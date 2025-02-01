@@ -1,6 +1,7 @@
 import { Metadata, Viewport } from 'next'
 import ThemeProvider from './theme-provider'
 import PWAPrompt from '@/components/PWAPrompt'
+import { Analytics } from '@vercel/analytics/react'
 import './globals.css'
 
 // SEO constants
@@ -72,7 +73,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="zh-CN">
+    <html lang="zh-CN" suppressHydrationWarning>
       <head>
         <meta name="application-name" content="Brew Guide" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -88,6 +89,7 @@ export default function RootLayout({
         <ThemeProvider>
           {children}
           <PWAPrompt />
+          <Analytics />
         </ThemeProvider>
         <script
           dangerouslySetInnerHTML={{
