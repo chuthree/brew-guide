@@ -1,3 +1,4 @@
+/** @type {import('next').NextConfig} */
 const withPWA = require('next-pwa')({
     dest: 'public',
     register: true,
@@ -8,14 +9,11 @@ const withPWA = require('next-pwa')({
             urlPattern: /^https?.*/,
             handler: 'NetworkFirst',
             options: {
-                cacheName: 'offline-cache',
+                cacheName: 'offlineCache',
                 networkTimeoutSeconds: 10,
                 expiration: {
                     maxEntries: 200,
                     maxAgeSeconds: 24 * 60 * 60 // 24 hours
-                },
-                cacheableResponse: {
-                    statuses: [0, 200]
                 }
             }
         },
@@ -93,7 +91,6 @@ const withPWA = require('next-pwa')({
     ]
 })
 
-/** @type {import('next').NextConfig} */
 const nextConfig = {
     reactStrictMode: true,
     swcMinify: true,
