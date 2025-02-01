@@ -1,9 +1,11 @@
-import { Metadata } from 'next'
+import { Metadata, Viewport } from 'next'
 import ThemeProvider from './theme-provider'
+import PWAPrompt from '@/components/PWAPrompt'
 import './globals.css'
 
 // SEO constants
 export const metadata: Metadata = {
+  metadataBase: new URL('https://brew-guide.vercel.app/'),
   title: '手冲咖啡冲煮指南',
   description:
     '专业的手冲咖啡冲煮指南，包含手冲咖啡的详细步骤、参数配置和计时器。提供清爽果香和醇厚平衡两种风味的冲煮方案，帮助您在家制作出完美的手冲咖啡。',
@@ -16,20 +18,13 @@ export const metadata: Metadata = {
     '手冲咖啡配比',
     '手冲咖啡萃取',
   ],
+  manifest: '/manifest.json',
   openGraph: {
     title: '手冲咖啡冲煮指南',
     description:
       '专业的手冲咖啡冲煮指南，包含手冲咖啡的详细步骤、参数配置和计时器。提供清爽果香和醇厚平衡两种风味的冲煮方案，帮助您在家制作出完美的手冲咖啡。',
-    url: 'https://chu3.dev/pour-over-recipes',
+    url: 'https://brew-guide.vercel.app/',
     siteName: "Chu3's Coffee Guide",
-    // images: [
-    //     {
-    //         url: 'https://chu3.dev/images/coffee-guide-og.jpg',
-    //         width: 1200,
-    //         height: 630,
-    //         alt: 'V60 手冲咖啡指南',
-    //     },
-    // ],
     locale: 'zh_CN',
     type: 'article',
   },
@@ -38,7 +33,6 @@ export const metadata: Metadata = {
     title: '咖啡冲煮指南 | 手冲咖啡冲煮指南',
     description:
       '专业的咖啡冲煮指南，包含手冲咖啡的详细步骤、参数配置和计时器。',
-    // images: ['https://chu3.dev/images/coffee-guide-og.jpg'],
   },
   robots: {
     index: true,
@@ -52,17 +46,24 @@ export const metadata: Metadata = {
     },
   },
   icons: {
-    icon: '/triangle.svg',
-    shortcut: '/triangle.svg',
-    apple: '/triangle.svg',
+    icon: [
+      { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' }
+    ],
+    shortcut: '/icons/icon-192x192.png',
+    apple: '/icons/icon-192x192.png',
     other: {
       rel: 'apple-touch-icon-precomposed',
-      url: '/triangle.svg',
+      url: '/icons/icon-192x192.png',
     },
   },
-  // verification: {
-  //     google: 'your-google-verification-code', // 如果有 Google Search Console 验证码，请替换
-  // },
+}
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 }
 
 export default function RootLayout({
@@ -72,8 +73,43 @@ export default function RootLayout({
 }) {
   return (
     <html lang="zh-CN">
+      <head>
+        <meta name="application-name" content="Brew Guide" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="Brew Guide" />
+        <meta name="format-detection" content="telephone=no" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="msapplication-tap-highlight" content="no" />
+        <link rel="apple-touch-startup-image" href="/icons/icon-512x512.png" />
+        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+      </head>
       <body>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          {children}
+          <PWAPrompt />
+        </ThemeProvider>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', async function() {
+                  try {
+                    const registration = await navigator.serviceWorker.register('/sw.js');
+                    console.log('ServiceWorker registration successful');
+
+                    // 检查更新
+                    setInterval(() => {
+                      registration.update();
+                    }, 1000 * 60 * 60); // 每小时检查一次更新
+                  } catch (err) {
+                    console.warn('ServiceWorker registration failed: ', err);
+                  }
+                });
+              }
+            `,
+          }}
+        />
       </body>
     </html>
   )
