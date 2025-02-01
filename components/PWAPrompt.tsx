@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 export default function PWAPrompt() {
@@ -8,7 +8,6 @@ export default function PWAPrompt() {
     const [showUpdatePrompt, setShowUpdatePrompt] = useState(false)
     const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
     const [isIOS, setIsIOS] = useState(false)
-    const lastUpdateCheck = useRef(0)
 
     useEffect(() => {
         // 检测是否是 iOS 设备
@@ -22,27 +21,6 @@ export default function PWAPrompt() {
         // 如果是 iOS 设备且没有安装，显示 iOS 特定的安装提示
         if (isIOSDevice && !isInstalled) {
             setShowInstallPrompt(true)
-        }
-
-        // iOS 特定的页面可见性检测
-        const handleVisibilityChange = () => {
-            if (document.visibilityState === 'visible') {
-                const now = Date.now()
-                // 每5分钟才检查一次更新，避免频繁检查
-                if (now - lastUpdateCheck.current > 5 * 60 * 1000) {
-                    checkForUpdates()
-                    lastUpdateCheck.current = now
-                }
-            }
-        }
-
-        // 页面获得焦点时检查更新
-        const handleFocus = () => {
-            const now = Date.now()
-            if (now - lastUpdateCheck.current > 5 * 60 * 1000) {
-                checkForUpdates()
-                lastUpdateCheck.current = now
-            }
         }
 
         // 对于非 iOS 设备，监听 beforeinstallprompt 事件
@@ -61,63 +39,8 @@ export default function PWAPrompt() {
             })
         }
 
-        // 更新检测处理
-        const checkForUpdates = async () => {
-            if ('serviceWorker' in navigator) {
-                try {
-                    const registration = await navigator.serviceWorker.ready
-
-                    // 强制检查更新
-                    await registration.update()
-
-                    // 检查缓存是否过期
-                    const cacheKeys = await caches.keys()
-                    for (const key of cacheKeys) {
-                        const cache = await caches.open(key)
-                        const requests = await cache.keys()
-                        for (const request of requests) {
-                            // 重新验证主要资源
-                            if (request.url.includes(window.location.origin)) {
-                                try {
-                                    const response = await fetch(request)
-                                    if (response.ok) {
-                                        await cache.put(request, response)
-                                    }
-                                } catch (error) {
-                                    console.warn('更新缓存失败:', error)
-                                }
-                            }
-                        }
-                    }
-
-                    // 监听更新
-                    registration.addEventListener('updatefound', () => {
-                        const newWorker = registration.installing
-                        if (newWorker) {
-                            newWorker.addEventListener('statechange', () => {
-                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                    setShowUpdatePrompt(true)
-                                }
-                            })
-                        }
-                    })
-                } catch (error) {
-                    console.warn('检查更新失败:', error)
-                }
-            }
-        }
-
-        // 添加事件监听器
-        document.addEventListener('visibilitychange', handleVisibilityChange)
-        window.addEventListener('focus', handleFocus)
-
-        // 初始检查
-        checkForUpdates()
-        lastUpdateCheck.current = Date.now()
-
         return () => {
-            document.removeEventListener('visibilitychange', handleVisibilityChange)
-            window.removeEventListener('focus', handleFocus)
+            window.removeEventListener('beforeinstallprompt', () => { })
         }
     }, [])
 
@@ -142,26 +65,13 @@ export default function PWAPrompt() {
         }
     }
 
-    const handleUpdate = async () => {
+    const handleUpdate = () => {
         if ('serviceWorker' in navigator) {
-            try {
-                const registration = await navigator.serviceWorker.ready
-                await registration.update()
-
-                if (isIOS) {
-                    // iOS 上使用更温和的更新方式
-                    const cache = await caches.open('offlineCache')
-                    await cache.delete(window.location.href)
+            navigator.serviceWorker.ready.then((registration) => {
+                registration.update().then(() => {
                     window.location.reload()
-                } else {
-                    // 其他平台使用正常的更新流程
-                    window.location.reload()
-                }
-            } catch (error) {
-                console.warn('更新失败:', error)
-                // 如果更新失败，强制刷新页面
-                window.location.reload()
-            }
+                })
+            })
         }
     }
 
@@ -169,56 +79,80 @@ export default function PWAPrompt() {
         <AnimatePresence>
             {(showInstallPrompt || showUpdatePrompt) && (
                 <motion.div
-                    initial={{ y: 100, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    exit={{ y: 100, opacity: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="fixed bottom-0 left-0 right-0 p-4 flex justify-center"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 20 }}
+                    transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
+                    className="fixed bottom-6 left-6 right-6 max-w-xl mx-auto"
                 >
-                    <div className="border-l-4 border-zinc-500 dark:border-zinc-400 bg-white dark:bg-zinc-900 p-4 shadow-lg max-w-md w-full">
-                        {showInstallPrompt && (
-                            <div className="flex flex-col gap-2">
-                                <p className="text-sm text-zinc-600 dark:text-zinc-300">
-                                    安装 Brew Guide 到您的设备
-                                </p>
-                                <div className="flex justify-end gap-2">
-                                    <button
-                                        onClick={() => setShowInstallPrompt(false)}
-                                        className="text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
-                                    >
-                                        [取消]
-                                    </button>
+                    {showInstallPrompt && (
+                        <div className="flex flex-col space-y-6 border-l border-neutral-200 pl-6 dark:border-neutral-800">
+                            <div className="space-y-2">
+                                <h3 className="text-xs font-normal tracking-wider text-neutral-800 dark:text-neutral-100">
+                                    添加到主屏幕
+                                </h3>
+                                {isIOS ? (
+                                    <div className="space-y-1">
+                                        <p className="text-[10px] tracking-wide text-neutral-500 dark:text-neutral-400">
+                                            在 Safari 浏览器中：
+                                        </p>
+                                        <ol className="space-y-1 text-[10px] tracking-wide text-neutral-500 dark:text-neutral-400">
+                                            <li>1. 点击底部的分享按钮</li>
+                                            <li>2. 选择添加到主屏幕</li>
+                                            <li>3. 点击添加完成安装</li>
+                                        </ol>
+                                    </div>
+                                ) : (
+                                    <p className="text-[10px] tracking-wide text-neutral-500 dark:text-neutral-400">
+                                        将应用添加到主屏幕，获得更好的使用体验
+                                    </p>
+                                )}
+                            </div>
+                            <div className="flex items-center justify-end space-x-4">
+                                <button
+                                    onClick={() => setShowInstallPrompt(false)}
+                                    className="text-[10px] tracking-widest text-neutral-400 transition-colors hover:text-neutral-800 dark:text-neutral-500 dark:hover:text-neutral-300"
+                                >
+                                    [ 稍后 ]
+                                </button>
+                                {!isIOS && (
                                     <button
                                         onClick={handleInstall}
-                                        className="text-sm text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                                        className="text-[10px] tracking-widest text-neutral-800 transition-colors hover:text-neutral-600 dark:text-neutral-100 dark:hover:text-neutral-300"
                                     >
-                                        [安装]
+                                        [ 安装 ]
                                     </button>
-                                </div>
+                                )}
                             </div>
-                        )}
-                        {showUpdatePrompt && (
-                            <div className="flex flex-col gap-2">
-                                <p className="text-sm text-zinc-600 dark:text-zinc-300">
-                                    有新版本可用，是否更新？
+                        </div>
+                    )}
+
+                    {showUpdatePrompt && (
+                        <div className="flex flex-col space-y-6 border-l border-neutral-200 pl-6 dark:border-neutral-800">
+                            <div className="space-y-2">
+                                <h3 className="text-xs font-normal tracking-wider text-neutral-800 dark:text-neutral-100">
+                                    更新可用
+                                </h3>
+                                <p className="text-[10px] tracking-wide text-neutral-500 dark:text-neutral-400">
+                                    新版本已就绪，立即更新获取最新功能
                                 </p>
-                                <div className="flex justify-end gap-2">
-                                    <button
-                                        onClick={() => setShowUpdatePrompt(false)}
-                                        className="text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
-                                    >
-                                        [稍后]
-                                    </button>
-                                    <button
-                                        onClick={handleUpdate}
-                                        className="text-sm text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-                                    >
-                                        [更新]
-                                    </button>
-                                </div>
                             </div>
-                        )}
-                    </div>
+                            <div className="flex items-center justify-end space-x-4">
+                                <button
+                                    onClick={() => setShowUpdatePrompt(false)}
+                                    className="text-[10px] tracking-widest text-neutral-400 transition-colors hover:text-neutral-800 dark:text-neutral-500 dark:hover:text-neutral-300"
+                                >
+                                    [ 稍后 ]
+                                </button>
+                                <button
+                                    onClick={handleUpdate}
+                                    className="text-[10px] tracking-widest text-neutral-800 transition-colors hover:text-neutral-600 dark:text-neutral-100 dark:hover:text-neutral-300"
+                                >
+                                    [ 更新 ]
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </motion.div>
             )}
         </AnimatePresence>
