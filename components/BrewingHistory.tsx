@@ -135,7 +135,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen }) => {
                                     delay: index * 0.1,
                                     layout: { duration: 0.3 }
                                 }}
-                                className="group space-y-4 border-l border-neutral-100 pl-6 dark:border-neutral-800"
+                                className="group space-y-4 border-l border-neutral-200/50 pl-6 dark:border-neutral-800"
                             >
                                 <motion.div
                                     initial={{ opacity: 0 }}
@@ -228,7 +228,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen }) => {
                                                     </div>
                                                 </div>
                                                 <motion.div
-                                                    className="h-px w-full overflow-hidden bg-neutral-100 dark:bg-neutral-800"
+                                                    className="h-px w-full overflow-hidden bg-neutral-200/50 dark:bg-neutral-800"
                                                 >
                                                     <motion.div
                                                         initial={{ width: 0 }}

@@ -228,7 +228,7 @@ const StageItem = ({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.3, delay: index * 0.1 }}
-        className={`group relative border-l border-neutral-100 pl-6 dark:border-neutral-800 ${activeTab === '注水' && index === currentStage
+        className={`group relative border-l border-neutral-200 pl-6 dark:border-neutral-800 ${activeTab === '注水' && index === currentStage
             ? 'text-neutral-800 dark:text-neutral-100'
             : activeTab === '注水' && index < currentStage
                 ? 'text-neutral-400 dark:text-neutral-500'
@@ -296,6 +296,20 @@ const PourOverRecipes = () => {
     const [hasNotes, setHasNotes] = useState(false)
     const [showComplete, setShowComplete] = useState(false)
     const [currentTime, setCurrentTime] = useState(0)
+    const [isOffline, setIsOffline] = useState(!navigator.onLine)
+
+    useEffect(() => {
+        const handleOnline = () => setIsOffline(false)
+        const handleOffline = () => setIsOffline(true)
+
+        window.addEventListener('online', handleOnline)
+        window.addEventListener('offline', handleOffline)
+
+        return () => {
+            window.removeEventListener('online', handleOnline)
+            window.removeEventListener('offline', handleOffline)
+        }
+    }, [])
 
     // 检查是否有笔记
     useEffect(() => {
@@ -555,7 +569,7 @@ const PourOverRecipes = () => {
     }
 
     return (
-        <div className="flex min-h-screen flex-col bg-white px-8 py-6 font-mono text-neutral-800 sm:px-12 sm:py-8 dark:bg-neutral-900 dark:text-neutral-100">
+        <div className="flex min-h-screen flex-col bg-neutral-50 px-8 py-6 font-mono text-neutral-800 sm:px-12 sm:py-8 dark:bg-neutral-900 dark:text-neutral-100">
             {/* Title section */}
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -565,19 +579,37 @@ const PourOverRecipes = () => {
                     height: isTimerRunning && !showComplete ? "60px" : "auto"
                 }}
                 transition={{ duration: 0.6, ease: 'easeOut' }}
-                className="mb-6 border-b border-neutral-100 overflow-hidden sm:mb-16 dark:border-neutral-800"
+                className="mb-6 border-b border-neutral-200 overflow-hidden sm:mb-16 dark:border-neutral-800"
             >
                 <div className={`space-y-4 transition-all duration-500 ${isTimerRunning && !showComplete ? 'opacity-30' : ''}`}>
-                    <div className="flex items-center justify-between">
+                    <div className="flex  w-full items-center justify-between">
+
                         <div>
                             <div className="text-[10px] tracking-widest text-neutral-400 sm:text-xs dark:text-neutral-500">
                                 POUR OVER COFFEE GUIDE{' '}
                                 <span className="ml-2 text-[8px] text-neutral-300 dark:text-neutral-600">
-                                    BETA v1.9.1
+                                    BETA v1.9.2
                                 </span>
+
                             </div>
                             <h1 className="mt-2 text-xl font-light tracking-wide sm:text-2xl">
                                 手冲咖啡冲煮指南
+                                {/* {isOffline && ( */}
+                                <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    className="group relative ml-2 inline-block"
+                                >
+                                    <span className="cursor-help text-[12px] font-light tracking-wide text-neutral-400 dark:text-neutral-500">
+                                        [离线模式]
+                                    </span>
+                                    <div className="pointer-events-none absolute left-1/2 top-full z-50 mt-2 -translate-x-1/2 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100">
+                                        <div className="w-36 rounded-lg bg-white/80 px-4 py-2 text-[10px] leading-relaxed text-neutral-500 shadow-[0_4px_12px_rgba(0,0,0,0.08)] backdrop-blur-sm dark:bg-neutral-800 dark:text-neutral-400 dark:shadow-[0_4px_12px_rgba(0,0,0,0.2)]">
+                                            离线模式下，计时音效不可用
+                                        </div>
+                                    </div>
+                                </motion.div>
+                                {/* )} */}
                             </h1>
                         </div>
                     </div>

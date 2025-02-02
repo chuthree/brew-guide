@@ -93,10 +93,20 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         start: HTMLAudioElement | null
         ding: HTMLAudioElement | null
         correct: HTMLAudioElement | null
+        isPlaying: {
+            start: boolean
+            ding: boolean
+            correct: boolean
+        }
     }>({
         start: null,
         ding: null,
-        correct: null
+        correct: null,
+        isPlaying: {
+            start: false,
+            ding: false,
+            correct: false
+        }
     })
     const methodStagesRef = useRef(currentBrewingMethod?.params.stages || [])
     const [showNoteForm, setShowNoteForm] = useState(false)
@@ -117,10 +127,26 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         dingAudio.preload = 'auto'
         correctAudio.preload = 'auto'
 
+        // Add ended event listeners to reset playing state
+        startAudio.addEventListener('ended', () => {
+            audioRefs.current.isPlaying.start = false
+        })
+        dingAudio.addEventListener('ended', () => {
+            audioRefs.current.isPlaying.ding = false
+        })
+        correctAudio.addEventListener('ended', () => {
+            audioRefs.current.isPlaying.correct = false
+        })
+
         audioRefs.current = {
             start: startAudio,
             ding: dingAudio,
-            correct: correctAudio
+            correct: correctAudio,
+            isPlaying: {
+                start: false,
+                ding: false,
+                correct: false
+            }
         }
 
         // Add event listeners for audio initialization on user interaction
@@ -128,7 +154,12 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
             audioRefs.current = {
                 start: startAudio,
                 ding: dingAudio,
-                correct: correctAudio
+                correct: correctAudio,
+                isPlaying: {
+                    start: false,
+                    ding: false,
+                    correct: false
+                }
             }
             document.removeEventListener('touchstart', initAudio)
             document.removeEventListener('click', initAudio)
@@ -144,20 +175,26 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
 
     const playSound = useCallback((type: 'start' | 'ding' | 'correct') => {
         const audio = audioRefs.current[type]
-        if (!audio) return
+        if (!audio || audioRefs.current.isPlaying[type]) return
 
+        audioRefs.current.isPlaying[type] = true
         const playPromise = audio.play()
         if (playPromise !== undefined) {
             playPromise
                 .then(() => {
                     if (audio) {
                         audio.currentTime = 0
+                        // Add a small delay before allowing the same sound to play again
+                        setTimeout(() => {
+                            audioRefs.current.isPlaying[type] = false
+                        }, 100)
                     }
                 })
                 .catch((e) => {
                     console.log('Sound play failed:', e)
                     if (audio) {
                         audio.currentTime = 0
+                        audioRefs.current.isPlaying[type] = false
                     }
                 })
         }
@@ -387,7 +424,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 20 }}
                 transition={{ duration: 0.3 }}
-                className="sticky bottom-0 border-t border-neutral-100 bg-white pt-6 dark:border-neutral-800 dark:bg-neutral-900"
+                className="sticky bottom-0 border-t border-neutral-200 bg-neutral-50 pt-6 dark:border-neutral-800 dark:bg-neutral-900"
             >
                 {/* Current Stage Info */}
                 <div className="mb-4 space-y-3">
@@ -532,7 +569,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                     })}
 
                     {/* Progress bar background with waiting pattern */}
-                    <div className="h-1 w-full overflow-hidden bg-neutral-100 dark:bg-neutral-800">
+                    <div className="h-1 w-full overflow-hidden bg-neutral-200/50 dark:bg-neutral-800">
                         {/* Waiting time pattern */}
                         {currentBrewingMethod.params.stages.map((stage, index) => {
                             const totalTime = currentBrewingMethod.params.stages[currentBrewingMethod.params.stages.length - 1].time
@@ -666,7 +703,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -20 }}
                         transition={{ duration: 0.3 }}
-                        className="absolute inset-0 bg-white dark:bg-neutral-900"
+                        className="absolute inset-0 bg-neutral-50 dark:bg-neutral-900"
                     >
                         <BrewingNoteForm
                             id="brewingNoteForm"

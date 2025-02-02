@@ -111,7 +111,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     if (!isOpen) return null
 
     return (
-        <div className="h-full w-full overflow-auto overscroll-none">
+        <div className="h-full w-full overflow-auto overscroll-none bg-neutral-50 dark:bg-neutral-900">
             <form id={id} onSubmit={handleSubmit} className="relative flex h-full flex-col space-y-8">
                 {/* Header with timestamp */}
                 <div className="flex items-baseline justify-between">
@@ -155,7 +155,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                                                 },
                                             })
                                         }
-                                        className="w-full border-b border-neutral-100 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
+                                        className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
                                         placeholder="咖啡豆名称"
                                     />
                                 </div>
@@ -171,7 +171,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                                                 },
                                             })
                                         }
-                                        className="w-full border-b border-neutral-100 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 text-neutral-800 dark:text-neutral-300"
+                                        className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 text-neutral-800 dark:text-neutral-300"
                                     >
                                         <option>浅度烘焙</option>
                                         <option>中浅度烘焙</option>
@@ -273,7 +273,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                                     notes: e.target.value,
                                 })
                             }
-                            className="w-full resize-none border-b border-neutral-100 rounded-none bg-transparent text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300"
+                            className="w-full resize-none border-b border-neutral-200 rounded-none bg-transparent text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300"
                             placeholder="记录一下这次冲煮的感受、改进点等..."
                         />
                     </div>

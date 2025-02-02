@@ -1,5 +1,5 @@
 import { Metadata, Viewport } from 'next'
-import ThemeProvider from './theme-provider'
+import { ThemeProvider } from 'next-themes'
 import PWAPrompt from '@/components/PWAPrompt'
 import './globals.css'
 
@@ -72,7 +72,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="zh-CN">
+    <html lang="zh" suppressHydrationWarning>
       <head>
         <meta name="application-name" content="Brew Guide" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -83,9 +83,17 @@ export default function RootLayout({
         <meta name="msapplication-tap-highlight" content="no" />
         <link rel="apple-touch-startup-image" href="/icons/icon-512x512.png" />
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#fafafa" media="(prefers-color-scheme: light)" />
+        <meta name="theme-color" content="#171717" media="(prefers-color-scheme: dark)" />
       </head>
-      <body>
-        <ThemeProvider>
+      <body className="bg-neutral-50 dark:bg-neutral-900">
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
           {children}
           <PWAPrompt />
         </ThemeProvider>
