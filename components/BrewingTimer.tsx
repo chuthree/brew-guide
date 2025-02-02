@@ -102,121 +102,66 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     const [showNoteForm, setShowNoteForm] = useState(false)
 
     useEffect(() => {
-        // Initialize all audio elements with better error handling and mobile optimization
-        // @ts-ignore - AudioContext types
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const audioFiles = {
-            start: '/sounds/start.mp3',
-            ding: '/sounds/ding.mp3',
-            correct: '/sounds/correct.mp3'
-        };
+        // Initialize all audio elements
+        const startAudio = new Audio('/sounds/start.mp3')
+        const dingAudio = new Audio('/sounds/ding.mp3')
+        const correctAudio = new Audio('/sounds/correct.mp3')
 
-        // Create audio elements with optimized settings
-        const createOptimizedAudio = (src: string) => {
-            const audio = new Audio(src);
-            audio.volume = 0.5;
-            audio.preload = 'auto';
+        // Set volume for all audio elements
+        startAudio.volume = 0.5
+        dingAudio.volume = 0.5
+        correctAudio.volume = 0.5
 
-            // Optimize for mobile devices
-            if (window.navigator.userAgent.match(/mobile/i)) {
-                // Lower volume on mobile to prevent distortion
-                audio.volume = 0.3;
-            }
-
-            // Enable fast playback
-            // @ts-ignore - vendor prefixed properties
-            audio.preservesPitch = false;
-            // @ts-ignore - vendor prefixed properties
-            audio.webkitPreservesPitch = false;
-            // @ts-ignore - vendor prefixed properties
-            audio.mozPreservesPitch = false;
-
-            return audio;
-        };
-
-        const startAudio = createOptimizedAudio(audioFiles.start);
-        const dingAudio = createOptimizedAudio(audioFiles.ding);
-        const correctAudio = createOptimizedAudio(audioFiles.correct);
-
-        // Set up audio context for better mobile handling
-        const setupAudioContext = () => {
-            if (audioContext.state === 'suspended') {
-                audioContext.resume();
-            }
-        };
-
-        // Handle audio focus for better mobile experience
-        let audioFocusEnabled = true;
-        if ('audiofocus' in navigator) {
-            document.addEventListener('visibilitychange', () => {
-                audioFocusEnabled = !document.hidden;
-            });
-        }
+        // Set preload for all audio elements
+        startAudio.preload = 'auto'
+        dingAudio.preload = 'auto'
+        correctAudio.preload = 'auto'
 
         audioRefs.current = {
             start: startAudio,
             ding: dingAudio,
             correct: correctAudio
-        };
+        }
 
-        // Preload all audio files
-        const preloadAudio = async () => {
-            try {
-                await Promise.all([
-                    startAudio.load(),
-                    dingAudio.load(),
-                    correctAudio.load()
-                ]);
-                console.log('Audio files preloaded successfully');
-            } catch (error) {
-                console.warn('Audio preload failed:', error);
-            }
-        };
-
-        // Initialize audio with user interaction handling
+        // Add event listeners for audio initialization on user interaction
         const initAudio = () => {
-            setupAudioContext();
-            preloadAudio();
-            document.removeEventListener('touchstart', initAudio);
-            document.removeEventListener('click', initAudio);
-        };
+            audioRefs.current = {
+                start: startAudio,
+                ding: dingAudio,
+                correct: correctAudio
+            }
+            document.removeEventListener('touchstart', initAudio)
+            document.removeEventListener('click', initAudio)
+        }
+        document.addEventListener('touchstart', initAudio)
+        document.addEventListener('click', initAudio)
 
-        // Try immediate initialization
-        preloadAudio().catch(() => {
-            document.addEventListener('touchstart', initAudio);
-            document.addEventListener('click', initAudio);
-        });
-
-        // Cleanup
         return () => {
-            document.removeEventListener('touchstart', initAudio);
-            document.removeEventListener('click', initAudio);
-            audioContext.close();
-        };
-    }, []);
+            document.removeEventListener('touchstart', initAudio)
+            document.removeEventListener('click', initAudio)
+        }
+    }, [])
 
     const playSound = useCallback((type: 'start' | 'ding' | 'correct') => {
-        const audio = audioRefs.current[type];
-        if (!audio || document.hidden) return;
+        const audio = audioRefs.current[type]
+        if (!audio) return
 
-        // Clone the audio for overlapping sounds
-        const audioClone = audio.cloneNode(true) as HTMLAudioElement;
-        const playPromise = audioClone.play();
-
+        const playPromise = audio.play()
         if (playPromise !== undefined) {
             playPromise
                 .then(() => {
-                    // Cleanup cloned audio after playing
-                    audioClone.addEventListener('ended', () => {
-                        audioClone.remove();
-                    });
+                    if (audio) {
+                        audio.currentTime = 0
+                    }
                 })
                 .catch((e) => {
-                    console.warn('Sound play failed:', e);
-                    audioClone.remove();
-                });
+                    console.log('Sound play failed:', e)
+                    if (audio) {
+                        audio.currentTime = 0
+                    }
+                })
         }
-    }, []);
+    }, [])
 
     const getCurrentStage = useCallback(() => {
         if (!currentBrewingMethod?.params?.stages?.length) return -1

@@ -573,7 +573,7 @@ const PourOverRecipes = () => {
                             <div className="text-[10px] tracking-widest text-neutral-400 sm:text-xs dark:text-neutral-500">
                                 POUR OVER COFFEE GUIDE{' '}
                                 <span className="ml-2 text-[8px] text-neutral-300 dark:text-neutral-600">
-                                    BETA v1.9
+                                    BETA v1.9.1
                                 </span>
                             </div>
                             <h1 className="mt-2 text-xl font-light tracking-wide sm:text-2xl">
