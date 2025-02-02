@@ -1,3 +1,32 @@
+/**
+ * Sound Design for Brewing Timer
+ * 
+ * Sound Files:
+ * - start.mp3: 提示音，用于倒计时和阶段预告
+ *   - 倒计时3秒时每秒播放一次
+ *   - 每个阶段开始前2秒和1秒各播放一次
+ * 
+ * - ding.mp3: 开始音，用于标记正式开始
+ *   - 倒计时结束时播放一次
+ *   - 每个新阶段开始时播放一次（除最后阶段）
+ * 
+ * - correct.mp3: 完成音
+ *   - 整个冲煮过程完成时播放一次
+ * 
+ * Sound Behaviors:
+ * 1. 首次开始或重置后开始：
+ *    start(3) -> start(2) -> start(1) -> ding(开始)
+ * 
+ * 2. 阶段变化（除最后阶段）：
+ *    start(前2秒) -> start(前1秒) -> ding(开始)
+ * 
+ * 3. 暂停后继续：
+ *    无音效，直接继续
+ * 
+ * 4. 最后阶段结束：
+ *    correct(完成)
+ */
+
 'use client'
 
 import React, { useState, useEffect, useCallback, useRef } from 'react'
@@ -60,49 +89,134 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     const [currentWaterAmount, setCurrentWaterAmount] = useState(0)
     const [countdownTime, setCountdownTime] = useState<number | null>(null)
     const [hasStartedOnce, setHasStartedOnce] = useState(false)
-    const audioRef = useRef<HTMLAudioElement | null>(null)
+    const audioRefs = useRef<{
+        start: HTMLAudioElement | null
+        ding: HTMLAudioElement | null
+        correct: HTMLAudioElement | null
+    }>({
+        start: null,
+        ding: null,
+        correct: null
+    })
     const methodStagesRef = useRef(currentBrewingMethod?.params.stages || [])
     const [showNoteForm, setShowNoteForm] = useState(false)
 
     useEffect(() => {
-        const audio = new Audio('/sounds/ding.mp3')
-        audio.volume = 0.5
-        audio.preload = 'auto'
+        // Initialize all audio elements with better error handling and mobile optimization
+        // @ts-ignore - AudioContext types
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const audioFiles = {
+            start: '/sounds/start.mp3',
+            ding: '/sounds/ding.mp3',
+            correct: '/sounds/correct.mp3'
+        };
 
+        // Create audio elements with optimized settings
+        const createOptimizedAudio = (src: string) => {
+            const audio = new Audio(src);
+            audio.volume = 0.5;
+            audio.preload = 'auto';
+
+            // Optimize for mobile devices
+            if (window.navigator.userAgent.match(/mobile/i)) {
+                // Lower volume on mobile to prevent distortion
+                audio.volume = 0.3;
+            }
+
+            // Enable fast playback
+            // @ts-ignore - vendor prefixed properties
+            audio.preservesPitch = false;
+            // @ts-ignore - vendor prefixed properties
+            audio.webkitPreservesPitch = false;
+            // @ts-ignore - vendor prefixed properties
+            audio.mozPreservesPitch = false;
+
+            return audio;
+        };
+
+        const startAudio = createOptimizedAudio(audioFiles.start);
+        const dingAudio = createOptimizedAudio(audioFiles.ding);
+        const correctAudio = createOptimizedAudio(audioFiles.correct);
+
+        // Set up audio context for better mobile handling
+        const setupAudioContext = () => {
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+        };
+
+        // Handle audio focus for better mobile experience
+        let audioFocusEnabled = true;
+        if ('audiofocus' in navigator) {
+            document.addEventListener('visibilitychange', () => {
+                audioFocusEnabled = !document.hidden;
+            });
+        }
+
+        audioRefs.current = {
+            start: startAudio,
+            ding: dingAudio,
+            correct: correctAudio
+        };
+
+        // Preload all audio files
+        const preloadAudio = async () => {
+            try {
+                await Promise.all([
+                    startAudio.load(),
+                    dingAudio.load(),
+                    correctAudio.load()
+                ]);
+                console.log('Audio files preloaded successfully');
+            } catch (error) {
+                console.warn('Audio preload failed:', error);
+            }
+        };
+
+        // Initialize audio with user interaction handling
         const initAudio = () => {
-            audioRef.current = audio
-            document.removeEventListener('touchstart', initAudio)
-            document.removeEventListener('click', initAudio)
-        }
+            setupAudioContext();
+            preloadAudio();
+            document.removeEventListener('touchstart', initAudio);
+            document.removeEventListener('click', initAudio);
+        };
 
-        document.addEventListener('touchstart', initAudio)
-        document.addEventListener('click', initAudio)
+        // Try immediate initialization
+        preloadAudio().catch(() => {
+            document.addEventListener('touchstart', initAudio);
+            document.addEventListener('click', initAudio);
+        });
 
+        // Cleanup
         return () => {
-            document.removeEventListener('touchstart', initAudio)
-            document.removeEventListener('click', initAudio)
-        }
-    }, [])
+            document.removeEventListener('touchstart', initAudio);
+            document.removeEventListener('click', initAudio);
+            audioContext.close();
+        };
+    }, []);
 
-    const playSound = useCallback(() => {
-        if (!audioRef.current) return
+    const playSound = useCallback((type: 'start' | 'ding' | 'correct') => {
+        const audio = audioRefs.current[type];
+        if (!audio || document.hidden) return;
 
-        const playPromise = audioRef.current.play()
+        // Clone the audio for overlapping sounds
+        const audioClone = audio.cloneNode(true) as HTMLAudioElement;
+        const playPromise = audioClone.play();
+
         if (playPromise !== undefined) {
             playPromise
                 .then(() => {
-                    if (audioRef.current) {
-                        audioRef.current.currentTime = 0
-                    }
+                    // Cleanup cloned audio after playing
+                    audioClone.addEventListener('ended', () => {
+                        audioClone.remove();
+                    });
                 })
                 .catch((e) => {
-                    console.log('Sound play failed:', e)
-                    if (audioRef.current) {
-                        audioRef.current.currentTime = 0
-                    }
-                })
+                    console.warn('Sound play failed:', e);
+                    audioClone.remove();
+                });
         }
-    }, [])
+    }, []);
 
     const getCurrentStage = useCallback(() => {
         if (!currentBrewingMethod?.params?.stages?.length) return -1
@@ -165,10 +279,58 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         }
     }, [timerId])
 
-    // Add countdown timer logic
+    const handleComplete = useCallback(() => {
+        clearTimerAndStates()
+        setIsRunning(false)
+        setShowComplete(true)
+        onComplete?.(true)
+        onTimerComplete?.()
+        playSound('correct')
+    }, [clearTimerAndStates, onComplete, onTimerComplete, playSound])
+
+    const startMainTimer = useCallback(() => {
+        if (currentBrewingMethod) {
+            const id = setInterval(() => {
+                setCurrentTime((time) => {
+                    const stages = methodStagesRef.current
+                    const newTime = time + 1
+                    const lastStageIndex = stages.length - 1
+
+                    stages.forEach((stage, index) => {
+                        const prevStageTime = index > 0 ? stages[index - 1].time : 0
+                        // Play ding sound at stage change (except for the last stage)
+                        if (newTime === prevStageTime) {
+                            playSound('ding')
+                        }
+                        // Play start sound at both 2 seconds and 1 second before next stage
+                        // For all stages including the last one
+                        const nextStageTime = stages[index].time
+                        if (newTime === nextStageTime - 2 || newTime === nextStageTime - 1) {
+                            playSound('start')
+                        }
+                    })
+
+                    if (newTime > stages[lastStageIndex].time) {
+                        clearInterval(id)
+                        setTimerId(null)
+                        setIsRunning(false)
+                        handleComplete()
+                        return stages[lastStageIndex].time
+                    }
+                    return newTime
+                })
+            }, 1000)
+            setTimerId(id)
+        }
+    }, [currentBrewingMethod, playSound, handleComplete])
+
+    // Update countdown timer logic
     useEffect(() => {
         if (countdownTime !== null && isRunning) {
             if (countdownTime > 0) {
+                // Play start sound for each countdown second
+                playSound('start')
+
                 const countdownId = setInterval(() => {
                     setCountdownTime(prev => {
                         if (prev === null) return null
@@ -178,19 +340,12 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                 return () => clearInterval(countdownId)
             } else {
                 setCountdownTime(null)
+                // Play ding sound when countdown ends and main timer starts
+                playSound('ding')
                 startMainTimer()
             }
         }
-    }, [countdownTime, isRunning])
-
-    const handleComplete = useCallback(() => {
-        clearTimerAndStates()
-        setIsRunning(false)
-        setShowComplete(true)
-        onComplete?.(true)
-        onTimerComplete?.()
-        playSound()
-    }, [clearTimerAndStates, onComplete, onTimerComplete, playSound])
+    }, [countdownTime, isRunning, playSound, startMainTimer])
 
     const handleSaveNote = useCallback((note: any) => {
         const notes = JSON.parse(localStorage.getItem('brewingNotes') || '[]')
@@ -208,46 +363,20 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         }
     }, [currentTime, handleComplete])
 
-    const startMainTimer = useCallback(() => {
-        if (currentBrewingMethod) {
-            const id = setInterval(() => {
-                setCurrentTime((time) => {
-                    const stages = methodStagesRef.current
-                    const newTime = time + 1
-
-                    stages.forEach((stage, index) => {
-                        const prevStageTime = index > 0 ? stages[index - 1].time : 0
-                        if (newTime === prevStageTime) {
-                            playSound()
-                        }
-                    })
-
-                    if (newTime > stages[stages.length - 1].time) {
-                        clearInterval(id)
-                        setTimerId(null)
-                        setIsRunning(false)
-                        handleComplete()
-                        return stages[stages.length - 1].time
-                    }
-                    return newTime
-                })
-            }, 1000)
-            setTimerId(id)
-        }
-    }, [currentBrewingMethod, playSound, handleComplete])
-
     const startTimer = useCallback(() => {
         if (!isRunning && currentBrewingMethod) {
             setIsRunning(true)
-            if (!hasStartedOnce) {
+            if (!hasStartedOnce || currentTime === 0) {
                 setCountdownTime(3)
                 setHasStartedOnce(true)
+                // Play start sound immediately when countdown starts
+                playSound('start')
             } else {
+                // Just resume the timer without any sound
                 startMainTimer()
             }
-            playSound()
         }
-    }, [isRunning, currentBrewingMethod, hasStartedOnce, startMainTimer, playSound])
+    }, [isRunning, currentBrewingMethod, hasStartedOnce, startMainTimer, playSound, currentTime])
 
     const pauseTimer = useCallback(() => {
         clearTimerAndStates()
