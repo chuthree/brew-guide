@@ -76,33 +76,33 @@ export const equipmentList: Equipment[] = [
 // Brewing Methods Data
 export const brewingMethods: BrewingMethods = {
 	V60: [
-		{
-			name: "测试",
-			params: {
-				coffee: "10g",
-				water: "10g",
-				ratio: "1:1",
-				grindSize: "中细（白砂糖颗粒）",
-				temp: "92°C",
-				videoUrl: "",
-				stages: [
-					{
-						time: 5,
-						pourTime: 3,
-						label: "过程",
-						water: "5g",
-						detail: "2 - 3 - 过程",
-					},
-					{
-						time: 10,
-						pourTime: 3,
-						label: "完成",
-						water: "10g",
-						detail: "2 - 3 - 完成",
-					},
-				],
-			},
-		},
+		// {
+		// 	name: "测试",
+		// 	params: {
+		// 		coffee: "10g",
+		// 		water: "10g",
+		// 		ratio: "1:1",
+		// 		grindSize: "中细（白砂糖颗粒）",
+		// 		temp: "92°C",
+		// 		videoUrl: "",
+		// 		stages: [
+		// 			{
+		// 				time: 5,
+		// 				pourTime: 3,
+		// 				label: "过程",
+		// 				water: "5g",
+		// 				detail: "2 - 3 - 过程",
+		// 			},
+		// 			{
+		// 				time: 10,
+		// 				pourTime: 3,
+		// 				label: "完成",
+		// 				water: "10g",
+		// 				detail: "2 - 3 - 完成",
+		// 			},
+		// 		],
+		// 	},
+		// },
 		{
 			name: "一刀流(萃取稳定)",
 			params: {
