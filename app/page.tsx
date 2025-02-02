@@ -594,22 +594,22 @@ const PourOverRecipes = () => {
                             </div>
                             <h1 className="mt-2 text-xl font-light tracking-wide sm:text-2xl">
                                 手冲咖啡冲煮指南
-                                {/* {isOffline && ( */}
-                                <motion.div
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    className="group relative ml-2 inline-block"
-                                >
-                                    <span className="cursor-help text-[12px] font-light tracking-wide text-neutral-400 dark:text-neutral-500">
-                                        [离线模式]
-                                    </span>
-                                    <div className="pointer-events-none absolute left-1/2 top-full z-50 mt-2 -translate-x-1/2 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100">
-                                        <div className="w-36 rounded-lg bg-white/80 px-4 py-2 text-[10px] leading-relaxed text-neutral-500 shadow-[0_4px_12px_rgba(0,0,0,0.08)] backdrop-blur-sm dark:bg-neutral-800 dark:text-neutral-400 dark:shadow-[0_4px_12px_rgba(0,0,0,0.2)]">
-                                            离线模式下，计时音效不可用
+                                {isOffline && (
+                                    <motion.div
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        className="group relative ml-2 inline-block"
+                                    >
+                                        <span className="cursor-help text-[12px] font-light tracking-wide text-neutral-400 dark:text-neutral-500">
+                                            [离线模式]
+                                        </span>
+                                        <div className="pointer-events-none absolute left-1/2 top-full z-50 mt-2 -translate-x-1/2 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100">
+                                            <div className="w-36 rounded-lg bg-white/80 px-4 py-2 text-[10px] leading-relaxed text-neutral-500 shadow-[0_4px_12px_rgba(0,0,0,0.08)] backdrop-blur-sm dark:bg-neutral-800 dark:text-neutral-400 dark:shadow-[0_4px_12px_rgba(0,0,0,0.2)]">
+                                                离线模式下，计时音效不可用
+                                            </div>
                                         </div>
-                                    </div>
-                                </motion.div>
-                                {/* )} */}
+                                    </motion.div>
+                                )}
                             </h1>
                         </div>
                     </div>
