@@ -569,7 +569,7 @@ const PourOverRecipes = () => {
     }
 
     return (
-        <div className="flex min-h-screen flex-col bg-neutral-50 px-8 py-6 font-mono text-neutral-800 sm:px-12 sm:py-8 dark:bg-neutral-900 dark:text-neutral-100">
+        <div className="mx-auto flex min-h-screen max-w-[500px] flex-col bg-neutral-50 px-8 py-6 font-mono text-neutral-800 sm:px-12 sm:py-8 dark:bg-neutral-900 dark:text-neutral-100">
             {/* Title section */}
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
