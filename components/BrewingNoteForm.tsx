@@ -136,53 +136,55 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                 {/* Form content */}
                 <div className="flex-1 space-y-8 overflow-auto pb-8">
                     {/* 咖啡豆信息 */}
-                    <div className="space-y-4">
-                        <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
-                            咖啡豆信息
-                        </div>
-                        <div className="grid gap-6">
-                            <div className="grid grid-cols-2 gap-6">
-                                <div>
-                                    <input
-                                        type="text"
-                                        value={formData.coffeeBeanInfo.name}
-                                        onChange={(e) =>
-                                            setFormData({
-                                                ...formData,
-                                                coffeeBeanInfo: {
-                                                    ...formData.coffeeBeanInfo,
-                                                    name: e.target.value,
-                                                },
-                                            })
-                                        }
-                                        className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
-                                        placeholder="咖啡豆名称"
-                                    />
-                                </div>
-                                <div>
-                                    <select
-                                        value={formData.coffeeBeanInfo.roastLevel}
-                                        onChange={(e) =>
-                                            setFormData({
-                                                ...formData,
-                                                coffeeBeanInfo: {
-                                                    ...formData.coffeeBeanInfo,
-                                                    roastLevel: e.target.value,
-                                                },
-                                            })
-                                        }
-                                        className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 text-neutral-800 dark:text-neutral-300"
-                                    >
-                                        <option>浅度烘焙</option>
-                                        <option>中浅度烘焙</option>
-                                        <option>中度烘焙</option>
-                                        <option>中深度烘焙</option>
-                                        <option>深度烘焙</option>
-                                    </select>
+                    {!initialData?.coffeeBeanInfo && (
+                        <div className="space-y-4">
+                            <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
+                                咖啡豆信息
+                            </div>
+                            <div className="grid gap-6">
+                                <div className="grid grid-cols-2 gap-6">
+                                    <div>
+                                        <input
+                                            type="text"
+                                            value={formData.coffeeBeanInfo.name}
+                                            onChange={(e) =>
+                                                setFormData({
+                                                    ...formData,
+                                                    coffeeBeanInfo: {
+                                                        ...formData.coffeeBeanInfo,
+                                                        name: e.target.value,
+                                                    },
+                                                })
+                                            }
+                                            className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
+                                            placeholder="咖啡豆名称"
+                                        />
+                                    </div>
+                                    <div>
+                                        <select
+                                            value={formData.coffeeBeanInfo.roastLevel}
+                                            onChange={(e) =>
+                                                setFormData({
+                                                    ...formData,
+                                                    coffeeBeanInfo: {
+                                                        ...formData.coffeeBeanInfo,
+                                                        roastLevel: e.target.value,
+                                                    },
+                                                })
+                                            }
+                                            className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 text-neutral-800 dark:text-neutral-300"
+                                        >
+                                            <option>浅度烘焙</option>
+                                            <option>中浅烘焙</option>
+                                            <option>中度烘焙</option>
+                                            <option>中深烘焙</option>
+                                            <option>深度烘焙</option>
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    )}
 
                     {/* 风味评分 */}
                     <div className="space-y-4">
