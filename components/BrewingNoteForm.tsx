@@ -92,21 +92,59 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         onClose()
     }
 
-    // Add touch event handlers
-    const handleTouchStart = (e: React.TouchEvent) => {
-        e.stopPropagation();
-        e.preventDefault();
-    };
+    const [isDragging, setIsDragging] = useState(false)
+    const [activeTaste, setActiveTaste] = useState<string | null>(null)
+    const [currentValue, setCurrentValue] = useState<number | null>(null)
 
-    const handleTouchMove = (e: React.TouchEvent) => {
-        e.stopPropagation();
-        e.preventDefault();
-    };
+    const handleTouchStart = (key: string, value: number) => (e: React.TouchEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+        setCurrentValue(value)
+    }
 
-    const handleTouchEnd = (e: React.TouchEvent) => {
-        e.stopPropagation();
-        e.preventDefault();
-    };
+    const handleTouchMove = (key: string) => (e: React.TouchEvent) => {
+        if (currentValue === null) return
+
+        const touch = e.touches[0]
+        const target = e.currentTarget as HTMLInputElement
+        const rect = target.getBoundingClientRect()
+        const width = rect.width
+        const x = touch.clientX - rect.left
+        const percentage = Math.max(0, Math.min(1, x / width))
+        const newValue = Math.round(percentage * 4) + 1
+
+        if (newValue !== currentValue) {
+            setFormData({
+                ...formData,
+                taste: {
+                    ...formData.taste,
+                    [key]: newValue,
+                },
+            })
+            setCurrentValue(newValue)
+        }
+    }
+
+    const handleTouchEnd = () => {
+        setCurrentValue(null)
+    }
+
+    useEffect(() => {
+        // 添加全局触摸事件处理
+        const preventScroll = (e: TouchEvent) => {
+            if (isDragging) {
+                e.preventDefault()
+            }
+        }
+
+        document.addEventListener('touchmove', preventScroll, { passive: false })
+        document.addEventListener('touchend', handleTouchEnd)
+
+        return () => {
+            document.removeEventListener('touchmove', preventScroll)
+            document.removeEventListener('touchend', handleTouchEnd)
+        }
+    }, [isDragging])
 
     if (!isOpen) return null
 
@@ -224,10 +262,10 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                                                     },
                                                 })
                                             }
-                                            onTouchStart={handleTouchStart}
-                                            onTouchMove={handleTouchMove}
+                                            onTouchStart={handleTouchStart(key, value)}
+                                            onTouchMove={handleTouchMove(key)}
                                             onTouchEnd={handleTouchEnd}
-                                            className="relative h-[1px] w-full appearance-none bg-neutral-300 dark:bg-neutral-600 cursor-pointer touch-none [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-neutral-400 [&::-webkit-slider-thumb]:bg-neutral-800 [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:transition-all [&::-webkit-slider-thumb]:shadow-none dark:[&::-webkit-slider-thumb]:border-neutral-400 dark:[&::-webkit-slider-thumb]:bg-white [&::-moz-range-thumb]:h-3 [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border [&::-moz-range-thumb]:border-neutral-400 [&::-moz-range-thumb]:bg-neutral-800 [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:transition-all [&::-moz-range-thumb]:shadow-none dark:[&::-moz-range-thumb]:border-neutral-400 dark:[&::-moz-range-thumb]:bg-white hover:[&::-webkit-slider-thumb]:scale-110 hover:[&::-moz-range-thumb]:scale-110"
+                                            className="relative h-[1px] w-full appearance-none bg-neutral-300 dark:bg-neutral-600 cursor-pointer touch-none [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-0 [&::-webkit-slider-thumb]:bg-neutral-800 dark:[&::-webkit-slider-thumb]:bg-white [&::-moz-range-thumb]:h-3 [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-neutral-800 dark:[&::-moz-range-thumb]:bg-white"
                                         />
                                     </div>
                                 </div>
@@ -285,4 +323,4 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     )
 }
 
-export default BrewingNoteForm 
+export default BrewingNoteForm
