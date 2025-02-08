@@ -27,21 +27,44 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen }) => {
     const [notes, setNotes] = useState<BrewingNote[]>([])
     const [editingNote, setEditingNote] = useState<BrewingNote | null>(null)
 
+    // 添加本地存储变化监听
     useEffect(() => {
-        if (isOpen) {
-            const savedNotes = JSON.parse(
-                localStorage.getItem('brewingNotes') || '[]'
-            )
-            console.log('Loaded notes:', savedNotes)
-            setNotes(savedNotes.sort((a: BrewingNote, b: BrewingNote) => b.timestamp - a.timestamp))
+        const loadNotes = () => {
+            try {
+                const savedNotes = JSON.parse(localStorage.getItem('brewingNotes') || '[]')
+                setNotes(savedNotes.sort((a: BrewingNote, b: BrewingNote) => b.timestamp - a.timestamp))
+            } catch (error) {
+                console.error('Error loading notes:', error)
+                setNotes([])
+            }
         }
+
+        // 初始加载
+        if (isOpen) {
+            loadNotes()
+        }
+
+        // 监听其他标签页的存储变化
+        const handleStorageChange = (e: StorageEvent) => {
+            if (e.key === 'brewingNotes') {
+                loadNotes()
+            }
+        }
+
+        window.addEventListener('storage', handleStorageChange)
+        return () => window.removeEventListener('storage', handleStorageChange)
     }, [isOpen])
 
     const handleDelete = (noteId: string) => {
         if (window.confirm('确定要删除这条笔记吗？')) {
-            const updatedNotes = notes.filter(note => note.id !== noteId)
-            localStorage.setItem('brewingNotes', JSON.stringify(updatedNotes))
-            setNotes(updatedNotes)
+            try {
+                const updatedNotes = notes.filter(note => note.id !== noteId)
+                localStorage.setItem('brewingNotes', JSON.stringify(updatedNotes))
+                setNotes(updatedNotes)
+            } catch (error) {
+                console.error('Error deleting note:', error)
+                alert('删除笔记时出错，请重试')
+            }
         }
     }
 
@@ -75,13 +98,11 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen }) => {
         const updatedNotes = notes.map(note =>
             note.id === editingNote.id
                 ? {
-                    ...updatedData,
-                    id: note.id,
-                    timestamp: note.timestamp,
-                    equipment: editingNote.equipment,
-                    method: editingNote.method,
-                    params: editingNote.params,
-                    totalTime: editingNote.totalTime,
+                    ...note,
+                    coffeeBeanInfo: updatedData.coffeeBeanInfo,
+                    rating: updatedData.rating,
+                    taste: updatedData.taste,
+                    notes: updatedData.notes,
                 }
                 : note
         )
@@ -269,4 +290,4 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen }) => {
     )
 }
 
-export default BrewingHistory 
+export default BrewingHistory

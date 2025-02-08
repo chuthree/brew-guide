@@ -446,6 +446,39 @@ const PourOverRecipes = () => {
         }
     }, [showComplete])
 
+    // 添加数据迁移和版本控制
+    useEffect(() => {
+        try {
+            // 检查本地存储版本
+            const storageVersion = localStorage.getItem('brewingNotesVersion')
+            const currentVersion = '1.0' // 当前数据版本
+
+            if (!storageVersion) {
+                // 首次使用或旧版本，初始化版本信息
+                localStorage.setItem('brewingNotesVersion', currentVersion)
+            }
+
+            // 确保 brewingNotes 存在且格式正确
+            const notes = localStorage.getItem('brewingNotes')
+            if (notes) {
+                try {
+                    JSON.parse(notes)
+                } catch (e) {
+                    // 如果数据格式错误，初始化为空数组
+                    localStorage.setItem('brewingNotes', '[]')
+                }
+            } else {
+                localStorage.setItem('brewingNotes', '[]')
+            }
+
+            // 检查是否有笔记
+            const hasExistingNotes = JSON.parse(localStorage.getItem('brewingNotes') || '[]').length > 0
+            setHasNotes(hasExistingNotes)
+        } catch (error) {
+            console.error('Error initializing storage:', error)
+        }
+    }, [])
+
     const handleEquipmentSelect = useCallback((equipment: string) => {
         setSelectedEquipment(equipment)
         setSelectedMethod(null)
@@ -616,8 +649,24 @@ const PourOverRecipes = () => {
         }))
     }
 
+    // 修改保存笔记的处理函数
     const handleSaveNote = (data: any) => {
-        // Implementation of handleSaveNote function
+        try {
+            const notes = JSON.parse(localStorage.getItem('brewingNotes') || '[]')
+            const newNote = {
+                ...data,
+                id: Date.now().toString(),
+                timestamp: Date.now(),
+            }
+            const updatedNotes = [newNote, ...notes]
+            localStorage.setItem('brewingNotes', JSON.stringify(updatedNotes))
+            setHasNotes(true)
+            setActiveTab('注水')
+            setShowComplete(false)
+        } catch (error) {
+            console.error('Error saving note:', error)
+            alert('保存笔记时出错，请重试')
+        }
     }
 
     return (
@@ -640,7 +689,7 @@ const PourOverRecipes = () => {
                             <div className="text-[10px] tracking-widest text-neutral-400 sm:text-xs dark:text-neutral-500">
                                 POUR OVER COFFEE GUIDE{' '}
                                 <span className="ml-2 text-[8px] text-neutral-300 dark:text-neutral-600">
-                                    BETA v1.9.5
+                                    BETA v1.9.6
                                 </span>
 
                             </div>
@@ -976,18 +1025,7 @@ const PourOverRecipes = () => {
                                     id="brewingNoteForm"
                                     isOpen={true}
                                     onClose={() => setActiveTab('注水')}
-                                    onSave={(data) => {
-                                        const notes = JSON.parse(localStorage.getItem('brewingNotes') || '[]')
-                                        const newNote = {
-                                            ...data,
-                                            id: Date.now().toString(),
-                                            timestamp: Date.now(),
-                                        }
-                                        localStorage.setItem('brewingNotes', JSON.stringify([newNote, ...notes]))
-                                        setActiveTab('注水')
-                                        setShowComplete(false)
-                                        setHasNotes(true)
-                                    }}
+                                    onSave={handleSaveNote}
                                     initialData={{
                                         equipment: selectedEquipment,
                                         method: currentBrewingMethod?.name,
