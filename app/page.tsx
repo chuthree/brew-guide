@@ -262,9 +262,9 @@ const StageItem = ({
                     </h3>
                     {activeTab === '注水' && selectedMethod && (
                         <div className="flex items-baseline gap-2 text-[10px] text-neutral-400 dark:text-neutral-500">
-                            <span>{step.items[0]}</span>
-                            <span>·</span>
                             <span>{formatTime(selectedMethod.params.stages[index].time, true)}</span>
+                            <span>·</span>
+                            <span>{step.items[0]}</span>
                         </div>
                     )}
                 </div>
@@ -338,21 +338,25 @@ const PourOverRecipes = () => {
                     type: methodType,
                     selectedBrand,
                     steps: methodType === 'common'
-                        ? commonMethods[selectedEquipment as keyof typeof commonMethods].map((method) => ({
-                            title: method.name,
-                            items: [
-                                `咖啡粉 ${method.params.coffee} | 水量 ${method.params.water}`,
-                                `水温 ${method.params.temp} | 研磨度 ${method.params.grindSize}`,
-                            ],
-                            note: '',
-                        }))
+                        ? commonMethods[selectedEquipment as keyof typeof commonMethods].map((method) => {
+                            // 计算总时长（获取最后一个stage的time）
+                            const totalTime = method.params.stages[method.params.stages.length - 1].time
+                            return {
+                                title: method.name,
+                                items: [
+                                    `水粉比 ${method.params.ratio}`,
+                                    `总时长 ${formatTime(totalTime, true)}`,
+                                    `研磨度 ${method.params.grindSize}`,
+                                ],
+                                note: '',
+                            }
+                        })
                         : selectedBrand
                             ? selectedBrand.beans.map((bean) => ({
                                 title: bean.name,
                                 items: [
                                     bean.description,
                                     `烘焙度：${bean.roastLevel}`,
-                                    // `推荐参数：${bean.method.params.coffee} | ${bean.method.params.water} | ${bean.method.params.temp}`,
                                 ],
                                 note: '',
                             }))
