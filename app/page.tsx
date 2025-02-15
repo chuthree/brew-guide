@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import BrewingTimer from '@/components/BrewingTimer'
-import { brewingMethods as commonMethods, equipmentList, brandCoffees, type Method, type Stage, type Brand, type CoffeeBean } from '@/lib/config'
+import { brewingMethods as commonMethods, equipmentList, brandCoffees, APP_VERSION, type Method, type Stage, type Brand, type CoffeeBean } from '@/lib/config'
 import BrewingHistory from '@/components/BrewingHistory'
 import BrewingNoteForm from '@/components/BrewingNoteForm'
 
@@ -455,7 +455,7 @@ const PourOverRecipes = () => {
         try {
             // 检查本地存储版本
             const storageVersion = localStorage.getItem('brewingNotesVersion')
-            const currentVersion = '1.0' // 当前数据版本
+            const currentVersion = APP_VERSION // 当前数据版本
 
             if (!storageVersion) {
                 // 首次使用或旧版本，初始化版本信息
@@ -545,7 +545,6 @@ const PourOverRecipes = () => {
 
         const currentCoffee = extractNumber(editableParams.coffee)
         const currentRatioNumber = extractRatioNumber(editableParams.ratio)
-        const currentWater = extractNumber(editableParams.water)
 
         let newParams = { ...editableParams }
         const parsedValue = parseFloat(value)
@@ -690,18 +689,13 @@ const PourOverRecipes = () => {
                     <div className="flex  w-full items-center justify-between">
 
                         <div>
-                            <div className="text-[10px] tracking-widest text-neutral-400 sm:text-xs dark:text-neutral-500">
-                                POUR OVER COFFEE GUIDE{' '}
-                                <span className="ml-2 text-[8px] text-neutral-300 dark:text-neutral-600">
-                                    BETA v1.9.6
-                                </span>
 
-                            </div>
                             <h1 className="mt-2 text-xl font-light tracking-wide sm:text-2xl">
                                 手冲咖啡冲煮指南
+                                <span className="ml-2 text-[8px] text-neutral-300 dark:text-neutral-600">
+                                    BETA v{APP_VERSION}
+                                </span>
                             </h1>
-                            <div>
-                            </div>
                         </div>
                     </div>
 

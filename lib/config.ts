@@ -1,3 +1,6 @@
+// App Version
+export const APP_VERSION = "1.9.6";
+
 // Types
 export interface Stage {
 	time: number;
