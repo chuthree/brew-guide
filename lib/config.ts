@@ -1,5 +1,5 @@
 // App Version
-export const APP_VERSION = "1.9.6";
+export const APP_VERSION = "1.9.7";
 
 // Types
 export interface Stage {
@@ -94,26 +94,6 @@ export const equipmentList: Equipment[] = [
 // Brewing Methods Data
 export const brewingMethods: BrewingMethods = {
 	V60: [
-		// {
-		// 	name: "test",
-		// 	params: {
-		// 		coffee: "1g",
-		// 		water: "1g",
-		// 		ratio: "1:1",
-		// 		grindSize: "中细（白砂糖颗粒）",
-		// 		temp: "92°C",
-		// 		videoUrl: "",
-		// 		stages: [
-		// 			{
-		// 				time: 1,
-		// 				pourTime: 1,
-		// 				label: "1",
-		// 				water: "1g",
-		// 				detail: "中心向外画硬币大小螺旋",
-		// 			},
-		// 		],
-		// 	},
-		// },
 		{
 			name: "一刀流(萃取稳定)",
 			params: {
@@ -169,7 +149,7 @@ export const brewingMethods: BrewingMethods = {
 						time: 90,
 						pourTime: 40,
 						label: "中心注水",
-						water: "240g",
+						water: "225g",
 						detail: "壶嘴压低快速注入",
 					},
 				],
