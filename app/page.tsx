@@ -673,17 +673,13 @@ const PourOverRecipes = () => {
     }
 
     return (
-        <div className="mx-auto flex min-h-screen max-w-[500px] flex-col bg-neutral-50 px-8 py-6 font-mono text-neutral-800 sm:px-12 sm:py-8 dark:bg-neutral-900 dark:text-neutral-100">
-            {/* Title section */}
+        <div className="flex h-full flex-col overflow-hidden mx-auto max-w-[500px] font-mono text-neutral-800 dark:text-neutral-100">
+            {/* Header section */}
             <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{
-                    opacity: isTimerRunning && !showComplete ? 0.3 : 1,
-                    y: 0,
-                    height: isTimerRunning && !showComplete ? "60px" : "auto"
-                }}
-                transition={{ duration: 0.6, ease: 'easeOut' }}
-                className="mb-6 border-b border-neutral-200 overflow-hidden sm:mb-16 dark:border-neutral-800"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.6 }}
+                className="relative mb-6 border-b mx-6 mt-3 border-neutral-200 dark:border-neutral-800"
             >
                 <div className={`space-y-4 transition-all duration-500 ${isTimerRunning && !showComplete ? 'opacity-30' : ''}`}>
                     <div className="flex  w-full items-center justify-between">
@@ -831,7 +827,7 @@ const PourOverRecipes = () => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.6, delay: 0.3 }}
-                className="relative flex flex-1 flex-col pb-6"
+                className="relative flex flex-1 flex-col overflow-hidden px-6 sm:px-8"
             >
                 {/* Navigation */}
                 <motion.div
@@ -994,7 +990,7 @@ const PourOverRecipes = () => {
                 </motion.div>
 
                 {/* Content display */}
-                <div className="relative flex-1 overflow-y-auto pb-[200px] sm:pb-[180px]">
+                <div className="relative flex-1 overflow-y-auto pb-[200px] sm:pb-[180px] h-full">
                     <AnimatePresence mode="wait">
                         {showHistory ? (
                             <motion.div
@@ -1111,12 +1107,14 @@ const PourOverRecipes = () => {
                             exit={{ opacity: 0 }}
                             transition={{ duration: 0.2 }}
                             style={{
-                                position: 'absolute',
+                                position: 'fixed',
                                 left: 0,
                                 right: 0,
                                 bottom: 0,
+                                zIndex: 50,
                                 willChange: "opacity"
                             }}
+                            className="max-w-[500px] mx-auto"
                         >
                             <BrewingTimer
                                 currentBrewingMethod={currentBrewingMethod}
@@ -1139,7 +1137,7 @@ const PourOverRecipes = () => {
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -20 }}
                             transition={{ duration: 0.3 }}
-                            className="mb-6 flex items-center space-x-4"
+                            className="mb-8 flex items-center space-x-4"
                         >
                             <motion.button
                                 onClick={() => {

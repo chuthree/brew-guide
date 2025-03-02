@@ -14,7 +14,21 @@
   }
 }
 
+html,
 body {
   color: var(--foreground);
   background: var(--background);
+  height: 100%;
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+  touch-action: manipulation;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 允许内部容器滚动 */
+.overflow-y-auto {
+  -webkit-overflow-scrolling: touch;
+  overflow-y: auto;
+  height: 100%;
 }

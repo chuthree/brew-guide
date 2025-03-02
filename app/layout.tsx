@@ -87,14 +87,16 @@ export default function RootLayout({
         <meta name="theme-color" content="#fafafa" media="(prefers-color-scheme: light)" />
         <meta name="theme-color" content="#171717" media="(prefers-color-scheme: dark)" />
       </head>
-      <body className="bg-neutral-50 dark:bg-neutral-900">
+      <body className="bg-neutral-50 dark:bg-neutral-900 fixed inset-0 overflow-hidden">
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <div className="h-full w-full overflow-hidden">
+            {children}
+          </div>
           <PWAPrompt />
         </ThemeProvider>
         <script
