@@ -1,7 +1,9 @@
 import { Metadata, Viewport } from 'next'
 import { ThemeProvider } from 'next-themes'
 import PWAPrompt from '@/components/PWAPrompt'
+import { Analytics } from '@vercel/analytics/next';
 import './globals.css'
+
 
 // SEO constants
 export const metadata: Metadata = {
@@ -120,6 +122,7 @@ export default function RootLayout({
             `,
           }}
         />
+        <Analytics />
       </body>
     </html>
   )
