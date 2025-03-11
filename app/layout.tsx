@@ -129,9 +129,17 @@ export default function RootLayout({
                 });
 
                 // 添加页面可见性变化监听
+                let lastUpdateCheck = 0;
+                const updateCooldown = 10 * 60 * 1000; // 10分钟冷却时间
+                
                 document.addEventListener('visibilitychange', () => {
                   if (document.visibilityState === 'visible') {
-                    navigator.serviceWorker.ready.then(registration => registration.update());
+                    const now = Date.now();
+                    // 只有当距离上次检查超过冷却时间时才检查更新
+                    if (now - lastUpdateCheck > updateCooldown) {
+                      lastUpdateCheck = now;
+                      navigator.serviceWorker.ready.then(registration => registration.update());
+                    }
                   }
                 });
               }

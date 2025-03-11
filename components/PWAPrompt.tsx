@@ -35,11 +35,30 @@ export default function PWAPrompt() {
 
         window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
 
+        // 存储当前会话标识，用于判断是否是新会话
+        const sessionId = Date.now().toString();
+        if (!sessionStorage.getItem('pwa_session_id')) {
+            sessionStorage.setItem('pwa_session_id', sessionId);
+        }
+        const isNewSession = sessionStorage.getItem('pwa_session_id') === sessionId;
+
         // 监听 PWA 更新
         if ('serviceWorker' in navigator) {
+            // 使用一个标志来跟踪是否已经显示过更新提示
+            let hasShownUpdatePrompt = false;
+
             navigator.serviceWorker.addEventListener('controllerchange', () => {
-                setShowUpdatePrompt(true)
-            })
+                // 只有在页面刷新前未显示过更新提示时才显示
+                // 并且不是首次加载（新会话）
+                if (!hasShownUpdatePrompt && !isNewSession) {
+                    hasShownUpdatePrompt = true;
+                    // 检查是否是由于新 service worker 激活导致的 controllerchange
+                    // 而不是首次加载
+                    setTimeout(() => {
+                        setShowUpdatePrompt(true);
+                    }, 1000); // 延迟一秒，避免与初始加载混淆
+                }
+            });
         }
 
         return () => {
