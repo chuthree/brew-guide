@@ -97,7 +97,6 @@ const withPWA = require('next-pwa')({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     reactStrictMode: true,
-    swcMinify: true,
     async headers() {
         return [
             {
@@ -118,9 +117,6 @@ const nextConfig = {
                 ]
             }
         ]
-    },
-    experimental: {
-        instrumentationHook: true
     }
 }
 

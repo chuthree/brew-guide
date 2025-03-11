@@ -1,6 +1,6 @@
 {
 	"name": "brew-guide",
-	"version": "0.1.0",
+	"version": "2.0.1",
 	"private": true,
 	"scripts": {
 		"dev": "next dev",
@@ -12,11 +12,11 @@
 		"@vercel/analytics": "^1.5.0",
 		"framer-motion": "^11.18.2",
 		"geist": "^1.2.1",
-		"next": "^14.2.23",
+		"next": "^15.2.1",
 		"next-pwa": "^5.6.0",
 		"next-themes": "^0.4.4",
-		"react": "18.2.0",
-		"react-dom": "18.2.0"
+		"react": "^18.2.0",
+		"react-dom": "^18.2.0"
 	},
 	"devDependencies": {
 		"@types/node": "^20.11.16",
@@ -24,7 +24,7 @@
 		"@types/react-dom": "^18.2.18",
 		"autoprefixer": "^10.4.17",
 		"eslint": "^8.56.0",
-		"eslint-config-next": "14.1.0",
+		"eslint-config-next": "15.2.1",
 		"postcss": "^8.4.35",
 		"tailwindcss": "^3.4.1",
 		"typescript": "^5.3.3"

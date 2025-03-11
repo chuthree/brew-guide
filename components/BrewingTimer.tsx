@@ -92,7 +92,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                     const loadAudio = async () => {
                         try {
                             const fetchAudio = async (url: string): Promise<AudioBuffer> => {
-                                const response = await fetch(url)
+                                const response = await fetch(url, { cache: 'force-cache' })
                                 const arrayBuffer = await response.arrayBuffer()
                                 if (audioContext.current) {
                                     return await audioContext.current.decodeAudioData(arrayBuffer)
