@@ -3,6 +3,7 @@ const withPWA = require('next-pwa')({
     register: true,
     skipWaiting: true,
     disable: process.env.NODE_ENV === 'development',
+    buildExcludes: [/app-build-manifest\.json$/],
     runtimeCaching: [
         {
             urlPattern: /^https?.*/,
@@ -97,6 +98,30 @@ const withPWA = require('next-pwa')({
 const nextConfig = {
     reactStrictMode: true,
     swcMinify: true,
+    async headers() {
+        return [
+            {
+                source: '/(.*)',
+                headers: [
+                    {
+                        key: 'Permissions-Policy',
+                        value: 'camera=(), microphone=(), geolocation=(), interest-cohort=()'
+                    },
+                    {
+                        key: 'Cache-Control',
+                        value: 'public, max-age=3600, must-revalidate'
+                    },
+                    {
+                        key: 'X-Content-Type-Options',
+                        value: 'nosniff'
+                    }
+                ]
+            }
+        ]
+    },
+    experimental: {
+        instrumentationHook: true
+    }
 }
 
 module.exports = withPWA(nextConfig) 

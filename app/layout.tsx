@@ -107,15 +107,31 @@ export default function RootLayout({
               if ('serviceWorker' in navigator) {
                 window.addEventListener('load', async function() {
                   try {
-                    const registration = await navigator.serviceWorker.register('/sw.js');
+                    const registration = await navigator.serviceWorker.register('/sw.js', {
+                      scope: '/',
+                      updateViaCache: 'none'
+                    });
                     console.log('ServiceWorker registration successful');
 
-                    // 检查更新
-                    setInterval(() => {
-                      registration.update();
-                    }, 1000 * 60 * 60); // 每小时检查一次更新
+                    // 优化更新检查间隔
+                    let updateInterval = 60 * 60 * 1000; // 1小时
+                    const checkForUpdate = async () => {
+                      try {
+                        await registration.update();
+                      } catch (err) {
+                        console.warn('ServiceWorker update check failed:', err);
+                      }
+                    };
+                    setInterval(checkForUpdate, updateInterval);
                   } catch (err) {
                     console.warn('ServiceWorker registration failed: ', err);
+                  }
+                });
+
+                // 添加页面可见性变化监听
+                document.addEventListener('visibilitychange', () => {
+                  if (document.visibilityState === 'visible') {
+                    navigator.serviceWorker.ready.then(registration => registration.update());
                   }
                 });
               }

@@ -24,13 +24,16 @@ export default function PWAPrompt() {
         }
 
         // 对于非 iOS 设备，监听 beforeinstallprompt 事件
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault()
+        const handleBeforeInstallPrompt = (e: any) => {
+            // 不要阻止默认行为，这样浏览器可以显示安装横幅
+            // e.preventDefault() 这行被移除了
             setDeferredPrompt(e)
             if (!isInstalled) {
                 setShowInstallPrompt(true)
             }
-        })
+        }
+
+        window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
 
         // 监听 PWA 更新
         if ('serviceWorker' in navigator) {
@@ -40,7 +43,7 @@ export default function PWAPrompt() {
         }
 
         return () => {
-            window.removeEventListener('beforeinstallprompt', () => { })
+            window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
         }
     }, [])
 
