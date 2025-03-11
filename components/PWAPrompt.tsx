@@ -83,7 +83,7 @@ export default function PWAPrompt() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 20 }}
                     transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
-                    className="fixed bottom-6 left-6 right-6 max-w-[404px] mx-auto"
+                    className="fixed bottom-6 mx-auto z-50 left-6 right-6 max-w-[500px] "
                 >
                     {showInstallPrompt && (
                         <div className="flex flex-col space-y-6 border-l border-neutral-200 pl-6 bg-neutral-50/80 backdrop-blur-sm dark:bg-neutral-900/80 dark:border-neutral-800">

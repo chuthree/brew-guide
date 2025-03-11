@@ -87,7 +87,14 @@ export const equipmentList: Equipment[] = [
 			"螺旋导流纹路均匀萃取，展现明亮酸质与细腻风味",
 		],
 	},
-
+	{
+		id: "CleverDripper",
+		name: "聪明杯",
+		description: [
+			"结合浸泡与滤纸过滤的冲煮器具，操作简单",
+			"可控制萃取时间，平衡风味，适合各种烘焙度的咖啡",
+		],
+	},
 	// 可以在这里添加更多器具
 ];
 
@@ -199,6 +206,56 @@ export const brewingMethods: BrewingMethods = {
 						label: "酸度控制 (3/3)",
 						water: "300g",
 						detail: "中心向外螺旋注水",
+					},
+				],
+			},
+		},
+	],
+	CleverDripper: [
+		{
+			name: "万能冲煮方案",
+			params: {
+				coffee: "20g",
+				water: "300g",
+				ratio: "1:15",
+				grindSize: "C40 MK4 28格",
+				temp: "90 - 75°C",
+				videoUrl: "",
+				stages: [
+					{
+						time: 40,
+						pourTime: 20,
+						label: "绕圈注水[关阀]",
+						water: "50g",
+						detail: "关闭阀门，注水50g",
+					},
+					{
+						time: 90,
+						pourTime: 15,
+						label: "绕圈注水[开阀]",
+						water: "120g",
+						detail: "打开阀门，注水至120g",
+					},
+					{
+						time: 130,
+						pourTime: 15,
+						label: "绕圈注水[开阀]",
+						water: "200g",
+						detail: "保持开阀，注水至200g",
+					},
+					{
+						time: 165,
+						pourTime: 15,
+						label: "降温绕圈注水[关阀]",
+						water: "300g",
+						detail: "关闭阀门，降温至70-80°C，注水至300g",
+					},
+					{
+						time: 210,
+						pourTime: 1,
+						label: "等待滴滤完成[开阀]",
+						water: "300g",
+						detail: "打开阀门等等滴滤完成",
 					},
 				],
 			},
@@ -359,4 +416,7 @@ export const brandCoffees: Brand[] = [
 	// 可以在这里添加更多品牌
 ];
 // 将现有的通用方案重命名为 commonMethods
-export const commonMethods = brewingMethods;
+export const commonMethods: BrewingMethods = {
+	V60: brewingMethods.V60,
+	CleverDripper: brewingMethods.CleverDripper,
+};

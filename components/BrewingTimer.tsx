@@ -1,32 +1,3 @@
-/**
- * Sound Design for Brewing Timer
- * 
- * Sound Files:
- * - start.mp3: 提示音，用于倒计时和阶段预告
- *   - 倒计时3秒时每秒播放一次
- *   - 每个阶段开始前2秒和1秒各播放一次
- * 
- * - ding.mp3: 开始音，用于标记正式开始
- *   - 倒计时结束时播放一次
- *   - 每个新阶段开始时播放一次（除最后阶段）
- * 
- * - correct.mp3: 完成音
- *   - 整个冲煮过程完成时播放一次
- * 
- * Sound Behaviors:
- * 1. 首次开始或重置后开始：
- *    start(3) -> start(2) -> start(1) -> ding(开始)
- * 
- * 2. 阶段变化（除最后阶段）：
- *    start(前2秒) -> start(前1秒) -> ding(开始)
- * 
- * 3. 暂停后继续：
- *    无音效，直接继续
- * 
- * 4. 最后阶段结束：
- *    correct(完成)
- */
-
 'use client'
 
 import React, { useState, useEffect, useCallback, useRef } from 'react'
@@ -89,114 +60,125 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     const [currentWaterAmount, setCurrentWaterAmount] = useState(0)
     const [countdownTime, setCountdownTime] = useState<number | null>(null)
     const [hasStartedOnce, setHasStartedOnce] = useState(false)
-    const audioRefs = useRef<{
-        start: HTMLAudioElement | null
-        ding: HTMLAudioElement | null
-        correct: HTMLAudioElement | null
-        isPlaying: {
-            start: boolean
-            ding: boolean
-            correct: boolean
-        }
+    const audioContext = useRef<AudioContext | null>(null)
+    const audioBuffers = useRef<{
+        start: AudioBuffer | null;
+        ding: AudioBuffer | null;
+        correct: AudioBuffer | null;
     }>({
         start: null,
         ding: null,
-        correct: null,
-        isPlaying: {
-            start: false,
-            ding: false,
-            correct: false
-        }
+        correct: null
     })
+    const lastPlayedTime = useRef<{
+        start: number;
+        ding: number;
+        correct: number;
+    }>({
+        start: 0,
+        ding: 0,
+        correct: 0
+    })
+    const audioLoaded = useRef<boolean>(false)
     const methodStagesRef = useRef(currentBrewingMethod?.params.stages || [])
     const [showNoteForm, setShowNoteForm] = useState(false)
 
     useEffect(() => {
-        // Initialize all audio elements
-        const startAudio = new Audio('/sounds/start.mp3')
-        const dingAudio = new Audio('/sounds/ding.mp3')
-        const correctAudio = new Audio('/sounds/correct.mp3')
+        const initAudioSystem = () => {
+            try {
+                if (typeof AudioContext !== 'undefined') {
+                    audioContext.current = new AudioContext()
 
-        // Set volume for all audio elements
-        startAudio.volume = 0.5
-        dingAudio.volume = 0.5
-        correctAudio.volume = 0.5
+                    const loadAudio = async () => {
+                        try {
+                            const fetchAudio = async (url: string): Promise<AudioBuffer> => {
+                                const response = await fetch(url)
+                                const arrayBuffer = await response.arrayBuffer()
+                                if (audioContext.current) {
+                                    return await audioContext.current.decodeAudioData(arrayBuffer)
+                                }
+                                throw new Error('AudioContext not initialized')
+                            }
 
-        // Set preload for all audio elements
-        startAudio.preload = 'auto'
-        dingAudio.preload = 'auto'
-        correctAudio.preload = 'auto'
+                            const [startBuffer, dingBuffer, correctBuffer] = await Promise.all([
+                                fetchAudio('/sounds/start.mp3'),
+                                fetchAudio('/sounds/ding.mp3'),
+                                fetchAudio('/sounds/correct.mp3')
+                            ])
 
-        // Add ended event listeners to reset playing state
-        startAudio.addEventListener('ended', () => {
-            audioRefs.current.isPlaying.start = false
-        })
-        dingAudio.addEventListener('ended', () => {
-            audioRefs.current.isPlaying.ding = false
-        })
-        correctAudio.addEventListener('ended', () => {
-            audioRefs.current.isPlaying.correct = false
-        })
+                            audioBuffers.current = {
+                                start: startBuffer,
+                                ding: dingBuffer,
+                                correct: correctBuffer
+                            }
 
-        audioRefs.current = {
-            start: startAudio,
-            ding: dingAudio,
-            correct: correctAudio,
-            isPlaying: {
-                start: false,
-                ding: false,
-                correct: false
-            }
-        }
+                            audioLoaded.current = true
+                            console.log('音频文件加载完成')
+                        } catch (error) {
+                            console.error('加载音频文件失败:', error)
+                        }
+                    }
 
-        // Add event listeners for audio initialization on user interaction
-        const initAudio = () => {
-            audioRefs.current = {
-                start: startAudio,
-                ding: dingAudio,
-                correct: correctAudio,
-                isPlaying: {
-                    start: false,
-                    ding: false,
-                    correct: false
+                    loadAudio()
+                } else {
+                    console.warn('浏览器不支持 Web Audio API，将使用备用方案')
                 }
+            } catch (error) {
+                console.error('初始化音频系统失败:', error)
             }
-            document.removeEventListener('touchstart', initAudio)
-            document.removeEventListener('click', initAudio)
         }
-        document.addEventListener('touchstart', initAudio)
-        document.addEventListener('click', initAudio)
+
+        const handleUserInteraction = () => {
+            if (audioContext.current?.state === 'suspended') {
+                audioContext.current.resume()
+            }
+            document.removeEventListener('click', handleUserInteraction)
+            document.removeEventListener('touchstart', handleUserInteraction)
+        }
+
+        document.addEventListener('click', handleUserInteraction)
+        document.addEventListener('touchstart', handleUserInteraction)
+
+        initAudioSystem()
 
         return () => {
-            document.removeEventListener('touchstart', initAudio)
-            document.removeEventListener('click', initAudio)
+            document.removeEventListener('click', handleUserInteraction)
+            document.removeEventListener('touchstart', handleUserInteraction)
+            audioContext.current?.close()
         }
     }, [])
 
     const playSound = useCallback((type: 'start' | 'ding' | 'correct') => {
-        const audio = audioRefs.current[type]
-        if (!audio || audioRefs.current.isPlaying[type]) return
+        if (!audioContext.current || !audioBuffers.current[type]) {
+            console.warn(`无法播放音效 ${type}: 音频系统未初始化或音频文件未加载`)
+            return
+        }
 
-        audioRefs.current.isPlaying[type] = true
-        const playPromise = audio.play()
-        if (playPromise !== undefined) {
-            playPromise
-                .then(() => {
-                    if (audio) {
-                        audio.currentTime = 0
-                        // Add a small delay before allowing the same sound to play again
-                        setTimeout(() => {
-                            audioRefs.current.isPlaying[type] = false
-                        }, 100)
-                    }
-                })
-                .catch((e) => {
-                    console.log('Sound play failed:', e)
-                    if (audio) {
-                        audio.currentTime = 0
-                        audioRefs.current.isPlaying[type] = false
-                    }
-                })
+        if (audioContext.current.state === 'suspended') {
+            audioContext.current.resume()
+        }
+
+        const now = Date.now()
+
+        if (now - lastPlayedTime.current[type] < 300) {
+            return
+        }
+
+        try {
+            const source = audioContext.current.createBufferSource()
+            source.buffer = audioBuffers.current[type]
+
+            const gainNode = audioContext.current.createGain()
+            gainNode.gain.value = 0.5
+
+            source.connect(gainNode)
+            gainNode.connect(audioContext.current.destination)
+
+            source.start(0)
+
+            lastPlayedTime.current[type] = now
+        } catch (error) {
+            console.error(`播放音效 ${type} 失败:`, error)
         }
     }, [])
 
@@ -240,7 +222,6 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         return currentTargetWater
     }, [currentTime, currentBrewingMethod, getCurrentStage])
 
-    // Update methodStagesRef when currentBrewingMethod changes
     useEffect(() => {
         methodStagesRef.current = currentBrewingMethod?.params.stages || []
     }, [currentBrewingMethod])
@@ -252,7 +233,6 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         }
     }, [timerId])
 
-    // Cleanup on unmount
     useEffect(() => {
         return () => {
             if (timerId) {
@@ -278,19 +258,28 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                     const newTime = time + 1
                     const lastStageIndex = stages.length - 1
 
-                    stages.forEach((stage, index) => {
+                    let shouldPlayDing = false
+                    let shouldPlayStart = false
+
+                    for (let index = 0; index < stages.length; index++) {
                         const prevStageTime = index > 0 ? stages[index - 1].time : 0
-                        // Play ding sound at stage change (except for the last stage)
-                        if (newTime === prevStageTime) {
-                            playSound('ding')
-                        }
-                        // Play start sound at both 2 seconds and 1 second before next stage
-                        // For all stages including the last one
                         const nextStageTime = stages[index].time
-                        if (newTime === nextStageTime - 2 || newTime === nextStageTime - 1) {
-                            playSound('start')
+
+                        if (newTime === prevStageTime) {
+                            shouldPlayDing = true
                         }
-                    })
+
+                        if (newTime === nextStageTime - 2 || newTime === nextStageTime - 1) {
+                            shouldPlayStart = true
+                        }
+                    }
+
+                    if (shouldPlayDing) {
+                        playSound('ding')
+                    }
+                    if (shouldPlayStart) {
+                        playSound('start')
+                    }
 
                     if (newTime > stages[lastStageIndex].time) {
                         clearInterval(id)
@@ -306,11 +295,9 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         }
     }, [currentBrewingMethod, playSound, handleComplete])
 
-    // Update countdown timer logic
     useEffect(() => {
         if (countdownTime !== null && isRunning) {
             if (countdownTime > 0) {
-                // Play start sound for each countdown second
                 playSound('start')
 
                 const countdownId = setInterval(() => {
@@ -322,7 +309,6 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                 return () => clearInterval(countdownId)
             } else {
                 setCountdownTime(null)
-                // Play ding sound when countdown ends and main timer starts
                 playSound('ding')
                 startMainTimer()
             }
@@ -351,14 +337,11 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
             if (!hasStartedOnce || currentTime === 0) {
                 setCountdownTime(3)
                 setHasStartedOnce(true)
-                // Play start sound immediately when countdown starts
-                playSound('start')
             } else {
-                // Just resume the timer without any sound
                 startMainTimer()
             }
         }
-    }, [isRunning, currentBrewingMethod, hasStartedOnce, startMainTimer, playSound, currentTime])
+    }, [isRunning, currentBrewingMethod, hasStartedOnce, startMainTimer, currentTime])
 
     const pauseTimer = useCallback(() => {
         clearTimerAndStates()
@@ -424,14 +407,12 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 20 }}
                 transition={{ duration: 0.3, ease: "easeOut" }}
-                className="sticky bottom-0 mb-8 mx-6 border-t border-neutral-200 bg-neutral-50 pt-6 dark:border-neutral-800 dark:bg-neutral-900"
+                className="sticky bottom-0 mb-9 mx-6 border-t border-neutral-200 bg-neutral-50 pt-6 dark:border-neutral-800 dark:bg-neutral-900"
                 style={{
                     willChange: "transform, opacity"
                 }}
             >
-                {/* Current Stage Info */}
                 <div className="mb-4 space-y-3">
-                    {/* Current Stage */}
                     <motion.div
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
@@ -474,7 +455,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                                     目标水量
                                 </div>
                                 <motion.div
-                                    key={`water-${currentWaterAmount}`}
+                                    key={`water-${getCurrentStage()}`}
                                     initial={{ opacity: 0.8 }}
                                     animate={{ opacity: 1 }}
                                     transition={{ duration: 0.2 }}
@@ -482,14 +463,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                                 >
                                     {currentBrewingMethod.params.stages[getCurrentStage()]?.water ? (
                                         <div className="flex items-baseline justify-end">
-                                            <motion.span
-                                                key={currentWaterAmount}
-                                                initial={{ scale: 1.1 }}
-                                                animate={{ scale: 1 }}
-                                                transition={{ duration: 0.2 }}
-                                            >
-                                                {currentWaterAmount}
-                                            </motion.span>
+                                            <span>{currentWaterAmount}</span>
                                             <span className="mx-0.5 text-neutral-300 dark:text-neutral-600">/</span>
                                             <span>{currentBrewingMethod.params.stages[getCurrentStage()].water}</span>
                                         </div>
@@ -502,7 +476,6 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                         </div>
                     </motion.div>
 
-                    {/* Next Stage */}
                     <AnimatePresence mode="wait">
                         {getCurrentStage() < currentBrewingMethod.params.stages.length - 1 && (
                             <motion.div
@@ -556,9 +529,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                     </AnimatePresence>
                 </div>
 
-                {/* Progress bar */}
                 <div className="relative mb-4">
-                    {/* Stage separators */}
                     {currentBrewingMethod.params.stages.map((stage) => {
                         const totalTime = currentBrewingMethod.params.stages[currentBrewingMethod.params.stages.length - 1].time
                         const percentage = (stage.time / totalTime) * 100
@@ -571,14 +542,10 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                         )
                     })}
 
-                    {/* Progress bar background with waiting pattern */}
                     <div className="h-1 w-full overflow-hidden bg-neutral-200/50 dark:bg-neutral-800">
-                        {/* Waiting time pattern */}
                         {currentBrewingMethod.params.stages.map((stage, index) => {
                             const totalTime = currentBrewingMethod.params.stages[currentBrewingMethod.params.stages.length - 1].time
                             const prevStageTime = index > 0 ? currentBrewingMethod.params.stages[index - 1].time : 0
-                            const stageStartPercentage = (prevStageTime / totalTime) * 100
-                            const stageWidth = ((stage.time - prevStageTime) / totalTime) * 100
                             const pourTime = stage.pourTime || Math.floor((stage.time - prevStageTime) / 3)
                             const waitingStartPercentage = ((prevStageTime + pourTime) / totalTime) * 100
                             const waitingWidth = ((stage.time - (prevStageTime + pourTime)) / totalTime) * 100
@@ -601,7 +568,6 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                                 />
                             ) : null
                         })}
-                        {/* Progress overlay */}
                         <motion.div
                             className="h-full bg-neutral-800 dark:bg-neutral-100"
                             initial={{ width: 0 }}
@@ -612,7 +578,6 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                         />
                     </div>
 
-                    {/* Stage time indicators */}
                     <div className="relative mt-1 h-4 w-full">
                         {currentBrewingMethod.params.stages.map((stage) => {
                             const totalTime = currentBrewingMethod.params.stages[currentBrewingMethod.params.stages.length - 1].time
@@ -633,68 +598,74 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                     </div>
                 </div>
 
-                {/* Timer controls */}
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4 sm:space-x-6">
-                        <div className="relative text-2xl font-light tracking-widest text-neutral-800 sm:text-3xl dark:text-neutral-100">
-                            <AnimatePresence mode="wait">
-                                {countdownTime !== null ? (
-                                    <motion.div
-                                        key="countdown"
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: -10 }}
-                                        transition={{ duration: 0.2 }}
-                                        className="absolute left-0 min-w-[5ch] text-left"
-                                    >
-                                        {countdownTime}
-                                    </motion.div>
-                                ) : (
-                                    <motion.div
-                                        key="timer"
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: -10 }}
-                                        transition={{ duration: 0.2 }}
-                                        className="absolute left-0 min-w-[5ch] text-left"
-                                    >
-                                        {formatTime(currentTime)}
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                            <div className="invisible min-w-[5ch] text-left">
-                                {formatTime(currentTime)}
+                <div className="flex items-center justify-between mt-6">
+                    <div className="flex items-start space-x-8 sm:space-x-12">
+                        <div className="flex flex-col items-start">
+                            <span className="text-xs text-neutral-400 dark:text-neutral-500 mb-1">时间</span>
+                            <div className="relative text-2xl font-light tracking-widest text-neutral-800 sm:text-3xl dark:text-neutral-100">
+                                <AnimatePresence mode="wait">
+                                    {countdownTime !== null ? (
+                                        <motion.div
+                                            key="countdown"
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: -10 }}
+                                            transition={{ duration: 0.2 }}
+                                            className="min-w-[5ch] text-left"
+                                        >
+                                            {countdownTime}
+                                        </motion.div>
+                                    ) : (
+                                        <motion.div
+                                            key="timer"
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: -10 }}
+                                            transition={{ duration: 0.2 }}
+                                            className="min-w-[5ch] text-left"
+                                        >
+                                            {formatTime(currentTime)}
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
                             </div>
                         </div>
-                        <div className="flex items-center space-x-3 text-[10px] tracking-widest text-neutral-400 sm:space-x-4 sm:text-xs dark:text-neutral-500">
-                            <button
-                                onClick={isRunning ? pauseTimer : startTimer}
-                                className={`transition-colors ${showComplete
-                                    ? 'cursor-not-allowed text-neutral-300 dark:text-neutral-700'
-                                    : 'hover:text-neutral-800 dark:hover:text-neutral-300'
-                                    }`}
-                                disabled={showComplete}
-                            >
-                                [ {isRunning ? '暂停' : '开始'} ]
-                            </button>
-                            <button
-                                onClick={resetTimer}
-                                className="transition-colors hover:text-neutral-800 dark:hover:text-neutral-300"
-                            >
-                                [ 重置 ]
-                            </button>
+
+                        <div className="flex flex-col items-start">
+                            <span className="text-xs text-neutral-400 dark:text-neutral-500 mb-1">水量</span>
+                            <div className="text-2xl font-light tracking-widest text-neutral-800 sm:text-3xl dark:text-neutral-100">
+                                <div className="min-w-[5ch] text-left">
+                                    <span>{currentWaterAmount}</span>
+                                    <span className="text-sm text-neutral-400 dark:text-neutral-500 ml-1">ml</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div className="text-[10px] tracking-widest text-neutral-400 sm:text-xs dark:text-neutral-500">
-                        {showComplete && (
-                            <motion.div
-                                initial={{ opacity: 0, x: 20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, x: -20 }}
-                            >
-                                COMPLETE
-                            </motion.div>
-                        )}
+
+                    <div className="flex items-center space-x-4 sm:space-x-6">
+                        <button
+                            onClick={isRunning ? pauseTimer : startTimer}
+                            className="w-14 h-14 flex items-center justify-center rounded-full bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400"
+                            disabled={showComplete}
+                        >
+                            {isRunning ?
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25v13.5m-7.5-13.5v13.5" />
+                                </svg>
+                                :
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" />
+                                </svg>
+                            }
+                        </button>
+                        <button
+                            onClick={resetTimer}
+                            className="w-14 h-14 flex items-center justify-center rounded-full bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                            </svg>
+                        </button>
                     </div>
                 </div>
             </motion.div>

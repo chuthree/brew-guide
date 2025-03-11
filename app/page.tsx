@@ -226,7 +226,7 @@ const StageItem = ({
     currentStage,
     stageProgress,
 }: {
-    step: any
+    step: Step
     index: number
     onClick: () => void
     activeTab: string
@@ -332,41 +332,53 @@ const PourOverRecipes = () => {
 
     useEffect(() => {
         if (selectedEquipment) {
-            setContent((prev) => ({
-                ...prev,
-                方案: {
-                    type: methodType,
-                    selectedBrand,
-                    steps: methodType === 'common'
-                        ? commonMethods[selectedEquipment as keyof typeof commonMethods].map((method) => {
-                            // 计算总时长（获取最后一个stage的time）
-                            const totalTime = method.params.stages[method.params.stages.length - 1].time
-                            return {
-                                title: method.name,
-                                items: [
-                                    `水粉比 ${method.params.ratio}`,
-                                    `总时长 ${formatTime(totalTime, true)}`,
-                                    `研磨度 ${method.params.grindSize}`,
-                                ],
-                                note: '',
-                            }
-                        })
-                        : selectedBrand
-                            ? selectedBrand.beans.map((bean) => ({
-                                title: bean.name,
-                                items: [
-                                    bean.description,
-                                    `烘焙度：${bean.roastLevel}`,
-                                ],
-                                note: '',
-                            }))
-                            : brandCoffees.map((brand) => ({
-                                title: brand.name,
-                                items: [brand.description],
-                                note: '',
-                            })),
-                },
-            }))
+            // 如果是聪明杯，强制使用通用方案
+            if (selectedEquipment === 'CleverDripper' && methodType !== 'common') {
+                setMethodType('common');
+                setSelectedBrand(null);
+                setSelectedBean(null);
+            }
+
+            setContent((prev) => {
+                // 检查是否存在对应的冲煮方法
+                const methodsForEquipment = commonMethods[selectedEquipment as keyof typeof commonMethods] || [];
+
+                return {
+                    ...prev,
+                    方案: {
+                        type: methodType,
+                        selectedBrand,
+                        steps: methodType === 'common'
+                            ? methodsForEquipment.map((method) => {
+                                // 计算总时长（获取最后一个stage的time）
+                                const totalTime = method.params.stages[method.params.stages.length - 1].time
+                                return {
+                                    title: method.name,
+                                    items: [
+                                        `水粉比 ${method.params.ratio}`,
+                                        `总时长 ${formatTime(totalTime, true)}`,
+                                        `研磨度 ${method.params.grindSize}`,
+                                    ],
+                                    note: '',
+                                }
+                            })
+                            : selectedBrand
+                                ? selectedBrand.beans.map((bean) => ({
+                                    title: bean.name,
+                                    items: [
+                                        bean.description,
+                                        `烘焙度：${bean.roastLevel}`,
+                                    ],
+                                    note: '',
+                                }))
+                                : brandCoffees.map((brand) => ({
+                                    title: brand.name,
+                                    items: [brand.description],
+                                    note: '',
+                                })),
+                    },
+                }
+            })
         }
     }, [selectedEquipment, methodType, selectedBrand])
 
@@ -390,19 +402,16 @@ const PourOverRecipes = () => {
 
     useEffect(() => {
         if (selectedEquipment) {
-            setParameterInfo((prev) => ({
-                equipment: selectedEquipment,
+            // 根据设备ID找到对应的设备名称
+            const equipmentName = equipmentList.find(e => e.id === selectedEquipment)?.name || selectedEquipment;
+
+            setParameterInfo(() => ({
+                equipment: equipmentName,
                 method: null,
                 params: null,
             }))
-        } else {
-            setParameterInfo({
-                equipment: null,
-                method: null,
-                params: null,
-            })
         }
-    }, [selectedEquipment])
+    }, [selectedEquipment, equipmentList])
 
     useEffect(() => {
         if (selectedMethod) {
@@ -433,10 +442,8 @@ const PourOverRecipes = () => {
                 water: selectedMethod.params.water,
                 ratio: selectedMethod.params.ratio,
             })
-        } else {
-            setEditableParams(null)
         }
-    }, [selectedMethod])
+    }, [selectedMethod, selectedEquipment])
 
     useEffect(() => {
         if (showComplete) {
@@ -467,7 +474,7 @@ const PourOverRecipes = () => {
             if (notes) {
                 try {
                     JSON.parse(notes)
-                } catch (e) {
+                } catch (_) {
                     // 如果数据格式错误，初始化为空数组
                     localStorage.setItem('brewingNotes', '[]')
                 }
@@ -483,11 +490,21 @@ const PourOverRecipes = () => {
         }
     }, [])
 
-    const handleEquipmentSelect = useCallback((equipment: string) => {
-        setSelectedEquipment(equipment)
-        setSelectedMethod(null)
-        setActiveTab('方案')
-    }, [])
+    const handleEquipmentSelect = useCallback((equipmentName: string) => {
+        // 根据设备名称找到对应的设备id
+        const equipment = equipmentList.find(e => e.name === equipmentName)?.id || equipmentName;
+        setSelectedEquipment(equipment);
+        setSelectedMethod(null);
+
+        // 如果选择的是聪明杯，确保方案类型设置为通用方案
+        if (equipment === 'CleverDripper') {
+            setMethodType('common');
+            setSelectedBrand(null);
+            setSelectedBean(null);
+        }
+
+        setActiveTab('方案');
+    }, []);
 
     const handleMethodSelect = useCallback(
         (methodIndex: number) => {
@@ -652,8 +669,28 @@ const PourOverRecipes = () => {
         }))
     }
 
+    // 定义笔记数据的接口
+    interface BrewingNoteData {
+        id: string;
+        timestamp: number;
+        coffeeBeanInfo: {
+            name: string;
+            roastLevel: string;
+            roastDate: string;
+        };
+        rating: number;
+        taste: {
+            acidity: number;
+            sweetness: number;
+            bitterness: number;
+            body: number;
+        };
+        notes: string;
+        [key: string]: any; // 允许其他可能的字段
+    }
+
     // 修改保存笔记的处理函数
-    const handleSaveNote = (data: any) => {
+    const handleSaveNote = (data: BrewingNoteData) => {
         try {
             const notes = JSON.parse(localStorage.getItem('brewingNotes') || '[]')
             const newNote = {
@@ -681,7 +718,7 @@ const PourOverRecipes = () => {
                 transition={{ duration: 0.6 }}
                 className="relative mb-6 border-b mx-6 mt-3 border-neutral-200 dark:border-neutral-800"
             >
-                <div className={`space-y-4 transition-all duration-500 ${isTimerRunning && !showComplete ? 'opacity-30' : ''}`}>
+                <div className={`space-y-4 transition-all duration-500 ${isTimerRunning && !showComplete ? 'opacity-10' : ''}`}>
                     <div className="flex  w-full items-center justify-between">
 
                         <div>
@@ -833,9 +870,7 @@ const PourOverRecipes = () => {
                 <motion.div
                     className="mb-6 flex items-center justify-between sm:mb-8"
                     animate={{
-                        opacity: isTimerRunning && !showComplete ? 0.4 : 1,
-                        height: isTimerRunning && !showComplete ? "40px" : "auto",
-                        marginBottom: isTimerRunning && !showComplete ? "1rem" : "2rem"
+                        opacity: isTimerRunning && !showComplete ? 0.3 : 1
                     }}
                     transition={{ duration: 0.5 }}
                 >
@@ -867,7 +902,6 @@ const PourOverRecipes = () => {
                             <motion.div
                                 key={tab}
                                 animate={{
-                                    scale: isTimerRunning ? 0.9 : 1,
                                     opacity: isTimerRunning && activeTab !== tab ? 0.3 : 1
                                 }}
                                 transition={{ duration: 0.4 }}
@@ -978,8 +1012,7 @@ const PourOverRecipes = () => {
                         <motion.button
                             onClick={handleBack}
                             animate={{
-                                opacity: isTimerRunning ? 0 : 1,
-                                x: isTimerRunning ? 20 : 0
+                                opacity: isTimerRunning ? 0 : 1
                             }}
                             transition={{ duration: 0.4 }}
                             className="text-[10px] tracking-widest text-neutral-400 transition-colors hover:text-neutral-800 sm:text-xs dark:text-neutral-500 dark:hover:text-neutral-300"
@@ -1021,7 +1054,7 @@ const PourOverRecipes = () => {
                                     onClose={() => setActiveTab('注水')}
                                     onSave={handleSaveNote}
                                     initialData={{
-                                        equipment: selectedEquipment,
+                                        equipment: equipmentList.find(e => e.id === selectedEquipment)?.name || selectedEquipment,
                                         method: currentBrewingMethod?.name,
                                         params: currentBrewingMethod?.params,
                                         totalTime: currentTime,
@@ -1131,13 +1164,13 @@ const PourOverRecipes = () => {
 
                 {/* 方案类型导航栏 */}
                 <AnimatePresence mode="wait">
-                    {activeTab === '方案' && !showHistory && (
+                    {activeTab === '方案' && !showHistory && selectedEquipment !== 'CleverDripper' && (
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -20 }}
                             transition={{ duration: 0.3 }}
-                            className="mb-8 flex items-center space-x-4"
+                            className="mb-9 flex items-center space-x-4"
                         >
                             <motion.button
                                 onClick={() => {
