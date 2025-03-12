@@ -1023,7 +1023,7 @@ const PourOverRecipes = () => {
                 </motion.div>
 
                 {/* Content display */}
-                <div className="relative flex-1 overflow-y-auto pb-[200px] sm:pb-[180px] h-full">
+                <div className="overflow-y-auto h-full">
                     <AnimatePresence mode="wait">
                         {showHistory ? (
                             <motion.div
@@ -1032,7 +1032,6 @@ const PourOverRecipes = () => {
                                 animate={{ opacity: 1, x: 0 }}
                                 exit={{ opacity: 0, x: 20 }}
                                 transition={{ duration: 0.3 }}
-                                className="absolute inset-0"
                             >
                                 <BrewingHistory
                                     isOpen={showHistory}
@@ -1046,7 +1045,6 @@ const PourOverRecipes = () => {
                                 animate={{ opacity: 1, x: 0 }}
                                 exit={{ opacity: 0, x: -20 }}
                                 transition={{ duration: 0.3 }}
-                                className="absolute inset-0"
                             >
                                 <BrewingNoteForm
                                     id="brewingNoteForm"
@@ -1073,7 +1071,7 @@ const PourOverRecipes = () => {
                                 animate={{ opacity: 1, x: 0 }}
                                 exit={{ opacity: 0, x: -20 }}
                                 transition={{ duration: 0.3 }}
-                                className="absolute inset-0 space-y-6 pr-2"
+                                className="space-y-6 pr-2"
                             >
                                 <AnimatePresence mode="wait">
                                     {activeTab === '方案' ? (
@@ -1140,14 +1138,9 @@ const PourOverRecipes = () => {
                             exit={{ opacity: 0 }}
                             transition={{ duration: 0.2 }}
                             style={{
-                                position: 'fixed',
-                                left: 0,
-                                right: 0,
-                                bottom: 0,
-                                zIndex: 50,
                                 willChange: "opacity"
                             }}
-                            className="max-w-[500px] mx-auto"
+                            className=""
                         >
                             <BrewingTimer
                                 currentBrewingMethod={currentBrewingMethod}
@@ -1170,7 +1163,7 @@ const PourOverRecipes = () => {
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -20 }}
                             transition={{ duration: 0.3 }}
-                            className="mb-9 flex items-center space-x-4"
+                            className="absolute bottom-0 bg-neutral-50 dark:bg-neutral-900 pt-1 pb-9 w-full flex items-center space-x-4"
                         >
                             <motion.button
                                 onClick={() => {
