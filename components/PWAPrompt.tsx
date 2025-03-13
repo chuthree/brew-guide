@@ -3,20 +3,33 @@
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 
+// 定义类型以替代 any
+interface BeforeInstallPromptEvent extends Event {
+    prompt: () => Promise<void>;
+    userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
+
+// 扩展 Window 接口以包含 beforeinstallprompt 事件
+declare global {
+    interface WindowEventMap {
+        beforeinstallprompt: BeforeInstallPromptEvent;
+    }
+}
+
 export default function PWAPrompt() {
     const [showInstallPrompt, setShowInstallPrompt] = useState(false)
     const [showUpdatePrompt, setShowUpdatePrompt] = useState(false)
-    const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
+    const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
     const [isIOS, setIsIOS] = useState(false)
 
     useEffect(() => {
         // 检测是否是 iOS 设备
-        const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream
+        const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as Window & { MSStream?: unknown }).MSStream
         setIsIOS(isIOSDevice)
 
         // 检测是否已经安装 PWA
         const isInstalled = window.matchMedia('(display-mode: standalone)').matches ||
-            (window.navigator as any).standalone === true
+            (window.navigator as Navigator & { standalone?: boolean }).standalone === true
 
         // 如果是 iOS 设备且没有安装，显示 iOS 特定的安装提示
         if (isIOSDevice && !isInstalled) {
@@ -24,7 +37,7 @@ export default function PWAPrompt() {
         }
 
         // 对于非 iOS 设备，监听 beforeinstallprompt 事件
-        const handleBeforeInstallPrompt = (e: any) => {
+        const handleBeforeInstallPrompt = (e: BeforeInstallPromptEvent) => {
             // 不要阻止默认行为，这样浏览器可以显示安装横幅
             // e.preventDefault() 这行被移除了
             setDeferredPrompt(e)

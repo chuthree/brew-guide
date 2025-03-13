@@ -1,16 +1,20 @@
 {
 	"name": "brew-guide",
-	"version": "2.0.3",
+	"version": "2.0.4",
 	"private": true,
 	"scripts": {
 		"dev": "next dev",
 		"build": "next build",
-		"start": "next start",
-		"lint": "next lint"
+		"start": "node .next/standalone/server.js",
+		"start:next": "next start",
+		"lint": "next lint",
+		"update-version": "node update-version.js",
+		"version": "npm run update-version && git add ."
 	},
 	"dependencies": {
 		"@tailwindcss/postcss": "^4.0.13",
 		"@vercel/analytics": "^1.5.0",
+		"critters": "^0.0.23",
 		"framer-motion": "^12.5.0",
 		"geist": "^1.3.1",
 		"next": "^15.2.2",

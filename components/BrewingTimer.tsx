@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import BrewingNoteForm from '@/components/BrewingNoteForm'
+import type { BrewingNoteData } from '@/app/page'
 
 interface Stage {
     time: number
@@ -315,23 +316,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         }
     }, [countdownTime, isRunning, playSound, startMainTimer])
 
-    const handleSaveNote = useCallback((note: {
-        equipment: string;
-        method: string;
-        params: {
-            coffee: string;
-            water: string;
-            ratio: string;
-            grindSize: string;
-            temp: string;
-            videoUrl: string;
-            stages: Stage[];
-        };
-        totalTime: number;
-        rating?: number;
-        notes?: string;
-        taste?: string;
-    }) => {
+    const handleSaveNote = useCallback((note: BrewingNoteData) => {
         const notes = JSON.parse(localStorage.getItem('brewingNotes') || '[]')
         const newNote = {
             ...note,

@@ -109,6 +109,13 @@ const withPWA = nextPWA({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     reactStrictMode: true,
+    output: 'standalone',
+    experimental: {
+        // 启用 CSS 优化
+        optimizeCss: true,
+    },
+    // 增加静态页面生成超时时间
+    staticPageGenerationTimeout: 180,
     async headers() {
         return [
             {

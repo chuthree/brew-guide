@@ -1,10 +1,13 @@
 'use client'
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import BrewingTimer from '@/components/BrewingTimer'
+import dynamic from 'next/dynamic'
 import { brewingMethods as commonMethods, equipmentList, brandCoffees, APP_VERSION, type Method, type Stage, type Brand, type CoffeeBean } from '@/lib/config'
-import BrewingHistory from '@/components/BrewingHistory'
-import BrewingNoteForm from '@/components/BrewingNoteForm'
+
+// 动态导入客户端组件
+const BrewingTimer = dynamic(() => import('@/components/BrewingTimer'), { ssr: false })
+const BrewingHistory = dynamic(() => import('@/components/BrewingHistory'), { ssr: false })
+const BrewingNoteForm = dynamic(() => import('@/components/BrewingNoteForm'), { ssr: false })
 
 const tabs = ['器具', '方案', '注水', '记录'] as const
 type TabType = typeof tabs[number]
@@ -287,13 +290,23 @@ const StageItem = ({
 )
 
 // 修改 BrewingNoteData 接口，避免使用 any
-interface BrewingNoteData {
+export interface BrewingNoteData {
     id: string;
     timestamp: number;
+    equipment?: string;
+    method?: string;
+    params?: {
+        coffee: string;
+        water: string;
+        ratio: string;
+        grindSize: string;
+        temp: string;
+    };
+    totalTime?: number;
     coffeeBeanInfo: {
         name: string;
         roastLevel: string;
-        roastDate: string;
+        roastDate?: string;
     };
     rating: number;
     taste: {
@@ -1038,7 +1051,7 @@ const PourOverRecipes = () => {
                                     onClose={() => setActiveTab('注水')}
                                     onSave={handleSaveNote}
                                     initialData={{
-                                        equipment: equipmentList.find(e => e.id === selectedEquipment)?.name || selectedEquipment,
+                                        equipment: selectedEquipment ? (equipmentList.find(e => e.id === selectedEquipment)?.name || selectedEquipment) : undefined,
                                         method: currentBrewingMethod?.name,
                                         params: currentBrewingMethod?.params,
                                         totalTime: currentTime,

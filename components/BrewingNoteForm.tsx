@@ -1,22 +1,17 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
+// import { motion } from 'framer-motion'
 
 // Helper function to format time
-const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60)
-    const secs = seconds % 60
-    return `${mins}:${secs.toString().padStart(2, '0')}`
-}
+// const formatTime = (seconds: number) => {
+//     const mins = Math.floor(seconds / 60)
+//     const secs = seconds % 60
+//     return `${mins}:${secs.toString().padStart(2, '0')}`
+// }
 
-interface BrewingNoteFormProps {
-    id?: string;
-    isOpen: boolean;
-    onClose: () => void;
-    onSave: (data: any) => void;
-    initialData: any;
-}
+// 从 page.tsx 导入 BrewingNoteData 类型
+import type { BrewingNoteData } from '@/app/page'
 
 interface TasteRatings {
     acidity: number;
@@ -34,6 +29,14 @@ interface FormData {
     rating: number;
     taste: TasteRatings;
     notes: string;
+}
+
+interface BrewingNoteFormProps {
+    id?: string;
+    isOpen: boolean;
+    onClose: () => void;
+    onSave: (data: BrewingNoteData) => void;
+    initialData: Partial<BrewingNoteData>;
 }
 
 const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
@@ -96,7 +99,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         try {
             const existingNotes = JSON.parse(localStorage.getItem('brewingNotes') || '[]')
             const updatedNotes = id
-                ? existingNotes.map((note: any) => (note.id === id ? noteData : note))
+                ? existingNotes.map((note: BrewingNoteData) => (note.id === id ? noteData : note))
                 : [noteData, ...existingNotes]
 
             localStorage.setItem('brewingNotes', JSON.stringify(updatedNotes))
@@ -108,8 +111,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         }
     }
 
-    const [isDragging, setIsDragging] = useState(false)
-    const [activeTaste, setActiveTaste] = useState<string | null>(null)
+    const [isDragging, /*setIsDragging*/] = useState(false)
     const [currentValue, setCurrentValue] = useState<number | null>(null)
 
     const handleTouchStart = (key: string, value: number) => (e: React.TouchEvent) => {

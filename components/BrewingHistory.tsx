@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { BrewingNote } from '@/lib/config'
+import type { BrewingNoteData } from '@/app/page'
 import BrewingNoteForm from './BrewingNoteForm'
 
 interface BrewingHistoryProps {
@@ -92,7 +93,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen }) => {
         setEditingNote(formattedNote)
     }
 
-    const handleSaveEdit = (updatedData: BrewingNote) => {
+    const handleSaveEdit = (updatedData: BrewingNoteData) => {
         if (!editingNote) return
 
         const updatedNotes = notes.map(note =>
@@ -120,7 +121,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen }) => {
                 isOpen={true}
                 onClose={() => setEditingNote(null)}
                 onSave={handleSaveEdit}
-                initialData={editingNote}
+                initialData={editingNote as unknown as Partial<BrewingNoteData>}
             />
         )
     }
