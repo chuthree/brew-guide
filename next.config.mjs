@@ -1,9 +1,21 @@
-const withPWA = require('next-pwa')({
+// 检查当前环境
+const isDev = process.env.NODE_ENV === 'development';
+
+// 配置 PWA
+import nextPWA from 'next-pwa';
+
+const withPWA = nextPWA({
     dest: 'public',
-    register: true,
+    register: !isDev,
     skipWaiting: true,
-    disable: process.env.NODE_ENV === 'development',
-    buildExcludes: [/app-build-manifest\.json$/],
+    disable: isDev,
+    buildExcludes: [
+        /app-build-manifest\.json$/,
+        /_buildManifest\.js$/,
+        /_ssgManifest\.js$/,
+        /middleware-manifest\.json$/,
+        /middleware-runtime\.js$/
+    ],
     runtimeCaching: [
         {
             urlPattern: /^https?.*/,
@@ -92,7 +104,7 @@ const withPWA = require('next-pwa')({
             }
         }
     ]
-})
+});
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -118,6 +130,6 @@ const nextConfig = {
             }
         ]
     }
-}
+};
 
-module.exports = withPWA(nextConfig) 
+export default withPWA(nextConfig); 

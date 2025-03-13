@@ -43,7 +43,7 @@ interface BrewingTimerProps {
     onTimerComplete?: () => void
     onStatusChange?: (status: { isRunning: boolean }) => void
     onStageChange?: (status: { currentStage: number, progress: number }) => void
-    onComplete?: (isComplete: boolean) => void
+    onComplete?: (isComplete: boolean, totalTime?: number) => void
 }
 
 const BrewingTimer: React.FC<BrewingTimerProps> = ({
@@ -245,10 +245,10 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         clearTimerAndStates()
         setIsRunning(false)
         setShowComplete(true)
-        onComplete?.(true)
+        onComplete?.(true, currentTime)
         onTimerComplete?.()
         playSound('correct')
-    }, [clearTimerAndStates, onComplete, onTimerComplete, playSound])
+    }, [clearTimerAndStates, onComplete, onTimerComplete, playSound, currentTime])
 
     const startMainTimer = useCallback(() => {
         if (currentBrewingMethod) {
@@ -315,7 +315,23 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         }
     }, [countdownTime, isRunning, playSound, startMainTimer])
 
-    const handleSaveNote = useCallback((note: any) => {
+    const handleSaveNote = useCallback((note: {
+        equipment: string;
+        method: string;
+        params: {
+            coffee: string;
+            water: string;
+            ratio: string;
+            grindSize: string;
+            temp: string;
+            videoUrl: string;
+            stages: Stage[];
+        };
+        totalTime: number;
+        rating?: number;
+        notes?: string;
+        taste?: string;
+    }) => {
         const notes = JSON.parse(localStorage.getItem('brewingNotes') || '[]')
         const newNote = {
             ...note,
@@ -613,7 +629,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                                             transition={{ duration: 0.2 }}
                                             className="min-w-[5ch] text-left"
                                         >
-                                            {countdownTime}
+                                            {`0:${countdownTime.toString().padStart(2, '0')}`}
                                         </motion.div>
                                     ) : (
                                         <motion.div

@@ -286,6 +286,26 @@ const StageItem = ({
     </motion.div>
 )
 
+// 修改 BrewingNoteData 接口，避免使用 any
+interface BrewingNoteData {
+    id: string;
+    timestamp: number;
+    coffeeBeanInfo: {
+        name: string;
+        roastLevel: string;
+        roastDate: string;
+    };
+    rating: number;
+    taste: {
+        acidity: number;
+        sweetness: number;
+        bitterness: number;
+        body: number;
+    };
+    notes: string;
+    [key: string]: unknown; // 使用 unknown 代替 any
+}
+
 // 手冲咖啡配方页面组件
 const PourOverRecipes = () => {
     const [activeTab, setActiveTab] = useState<TabType>('器具')
@@ -306,23 +326,9 @@ const PourOverRecipes = () => {
     const [hasNotes, setHasNotes] = useState(false)
     const [showComplete, setShowComplete] = useState(false)
     const [currentTime, setCurrentTime] = useState(0)
-    const [isOffline, setIsOffline] = useState(!navigator.onLine)
     const [methodType, setMethodType] = useState<'common' | 'brand'>('common')
     const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null)
     const [selectedBean, setSelectedBean] = useState<CoffeeBean | null>(null)
-
-    useEffect(() => {
-        const handleOnline = () => setIsOffline(false)
-        const handleOffline = () => setIsOffline(true)
-
-        window.addEventListener('online', handleOnline)
-        window.addEventListener('offline', handleOffline)
-
-        return () => {
-            window.removeEventListener('online', handleOnline)
-            window.removeEventListener('offline', handleOffline)
-        }
-    }, [])
 
     // 检查是否有笔记
     useEffect(() => {
@@ -411,7 +417,7 @@ const PourOverRecipes = () => {
                 params: null,
             }))
         }
-    }, [selectedEquipment, equipmentList])
+    }, [selectedEquipment])
 
     useEffect(() => {
         if (selectedMethod) {
@@ -433,7 +439,7 @@ const PourOverRecipes = () => {
                 params: null,
             }))
         }
-    }, [selectedMethod])
+    }, [selectedMethod, selectedEquipment])
 
     useEffect(() => {
         if (selectedMethod) {
@@ -457,7 +463,7 @@ const PourOverRecipes = () => {
         }
     }, [showComplete])
 
-    // 添加数据迁移和版本控制
+    // 修改 catch 块中的未使用变量
     useEffect(() => {
         try {
             // 检查本地存储版本
@@ -474,7 +480,7 @@ const PourOverRecipes = () => {
             if (notes) {
                 try {
                     JSON.parse(notes)
-                } catch (_) {
+                } catch {
                     // 如果数据格式错误，初始化为空数组
                     localStorage.setItem('brewingNotes', '[]')
                 }
@@ -667,26 +673,6 @@ const PourOverRecipes = () => {
                 })),
             },
         }))
-    }
-
-    // 定义笔记数据的接口
-    interface BrewingNoteData {
-        id: string;
-        timestamp: number;
-        coffeeBeanInfo: {
-            name: string;
-            roastLevel: string;
-            roastDate: string;
-        };
-        rating: number;
-        taste: {
-            acidity: number;
-            sweetness: number;
-            bitterness: number;
-            body: number;
-        };
-        notes: string;
-        [key: string]: any; // 允许其他可能的字段
     }
 
     // 修改保存笔记的处理函数
@@ -1073,37 +1059,16 @@ const PourOverRecipes = () => {
                                 transition={{ duration: 0.3 }}
                                 className="space-y-6 pr-2"
                             >
-                                <AnimatePresence mode="wait">
-                                    {activeTab === '方案' ? (
-                                        <motion.div
-                                            key={`${methodType}-${selectedBrand?.name || 'none'}`}
-                                            initial={{ opacity: 0, x: 20 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            exit={{ opacity: 0, x: -20 }}
-                                            transition={{ duration: 0.3 }}
-                                            className="space-y-6"
-                                        >
-                                            {content[activeTab as keyof typeof content].steps.map((step, index) => (
-                                                <StageItem
-                                                    key={index}
-                                                    step={step}
-                                                    index={index}
-                                                    onClick={() => {
-                                                        if (activeTab === ('器具' as TabType)) {
-                                                            handleEquipmentSelect(step.title)
-                                                        } else if (activeTab === ('方案' as TabType)) {
-                                                            handleMethodSelect(index)
-                                                        }
-                                                    }}
-                                                    activeTab={activeTab}
-                                                    selectedMethod={selectedMethod}
-                                                    currentStage={currentStage}
-                                                    stageProgress={stageProgress}
-                                                />
-                                            ))}
-                                        </motion.div>
-                                    ) : (
-                                        content[activeTab as keyof typeof content].steps.map((step, index) => (
+                                {activeTab === '方案' ? (
+                                    <motion.div
+                                        key={`${methodType}-${selectedBrand?.name || 'none'}`}
+                                        initial={{ opacity: 0, x: 20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        exit={{ opacity: 0, x: -20 }}
+                                        transition={{ duration: 0.3 }}
+                                        className="space-y-6"
+                                    >
+                                        {content[activeTab as keyof typeof content].steps.map((step, index) => (
                                             <StageItem
                                                 key={index}
                                                 step={step}
@@ -1120,9 +1085,28 @@ const PourOverRecipes = () => {
                                                 currentStage={currentStage}
                                                 stageProgress={stageProgress}
                                             />
-                                        ))
-                                    )}
-                                </AnimatePresence>
+                                        ))}
+                                    </motion.div>
+                                ) : (
+                                    content[activeTab as keyof typeof content].steps.map((step, index) => (
+                                        <StageItem
+                                            key={index}
+                                            step={step}
+                                            index={index}
+                                            onClick={() => {
+                                                if (activeTab === ('器具' as TabType)) {
+                                                    handleEquipmentSelect(step.title)
+                                                } else if (activeTab === ('方案' as TabType)) {
+                                                    handleMethodSelect(index)
+                                                }
+                                            }}
+                                            activeTab={activeTab}
+                                            selectedMethod={selectedMethod}
+                                            currentStage={currentStage}
+                                            stageProgress={stageProgress}
+                                        />
+                                    ))
+                                )}
                             </motion.div>
                         )}
                     </AnimatePresence>
@@ -1149,14 +1133,17 @@ const PourOverRecipes = () => {
                                     setCurrentStage(currentStage)
                                     setStageProgress(progress)
                                 }}
-                                onComplete={(isComplete) => setShowComplete(isComplete)}
+                                onComplete={(isComplete, totalTime) => {
+                                    setShowComplete(isComplete)
+                                    setCurrentTime(totalTime || 0)
+                                }}
                             />
                         </motion.div>
                     )}
                 </AnimatePresence>
 
                 {/* 方案类型导航栏 */}
-                <AnimatePresence mode="wait">
+                <AnimatePresence>
                     {activeTab === '方案' && !showHistory && selectedEquipment !== 'CleverDripper' && (
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}

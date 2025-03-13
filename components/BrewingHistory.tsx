@@ -92,7 +92,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen }) => {
         setEditingNote(formattedNote)
     }
 
-    const handleSaveEdit = (updatedData: any) => {
+    const handleSaveEdit = (updatedData: BrewingNote) => {
         if (!editingNote) return
 
         const updatedNotes = notes.map(note =>

@@ -2,6 +2,7 @@ import { Metadata, Viewport } from 'next'
 import { ThemeProvider } from 'next-themes'
 import PWAPrompt from '@/components/PWAPrompt'
 import { Analytics } from '@vercel/analytics/next';
+import Script from 'next/script'
 import './globals.css'
 
 
@@ -73,6 +74,9 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  // 确定当前环境
+  const isDevelopment = process.env.NODE_ENV === 'development'
+
   return (
     <html lang="zh" suppressHydrationWarning>
       <head>
@@ -88,6 +92,9 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#fafafa" media="(prefers-color-scheme: light)" />
         <meta name="theme-color" content="#171717" media="(prefers-color-scheme: dark)" />
+        {isDevelopment && (
+          <Script src="/sw-dev-unregister.js" strategy="beforeInteractive" />
+        )}
       </head>
       <body className="bg-neutral-50 dark:bg-neutral-900 fixed inset-0 overflow-hidden">
         <ThemeProvider
@@ -101,10 +108,14 @@ export default function RootLayout({
           </div>
           <PWAPrompt />
         </ThemeProvider>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              if ('serviceWorker' in navigator) {
+        <Analytics />
+        <Script id="service-worker-handler" strategy="afterInteractive">
+          {`
+            if ('serviceWorker' in navigator) {
+              const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+              
+              if (!isDev) {
+                // 生产环境 - 注册 Service Worker
                 window.addEventListener('load', async function() {
                   try {
                     const registration = await navigator.serviceWorker.register('/sw.js', {
@@ -123,30 +134,39 @@ export default function RootLayout({
                       }
                     };
                     setInterval(checkForUpdate, updateInterval);
+                    
+                    // 添加页面可见性变化监听
+                    let lastUpdateCheck = 0;
+                    const updateCooldown = 10 * 60 * 1000; // 10分钟冷却时间
+                    
+                    document.addEventListener('visibilitychange', () => {
+                      if (document.visibilityState === 'visible') {
+                        const now = Date.now();
+                        // 只有当距离上次检查超过冷却时间时才检查更新
+                        if (now - lastUpdateCheck > updateCooldown) {
+                          lastUpdateCheck = now;
+                          navigator.serviceWorker.ready.then(registration => registration.update());
+                        }
+                      }
+                    });
                   } catch (err) {
                     console.warn('ServiceWorker registration failed: ', err);
                   }
                 });
-
-                // 添加页面可见性变化监听
-                let lastUpdateCheck = 0;
-                const updateCooldown = 10 * 60 * 1000; // 10分钟冷却时间
-                
-                document.addEventListener('visibilitychange', () => {
-                  if (document.visibilityState === 'visible') {
-                    const now = Date.now();
-                    // 只有当距离上次检查超过冷却时间时才检查更新
-                    if (now - lastUpdateCheck > updateCooldown) {
-                      lastUpdateCheck = now;
-                      navigator.serviceWorker.ready.then(registration => registration.update());
+              } else {
+                // 开发环境 - 卸载 Service Worker
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                    for(let registration of registrations) {
+                      registration.unregister();
+                      console.log('ServiceWorker unregistered in development mode');
                     }
-                  }
+                  });
                 });
               }
-            `,
-          }}
-        />
-        <Analytics />
+            }
+          `}
+        </Script>
       </body>
     </html>
   )
