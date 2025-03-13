@@ -598,7 +598,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                     </div>
                 </div>
 
-                <div className="flex items-center justify-between mt-6">
+                <div className="flex items-center justify-between mt-3">
                     <div className="flex items-start space-x-8 sm:space-x-12">
                         <div className="flex flex-col items-start">
                             <span className="text-xs text-neutral-400 dark:text-neutral-500 mb-1">时间</span>

@@ -126,7 +126,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen }) => {
     }
 
     return (
-        <div className="absolute inset-0 space-y-6 pr-2">
+        <div className=" space-y-6 pr-2">
             {notes.length === 0 ? (
                 <motion.div
                     initial={{ opacity: 0 }}
