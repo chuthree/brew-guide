@@ -170,7 +170,7 @@ export const brewingMethods: BrewingMethods = {
 				ratio: "1:15",
 				grindSize: "中细偏粗",
 				temp: "96°C",
-				videoUrl: "https://youtu.be/OFLaCs99lWY",
+				videoUrl: "https://youtu.be/OFLaCs99lWY?si=aFJ3KtBXZtAZMbtN",
 				stages: [
 					{
 						time: 45,

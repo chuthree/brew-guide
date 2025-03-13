@@ -93,7 +93,12 @@ export default function RootLayout({
         <meta name="theme-color" content="#fafafa" media="(prefers-color-scheme: light)" />
         <meta name="theme-color" content="#171717" media="(prefers-color-scheme: dark)" />
         {isDevelopment && (
-          <Script src="/sw-dev-unregister.js" strategy="beforeInteractive" />
+          <>
+            <meta httpEquiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+            <meta httpEquiv="Pragma" content="no-cache" />
+            <meta httpEquiv="Expires" content="0" />
+            <Script src="/sw-dev-unregister.js" strategy="beforeInteractive" />
+          </>
         )}
       </head>
       <body className="bg-neutral-50 dark:bg-neutral-900 fixed inset-0 overflow-hidden">
@@ -124,11 +129,27 @@ export default function RootLayout({
                     });
                     console.log('ServiceWorker registration successful');
 
+                    // 检查并应用更新
+                    registration.addEventListener('updatefound', () => {
+                      const newWorker = registration.installing;
+                      console.log('Service Worker update found!');
+                      
+                      newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                          // 新的Service Worker已安装，可以通知用户刷新
+                          if (confirm('新版本可用！点击确定刷新页面以应用更新。')) {
+                            window.location.reload();
+                          }
+                        }
+                      });
+                    });
+                    
                     // 优化更新检查间隔
-                    let updateInterval = 60 * 60 * 1000; // 1小时
+                    let updateInterval = 30 * 60 * 1000; // 30分钟
                     const checkForUpdate = async () => {
                       try {
                         await registration.update();
+                        console.log('Service Worker update check completed');
                       } catch (err) {
                         console.warn('ServiceWorker update check failed:', err);
                       }
@@ -137,7 +158,7 @@ export default function RootLayout({
                     
                     // 添加页面可见性变化监听
                     let lastUpdateCheck = 0;
-                    const updateCooldown = 10 * 60 * 1000; // 10分钟冷却时间
+                    const updateCooldown = 5 * 60 * 1000; // 5分钟冷却时间
                     
                     document.addEventListener('visibilitychange', () => {
                       if (document.visibilityState === 'visible') {
@@ -145,6 +166,7 @@ export default function RootLayout({
                         // 只有当距离上次检查超过冷却时间时才检查更新
                         if (now - lastUpdateCheck > updateCooldown) {
                           lastUpdateCheck = now;
+                          console.log('Checking for Service Worker updates on page visibility change');
                           navigator.serviceWorker.ready.then(registration => registration.update());
                         }
                       }
@@ -154,14 +176,48 @@ export default function RootLayout({
                   }
                 });
               } else {
-                // 开发环境 - 卸载 Service Worker
+                // 开发环境 - 卸载 Service Worker 并清除缓存
                 window.addEventListener('load', function() {
+                  // 清除所有缓存
+                  if ('caches' in window) {
+                    caches.keys().then(function(cacheNames) {
+                      return Promise.all(
+                        cacheNames.map(function(cacheName) {
+                          console.log('开发环境：删除缓存', cacheName);
+                          return caches.delete(cacheName);
+                        })
+                      );
+                    });
+                  }
+                  
+                  // 卸载所有 Service Worker
                   navigator.serviceWorker.getRegistrations().then(function(registrations) {
                     for(let registration of registrations) {
-                      registration.unregister();
-                      console.log('ServiceWorker unregistered in development mode');
+                      registration.unregister().then(function(success) {
+                        console.log('开发环境：Service Worker 卸载' + (success ? '成功' : '失败'));
+                      });
                     }
                   });
+                  
+                  // 禁用应用缓存
+                  if (window.applicationCache) {
+                    try {
+                      window.applicationCache.swapCache();
+                    } catch (e) {}
+                  }
+                  
+                  // 设置禁用缓存的请求头
+                  const originalFetch = window.fetch;
+                  window.fetch = function(input, init) {
+                    init = init || {};
+                    init.headers = init.headers || {};
+                    init.headers = {
+                      ...init.headers,
+                      'Pragma': 'no-cache',
+                      'Cache-Control': 'no-cache, no-store, must-revalidate'
+                    };
+                    return originalFetch(input, init);
+                  };
                 });
               }
             }
