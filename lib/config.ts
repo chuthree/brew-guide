@@ -8,6 +8,8 @@ export interface Stage {
 	water: string;
 	detail: string;
 	pourTime?: number;
+	pourType?: "center" | "circle";
+	valveStatus?: "open" | "closed";
 }
 
 export interface Method {
@@ -117,6 +119,7 @@ export const brewingMethods: BrewingMethods = {
 						label: "焖蒸",
 						water: "30g",
 						detail: "中心向外画硬币大小螺旋",
+						pourType: "circle",
 					},
 					{
 						time: 120,
@@ -124,6 +127,7 @@ export const brewingMethods: BrewingMethods = {
 						label: "绕圈注水",
 						water: "225g",
 						detail: "保持匀速硬币大小螺旋",
+						pourType: "circle",
 					},
 				],
 			},
@@ -144,6 +148,7 @@ export const brewingMethods: BrewingMethods = {
 						label: "焖蒸",
 						water: "30g",
 						detail: "中心向外画硬币大小螺旋",
+						pourType: "circle",
 					},
 					{
 						time: 50,
@@ -151,6 +156,7 @@ export const brewingMethods: BrewingMethods = {
 						label: "绕圈注水",
 						water: "140g",
 						detail: "保持匀速硬币大小螺旋",
+						pourType: "circle",
 					},
 					{
 						time: 90,
@@ -158,6 +164,7 @@ export const brewingMethods: BrewingMethods = {
 						label: "中心注水",
 						water: "225g",
 						detail: "壶嘴压低快速注入",
+						pourType: "center",
 					},
 				],
 			},
@@ -178,6 +185,7 @@ export const brewingMethods: BrewingMethods = {
 						label: "甜度控制 (1/2)",
 						water: "50g",
 						detail: "中心圆形注水，确保均匀浸润",
+						pourType: "circle",
 					},
 					{
 						time: 90,
@@ -185,6 +193,7 @@ export const brewingMethods: BrewingMethods = {
 						label: "甜度控制 (2/2)",
 						water: "120g",
 						detail: "中心圆形注水",
+						pourType: "circle",
 					},
 					{
 						time: 130,
@@ -192,6 +201,7 @@ export const brewingMethods: BrewingMethods = {
 						label: "酸度控制 (1/3)",
 						water: "180g",
 						detail: "中心向外螺旋注水",
+						pourType: "circle",
 					},
 					{
 						time: 165,
@@ -199,6 +209,7 @@ export const brewingMethods: BrewingMethods = {
 						label: "酸度控制 (2/3)",
 						water: "240g",
 						detail: "中心向外螺旋注水",
+						pourType: "circle",
 					},
 					{
 						time: 210,
@@ -206,6 +217,7 @@ export const brewingMethods: BrewingMethods = {
 						label: "酸度控制 (3/3)",
 						water: "300g",
 						detail: "中心向外螺旋注水",
+						pourType: "circle",
 					},
 				],
 			},
@@ -228,6 +240,8 @@ export const brewingMethods: BrewingMethods = {
 						label: "绕圈注水[关阀]",
 						water: "50g",
 						detail: "关闭阀门，注水50g",
+						pourType: "circle",
+						valveStatus: "closed",
 					},
 					{
 						time: 90,
@@ -235,6 +249,8 @@ export const brewingMethods: BrewingMethods = {
 						label: "绕圈注水[开阀]",
 						water: "120g",
 						detail: "打开阀门，注水至120g",
+						pourType: "circle",
+						valveStatus: "open",
 					},
 					{
 						time: 130,
@@ -242,6 +258,8 @@ export const brewingMethods: BrewingMethods = {
 						label: "绕圈注水[开阀]",
 						water: "200g",
 						detail: "保持开阀，注水至200g",
+						pourType: "circle",
+						valveStatus: "open",
 					},
 					{
 						time: 165,
@@ -249,6 +267,8 @@ export const brewingMethods: BrewingMethods = {
 						label: "降温绕圈注水[关阀]",
 						water: "300g",
 						detail: "关闭阀门，降温至70-80°C，注水至300g",
+						pourType: "circle",
+						valveStatus: "closed",
 					},
 					{
 						time: 210,
@@ -256,6 +276,8 @@ export const brewingMethods: BrewingMethods = {
 						label: "等待滴滤完成[开阀]",
 						water: "300g",
 						detail: "打开阀门等等滴滤完成",
+						pourType: "center",
+						valveStatus: "open",
 					},
 				],
 			},
@@ -291,6 +313,7 @@ export const brandCoffees: Brand[] = [
 								label: "焖蒸",
 								water: "40g",
 								detail: "水量更好没过粉层",
+								pourType: "circle",
 							},
 							{
 								time: 55,
@@ -298,6 +321,7 @@ export const brandCoffees: Brand[] = [
 								label: "绕圈注水",
 								water: "180g",
 								detail: "大水流绕圈注水",
+								pourType: "circle",
 							},
 							{
 								time: 75,
@@ -305,6 +329,7 @@ export const brandCoffees: Brand[] = [
 								label: "中心注水",
 								water: "240g",
 								detail: "正常流速中心注水",
+								pourType: "center",
 							},
 						],
 					},
@@ -331,6 +356,7 @@ export const brandCoffees: Brand[] = [
 								label: "焖蒸",
 								water: "40g",
 								detail: "水量更好没过粉层",
+								pourType: "circle",
 							},
 							{
 								time: 50,
@@ -338,6 +364,7 @@ export const brandCoffees: Brand[] = [
 								label: "绕圈注水",
 								water: "60g",
 								detail: "小水流绕圈注水",
+								pourType: "circle",
 							},
 							{
 								time: 60,
@@ -345,6 +372,7 @@ export const brandCoffees: Brand[] = [
 								label: "绕圈注水",
 								water: "80g",
 								detail: "小水流绕圈注水",
+								pourType: "circle",
 							},
 							{
 								time: 100,
@@ -352,6 +380,7 @@ export const brandCoffees: Brand[] = [
 								label: "绕圈注水",
 								water: "320g",
 								detail: "大水流绕圈注水",
+								pourType: "circle",
 							},
 						],
 					},
@@ -378,6 +407,7 @@ export const brandCoffees: Brand[] = [
 								label: "焖蒸",
 								water: "40g",
 								detail: "水量更好没过粉层",
+								pourType: "circle",
 							},
 							{
 								time: 35,
@@ -385,6 +415,7 @@ export const brandCoffees: Brand[] = [
 								label: "绕圈注水",
 								water: "120g",
 								detail: "正常流速中心绕圈注水",
+								pourType: "circle",
 							},
 							{
 								time: 50,
@@ -392,20 +423,23 @@ export const brandCoffees: Brand[] = [
 								label: "中心注水",
 								water: "160g",
 								detail: "正常流速中心注水",
+								pourType: "center",
 							},
 							{
 								time: 65,
-								pourTime: 1,
+								pourTime: 0,
 								label: "* 加入冰块",
 								water: "240g",
 								detail: "滤杯与分享壶中各加入粉水比1:4的冰块",
+								// pourType: "center",
 							},
 							{
 								time: 80,
-								pourTime: 1,
+								pourTime: 0,
 								label: "* 倒入咖啡原液",
 								water: "240g",
 								detail: "将咖啡原液倒入滤杯降温",
+								// pourType: "center",
 							},
 						],
 					},

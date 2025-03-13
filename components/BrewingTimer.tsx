@@ -11,6 +11,7 @@ interface Stage {
     water: string
     detail: string
     pourTime?: number
+    pourType?: "center" | "circle"
 }
 
 interface Method {
@@ -45,6 +46,7 @@ interface BrewingTimerProps {
     onStatusChange?: (status: { isRunning: boolean }) => void
     onStageChange?: (status: { currentStage: number, progress: number }) => void
     onComplete?: (isComplete: boolean, totalTime?: number) => void
+    onCountdownChange?: (time: number | null) => void
 }
 
 const BrewingTimer: React.FC<BrewingTimerProps> = ({
@@ -53,6 +55,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     onStatusChange,
     onStageChange,
     onComplete,
+    onCountdownChange,
 }) => {
     const [currentTime, setCurrentTime] = useState(0)
     const [isRunning, setIsRunning] = useState(false)
@@ -210,6 +213,11 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
 
         const prevStageTime = prevStage ? prevStage.time : 0
         const prevStageWater = prevStage ? parseInt(prevStage.water) : 0
+
+        if (currentStage.pourTime === 0) {
+            return parseInt(currentStage.water)
+        }
+
         const pourTime = currentStage.pourTime || Math.floor((currentStage.time - prevStageTime) / 3)
 
         const timeInCurrentStage = currentTime - prevStageTime
@@ -399,6 +407,10 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         onStageChange?.({ currentStage, progress })
     }, [currentTime, getCurrentStage, getStageProgress, onStageChange])
 
+    useEffect(() => {
+        onCountdownChange?.(countdownTime)
+    }, [countdownTime, onCountdownChange])
+
     if (!currentBrewingMethod) return null
 
     return (
@@ -547,9 +559,10 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                         {currentBrewingMethod.params.stages.map((stage, index) => {
                             const totalTime = currentBrewingMethod.params.stages[currentBrewingMethod.params.stages.length - 1].time
                             const prevStageTime = index > 0 ? currentBrewingMethod.params.stages[index - 1].time : 0
-                            const pourTime = stage.pourTime || Math.floor((stage.time - prevStageTime) / 3)
-                            const waitingStartPercentage = ((prevStageTime + pourTime) / totalTime) * 100
-                            const waitingWidth = ((stage.time - (prevStageTime + pourTime)) / totalTime) * 100
+
+                            const stagePourTime = stage.pourTime === 0 ? 0 : (stage.pourTime || Math.floor((stage.time - prevStageTime) / 3))
+                            const waitingStartPercentage = ((prevStageTime + stagePourTime) / totalTime) * 100
+                            const waitingWidth = ((stage.time - (prevStageTime + stagePourTime)) / totalTime) * 100
 
                             return waitingWidth > 0 ? (
                                 <div

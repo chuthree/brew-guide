@@ -8,6 +8,14 @@ import { brewingMethods as commonMethods, equipmentList, brandCoffees, APP_VERSI
 const BrewingTimer = dynamic(() => import('@/components/BrewingTimer'), { ssr: false })
 const BrewingHistory = dynamic(() => import('@/components/BrewingHistory'), { ssr: false })
 const BrewingNoteForm = dynamic(() => import('@/components/BrewingNoteForm'), { ssr: false })
+const PourVisualizer = dynamic(() => import('@/components/PourVisualizer'), {
+    ssr: false,
+    loading: () => (
+        <div className="relative w-full aspect-square max-w-[300px] mx-auto opacity-50">
+            <div className="animate-pulse bg-neutral-100 dark:bg-neutral-800 w-full h-full rounded-full"></div>
+        </div>
+    )
+})
 
 const tabs = ['器具', '方案', '注水', '记录'] as const
 type TabType = typeof tabs[number]
@@ -227,7 +235,6 @@ const StageItem = ({
     activeTab,
     selectedMethod,
     currentStage,
-    stageProgress,
 }: {
     step: Step
     index: number
@@ -235,7 +242,6 @@ const StageItem = ({
     activeTab: string
     selectedMethod: Method | null
     currentStage: number
-    stageProgress: number
 }) => (
     <motion.div
         initial={{ opacity: 0 }}
@@ -251,9 +257,9 @@ const StageItem = ({
     >
         {activeTab === '注水' && index === currentStage && (
             <motion.div
-                className="absolute -left-px top-0 h-full w-px origin-top bg-neutral-800 dark:bg-neutral-100"
+                className="absolute -left-px top-0 h-full w-px bg-neutral-800 dark:bg-neutral-100"
                 initial={{ scaleY: 0 }}
-                animate={{ scaleY: stageProgress / 100 }}
+                animate={{ scaleY: 1 }}
                 transition={{ duration: 0.3, ease: 'linear' }}
             />
         )}
@@ -334,7 +340,6 @@ const PourOverRecipes = () => {
     const [currentBrewingMethod, setCurrentBrewingMethod] = useState<Method | null>(null)
     const [isTimerRunning, setIsTimerRunning] = useState(false)
     const [currentStage, setCurrentStage] = useState(-1)
-    const [stageProgress, setStageProgress] = useState(0)
     const [showHistory, setShowHistory] = useState(false)
     const [hasNotes, setHasNotes] = useState(false)
     const [showComplete, setShowComplete] = useState(false)
@@ -342,12 +347,41 @@ const PourOverRecipes = () => {
     const [methodType, setMethodType] = useState<'common' | 'brand'>('common')
     const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null)
     const [selectedBean, setSelectedBean] = useState<CoffeeBean | null>(null)
+    const [countdownTime, setCountdownTime] = useState<number | null>(null)
+    const [isPourVisualizerPreloaded, setIsPourVisualizerPreloaded] = useState(false)
 
     // 检查是否有笔记
     useEffect(() => {
         const notes = JSON.parse(localStorage.getItem('brewingNotes') || '[]')
         setHasNotes(notes.length > 0)
     }, [showHistory])
+
+    // 预加载 PourVisualizer 组件
+    useEffect(() => {
+        // 当用户选择了器具后就开始预加载 PourVisualizer 组件
+        if (selectedEquipment && !isPourVisualizerPreloaded) {
+            // 使用动态导入预加载组件
+            const preloadComponent = async () => {
+                await import('@/components/PourVisualizer')
+                // 预加载注水动画相关的图片资源
+                const preloadImage = (src: string) => {
+                    const img = new Image()
+                    img.src = src
+                    return img
+                }
+                // 预加载基础图片
+                preloadImage('/images/v60-base.svg')
+                // 预加载注水动画图片
+                for (let i = 1; i <= 4; i++) {
+                    preloadImage(`/images/pour-center-motion-${i}.svg`)
+                    preloadImage(`/images/pour-spiral-motion-${i}.svg`)
+                }
+            }
+
+            preloadComponent()
+            setIsPourVisualizerPreloaded(true)
+        }
+    }, [selectedEquipment, isPourVisualizerPreloaded])
 
     useEffect(() => {
         if (selectedEquipment) {
@@ -724,16 +758,11 @@ const PourOverRecipes = () => {
         <div className="flex h-full flex-col overflow-hidden mx-auto max-w-[500px] font-mono text-neutral-800 dark:text-neutral-100">
             {/* Header section */}
             <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.6 }}
-                className="relative mb-6 border-b mx-6 mt-3 border-neutral-200 dark:border-neutral-800"
+                className={`${isTimerRunning && !showComplete ? 'translate-y-16' : ''} z-10  bg-neutral-50 dark:bg-neutral-900  transition-all duration-600  relative border-b mx-6 mt-3 border-neutral-200 dark:border-neutral-800`}
             >
-                <div className={`space-y-4 transition-all duration-500 ${isTimerRunning && !showComplete ? 'opacity-10' : ''}`}>
-                    <div className="flex  w-full items-center justify-between">
-
+                <div className={`space-y-4 transition-all ease-in-out duration-300 ${isTimerRunning && !showComplete ? 'opacity-0' : ''}`}>
+                    <div className="flex w-full items-center justify-between">
                         <div>
-
                             <h1 className="mt-2 text-xl font-light tracking-wide sm:text-2xl">
                                 手冲咖啡冲煮指南
                                 <span className="ml-2 text-[8px] text-neutral-300 dark:text-neutral-600">
@@ -879,11 +908,8 @@ const PourOverRecipes = () => {
             >
                 {/* Navigation */}
                 <motion.div
-                    className="mb-6 flex items-center justify-between sm:mb-8"
-                    animate={{
-                        opacity: isTimerRunning && !showComplete ? 0.3 : 1
-                    }}
-                    transition={{ duration: 0.5 }}
+                    className={`flex items-center justify-between transition-all my-6 duration-300 ${isTimerRunning && !showComplete ? 'opacity-0 pointer-events-none ' : 'opacity-100'}`}
+
                 >
                     <div className="flex items-center space-x-4 sm:space-x-8">
                         {hasNotes && (
@@ -1034,7 +1060,8 @@ const PourOverRecipes = () => {
                 </motion.div>
 
                 {/* Content display */}
-                <div className="overflow-y-auto h-full">
+                <div className={` overflow-y-auto  h-full`}>
+
                     <AnimatePresence mode="wait">
                         {showHistory ? (
                             <motion.div
@@ -1082,56 +1109,111 @@ const PourOverRecipes = () => {
                                 animate={{ opacity: 1, x: 0 }}
                                 exit={{ opacity: 0, x: -20 }}
                                 transition={{ duration: 0.3 }}
-                                className="space-y-6 pr-2"
+                                className="relative h-full"
                             >
-                                {activeTab === '方案' ? (
-                                    <motion.div
-                                        key={`${methodType}-${selectedBrand?.name || 'none'}`}
-                                        initial={{ opacity: 0, x: 20 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        exit={{ opacity: 0, x: -20 }}
-                                        transition={{ duration: 0.3 }}
-                                        className="space-y-6"
-                                    >
-                                        {content[activeTab as keyof typeof content].steps.map((step, index) => (
-                                            <StageItem
-                                                key={index}
-                                                step={step}
-                                                index={index}
-                                                onClick={() => {
-                                                    if (activeTab === ('器具' as TabType)) {
-                                                        handleEquipmentSelect(step.title)
-                                                    } else if (activeTab === ('方案' as TabType)) {
-                                                        handleMethodSelect(index)
-                                                    }
-                                                }}
-                                                activeTab={activeTab}
-                                                selectedMethod={selectedMethod}
-                                                currentStage={currentStage}
-                                                stageProgress={stageProgress}
-                                            />
-                                        ))}
-                                    </motion.div>
-                                ) : (
-                                    content[activeTab as keyof typeof content].steps.map((step, index) => (
-                                        <StageItem
-                                            key={index}
-                                            step={step}
-                                            index={index}
-                                            onClick={() => {
-                                                if (activeTab === ('器具' as TabType)) {
-                                                    handleEquipmentSelect(step.title)
-                                                } else if (activeTab === ('方案' as TabType)) {
-                                                    handleMethodSelect(index)
-                                                }
+                                {/* 当计时器运行时显示可视化组件 */}
+                                <AnimatePresence mode="wait">
+                                    {isTimerRunning && !showComplete && currentBrewingMethod ? (
+                                        <motion.div
+                                            key="pour-visualizer-container"
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            exit={{ opacity: 0 }}
+                                            transition={{ duration: 0.3 }}
+                                            className="flex items-center justify-center"
+                                            style={{
+                                                position: 'absolute',
+                                                top: '50%',
+                                                left: '50%',
+                                                transform: 'translate(-50%, -50%)',
+                                                width: '100%',
+                                                zIndex: 10
                                             }}
-                                            activeTab={activeTab}
-                                            selectedMethod={selectedMethod}
-                                            currentStage={currentStage}
-                                            stageProgress={stageProgress}
-                                        />
-                                    ))
-                                )}
+                                        >
+                                            <div
+                                                key="pour-visualizer-inner"
+                                                className="w-full max-w-[300px]"
+                                            >
+                                                <PourVisualizer
+                                                    isRunning={isTimerRunning}
+                                                    currentStage={currentStage}
+                                                    stages={currentBrewingMethod.params.stages}
+                                                    countdownTime={countdownTime}
+                                                    equipmentId={selectedEquipment || 'V60'}
+                                                />
+                                            </div>
+                                        </motion.div>
+                                    ) : (
+                                        <motion.div
+                                            key="steps-list-container"
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            exit={{ opacity: 0 }}
+                                            transition={{ duration: 0.3 }}
+                                            className="space-y-6 pr-2"
+                                        >
+                                            {/* 预渲染 PourVisualizer 组件，但设置为不可见 */}
+                                            {activeTab === '注水' && currentBrewingMethod && isPourVisualizerPreloaded && (
+                                                <div className="hidden">
+                                                    <PourVisualizer
+                                                        isRunning={false}
+                                                        currentStage={-1}
+                                                        stages={currentBrewingMethod.params.stages}
+                                                        countdownTime={null}
+                                                        equipmentId={selectedEquipment || 'V60'}
+                                                    />
+                                                </div>
+                                            )}
+
+                                            {activeTab === '方案' ? (
+                                                <motion.div
+                                                    key={`${methodType}-${selectedBrand?.name || 'none'}`}
+                                                    initial={{ opacity: 0, x: 20 }}
+                                                    animate={{ opacity: 1, x: 0 }}
+                                                    exit={{ opacity: 0, x: -20 }}
+                                                    transition={{ duration: 0.3 }}
+                                                    className="space-y-6"
+                                                >
+                                                    {content[activeTab as keyof typeof content].steps.map((step, index) => (
+                                                        <StageItem
+                                                            key={index}
+                                                            step={step}
+                                                            index={index}
+                                                            onClick={() => {
+                                                                if (activeTab === ('器具' as TabType)) {
+                                                                    handleEquipmentSelect(step.title)
+                                                                } else if (activeTab === ('方案' as TabType)) {
+                                                                    handleMethodSelect(index)
+                                                                }
+                                                            }}
+                                                            activeTab={activeTab}
+                                                            selectedMethod={selectedMethod}
+                                                            currentStage={currentStage}
+                                                        />
+                                                    ))}
+                                                </motion.div>
+                                            ) : (
+                                                content[activeTab as keyof typeof content].steps.map((step, index) => (
+                                                    <StageItem
+                                                        key={index}
+                                                        step={step}
+                                                        index={index}
+                                                        onClick={() => {
+                                                            if (activeTab === ('器具' as TabType)) {
+                                                                handleEquipmentSelect(step.title)
+                                                            } else if (activeTab === ('方案' as TabType)) {
+                                                                handleMethodSelect(index)
+                                                            }
+                                                        }}
+                                                        activeTab={activeTab}
+                                                        selectedMethod={selectedMethod}
+                                                        currentStage={currentStage}
+                                                    />
+                                                ))
+                                            )}
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
                             </motion.div>
                         )}
                     </AnimatePresence>
@@ -1149,19 +1231,18 @@ const PourOverRecipes = () => {
                             style={{
                                 willChange: "opacity"
                             }}
-                            className=""
                         >
                             <BrewingTimer
                                 currentBrewingMethod={currentBrewingMethod}
                                 onStatusChange={({ isRunning }) => setIsTimerRunning(isRunning)}
-                                onStageChange={({ currentStage, progress }) => {
+                                onStageChange={({ currentStage }) => {
                                     setCurrentStage(currentStage)
-                                    setStageProgress(progress)
                                 }}
                                 onComplete={(isComplete, totalTime) => {
                                     setShowComplete(isComplete)
                                     setCurrentTime(totalTime || 0)
                                 }}
+                                onCountdownChange={(time) => setCountdownTime(time)}
                             />
                         </motion.div>
                     )}
@@ -1169,75 +1250,77 @@ const PourOverRecipes = () => {
 
                 {/* 方案类型导航栏 */}
                 <AnimatePresence>
-                    {activeTab === '方案' && !showHistory && selectedEquipment !== 'CleverDripper' && (
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -20 }}
-                            transition={{ duration: 0.3 }}
-                            className="absolute bottom-0 bg-neutral-50 dark:bg-neutral-900 pt-1 pb-9 w-full flex items-center space-x-4"
-                        >
-                            <motion.button
-                                onClick={() => {
-                                    setMethodType('common')
-                                    setSelectedBrand(null)
-                                    setSelectedBean(null)
-                                }}
-                                className={`text-xs tracking-wider transition-colors ${methodType === 'common'
-                                    ? 'text-neutral-800 dark:text-neutral-100'
-                                    : 'text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300'
-                                    }`}
-                                whileHover={{ scale: 1.02 }}
-                                whileTap={{ scale: 0.98 }}
+                    {
+                        activeTab === '方案' && !showHistory && selectedEquipment !== 'CleverDripper' && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -20 }}
+                                transition={{ duration: 0.3 }}
+                                className="absolute bottom-0 bg-neutral-50 dark:bg-neutral-900 pt-1 pb-9 w-full flex items-center space-x-4"
                             >
-                                通用方案
-                            </motion.button>
-                            <motion.span
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                className="text-neutral-300 dark:text-neutral-600"
-                            >
-                                |
-                            </motion.span>
-                            <div className="flex items-center space-x-2">
                                 <motion.button
                                     onClick={() => {
-                                        if (methodType === 'brand' && selectedBrand) {
-                                            setSelectedBrand(null)
-                                            setSelectedBean(null)
-                                        } else {
-                                            setMethodType('brand')
-                                        }
+                                        setMethodType('common')
+                                        setSelectedBrand(null)
+                                        setSelectedBean(null)
                                     }}
-                                    className={`group flex items-center text-xs tracking-wider transition-colors ${methodType === 'brand'
+                                    className={`text-xs tracking-wider transition-colors ${methodType === 'common'
                                         ? 'text-neutral-800 dark:text-neutral-100'
                                         : 'text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300'
                                         }`}
                                     whileHover={{ scale: 1.02 }}
                                     whileTap={{ scale: 0.98 }}
                                 >
-                                    品牌方案
+                                    通用方案
                                 </motion.button>
-                                <AnimatePresence mode="wait">
-                                    {methodType === 'brand' && selectedBrand && (
-                                        <motion.div
-                                            initial={{ opacity: 0, x: -10 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            exit={{ opacity: 0, x: 10 }}
-                                            transition={{ duration: 0.3 }}
-                                            className="flex items-center space-x-2"
-                                        >
-                                            <span className="text-neutral-300 dark:text-neutral-600">·</span>
-                                            <span className="text-xs tracking-wider text-neutral-800 dark:text-neutral-100">
-                                                {selectedBrand.name}
-                                            </span>
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
-                            </div>
-                        </motion.div>
-                    )}
+                                <motion.span
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    className="text-neutral-300 dark:text-neutral-600"
+                                >
+                                    |
+                                </motion.span>
+                                <div className="flex items-center space-x-2">
+                                    <motion.button
+                                        onClick={() => {
+                                            if (methodType === 'brand' && selectedBrand) {
+                                                setSelectedBrand(null)
+                                                setSelectedBean(null)
+                                            } else {
+                                                setMethodType('brand')
+                                            }
+                                        }}
+                                        className={`group flex items-center text-xs tracking-wider transition-colors ${methodType === 'brand'
+                                            ? 'text-neutral-800 dark:text-neutral-100'
+                                            : 'text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300'
+                                            }`}
+                                        whileHover={{ scale: 1.02 }}
+                                        whileTap={{ scale: 0.98 }}
+                                    >
+                                        品牌方案
+                                    </motion.button>
+                                    <AnimatePresence mode="wait">
+                                        {methodType === 'brand' && selectedBrand && (
+                                            <motion.div
+                                                initial={{ opacity: 0, x: -10 }}
+                                                animate={{ opacity: 1, x: 0 }}
+                                                exit={{ opacity: 0, x: 10 }}
+                                                transition={{ duration: 0.3 }}
+                                                className="flex items-center space-x-2"
+                                            >
+                                                <span className="text-neutral-300 dark:text-neutral-600">·</span>
+                                                <span className="text-xs tracking-wider text-neutral-800 dark:text-neutral-100">
+                                                    {selectedBrand.name}
+                                                </span>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </div>
+                            </motion.div>
+                        )
+                    }
                 </AnimatePresence>
             </motion.div>
         </div>
