@@ -568,10 +568,22 @@ const PourOverRecipes = () => {
                     setActiveTab('器具')
                     setSelectedEquipment(null)
                     setMethodType('common')
+                    // 重置参数信息
+                    setParameterInfo({
+                        equipment: null,
+                        method: null,
+                        params: null,
+                    })
                 }
             } else {
                 setActiveTab('器具')
                 setSelectedEquipment(null)
+                // 重置参数信息
+                setParameterInfo({
+                    equipment: null,
+                    method: null,
+                    params: null,
+                })
             }
         }
     }, [activeTab, isTimerRunning, showHistory, methodType, selectedBrand])
