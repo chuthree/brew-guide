@@ -1,15 +1,13 @@
 {
 	"name": "brew-guide",
-	"version": "2.0.4",
+	"version": "2.0.5",
 	"private": true,
 	"scripts": {
 		"dev": "next dev",
 		"build": "next build",
 		"start": "node .next/standalone/server.js",
 		"start:next": "next start",
-		"lint": "next lint",
-		"update-version": "node update-version.js",
-		"version": "npm run update-version && git add ."
+		"lint": "next lint"
 	},
 	"dependencies": {
 		"@tailwindcss/postcss": "^4.0.13",

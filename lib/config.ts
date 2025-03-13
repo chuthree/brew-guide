@@ -1,5 +1,5 @@
 // App Version
-export const APP_VERSION = "2.0.4";
+export const APP_VERSION = "2.0.5";
 
 // Types
 export interface Stage {
@@ -272,7 +272,7 @@ export const brewingMethods: BrewingMethods = {
 					},
 					{
 						time: 210,
-						pourTime: 1,
+						pourTime: 0,
 						label: "等待滴滤完成[开阀]",
 						water: "300g",
 						detail: "打开阀门等等滴滤完成",
