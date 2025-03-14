@@ -11,7 +11,7 @@ interface Stage {
     water: string
     detail: string
     pourTime?: number
-    pourType?: "center" | "circle"
+    pourType?: "center" | "circle" | "ice"
 }
 
 interface Method {
