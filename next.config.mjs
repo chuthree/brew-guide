@@ -113,13 +113,26 @@ const withPWA = isDev
 const nextConfig = {
     devIndicators: false,
     reactStrictMode: true,
-    output: 'standalone',
+    // 在 Vercel 上部署时不需要使用 export 模式
+    // output: 'export',
     experimental: {
         // 启用 CSS 优化
         optimizeCss: true,
     },
     // 增加静态页面生成超时时间
     staticPageGenerationTimeout: 180,
+    // 配置图像优化
+    images: {
+        unoptimized: false, // 在 Vercel 上可以使用图像优化功能
+        domains: ['localhost'],
+        remotePatterns: [
+            {
+                protocol: 'https',
+                hostname: '**',
+            },
+        ],
+    },
+    // 修改Permissions-Policy，移除可能导致问题的interest-cohort
     async headers() {
         return [
             {
@@ -127,7 +140,7 @@ const nextConfig = {
                 headers: [
                     {
                         key: 'Permissions-Policy',
-                        value: 'camera=(), microphone=(), geolocation=(), interest-cohort=()'
+                        value: 'camera=(), microphone=(), geolocation=()'
                     },
                     {
                         key: 'Cache-Control',
@@ -138,6 +151,25 @@ const nextConfig = {
                     {
                         key: 'X-Content-Type-Options',
                         value: 'nosniff'
+                    }
+                ]
+            },
+            // 添加正确的 MIME 类型配置
+            {
+                source: '/_next/static/chunks/(.*)',
+                headers: [
+                    {
+                        key: 'Content-Type',
+                        value: 'application/javascript'
+                    }
+                ]
+            },
+            {
+                source: '/manifest.json',
+                headers: [
+                    {
+                        key: 'Content-Type',
+                        value: 'application/manifest+json'
                     }
                 ]
             }
