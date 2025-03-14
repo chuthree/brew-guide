@@ -25,27 +25,30 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
     const [valveStatus, setValveStatus] = useState<'open' | 'closed'>('closed') // 添加阀门状态
     const [imagesPreloaded, setImagesPreloaded] = useState(false)
 
-    // 使用 useMemo 优化 existingImages 对象，避免每次渲染都重新创建
-    const existingImages = useMemo(() => ({
-        'v60-base.svg': true,
-        'valve-open.svg': true,
-        'valve-closed.svg': true,
-        'pour-center-motion-1.svg': true,
-        'pour-center-motion-2.svg': true,
-        'pour-center-motion-3.svg': true,
-        // 'pour-center-motion-4.svg': false, // 这个文件不存在
-        'pour-spiral-motion-1.svg': true,
-        'pour-spiral-motion-2.svg': true,
-        'pour-spiral-motion-3.svg': true,
-        'pour-spiral-motion-4.svg': true
+    // 定义可用的动画图片及其最大索引
+    const availableAnimations = useMemo(() => ({
+        center: { maxIndex: 3 },  // center 只有3张图片
+        circle: { maxIndex: 4 }   // circle 有4张图片
     }), [])
 
-    // 预加载所有确认存在的图像
-    useEffect(() => {
-        const imagesToPreload = Object.keys(existingImages)
-            .filter(img => existingImages[img as keyof typeof existingImages])
-            .map(img => `/images/${img}`)
+    // 需要预加载的图片列表
+    const imagesToPreload = useMemo(() => [
+        '/images/v60-base.svg',
+        '/images/valve-open.svg',
+        '/images/valve-closed.svg',
+        // center 动画图片
+        '/images/pour-center-motion-1.svg',
+        '/images/pour-center-motion-2.svg',
+        '/images/pour-center-motion-3.svg',
+        // circle 动画图片
+        '/images/pour-circle-motion-1.svg',
+        '/images/pour-circle-motion-2.svg',
+        '/images/pour-circle-motion-3.svg',
+        '/images/pour-circle-motion-4.svg'
+    ], [])
 
+    // 预加载所有图像
+    useEffect(() => {
         // 如果没有图像需要预加载，直接设置为完成
         if (imagesToPreload.length === 0) {
             setImagesPreloaded(true)
@@ -81,7 +84,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                 img.src = ''
             })
         }
-    }, [existingImages])
+    }, [imagesToPreload])
 
     // 跟踪当前阶段的经过时间，用于确定是否在注水时间内
     useEffect(() => {
@@ -125,14 +128,16 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
 
         const interval = setInterval(() => {
             setCurrentMotionIndex(prev => {
-                // 根据注水类型决定最大索引
-                const maxIndex = stages[currentStage]?.pourType === 'center' ? 3 : 4
+                // 获取当前注水类型
+                const pourType = stages[currentStage]?.pourType || 'center'
+                // 获取该类型的最大索引
+                const maxIndex = availableAnimations[pourType as keyof typeof availableAnimations]?.maxIndex || 3
                 return prev >= maxIndex ? 1 : prev + 1
             })
         }, 1000)
 
         return () => clearInterval(interval)
-    }, [isRunning, isPouring, currentStage, countdownTime, stages])
+    }, [isRunning, isPouring, currentStage, countdownTime, stages, availableAnimations])
 
     // 更新阀门状态 - 针对聪明杯
     useEffect(() => {
@@ -168,12 +173,6 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
             : '/images/valve-closed.svg'
     }
 
-    // 检查图像是否存在
-    const imageExists = (filename: string) => {
-        const baseName = filename.split('/').pop() || ''
-        return existingImages[baseName as keyof typeof existingImages] || false
-    }
-
     // 如果没有运行或者在倒计时，不显示动画
     if (!isRunning || currentStage < 0 || countdownTime !== null) {
         return (
@@ -182,7 +181,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                     src={getEquipmentImageSrc()}
                     alt={equipmentId}
                     fill
-                    className="object-contain invert dark:invert-0"
+                    className="object-contain invert-0 dark:invert"
                     priority
                     sizes="(max-width: 768px) 100vw, 300px"
                     quality={85}
@@ -194,7 +193,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                             src={getValveImageSrc() || ''}
                             alt={`Valve ${valveStatus}`}
                             fill
-                            className="object-contain invert dark:invert-0"
+                            className="object-contain invert-0 dark:invert"
                             sizes="(max-width: 768px) 100vw, 300px"
                             quality={85}
                             onError={() => console.error('阀门图像加载失败')}
@@ -209,8 +208,8 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
     const currentPourType = stages[currentStage]?.pourType || 'center'
     const motionSrc = `/images/pour-${currentPourType}-motion-${currentMotionIndex}.svg`
 
-    // 检查当前动画图像是否存在
-    const currentMotionImageExists = imageExists(`pour-${currentPourType}-motion-${currentMotionIndex}.svg`)
+    // 检查当前动画类型是否有效
+    const isValidAnimation = availableAnimations[currentPourType as keyof typeof availableAnimations] !== undefined
 
     return (
         <div
@@ -221,7 +220,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                 src={getEquipmentImageSrc()}
                 alt={equipmentId}
                 fill
-                className="object-contain invert dark:invert-0"
+                className="object-contain invert-0 dark:invert"
                 priority
                 sizes="(max-width: 768px) 100vw, 300px"
                 quality={85}
@@ -235,7 +234,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                         src={getValveImageSrc() || ''}
                         alt={`Valve ${valveStatus}`}
                         fill
-                        className="object-contain invert dark:invert-0"
+                        className="object-contain invert-0 dark:invert"
                         sizes="(max-width: 768px) 100vw, 300px"
                         quality={85}
                         onError={() => console.error('阀门图像加载失败')}
@@ -243,9 +242,9 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                 </div>
             )}
 
-            {/* 注水动画 - 只在注水时间内显示，且图像存在时 */}
+            {/* 注水动画 - 只在注水时间内显示，且动画类型有效时 */}
             <AnimatePresence>
-                {isPouring && imagesPreloaded && currentMotionImageExists && (
+                {isPouring && imagesPreloaded && isValidAnimation && (
                     <motion.div
                         key={`${currentStage}-${currentMotionIndex}`}
                         initial={{ opacity: 0 }}
@@ -258,7 +257,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                             src={motionSrc}
                             alt={`Pour ${currentPourType}`}
                             fill
-                            className="object-contain invert dark:invert-0"
+                            className="object-contain invert-0 dark:invert"
                             sizes="(max-width: 768px) 100vw, 300px"
                             quality={85}
                             loading="eager"

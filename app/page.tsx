@@ -362,20 +362,8 @@ const PourOverRecipes = () => {
         if (selectedEquipment && !isPourVisualizerPreloaded) {
             // 使用动态导入预加载组件
             const preloadComponent = async () => {
+                // 动态导入PourVisualizer组件，组件内部会自动处理图片预加载
                 await import('@/components/PourVisualizer')
-                // 预加载注水动画相关的图片资源
-                const preloadImage = (src: string) => {
-                    const img = new Image()
-                    img.src = src
-                    return img
-                }
-                // 预加载基础图片
-                preloadImage('/images/v60-base.svg')
-                // 预加载注水动画图片
-                for (let i = 1; i <= 4; i++) {
-                    preloadImage(`/images/pour-center-motion-${i}.svg`)
-                    preloadImage(`/images/pour-spiral-motion-${i}.svg`)
-                }
             }
 
             preloadComponent()
