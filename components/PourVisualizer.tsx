@@ -5,6 +5,12 @@ import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Stage } from '@/lib/config'
 
+// 定义动画配置类型
+interface AnimationConfig {
+    maxIndex: number;
+    isStacking?: boolean;
+}
+
 interface PourVisualizerProps {
     isRunning: boolean
     currentStage: number
@@ -24,11 +30,13 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
     const [isPouring, setIsPouring] = useState(false)
     const [valveStatus, setValveStatus] = useState<'open' | 'closed'>('closed') // 添加阀门状态
     const [imagesPreloaded, setImagesPreloaded] = useState(false)
+    const [displayedIceIndices, setDisplayedIceIndices] = useState<number[]>([])
 
     // 定义可用的动画图片及其最大索引
-    const availableAnimations = useMemo(() => ({
+    const availableAnimations = useMemo<Record<string, AnimationConfig>>(() => ({
         center: { maxIndex: 3 },  // center 只有3张图片
-        circle: { maxIndex: 4 }   // circle 有4张图片
+        circle: { maxIndex: 4 },   // circle 有4张图片
+        ice: { maxIndex: 4, isStacking: true }  // 冰块动画，有4张图片，需要叠加显示
     }), [])
 
     // 需要预加载的图片列表
@@ -44,7 +52,12 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
         '/images/pour-circle-motion-1.svg',
         '/images/pour-circle-motion-2.svg',
         '/images/pour-circle-motion-3.svg',
-        '/images/pour-circle-motion-4.svg'
+        '/images/pour-circle-motion-4.svg',
+        // ice 动画图片
+        '/images/pour-ice-motion-1.svg',
+        '/images/pour-ice-motion-2.svg',
+        '/images/pour-ice-motion-3.svg',
+        '/images/pour-ice-motion-4.svg'
     ], [])
 
     // 预加载所有图像
@@ -126,18 +139,42 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
     useEffect(() => {
         if (!isRunning || !isPouring || currentStage < 0 || countdownTime !== null) return
 
-        const interval = setInterval(() => {
-            setCurrentMotionIndex(prev => {
-                // 获取当前注水类型
-                const pourType = stages[currentStage]?.pourType || 'center'
-                // 获取该类型的最大索引
-                const maxIndex = availableAnimations[pourType as keyof typeof availableAnimations]?.maxIndex || 3
-                return prev >= maxIndex ? 1 : prev + 1
-            })
-        }, 1000)
+        // 获取当前注水类型
+        const pourType = stages[currentStage]?.pourType || 'center'
+        // 获取该类型的动画配置
+        const animationConfig = availableAnimations[pourType as keyof typeof availableAnimations]
 
-        return () => clearInterval(interval)
+        // 如果是叠加显示的动画类型（如冰块）
+        if (animationConfig?.isStacking) {
+            // 如果是冰块动画，每隔一段时间添加一个新的冰块
+            const interval = setInterval(() => {
+                setDisplayedIceIndices(prev => {
+                    // 如果已经显示了所有冰块，不再添加
+                    if (prev.length >= animationConfig.maxIndex) return prev
+                    // 添加下一个冰块索引
+                    return [...prev, prev.length + 1]
+                })
+            }, 1500) // 每1.5秒添加一个冰块
+
+            return () => clearInterval(interval)
+        } else {
+            // 对于普通动画（center, circle），使用原有的切换逻辑
+            const interval = setInterval(() => {
+                setCurrentMotionIndex(prev => {
+                    // 获取该类型的最大索引
+                    const maxIndex = animationConfig?.maxIndex || 3
+                    return prev >= maxIndex ? 1 : prev + 1
+                })
+            }, 1000)
+
+            return () => clearInterval(interval)
+        }
     }, [isRunning, isPouring, currentStage, countdownTime, stages, availableAnimations])
+
+    // 当阶段变化时重置冰块显示
+    useEffect(() => {
+        setDisplayedIceIndices([])
+    }, [currentStage])
 
     // 更新阀门状态 - 针对聪明杯
     useEffect(() => {
@@ -245,27 +282,56 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
             {/* 注水动画 - 只在注水时间内显示，且动画类型有效时 */}
             <AnimatePresence>
                 {isPouring && imagesPreloaded && isValidAnimation && (
-                    <motion.div
-                        key={`${currentStage}-${currentMotionIndex}`}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="absolute inset-0"
-                    >
-                        <Image
-                            src={motionSrc}
-                            alt={`Pour ${currentPourType}`}
-                            fill
-                            className="object-contain invert-0 dark:invert"
-                            sizes="(max-width: 768px) 100vw, 300px"
-                            quality={85}
-                            loading="eager"
-                            onError={() => {
-                                console.error(`动画图像加载失败: ${motionSrc}`)
-                            }}
-                        />
-                    </motion.div>
+                    <>
+                        {/* 对于普通动画类型（center, circle），显示单个动画 */}
+                        {!availableAnimations[currentPourType as keyof typeof availableAnimations]?.isStacking && (
+                            <motion.div
+                                key={`${currentStage}-${currentMotionIndex}`}
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 0.2 }}
+                                className="absolute inset-0"
+                            >
+                                <Image
+                                    src={motionSrc}
+                                    alt={`Pour ${currentPourType}`}
+                                    fill
+                                    className="object-contain invert-0 dark:invert"
+                                    sizes="(max-width: 768px) 100vw, 300px"
+                                    quality={85}
+                                    loading="eager"
+                                    onError={() => {
+                                        console.error(`动画图像加载失败: ${motionSrc}`)
+                                    }}
+                                />
+                            </motion.div>
+                        )}
+
+                        {/* 对于叠加动画类型（ice），显示多个叠加的动画 */}
+                        {currentPourType === 'ice' && displayedIceIndices.map(index => (
+                            <motion.div
+                                key={`ice-${index}`}
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ duration: 0.3 }}
+                                className="absolute inset-0"
+                            >
+                                <Image
+                                    src={`/images/pour-ice-motion-${index}.svg`}
+                                    alt={`Ice cube ${index}`}
+                                    fill
+                                    className="object-contain invert-0 dark:invert"
+                                    sizes="(max-width: 768px) 100vw, 300px"
+                                    quality={85}
+                                    loading="eager"
+                                    onError={() => {
+                                        console.error(`冰块图像加载失败: /images/pour-ice-motion-${index}.svg`)
+                                    }}
+                                />
+                            </motion.div>
+                        ))}
+                    </>
                 )}
             </AnimatePresence>
         </div>

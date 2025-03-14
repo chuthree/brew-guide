@@ -8,7 +8,7 @@ export interface Stage {
 	water: string;
 	detail: string;
 	pourTime?: number;
-	pourType?: "center" | "circle";
+	pourType?: "center" | "circle" | "ice";
 	valveStatus?: "open" | "closed";
 }
 
@@ -312,7 +312,7 @@ export const brandCoffees: Brand[] = [
 								pourTime: 20,
 								label: "焖蒸",
 								water: "40g",
-								detail: "水量更好没过粉层",
+								detail: "水量刚好没过粉层",
 								pourType: "circle",
 							},
 							{
@@ -431,7 +431,7 @@ export const brandCoffees: Brand[] = [
 								label: "* 加入冰块",
 								water: "240g",
 								detail: "滤杯与分享壶中各加入粉水比1:4的冰块",
-								// pourType: "center",
+								pourType: "ice",
 							},
 							{
 								time: 80,
