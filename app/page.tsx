@@ -258,9 +258,9 @@ const StageItem = ({
         {activeTab === '注水' && index === currentStage && (
             <motion.div
                 className="absolute -left-px top-0 h-full w-px bg-neutral-800 dark:bg-neutral-100"
-                initial={{ scaleY: 0 }}
+                initial={{ scaleY: 0, transformOrigin: "top" }}
                 animate={{ scaleY: 1 }}
-                transition={{ duration: 0.3, ease: 'linear' }}
+                transition={{ duration: 0.2, ease: 'linear' }}
             />
         )}
         <div className={activeTab !== '注水' ? 'cursor-pointer' : ''}>
@@ -1166,32 +1166,34 @@ const PourOverRecipes = () => {
                                             )}
 
                                             {activeTab === '方案' ? (
-                                                <motion.div
-                                                    key={`${methodType}-${selectedBrand?.name || 'none'}`}
-                                                    initial={{ opacity: 0, x: 20 }}
-                                                    animate={{ opacity: 1, x: 0 }}
-                                                    exit={{ opacity: 0, x: -20 }}
-                                                    transition={{ duration: 0.3 }}
-                                                    className="space-y-6"
-                                                >
-                                                    {content[activeTab as keyof typeof content].steps.map((step, index) => (
-                                                        <StageItem
-                                                            key={index}
-                                                            step={step}
-                                                            index={index}
-                                                            onClick={() => {
-                                                                if (activeTab === ('器具' as TabType)) {
-                                                                    handleEquipmentSelect(step.title)
-                                                                } else if (activeTab === ('方案' as TabType)) {
-                                                                    handleMethodSelect(index)
-                                                                }
-                                                            }}
-                                                            activeTab={activeTab}
-                                                            selectedMethod={selectedMethod}
-                                                            currentStage={currentStage}
-                                                        />
-                                                    ))}
-                                                </motion.div>
+                                                <AnimatePresence mode="wait">
+                                                    <motion.div
+                                                        key={`${methodType}-${selectedBrand?.name || 'none'}`}
+                                                        initial={{ opacity: 0, x: 20 }}
+                                                        animate={{ opacity: 1, x: 0 }}
+                                                        exit={{ opacity: 0, x: -20 }}
+                                                        transition={{ duration: 0.3 }}
+                                                        className="space-y-6"
+                                                    >
+                                                        {content[activeTab as keyof typeof content].steps.map((step, index) => (
+                                                            <StageItem
+                                                                key={index}
+                                                                step={step}
+                                                                index={index}
+                                                                onClick={() => {
+                                                                    if (activeTab === ('器具' as TabType)) {
+                                                                        handleEquipmentSelect(step.title)
+                                                                    } else if (activeTab === ('方案' as TabType)) {
+                                                                        handleMethodSelect(index)
+                                                                    }
+                                                                }}
+                                                                activeTab={activeTab}
+                                                                selectedMethod={selectedMethod}
+                                                                currentStage={currentStage}
+                                                            />
+                                                        ))}
+                                                    </motion.div>
+                                                </AnimatePresence>
                                             ) : (
                                                 content[activeTab as keyof typeof content].steps.map((step, index) => (
                                                     <StageItem

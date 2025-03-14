@@ -23,6 +23,36 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
     const [currentMotionIndex, setCurrentMotionIndex] = useState(1)
     const [isPouring, setIsPouring] = useState(false)
     const [valveStatus, setValveStatus] = useState<'open' | 'closed'>('closed') // 添加阀门状态
+    const [imagesPreloaded, setImagesPreloaded] = useState(false)
+
+    // 预加载所有可能用到的图像
+    useEffect(() => {
+        const imagesToPreload = [
+            '/images/v60-base.svg',
+            '/images/valve-open.svg',
+            '/images/valve-closed.svg',
+            '/images/pour-center-motion-1.svg',
+            '/images/pour-center-motion-2.svg',
+            '/images/pour-center-motion-3.svg',
+            '/images/pour-circle-motion-1.svg',
+            '/images/pour-circle-motion-2.svg',
+            '/images/pour-circle-motion-3.svg',
+            '/images/pour-circle-motion-4.svg'
+        ]
+
+        Promise.all(
+            imagesToPreload.map(src => {
+                return new Promise((resolve, reject) => {
+                    const img = new globalThis.Image()
+                    img.src = src
+                    img.onload = resolve
+                    img.onerror = reject
+                })
+            })
+        )
+            .then(() => setImagesPreloaded(true))
+            .catch(err => console.error('图像预加载失败:', err))
+    }, [])
 
     // 跟踪当前阶段的经过时间，用于确定是否在注水时间内
     useEffect(() => {
@@ -119,6 +149,8 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                     fill
                     className="object-contain invert dark:invert-0"
                     priority
+                    sizes="(max-width: 768px) 100vw, 300px"
+                    quality={85}
                 />
                 {equipmentId === 'CleverDripper' && (
                     <div className="absolute inset-0">
@@ -127,6 +159,8 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                             alt={`Valve ${valveStatus}`}
                             fill
                             className="object-contain invert dark:invert-0"
+                            sizes="(max-width: 768px) 100vw, 300px"
+                            quality={85}
                         />
                     </div>
                 )}
@@ -149,6 +183,8 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                 fill
                 className="object-contain invert dark:invert-0"
                 priority
+                sizes="(max-width: 768px) 100vw, 300px"
+                quality={85}
             />
 
             {/* 聪明杯阀门图层 */}
@@ -159,13 +195,15 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                         alt={`Valve ${valveStatus}`}
                         fill
                         className="object-contain invert dark:invert-0"
+                        sizes="(max-width: 768px) 100vw, 300px"
+                        quality={85}
                     />
                 </div>
             )}
 
             {/* 注水动画 - 只在注水时间内显示 */}
             <AnimatePresence>
-                {isPouring && (
+                {isPouring && imagesPreloaded && (
                     <motion.div
                         key={`${currentStage}-${currentMotionIndex}`}
                         initial={{ opacity: 0 }}
@@ -179,6 +217,9 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                             alt={`Pour ${currentPourType}`}
                             fill
                             className="object-contain invert dark:invert-0"
+                            sizes="(max-width: 768px) 100vw, 300px"
+                            quality={85}
+                            loading="eager"
                         />
                     </motion.div>
                 )}
