@@ -82,6 +82,9 @@ export function parseMethodFromJson(jsonString: string): Method | null {
 
 		// 构建Method对象
 		const method: Method = {
+			id:
+				parsedData.id ||
+				`${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
 			name: parsedData.method || `${parsedData.equipment}优化方案`,
 			params: {
 				coffee: parsedData.params?.coffee || "15g",
@@ -257,6 +260,7 @@ export function cleanJsonForOptimization(jsonString: string): string {
 export function methodToJson(method: Method): string {
 	// 创建配置对象
 	const configObject = {
+		id: method.id,
 		method: method.name,
 		params: {
 			coffee: method.params.coffee,

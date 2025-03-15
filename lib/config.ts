@@ -1,5 +1,5 @@
 // App Version
-export const APP_VERSION = "2.2.0";
+export const APP_VERSION = "2.2.1";
 
 // Types
 export interface Stage {
@@ -13,6 +13,7 @@ export interface Stage {
 }
 
 export interface Method {
+	id?: string;
 	name: string;
 	params: {
 		coffee: string;

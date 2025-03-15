@@ -27,6 +27,7 @@ interface Step {
     title: string
     items: string[]
     note: string
+    methodId?: string
 }
 
 interface Content {
@@ -259,7 +260,7 @@ const StageItem = ({
     customMethods?: Record<string, Method[]>
 }) => {
     // 创建一个唯一的ID来标识这个卡片
-    const cardId = `${activeTab}-${step.title}-${index}`
+    const cardId = `${activeTab}-${step.methodId || step.title}-${index}`
     // 检查这个卡片的菜单是否应该显示
     const showActions = actionMenuStates[cardId] || false
     // 添加复制成功状态
@@ -328,7 +329,7 @@ const StageItem = ({
         <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.3, delay: index * 0.1 }}
+            transition={{ duration: 0.3, delay: 0.05 }}
             className={`group relative border-l border-neutral-200 pl-6 dark:border-neutral-800 ${activeTab === '注水' && index === currentStage
                 ? 'text-neutral-800 dark:text-neutral-100'
                 : activeTab === '注水' && index < currentStage
@@ -473,6 +474,7 @@ export interface BrewingNoteData {
         grindSize: string;
         temp: string;
     };
+    stages?: Stage[];
     totalTime?: number;
     coffeeBeanInfo: {
         name: string;
@@ -549,7 +551,22 @@ const PourOverRecipes = () => {
         try {
             const savedMethods = localStorage.getItem('customMethods')
             if (savedMethods) {
-                setCustomMethods(JSON.parse(savedMethods))
+                const parsedMethods = JSON.parse(savedMethods);
+
+                // 确保所有方法都有唯一ID
+                const methodsWithIds: Record<string, Method[]> = {};
+
+                Object.keys(parsedMethods).forEach(equipment => {
+                    methodsWithIds[equipment] = parsedMethods[equipment].map((method: Method) => ({
+                        ...method,
+                        id: method.id || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+                    }));
+                });
+
+                setCustomMethods(methodsWithIds);
+
+                // 更新本地存储
+                localStorage.setItem('customMethods', JSON.stringify(methodsWithIds));
             }
         } catch (error) {
             console.error('Error loading custom methods:', error)
@@ -925,10 +942,18 @@ const PourOverRecipes = () => {
     const handleSaveNote = (data: BrewingNoteData) => {
         try {
             const notes = JSON.parse(localStorage.getItem('brewingNotes') || '[]')
+
+            // 确保包含stages数据
+            let stages: Stage[] = [];
+            if (selectedMethod && selectedMethod.params.stages) {
+                stages = selectedMethod.params.stages;
+            }
+
             const newNote = {
                 ...data,
                 id: Date.now().toString(),
                 timestamp: Date.now(),
+                stages: stages, // 添加stages数据
             }
             const updatedNotes = [newNote, ...notes]
             localStorage.setItem('brewingNotes', JSON.stringify(updatedNotes))
@@ -945,6 +970,12 @@ const PourOverRecipes = () => {
     const handleSaveCustomMethod = (method: Method) => {
         if (!selectedEquipment) return
 
+        // 确保方法有唯一ID
+        const methodWithId = {
+            ...method,
+            id: method.id || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+        };
+
         // 检查是否是编辑模式
         const isEditing = editingMethod !== undefined;
 
@@ -954,11 +985,11 @@ const PourOverRecipes = () => {
         if (isEditing) {
             // 编辑模式：替换现有方法
             updatedMethods = updatedMethods.map(m =>
-                m.name === editingMethod?.name ? method : m
+                m.id === editingMethod?.id ? methodWithId : m
             );
         } else {
             // 创建模式：添加新方法
-            updatedMethods.push(method);
+            updatedMethods.push(methodWithId);
         }
 
         const newCustomMethods = {
@@ -985,13 +1016,14 @@ const PourOverRecipes = () => {
                     steps: [
                         ...filteredSteps,
                         {
-                            title: method.name,
+                            title: methodWithId.name,
                             items: [
-                                `水粉比 ${method.params.ratio}`,
-                                `总时长 ${formatTime(method.params.stages[method.params.stages.length - 1].time, true)}`,
-                                `研磨度 ${method.params.grindSize}`,
+                                `水粉比 ${methodWithId.params.ratio}`,
+                                `总时长 ${formatTime(methodWithId.params.stages[methodWithId.params.stages.length - 1].time, true)}`,
+                                `研磨度 ${methodWithId.params.grindSize}`,
                             ],
                             note: '',
+                            methodId: methodWithId.id, // 保存方法ID到步骤中
                         },
                     ],
                 },
@@ -1012,7 +1044,7 @@ const PourOverRecipes = () => {
         const newCustomMethods = {
             ...customMethods,
             [selectedEquipment]: customMethods[selectedEquipment].filter(
-                (m) => m.name !== method.name
+                (m) => m.id !== method.id
             ),
         }
 
@@ -1024,9 +1056,12 @@ const PourOverRecipes = () => {
             ...prev,
             方案: {
                 ...prev.方案,
-                steps: prev.方案.steps.filter((step) => step.title !== method.name),
+                steps: prev.方案.steps.filter((step) => step.methodId !== method.id),
             },
         }))
+
+        // 重置所有菜单状态，解决删除后其他方案菜单状态异常的问题
+        setActionMenuStates({});
     }
 
     return (
@@ -1494,9 +1529,57 @@ const PourOverRecipes = () => {
                                                                 </motion.button>
                                                             </div>
                                                         )}
-                                                        {content[activeTab as keyof typeof content].steps.map((step, index) => (
+                                                        <AnimatePresence initial={false}>
+                                                            {content[activeTab as keyof typeof content].steps.map((step, index) => (
+                                                                <motion.div
+                                                                    key={step.methodId || `${step.title}-${index}`}
+                                                                    initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                                                                    animate={{ opacity: 1, height: 'auto', marginBottom: 24 }}
+                                                                    exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                                                                    transition={{ duration: 0.3 }}
+                                                                >
+                                                                    <StageItem
+                                                                        step={step}
+                                                                        index={index}
+                                                                        onClick={() => {
+                                                                            if (activeTab === ('器具' as TabType)) {
+                                                                                handleEquipmentSelect(step.title)
+                                                                            } else if (activeTab === ('方案' as TabType)) {
+                                                                                handleMethodSelect(index)
+                                                                            }
+                                                                        }}
+                                                                        activeTab={activeTab}
+                                                                        selectedMethod={selectedMethod}
+                                                                        currentStage={currentStage}
+                                                                        onEdit={methodType === 'custom' && customMethods[selectedEquipment!] ? () => {
+                                                                            const method = customMethods[selectedEquipment!][index];
+                                                                            handleEditCustomMethod(method);
+                                                                        } : undefined}
+                                                                        onDelete={methodType === 'custom' && customMethods[selectedEquipment!] ? () => {
+                                                                            const method = customMethods[selectedEquipment!][index];
+                                                                            handleDeleteCustomMethod(method);
+                                                                        } : undefined}
+                                                                        actionMenuStates={actionMenuStates}
+                                                                        setActionMenuStates={setActionMenuStates}
+                                                                        selectedEquipment={selectedEquipment}
+                                                                        customMethods={customMethods}
+                                                                    />
+                                                                </motion.div>
+                                                            ))}
+                                                        </AnimatePresence>
+                                                    </motion.div>
+                                                </AnimatePresence>
+                                            ) : (
+                                                <AnimatePresence initial={false}>
+                                                    {content[activeTab as keyof typeof content].steps.map((step, index) => (
+                                                        <motion.div
+                                                            key={step.methodId || `${step.title}-${index}`}
+                                                            initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                                                            animate={{ opacity: 1, height: 'auto', marginBottom: 24 }}
+                                                            exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                                                            transition={{ duration: 0.3 }}
+                                                        >
                                                             <StageItem
-                                                                key={index}
                                                                 step={step}
                                                                 index={index}
                                                                 onClick={() => {
@@ -1509,38 +1592,22 @@ const PourOverRecipes = () => {
                                                                 activeTab={activeTab}
                                                                 selectedMethod={selectedMethod}
                                                                 currentStage={currentStage}
-                                                                onEdit={methodType === 'custom' ? () => handleEditCustomMethod(customMethods[selectedEquipment!][index]) : undefined}
-                                                                onDelete={methodType === 'custom' ? () => handleDeleteCustomMethod(customMethods[selectedEquipment!][index]) : undefined}
+                                                                onEdit={methodType === 'custom' && customMethods[selectedEquipment!] ? () => {
+                                                                    const method = customMethods[selectedEquipment!][index];
+                                                                    handleEditCustomMethod(method);
+                                                                } : undefined}
+                                                                onDelete={methodType === 'custom' && customMethods[selectedEquipment!] ? () => {
+                                                                    const method = customMethods[selectedEquipment!][index];
+                                                                    handleDeleteCustomMethod(method);
+                                                                } : undefined}
                                                                 actionMenuStates={actionMenuStates}
                                                                 setActionMenuStates={setActionMenuStates}
                                                                 selectedEquipment={selectedEquipment}
                                                                 customMethods={customMethods}
                                                             />
-                                                        ))}
-                                                    </motion.div>
+                                                        </motion.div>
+                                                    ))}
                                                 </AnimatePresence>
-                                            ) : (
-                                                content[activeTab as keyof typeof content].steps.map((step, index) => (
-                                                    <StageItem
-                                                        key={index}
-                                                        step={step}
-                                                        index={index}
-                                                        onClick={() => {
-                                                            if (activeTab === ('器具' as TabType)) {
-                                                                handleEquipmentSelect(step.title)
-                                                            } else if (activeTab === ('方案' as TabType)) {
-                                                                handleMethodSelect(index)
-                                                            }
-                                                        }}
-                                                        activeTab={activeTab}
-                                                        selectedMethod={selectedMethod}
-                                                        currentStage={currentStage}
-                                                        actionMenuStates={actionMenuStates}
-                                                        setActionMenuStates={setActionMenuStates}
-                                                        selectedEquipment={selectedEquipment}
-                                                        customMethods={customMethods}
-                                                    />
-                                                ))
                                             )}
                                         </motion.div>
                                     )}

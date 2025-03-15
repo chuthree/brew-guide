@@ -14,6 +14,7 @@ import React, { useState, useEffect } from 'react'
 // 从 page.tsx 导入 BrewingNoteData 类型
 import type { BrewingNoteData } from '@/app/page'
 import { generateOptimizationJson } from '@/lib/jsonUtils'
+import { brewingMethods, type Method, type Stage } from '@/lib/config'
 
 interface TasteRatings {
     acidity: number;
@@ -224,6 +225,25 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
             return null
         }).filter(Boolean).join('，')
 
+        // 获取stages数据
+        let stages: Stage[] = [];
+        // 首先尝试从initialData.stages获取
+        if (Array.isArray(initialData.stages)) {
+            stages = initialData.stages;
+        }
+        // 如果没有，尝试从brewingMethods中获取
+        else if (initialData.equipment && initialData.method) {
+            // 查找对应的方法
+            if (brewingMethods[initialData.equipment]) {
+                const method = brewingMethods[initialData.equipment].find(
+                    (m: Method) => m.name === initialData.method
+                );
+                if (method && Array.isArray(method.params.stages)) {
+                    stages = method.params.stages;
+                }
+            }
+        }
+
         // 使用工具函数生成优化JSON
         const configJson = generateOptimizationJson(
             initialData.equipment || '',
@@ -240,7 +260,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                 grindSize: '',
                 temp: '',
             },
-            Array.isArray(initialData.stages) ? initialData.stages : [],
+            stages, // 使用获取到的stages
             formData.taste,
             idealTaste,
             formData.notes || '',
