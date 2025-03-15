@@ -829,12 +829,25 @@ const PourOverRecipes = () => {
     const handleSaveCustomMethod = (method: Method) => {
         if (!selectedEquipment) return
 
+        // 检查是否是编辑模式
+        const isEditing = editingMethod !== undefined;
+
+        // 创建新的自定义方法列表
+        let updatedMethods = [...(customMethods[selectedEquipment] || [])];
+
+        if (isEditing) {
+            // 编辑模式：替换现有方法
+            updatedMethods = updatedMethods.map(m =>
+                m.name === editingMethod?.name ? method : m
+            );
+        } else {
+            // 创建模式：添加新方法
+            updatedMethods.push(method);
+        }
+
         const newCustomMethods = {
             ...customMethods,
-            [selectedEquipment]: [
-                ...(customMethods[selectedEquipment] || []),
-                method,
-            ],
+            [selectedEquipment]: updatedMethods,
         }
 
         setCustomMethods(newCustomMethods)
@@ -843,24 +856,31 @@ const PourOverRecipes = () => {
         setEditingMethod(undefined)
 
         // 更新内容显示
-        setContent((prev) => ({
-            ...prev,
-            方案: {
-                ...prev.方案,
-                steps: [
-                    ...prev.方案.steps,
-                    {
-                        title: method.name,
-                        items: [
-                            `水粉比 ${method.params.ratio}`,
-                            `总时长 ${formatTime(method.params.stages[method.params.stages.length - 1].time, true)}`,
-                            `研磨度 ${method.params.grindSize}`,
-                        ],
-                        note: '',
-                    },
-                ],
-            },
-        }))
+        setContent((prev) => {
+            // 如果是编辑模式，先移除旧的方案
+            const filteredSteps = isEditing
+                ? prev.方案.steps.filter(step => step.title !== editingMethod?.name)
+                : prev.方案.steps;
+
+            return {
+                ...prev,
+                方案: {
+                    ...prev.方案,
+                    steps: [
+                        ...filteredSteps,
+                        {
+                            title: method.name,
+                            items: [
+                                `水粉比 ${method.params.ratio}`,
+                                `总时长 ${formatTime(method.params.stages[method.params.stages.length - 1].time, true)}`,
+                                `研磨度 ${method.params.grindSize}`,
+                            ],
+                            note: '',
+                        },
+                    ],
+                },
+            };
+        })
     }
 
     // 处理自定义方案的编辑
@@ -1516,28 +1536,10 @@ const PourOverRecipes = () => {
                                 <div className="h-1.5 w-12 rounded-full bg-neutral-200 dark:bg-neutral-700" />
                             </div>
 
-                            {/* 标题栏 */}
-                            {/* <div className="flex items-center justify-between px-6 pb-4">
-                                <h2 className="text-sm font-medium tracking-wider text-neutral-800 dark:text-neutral-100">
-                                    {editingMet hod ? '编辑方案' : '新建方案'}
-                                </h2>
-                                <button
-                                    onClick={() => {
-                                        setShowCustomForm(false)
-                                        setEditingMethod(undefined)
-                                    }}
-                                    className="text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300"
-                                >
-                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                </button>
-                            </div> */}
 
                             {/* 表单内容 */}
                             <div className="px-6 pb-6">
                                 <CustomMethodForm
-                                    _equipmentId={selectedEquipment!}
                                     onSave={handleSaveCustomMethod}
                                     onCancel={() => {
                                         setShowCustomForm(false)

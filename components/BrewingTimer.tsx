@@ -4,28 +4,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import BrewingNoteForm from '@/components/BrewingNoteForm'
 import type { BrewingNoteData } from '@/app/page'
-
-interface Stage {
-    time: number
-    label: string
-    water: string
-    detail: string
-    pourTime?: number
-    pourType?: "center" | "circle" | "ice"
-}
-
-interface Method {
-    name: string
-    params: {
-        coffee: string
-        water: string
-        ratio: string
-        grindSize: string
-        temp: string
-        videoUrl: string
-        stages: Stage[]
-    }
-}
+import type { Method } from '@/lib/config'
 
 // Helper function to format time
 const formatTime = (seconds: number, compact: boolean = false) => {

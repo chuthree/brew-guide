@@ -26,6 +26,11 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     const stagesContainerRef = useRef<HTMLDivElement>(null)
     const newStageRef = useRef<HTMLDivElement>(null)
 
+    // 添加一个状态来跟踪正在编辑的累计时间输入
+    const [editingCumulativeTime, setEditingCumulativeTime] = useState<{ index: number, value: string } | null>(null)
+    // 添加一个状态来跟踪正在编辑的累计水量输入
+    const [editingCumulativeWater, setEditingCumulativeWater] = useState<{ index: number, value: string } | null>(null)
+
     const [method, setMethod] = useState<Method>(() => {
         // 如果有初始方法，直接使用
         if (initialMethod) {
@@ -242,7 +247,17 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     }
 
     const handleSubmit = () => {
-        onSave(method)
+        // 创建一个方法的深拷贝，以便修改
+        const finalMethod = JSON.parse(JSON.stringify(method)) as Method;
+
+        // 不需要处理 ID，因为 Method 类型中没有 id 属性
+        // 在 app/page.tsx 中会根据方法名称进行匹配和更新
+
+        // 注意：不再计算累计值，直接使用用户输入的值
+        // 因为表单中用户已经直接输入了累计值
+
+        // 保存方法
+        onSave(finalMethod);
     }
 
     const handleCoffeeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -313,7 +328,19 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     }
 
     const calculateTotalTime = () => {
-        return method.params.stages.reduce((total, stage) => total + stage.time, 0)
+        // 如果没有步骤，返回0
+        if (method.params.stages.length === 0) return 0;
+
+        // 返回最后一个有时间的步骤的时间
+        for (let i = method.params.stages.length - 1; i >= 0; i--) {
+            const stage = method.params.stages[i];
+            if (stage.time) {
+                return stage.time;
+            }
+        }
+
+        // 如果没有找到有时间的步骤，返回0
+        return 0;
     }
 
     const formatTime = (seconds: number) => {
@@ -379,25 +406,19 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
 
     // 计算当前已使用的水量
     const calculateCurrentWater = () => {
-        return method.params.stages.reduce((total, stage) => {
-            if (!stage.water) return total;
-            return total + parseInt(stage.water);
-        }, 0);
-    }
+        // 如果没有步骤，返回0
+        if (method.params.stages.length === 0) return 0;
 
-    // 计算到指定阶段之前的累计水量（不包括该阶段）
-    const calculateCumulativeWaterBeforeStage = (stageIndex: number) => {
-        return method.params.stages.slice(0, stageIndex).reduce((total, stage) => {
-            if (!stage.water) return total;
-            return total + parseInt(stage.water.replace('g', ''));
-        }, 0);
-    }
+        // 找到最后一个有水量的步骤
+        for (let i = method.params.stages.length - 1; i >= 0; i--) {
+            const stage = method.params.stages[i];
+            if (stage.water) {
+                return parseInt(stage.water.replace('g', ''));
+            }
+        }
 
-    // 计算到指定阶段之前的累计时间（不包括该阶段）
-    const calculateCumulativeTimeBeforeStage = (stageIndex: number) => {
-        return method.params.stages.slice(0, stageIndex).reduce((total, stage) => {
-            return total + (stage.time || 0);
-        }, 0);
+        // 如果没有找到有水量的步骤，返回0
+        return 0;
     }
 
     // 渲染进度条
@@ -423,7 +444,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                     <div className="flex flex-col items-center justify-center h-full">
                         <div className="text-center space-y-8 max-w-sm">
                             <h2 className="text-xl font-medium text-neutral-800 dark:text-neutral-200">
-                                给你的冲煮方案起个名字
+                                {initialMethod ? '编辑你的冲煮方案名称' : '给你的冲煮方案起个名字'}
                             </h2>
                             <div className="relative flex justify-center">
                                 <div className="relative inline-block">
@@ -625,57 +646,61 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                                                     type="number"
                                                     min="0"
                                                     step="1"
-                                                    value={stage.time ? (calculateCumulativeTimeBeforeStage(index) + stage.time).toString() : ''}
-                                                    placeholder={`当前累计: ${calculateCumulativeTimeBeforeStage(index)}`}
+                                                    value={
+                                                        editingCumulativeTime && editingCumulativeTime.index === index
+                                                            ? editingCumulativeTime.value
+                                                            : stage.time ? stage.time.toString() : ''
+                                                    }
+                                                    placeholder="请输入累计时间"
                                                     onChange={(e) => {
-                                                        // 仅更新输入值，不做验证
-                                                        const value = e.target.value;
+                                                        // 更新本地编辑状态
+                                                        setEditingCumulativeTime({
+                                                            index,
+                                                            value: e.target.value
+                                                        });
 
                                                         // 如果输入为空，允许清空
+                                                        if (!e.target.value.trim()) {
+                                                            handleStageChange(index, 'time', 0);
+                                                            return;
+                                                        }
+
+                                                        // 直接使用用户输入的值
+                                                        const time = parseInt(e.target.value);
+                                                        handleStageChange(index, 'time', time);
+                                                    }}
+                                                    onBlur={(e) => {
+                                                        // 清除编辑状态
+                                                        setEditingCumulativeTime(null);
+
+                                                        // 在失去焦点时进行验证和调整
+                                                        const value = e.target.value;
+
+                                                        // 如果输入为空，设置为0
                                                         if (!value.trim()) {
                                                             handleStageChange(index, 'time', 0);
                                                             return;
                                                         }
 
-                                                        const targetCumulativeTime = parseInt(value);
-                                                        const previousTime = calculateCumulativeTimeBeforeStage(index);
-                                                        const stageTime = targetCumulativeTime - previousTime;
+                                                        // 直接使用用户输入的值
+                                                        const time = parseInt(value) || 0;
+                                                        handleStageChange(index, 'time', time);
 
-                                                        // 直接更新时间，不做验证
-                                                        handleStageChange(index, 'time', stageTime);
-                                                    }}
-                                                    onBlur={(e) => {
-                                                        // 在失去焦点时进行验证和调整
-                                                        const value = e.target.value;
+                                                        // 自动设置注水时间
+                                                        // 计算本阶段的时间（当前累计时间减去前一阶段的累计时间）
+                                                        const previousTime = index > 0 ? method.params.stages[index - 1].time || 0 : 0;
+                                                        const stageTime = time - previousTime;
 
-                                                        // 获取之前阶段的累计时间
-                                                        const previousTime = calculateCumulativeTimeBeforeStage(index);
-
-                                                        // 用户输入的是当前阶段的目标累计时间
-                                                        const targetCumulativeTime = parseInt(value) || 0;
-
-                                                        // 如果输入的累计时间小于前一阶段的累计时间，则清空输入
-                                                        if (targetCumulativeTime < previousTime) {
-                                                            handleStageChange(index, 'time', 0);
-                                                            return;
-                                                        }
-
-                                                        // 计算当前阶段的实际时间（当前累计时间减去之前阶段的累计时间）
-                                                        const stageTime = targetCumulativeTime - previousTime;
-
-                                                        // 更新当前阶段的时间
-                                                        handleStageChange(index, 'time', stageTime);
-
-                                                        // 自动设置注水时间为当前阶段的时间
-                                                        if (stageTime > 0) {
-                                                            handleStageChange(index, 'pourTime', stageTime);
+                                                        // 只有当注水时间未设置或大于阶段时间时才自动设置
+                                                        if (!stage.pourTime || stageTime < stage.pourTime) {
+                                                            handleStageChange(index, 'pourTime', stageTime > 0 ? stageTime : 0);
                                                         }
                                                     }}
                                                     onFocus={(e) => e.target.select()}
                                                     className="w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
                                                 />
                                                 <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
-                                                    本阶段时间: {stage.time || 0}秒 (总计: {calculateCumulativeTimeBeforeStage(index) + (stage.time || 0)}秒)
+                                                    {index > 0 ? `上一步时间: ${method.params.stages[index - 1].time || 0}秒` : '第一步'}
                                                 </p>
                                             </div>
                                             <div className="space-y-2">
@@ -703,56 +728,52 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                                                         type="number"
                                                         min="0"
                                                         step="1"
-                                                        value={stage.water ? (calculateCumulativeWaterBeforeStage(index) + parseInt(stage.water.replace('g', ''))).toString() : ''}
-                                                        placeholder={`剩余: ${parseInt(method.params.water?.replace('g', '')) - calculateCumulativeWaterBeforeStage(index)}`}
+                                                        value={
+                                                            editingCumulativeWater && editingCumulativeWater.index === index
+                                                                ? editingCumulativeWater.value
+                                                                : stage.water ? parseInt(stage.water.replace('g', '')).toString() : ''
+                                                        }
+                                                        placeholder={`总水量: ${parseInt(method.params.water?.replace('g', '') || '0')}g`}
                                                         onChange={(e) => {
-                                                            // 仅更新输入值，不做验证
-                                                            const value = e.target.value;
+                                                            // 更新本地编辑状态
+                                                            setEditingCumulativeWater({
+                                                                index,
+                                                                value: e.target.value
+                                                            });
 
                                                             // 如果输入为空，允许清空
+                                                            if (!e.target.value.trim()) {
+                                                                handleStageChange(index, 'water', '');
+                                                                return;
+                                                            }
+
+                                                            // 直接使用用户输入的值
+                                                            const water = parseInt(e.target.value);
+                                                            handleStageChange(index, 'water', `${water}g`);
+                                                        }}
+                                                        onBlur={(e) => {
+                                                            // 清除编辑状态
+                                                            setEditingCumulativeWater(null);
+
+                                                            // 在失去焦点时进行验证和调整
+                                                            const value = e.target.value;
+
+                                                            // 如果输入为空，清空水量
                                                             if (!value.trim()) {
                                                                 handleStageChange(index, 'water', '');
                                                                 return;
                                                             }
 
-                                                            const targetCumulativeWater = parseInt(value);
-                                                            const previousWater = calculateCumulativeWaterBeforeStage(index);
-                                                            const stageWater = targetCumulativeWater - previousWater;
-
-                                                            // 直接更新水量，不做验证
-                                                            handleStageChange(index, 'water', stageWater.toString());
-                                                        }}
-                                                        onBlur={(e) => {
-                                                            // 在失去焦点时进行验证和调整
-                                                            const value = e.target.value;
-
-                                                            // 获取之前阶段的累计水量
-                                                            const previousWater = calculateCumulativeWaterBeforeStage(index);
-
-                                                            // 用户输入的是当前阶段的目标累计水量
-                                                            const targetCumulativeWater = parseInt(value) || 0;
-
-                                                            // 如果输入的累计水量小于前一阶段的累计水量，则清空输入
-                                                            if (targetCumulativeWater < previousWater) {
-                                                                handleStageChange(index, 'water', '');
-                                                                return;
-                                                            }
+                                                            // 直接使用用户输入的值
+                                                            const water = parseInt(value) || 0;
 
                                                             // 确保累计水量不超过总水量
                                                             const totalWater = parseInt(method.params.water?.replace('g', '') || '0');
-
-                                                            // 如果累计水量超过总水量，则设置为总水量
-                                                            if (targetCumulativeWater > totalWater) {
-                                                                const stageWater = totalWater - previousWater;
-                                                                handleStageChange(index, 'water', stageWater.toString());
-                                                                return;
+                                                            if (water > totalWater) {
+                                                                handleStageChange(index, 'water', `${totalWater}g`);
+                                                            } else {
+                                                                handleStageChange(index, 'water', `${water}g`);
                                                             }
-
-                                                            // 计算当前阶段的实际水量（当前累计水量减去之前阶段的累计水量）
-                                                            const stageWater = targetCumulativeWater - previousWater;
-
-                                                            // 更新当前阶段的水量
-                                                            handleStageChange(index, 'water', stageWater.toString());
                                                         }}
                                                         onFocus={(e) => e.target.select()}
                                                         className="w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
@@ -760,7 +781,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                                                     <span className="absolute right-0 bottom-2 text-neutral-500 dark:text-neutral-400">g</span>
                                                 </div>
                                                 <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
-                                                    本阶段注水: {formatWater(stage.water)} (总计: {calculateCumulativeWaterBeforeStage(index) + (stage.water ? parseInt(stage.water.replace('g', '')) : 0)}g)
+                                                    {index > 0 ? `上一步水量: ${method.params.stages[index - 1].water || '0g'}` : '第一步'}
                                                 </p>
                                             </div>
                                         </div>
@@ -795,7 +816,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                         </div>
                         <div className="space-y-2">
                             <h3 className="text-xl font-medium text-neutral-800 dark:text-neutral-200">
-                                方案创建完成
+                                {initialMethod ? '方案编辑完成' : '方案创建完成'}
                             </h3>
                             <p className="text-neutral-600 dark:text-neutral-400">
                                 你的咖啡冲煮方案已经准备就绪

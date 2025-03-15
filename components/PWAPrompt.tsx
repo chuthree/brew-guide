@@ -112,7 +112,7 @@ export default function PWAPrompt() {
 
     return (
         <AnimatePresence>
-            {/* {(showInstallPrompt || showUpdatePrompt) && (
+            {(showInstallPrompt || showUpdatePrompt) && (
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -189,7 +189,7 @@ export default function PWAPrompt() {
                         </div>
                     )}
                 </motion.div>
-            )} */}
+            )}
         </AnimatePresence>
     )
 } 

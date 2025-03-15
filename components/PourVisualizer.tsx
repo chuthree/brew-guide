@@ -154,7 +154,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                     // 添加下一个冰块索引
                     return [...prev, prev.length + 1]
                 })
-            }, 1500) // 每1.5秒添加一个冰块
+            }, 1000) // 每1秒添加一个冰块，从1.5秒改为1秒
 
             return () => clearInterval(interval)
         } else {
