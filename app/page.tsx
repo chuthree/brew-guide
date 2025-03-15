@@ -3,9 +3,8 @@ import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import dynamic from 'next/dynamic'
 import { brewingMethods as commonMethods, equipmentList, brandCoffees, APP_VERSION, type Method, type Stage, type Brand, type CoffeeBean } from '@/lib/config'
-import CustomMethodForm from '@/components/CustomMethodForm'
-import ImportMethodForm from '@/components/ImportMethodForm'
-import { methodToJson } from '@/lib/jsonUtils'
+import { loadCustomMethods, saveCustomMethod, deleteCustomMethod, copyMethodToClipboard } from '@/lib/customMethods'
+import CustomMethodFormModal from '@/components/CustomMethodFormModal'
 
 // 动态导入客户端组件
 const BrewingTimer = dynamic(() => import('@/components/BrewingTimer'), { ssr: false })
@@ -266,51 +265,13 @@ const StageItem = ({
     // 添加复制成功状态
     const [copySuccess, setCopySuccess] = useState(false)
 
-    // 兼容性更好的复制文本方法
-    const copyTextToClipboard = async (text: string) => {
-        // 首先尝试使用现代API
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            return navigator.clipboard.writeText(text);
-        }
-
-        // 回退方法：创建临时textarea元素
-        const textArea = document.createElement('textarea');
-        textArea.value = text;
-
-        // 设置样式使其不可见
-        textArea.style.position = 'fixed';
-        textArea.style.left = '-999999px';
-        textArea.style.top = '-999999px';
-        document.body.appendChild(textArea);
-
-        // 选择文本并复制
-        textArea.focus();
-        textArea.select();
-
-        return new Promise<void>((resolve, reject) => {
-            try {
-                const successful = document.execCommand('copy');
-                if (successful) {
-                    resolve();
-                } else {
-                    reject(new Error('复制命令执行失败'));
-                }
-            } catch (err) {
-                reject(err);
-            } finally {
-                document.body.removeChild(textArea);
-            }
-        });
-    }
-
     // 处理分享方法
     const handleShare = useCallback((e: React.MouseEvent) => {
         e.stopPropagation()
         if (onEdit && activeTab === ('方案' as TabType) && selectedEquipment && customMethods && customMethods[selectedEquipment]) {
             try {
                 const method = customMethods[selectedEquipment][index]
-                const jsonString = methodToJson(method)
-                copyTextToClipboard(jsonString)
+                copyMethodToClipboard(method)
                     .then(() => {
                         setCopySuccess(true)
                         setTimeout(() => setCopySuccess(false), 2000)
@@ -549,25 +510,8 @@ const PourOverRecipes = () => {
     // 加载自定义方案
     useEffect(() => {
         try {
-            const savedMethods = localStorage.getItem('customMethods')
-            if (savedMethods) {
-                const parsedMethods = JSON.parse(savedMethods);
-
-                // 确保所有方法都有唯一ID
-                const methodsWithIds: Record<string, Method[]> = {};
-
-                Object.keys(parsedMethods).forEach(equipment => {
-                    methodsWithIds[equipment] = parsedMethods[equipment].map((method: Method) => ({
-                        ...method,
-                        id: method.id || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-                    }));
-                });
-
-                setCustomMethods(methodsWithIds);
-
-                // 更新本地存储
-                localStorage.setItem('customMethods', JSON.stringify(methodsWithIds));
-            }
+            const loadedMethods = loadCustomMethods();
+            setCustomMethods(loadedMethods);
         } catch (error) {
             console.error('Error loading custom methods:', error)
         }
@@ -970,64 +914,49 @@ const PourOverRecipes = () => {
     const handleSaveCustomMethod = (method: Method) => {
         if (!selectedEquipment) return
 
-        // 始终生成新的ID，确保每次修改都有唯一标识
-        const methodWithId = {
-            ...method,
-            id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-        };
+        try {
+            const { newCustomMethods, methodWithId } = saveCustomMethod(
+                method,
+                selectedEquipment,
+                customMethods,
+                editingMethod
+            );
 
-        // 检查是否是编辑模式
-        const isEditing = editingMethod !== undefined;
+            setCustomMethods(newCustomMethods);
+            setShowCustomForm(false);
+            setEditingMethod(undefined);
 
-        // 创建新的自定义方法列表
-        let updatedMethods = [...(customMethods[selectedEquipment] || [])];
+            // 更新内容显示
+            setContent((prev) => {
+                // 如果是编辑模式，先移除旧的方案
+                const filteredSteps = editingMethod
+                    ? prev.方案.steps.filter(step => step.title !== editingMethod?.name)
+                    : prev.方案.steps;
 
-        if (isEditing) {
-            // 编辑模式：移除旧方法，添加新方法（使用新ID）
-            updatedMethods = updatedMethods.filter(m => m.id !== editingMethod?.id);
-            updatedMethods.push(methodWithId);
-        } else {
-            // 创建模式：添加新方法
-            updatedMethods.push(methodWithId);
+                return {
+                    ...prev,
+                    方案: {
+                        ...prev.方案,
+                        steps: [
+                            ...filteredSteps,
+                            {
+                                title: methodWithId.name,
+                                items: [
+                                    `水粉比 ${methodWithId.params.ratio}`,
+                                    `总时长 ${formatTime(methodWithId.params.stages[methodWithId.params.stages.length - 1].time, true)}`,
+                                    `研磨度 ${methodWithId.params.grindSize}`,
+                                ],
+                                note: '',
+                                methodId: methodWithId.id, // 保存方法ID到步骤中
+                            },
+                        ],
+                    },
+                };
+            });
+        } catch (error) {
+            console.error('保存自定义方案失败:', error);
+            alert('保存失败，请重试');
         }
-
-        const newCustomMethods = {
-            ...customMethods,
-            [selectedEquipment]: updatedMethods,
-        }
-
-        setCustomMethods(newCustomMethods)
-        localStorage.setItem('customMethods', JSON.stringify(newCustomMethods))
-        setShowCustomForm(false)
-        setEditingMethod(undefined)
-
-        // 更新内容显示
-        setContent((prev) => {
-            // 如果是编辑模式，先移除旧的方案
-            const filteredSteps = isEditing
-                ? prev.方案.steps.filter(step => step.title !== editingMethod?.name)
-                : prev.方案.steps;
-
-            return {
-                ...prev,
-                方案: {
-                    ...prev.方案,
-                    steps: [
-                        ...filteredSteps,
-                        {
-                            title: methodWithId.name,
-                            items: [
-                                `水粉比 ${methodWithId.params.ratio}`,
-                                `总时长 ${formatTime(methodWithId.params.stages[methodWithId.params.stages.length - 1].time, true)}`,
-                                `研磨度 ${methodWithId.params.grindSize}`,
-                            ],
-                            note: '',
-                            methodId: methodWithId.id, // 保存方法ID到步骤中
-                        },
-                    ],
-                },
-            };
-        })
     }
 
     // 处理自定义方案的编辑
@@ -1040,27 +969,25 @@ const PourOverRecipes = () => {
     const handleDeleteCustomMethod = (method: Method) => {
         if (!selectedEquipment) return
 
-        const newCustomMethods = {
-            ...customMethods,
-            [selectedEquipment]: customMethods[selectedEquipment].filter(
-                (m) => m.id !== method.id
-            ),
+        try {
+            const newCustomMethods = deleteCustomMethod(method, selectedEquipment, customMethods);
+            setCustomMethods(newCustomMethods);
+
+            // 更新内容显示
+            setContent((prev) => ({
+                ...prev,
+                方案: {
+                    ...prev.方案,
+                    steps: prev.方案.steps.filter((step) => step.methodId !== method.id),
+                },
+            }));
+
+            // 重置所有菜单状态，解决删除后其他方案菜单状态异常的问题
+            setActionMenuStates({});
+        } catch (error) {
+            console.error('删除自定义方案失败:', error);
+            alert('删除失败，请重试');
         }
-
-        setCustomMethods(newCustomMethods)
-        localStorage.setItem('customMethods', JSON.stringify(newCustomMethods))
-
-        // 更新内容显示
-        setContent((prev) => ({
-            ...prev,
-            方案: {
-                ...prev.方案,
-                steps: prev.方案.steps.filter((step) => step.methodId !== method.id),
-            },
-        }))
-
-        // 重置所有菜单状态，解决删除后其他方案菜单状态异常的问题
-        setActionMenuStates({});
     }
 
     return (
@@ -1732,133 +1659,20 @@ const PourOverRecipes = () => {
                 </AnimatePresence>
             </motion.div>
 
-            {/* 自定义方案表单 */}
-            <AnimatePresence>
-                {showCustomForm && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.25 }}
-                        className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
-                        onClick={(e) => {
-                            if (e.target === e.currentTarget) {
-                                setShowCustomForm(false)
-                                setEditingMethod(undefined)
-                            }
-                        }}
-                    >
-                        <motion.div
-                            initial={{ y: '100%' }}
-                            animate={{ y: 0 }}
-                            exit={{ y: '100%' }}
-                            transition={{
-                                type: "tween",
-                                ease: [0.33, 1, 0.68, 1], // cubic-bezier(0.33, 1, 0.68, 1) - easeOutCubic
-                                duration: 0.35
-                            }}
-                            style={{
-                                willChange: "transform"
-                            }}
-                            className="absolute inset-x-0 bottom-0 max-h-[90vh] overflow-hidden rounded-t-2xl bg-white shadow-xl dark:bg-neutral-900"
-                        >
-                            {/* 拖动条 */}
-                            <div className="sticky top-0 z-10 flex justify-center py-2 bg-white dark:bg-neutral-900">
-                                <div className="h-1.5 w-12 rounded-full bg-neutral-200 dark:bg-neutral-700" />
-                            </div>
-
-
-                            {/* 表单内容 */}
-                            <motion.div
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{
-                                    type: "tween",
-                                    ease: "easeOut",
-                                    duration: 0.25,
-                                    delay: 0.05
-                                }}
-                                style={{
-                                    willChange: "opacity, transform"
-                                }}
-                                className="px-6 pb-6 overflow-auto max-h-[calc(90vh-40px)]"
-                            >
-                                <CustomMethodForm
-                                    onSave={handleSaveCustomMethod}
-                                    onCancel={() => {
-                                        setShowCustomForm(false)
-                                        setEditingMethod(undefined)
-                                    }}
-                                    initialMethod={editingMethod}
-                                />
-                            </motion.div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* 导入方案表单 */}
-            <AnimatePresence>
-                {showImportForm && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.25 }}
-                        className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
-                        onClick={(e) => {
-                            if (e.target === e.currentTarget) {
-                                setShowImportForm(false)
-                            }
-                        }}
-                    >
-                        <motion.div
-                            initial={{ y: '100%' }}
-                            animate={{ y: 0 }}
-                            exit={{ y: '100%' }}
-                            transition={{
-                                type: "tween",
-                                ease: [0.33, 1, 0.68, 1], // cubic-bezier(0.33, 1, 0.68, 1) - easeOutCubic
-                                duration: 0.35
-                            }}
-                            style={{
-                                willChange: "transform"
-                            }}
-                            className="absolute inset-x-0 bottom-0 max-h-[90vh] overflow-hidden rounded-t-2xl bg-white shadow-xl dark:bg-neutral-900"
-                        >
-                            {/* 拖动条 */}
-                            <div className="sticky top-0 z-10 flex justify-center py-2 bg-white dark:bg-neutral-900">
-                                <div className="h-1.5 w-12 rounded-full bg-neutral-200 dark:bg-neutral-700" />
-                            </div>
-
-                            {/* 表单内容 */}
-                            <motion.div
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{
-                                    type: "tween",
-                                    ease: "easeOut",
-                                    duration: 0.25,
-                                    delay: 0.05
-                                }}
-                                style={{
-                                    willChange: "opacity, transform"
-                                }}
-                                className="px-6 pb-6 overflow-auto max-h-[calc(90vh-40px)]"
-                            >
-                                <ImportMethodForm
-                                    onSave={(method) => {
-                                        handleSaveCustomMethod(method)
-                                        setShowImportForm(false)
-                                    }}
-                                    onCancel={() => setShowImportForm(false)}
-                                    existingMethods={selectedEquipment && customMethods[selectedEquipment] ? customMethods[selectedEquipment] : []}
-                                />
-                            </motion.div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            {/* 使用自定义方案表单模态框组件 */}
+            <CustomMethodFormModal
+                showCustomForm={showCustomForm}
+                showImportForm={showImportForm}
+                editingMethod={editingMethod}
+                selectedEquipment={selectedEquipment}
+                customMethods={customMethods}
+                onSaveCustomMethod={handleSaveCustomMethod}
+                onCloseCustomForm={() => {
+                    setShowCustomForm(false)
+                    setEditingMethod(undefined)
+                }}
+                onCloseImportForm={() => setShowImportForm(false)}
+            />
         </div>
     )
 }
