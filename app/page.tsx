@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import dynamic from 'next/dynamic'
 import { brewingMethods as commonMethods, equipmentList, brandCoffees, APP_VERSION, type Method, type Stage, type Brand, type CoffeeBean } from '@/lib/config'
+// 当前应用版本: 2.1.0，添加了模态窗口功能和暗色模式支持
 import CustomMethodForm from '@/components/CustomMethodForm'
 
 // 动态导入客户端组件
