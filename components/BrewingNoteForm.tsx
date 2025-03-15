@@ -588,7 +588,7 @@ stages数组中的每个阶段必须包含以下字段：
                                 value={optimizationNotes}
                                 onChange={(e) => setOptimizationNotes(e.target.value)}
                                 className="w-full resize-none border-b border-neutral-200 rounded-none bg-transparent text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300"
-                                placeholder="描述你想要达到的风味目标，例如：希望增加甜度，减少苦味..."
+                                placeholder="还有其他优化目标？例如：提升层次感、增加果香、改善口感..."
                             />
                         </div>
 
