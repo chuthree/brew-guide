@@ -124,7 +124,7 @@ export default function PWAPrompt() {
                         <div className="flex flex-col space-y-6 border-l border-neutral-200 pl-6 bg-neutral-50/80 backdrop-blur-sm dark:bg-neutral-900/80 dark:border-neutral-800">
                             <div className="space-y-2">
                                 <h3 className="text-xs font-normal tracking-wider text-neutral-800 dark:text-neutral-100">
-                                    添加到主屏幕
+                                    添加到主屏幕（强烈建议！✨）
                                 </h3>
                                 {isIOS ? (
                                     <div className="space-y-1">

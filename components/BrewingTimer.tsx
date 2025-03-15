@@ -399,7 +399,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.3 }}
-                className="sticky bottom-0 mb-9 border-t border-neutral-200 bg-neutral-50 pt-6 dark:border-neutral-800 dark:bg-neutral-900"
+                className="sticky bottom-0 pb-9 border-t border-neutral-200 bg-neutral-50 pt-6 dark:border-neutral-800 dark:bg-neutral-900"
                 style={{
                     willChange: "transform, opacity"
                 }}

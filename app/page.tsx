@@ -3,7 +3,6 @@ import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import dynamic from 'next/dynamic'
 import { brewingMethods as commonMethods, equipmentList, brandCoffees, APP_VERSION, type Method, type Stage, type Brand, type CoffeeBean } from '@/lib/config'
-// 当前应用版本: 2.1.0，添加了模态窗口功能和暗色模式支持
 import CustomMethodForm from '@/components/CustomMethodForm'
 
 // 动态导入客户端组件
@@ -239,6 +238,8 @@ const StageItem = ({
     currentStage,
     onEdit,
     onDelete,
+    actionMenuStates,
+    setActionMenuStates,
 }: {
     step: Step
     index: number
@@ -248,8 +249,13 @@ const StageItem = ({
     currentStage: number
     onEdit?: () => void
     onDelete?: () => void
+    actionMenuStates: Record<string, boolean>
+    setActionMenuStates: React.Dispatch<React.SetStateAction<Record<string, boolean>>>
 }) => {
-    const [showActions, setShowActions] = useState(false)
+    // 创建一个唯一的ID来标识这个卡片
+    const cardId = `${activeTab}-${step.title}-${index}`
+    // 检查这个卡片的菜单是否应该显示
+    const showActions = actionMenuStates[cardId] || false
 
     return (
         <motion.div
@@ -318,7 +324,11 @@ const StageItem = ({
                                         <button
                                             onClick={(e) => {
                                                 e.stopPropagation()
-                                                setShowActions(false)
+                                                // 更新全局状态对象，关闭当前卡片的菜单
+                                                setActionMenuStates(prev => ({
+                                                    ...prev,
+                                                    [cardId]: false
+                                                }))
                                             }}
                                             className="w-7 h-7 flex items-center justify-center rounded-full text-sm text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800"
                                         >
@@ -334,7 +344,11 @@ const StageItem = ({
                                         transition={{ duration: 0.2 }}
                                         onClick={(e) => {
                                             e.stopPropagation()
-                                            setShowActions(true)
+                                            // 更新全局状态对象，打开当前卡片的菜单
+                                            setActionMenuStates(prev => ({
+                                                ...prev,
+                                                [cardId]: true
+                                            }))
                                         }}
                                         className="w-7 h-7 flex items-center justify-center text-xs text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300"
                                     >
@@ -420,6 +434,8 @@ const PourOverRecipes = () => {
     const [customMethods, setCustomMethods] = useState<Record<string, Method[]>>({})
     const [showCustomForm, setShowCustomForm] = useState(false)
     const [editingMethod, setEditingMethod] = useState<Method | undefined>(undefined)
+    // 添加一个新的状态来跟踪每个卡片的菜单状态
+    const [actionMenuStates, setActionMenuStates] = useState<Record<string, boolean>>({})
 
     // 检查是否有笔记
     useEffect(() => {
@@ -1376,6 +1392,8 @@ const PourOverRecipes = () => {
                                                                 currentStage={currentStage}
                                                                 onEdit={methodType === 'custom' ? () => handleEditCustomMethod(customMethods[selectedEquipment!][index]) : undefined}
                                                                 onDelete={methodType === 'custom' ? () => handleDeleteCustomMethod(customMethods[selectedEquipment!][index]) : undefined}
+                                                                actionMenuStates={actionMenuStates}
+                                                                setActionMenuStates={setActionMenuStates}
                                                             />
                                                         ))}
                                                     </motion.div>
@@ -1396,6 +1414,8 @@ const PourOverRecipes = () => {
                                                         activeTab={activeTab}
                                                         selectedMethod={selectedMethod}
                                                         currentStage={currentStage}
+                                                        actionMenuStates={actionMenuStates}
+                                                        setActionMenuStates={setActionMenuStates}
                                                     />
                                                 ))
                                             )}
@@ -1445,7 +1465,7 @@ const PourOverRecipes = () => {
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: -20 }}
                                 transition={{ duration: 0.3 }}
-                                className=" bg-neutral-50 dark:bg-neutral-900 pt-1 w-full pb-9 flex flex-row justify-between"
+                                className=" bg-neutral-50 dark:bg-neutral-900 pt-1 w-full pb-9 flex flex-row justify-between absolute bottom-0 left-0 right-0 px-6"
 
                             >
                                 <div className="flex items-center space-x-4">

@@ -218,7 +218,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                     src={getEquipmentImageSrc()}
                     alt={equipmentId}
                     fill
-                    className="object-contain invert-0 dark:invert"
+                    className="object-contain invert-0 dark:invert opacity-50 transition-opacity duration-300"
                     priority
                     sizes="(max-width: 768px) 100vw, 300px"
                     quality={85}
@@ -230,7 +230,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                             src={getValveImageSrc() || ''}
                             alt={`Valve ${valveStatus}`}
                             fill
-                            className="object-contain invert-0 dark:invert"
+                            className="object-contain invert-0 dark:invert opacity-50 transition-opacity duration-300"
                             sizes="(max-width: 768px) 100vw, 300px"
                             quality={85}
                             onError={() => console.error('阀门图像加载失败')}
@@ -248,6 +248,9 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
     // 检查当前动画类型是否有效
     const isValidAnimation = availableAnimations[currentPourType as keyof typeof availableAnimations] !== undefined
 
+    // 计算杯体透明度 - 在注水时为完全不透明，否则为半透明
+    const equipmentOpacity = isPouring ? 'opacity-100' : 'opacity-50'
+
     return (
         <div
             className="relative w-full aspect-square max-w-[300px] mx-auto"
@@ -257,7 +260,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                 src={getEquipmentImageSrc()}
                 alt={equipmentId}
                 fill
-                className="object-contain invert-0 dark:invert"
+                className={`object-contain invert-0 dark:invert ${equipmentOpacity} transition-opacity duration-300`}
                 priority
                 sizes="(max-width: 768px) 100vw, 300px"
                 quality={85}
@@ -271,7 +274,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                         src={getValveImageSrc() || ''}
                         alt={`Valve ${valveStatus}`}
                         fill
-                        className="object-contain invert-0 dark:invert"
+                        className={`object-contain invert-0 dark:invert ${equipmentOpacity} transition-opacity duration-300`}
                         sizes="(max-width: 768px) 100vw, 300px"
                         quality={85}
                         onError={() => console.error('阀门图像加载失败')}
