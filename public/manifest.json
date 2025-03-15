@@ -1,9 +1,9 @@
 {
-	"name": "Brew Guide",
+	"name": "手冲咖啡冲煮指南",
 	"short_name": "Brew Guide",
-	"description": "Your personal coffee brewing companion",
-	"start_url": "/?standalone=true",
-	"display": "standalone",
+	"description": "专业的手冲咖啡冲煮指南，包含手冲咖啡的详细步骤、参数配置和计时器",
+	"start_url": "/",
+	"display": "fullscreen",
 	"orientation": "portrait",
 	"scope": "/",
 	"prefer_related_applications": false,
@@ -21,6 +21,9 @@
 			"purpose": "maskable"
 		}
 	],
-	"theme_color": "#000000",
-	"background_color": "#000000"
+	"theme_color": "#fafafa",
+	"background_color": "#fafafa",
+	"categories": ["food", "lifestyle", "utilities"],
+	"lang": "zh-CN",
+	"dir": "ltr"
 }
