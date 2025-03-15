@@ -3,6 +3,8 @@ import { ThemeProvider } from 'next-themes'
 import PWAPrompt from '@/components/PWAPrompt'
 import { Analytics } from '@vercel/analytics/next';
 import Script from 'next/script'
+import { GeistSans } from 'geist/font/sans'
+import { GeistMono } from 'geist/font/mono'
 import './globals.css'
 
 
@@ -79,7 +81,10 @@ export default function RootLayout({
   const isDevelopment = process.env.NODE_ENV === 'development'
 
   return (
-    <html lang="zh" suppressHydrationWarning>
+    <html lang="zh" suppressHydrationWarning style={{
+      '--font-sans': GeistSans.style.fontFamily,
+      '--font-mono': GeistMono.style.fontFamily,
+    } as React.CSSProperties}>
       <head>
         <meta name="application-name" content="Brew Guide" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
