@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import dynamic from 'next/dynamic'
 import { brewingMethods as commonMethods, equipmentList, brandCoffees, APP_VERSION, type Method, type Stage, type Brand, type CoffeeBean } from '@/lib/config'
 import CustomMethodForm from '@/components/CustomMethodForm'
+import ImportMethodForm from '@/components/ImportMethodForm'
+import { methodToJson } from '@/lib/jsonUtils'
 
 // 动态导入客户端组件
 const BrewingTimer = dynamic(() => import('@/components/BrewingTimer'), { ssr: false })
@@ -240,6 +242,8 @@ const StageItem = ({
     onDelete,
     actionMenuStates,
     setActionMenuStates,
+    selectedEquipment,
+    customMethods,
 }: {
     step: Step
     index: number
@@ -251,11 +255,74 @@ const StageItem = ({
     onDelete?: () => void
     actionMenuStates: Record<string, boolean>
     setActionMenuStates: React.Dispatch<React.SetStateAction<Record<string, boolean>>>
+    selectedEquipment?: string | null
+    customMethods?: Record<string, Method[]>
 }) => {
     // 创建一个唯一的ID来标识这个卡片
     const cardId = `${activeTab}-${step.title}-${index}`
     // 检查这个卡片的菜单是否应该显示
     const showActions = actionMenuStates[cardId] || false
+    // 添加复制成功状态
+    const [copySuccess, setCopySuccess] = useState(false)
+
+    // 兼容性更好的复制文本方法
+    const copyTextToClipboard = async (text: string) => {
+        // 首先尝试使用现代API
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            return navigator.clipboard.writeText(text);
+        }
+
+        // 回退方法：创建临时textarea元素
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+
+        // 设置样式使其不可见
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+
+        // 选择文本并复制
+        textArea.focus();
+        textArea.select();
+
+        return new Promise<void>((resolve, reject) => {
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    resolve();
+                } else {
+                    reject(new Error('复制命令执行失败'));
+                }
+            } catch (err) {
+                reject(err);
+            } finally {
+                document.body.removeChild(textArea);
+            }
+        });
+    }
+
+    // 处理分享方法
+    const handleShare = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation()
+        if (onEdit && activeTab === '方案' && selectedEquipment && customMethods && customMethods[selectedEquipment]) {
+            try {
+                const method = customMethods[selectedEquipment][index]
+                const jsonString = methodToJson(method)
+                copyTextToClipboard(jsonString)
+                    .then(() => {
+                        setCopySuccess(true)
+                        setTimeout(() => setCopySuccess(false), 2000)
+                    })
+                    .catch(err => {
+                        console.error('复制失败:', err)
+                        alert('复制失败，请手动复制')
+                    })
+            } catch (err) {
+                console.error('复制失败:', err)
+            }
+        }
+    }, [onEdit, activeTab, index, selectedEquipment, customMethods])
 
     return (
         <motion.div
@@ -311,6 +378,22 @@ const StageItem = ({
                                             className="px-3 py-1.5 text-xs text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300"
                                         >
                                             编辑
+                                        </button>
+                                        <button
+                                            onClick={handleShare}
+                                            className="px-3 py-1.5 text-xs text-blue-400 hover:text-blue-600 dark:text-blue-500 dark:hover:text-blue-300 relative"
+                                        >
+                                            {copySuccess ? '已复制' : '分享'}
+                                            {copySuccess && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, y: 10 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    exit={{ opacity: 0, y: -10 }}
+                                                    className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-neutral-800 dark:bg-neutral-700 text-white px-2 py-1 rounded text-[10px] whitespace-nowrap"
+                                                >
+                                                    已复制到剪贴板
+                                                </motion.div>
+                                            )}
                                         </button>
                                         <button
                                             onClick={(e) => {
@@ -436,6 +519,9 @@ const PourOverRecipes = () => {
     const [editingMethod, setEditingMethod] = useState<Method | undefined>(undefined)
     // 添加一个新的状态来跟踪每个卡片的菜单状态
     const [actionMenuStates, setActionMenuStates] = useState<Record<string, boolean>>({})
+    // 添加导入方案表单状态
+    const [showImportForm, setShowImportForm] = useState(false)
+    const [optimizingNote, setOptimizingNote] = useState(false)
 
     // 检查是否有笔记
     useEffect(() => {
@@ -689,8 +775,20 @@ const PourOverRecipes = () => {
         if (isTimerRunning && !window.confirm('计时器正在运行，确定要返回吗？'))
             return
 
+        // 如果在编辑或优化模式下，先关闭这些模式
         if (showHistory) {
-            setShowHistory(false)
+            // 检查是否在编辑或优化模式
+            const historyComponent = document.getElementById('brewing-history-component');
+            if (historyComponent) {
+                // 尝试查找返回按钮并模拟点击
+                const backButton = historyComponent.querySelector('button[data-action="back"]');
+                if (backButton) {
+                    (backButton as HTMLButtonElement).click();
+                    return;
+                }
+            }
+
+            setShowHistory(false);
         } else if (activeTab === '记录') {
             setActiveTab('注水')
             setShowComplete(false)
@@ -704,27 +802,12 @@ const PourOverRecipes = () => {
                     setSelectedBrand(null)
                 } else {
                     setActiveTab('器具')
-                    setSelectedEquipment(null)
-                    setMethodType('common')
-                    // 重置参数信息
-                    setParameterInfo({
-                        equipment: null,
-                        method: null,
-                        params: null,
-                    })
                 }
             } else {
                 setActiveTab('器具')
-                setSelectedEquipment(null)
-                // 重置参数信息
-                setParameterInfo({
-                    equipment: null,
-                    method: null,
-                    params: null,
-                })
             }
         }
-    }, [activeTab, isTimerRunning, showHistory, methodType, selectedBrand])
+    }, [activeTab, isTimerRunning, methodType, selectedBrand, showHistory])
 
     const handleParamChange = (type: keyof EditableParams, value: string) => {
         if (!editableParams || !selectedMethod || !currentBrewingMethod) return
@@ -980,9 +1063,34 @@ const PourOverRecipes = () => {
                                         transition={{ duration: 0.3 }}
                                         className="flex flex-col space-y-1"
                                     >
-                                        <div className="text-xs text-neutral-400 dark:text-neutral-500">
-                                            浏览历史冲煮记录
-                                        </div>
+                                        <AnimatePresence mode="wait">
+                                            {optimizingNote ? (
+                                                <motion.div
+                                                    key="optimize-info"
+                                                    initial={{ opacity: 0, y: 10 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    exit={{ opacity: 0, y: -10 }}
+                                                    transition={{ duration: 0.3 }}
+                                                    className="space-y-1"
+                                                >
+                                                    <div className="text-xs text-neutral-400 dark:text-neutral-500">
+                                                        优化冲煮方案：调整理想风味参数，生成优化提示词，让AI帮你优化冲煮方案
+                                                    </div>
+                                                </motion.div>
+                                            ) : (
+                                                <motion.div
+                                                    key="history-text"
+                                                    initial={{ opacity: 0, y: 5 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    exit={{ opacity: 0, y: -5 }}
+                                                    transition={{ duration: 0.3 }}
+                                                >
+                                                    <div className="text-xs text-neutral-400 dark:text-neutral-500">
+                                                        浏览历史冲煮记录
+                                                    </div>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
                                     </motion.div>
                                 ) : parameterInfo.equipment ? (
                                     <motion.div
@@ -1264,6 +1372,7 @@ const PourOverRecipes = () => {
                                 <BrewingHistory
                                     isOpen={showHistory}
                                     onClose={() => setShowHistory(false)}
+                                    onOptimizingChange={setOptimizingNote}
                                 />
                             </motion.div>
                         ) : activeTab === '记录' ? (
@@ -1366,14 +1475,24 @@ const PourOverRecipes = () => {
                                                         className="space-y-6"
                                                     >
                                                         {methodType === 'custom' && (
-                                                            <motion.button
-                                                                onClick={() => setShowCustomForm(true)}
-                                                                whileHover={{ scale: 1.02 }}
-                                                                whileTap={{ scale: 0.98 }}
-                                                                className="flex items-center justify-center w-full py-4 mb-4 border border-dashed border-neutral-300 rounded-md text-xs text-neutral-500 hover:text-neutral-700 hover:border-neutral-400 dark:border-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200 dark:hover:border-neutral-700 transition-colors"
-                                                            >
-                                                                <span className="mr-1">+</span> 新建方案
-                                                            </motion.button>
+                                                            <div className="flex space-x-2 mb-4">
+                                                                <motion.button
+                                                                    onClick={() => setShowCustomForm(true)}
+                                                                    whileHover={{ scale: 1.02 }}
+                                                                    whileTap={{ scale: 0.98 }}
+                                                                    className="flex-1 flex items-center justify-center py-4 border border-dashed border-neutral-300 rounded-md text-xs text-neutral-500 hover:text-neutral-700 hover:border-neutral-400 dark:border-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200 dark:hover:border-neutral-700 transition-colors"
+                                                                >
+                                                                    <span className="mr-1">+</span> 新建方案
+                                                                </motion.button>
+                                                                <motion.button
+                                                                    onClick={() => setShowImportForm(true)}
+                                                                    whileHover={{ scale: 1.02 }}
+                                                                    whileTap={{ scale: 0.98 }}
+                                                                    className="flex-1 flex items-center justify-center py-4 border border-dashed border-neutral-300 rounded-md text-xs text-neutral-500 hover:text-neutral-700 hover:border-neutral-400 dark:border-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200 dark:hover:border-neutral-700 transition-colors"
+                                                                >
+                                                                    <span className="mr-1">↓</span> 导入方案
+                                                                </motion.button>
+                                                            </div>
                                                         )}
                                                         {content[activeTab as keyof typeof content].steps.map((step, index) => (
                                                             <StageItem
@@ -1394,6 +1513,8 @@ const PourOverRecipes = () => {
                                                                 onDelete={methodType === 'custom' ? () => handleDeleteCustomMethod(customMethods[selectedEquipment!][index]) : undefined}
                                                                 actionMenuStates={actionMenuStates}
                                                                 setActionMenuStates={setActionMenuStates}
+                                                                selectedEquipment={selectedEquipment}
+                                                                customMethods={customMethods}
                                                             />
                                                         ))}
                                                     </motion.div>
@@ -1416,6 +1537,8 @@ const PourOverRecipes = () => {
                                                         currentStage={currentStage}
                                                         actionMenuStates={actionMenuStates}
                                                         setActionMenuStates={setActionMenuStates}
+                                                        selectedEquipment={selectedEquipment}
+                                                        customMethods={customMethods}
                                                     />
                                                 ))
                                             )}
@@ -1602,6 +1725,68 @@ const PourOverRecipes = () => {
                                         setEditingMethod(undefined)
                                     }}
                                     initialMethod={editingMethod}
+                                />
+                            </motion.div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* 导入方案表单 */}
+            <AnimatePresence>
+                {showImportForm && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.25 }}
+                        className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
+                        onClick={(e) => {
+                            if (e.target === e.currentTarget) {
+                                setShowImportForm(false)
+                            }
+                        }}
+                    >
+                        <motion.div
+                            initial={{ y: '100%' }}
+                            animate={{ y: 0 }}
+                            exit={{ y: '100%' }}
+                            transition={{
+                                type: "tween",
+                                ease: [0.33, 1, 0.68, 1], // cubic-bezier(0.33, 1, 0.68, 1) - easeOutCubic
+                                duration: 0.35
+                            }}
+                            style={{
+                                willChange: "transform"
+                            }}
+                            className="absolute inset-x-0 bottom-0 max-h-[90vh] overflow-hidden rounded-t-2xl bg-white shadow-xl dark:bg-neutral-900"
+                        >
+                            {/* 拖动条 */}
+                            <div className="sticky top-0 z-10 flex justify-center py-2 bg-white dark:bg-neutral-900">
+                                <div className="h-1.5 w-12 rounded-full bg-neutral-200 dark:bg-neutral-700" />
+                            </div>
+
+                            {/* 表单内容 */}
+                            <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{
+                                    type: "tween",
+                                    ease: "easeOut",
+                                    duration: 0.25,
+                                    delay: 0.05
+                                }}
+                                style={{
+                                    willChange: "opacity, transform"
+                                }}
+                                className="px-6 pb-6 overflow-auto max-h-[calc(90vh-40px)]"
+                            >
+                                <ImportMethodForm
+                                    onSave={(method) => {
+                                        handleSaveCustomMethod(method)
+                                        setShowImportForm(false)
+                                    }}
+                                    onCancel={() => setShowImportForm(false)}
                                 />
                             </motion.div>
                         </motion.div>

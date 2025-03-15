@@ -9,6 +9,7 @@ import BrewingNoteForm from './BrewingNoteForm'
 interface BrewingHistoryProps {
     isOpen: boolean
     onClose: () => void
+    onOptimizingChange?: (isOptimizing: boolean) => void
 }
 
 const formatDate = (timestamp: number) => {
@@ -24,9 +25,10 @@ const formatRating = (rating: number) => {
     return `[ ${rating}/5 ]`
 }
 
-const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen }) => {
+const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingChange }) => {
     const [notes, setNotes] = useState<BrewingNote[]>([])
     const [editingNote, setEditingNote] = useState<BrewingNote | null>(null)
+    const [optimizingNote, setOptimizingNote] = useState<BrewingNote | null>(null)
 
     // 添加本地存储变化监听
     useEffect(() => {
@@ -93,6 +95,33 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen }) => {
         setEditingNote(formattedNote)
     }
 
+    const handleOptimize = (note: BrewingNote) => {
+        const formattedNote = {
+            ...note,
+            coffeeBeanInfo: {
+                name: note.coffeeBeanInfo?.name || '',
+                roastLevel: note.coffeeBeanInfo?.roastLevel || '中度烘焙',
+                roastDate: note.coffeeBeanInfo?.roastDate || '',
+            },
+            rating: note.rating || 3,
+            taste: {
+                acidity: note.taste?.acidity || 3,
+                sweetness: note.taste?.sweetness || 3,
+                bitterness: note.taste?.bitterness || 3,
+                body: note.taste?.body || 3,
+            },
+            notes: note.notes || '',
+            equipment: note.equipment,
+            method: note.method,
+            params: note.params,
+            totalTime: note.totalTime,
+        }
+        setOptimizingNote(formattedNote)
+        if (onOptimizingChange) {
+            onOptimizingChange(true)
+        }
+    }
+
     const handleSaveEdit = (updatedData: BrewingNoteData) => {
         if (!editingNote) return
 
@@ -114,180 +143,250 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen }) => {
 
     if (!isOpen) return null
 
-    if (editingNote) {
-        return (
-            <BrewingNoteForm
-                id={editingNote.id}
-                isOpen={true}
-                onClose={() => setEditingNote(null)}
-                onSave={handleSaveEdit}
-                initialData={editingNote as unknown as Partial<BrewingNoteData>}
-            />
-        )
-    }
-
     return (
-        <div className="space-y-6">
-            {notes.length === 0 ? (
+        <AnimatePresence mode="wait">
+            {editingNote ? (
                 <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.3, duration: 0.3 }}
-                    className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500"
+                    key="edit-form"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.3 }}
+                    className="h-full"
+                    id="brewing-history-component"
                 >
-                    [ 暂无冲煮记录 ]
+                    <BrewingNoteForm
+                        id={editingNote.id}
+                        isOpen={true}
+                        onClose={() => setEditingNote(null)}
+                        onSave={handleSaveEdit}
+                        initialData={editingNote as unknown as Partial<BrewingNoteData>}
+                    />
+                </motion.div>
+            ) : optimizingNote ? (
+                <motion.div
+                    key="optimize-form"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.3 }}
+                    className="h-full"
+                    id="brewing-history-component"
+                >
+                    {/* 隐藏的返回按钮，仅用于导航栏返回按钮查找 */}
+                    <button
+                        data-action="back"
+                        onClick={() => {
+                            setOptimizingNote(null)
+                            if (onOptimizingChange) {
+                                onOptimizingChange(false)
+                            }
+                        }}
+                        className="hidden"
+                    />
+                    <BrewingNoteForm
+                        id={optimizingNote.id}
+                        isOpen={true}
+                        onClose={() => {
+                            setOptimizingNote(null)
+                            if (onOptimizingChange) {
+                                onOptimizingChange(false)
+                            }
+                        }}
+                        onSave={() => {
+                            setOptimizingNote(null)
+                            if (onOptimizingChange) {
+                                onOptimizingChange(false)
+                            }
+                        }}
+                        initialData={optimizingNote as unknown as Partial<BrewingNoteData>}
+                        showOptimizationByDefault={true}
+                    />
                 </motion.div>
             ) : (
                 <motion.div
+                    key="notes-list"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    transition={{ delay: 0.3, duration: 0.3 }}
-                    className="grid grid-cols-1 gap-6 md:grid-cols-2"
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="space-y-6"
+                    id="brewing-history-component"
                 >
-                    <AnimatePresence mode="popLayout">
-                        {notes.map((note, index) => (
-                            <motion.div
-                                key={note.id}
-                                layoutId={note.id}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -20 }}
-                                transition={{
-                                    duration: 0.4,
-                                    delay: index * 0.1,
-                                    layout: { duration: 0.3 }
-                                }}
-                                className="group space-y-4 border-l border-neutral-200/50 pl-6 dark:border-neutral-800"
-                            >
-                                <motion.div
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    transition={{ delay: 0.2 + index * 0.1 }}
-                                    className="flex flex-col space-y-4"
-                                >
-                                    <div className="space-y-2">
-                                        <div className="flex items-baseline justify-between">
-                                            <div className="flex items-baseline space-x-2">
-                                                <div className="text-[10px] ">
-                                                    {note.equipment}
-                                                </div>
-                                                {note.method && (
-                                                    <>
-                                                        <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
-                                                            ·
+                    {notes.length === 0 ? (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.3, duration: 0.3 }}
+                            className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500"
+                        >
+                            [ 暂无冲煮记录 ]
+                        </motion.div>
+                    ) : (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.3, duration: 0.3 }}
+                            className="grid grid-cols-1 gap-6"
+                        >
+                            <AnimatePresence mode="popLayout">
+                                {notes.map((note, index) => (
+                                    <motion.div
+                                        key={note.id}
+                                        layoutId={note.id}
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -20 }}
+                                        transition={{
+                                            duration: 0.4,
+                                            delay: index * 0.1,
+                                            layout: { duration: 0.3 }
+                                        }}
+                                        className="group space-y-4 border-l border-neutral-200/50 pl-6 dark:border-neutral-800"
+                                    >
+                                        <motion.div
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            transition={{ delay: 0.2 + index * 0.1 }}
+                                            className="flex flex-col space-y-4"
+                                        >
+                                            <div className="space-y-2">
+                                                <div className="flex items-baseline justify-between">
+                                                    <div className="flex items-baseline space-x-2">
+                                                        <div className="text-[10px] ">
+                                                            {note.equipment}
                                                         </div>
-                                                        <div className="text-[10px] font-light tracking-wide">
-                                                            {note.method}
-                                                        </div>
-                                                    </>
-                                                )}
-                                            </div>
-                                            <div className="flex items-center space-x-4">
-                                                <button
-                                                    onClick={() => handleEdit(note)}
-                                                    className="text-[10px] tracking-widest text-neutral-400 transition-colors hover:text-neutral-800 dark:text-neutral-500 dark:hover:text-neutral-300"
-                                                >
-                                                    [ 编辑 ]
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(note.id)}
-                                                    className="text-[10px] tracking-widest text-neutral-400 transition-colors hover:text-red-500 dark:text-neutral-500 dark:hover:text-red-400"
-                                                >
-                                                    [ 删除 ]
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex flex-wrap gap-2 text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
-                                            {note.coffeeBeanInfo?.name && (
-                                                <>
-                                                    <span>{note.coffeeBeanInfo.name}</span>
-                                                    <span>·</span>
-                                                </>
-                                            )}
-                                            <span>{note.coffeeBeanInfo?.roastLevel}</span>
-                                            {note.coffeeBeanInfo?.roastDate && (
-                                                <>
-                                                    <span>·</span>
-                                                    <span>{note.coffeeBeanInfo.roastDate}</span>
-                                                </>
-                                            )}
-                                            {note.params && (
-                                                <>
-                                                    <span>·</span>
-                                                    <span>{note.params.coffee}</span>
-                                                    <span>·</span>
-                                                    <span>{note.params.water}</span>
-                                                    <span>·</span>
-                                                    <span>{note.params.ratio}</span>
-                                                </>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-4">
-                                        {Object.entries(note.taste).map(([key, value], i) => (
-                                            <motion.div
-                                                key={key}
-                                                initial={{ opacity: 0, x: -10 }}
-                                                animate={{ opacity: 1, x: 0 }}
-                                                transition={{ delay: 0.5 + i * 0.1 + index * 0.1 }}
-                                                className="space-y-1"
-                                            >
-                                                <div className="flex items-center justify-between">
-                                                    <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
-                                                        {
-                                                            {
-                                                                acidity: '酸度',
-                                                                sweetness: '甜度',
-                                                                bitterness: '苦度',
-                                                                body: '醇度',
-                                                            }[key]
-                                                        }
+                                                        {note.method && (
+                                                            <>
+                                                                <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
+                                                                    ·
+                                                                </div>
+                                                                <div className="text-[10px] font-light tracking-wide">
+                                                                    {note.method}
+                                                                </div>
+                                                            </>
+                                                        )}
                                                     </div>
-                                                    <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
-                                                        [ {value} ]
+                                                    <div className="flex items-center space-x-4">
+                                                        <motion.button
+                                                            onClick={() => handleOptimize(note)}
+                                                            whileHover={{ scale: 1.05 }}
+                                                            whileTap={{ scale: 0.95 }}
+                                                            className="text-[10px] tracking-widest text-emerald-600 transition-colors hover:text-emerald-700 dark:text-emerald-500 dark:hover:text-emerald-400 font-medium"
+                                                        >
+                                                            [ 优化 ↗ ]
+                                                        </motion.button>
+                                                        <motion.button
+                                                            onClick={() => handleEdit(note)}
+                                                            whileHover={{ scale: 1.05 }}
+                                                            whileTap={{ scale: 0.95 }}
+                                                            className="text-[10px] tracking-widest text-neutral-400 transition-colors hover:text-neutral-800 dark:text-neutral-500 dark:hover:text-neutral-300"
+                                                        >
+                                                            [ 编辑 ]
+                                                        </motion.button>
+                                                        <motion.button
+                                                            onClick={() => handleDelete(note.id)}
+                                                            whileHover={{ scale: 1.05 }}
+                                                            whileTap={{ scale: 0.95 }}
+                                                            className="text-[10px] tracking-widest text-neutral-400 transition-colors hover:text-red-500 dark:text-neutral-500 dark:hover:text-red-400"
+                                                        >
+                                                            [ 删除 ]
+                                                        </motion.button>
                                                     </div>
                                                 </div>
-                                                <motion.div
-                                                    className="h-px w-full overflow-hidden bg-neutral-200/50 dark:bg-neutral-800"
-                                                >
+
+                                                <div className="flex flex-wrap gap-2 text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
+                                                    {note.coffeeBeanInfo?.name && (
+                                                        <>
+                                                            <span>{note.coffeeBeanInfo.name}</span>
+                                                            <span>·</span>
+                                                        </>
+                                                    )}
+                                                    <span>{note.coffeeBeanInfo?.roastLevel}</span>
+                                                    {note.coffeeBeanInfo?.roastDate && (
+                                                        <>
+                                                            <span>·</span>
+                                                            <span>{note.coffeeBeanInfo.roastDate}</span>
+                                                        </>
+                                                    )}
+                                                    {note.params && (
+                                                        <>
+                                                            <span>·</span>
+                                                            <span>{note.params.coffee}</span>
+                                                            <span>·</span>
+                                                            <span>{note.params.water}</span>
+                                                            <span>·</span>
+                                                            <span>{note.params.ratio}</span>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-4">
+                                                {Object.entries(note.taste).map(([key, value], i) => (
                                                     <motion.div
-                                                        initial={{ width: 0 }}
-                                                        animate={{ width: `${(value / 5) * 100}%` }}
-                                                        transition={{
-                                                            delay: 0.6 + i * 0.1 + index * 0.1,
-                                                            duration: 0.5,
-                                                            ease: "easeOut"
-                                                        }}
-                                                        className="h-full bg-neutral-800 dark:bg-neutral-100"
-                                                    />
-                                                </motion.div>
-                                            </motion.div>
-                                        ))}
-                                    </div>
+                                                        key={key}
+                                                        initial={{ opacity: 0, x: -10 }}
+                                                        animate={{ opacity: 1, x: 0 }}
+                                                        transition={{ delay: 0.5 + i * 0.1 + index * 0.1 }}
+                                                        className="space-y-1"
+                                                    >
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
+                                                                {
+                                                                    {
+                                                                        acidity: '酸度',
+                                                                        sweetness: '甜度',
+                                                                        bitterness: '苦度',
+                                                                        body: '醇度',
+                                                                    }[key]
+                                                                }
+                                                            </div>
+                                                            <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
+                                                                [ {value} ]
+                                                            </div>
+                                                        </div>
+                                                        <motion.div
+                                                            className="h-px w-full overflow-hidden bg-neutral-200/50 dark:bg-neutral-800"
+                                                        >
+                                                            <motion.div
+                                                                initial={{ width: 0 }}
+                                                                animate={{ width: `${(value / 5) * 100}%` }}
+                                                                transition={{
+                                                                    delay: 0.6 + i * 0.1 + index * 0.1,
+                                                                    duration: 0.5,
+                                                                    ease: "easeOut"
+                                                                }}
+                                                                className="h-full bg-neutral-800 dark:bg-neutral-100"
+                                                            />
+                                                        </motion.div>
+                                                    </motion.div>
+                                                ))}
+                                            </div>
 
-                                    <div className="flex items-baseline justify-between">
-                                        <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
-                                            {formatDate(note.timestamp)}
-                                        </div>
-                                        <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
-                                            {formatRating(note.rating)}
-                                        </div>
-                                    </div>
+                                            <div className="flex items-baseline justify-between">
+                                                <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
+                                                    {formatDate(note.timestamp)}
+                                                </div>
+                                                <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
+                                                    {formatRating(note.rating)}
+                                                </div>
+                                            </div>
 
-                                    {note.notes && (
-                                        <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
-                                            {note.notes}
-                                        </div>
-                                    )}
-                                </motion.div>
-                            </motion.div>
-                        ))}
-                    </AnimatePresence>
+                                            {note.notes && (
+                                                <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
+                                                    {note.notes}
+                                                </div>
+                                            )}
+                                        </motion.div>
+                                    </motion.div>
+                                ))}
+                            </AnimatePresence>
+                        </motion.div>
+                    )}
                 </motion.div>
             )}
-        </div>
+        </AnimatePresence>
     )
 }
 

@@ -803,7 +803,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
 
                                                             // 直接使用用户输入的值
                                                             const water = parseInt(e.target.value);
-                                                            handleStageChange(index, 'water', `${water}g`);
+                                                            handleStageChange(index, 'water', `${water}`);
                                                         }}
                                                         onBlur={(e) => {
                                                             // 清除编辑状态
@@ -822,11 +822,11 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                                                             const water = parseInt(value) || 0;
 
                                                             // 确保累计水量不超过总水量
-                                                            const totalWater = parseInt(method.params.water?.replace('g', '') || '0');
+                                                            const totalWater = parseInt(method.params.water?.replace('', '') || '0');
                                                             if (water > totalWater) {
-                                                                handleStageChange(index, 'water', `${totalWater}g`);
+                                                                handleStageChange(index, 'water', `${totalWater}`);
                                                             } else {
-                                                                handleStageChange(index, 'water', `${water}g`);
+                                                                handleStageChange(index, 'water', `${water}`);
                                                             }
                                                         }}
                                                         onFocus={(e) => e.target.select()}
