@@ -94,6 +94,7 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#fafafa" media="(prefers-color-scheme: light)" />
         <meta name="theme-color" content="#171717" media="(prefers-color-scheme: dark)" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         {isDevelopment && (
           <>
             <meta httpEquiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
@@ -116,6 +117,49 @@ export default function RootLayout({
           <PWAPrompt />
         </ThemeProvider>
         <Analytics />
+
+        {/* 添加动态theme-color脚本，确保在Sheet打开时状态栏颜色正确 */}
+        <Script id="theme-color-handler" strategy="afterInteractive">
+          {`
+            (function() {
+              // 监听媒体查询变化
+              const darkModeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+              
+              // 设置主题色
+              function updateThemeColor(isDarkMode) {
+                const themeColor = isDarkMode ? '#171717' : '#fafafa';
+                const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+                
+                if (metaThemeColor) {
+                  metaThemeColor.setAttribute('content', themeColor);
+                }
+              }
+              
+              // 初始设置
+              updateThemeColor(darkModeMediaQuery.matches);
+              
+              // 监听变化
+              darkModeMediaQuery.addEventListener('change', (e) => {
+                updateThemeColor(e.matches);
+              });
+              
+              // 监听Sheet打开状态
+              document.addEventListener('mousedown', (e) => {
+                if (e.target && e.target.classList && e.target.classList.contains('react-modal-sheet-backdrop')) {
+                  // Sheet已打开，确保状态栏颜色正确
+                  updateThemeColor(darkModeMediaQuery.matches);
+                }
+              });
+              
+              // 监听主题变化
+              document.addEventListener('themeChange', () => {
+                const isDark = document.documentElement.classList.contains('dark');
+                updateThemeColor(isDark);
+              });
+            })();
+          `}
+        </Script>
+
         <Script id="service-worker-handler" strategy="afterInteractive">
           {`
             if ('serviceWorker' in navigator) {

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useRef, useEffect } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { type Method, type Stage } from '@/lib/config'
 import { ArrowLeft, ArrowRight, Check } from 'lucide-react'
 
@@ -421,6 +421,31 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         return 0;
     }
 
+    // 添加动画变体
+    const pageVariants = {
+        initial: {
+            opacity: 0,
+            x: 20,
+            scale: 0.95,
+        },
+        in: {
+            opacity: 1,
+            x: 0,
+            scale: 1,
+        },
+        out: {
+            opacity: 0,
+            x: -20,
+            scale: 0.95,
+        }
+    }
+
+    const pageTransition = {
+        type: "tween",
+        ease: "anticipate",
+        duration: 0.3
+    }
+
     // 渲染进度条
     const renderProgressBar = () => {
         const currentIndex = getCurrentStepIndex()
@@ -441,7 +466,15 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         switch (currentStep) {
             case 'name':
                 return (
-                    <div className="flex flex-col items-center justify-center h-full">
+                    <motion.div
+                        key="name-step"
+                        initial="initial"
+                        animate="in"
+                        exit="out"
+                        variants={pageVariants}
+                        transition={pageTransition}
+                        className="flex flex-col items-center justify-center h-full"
+                    >
                         <div className="text-center space-y-8 max-w-sm">
                             <h2 className="text-xl font-medium text-neutral-800 dark:text-neutral-200">
                                 {initialMethod ? '编辑你的冲煮方案名称' : '给你的冲煮方案起个名字'}
@@ -454,6 +487,17 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                                         value={method.name}
                                         onChange={(e) => setMethod({ ...method, name: e.target.value })}
                                         placeholder="叫做..."
+                                        autoFocus={false}
+                                        onFocus={(e) => {
+                                            // 防止自动聚焦时弹出键盘
+                                            if (!e.currentTarget.dataset.userInitiated) {
+                                                e.currentTarget.blur();
+                                            }
+                                        }}
+                                        onClick={(e) => {
+                                            // 标记用户主动点击
+                                            e.currentTarget.dataset.userInitiated = 'true';
+                                        }}
                                         className={`
                                             text-center text-lg py-2 bg-transparent outline-none
                                             focus:border-neutral-800 dark:focus:border-neutral-400
@@ -462,12 +506,20 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </motion.div>
                 )
 
             case 'params':
                 return (
-                    <div className="space-y-10 max-w-md mx-auto flex flex-col items-center justify-center h-full">
+                    <motion.div
+                        key="params-step"
+                        initial="initial"
+                        animate="in"
+                        exit="out"
+                        variants={pageVariants}
+                        transition={pageTransition}
+                        className="space-y-10 max-w-md mx-auto flex flex-col items-center justify-center h-full"
+                    >
                         <div className="grid grid-cols-2 gap-6">
                             <div className="space-y-2">
                                 <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
@@ -547,13 +599,20 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </motion.div>
                 )
 
             case 'stages':
                 return (
-                    <div className="space-y-8 max-w-md mx-auto relative">
-
+                    <motion.div
+                        key="stages-step"
+                        initial="initial"
+                        animate="in"
+                        exit="out"
+                        variants={pageVariants}
+                        transition={pageTransition}
+                        className="space-y-8 max-w-md mx-auto relative"
+                    >
                         {/* 顶部固定导航 */}
                         <div className="sticky top-0 pt-2 pb-4 bg-white dark:bg-neutral-900 z-10 flex flex-col border-b border-neutral-200 dark:border-neutral-700">
                             <div className="flex justify-between items-center mb-2">
@@ -651,7 +710,6 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                                                             ? editingCumulativeTime.value
                                                             : stage.time ? stage.time.toString() : ''
                                                     }
-                                                    placeholder="请输入累计时间"
                                                     onChange={(e) => {
                                                         // 更新本地编辑状态
                                                         setEditingCumulativeTime({
@@ -699,9 +757,6 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                                                     onFocus={(e) => e.target.select()}
                                                     className="w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
                                                 />
-                                                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
-                                                    {index > 0 ? `上一步时间: ${method.params.stages[index - 1].time || 0}秒` : '第一步'}
-                                                </p>
                                             </div>
                                             <div className="space-y-2">
                                                 <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
@@ -733,7 +788,6 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                                                                 ? editingCumulativeWater.value
                                                                 : stage.water ? parseInt(stage.water.replace('g', '')).toString() : ''
                                                         }
-                                                        placeholder={`总水量: ${parseInt(method.params.water?.replace('g', '') || '0')}g`}
                                                         onChange={(e) => {
                                                             // 更新本地编辑状态
                                                             setEditingCumulativeWater({
@@ -780,9 +834,6 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                                                     />
                                                     <span className="absolute right-0 bottom-2 text-neutral-500 dark:text-neutral-400">g</span>
                                                 </div>
-                                                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
-                                                    {index > 0 ? `上一步水量: ${method.params.stages[index - 1].water || '0g'}` : '第一步'}
-                                                </p>
                                             </div>
                                         </div>
 
@@ -805,12 +856,20 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
 
                         {/* 底部渐变阴影 - 提示有更多内容 */}
                         <div className="sticky bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-white dark:from-neutral-900 to-transparent pointer-events-none"></div>
-                    </div>
+                    </motion.div>
                 )
 
             case 'complete':
                 return (
-                    <div className="flex flex-col items-center justify-center pt-10 space-y-8 text-center relative">
+                    <motion.div
+                        key="complete-step"
+                        initial="initial"
+                        animate="in"
+                        exit="out"
+                        variants={pageVariants}
+                        transition={pageTransition}
+                        className="flex flex-col items-center justify-center pt-10 space-y-8 text-center relative"
+                    >
                         <div className="w-16 h-16 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
                             <Check className="w-8 h-8 text-neutral-800 dark:text-neutral-200" />
                         </div>
@@ -846,7 +905,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                         </div>
                         {/* 底部渐变阴影 - 提示有更多内容 */}
                         <div className="sticky w-full bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-white dark:from-neutral-900 to-transparent pointer-events-none"></div>
-                    </div>
+                    </motion.div>
                 )
 
             default:
@@ -938,7 +997,9 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
 
             {/* 步骤内容 */}
             <div className="flex-1 overflow-y-auto pr-2">
-                {renderStepContent()}
+                <AnimatePresence mode="wait">
+                    {renderStepContent()}
+                </AnimatePresence>
             </div>
 
             {/* 下一步按钮 */}

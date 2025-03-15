@@ -19,7 +19,8 @@
 		"next-pwa": "^5.6.0",
 		"next-themes": "^0.4.6",
 		"react": "^19.0.0",
-		"react-dom": "^19.0.0"
+		"react-dom": "^19.0.0",
+		"react-modal-sheet": "^4.0.1"
 	},
 	"devDependencies": {
 		"@types/node": "^22.13.10",

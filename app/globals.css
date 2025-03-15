@@ -3,12 +3,20 @@
 :root {
   --foreground: #000;
   --background: #FAFAFA;
+  --rsbs-backdrop-bg: rgba(0, 0, 0, 0.3);
+  --rsbs-bg: var(--background);
+  --rsbs-handle-bg: rgba(0, 0, 0, 0.14);
+  --rsbs-max-w: 500px;
+  --rsbs-ml: auto;
+  --rsbs-mr: auto;
+  --rsbs-overlay-rounded: 16px;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --foreground: #fff;
     --background: #171717;
+    --rsbs-backdrop-bg: rgba(0, 0, 0, 0.5);
   }
 }
 
@@ -29,4 +37,47 @@ body {
   -webkit-overflow-scrolling: touch;
   overflow-y: auto;
   height: 100%;
+}
+
+/* 确保Sheet内容在暗色模式下正确显示 */
+.react-modal-sheet-container {
+  background-color: var(--background) !important;
+  border-top-left-radius: 1rem !important;
+  border-top-right-radius: 1rem !important;
+  max-width: var(--rsbs-max-w);
+  margin-left: var(--rsbs-ml);
+  margin-right: var(--rsbs-mr);
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.react-modal-sheet-backdrop {
+  background-color: var(--rsbs-backdrop-bg) !important;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.react-modal-sheet-drag-indicator {
+  background-color: var(--rsbs-handle-bg) !important;
+  width: 36px;
+  height: 5px;
+  border-radius: 2.5px;
+  margin: 0 auto;
+}
+
+.react-modal-sheet-content {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  height: auto;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 确保Sheet内容在iOS设备上正确显示 */
+@supports (-webkit-touch-callout: none) {
+  .react-modal-sheet-container {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
 }

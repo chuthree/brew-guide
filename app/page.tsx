@@ -248,7 +248,7 @@ const StageItem = ({
     onEdit?: () => void
     onDelete?: () => void
 }) => {
-    const [isExpanded, setIsExpanded] = useState(false)
+    const [showActions, setShowActions] = useState(false)
 
     return (
         <motion.div
@@ -285,16 +285,62 @@ const StageItem = ({
                         )}
                     </div>
                     {onEdit && onDelete && (
-                        <div className="flex items-center space-x-2">
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation()
-                                    setIsExpanded(!isExpanded)
-                                }}
-                                className="text-xs text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300"
-                            >
-                                {isExpanded ? '' : '··'}
-                            </button>
+                        <div className="flex items-center">
+                            <AnimatePresence mode="wait">
+                                {showActions ? (
+                                    <motion.div
+                                        key="action-buttons"
+                                        initial={{ opacity: 0, scale: 0.9, x: 10 }}
+                                        animate={{ opacity: 1, scale: 1, x: 0 }}
+                                        exit={{ opacity: 0, scale: 0.9, x: 10 }}
+                                        transition={{ duration: 0.2 }}
+                                        className="flex items-center space-x-3"
+                                    >
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation()
+                                                onEdit()
+                                            }}
+                                            className="px-3 py-1.5 text-xs text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300"
+                                        >
+                                            编辑
+                                        </button>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation()
+                                                onDelete()
+                                            }}
+                                            className="px-3 py-1.5 text-xs text-red-400 hover:text-red-600"
+                                        >
+                                            删除
+                                        </button>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation()
+                                                setShowActions(false)
+                                            }}
+                                            className="w-7 h-7 flex items-center justify-center rounded-full text-sm text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                                        >
+                                            ×
+                                        </button>
+                                    </motion.div>
+                                ) : (
+                                    <motion.button
+                                        key="more-button"
+                                        initial={{ opacity: 0, scale: 0.9 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        exit={{ opacity: 0, scale: 0.9 }}
+                                        transition={{ duration: 0.2 }}
+                                        onClick={(e) => {
+                                            e.stopPropagation()
+                                            setShowActions(true)
+                                        }}
+                                        className="w-7 h-7 flex items-center justify-center text-xs text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300"
+                                    >
+                                        ···
+                                    </motion.button>
+                                )}
+                            </AnimatePresence>
                         </div>
                     )}
                 </div>
@@ -311,36 +357,6 @@ const StageItem = ({
                         </ul>
                     )}
                 </div>
-                <AnimatePresence>
-                    {isExpanded && onEdit && onDelete && (
-                        <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: 'auto' }}
-                            exit={{ opacity: 0, height: 0 }}
-                            transition={{ duration: 0.2 }}
-                            className="mt-2 flex items-center space-x-4"
-                        >
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation()
-                                    onEdit()
-                                }}
-                                className="text-xs text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300"
-                            >
-                                编辑
-                            </button>
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation()
-                                    onDelete()
-                                }}
-                                className="text-xs text-red-400 hover:text-red-600"
-                            >
-                                删除
-                            </button>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
             </div>
         </motion.div>
     )
@@ -1333,14 +1349,14 @@ const PourOverRecipes = () => {
                                                         className="space-y-6"
                                                     >
                                                         {methodType === 'custom' && (
-                                                            <div className="flex justify-end">
-                                                                <button
-                                                                    onClick={() => setShowCustomForm(true)}
-                                                                    className="text-xs text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
-                                                                >
-                                                                    + 新建方案
-                                                                </button>
-                                                            </div>
+                                                            <motion.button
+                                                                onClick={() => setShowCustomForm(true)}
+                                                                whileHover={{ scale: 1.02 }}
+                                                                whileTap={{ scale: 0.98 }}
+                                                                className="flex items-center justify-center w-full py-4 mb-4 border border-dashed border-neutral-300 rounded-md text-xs text-neutral-500 hover:text-neutral-700 hover:border-neutral-400 dark:border-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200 dark:hover:border-neutral-700 transition-colors"
+                                                            >
+                                                                <span className="mr-1">+</span> 新建方案
+                                                            </motion.button>
                                                         )}
                                                         {content[activeTab as keyof typeof content].steps.map((step, index) => (
                                                             <StageItem
@@ -1429,6 +1445,7 @@ const PourOverRecipes = () => {
                                 exit={{ opacity: 0, y: -20 }}
                                 transition={{ duration: 0.3 }}
                                 className=" bg-neutral-50 dark:bg-neutral-900 pt-1 w-full pb-9 flex flex-row justify-between"
+
                             >
                                 <div className="flex items-center space-x-4">
                                     <motion.button
@@ -1441,8 +1458,6 @@ const PourOverRecipes = () => {
                                             ? 'text-neutral-800 dark:text-neutral-100'
                                             : 'text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300'
                                             }`}
-                                        whileHover={{ scale: 1.02 }}
-                                        whileTap={{ scale: 0.98 }}
                                     >
                                         通用方案
                                     </motion.button>
@@ -1467,8 +1482,6 @@ const PourOverRecipes = () => {
                                                 ? 'text-neutral-800 dark:text-neutral-100'
                                                 : 'text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300'
                                                 }`}
-                                            whileHover={{ scale: 1.02 }}
-                                            whileTap={{ scale: 0.98 }}
                                         >
                                             品牌方案
                                         </motion.button>
@@ -1500,11 +1513,10 @@ const PourOverRecipes = () => {
                                         ? 'text-neutral-800 dark:text-neutral-100'
                                         : 'text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300'
                                         }`}
-                                    whileHover={{ scale: 1.02 }}
-                                    whileTap={{ scale: 0.98 }}
                                 >
                                     自定义方案
                                 </motion.button>
+
                             </motion.div>
                         )
                     }
@@ -1518,7 +1530,14 @@ const PourOverRecipes = () => {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 bg-black/30"
+                        transition={{ duration: 0.25 }}
+                        className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
+                        onClick={(e) => {
+                            if (e.target === e.currentTarget) {
+                                setShowCustomForm(false)
+                                setEditingMethod(undefined)
+                            }
+                        }}
                     >
                         <motion.div
                             initial={{ y: '100%' }}
@@ -1526,19 +1545,35 @@ const PourOverRecipes = () => {
                             exit={{ y: '100%' }}
                             transition={{
                                 type: "tween",
-                                duration: 0.3,
-                                ease: [0.4, 0, 0.2, 1]
+                                ease: [0.33, 1, 0.68, 1], // cubic-bezier(0.33, 1, 0.68, 1) - easeOutCubic
+                                duration: 0.35
                             }}
-                            className="absolute inset-x-0 bottom-0 max-h-[90vh] rounded-t-2xl bg-white shadow-xl dark:bg-neutral-900"
+                            style={{
+                                willChange: "transform"
+                            }}
+                            className="absolute inset-x-0 bottom-0 max-h-[90vh] overflow-hidden rounded-t-2xl bg-white shadow-xl dark:bg-neutral-900"
                         >
                             {/* 拖动条 */}
-                            <div className="sticky top-0 z-10 flex justify-center py-2">
+                            <div className="sticky top-0 z-10 flex justify-center py-2 bg-white dark:bg-neutral-900">
                                 <div className="h-1.5 w-12 rounded-full bg-neutral-200 dark:bg-neutral-700" />
                             </div>
 
 
                             {/* 表单内容 */}
-                            <div className="px-6 pb-6">
+                            <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{
+                                    type: "tween",
+                                    ease: "easeOut",
+                                    duration: 0.25,
+                                    delay: 0.05
+                                }}
+                                style={{
+                                    willChange: "opacity, transform"
+                                }}
+                                className="px-6 pb-6 overflow-auto max-h-[calc(90vh-40px)]"
+                            >
                                 <CustomMethodForm
                                     onSave={handleSaveCustomMethod}
                                     onCancel={() => {
@@ -1547,7 +1582,7 @@ const PourOverRecipes = () => {
                                     }}
                                     initialMethod={editingMethod}
                                 />
-                            </div>
+                            </motion.div>
                         </motion.div>
                     </motion.div>
                 )}
