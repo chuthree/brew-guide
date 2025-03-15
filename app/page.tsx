@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import dynamic from 'next/dynamic'
 import { brewingMethods as commonMethods, equipmentList, brandCoffees, APP_VERSION, type Method, type Stage, type Brand, type CoffeeBean } from '@/lib/config'
+import CustomMethodForm from '@/components/CustomMethodForm'
 
 // 动态导入客户端组件
 const BrewingTimer = dynamic(() => import('@/components/BrewingTimer'), { ssr: false })
@@ -32,7 +33,7 @@ interface Content {
     }
     方案: {
         steps: Step[]
-        type: 'common' | 'brand'
+        type: 'common' | 'brand' | 'custom'
         selectedBrand?: Brand | null
     }
     注水: {
@@ -235,6 +236,8 @@ const StageItem = ({
     activeTab,
     selectedMethod,
     currentStage,
+    onEdit,
+    onDelete,
 }: {
     step: Step
     index: number
@@ -242,58 +245,106 @@ const StageItem = ({
     activeTab: string
     selectedMethod: Method | null
     currentStage: number
-}) => (
-    <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.3, delay: index * 0.1 }}
-        className={`group relative border-l border-neutral-200 pl-6 dark:border-neutral-800 ${activeTab === '注水' && index === currentStage
-            ? 'text-neutral-800 dark:text-neutral-100'
-            : activeTab === '注水' && index < currentStage
-                ? 'text-neutral-400 dark:text-neutral-500'
-                : 'text-neutral-500 dark:text-neutral-400'
-            }`}
-        onClick={onClick}
-    >
-        {activeTab === '注水' && index === currentStage && (
-            <motion.div
-                className="absolute -left-px top-0 h-full w-px bg-neutral-800 dark:bg-neutral-100"
-                initial={{ scaleY: 0, transformOrigin: "top" }}
-                animate={{ scaleY: 1 }}
-                transition={{ duration: 0.2, ease: 'linear' }}
-            />
-        )}
-        <div className={activeTab !== '注水' ? 'cursor-pointer' : ''}>
-            <div className="flex items-baseline justify-between">
-                <div className="flex items-baseline gap-3">
-                    <h3 className="text-xs font-normal tracking-wider">
-                        {step.title}
-                    </h3>
-                    {activeTab === '注水' && selectedMethod && (
-                        <div className="flex items-baseline gap-2 text-[10px] text-neutral-400 dark:text-neutral-500">
-                            <span>{formatTime(selectedMethod.params.stages[index].time, true)}</span>
-                            <span>·</span>
-                            <span>{step.items[0]}</span>
+    onEdit?: () => void
+    onDelete?: () => void
+}) => {
+    const [isExpanded, setIsExpanded] = useState(false)
+
+    return (
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3, delay: index * 0.1 }}
+            className={`group relative border-l border-neutral-200 pl-6 dark:border-neutral-800 ${activeTab === '注水' && index === currentStage
+                ? 'text-neutral-800 dark:text-neutral-100'
+                : activeTab === '注水' && index < currentStage
+                    ? 'text-neutral-400 dark:text-neutral-500'
+                    : 'text-neutral-500 dark:text-neutral-400'
+                }`}
+        >
+            {activeTab === '注水' && index === currentStage && (
+                <motion.div
+                    className="absolute -left-px top-0 h-full w-px bg-neutral-800 dark:bg-neutral-100"
+                    initial={{ scaleY: 0, transformOrigin: "top" }}
+                    animate={{ scaleY: 1 }}
+                    transition={{ duration: 0.2, ease: 'linear' }}
+                />
+            )}
+            <div className={activeTab !== '注水' ? 'cursor-pointer' : ''} onClick={onClick}>
+                <div className="flex items-baseline justify-between">
+                    <div className="flex items-baseline gap-3">
+                        <h3 className="text-xs font-normal tracking-wider">
+                            {step.title}
+                        </h3>
+                        {activeTab === '注水' && selectedMethod && (
+                            <div className="flex items-baseline gap-2 text-[10px] text-neutral-400 dark:text-neutral-500">
+                                <span>{formatTime(selectedMethod.params.stages[index].time, true)}</span>
+                                <span>·</span>
+                                <span>{step.items[0]}</span>
+                            </div>
+                        )}
+                    </div>
+                    {onEdit && onDelete && (
+                        <div className="flex items-center space-x-2">
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    setIsExpanded(!isExpanded)
+                                }}
+                                className="text-xs text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300"
+                            >
+                                {isExpanded ? '' : '··'}
+                            </button>
                         </div>
                     )}
                 </div>
+                <div className="mt-2">
+                    {activeTab === '注水' ? (
+                        <p className="text-xs font-light">{step.items[1]}</p>
+                    ) : (
+                        <ul className="space-y-1">
+                            {step.items.map((item: string, i: number) => (
+                                <li key={i} className="text-xs font-light">
+                                    {item}
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </div>
+                <AnimatePresence>
+                    {isExpanded && onEdit && onDelete && (
+                        <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="mt-2 flex items-center space-x-4"
+                        >
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    onEdit()
+                                }}
+                                className="text-xs text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300"
+                            >
+                                编辑
+                            </button>
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    onDelete()
+                                }}
+                                className="text-xs text-red-400 hover:text-red-600"
+                            >
+                                删除
+                            </button>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
-            <div className="mt-2">
-                {activeTab === '注水' ? (
-                    <p className="text-xs font-light">{step.items[1]}</p>
-                ) : (
-                    <ul className="space-y-1">
-                        {step.items.map((item: string, i: number) => (
-                            <li key={i} className="text-xs font-light">
-                                {item}
-                            </li>
-                        ))}
-                    </ul>
-                )}
-            </div>
-        </div>
-    </motion.div>
-)
+        </motion.div>
+    )
+}
 
 // 修改 BrewingNoteData 接口，避免使用 any
 export interface BrewingNoteData {
@@ -344,11 +395,14 @@ const PourOverRecipes = () => {
     const [hasNotes, setHasNotes] = useState(false)
     const [showComplete, setShowComplete] = useState(false)
     const [currentTime, setCurrentTime] = useState(0)
-    const [methodType, setMethodType] = useState<'common' | 'brand'>('common')
+    const [methodType, setMethodType] = useState<'common' | 'brand' | 'custom'>('common')
     const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null)
     const [selectedBean, setSelectedBean] = useState<CoffeeBean | null>(null)
     const [countdownTime, setCountdownTime] = useState<number | null>(null)
     const [isPourVisualizerPreloaded, setIsPourVisualizerPreloaded] = useState(false)
+    const [customMethods, setCustomMethods] = useState<Record<string, Method[]>>({})
+    const [showCustomForm, setShowCustomForm] = useState(false)
+    const [editingMethod, setEditingMethod] = useState<Method | undefined>(undefined)
 
     // 检查是否有笔记
     useEffect(() => {
@@ -371,6 +425,18 @@ const PourOverRecipes = () => {
         }
     }, [selectedEquipment, isPourVisualizerPreloaded])
 
+    // 加载自定义方案
+    useEffect(() => {
+        try {
+            const savedMethods = localStorage.getItem('customMethods')
+            if (savedMethods) {
+                setCustomMethods(JSON.parse(savedMethods))
+            }
+        } catch (error) {
+            console.error('Error loading custom methods:', error)
+        }
+    }, [])
+
     useEffect(() => {
         if (selectedEquipment) {
             // 如果是聪明杯，强制使用通用方案
@@ -381,8 +447,9 @@ const PourOverRecipes = () => {
             }
 
             setContent((prev) => {
-                // 检查是否存在对应的冲煮方法
-                const methodsForEquipment = commonMethods[selectedEquipment as keyof typeof commonMethods] || [];
+                const methodsForEquipment = methodType === 'custom'
+                    ? customMethods[selectedEquipment] || []
+                    : commonMethods[selectedEquipment as keyof typeof commonMethods] || []
 
                 return {
                     ...prev,
@@ -391,7 +458,6 @@ const PourOverRecipes = () => {
                         selectedBrand,
                         steps: methodType === 'common'
                             ? methodsForEquipment.map((method) => {
-                                // 计算总时长（获取最后一个stage的time）
                                 const totalTime = method.params.stages[method.params.stages.length - 1].time
                                 return {
                                     title: method.name,
@@ -403,25 +469,35 @@ const PourOverRecipes = () => {
                                     note: '',
                                 }
                             })
-                            : selectedBrand
-                                ? selectedBrand.beans.map((bean) => ({
-                                    title: bean.name,
+                            : methodType === 'brand'
+                                ? selectedBrand
+                                    ? selectedBrand.beans.map((bean) => ({
+                                        title: bean.name,
+                                        items: [
+                                            bean.description,
+                                            `烘焙度：${bean.roastLevel}`,
+                                        ],
+                                        note: '',
+                                    }))
+                                    : brandCoffees.map((brand) => ({
+                                        title: brand.name,
+                                        items: [brand.description],
+                                        note: '',
+                                    }))
+                                : methodsForEquipment.map((method) => ({
+                                    title: method.name,
                                     items: [
-                                        bean.description,
-                                        `烘焙度：${bean.roastLevel}`,
+                                        `水粉比 ${method.params.ratio}`,
+                                        `总时长 ${formatTime(method.params.stages[method.params.stages.length - 1].time, true)}`,
+                                        `研磨度 ${method.params.grindSize}`,
                                     ],
-                                    note: '',
-                                }))
-                                : brandCoffees.map((brand) => ({
-                                    title: brand.name,
-                                    items: [brand.description],
                                     note: '',
                                 })),
                     },
                 }
             })
         }
-    }, [selectedEquipment, methodType, selectedBrand])
+    }, [selectedEquipment, methodType, selectedBrand, customMethods])
 
     useEffect(() => {
         if (selectedMethod) {
@@ -555,18 +631,25 @@ const PourOverRecipes = () => {
                     setSelectedMethod(method)
                     setCurrentBrewingMethod({ ...method })
                     setActiveTab('注水')
-                } else if (selectedBrand) {
-                    const selectedBean = selectedBrand.beans[methodIndex]
-                    setSelectedBean(selectedBean)
-                    setSelectedMethod(selectedBean.method)
-                    setCurrentBrewingMethod({ ...selectedBean.method })
+                } else if (methodType === 'brand') {
+                    if (selectedBrand) {
+                        const selectedBean = selectedBrand.beans[methodIndex]
+                        setSelectedBean(selectedBean)
+                        setSelectedMethod(selectedBean.method)
+                        setCurrentBrewingMethod({ ...selectedBean.method })
+                        setActiveTab('注水')
+                    } else {
+                        setSelectedBrand(brandCoffees[methodIndex])
+                    }
+                } else if (methodType === 'custom') {
+                    const method = customMethods[selectedEquipment][methodIndex]
+                    setSelectedMethod(method)
+                    setCurrentBrewingMethod({ ...method })
                     setActiveTab('注水')
-                } else {
-                    setSelectedBrand(brandCoffees[methodIndex])
                 }
             }
         },
-        [selectedEquipment, methodType, selectedBrand]
+        [selectedEquipment, methodType, selectedBrand, customMethods]
     )
 
     const handleBack = useCallback(() => {
@@ -742,24 +825,90 @@ const PourOverRecipes = () => {
         }
     }
 
+    // 保存自定义方案
+    const handleSaveCustomMethod = (method: Method) => {
+        if (!selectedEquipment) return
+
+        const newCustomMethods = {
+            ...customMethods,
+            [selectedEquipment]: [
+                ...(customMethods[selectedEquipment] || []),
+                method,
+            ],
+        }
+
+        setCustomMethods(newCustomMethods)
+        localStorage.setItem('customMethods', JSON.stringify(newCustomMethods))
+        setShowCustomForm(false)
+        setEditingMethod(undefined)
+
+        // 更新内容显示
+        setContent((prev) => ({
+            ...prev,
+            方案: {
+                ...prev.方案,
+                steps: [
+                    ...prev.方案.steps,
+                    {
+                        title: method.name,
+                        items: [
+                            `水粉比 ${method.params.ratio}`,
+                            `总时长 ${formatTime(method.params.stages[method.params.stages.length - 1].time, true)}`,
+                            `研磨度 ${method.params.grindSize}`,
+                        ],
+                        note: '',
+                    },
+                ],
+            },
+        }))
+    }
+
+    // 处理自定义方案的编辑
+    const handleEditCustomMethod = (method: Method) => {
+        setEditingMethod(method)
+        setShowCustomForm(true)
+    }
+
+    // 处理自定义方案的删除
+    const handleDeleteCustomMethod = (method: Method) => {
+        if (!selectedEquipment) return
+
+        const newCustomMethods = {
+            ...customMethods,
+            [selectedEquipment]: customMethods[selectedEquipment].filter(
+                (m) => m.name !== method.name
+            ),
+        }
+
+        setCustomMethods(newCustomMethods)
+        localStorage.setItem('customMethods', JSON.stringify(newCustomMethods))
+
+        // 更新内容显示
+        setContent((prev) => ({
+            ...prev,
+            方案: {
+                ...prev.方案,
+                steps: prev.方案.steps.filter((step) => step.title !== method.name),
+            },
+        }))
+    }
+
     return (
         <div className="flex h-full flex-col overflow-hidden mx-auto max-w-[500px] font-mono text-neutral-800 dark:text-neutral-100">
             {/* Header section */}
             <motion.div
-                className={`${isTimerRunning && !showComplete ? 'translate-y-16' : ''} z-10  bg-neutral-50 dark:bg-neutral-900  transition-all duration-600  relative border-b mx-6 mt-3 border-neutral-200 dark:border-neutral-800`}
+                className={`${isTimerRunning && !showComplete ? 'translate-y-16' : ''} z-10  bg-neutral-50 dark:bg-neutral-900  transition-all duration-600  relative border-b mx-6 mt-6 border-neutral-200 dark:border-neutral-800`}
             >
-                <div className={`space-y-4 transition-all ease-in-out duration-300 ${isTimerRunning && !showComplete ? 'opacity-0' : ''}`}>
-                    <div className="flex w-full items-center justify-between">
-                        <div>
-                            <h1 className="mt-2 text-xl font-light tracking-wide sm:text-2xl">
-                                手冲咖啡冲煮指南
-                                <span className="ml-2 text-[8px] text-neutral-300 dark:text-neutral-600">
-                                    BETA v{APP_VERSION}
-                                </span>
-                            </h1>
-                        </div>
+                <div className={`space-y-4 transition-all ease-in-out duration-300 ${isTimerRunning && !showComplete ? 'opacity-0' : ''}`}><div className="flex w-full items-center justify-between">
+                    <div>
+                        <h1 className="mt-2 text-xl font-light tracking-wide sm:text-2xl">
+                            手冲咖啡冲煮指南
+                            <span className="ml-2 text-[8px] text-neutral-300 dark:text-neutral-600">
+                                BETA v{APP_VERSION}
+                            </span>
+                        </h1>
                     </div>
-
+                </div>
                     {/* Parameter information display */}
                     <motion.div
                         initial={{ opacity: 0 }}
@@ -892,7 +1041,7 @@ const PourOverRecipes = () => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.6, delay: 0.3 }}
-                className="relative flex flex-1 flex-col overflow-hidden px-6 sm:px-8"
+                className="relative flex flex-1 flex-col overflow-hidden px-6 sm:px-8 w-full"
             >
                 {/* Navigation */}
                 <motion.div
@@ -1163,6 +1312,16 @@ const PourOverRecipes = () => {
                                                         transition={{ duration: 0.3 }}
                                                         className="space-y-6"
                                                     >
+                                                        {methodType === 'custom' && (
+                                                            <div className="flex justify-end">
+                                                                <button
+                                                                    onClick={() => setShowCustomForm(true)}
+                                                                    className="text-xs text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
+                                                                >
+                                                                    + 新建方案
+                                                                </button>
+                                                            </div>
+                                                        )}
                                                         {content[activeTab as keyof typeof content].steps.map((step, index) => (
                                                             <StageItem
                                                                 key={index}
@@ -1178,6 +1337,8 @@ const PourOverRecipes = () => {
                                                                 activeTab={activeTab}
                                                                 selectedMethod={selectedMethod}
                                                                 currentStage={currentStage}
+                                                                onEdit={methodType === 'custom' ? () => handleEditCustomMethod(customMethods[selectedEquipment!][index]) : undefined}
+                                                                onDelete={methodType === 'custom' ? () => handleDeleteCustomMethod(customMethods[selectedEquipment!][index]) : undefined}
                                                             />
                                                         ))}
                                                     </motion.div>
@@ -1247,72 +1408,148 @@ const PourOverRecipes = () => {
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: -20 }}
                                 transition={{ duration: 0.3 }}
-                                className="absolute bottom-0 bg-neutral-50 dark:bg-neutral-900 pt-1 pb-9 w-full flex items-center space-x-4"
+                                className=" bg-neutral-50 dark:bg-neutral-900 pt-1 w-full pb-9 flex flex-row justify-between"
                             >
-                                <motion.button
-                                    onClick={() => {
-                                        setMethodType('common')
-                                        setSelectedBrand(null)
-                                        setSelectedBean(null)
-                                    }}
-                                    className={`text-xs tracking-wider transition-colors ${methodType === 'common'
-                                        ? 'text-neutral-800 dark:text-neutral-100'
-                                        : 'text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300'
-                                        }`}
-                                    whileHover={{ scale: 1.02 }}
-                                    whileTap={{ scale: 0.98 }}
-                                >
-                                    通用方案
-                                </motion.button>
-                                <motion.span
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    exit={{ opacity: 0 }}
-                                    className="text-neutral-300 dark:text-neutral-600"
-                                >
-                                    |
-                                </motion.span>
-                                <div className="flex items-center space-x-2">
+                                <div className="flex items-center space-x-4">
                                     <motion.button
                                         onClick={() => {
-                                            if (methodType === 'brand' && selectedBrand) {
-                                                setSelectedBrand(null)
-                                                setSelectedBean(null)
-                                            } else {
-                                                setMethodType('brand')
-                                            }
+                                            setMethodType('common')
+                                            setSelectedBrand(null)
+                                            setSelectedBean(null)
                                         }}
-                                        className={`group flex items-center text-xs tracking-wider transition-colors ${methodType === 'brand'
+                                        className={`text-xs tracking-wider transition-colors ${methodType === 'common'
                                             ? 'text-neutral-800 dark:text-neutral-100'
                                             : 'text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300'
                                             }`}
                                         whileHover={{ scale: 1.02 }}
                                         whileTap={{ scale: 0.98 }}
                                     >
-                                        品牌方案
+                                        通用方案
                                     </motion.button>
-                                    <AnimatePresence mode="wait">
-                                        {methodType === 'brand' && selectedBrand && (
-                                            <motion.div
-                                                initial={{ opacity: 0, x: -10 }}
-                                                animate={{ opacity: 1, x: 0 }}
-                                                exit={{ opacity: 0, x: 10 }}
-                                                transition={{ duration: 0.3 }}
-                                                className="flex items-center space-x-2"
-                                            >
-                                                <span className="text-neutral-300 dark:text-neutral-600">·</span>
-                                                <span className="text-xs tracking-wider text-neutral-800 dark:text-neutral-100">
-                                                    {selectedBrand.name}
-                                                </span>
-                                            </motion.div>
-                                        )}
-                                    </AnimatePresence>
+                                    <motion.span
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        exit={{ opacity: 0 }}
+                                        className="text-neutral-300 dark:text-neutral-600"
+                                    >
+                                        |
+                                    </motion.span>
+                                    <div className="flex items-center space-x-2">
+                                        <motion.button
+                                            onClick={() => {
+                                                if (methodType === 'brand' && selectedBrand) {
+                                                    setSelectedBrand(null)
+                                                } else {
+                                                    setMethodType('brand')
+                                                }
+                                            }}
+                                            className={`group flex items-center text-xs tracking-wider transition-colors ${methodType === 'brand'
+                                                ? 'text-neutral-800 dark:text-neutral-100'
+                                                : 'text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300'
+                                                }`}
+                                            whileHover={{ scale: 1.02 }}
+                                            whileTap={{ scale: 0.98 }}
+                                        >
+                                            品牌方案
+                                        </motion.button>
+                                        <AnimatePresence mode="wait">
+                                            {methodType === 'brand' && selectedBrand && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, x: -10 }}
+                                                    animate={{ opacity: 1, x: 0 }}
+                                                    exit={{ opacity: 0, x: 10 }}
+                                                    transition={{ duration: 0.3 }}
+                                                    className="flex items-center space-x-2"
+                                                >
+                                                    <span className="text-neutral-300 dark:text-neutral-600">·</span>
+                                                    <span className="text-xs tracking-wider text-neutral-800 dark:text-neutral-100">
+                                                        {selectedBrand.name}
+                                                    </span>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </div>
                                 </div>
+                                <motion.button
+                                    onClick={() => {
+                                        setMethodType('custom')
+                                        setSelectedBrand(null)
+                                        setSelectedBean(null)
+                                    }}
+                                    className={`text-xs  tracking-wider transition-colors ${methodType === 'custom'
+                                        ? 'text-neutral-800 dark:text-neutral-100'
+                                        : 'text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300'
+                                        }`}
+                                    whileHover={{ scale: 1.02 }}
+                                    whileTap={{ scale: 0.98 }}
+                                >
+                                    自定义方案
+                                </motion.button>
                             </motion.div>
                         )
                     }
                 </AnimatePresence>
             </motion.div>
+
+            {/* 自定义方案表单 */}
+            <AnimatePresence>
+                {showCustomForm && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 bg-black/30"
+                    >
+                        <motion.div
+                            initial={{ y: '100%' }}
+                            animate={{ y: 0 }}
+                            exit={{ y: '100%' }}
+                            transition={{
+                                type: "tween",
+                                duration: 0.3,
+                                ease: [0.4, 0, 0.2, 1]
+                            }}
+                            className="absolute inset-x-0 bottom-0 max-h-[90vh] rounded-t-2xl bg-white shadow-xl dark:bg-neutral-900"
+                        >
+                            {/* 拖动条 */}
+                            <div className="sticky top-0 z-10 flex justify-center py-2">
+                                <div className="h-1.5 w-12 rounded-full bg-neutral-200 dark:bg-neutral-700" />
+                            </div>
+
+                            {/* 标题栏 */}
+                            {/* <div className="flex items-center justify-between px-6 pb-4">
+                                <h2 className="text-sm font-medium tracking-wider text-neutral-800 dark:text-neutral-100">
+                                    {editingMet hod ? '编辑方案' : '新建方案'}
+                                </h2>
+                                <button
+                                    onClick={() => {
+                                        setShowCustomForm(false)
+                                        setEditingMethod(undefined)
+                                    }}
+                                    className="text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300"
+                                >
+                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div> */}
+
+                            {/* 表单内容 */}
+                            <div className="px-6 pb-6">
+                                <CustomMethodForm
+                                    _equipmentId={selectedEquipment!}
+                                    onSave={handleSaveCustomMethod}
+                                    onCancel={() => {
+                                        setShowCustomForm(false)
+                                        setEditingMethod(undefined)
+                                    }}
+                                    initialMethod={editingMethod}
+                                />
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     )
 }

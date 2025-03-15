@@ -8,7 +8,7 @@ export interface Stage {
 	water: string;
 	detail: string;
 	pourTime?: number;
-	pourType?: "center" | "circle" | "ice";
+	pourType?: "center" | "circle" | "ice" | "other";
 	valveStatus?: "open" | "closed";
 }
 
@@ -21,6 +21,7 @@ export interface Method {
 		grindSize: string;
 		temp: string;
 		videoUrl: string;
+		roastLevel?: string;
 		stages: Stage[];
 	};
 }
@@ -104,6 +105,36 @@ export const equipmentList: Equipment[] = [
 export const brewingMethods: BrewingMethods = {
 	V60: [
 		{
+			name: "测试方案",
+			params: {
+				coffee: "15g",
+				water: "225g",
+				ratio: "1:15",
+				grindSize: "中细（白砂糖颗粒）",
+				temp: "92°C",
+				videoUrl: "",
+				roastLevel: "中浅烘焙",
+				stages: [
+					{
+						time: 1,
+						pourTime: 1,
+						label: "绕圈注水",
+						water: "30g",
+						detail: "绕圈注水",
+						pourType: "circle",
+					},
+					{
+						time: 2,
+						pourTime: 1,
+						label: "中心注水",
+						water: "225g",
+						detail: "保持匀速硬币大小螺旋",
+						pourType: "center",
+					},
+				],
+			},
+		},
+		{
 			name: "一刀流(萃取稳定)",
 			params: {
 				coffee: "15g",
@@ -112,6 +143,7 @@ export const brewingMethods: BrewingMethods = {
 				grindSize: "中细（白砂糖颗粒）",
 				temp: "92°C",
 				videoUrl: "",
+				roastLevel: "中浅烘焙",
 				stages: [
 					{
 						time: 25,
@@ -141,6 +173,7 @@ export const brewingMethods: BrewingMethods = {
 				grindSize: "中细（白砂糖颗粒）",
 				temp: "92°C",
 				videoUrl: "",
+				roastLevel: "中浅烘焙",
 				stages: [
 					{
 						time: 25,
@@ -178,6 +211,7 @@ export const brewingMethods: BrewingMethods = {
 				grindSize: "中细偏粗",
 				temp: "96°C",
 				videoUrl: "https://youtu.be/OFLaCs99lWY?si=aFJ3KtBXZtAZMbtN",
+				roastLevel: "中浅烘焙",
 				stages: [
 					{
 						time: 45,
@@ -233,6 +267,7 @@ export const brewingMethods: BrewingMethods = {
 				grindSize: "C40 MK4 28格",
 				temp: "90 - 75°C",
 				videoUrl: "",
+				roastLevel: "中浅烘焙",
 				stages: [
 					{
 						time: 40,
@@ -306,6 +341,7 @@ export const brandCoffees: Brand[] = [
 						grindSize: "Sinloy X1 45格",
 						temp: "92°C",
 						videoUrl: "",
+						roastLevel: "中浅烘焙",
 						stages: [
 							{
 								time: 20,
@@ -349,6 +385,7 @@ export const brandCoffees: Brand[] = [
 						grindSize: "C40 25格(略粗于白砂糖)",
 						temp: "88°C",
 						videoUrl: "",
+						roastLevel: "中浅烘焙",
 						stages: [
 							{
 								time: 40,
@@ -400,6 +437,7 @@ export const brandCoffees: Brand[] = [
 						grindSize: "Sinloy X1 40格(略细与白砂糖)",
 						temp: "90°C",
 						videoUrl: "",
+						roastLevel: "浅度烘焙",
 						stages: [
 							{
 								time: 20,
@@ -431,7 +469,7 @@ export const brandCoffees: Brand[] = [
 								label: "* 加入冰块",
 								water: "240g",
 								detail: "滤杯与分享壶中各加入粉水比1:4的冰块",
-								pourType: "ice",
+								pourType: "other",
 							},
 							{
 								time: 80,
