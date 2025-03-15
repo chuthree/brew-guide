@@ -29,6 +29,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
     const [notes, setNotes] = useState<BrewingNote[]>([])
     const [editingNote, setEditingNote] = useState<BrewingNote | null>(null)
     const [optimizingNote, setOptimizingNote] = useState<BrewingNote | null>(null)
+    const [actionMenuStates, setActionMenuStates] = useState<Record<string, boolean>>({})
+    const [copySuccess, setCopySuccess] = useState<Record<string, boolean>>({})
 
     // 添加本地存储变化监听
     useEffect(() => {
@@ -141,6 +143,73 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
         setEditingNote(null)
     }
 
+    const copyTextToClipboard = async (text: string) => {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            return navigator.clipboard.writeText(text);
+        }
+
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+
+        textArea.focus();
+        textArea.select();
+
+        return new Promise<void>((resolve, reject) => {
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    resolve();
+                } else {
+                    reject(new Error('复制命令执行失败'));
+                }
+            } catch (err) {
+                reject(err);
+            } finally {
+                document.body.removeChild(textArea);
+            }
+        });
+    }
+
+    const handleShare = (note: BrewingNote) => {
+        try {
+            const shareableNote = {
+                equipment: note.equipment,
+                method: note.method,
+                params: note.params,
+                coffeeBeanInfo: note.coffeeBeanInfo,
+                rating: note.rating,
+                taste: note.taste,
+                notes: note.notes
+            };
+
+            const jsonString = JSON.stringify(shareableNote, null, 2);
+            copyTextToClipboard(jsonString)
+                .then(() => {
+                    setCopySuccess(prev => ({
+                        ...prev,
+                        [note.id]: true
+                    }));
+                    setTimeout(() => {
+                        setCopySuccess(prev => ({
+                            ...prev,
+                            [note.id]: false
+                        }));
+                    }, 2000);
+                })
+                .catch(err => {
+                    console.error('复制失败:', err);
+                    alert('复制失败，请手动复制');
+                });
+        } catch (err) {
+            console.error('复制失败:', err);
+        }
+    };
+
     if (!isOpen) return null
 
     return (
@@ -173,7 +242,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                     className="h-full"
                     id="brewing-history-component"
                 >
-                    {/* 隐藏的返回按钮，仅用于导航栏返回按钮查找 */}
                     <button
                         data-action="back"
                         onClick={() => {
@@ -267,31 +335,82 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                                             </>
                                                         )}
                                                     </div>
-                                                    <div className="flex items-center space-x-4">
-                                                        <motion.button
-                                                            onClick={() => handleOptimize(note)}
-                                                            whileHover={{ scale: 1.05 }}
-                                                            whileTap={{ scale: 0.95 }}
-                                                            className="text-[10px] tracking-widest text-emerald-600 transition-colors hover:text-emerald-700 dark:text-emerald-500 dark:hover:text-emerald-400 font-medium"
-                                                        >
-                                                            [ 优化 ↗ ]
-                                                        </motion.button>
-                                                        <motion.button
-                                                            onClick={() => handleEdit(note)}
-                                                            whileHover={{ scale: 1.05 }}
-                                                            whileTap={{ scale: 0.95 }}
-                                                            className="text-[10px] tracking-widest text-neutral-400 transition-colors hover:text-neutral-800 dark:text-neutral-500 dark:hover:text-neutral-300"
-                                                        >
-                                                            [ 编辑 ]
-                                                        </motion.button>
-                                                        <motion.button
-                                                            onClick={() => handleDelete(note.id)}
-                                                            whileHover={{ scale: 1.05 }}
-                                                            whileTap={{ scale: 0.95 }}
-                                                            className="text-[10px] tracking-widest text-neutral-400 transition-colors hover:text-red-500 dark:text-neutral-500 dark:hover:text-red-400"
-                                                        >
-                                                            [ 删除 ]
-                                                        </motion.button>
+                                                    <div className="flex items-center">
+                                                        <AnimatePresence mode="wait">
+                                                            {actionMenuStates[note.id] ? (
+                                                                <motion.div
+                                                                    key="action-buttons"
+                                                                    initial={{ opacity: 0, scale: 0.9, x: 10 }}
+                                                                    animate={{ opacity: 1, scale: 1, x: 0 }}
+                                                                    exit={{ opacity: 0, scale: 0.9, x: 10 }}
+                                                                    transition={{ duration: 0.2 }}
+                                                                    className="flex items-center space-x-3"
+                                                                >
+                                                                    <button
+                                                                        onClick={() => handleEdit(note)}
+                                                                        className="px-2 text-xs text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300"
+                                                                    >
+                                                                        编辑
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleShare(note)}
+                                                                        className="px-2 text-xs text-blue-400 hover:text-blue-600 dark:text-blue-500 dark:hover:text-blue-300 relative"
+                                                                    >
+                                                                        {copySuccess[note.id] ? '已复制' : '分享'}
+                                                                        {copySuccess[note.id] && (
+                                                                            <motion.div
+                                                                                initial={{ opacity: 0, y: 10 }}
+                                                                                animate={{ opacity: 1, y: 0 }}
+                                                                                exit={{ opacity: 0, y: -10 }}
+                                                                                className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-neutral-800 dark:bg-neutral-700 text-white px-2 py-1 rounded text-[10px] whitespace-nowrap"
+                                                                            >
+                                                                                已复制到剪贴板
+                                                                            </motion.div>
+                                                                        )}
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleOptimize(note)}
+                                                                        className="px-2 text-xs text-emerald-600 hover:text-emerald-700 dark:text-emerald-500 dark:hover:text-emerald-400 font-medium"
+                                                                    >
+                                                                        优化
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleDelete(note.id)}
+                                                                        className="px-2 text-xs text-red-400 hover:text-red-600"
+                                                                    >
+                                                                        删除
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            setActionMenuStates(prev => ({
+                                                                                ...prev,
+                                                                                [note.id]: false
+                                                                            }))
+                                                                        }}
+                                                                        className="w-7 h-7 flex items-center justify-center rounded-full text-sm text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                                                                    >
+                                                                        ×
+                                                                    </button>
+                                                                </motion.div>
+                                                            ) : (
+                                                                <motion.button
+                                                                    key="more-button"
+                                                                    initial={{ opacity: 0, scale: 0.9 }}
+                                                                    animate={{ opacity: 1, scale: 1 }}
+                                                                    exit={{ opacity: 0, scale: 0.9 }}
+                                                                    transition={{ duration: 0.2 }}
+                                                                    onClick={() => {
+                                                                        setActionMenuStates(prev => ({
+                                                                            ...prev,
+                                                                            [note.id]: true
+                                                                        }))
+                                                                    }}
+                                                                    className="w-7 h-7 flex items-center justify-center text-xs text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300"
+                                                                >
+                                                                    ···
+                                                                </motion.button>
+                                                            )}
+                                                        </AnimatePresence>
                                                     </div>
                                                 </div>
 

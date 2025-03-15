@@ -306,7 +306,7 @@ const StageItem = ({
     // 处理分享方法
     const handleShare = useCallback((e: React.MouseEvent) => {
         e.stopPropagation()
-        if (onEdit && activeTab === '方案' && selectedEquipment && customMethods && customMethods[selectedEquipment]) {
+        if (onEdit && activeTab === ('方案' as TabType) && selectedEquipment && customMethods && customMethods[selectedEquipment]) {
             try {
                 const method = customMethods[selectedEquipment][index]
                 const jsonString = methodToJson(method)
@@ -376,13 +376,13 @@ const StageItem = ({
                                                 e.stopPropagation()
                                                 onEdit()
                                             }}
-                                            className="px-3 py-1.5 text-xs text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300"
+                                            className="px-2  text-xs text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300"
                                         >
                                             编辑
                                         </button>
                                         <button
                                             onClick={handleShare}
-                                            className="px-3 py-1.5 text-xs text-blue-400 hover:text-blue-600 dark:text-blue-500 dark:hover:text-blue-300 relative"
+                                            className="px-2  text-xs text-blue-400 hover:text-blue-600 dark:text-blue-500 dark:hover:text-blue-300 relative"
                                         >
                                             {copySuccess ? '已复制' : '分享'}
                                             {copySuccess && (
@@ -401,7 +401,7 @@ const StageItem = ({
                                                 e.stopPropagation()
                                                 onDelete()
                                             }}
-                                            className="px-3 py-1.5 text-xs text-red-400 hover:text-red-600"
+                                            className="px-2 text-xs text-red-400 hover:text-red-600"
                                         >
                                             删除
                                         </button>
@@ -970,10 +970,10 @@ const PourOverRecipes = () => {
     const handleSaveCustomMethod = (method: Method) => {
         if (!selectedEquipment) return
 
-        // 确保方法有唯一ID
+        // 始终生成新的ID，确保每次修改都有唯一标识
         const methodWithId = {
             ...method,
-            id: method.id || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+            id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
         };
 
         // 检查是否是编辑模式
@@ -983,10 +983,9 @@ const PourOverRecipes = () => {
         let updatedMethods = [...(customMethods[selectedEquipment] || [])];
 
         if (isEditing) {
-            // 编辑模式：替换现有方法
-            updatedMethods = updatedMethods.map(m =>
-                m.id === editingMethod?.id ? methodWithId : m
-            );
+            // 编辑模式：移除旧方法，添加新方法（使用新ID）
+            updatedMethods = updatedMethods.filter(m => m.id !== editingMethod?.id);
+            updatedMethods.push(methodWithId);
         } else {
             // 创建模式：添加新方法
             updatedMethods.push(methodWithId);
@@ -1507,7 +1506,7 @@ const PourOverRecipes = () => {
                                                         animate={{ opacity: 1, x: 0 }}
                                                         exit={{ opacity: 0, x: -20 }}
                                                         transition={{ duration: 0.3 }}
-                                                        className="space-y-6"
+                                                        className="space-y-6 pb-16"
                                                     >
                                                         {methodType === 'custom' && (
                                                             <div className="flex space-x-2 mb-4">
@@ -1551,11 +1550,11 @@ const PourOverRecipes = () => {
                                                                         activeTab={activeTab}
                                                                         selectedMethod={selectedMethod}
                                                                         currentStage={currentStage}
-                                                                        onEdit={methodType === 'custom' && customMethods[selectedEquipment!] ? () => {
+                                                                        onEdit={activeTab === ('方案' as TabType) && methodType === 'custom' && customMethods[selectedEquipment!] ? () => {
                                                                             const method = customMethods[selectedEquipment!][index];
                                                                             handleEditCustomMethod(method);
                                                                         } : undefined}
-                                                                        onDelete={methodType === 'custom' && customMethods[selectedEquipment!] ? () => {
+                                                                        onDelete={activeTab === ('方案' as TabType) && methodType === 'custom' && customMethods[selectedEquipment!] ? () => {
                                                                             const method = customMethods[selectedEquipment!][index];
                                                                             handleDeleteCustomMethod(method);
                                                                         } : undefined}
@@ -1592,11 +1591,11 @@ const PourOverRecipes = () => {
                                                                 activeTab={activeTab}
                                                                 selectedMethod={selectedMethod}
                                                                 currentStage={currentStage}
-                                                                onEdit={methodType === 'custom' && customMethods[selectedEquipment!] ? () => {
+                                                                onEdit={activeTab === ('方案' as TabType) && methodType === 'custom' && customMethods[selectedEquipment!] ? () => {
                                                                     const method = customMethods[selectedEquipment!][index];
                                                                     handleEditCustomMethod(method);
                                                                 } : undefined}
-                                                                onDelete={methodType === 'custom' && customMethods[selectedEquipment!] ? () => {
+                                                                onDelete={activeTab === ('方案' as TabType) && methodType === 'custom' && customMethods[selectedEquipment!] ? () => {
                                                                     const method = customMethods[selectedEquipment!][index];
                                                                     handleDeleteCustomMethod(method);
                                                                 } : undefined}
@@ -1655,8 +1654,7 @@ const PourOverRecipes = () => {
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: -20 }}
                                 transition={{ duration: 0.3 }}
-                                className=" bg-neutral-50 dark:bg-neutral-900 pt-1 w-full pb-9 flex flex-row justify-between absolute bottom-0 left-0 right-0 px-6"
-
+                                className="bg-neutral-50 dark:bg-neutral-900 pt-1 w-full pb-9 flex flex-row justify-between absolute bottom-0 left-0 right-0 px-6 shadow-[0_-8px_16px_-4px_rgba(0,0,0,0.05)] dark:shadow-[0_-8px_16px_-4px_rgba(0,0,0,0.2)] before:content-[''] before:absolute before:top-[-20px] before:left-0 before:right-0 before:h-5 before:bg-gradient-to-b before:from-transparent before:to-neutral-50/90 dark:before:to-neutral-900/90 before:pointer-events-none"
                             >
                                 <div className="flex items-center space-x-4">
                                     <motion.button
@@ -1854,6 +1852,7 @@ const PourOverRecipes = () => {
                                         setShowImportForm(false)
                                     }}
                                     onCancel={() => setShowImportForm(false)}
+                                    existingMethods={selectedEquipment && customMethods[selectedEquipment] ? customMethods[selectedEquipment] : []}
                                 />
                             </motion.div>
                         </motion.div>

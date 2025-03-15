@@ -9,6 +9,7 @@ import { parseMethodFromJson, getExampleJson } from '@/lib/jsonUtils'
 interface ImportMethodFormProps {
     onSave: (method: Method) => void
     onCancel: () => void
+    existingMethods?: Method[]
 }
 
 // 定义步骤类型
@@ -17,6 +18,7 @@ type Step = 'input' | 'complete'
 const ImportMethodForm: React.FC<ImportMethodFormProps> = ({
     onSave,
     onCancel,
+    existingMethods = [],
 }) => {
     // 当前步骤状态
     const [currentStep, setCurrentStep] = useState<Step>('input')
@@ -70,6 +72,13 @@ const ImportMethodForm: React.FC<ImportMethodFormProps> = ({
 
             if (!method) {
                 setError('解析JSON失败，请检查格式')
+                return
+            }
+
+            // 检查是否已存在同名方案
+            const existingMethod = existingMethods.find(m => m.name === method.name)
+            if (existingMethod) {
+                setError(`已存在同名方案"${method.name}"，请修改后再导入`)
                 return
             }
 
@@ -155,7 +164,7 @@ const ImportMethodForm: React.FC<ImportMethodFormProps> = ({
                                 粘贴配置JSON
                             </h2>
                             <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                                请粘贴AI优化后返回的JSON配置
+                                请粘贴AI优化后返回的JSON配置(或朋友分享的)
                             </p>
                         </div>
 

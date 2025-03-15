@@ -80,11 +80,9 @@ export function parseMethodFromJson(jsonString: string): Method | null {
 			throw new Error("导入的JSON缺少必要字段 (method)");
 		}
 
-		// 构建Method对象
+		// 构建Method对象 - 始终生成新的ID，避免ID冲突
 		const method: Method = {
-			id:
-				parsedData.id ||
-				`${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+			id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
 			name: parsedData.method || `${parsedData.equipment}优化方案`,
 			params: {
 				coffee: parsedData.params?.coffee || "15g",
@@ -260,7 +258,6 @@ export function cleanJsonForOptimization(jsonString: string): string {
 export function methodToJson(method: Method): string {
 	// 创建配置对象
 	const configObject = {
-		id: method.id,
 		method: method.name,
 		params: {
 			coffee: method.params.coffee,
