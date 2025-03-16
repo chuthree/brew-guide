@@ -763,9 +763,21 @@ const PourOverRecipes = () => {
                     setSelectedBrand(null)
                 } else {
                     setActiveTab('器具')
+                    setSelectedEquipment(null)
+                    setParameterInfo({
+                        equipment: null,
+                        method: null,
+                        params: null,
+                    })
                 }
             } else {
                 setActiveTab('器具')
+                setSelectedEquipment(null)
+                setParameterInfo({
+                    equipment: null,
+                    method: null,
+                    params: null,
+                })
             }
         }
     }, [activeTab, isTimerRunning, methodType, selectedBrand, showHistory])
