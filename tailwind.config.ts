@@ -18,7 +18,7 @@ const config = {
 			},
 		},
 	},
-	plugins: [],
+	plugins: [require("tailwindcss-safe-area")],
 } satisfies Config;
 
 export default config;

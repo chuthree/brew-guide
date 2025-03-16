@@ -1,10 +1,12 @@
 'use client'
-import React, { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import dynamic from 'next/dynamic'
 import { brewingMethods as commonMethods, equipmentList, brandCoffees, APP_VERSION, type Method, type Stage, type Brand, type CoffeeBean } from '@/lib/config'
 import { loadCustomMethods, saveCustomMethod, deleteCustomMethod, copyMethodToClipboard } from '@/lib/customMethods'
 import CustomMethodFormModal from '@/components/CustomMethodFormModal'
+import NavigationBar from '@/components/NavigationBar'
+import Settings, { SettingsOptions, defaultSettings } from '@/components/Settings'
 
 // 动态导入客户端组件
 const BrewingTimer = dynamic(() => import('@/components/BrewingTimer'), { ssr: false })
@@ -19,8 +21,13 @@ const PourVisualizer = dynamic(() => import('@/components/PourVisualizer'), {
     )
 })
 
-const tabs = ['器具', '方案', '注水', '记录'] as const
-type TabType = typeof tabs[number]
+// 定义标签类型
+type TabType = '器具' | '方案' | '注水' | '记录';
+
+// 添加新的主导航类型
+type MainTabType = '冲煮' | '咖啡豆' | '笔记';
+// 修改冲煮步骤类型
+type BrewingStep = 'coffeeBean' | 'equipment' | 'method' | 'brewing' | 'notes';
 
 interface Step {
     title: string
@@ -101,74 +108,6 @@ interface EditableParams {
     ratio: string
 }
 
-// Add new component for editable parameters
-const EditableParameter = ({
-    value,
-    onChange,
-    unit,
-    className = '',
-}: {
-    value: string
-    onChange: (value: string) => void
-    unit: string
-    className?: string
-}) => {
-    const [isEditing, setIsEditing] = useState(false)
-    const [tempValue, setTempValue] = useState(value)
-    const inputRef = useRef<HTMLInputElement>(null)
-
-    useEffect(() => {
-        if (isEditing && inputRef.current) {
-            inputRef.current.focus()
-            inputRef.current.select()
-        }
-    }, [isEditing])
-
-    useEffect(() => {
-        setTempValue(value)
-    }, [value])
-
-    const handleBlur = () => {
-        setIsEditing(false)
-        if (tempValue !== value) {
-            onChange(tempValue)
-        }
-    }
-
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter') {
-            handleBlur()
-        } else if (e.key === 'Escape') {
-            setTempValue(value)
-            setIsEditing(false)
-        }
-    }
-
-    return (
-        <span
-            className={`group relative inline-block ${className} cursor-pointer`}
-            onClick={() => setIsEditing(true)}
-        >
-            {isEditing ? (
-                <input
-                    ref={inputRef}
-                    type="text"
-                    value={tempValue}
-                    onChange={(e) => setTempValue(e.target.value)}
-                    onBlur={handleBlur}
-                    onKeyDown={handleKeyDown}
-                    className="w-12 border-b border-neutral-300 bg-transparent text-center text-[10px] outline-none sm:text-xs"
-                />
-            ) : (
-                <span className="cursor-pointer hover:text-neutral-600">
-                    {value}
-                    <span className="ml-0.5">{unit}</span>
-                </span>
-            )}
-        </span>
-    )
-}
-
 // Update the extractNumber function to handle ratio specifically
 const extractNumber = (str: string) => {
     const match = str.match(/[\d.]+/)
@@ -186,49 +125,6 @@ const extractRatioNumber = (ratioStr: string) => {
 const formatRatio = (ratio: number) => {
     return Number.isInteger(ratio) ? ratio.toString() : ratio.toFixed(1)
 }
-
-// Add TabButton component at the top level
-const TabButton = ({
-    tab,
-    isActive,
-    isDisabled,
-    onClick,
-    hasSecondaryLine,
-}: {
-    tab: string
-    isActive: boolean
-    isDisabled: boolean
-    onClick?: () => void
-    hasSecondaryLine?: boolean
-}) => (
-    <div
-        onClick={!isDisabled ? onClick : undefined}
-        className={`text-xs tracking-widest transition-all duration-300 ${isActive
-            ? 'text-neutral-800 dark:text-neutral-100'
-            : isDisabled
-                ? 'text-neutral-200 dark:text-neutral-700'
-                : 'cursor-pointer text-neutral-300 hover:text-neutral-600 dark:text-neutral-600 dark:hover:text-neutral-300'
-            }`}
-    >
-        <span className="relative">
-            {tab}
-            {/* Secondary line (always below) */}
-            <motion.div
-                layoutId="secondary-underline"
-                animate={{ opacity: hasSecondaryLine ? 1 : 0 }}
-                transition={{ duration: 0.3 }}
-                className="absolute -bottom-1 left-0 right-0 h-px bg-neutral-200 dark:bg-neutral-700"
-            />
-            {/* Primary line (always on top) */}
-            {isActive && (
-                <motion.div
-                    layoutId="underline"
-                    className="absolute -bottom-1 left-0 right-0 z-10 h-px bg-neutral-800 dark:bg-neutral-100"
-                />
-            )}
-        </span>
-    </div>
-)
 
 // 修改 StageItem 组件
 const StageItem = ({
@@ -290,7 +186,7 @@ const StageItem = ({
         <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.3, delay: 0.05 }}
+            transition={{ duration: 0.26, delay: 0.05 }}
             className={`group relative border-l border-neutral-200 pl-6 dark:border-neutral-800 ${activeTab === '注水' && index === currentStage
                 ? 'text-neutral-800 dark:text-neutral-100'
                 : activeTab === '注水' && index < currentStage
@@ -303,7 +199,7 @@ const StageItem = ({
                     className="absolute -left-px top-0 h-full w-px bg-neutral-800 dark:bg-neutral-100"
                     initial={{ scaleY: 0, transformOrigin: "top" }}
                     animate={{ scaleY: 1 }}
-                    transition={{ duration: 0.2, ease: 'linear' }}
+                    transition={{ duration: 0.26, ease: 'linear' }}
                 />
             )}
             <div className={activeTab !== '注水' ? 'cursor-pointer' : ''} onClick={onClick}>
@@ -329,7 +225,7 @@ const StageItem = ({
                                         initial={{ opacity: 0, scale: 0.9, x: 10 }}
                                         animate={{ opacity: 1, scale: 1, x: 0 }}
                                         exit={{ opacity: 0, scale: 0.9, x: 10 }}
-                                        transition={{ duration: 0.2 }}
+                                        transition={{ duration: 0.26 }}
                                         className="flex items-baseline space-x-3"
                                     >
                                         <button
@@ -337,13 +233,13 @@ const StageItem = ({
                                                 e.stopPropagation()
                                                 onEdit()
                                             }}
-                                            className="px-2  text-xs text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300"
+                                            className="px-2  text-xs text-neutral-400  dark:text-neutral-500"
                                         >
                                             编辑
                                         </button>
                                         <button
                                             onClick={handleShare}
-                                            className="px-2  text-xs text-blue-400 hover:text-blue-600 dark:text-blue-500 dark:hover:text-blue-300 relative"
+                                            className="px-2  text-xs text-blue-400 dark:text-blue-500 relative"
                                         >
                                             {copySuccess ? '已复制' : '分享'}
                                             {copySuccess && (
@@ -362,7 +258,7 @@ const StageItem = ({
                                                 e.stopPropagation()
                                                 onDelete()
                                             }}
-                                            className="px-2 text-xs text-red-400 hover:text-red-600"
+                                            className="px-2 text-xs text-red-400"
                                         >
                                             删除
                                         </button>
@@ -375,7 +271,7 @@ const StageItem = ({
                                                     [cardId]: false
                                                 }))
                                             }}
-                                            className="w-7 h-7 flex items-center justify-center rounded-full text-sm text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                                            className="w-7 h-7 flex items-center justify-center rounded-full text-sm text-neutral-400"
                                         >
                                             ×
                                         </button>
@@ -386,7 +282,7 @@ const StageItem = ({
                                         initial={{ opacity: 0, scale: 0.9 }}
                                         animate={{ opacity: 1, scale: 1 }}
                                         exit={{ opacity: 0, scale: 0.9 }}
-                                        transition={{ duration: 0.2 }}
+                                        transition={{ duration: 0.26 }}
                                         onClick={(e) => {
                                             e.stopPropagation()
                                             // 更新全局状态对象，打开当前卡片的菜单
@@ -395,7 +291,7 @@ const StageItem = ({
                                                 [cardId]: true
                                             }))
                                         }}
-                                        className="w-7 h-7 flex items-center justify-center text-xs text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300"
+                                        className="w-7 h-7 flex items-center justify-center text-xs text-neutral-400 dark:text-neutral-500"
                                     >
                                         ···
                                     </motion.button>
@@ -455,6 +351,11 @@ export interface BrewingNoteData {
 
 // 手冲咖啡配方页面组件
 const PourOverRecipes = () => {
+    // 添加主导航状态
+    const [activeMainTab, setActiveMainTab] = useState<MainTabType>('冲煮');
+    // 修改冲煮步骤状态
+    const [activeBrewingStep, setActiveBrewingStep] = useState<BrewingStep>('coffeeBean');
+
     const [activeTab, setActiveTab] = useState<TabType>('器具')
     const [selectedEquipment, setSelectedEquipment] = useState<string | null>(null)
     const [selectedMethod, setSelectedMethod] = useState<Method | null>(null)
@@ -469,7 +370,6 @@ const PourOverRecipes = () => {
     const [isTimerRunning, setIsTimerRunning] = useState(false)
     const [currentStage, setCurrentStage] = useState(-1)
     const [showHistory, setShowHistory] = useState(false)
-    const [hasNotes, setHasNotes] = useState(false)
     const [showComplete, setShowComplete] = useState(false)
     const [currentTime, setCurrentTime] = useState(0)
     const [methodType, setMethodType] = useState<'common' | 'brand' | 'custom'>('common')
@@ -484,13 +384,96 @@ const PourOverRecipes = () => {
     const [actionMenuStates, setActionMenuStates] = useState<Record<string, boolean>>({})
     // 添加导入方案表单状态
     const [showImportForm, setShowImportForm] = useState(false)
-    const [optimizingNote, setOptimizingNote] = useState(false)
 
-    // 检查是否有笔记
+    // 添加设置相关状态
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [settings, setSettings] = useState<SettingsOptions>(() => {
+        // 从本地存储加载设置，如果没有则使用默认设置
+        if (typeof window !== 'undefined') {
+            const savedSettings = localStorage.getItem('brewGuideSettings');
+            if (savedSettings) {
+                try {
+                    return JSON.parse(savedSettings) as SettingsOptions;
+                } catch {
+                    return defaultSettings;
+                }
+            }
+        }
+        return defaultSettings;
+    });
+
+    // 处理双击标题打开设置
+    const handleTitleDoubleClick = () => {
+        setIsSettingsOpen(true);
+    };
+
+    // 将现有的 activeTab 映射到新的 activeBrewingStep
     useEffect(() => {
-        const notes = JSON.parse(localStorage.getItem('brewingNotes') || '[]')
-        setHasNotes(notes.length > 0)
-    }, [showHistory])
+        if (activeMainTab === '冲煮') {
+            // 从其他标签切换回冲煮标签时，确保关闭历史记录显示
+            if (showHistory) {
+                setShowHistory(false);
+            }
+
+            // 映射旧的 activeTab 到新的 activeBrewingStep
+            switch (activeTab) {
+                case '器具':
+                    setActiveBrewingStep('equipment');
+                    break;
+                case '方案':
+                    setActiveBrewingStep('method');
+                    break;
+                case '注水':
+                    setActiveBrewingStep('brewing');
+                    break;
+                case '记录':
+                    setActiveBrewingStep('notes');
+                    break;
+                default:
+                    break;
+            }
+        }
+    }, [activeTab, activeMainTab, showHistory]);
+
+    // 处理主导航标签切换
+    useEffect(() => {
+        // 当切换到不同的主导航标签时，更新UI状态
+        if (activeMainTab === '咖啡豆') {
+            // 切换到咖啡豆标签时，保留当前的冲煮设置，但不显示参数信息条
+            // 不需要额外操作，因为参数信息条已经通过条件渲染控制只在冲煮标签显示
+        } else if (activeMainTab === '笔记') {
+            // 切换到笔记标签时，保留当前的冲煮设置，但不显示参数信息条
+            // 不需要额外操作，因为参数信息条已经通过条件渲染控制只在冲煮标签显示
+        } else if (activeMainTab === '冲煮') {
+            // 切换回冲煮标签时，根据当前步骤恢复显示参数信息条和步骤指示器
+            // 如果当前步骤是咖啡豆，确保参数信息条为空
+            if (activeBrewingStep === 'coffeeBean') {
+                setParameterInfo({
+                    equipment: null,
+                    method: null,
+                    params: null,
+                });
+            }
+            // 如果当前步骤是器具，但没有选择器具，确保参数信息条为空
+            else if (activeBrewingStep === 'equipment' && !selectedEquipment) {
+                setParameterInfo({
+                    equipment: null,
+                    method: null,
+                    params: null,
+                });
+            }
+            // 如果当前步骤是方案，但没有选择方案，确保参数信息条只显示器具
+            else if (activeBrewingStep === 'method' && !selectedMethod && selectedEquipment) {
+                const equipmentName = equipmentList.find(e => e.id === selectedEquipment)?.name || selectedEquipment;
+                setParameterInfo({
+                    equipment: equipmentName,
+                    method: null,
+                    params: null,
+                });
+            }
+            // 其他情况下，参数信息条已经通过其他逻辑正确设置
+        }
+    }, [activeMainTab, activeBrewingStep, selectedEquipment, selectedMethod]);
 
     // 预加载 PourVisualizer 组件
     useEffect(() => {
@@ -580,69 +563,6 @@ const PourOverRecipes = () => {
     }, [selectedEquipment, methodType, selectedBrand, customMethods])
 
     useEffect(() => {
-        if (selectedMethod) {
-            setContent((prev) => ({
-                ...prev,
-                注水: {
-                    steps: selectedMethod.params.stages.map((stage: Stage) => ({
-                        title: stage.label,
-                        items: [
-                            `${stage.water.replace('ml', 'g')}`,
-                            stage.detail,
-                        ],
-                        note: stage.time + '秒',
-                    })),
-                },
-            }))
-        }
-    }, [selectedMethod])
-
-    useEffect(() => {
-        if (selectedEquipment) {
-            // 根据设备ID找到对应的设备名称
-            const equipmentName = equipmentList.find(e => e.id === selectedEquipment)?.name || selectedEquipment;
-
-            setParameterInfo(() => ({
-                equipment: equipmentName,
-                method: null,
-                params: null,
-            }))
-        }
-    }, [selectedEquipment])
-
-    useEffect(() => {
-        if (selectedMethod) {
-            setParameterInfo((prev) => ({
-                ...prev,
-                method: selectedMethod.name,
-                params: {
-                    coffee: selectedMethod.params.coffee,
-                    water: selectedMethod.params.water,
-                    ratio: selectedMethod.params.ratio,
-                    grindSize: selectedMethod.params.grindSize,
-                    temp: selectedMethod.params.temp,
-                },
-            }))
-        } else if (selectedEquipment) {
-            setParameterInfo((prev) => ({
-                ...prev,
-                method: null,
-                params: null,
-            }))
-        }
-    }, [selectedMethod, selectedEquipment])
-
-    useEffect(() => {
-        if (selectedMethod) {
-            setEditableParams({
-                coffee: selectedMethod.params.coffee,
-                water: selectedMethod.params.water,
-                ratio: selectedMethod.params.ratio,
-            })
-        }
-    }, [selectedMethod, selectedEquipment])
-
-    useEffect(() => {
         if (showComplete) {
             // 先恢复界面状态
             setIsTimerRunning(false)
@@ -678,20 +598,31 @@ const PourOverRecipes = () => {
             } else {
                 localStorage.setItem('brewingNotes', '[]')
             }
-
-            // 检查是否有笔记
-            const hasExistingNotes = JSON.parse(localStorage.getItem('brewingNotes') || '[]').length > 0
-            setHasNotes(hasExistingNotes)
         } catch (error) {
             console.error('Error initializing storage:', error)
         }
     }, [])
 
     const handleEquipmentSelect = useCallback((equipmentName: string) => {
+        // 如果当前在笔记标签，先切换回冲煮标签
+        if (activeMainTab !== '冲煮') {
+            setActiveMainTab('冲煮');
+            setShowHistory(false);
+            // 在状态更新后再处理器具选择，避免状态不一致
+            setTimeout(() => handleEquipmentSelect(equipmentName), 0);
+            return;
+        }
+
         // 根据设备名称找到对应的设备id
         const equipment = equipmentList.find(e => e.name === equipmentName)?.id || equipmentName;
-        setSelectedEquipment(equipment);
+
+        // 重置方案相关状态
         setSelectedMethod(null);
+        setCurrentBrewingMethod(null);
+        setEditableParams(null);
+
+        // 设置新的设备
+        setSelectedEquipment(equipment);
 
         // 如果选择的是聪明杯，确保方案类型设置为通用方案
         if (equipment === 'CleverDripper') {
@@ -700,87 +631,151 @@ const PourOverRecipes = () => {
             setSelectedBean(null);
         }
 
+        // 设置参数信息条显示选择的器具
+        const displayName = equipmentList.find(e => e.id === equipment)?.name || equipmentName;
+        setParameterInfo({
+            equipment: displayName,
+            method: null,
+            params: null,
+        });
+
+        // 更新方案列表内容
+        const methodsForEquipment = methodType === 'custom'
+            ? customMethods[equipment] || []
+            : commonMethods[equipment as keyof typeof commonMethods] || [];
+
+        setContent((prev) => ({
+            ...prev,
+            方案: {
+                type: methodType,
+                selectedBrand,
+                steps: methodType === 'common'
+                    ? methodsForEquipment.map((method) => {
+                        const totalTime = method.params.stages[method.params.stages.length - 1].time;
+                        return {
+                            title: method.name,
+                            items: [
+                                `水粉比 ${method.params.ratio}`,
+                                `总时长 ${formatTime(totalTime, true)}`,
+                                `研磨度 ${method.params.grindSize}`,
+                            ],
+                            note: '',
+                        };
+                    })
+                    : methodType === 'brand'
+                        ? selectedBrand
+                            ? selectedBrand.beans.map((bean) => ({
+                                title: bean.name,
+                                items: [
+                                    bean.description,
+                                    `烘焙度：${bean.roastLevel}`,
+                                ],
+                                note: '',
+                            }))
+                            : brandCoffees.map((brand) => ({
+                                title: brand.name,
+                                items: [brand.description],
+                                note: '',
+                            }))
+                        : methodsForEquipment.map((method) => ({
+                            title: method.name,
+                            items: [
+                                `水粉比 ${method.params.ratio}`,
+                                `总时长 ${formatTime(method.params.stages[method.params.stages.length - 1].time, true)}`,
+                                `研磨度 ${method.params.grindSize}`,
+                            ],
+                            note: '',
+                        })),
+            },
+        }));
+
         setActiveTab('方案');
-    }, []);
+        setActiveBrewingStep('method');
+    }, [activeMainTab, setActiveMainTab, setShowHistory, methodType, selectedBrand, customMethods]);
 
     const handleMethodSelect = useCallback(
         (methodIndex: number) => {
+            // 如果当前在笔记标签，先切换回冲煮标签
+            if (activeMainTab !== '冲煮') {
+                setActiveMainTab('冲煮');
+                setShowHistory(false);
+                // 在状态更新后再处理方案选择，避免状态不一致
+                setTimeout(() => handleMethodSelect(methodIndex), 0);
+                return;
+            }
+
             if (selectedEquipment) {
+                let method: Method | null = null;
+
                 if (methodType === 'common') {
-                    const method = commonMethods[selectedEquipment as keyof typeof commonMethods][methodIndex]
-                    setSelectedMethod(method)
-                    setCurrentBrewingMethod({ ...method })
-                    setActiveTab('注水')
+                    method = commonMethods[selectedEquipment as keyof typeof commonMethods][methodIndex];
                 } else if (methodType === 'brand') {
                     if (selectedBrand) {
-                        const selectedBean = selectedBrand.beans[methodIndex]
-                        setSelectedBean(selectedBean)
-                        setSelectedMethod(selectedBean.method)
-                        setCurrentBrewingMethod({ ...selectedBean.method })
-                        setActiveTab('注水')
+                        const selectedBean = selectedBrand.beans[methodIndex];
+                        setSelectedBean(selectedBean);
+                        method = selectedBean.method;
                     } else {
-                        setSelectedBrand(brandCoffees[methodIndex])
+                        setSelectedBrand(brandCoffees[methodIndex]);
+                        return; // 仅选择品牌，不选择方案
                     }
                 } else if (methodType === 'custom') {
-                    const method = customMethods[selectedEquipment][methodIndex]
-                    setSelectedMethod(method)
-                    setCurrentBrewingMethod({ ...method })
-                    setActiveTab('注水')
+                    method = customMethods[selectedEquipment][methodIndex];
+                }
+
+                if (method) {
+                    // 即使是相同的方案，也强制更新状态和参数信息
+                    setCurrentBrewingMethod({ ...method });
+
+                    // 先设置为null，然后再设置新值，确保即使是相同的方案也会触发更新
+                    setSelectedMethod(null);
+
+                    // 使用setTimeout确保状态更新是分开的
+                    setTimeout(() => {
+                        setSelectedMethod(method);
+
+                        // 直接更新参数信息，不依赖于useEffect
+                        setParameterInfo((prev) => ({
+                            ...prev,
+                            method: method.name,
+                            params: {
+                                coffee: method.params.coffee,
+                                water: method.params.water,
+                                ratio: method.params.ratio,
+                                grindSize: method.params.grindSize,
+                                temp: method.params.temp,
+                            },
+                        }));
+
+                        // 直接更新可编辑参数，不依赖于useEffect
+                        setEditableParams({
+                            coffee: method.params.coffee,
+                            water: method.params.water,
+                            ratio: method.params.ratio,
+                        });
+
+                        // 更新注水步骤内容
+                        setContent((prev) => ({
+                            ...prev,
+                            注水: {
+                                steps: method.params.stages.map((stage: Stage) => ({
+                                    title: stage.label,
+                                    items: [
+                                        `${stage.water.replace('ml', 'g')}`,
+                                        stage.detail,
+                                    ],
+                                    note: stage.time + '秒',
+                                })),
+                            },
+                        }));
+
+                        setActiveTab('注水');
+                        setActiveBrewingStep('brewing');
+                    }, 0);
                 }
             }
         },
-        [selectedEquipment, methodType, selectedBrand, customMethods]
+        [selectedEquipment, methodType, selectedBrand, customMethods, activeMainTab, setActiveMainTab, setShowHistory, setActiveBrewingStep, setContent]
     )
-
-    const handleBack = useCallback(() => {
-        if (isTimerRunning && !window.confirm('计时器正在运行，确定要返回吗？'))
-            return
-
-        // 如果在编辑或优化模式下，先关闭这些模式
-        if (showHistory) {
-            // 检查是否在编辑或优化模式
-            const historyComponent = document.getElementById('brewing-history-component');
-            if (historyComponent) {
-                // 尝试查找返回按钮并模拟点击
-                const backButton = historyComponent.querySelector('button[data-action="back"]');
-                if (backButton) {
-                    (backButton as HTMLButtonElement).click();
-                    return;
-                }
-            }
-
-            setShowHistory(false);
-        } else if (activeTab === '记录') {
-            setActiveTab('注水')
-            setShowComplete(false)
-        } else if (activeTab === '注水') {
-            setActiveTab('方案')
-            setSelectedMethod(null)
-            setSelectedBean(null)
-        } else if (activeTab === '方案') {
-            if (methodType === 'brand') {
-                if (selectedBrand) {
-                    setSelectedBrand(null)
-                } else {
-                    setActiveTab('器具')
-                    setSelectedEquipment(null)
-                    setParameterInfo({
-                        equipment: null,
-                        method: null,
-                        params: null,
-                    })
-                }
-            } else {
-                setActiveTab('器具')
-                setSelectedEquipment(null)
-                setParameterInfo({
-                    equipment: null,
-                    method: null,
-                    params: null,
-                })
-            }
-        }
-    }, [activeTab, isTimerRunning, methodType, selectedBrand, showHistory])
 
     const handleParamChange = (type: keyof EditableParams, value: string) => {
         if (!editableParams || !selectedMethod || !currentBrewingMethod) return
@@ -913,7 +908,6 @@ const PourOverRecipes = () => {
             }
             const updatedNotes = [newNote, ...notes]
             localStorage.setItem('brewingNotes', JSON.stringify(updatedNotes))
-            setHasNotes(true)
             setActiveTab('注水')
             setShowComplete(false)
         } catch (error) {
@@ -1002,674 +996,604 @@ const PourOverRecipes = () => {
         }
     }
 
+    // 处理冲煮步骤点击
+    const handleBrewingStepClick = (step: BrewingStep) => {
+        // 如果当前在笔记标签，先切换回冲煮标签
+        if (activeMainTab !== '冲煮') {
+            setActiveMainTab('冲煮');
+            setShowHistory(false);
+            // 在状态更新后再处理步骤点击，避免状态不一致
+            setTimeout(() => handleBrewingStepClick(step), 0);
+            return;
+        }
+
+        // 如果计时器正在运行，不允许切换步骤
+        if (isTimerRunning && !showComplete) {
+            return;
+        }
+
+        // 获取步骤索引，用于判断是否是回到上一步
+        const stepOrder = ['coffeeBean', 'equipment', 'method', 'brewing', 'notes'];
+        const currentStepIndex = stepOrder.indexOf(activeBrewingStep);
+        const targetStepIndex = stepOrder.indexOf(step);
+
+        // 实现新的导航逻辑：
+        // 1. 允许用户返回上一步（targetStepIndex < currentStepIndex）
+        // 2. 允许用户前进到下一步，但只能是相邻的下一步（targetStepIndex === currentStepIndex + 1）
+        // 3. 咖啡豆步骤可以随时访问
+        // 4. 从记录步骤可以返回到任何步骤
+        if (step !== 'coffeeBean' &&
+            activeBrewingStep !== 'notes' &&
+            targetStepIndex > currentStepIndex &&
+            targetStepIndex !== currentStepIndex + 1) {
+            // 不允许跳过步骤前进，直接返回
+            return;
+        }
+
+        // 关键修改：对所有步骤实施相同的逻辑，一旦返回就必须重新选择才能前进
+        // 从器具步骤到方案步骤
+        if (step === 'method' && activeBrewingStep === 'equipment' && !selectedEquipment) {
+            // 如果没有选择器具，不允许进入方案步骤
+            return;
+        }
+        // 从方案步骤到注水步骤
+        if (step === 'brewing' && activeBrewingStep === 'method' && !selectedMethod) {
+            // 如果没有选择方案，不允许进入注水步骤
+            return;
+        }
+        // 从注水步骤到记录步骤
+        if (step === 'notes' && activeBrewingStep === 'brewing' && !showComplete) {
+            // 如果没有完成冲煮，不允许进入记录步骤
+            return;
+        }
+
+        // 如果是回到咖啡豆步骤，重置所有选择
+        if (step === 'coffeeBean') {
+            setSelectedEquipment(null);
+            setSelectedMethod(null);
+            setCurrentBrewingMethod(null);
+            setEditableParams(null);
+            setParameterInfo({
+                equipment: null,
+                method: null,
+                params: null,
+            });
+        }
+        // 如果回到器具步骤，重置方案和注水相关状态
+        else if (step === 'equipment' && targetStepIndex < currentStepIndex) {
+            // 重置器具选择，强制用户重新选择器具
+            setSelectedEquipment(null);
+            setSelectedMethod(null);
+            setCurrentBrewingMethod(null);
+            setEditableParams(null);
+            setParameterInfo({
+                equipment: null,
+                method: null,
+                params: null,
+            });
+        }
+        // 如果回到方案步骤，重置注水相关状态
+        else if (step === 'method' && targetStepIndex < currentStepIndex) {
+            // 重置注水相关状态，并且重置方案选择，强制用户重新选择方案
+            setIsTimerRunning(false);
+            setCurrentStage(-1);
+            setCountdownTime(null);
+            setSelectedMethod(null);
+            setCurrentBrewingMethod(null);
+            setEditableParams(null);
+
+            // 更新参数信息，只保留设备信息
+            if (selectedEquipment) {
+                const equipmentName = equipmentList.find(e => e.id === selectedEquipment)?.name || selectedEquipment;
+                setParameterInfo({
+                    equipment: equipmentName,
+                    method: null,
+                    params: null,
+                });
+            }
+        }
+        // 如果回到注水步骤，重置记录相关状态
+        else if (step === 'brewing' && targetStepIndex < currentStepIndex) {
+            // 重置计时器状态，强制用户重新开始冲煮
+            setIsTimerRunning(false);
+            setCurrentStage(-1);
+            setCountdownTime(null);
+            setShowComplete(false);
+        }
+
+        // 如果点击的步骤被禁用，不执行任何操作
+        const disabledSteps: BrewingStep[] = [];
+        if (!selectedEquipment) {
+            disabledSteps.push('method', 'brewing', 'notes');
+        } else if (!selectedMethod) {
+            disabledSteps.push('brewing', 'notes');
+        } else if (!showComplete) {
+            disabledSteps.push('notes');
+        }
+
+        if (disabledSteps.includes(step)) {
+            return;
+        }
+
+        // 当离开当前步骤时，重置相关状态
+        if (activeBrewingStep !== step) {
+            // 如果离开咖啡豆步骤，重置所有选择
+            if (activeBrewingStep === 'coffeeBean' && step !== 'coffeeBean') {
+                // 不需要额外操作，因为咖啡豆步骤本身就是初始状态
+            }
+
+            // 如果离开器具步骤，重置方案和注水相关状态
+            else if (activeBrewingStep === 'equipment' && step !== 'equipment') {
+                setSelectedMethod(null);
+                setCurrentBrewingMethod(null);
+                setEditableParams(null);
+                // 保留selectedEquipment，但更新参数信息
+                if (selectedEquipment) {
+                    const equipmentName = equipmentList.find(e => e.id === selectedEquipment)?.name || selectedEquipment;
+                    setParameterInfo({
+                        equipment: equipmentName,
+                        method: null,
+                        params: null,
+                    });
+                }
+            }
+
+            // 如果离开方案步骤，重置注水相关状态
+            else if (activeBrewingStep === 'method' && step !== 'method') {
+                // 如果没有选择方案就离开，则重置方案相关状态
+                if (!selectedMethod) {
+                    setSelectedMethod(null);
+                    setCurrentBrewingMethod(null);
+                    setEditableParams(null);
+                }
+            }
+
+            // 如果离开注水步骤，重置计时器状态
+            else if (activeBrewingStep === 'brewing' && step !== 'brewing') {
+                setIsTimerRunning(false);
+                setCurrentStage(-1);
+                setCountdownTime(null);
+            }
+
+            // 如果离开记录步骤，重置完成状态
+            else if (activeBrewingStep === 'notes' && step !== 'notes') {
+                setShowComplete(false);
+            }
+        }
+
+        // 根据步骤更新对应的旧状态
+        switch (step) {
+            case 'coffeeBean':
+                // 处理咖啡豆选择
+                // 重置参数信息显示和相关状态
+                setParameterInfo({
+                    equipment: null,
+                    method: null,
+                    params: null,
+                });
+                setSelectedEquipment(null);
+                setSelectedMethod(null);
+                setEditableParams(null);
+                break;
+            case 'equipment':
+                setActiveTab('器具');
+                // 完全清空参数信息条，因为用户正在选择器具
+                setParameterInfo({
+                    equipment: null,
+                    method: null,
+                    params: null,
+                });
+                // 重置方法选择，但保留设备选择
+                setSelectedMethod(null);
+                setEditableParams(null);
+                break;
+            case 'method':
+                if (selectedEquipment) {
+                    setActiveTab('方案');
+                    // 保持设备信息，清空方法和参数信息
+                    const equipmentName = equipmentList.find(e => e.id === selectedEquipment)?.name || selectedEquipment;
+                    setParameterInfo({
+                        equipment: equipmentName,
+                        method: null,
+                        params: null,
+                    });
+                }
+                break;
+            case 'brewing':
+                if (selectedMethod) {
+                    setActiveTab('注水');
+                }
+                break;
+            case 'notes':
+                if (showComplete) {
+                    setActiveTab('记录');
+                }
+                break;
+        }
+        setActiveBrewingStep(step);
+    };
+
     return (
         <div className="flex h-full flex-col overflow-hidden mx-auto max-w-[500px] font-mono text-neutral-800 dark:text-neutral-100">
-            {/* Header section */}
-            <motion.div
-                className={`${isTimerRunning && !showComplete ? 'translate-y-16' : ''} z-10  bg-neutral-50 dark:bg-neutral-900  transition-all duration-600  relative border-b mx-6 mt-6 border-neutral-200 dark:border-neutral-800`}
-            >
-                <div className={`space-y-4 transition-all ease-in-out duration-300 ${isTimerRunning && !showComplete ? 'opacity-0' : ''}`}><div className="flex w-full items-center justify-between">
-                    <div>
-                        <h1 className="mt-2 text-xl font-light tracking-wide sm:text-2xl">
-                            手冲咖啡冲煮指南
-                            <span className="ml-2 text-[8px] text-neutral-300 dark:text-neutral-600">
-                                BETA v{APP_VERSION}
-                            </span>
-                        </h1>
-                    </div>
-                </div>
-                    {/* Parameter information display */}
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.3 }}
-                        className="h-16 sm:h-20"
-                    >
-                        <div className="space-y-2">
-                            <AnimatePresence mode="wait">
-                                {showHistory ? (
-                                    <motion.div
-                                        key="history-info"
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: -10 }}
-                                        transition={{ duration: 0.3 }}
-                                        className="flex flex-col space-y-1"
-                                    >
-                                        <AnimatePresence mode="wait">
-                                            {optimizingNote ? (
-                                                <motion.div
-                                                    key="optimize-info"
-                                                    initial={{ opacity: 0, y: 10 }}
-                                                    animate={{ opacity: 1, y: 0 }}
-                                                    exit={{ opacity: 0, y: -10 }}
-                                                    transition={{ duration: 0.3 }}
-                                                    className="space-y-1"
-                                                >
-                                                    <div className="text-xs text-neutral-400 dark:text-neutral-500">
-                                                        优化冲煮方案：调整理想风味参数，生成优化提示词，让AI帮你优化冲煮方案
-                                                    </div>
-                                                </motion.div>
-                                            ) : (
-                                                <motion.div
-                                                    key="history-text"
-                                                    initial={{ opacity: 0, y: 5 }}
-                                                    animate={{ opacity: 1, y: 0 }}
-                                                    exit={{ opacity: 0, y: -5 }}
-                                                    transition={{ duration: 0.3 }}
-                                                >
-                                                    <div className="text-xs text-neutral-400 dark:text-neutral-500">
-                                                        浏览历史冲煮记录
-                                                    </div>
-                                                </motion.div>
-                                            )}
-                                        </AnimatePresence>
-                                    </motion.div>
-                                ) : parameterInfo.equipment ? (
-                                    <motion.div
-                                        key="parameter-info"
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: -10 }}
-                                        transition={{ duration: 0.3 }}
-                                        className="flex flex-col space-y-1"
-                                    >
-                                        <div className="flex items-center space-x-3 text-xs text-neutral-500 sm:text-sm dark:text-neutral-400">
-                                            <span className="font-light">
-                                                {parameterInfo.equipment}
-                                            </span>
-                                            <AnimatePresence mode="wait">
-                                                {parameterInfo.method && (
-                                                    <motion.div
-                                                        initial={{ opacity: 0, x: 10 }}
-                                                        animate={{ opacity: 1, x: 0 }}
-                                                        exit={{ opacity: 0, x: -10 }}
-                                                        transition={{ duration: 0.2 }}
-                                                        className="flex items-center space-x-3"
-                                                    >
-                                                        <span className="text-neutral-300 dark:text-neutral-600">
-                                                            |
-                                                        </span>
-                                                        <span className="font-light">
-                                                            {parameterInfo.method}
-                                                        </span>
-                                                    </motion.div>
-                                                )}
-                                            </AnimatePresence>
-                                        </div>
-                                        <AnimatePresence mode="wait">
-                                            {parameterInfo.params && (
-                                                <motion.div
-                                                    initial={{ opacity: 0, y: 5 }}
-                                                    animate={{ opacity: 1, y: 0 }}
-                                                    exit={{ opacity: 0, y: -5 }}
-                                                    transition={{ duration: 0.2, delay: 0.1 }}
-                                                    className="relative flex flex-wrap gap-2 text-[10px] text-neutral-400 sm:text-xs dark:text-neutral-500"
-                                                >
-                                                    {editableParams ? (
-                                                        <>
-                                                            <EditableParameter
-                                                                value={editableParams.coffee.replace('g', '')}
-                                                                onChange={(v) => handleParamChange('coffee', v)}
-                                                                unit="g"
-                                                                className="border-b border-dashed border-neutral-200 hover:border-neutral-400 dark:border-neutral-800 dark:hover:border-neutral-600"
-                                                            />
-                                                            <span>·</span>
-                                                            <EditableParameter
-                                                                value={editableParams.water.replace('g', '')}
-                                                                onChange={(v) => handleParamChange('water', v)}
-                                                                unit="g"
-                                                                className="border-b border-dashed border-neutral-200 hover:border-neutral-400 dark:border-neutral-800 dark:hover:border-neutral-600"
-                                                            />
-                                                            <span>·</span>
-                                                            <EditableParameter
-                                                                value={editableParams.ratio.replace('1:', '')}
-                                                                onChange={(v) => handleParamChange('ratio', v)}
-                                                                unit=""
-                                                                className="border-b border-dashed border-neutral-200 before:mr-0.5 before:content-['1:'] hover:border-neutral-400 dark:border-neutral-800 dark:hover:border-neutral-600"
-                                                            />
-                                                            <span>·</span>
-                                                            <span>{parameterInfo.params?.grindSize}</span>
-                                                            <span>·</span>
-                                                            <span>{parameterInfo.params?.temp}</span>
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <span>{parameterInfo.params?.coffee}</span>
-                                                            <span>·</span>
-                                                            <span>{parameterInfo.params?.water}</span>
-                                                            <span>·</span>
-                                                            <span>{parameterInfo.params?.ratio}</span>
-                                                            <span>·</span>
-                                                            <span>{parameterInfo.params?.grindSize}</span>
-                                                            <span>·</span>
-                                                            <span>{parameterInfo.params?.temp}</span>
-                                                        </>
-                                                    )}
-                                                </motion.div>
-                                            )}
-                                        </AnimatePresence>
-                                    </motion.div>
-                                ) : (
-                                    <motion.div
-                                        key="empty-state"
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: -10 }}
-                                        transition={{ duration: 0.3 }}
-                                        className="flex flex-col space-y-1"
-                                    >
-                                        <div className="text-xs text-neutral-400 dark:text-neutral-500">
-                                            选择器具开始冲煮
-                                        </div>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </div>
-                    </motion.div>
-                </div>
-            </motion.div>
+            {/* 使用 NavigationBar 组件替换原有的导航栏 */}
+            <NavigationBar
+                activeMainTab={activeMainTab}
+                setActiveMainTab={setActiveMainTab}
+                activeBrewingStep={activeBrewingStep}
+                setActiveBrewingStep={handleBrewingStepClick}
+                parameterInfo={parameterInfo}
+                setParameterInfo={setParameterInfo}
+                editableParams={editableParams}
+                setEditableParams={setEditableParams}
+                isTimerRunning={isTimerRunning}
+                showComplete={showComplete}
+                selectedEquipment={selectedEquipment}
+                selectedMethod={currentBrewingMethod}
+                handleParamChange={handleParamChange}
+                setShowHistory={setShowHistory}
+                setActiveTab={setActiveTab}
+                onTitleDoubleClick={handleTitleDoubleClick}
+            />
 
-            {/* Content section */}
-            <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.6, delay: 0.3 }}
-                className="relative flex flex-1 flex-col overflow-hidden px-6 sm:px-8 w-full"
-            >
-                {/* Navigation */}
-                <motion.div
-                    className={`flex items-center justify-between transition-all my-6 duration-300 ${isTimerRunning && !showComplete ? 'opacity-0 pointer-events-none ' : 'opacity-100'}`}
-
-                >
-                    <div className="flex items-center space-x-4 sm:space-x-8">
-                        {hasNotes && (
-                            <>
-                                <motion.div
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    exit={{ opacity: 0, x: -20 }}
-                                >
-                                    <TabButton
-                                        tab="笔记"
-                                        isActive={showHistory}
-                                        isDisabled={isTimerRunning}
-                                        onClick={isTimerRunning ? undefined : () => {
-                                            if (showHistory) {
-                                                setShowHistory(false)
-                                            } else {
-                                                setShowHistory(true)
-                                            }
-                                        }}
-                                    />
-                                </motion.div>
-                                <div className="h-4 w-px bg-neutral-200 dark:bg-neutral-700" />
-                            </>
-                        )}
-                        {tabs.slice(0, 3).map((tab) => (
-                            <motion.div
-                                key={tab}
-                                animate={{
-                                    opacity: isTimerRunning && activeTab !== tab ? 0.3 : 1
-                                }}
-                                transition={{ duration: 0.4 }}
-                            >
-                                <TabButton
-                                    tab={tab}
-                                    isActive={activeTab === tab && !showHistory}
-                                    hasSecondaryLine={activeTab === tab}
-                                    isDisabled={
-                                        isTimerRunning ||
-                                        (tab === '方案' && !selectedEquipment) ||
-                                        (tab === '注水' && !selectedMethod)
-                                    }
-                                    onClick={
-                                        isTimerRunning ? undefined :
-                                            () => {
-                                                if (tab === activeTab && tab !== '注水') {
-                                                    // 如果点击当前标签（除了注水），根据层级关系返回上一级
-                                                    handleBack()
-                                                } else if (
-                                                    (tab === '方案' && selectedEquipment) ||
-                                                    (tab === '注水' && selectedMethod) ||
-                                                    tab === '器具'
-                                                ) {
-                                                    if (showHistory) {
-                                                        setShowHistory(false)
-                                                    }
-
-                                                    // 如果当前在记录页面，无论点击哪个标签都需要重置状态
-                                                    if (activeTab === '记录') {
-                                                        setShowComplete(false)
-                                                        if (tab === '器具') {
-                                                            setSelectedEquipment(null)
-                                                            setSelectedMethod(null)
-                                                            setCurrentBrewingMethod(null)
-                                                            setParameterInfo({
-                                                                equipment: null,
-                                                                method: null,
-                                                                params: null,
-                                                            })
-                                                        } else if (tab === '方案') {
-                                                            setSelectedMethod(null)
-                                                            setCurrentBrewingMethod(null)
-                                                            setParameterInfo((prev) => ({
-                                                                equipment: prev.equipment,
-                                                                method: null,
-                                                                params: null,
-                                                            }))
-                                                        } else if (tab === '注水') {
-                                                            // 从记录页面点击注水时，只重置完成状态
-                                                            setShowComplete(false)
-                                                        }
-                                                    } else if (tab !== activeTab) { // 只在切换到不同标签时重置状态
-                                                        // 非记录页面的原有逻辑
-                                                        if (tab === '器具') {
-                                                            setSelectedEquipment(null)
-                                                            setSelectedMethod(null)
-                                                            setCurrentBrewingMethod(null)
-                                                            setParameterInfo({
-                                                                equipment: null,
-                                                                method: null,
-                                                                params: null,
-                                                            })
-                                                            setShowComplete(false)
-                                                        } else if (tab === '方案') {
-                                                            setSelectedMethod(null)
-                                                            setCurrentBrewingMethod(null)
-                                                            setParameterInfo((prev) => ({
-                                                                equipment: prev.equipment,
-                                                                method: null,
-                                                                params: null,
-                                                            }))
-                                                            setShowComplete(false)
-                                                        }
-                                                    }
-                                                    setActiveTab(tab as TabType)
-                                                }
-                                            }
-                                    }
-                                />
-                            </motion.div>
-                        ))}
-                        {showComplete && (
-                            <>
-                                <div className="h-4 w-px bg-neutral-200 dark:bg-neutral-700" />
-                                <motion.div
-                                    initial={{ opacity: 0, x: 20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ duration: 0.4, delay: 0.3 }}
-                                >
-                                    <TabButton
-                                        tab="记录"
-                                        isActive={activeTab === '记录' && !showHistory}
-                                        hasSecondaryLine={activeTab === '记录'}
-                                        isDisabled={false}
-                                        onClick={() => {
-                                            if (showHistory) {
-                                                setShowHistory(false)
-                                            }
-                                            setActiveTab('记录')
-                                        }}
-                                    />
-                                </motion.div>
-                            </>
-                        )}
-                    </div>
-                    {(activeTab !== '器具' || showHistory) && (
-                        <motion.button
-                            onClick={handleBack}
-                            animate={{
-                                opacity: isTimerRunning ? 0 : 1
-                            }}
-                            transition={{ duration: 0.4 }}
-                            className="text-[10px] tracking-widest text-neutral-400 transition-colors hover:text-neutral-800 sm:text-xs dark:text-neutral-500 dark:hover:text-neutral-300"
-                        >
-                            [ 返回 ]
-                        </motion.button>
-                    )}
-                </motion.div>
-
-                {/* Content display */}
-                <div className={` overflow-y-auto  h-full`}>
-
-                    <AnimatePresence mode="wait">
-                        {showHistory ? (
-                            <motion.div
-                                key="history"
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, x: 20 }}
-                                transition={{ duration: 0.3 }}
-                            >
-                                <BrewingHistory
-                                    isOpen={showHistory}
-                                    onClose={() => setShowHistory(false)}
-                                    onOptimizingChange={setOptimizingNote}
-                                />
-                            </motion.div>
-                        ) : activeTab === '记录' ? (
-                            <motion.div
-                                key="note-form"
-                                initial={{ opacity: 0, x: 20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, x: -20 }}
-                                transition={{ duration: 0.3 }}
-                            >
-                                <BrewingNoteForm
-                                    id="brewingNoteForm"
-                                    isOpen={true}
-                                    onClose={() => setActiveTab('注水')}
-                                    onSave={handleSaveNote}
-                                    initialData={{
-                                        equipment: selectedEquipment ? (equipmentList.find(e => e.id === selectedEquipment)?.name || selectedEquipment) : undefined,
-                                        method: currentBrewingMethod?.name,
-                                        params: currentBrewingMethod?.params,
-                                        totalTime: currentTime,
-                                        coffeeBeanInfo: methodType === 'brand' && selectedBean ? {
-                                            name: selectedBean.name,
-                                            roastLevel: selectedBean.roastLevel,
-                                            roastDate: '',
-                                        } : undefined
-                                    }}
-                                />
-                            </motion.div>
-                        ) : (
-                            <motion.div
-                                key={activeTab}
-                                initial={{ opacity: 0, x: 20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, x: -20 }}
-                                transition={{ duration: 0.3 }}
-                                className="relative h-full"
-                            >
-                                {/* 当计时器运行时显示可视化组件 */}
-                                <AnimatePresence mode="wait">
-                                    {isTimerRunning && !showComplete && currentBrewingMethod ? (
-                                        <motion.div
-                                            key="pour-visualizer-container"
-                                            initial={{ opacity: 0 }}
-                                            animate={{ opacity: 1 }}
-                                            exit={{ opacity: 0 }}
-                                            transition={{ duration: 0.3 }}
-                                            className="flex items-center justify-center"
-                                            style={{
-                                                position: 'absolute',
-                                                top: '50%',
-                                                left: '50%',
-                                                transform: 'translate(-50%, -50%)',
-                                                width: '100%',
-                                                zIndex: 10
-                                            }}
-                                        >
-                                            <div
-                                                key="pour-visualizer-inner"
-                                                className="w-full max-w-[300px]"
-                                            >
-                                                <PourVisualizer
-                                                    isRunning={isTimerRunning}
-                                                    currentStage={currentStage}
-                                                    stages={currentBrewingMethod.params.stages}
-                                                    countdownTime={countdownTime}
-                                                    equipmentId={selectedEquipment || 'V60'}
-                                                />
-                                            </div>
-                                        </motion.div>
-                                    ) : (
-                                        <motion.div
-                                            key="steps-list-container"
-                                            initial={{ opacity: 0 }}
-                                            animate={{ opacity: 1 }}
-                                            exit={{ opacity: 0 }}
-                                            transition={{ duration: 0.3 }}
-                                            className="space-y-6 pr-2"
-                                        >
-                                            {/* 预渲染 PourVisualizer 组件，但设置为不可见 */}
-                                            {activeTab === '注水' && currentBrewingMethod && isPourVisualizerPreloaded && (
-                                                <div className="hidden">
-                                                    <PourVisualizer
-                                                        isRunning={false}
-                                                        currentStage={-1}
-                                                        stages={currentBrewingMethod.params.stages}
-                                                        countdownTime={null}
-                                                        equipmentId={selectedEquipment || 'V60'}
-                                                    />
-                                                </div>
-                                            )}
-
-                                            {activeTab === '方案' ? (
-                                                <AnimatePresence mode="wait">
-                                                    <motion.div
-                                                        key={`${methodType}-${selectedBrand?.name || 'none'}`}
-                                                        initial={{ opacity: 0, x: 20 }}
-                                                        animate={{ opacity: 1, x: 0 }}
-                                                        exit={{ opacity: 0, x: -20 }}
-                                                        transition={{ duration: 0.3 }}
-                                                        className="space-y-6 pb-16"
-                                                    >
-                                                        {methodType === 'custom' && (
-                                                            <div className="flex space-x-2 mb-4">
-                                                                <motion.button
-                                                                    onClick={() => setShowCustomForm(true)}
-                                                                    whileHover={{ scale: 1.02 }}
-                                                                    whileTap={{ scale: 0.98 }}
-                                                                    className="flex-1 flex items-center justify-center py-4 border border-dashed border-neutral-300 rounded-md text-xs text-neutral-500 hover:text-neutral-700 hover:border-neutral-400 dark:border-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200 dark:hover:border-neutral-700 transition-colors"
-                                                                >
-                                                                    <span className="mr-1">+</span> 新建方案
-                                                                </motion.button>
-                                                                <motion.button
-                                                                    onClick={() => setShowImportForm(true)}
-                                                                    whileHover={{ scale: 1.02 }}
-                                                                    whileTap={{ scale: 0.98 }}
-                                                                    className="flex-1 flex items-center justify-center py-4 border border-dashed border-neutral-300 rounded-md text-xs text-neutral-500 hover:text-neutral-700 hover:border-neutral-400 dark:border-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200 dark:hover:border-neutral-700 transition-colors"
-                                                                >
-                                                                    <span className="mr-1">↓</span> 导入方案
-                                                                </motion.button>
-                                                            </div>
-                                                        )}
-                                                        <AnimatePresence initial={false}>
-                                                            {content[activeTab as keyof typeof content].steps.map((step, index) => (
-                                                                <motion.div
-                                                                    key={step.methodId || `${step.title}-${index}`}
-                                                                    initial={{ opacity: 0, height: 0, marginBottom: 0 }}
-                                                                    animate={{ opacity: 1, height: 'auto', marginBottom: 24 }}
-                                                                    exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-                                                                    transition={{ duration: 0.3 }}
-                                                                >
-                                                                    <StageItem
-                                                                        step={step}
-                                                                        index={index}
-                                                                        onClick={() => {
-                                                                            if (activeTab === ('器具' as TabType)) {
-                                                                                handleEquipmentSelect(step.title)
-                                                                            } else if (activeTab === ('方案' as TabType)) {
-                                                                                handleMethodSelect(index)
-                                                                            }
-                                                                        }}
-                                                                        activeTab={activeTab}
-                                                                        selectedMethod={selectedMethod}
-                                                                        currentStage={currentStage}
-                                                                        onEdit={activeTab === ('方案' as TabType) && methodType === 'custom' && customMethods[selectedEquipment!] ? () => {
-                                                                            const method = customMethods[selectedEquipment!][index];
-                                                                            handleEditCustomMethod(method);
-                                                                        } : undefined}
-                                                                        onDelete={activeTab === ('方案' as TabType) && methodType === 'custom' && customMethods[selectedEquipment!] ? () => {
-                                                                            const method = customMethods[selectedEquipment!][index];
-                                                                            handleDeleteCustomMethod(method);
-                                                                        } : undefined}
-                                                                        actionMenuStates={actionMenuStates}
-                                                                        setActionMenuStates={setActionMenuStates}
-                                                                        selectedEquipment={selectedEquipment}
-                                                                        customMethods={customMethods}
-                                                                    />
-                                                                </motion.div>
-                                                            ))}
-                                                        </AnimatePresence>
-                                                    </motion.div>
-                                                </AnimatePresence>
-                                            ) : (
-                                                <AnimatePresence initial={false}>
-                                                    {content[activeTab as keyof typeof content].steps.map((step, index) => (
-                                                        <motion.div
-                                                            key={step.methodId || `${step.title}-${index}`}
-                                                            initial={{ opacity: 0, height: 0, marginBottom: 0 }}
-                                                            animate={{ opacity: 1, height: 'auto', marginBottom: 24 }}
-                                                            exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-                                                            transition={{ duration: 0.3 }}
-                                                        >
-                                                            <StageItem
-                                                                step={step}
-                                                                index={index}
-                                                                onClick={() => {
-                                                                    if (activeTab === ('器具' as TabType)) {
-                                                                        handleEquipmentSelect(step.title)
-                                                                    } else if (activeTab === ('方案' as TabType)) {
-                                                                        handleMethodSelect(index)
-                                                                    }
-                                                                }}
-                                                                activeTab={activeTab}
-                                                                selectedMethod={selectedMethod}
-                                                                currentStage={currentStage}
-                                                                onEdit={activeTab === ('方案' as TabType) && methodType === 'custom' && customMethods[selectedEquipment!] ? () => {
-                                                                    const method = customMethods[selectedEquipment!][index];
-                                                                    handleEditCustomMethod(method);
-                                                                } : undefined}
-                                                                onDelete={activeTab === ('方案' as TabType) && methodType === 'custom' && customMethods[selectedEquipment!] ? () => {
-                                                                    const method = customMethods[selectedEquipment!][index];
-                                                                    handleDeleteCustomMethod(method);
-                                                                } : undefined}
-                                                                actionMenuStates={actionMenuStates}
-                                                                setActionMenuStates={setActionMenuStates}
-                                                                selectedEquipment={selectedEquipment}
-                                                                customMethods={customMethods}
-                                                            />
-                                                        </motion.div>
-                                                    ))}
-                                                </AnimatePresence>
-                                            )}
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-                </div>
-
-                {/* Timer section */}
+            {/* 内容区域 - 简化内边距和间距 */}
+            <div className="flex-1 overflow-y-auto">
                 <AnimatePresence mode="wait">
-                    {activeTab === '注水' && currentBrewingMethod && !showHistory && (
+                    {activeMainTab === '笔记' ? (
                         <motion.div
-                            key="brewing-timer"
+                            key="history"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            transition={{ duration: 0.2 }}
-                            style={{
-                                willChange: "opacity"
-                            }}
+                            transition={{ duration: 0.26 }}
+                            className="h-full"
                         >
-                            <BrewingTimer
-                                currentBrewingMethod={currentBrewingMethod}
-                                onStatusChange={({ isRunning }) => setIsTimerRunning(isRunning)}
-                                onStageChange={({ currentStage }) => {
-                                    setCurrentStage(currentStage)
+                            <BrewingHistory
+                                isOpen={true}
+                                onClose={() => {
+                                    setActiveMainTab('冲煮');
+                                    setShowHistory(false);
                                 }}
-                                onComplete={(isComplete, totalTime) => {
-                                    setShowComplete(isComplete)
-                                    setCurrentTime(totalTime || 0)
-                                }}
-                                onCountdownChange={(time) => setCountdownTime(time)}
                             />
                         </motion.div>
-                    )}
-                </AnimatePresence>
-
-                {/* 方案类型导航栏 */}
-                <AnimatePresence>
-                    {
-                        activeTab === '方案' && !showHistory && selectedEquipment !== 'CleverDripper' && (
-                            <motion.div
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -20 }}
-                                transition={{ duration: 0.3 }}
-                                className="bg-neutral-50 dark:bg-neutral-900 pt-1 w-full pb-9 flex flex-row justify-between absolute bottom-0 left-0 right-0 px-6 shadow-[0_-8px_16px_-4px_rgba(0,0,0,0.05)] dark:shadow-[0_-8px_16px_-4px_rgba(0,0,0,0.2)] before:content-[''] before:absolute before:top-[-20px] before:left-0 before:right-0 before:h-5 before:bg-gradient-to-b before:from-transparent before:to-neutral-50/90 dark:before:to-neutral-900/90 before:pointer-events-none"
-                            >
-                                <div className="flex items-center space-x-4">
-                                    <motion.button
-                                        onClick={() => {
-                                            setMethodType('common')
-                                            setSelectedBrand(null)
-                                            setSelectedBean(null)
+                    ) : activeMainTab === '咖啡豆' ? (
+                        <motion.div
+                            key="coffee-beans"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.26 }}
+                            className="h-full px-6 py-4"
+                        >
+                            {/* 咖啡豆管理界面将在这里实现 */}
+                            <div className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
+                                [ 咖啡豆管理功能即将推出 ]
+                            </div>
+                        </motion.div>
+                    ) : activeBrewingStep === 'coffeeBean' ? (
+                        <motion.div
+                            key="coffee-bean-selection"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.26 }}
+                            className="h-full px-6 py-4"
+                        >
+                            {/* 咖啡豆选择界面将在这里实现 */}
+                            <div className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
+                                [ 咖啡豆选择功能即将推出 ]
+                            </div>
+                        </motion.div>
+                    ) : activeTab === '记录' ? (
+                        <motion.div
+                            key="note-form"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.26 }}
+                            className="h-full px-6 py-4"
+                        >
+                            <BrewingNoteForm
+                                id="brewingNoteForm"
+                                isOpen={true}
+                                onClose={() => {
+                                    setActiveTab('注水');
+                                    setActiveBrewingStep('brewing');
+                                }}
+                                onSave={handleSaveNote}
+                                initialData={{
+                                    equipment: selectedEquipment ? (equipmentList.find(e => e.id === selectedEquipment)?.name || selectedEquipment) : undefined,
+                                    method: currentBrewingMethod?.name,
+                                    params: currentBrewingMethod?.params,
+                                    totalTime: currentTime,
+                                    coffeeBeanInfo: methodType === 'brand' && selectedBean ? {
+                                        name: selectedBean.name,
+                                        roastLevel: selectedBean.roastLevel,
+                                        roastDate: '',
+                                    } : undefined
+                                }}
+                            />
+                        </motion.div>
+                    ) : (
+                        <motion.div
+                            key={activeTab}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.26 }}
+                            className="relative h-full px-6 py-6"
+                        >
+                            {/* 当计时器运行时显示可视化组件 */}
+                            <AnimatePresence mode="wait">
+                                {isTimerRunning && !showComplete && currentBrewingMethod ? (
+                                    <motion.div
+                                        key="pour-visualizer-container"
+                                        initial={{ opacity: 0, scale: 0.95 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        exit={{ opacity: 0, scale: 0.95 }}
+                                        transition={{
+                                            type: "spring",
+                                            stiffness: 400,
+                                            damping: 30,
+                                            opacity: { duration: 0.26 }
                                         }}
-                                        className={`text-xs tracking-wider transition-colors ${methodType === 'common'
-                                            ? 'text-neutral-800 dark:text-neutral-100'
-                                            : 'text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300'
-                                            }`}
+                                        className="flex items-center justify-center w-full h-full"
                                     >
-                                        通用方案
-                                    </motion.button>
-                                    <motion.span
+                                        <div
+                                            key="pour-visualizer-inner"
+                                            className="w-full max-w-[300px]"
+                                        >
+                                            <PourVisualizer
+                                                isRunning={isTimerRunning}
+                                                currentStage={currentStage}
+                                                stages={currentBrewingMethod.params.stages}
+                                                countdownTime={countdownTime}
+                                                equipmentId={selectedEquipment || 'V60'}
+                                            />
+                                        </div>
+                                    </motion.div>
+                                ) : (
+                                    <motion.div
+                                        key="steps-list-container"
                                         initial={{ opacity: 0 }}
                                         animate={{ opacity: 1 }}
                                         exit={{ opacity: 0 }}
-                                        className="text-neutral-300 dark:text-neutral-600"
+                                        transition={{
+                                            type: "spring",
+                                            stiffness: 300,
+                                            damping: 30,
+                                            opacity: { duration: 0.26 }
+                                        }}
+                                        className="space-y-5"
                                     >
-                                        |
-                                    </motion.span>
-                                    <div className="flex items-center space-x-2">
-                                        <motion.button
-                                            onClick={() => {
-                                                if (methodType === 'brand' && selectedBrand) {
-                                                    setSelectedBrand(null)
-                                                } else {
-                                                    setMethodType('brand')
-                                                }
-                                            }}
-                                            className={`group flex items-center text-xs tracking-wider transition-colors ${methodType === 'brand'
-                                                ? 'text-neutral-800 dark:text-neutral-100'
-                                                : 'text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300'
-                                                }`}
-                                        >
-                                            品牌方案
-                                        </motion.button>
-                                        <AnimatePresence mode="wait">
-                                            {methodType === 'brand' && selectedBrand && (
+                                        {/* 预渲染 PourVisualizer 组件，但设置为不可见 */}
+                                        {activeTab === '注水' && currentBrewingMethod && isPourVisualizerPreloaded && (
+                                            <div className="hidden">
+                                                <PourVisualizer
+                                                    isRunning={false}
+                                                    currentStage={-1}
+                                                    stages={currentBrewingMethod.params.stages}
+                                                    countdownTime={null}
+                                                    equipmentId={selectedEquipment || 'V60'}
+                                                />
+                                            </div>
+                                        )}
+
+                                        {activeTab === '方案' ? (
+                                            <AnimatePresence mode="wait">
                                                 <motion.div
-                                                    initial={{ opacity: 0, x: -10 }}
-                                                    animate={{ opacity: 1, x: 0 }}
-                                                    exit={{ opacity: 0, x: 10 }}
-                                                    transition={{ duration: 0.3 }}
-                                                    className="flex items-center space-x-2"
+                                                    key={`${methodType}-${selectedBrand?.name || 'none'}`}
+                                                    initial={{ opacity: 0 }}
+                                                    animate={{ opacity: 1 }}
+                                                    exit={{ opacity: 0 }}
+                                                    transition={{ duration: 0.26 }}
+                                                    className="space-y-5 pb-16"
                                                 >
-                                                    <span className="text-neutral-300 dark:text-neutral-600">·</span>
-                                                    <span className="text-xs tracking-wider text-neutral-800 dark:text-neutral-100">
-                                                        {selectedBrand.name}
-                                                    </span>
+                                                    {methodType === 'custom' && (
+                                                        <div className="flex space-x-2 mb-4">
+                                                            <motion.button
+                                                                onClick={() => setShowCustomForm(true)}
+                                                                whileHover={{ scale: 1.02 }}
+                                                                whileTap={{ scale: 0.98 }}
+                                                                className="flex-1 flex items-center justify-center py-3 border border-dashed border-neutral-300 rounded-md text-xs text-neutral-500 dark:border-neutral-800 dark:text-neutral-400 transition-colors"
+                                                            >
+                                                                <span className="mr-1">+</span> 新建方案
+                                                            </motion.button>
+                                                            <motion.button
+                                                                onClick={() => setShowImportForm(true)}
+                                                                whileHover={{ scale: 1.02 }}
+                                                                whileTap={{ scale: 0.98 }}
+                                                                className="flex-1 flex items-center justify-center py-3 border border-dashed border-neutral-300 rounded-md text-xs text-neutral-500 dark:border-neutral-800 dark:text-neutral-400 transition-colors"
+                                                            >
+                                                                <span className="mr-1">↓</span> 导入方案
+                                                            </motion.button>
+                                                        </div>
+                                                    )}
+                                                    <AnimatePresence initial={false}>
+                                                        {content[activeTab as keyof typeof content].steps.map((step, index) => (
+                                                            <motion.div
+                                                                key={step.methodId || `${step.title}-${index}`}
+                                                                initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                                                                animate={{ opacity: 1, height: 'auto', marginBottom: 20 }}
+                                                                exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                                                                transition={{ duration: 0.26 }}
+                                                            >
+                                                                <StageItem
+                                                                    step={step}
+                                                                    index={index}
+                                                                    onClick={() => {
+                                                                        if (activeTab === ('器具' as TabType)) {
+                                                                            handleEquipmentSelect(step.title)
+                                                                        } else if (activeTab === ('方案' as TabType)) {
+                                                                            handleMethodSelect(index)
+                                                                        }
+                                                                    }}
+                                                                    activeTab={activeTab}
+                                                                    selectedMethod={selectedMethod}
+                                                                    currentStage={currentStage}
+                                                                    onEdit={activeTab === ('方案' as TabType) && methodType === 'custom' && customMethods[selectedEquipment!] ? () => {
+                                                                        const method = customMethods[selectedEquipment!][index];
+                                                                        handleEditCustomMethod(method);
+                                                                    } : undefined}
+                                                                    onDelete={activeTab === ('方案' as TabType) && methodType === 'custom' && customMethods[selectedEquipment!] ? () => {
+                                                                        const method = customMethods[selectedEquipment!][index];
+                                                                        handleDeleteCustomMethod(method);
+                                                                    } : undefined}
+                                                                    actionMenuStates={actionMenuStates}
+                                                                    setActionMenuStates={setActionMenuStates}
+                                                                    selectedEquipment={selectedEquipment}
+                                                                    customMethods={customMethods}
+                                                                />
+                                                            </motion.div>
+                                                        ))}
+                                                    </AnimatePresence>
                                                 </motion.div>
-                                            )}
-                                        </AnimatePresence>
-                                    </div>
-                                </div>
-                                <motion.button
+                                            </AnimatePresence>
+                                        ) : (
+                                            <AnimatePresence initial={false}>
+                                                {content[activeTab as keyof typeof content].steps.map((step, index) => (
+                                                    <motion.div
+                                                        key={step.methodId || `${step.title}-${index}`}
+                                                        initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                                                        animate={{ opacity: 1, height: 'auto', marginBottom: 20 }}
+                                                        exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                                                        transition={{ duration: 0.26 }}
+                                                    >
+                                                        <StageItem
+                                                            step={step}
+                                                            index={index}
+                                                            onClick={() => {
+                                                                if (activeTab === ('器具' as TabType)) {
+                                                                    handleEquipmentSelect(step.title)
+                                                                } else if (activeTab === ('方案' as TabType)) {
+                                                                    handleMethodSelect(index)
+                                                                }
+                                                            }}
+                                                            activeTab={activeTab}
+                                                            selectedMethod={selectedMethod}
+                                                            currentStage={currentStage}
+                                                            onEdit={activeTab === ('方案' as TabType) && methodType === 'custom' && customMethods[selectedEquipment!] ? () => {
+                                                                const method = customMethods[selectedEquipment!][index];
+                                                                handleEditCustomMethod(method);
+                                                            } : undefined}
+                                                            onDelete={activeTab === ('方案' as TabType) && methodType === 'custom' && customMethods[selectedEquipment!] ? () => {
+                                                                const method = customMethods[selectedEquipment!][index];
+                                                                handleDeleteCustomMethod(method);
+                                                            } : undefined}
+                                                            actionMenuStates={actionMenuStates}
+                                                            setActionMenuStates={setActionMenuStates}
+                                                            selectedEquipment={selectedEquipment}
+                                                            customMethods={customMethods}
+                                                        />
+                                                    </motion.div>
+                                                ))}
+                                            </AnimatePresence>
+                                        )}
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </div>
+
+            {/* 底部工具栏 - 根据当前状态显示不同内容 */}
+            <AnimatePresence>
+                {/* 方案类型选择器 */}
+                {activeMainTab === '冲煮' && activeBrewingStep === 'method' && selectedEquipment !== 'CleverDripper' && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 20 }}
+                        transition={{ duration: 0.26 }}
+                        className="bg-neutral-50 dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-800 pt-3 pb-safe px-6 px-safe"
+                    >
+                        <div className="flex justify-between items-center">
+                            <div className="flex space-x-4">
+                                <button
                                     onClick={() => {
-                                        setMethodType('custom')
-                                        setSelectedBrand(null)
-                                        setSelectedBean(null)
+                                        setMethodType('common');
+                                        setSelectedBrand(null);
+                                        setSelectedBean(null);
                                     }}
-                                    className={`text-xs  tracking-wider transition-colors ${methodType === 'custom'
+                                    className={`text-[12px] tracking-wider transition-colors ${methodType === 'common'
                                         ? 'text-neutral-800 dark:text-neutral-100'
-                                        : 'text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300'
+                                        : 'text-neutral-400 dark:text-neutral-500 '
                                         }`}
                                 >
-                                    自定义方案
-                                </motion.button>
+                                    通用方案
+                                </button>
 
-                            </motion.div>
-                        )
-                    }
-                </AnimatePresence>
-            </motion.div>
+                                <span
+                                    className="text-neutral-300 dark:text-neutral-600"
+                                >
+                                    |
+                                </span>
+                                <button
+                                    onClick={() => {
+                                        if (methodType === 'brand' && selectedBrand) {
+                                            setSelectedBrand(null);
+                                        } else {
+                                            setMethodType('brand');
+                                        }
+                                    }}
+                                    className={`text-[12px] tracking-wider transition-colors ${methodType === 'brand'
+                                        ? 'text-neutral-800 dark:text-neutral-100'
+                                        : 'text-neutral-400 dark:text-neutral-500'
+                                        }`}
+                                >
+                                    品牌方案
+                                    {methodType === 'brand' && selectedBrand && (
+                                        <span className="ml-1 text-[10px]">· {selectedBrand.name}</span>
+                                    )}
+                                </button>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    setMethodType('custom');
+                                    setSelectedBrand(null);
+                                    setSelectedBean(null);
+                                }}
+                                className={`text-[12px] tracking-wider transition-colors ${methodType === 'custom'
+                                    ? 'text-neutral-800 dark:text-neutral-100'
+                                    : 'text-neutral-400 dark:text-neutral-500'
+                                    }`}
+                            >
+                                自定义方案
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+
+                {/* 计时器 */}
+                {activeMainTab === '冲煮' && activeBrewingStep === 'brewing' && currentBrewingMethod && !showHistory && (
+                    <motion.div
+                        key="brewing-timer"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{
+                            type: "spring",
+                            stiffness: 500,
+                            damping: 30,
+                            opacity: { duration: 0.26 }
+                        }}
+                        className='px-6 px-safe pb-safe'
+                    >
+                        <BrewingTimer
+                            currentBrewingMethod={currentBrewingMethod}
+                            onStatusChange={({ isRunning }) => setIsTimerRunning(isRunning)}
+                            onStageChange={({ currentStage }) => {
+                                setCurrentStage(currentStage)
+                            }}
+                            onComplete={(isComplete, totalTime) => {
+                                setShowComplete(isComplete)
+                                setCurrentTime(totalTime || 0)
+                            }}
+                            onCountdownChange={(time) => setCountdownTime(time)}
+                        />
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* 使用自定义方案表单模态框组件 */}
             <CustomMethodFormModal
@@ -1684,6 +1608,14 @@ const PourOverRecipes = () => {
                     setEditingMethod(undefined)
                 }}
                 onCloseImportForm={() => setShowImportForm(false)}
+            />
+
+            {/* 设置组件 - 放在页面级别确保正确覆盖整个内容 */}
+            <Settings
+                isOpen={isSettingsOpen}
+                onClose={() => setIsSettingsOpen(false)}
+                settings={settings}
+                setSettings={setSettings}
             />
         </div>
     )

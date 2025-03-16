@@ -127,7 +127,7 @@ const ImportMethodForm: React.FC<ImportMethodFormProps> = ({
     const pageTransition = {
         type: "tween",
         ease: "anticipate",
-        duration: 0.3
+        duration: 0.26
     }
 
     // 渲染进度条
@@ -180,7 +180,7 @@ const ImportMethodForm: React.FC<ImportMethodFormProps> = ({
                                 <button
                                     type="button"
                                     onClick={useExampleJson}
-                                    className="text-xs text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300"
+                                    className="text-xs text-neutral-500 dark:text-neutral-400"
                                 >
                                     使用示例JSON
                                 </button>
@@ -268,7 +268,7 @@ const ImportMethodForm: React.FC<ImportMethodFormProps> = ({
                         className={`
                             px-6 py-3 rounded-full text-sm font-medium
                             ${isStepValid()
-                                ? 'bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-800 hover:opacity-90'
+                                ? 'bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-800'
                                 : 'bg-neutral-300 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400 cursor-not-allowed'}
                         `}
                     >
@@ -278,7 +278,7 @@ const ImportMethodForm: React.FC<ImportMethodFormProps> = ({
                     <button
                         type="button"
                         onClick={handleSave}
-                        className="bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-800 px-6 py-3 rounded-full font-medium hover:opacity-80"
+                        className="bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-800 px-6 py-3 rounded-full font-medium"
                     >
                         <span className="font-medium">导入方案</span>
                     </button>
@@ -300,7 +300,7 @@ const ImportMethodForm: React.FC<ImportMethodFormProps> = ({
                 <button
                     type="button"
                     onClick={handleBack}
-                    className="rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                    className="rounded-full"
                 >
                     <ArrowLeft className="w-5 h-5 text-neutral-800 dark:text-neutral-200" />
                 </button>

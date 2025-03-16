@@ -213,7 +213,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
     // 如果没有运行或者在倒计时，不显示动画
     if (!isRunning || currentStage < 0 || countdownTime !== null) {
         return (
-            <div className="relative w-full aspect-square max-w-[300px] mx-auto">
+            <div className="relative w-full aspect-square max-w-[300px] mx-auto px-safe">
                 <Image
                     src={getEquipmentImageSrc()}
                     alt={equipmentId}
@@ -252,9 +252,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
     const equipmentOpacity = isPouring ? 'opacity-100' : 'opacity-50'
 
     return (
-        <div
-            className="relative w-full aspect-square max-w-[300px] mx-auto"
-        >
+        <div className="relative w-full aspect-square max-w-[300px] mx-auto px-safe">
             {/* 底部杯体 */}
             <Image
                 src={getEquipmentImageSrc()}
@@ -293,7 +291,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
-                                transition={{ duration: 0.2 }}
+                                transition={{ duration: 0.26 }}
                                 className="absolute inset-0"
                             >
                                 <Image
@@ -317,7 +315,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                                 key={`ice-${index}`}
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
-                                transition={{ duration: 0.3 }}
+                                transition={{ duration: 0.26 }}
                                 className="absolute inset-0"
                             >
                                 <Image

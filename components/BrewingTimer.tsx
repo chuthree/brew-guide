@@ -398,8 +398,8 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.3 }}
-                className="sticky bottom-0 pb-9 border-t border-neutral-200 bg-neutral-50 pt-6 dark:border-neutral-800 dark:bg-neutral-900"
+                transition={{ duration: 0.26 }}
+                className="sticky bottom-0 border-t border-neutral-200 bg-neutral-50 pt-6 dark:border-neutral-800 dark:bg-neutral-900"
                 style={{
                     willChange: "transform, opacity"
                 }}
@@ -418,7 +418,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                                 key={getCurrentStage()}
                                 initial={{ opacity: 0, y: -10 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.3 }}
+                                transition={{ duration: 0.26 }}
                                 className="mt-1 text-sm font-medium tracking-wide"
                             >
                                 {currentBrewingMethod.params.stages[getCurrentStage()]?.label || '完成冲煮'}
@@ -434,7 +434,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                                     key={`time-${getCurrentStage()}`}
                                     initial={{ opacity: 0.8 }}
                                     animate={{ opacity: 1 }}
-                                    transition={{ duration: 0.2 }}
+                                    transition={{ duration: 0.26 }}
                                     className="mt-1 text-sm font-medium tracking-wide"
                                 >
                                     {currentBrewingMethod.params.stages[getCurrentStage()]
@@ -450,7 +450,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                                     key={`water-${getCurrentStage()}`}
                                     initial={{ opacity: 0.8 }}
                                     animate={{ opacity: 1 }}
-                                    transition={{ duration: 0.2 }}
+                                    transition={{ duration: 0.26 }}
                                     className="mt-1 flex flex-col text-sm font-medium tracking-wide"
                                 >
                                     {currentBrewingMethod.params.stages[getCurrentStage()]?.water ? (
@@ -475,7 +475,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                                 initial={{ opacity: 0, height: 0, y: -20 }}
                                 animate={{ opacity: 1, height: 'auto', y: 0 }}
                                 exit={{ opacity: 0, height: 0, y: -20 }}
-                                transition={{ duration: 0.3 }}
+                                transition={{ duration: 0.26 }}
                                 className="flex items-baseline justify-between border-l border-neutral-300 pl-3 dark:border-neutral-700"
                             >
                                 <div>
@@ -485,7 +485,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                                     <motion.div
                                         initial={{ opacity: 0, x: -10 }}
                                         animate={{ opacity: 1, x: 0 }}
-                                        transition={{ duration: 0.3, delay: 0.1 }}
+                                        transition={{ duration: 0.26, delay: 0.1 }}
                                         className="mt-1"
                                     >
                                         <span className="text-sm font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
@@ -496,7 +496,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                                 <motion.div
                                     initial={{ opacity: 0, x: 10 }}
                                     animate={{ opacity: 1, x: 0 }}
-                                    transition={{ duration: 0.3, delay: 0.2 }}
+                                    transition={{ duration: 0.26, delay: 0.2 }}
                                     className="flex items-baseline text-right"
                                 >
                                     <div>
@@ -528,7 +528,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                         return (
                             <div
                                 key={stage.time}
-                                className="absolute top-0 h-1 w-[2px] bg-white dark:bg-neutral-900"
+                                className="absolute top-0 h-1 w-[2px] bg-neutral-50 dark:bg-neutral-900"
                                 style={{ left: `${percentage}%` }}
                             />
                         )
@@ -567,7 +567,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                             animate={{
                                 width: `${(currentTime / currentBrewingMethod.params.stages[currentBrewingMethod.params.stages.length - 1].time) * 100}%`,
                             }}
-                            transition={{ duration: 0.3 }}
+                            transition={{ duration: 0.26 }}
                         />
                     </div>
 
@@ -603,7 +603,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                                             initial={{ opacity: 0, y: 10 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             exit={{ opacity: 0, y: -10 }}
-                                            transition={{ duration: 0.2 }}
+                                            transition={{ duration: 0.26 }}
                                             className="min-w-[5ch] text-left"
                                         >
                                             {`0:${countdownTime.toString().padStart(2, '0')}`}
@@ -614,7 +614,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                                             initial={{ opacity: 0, y: 10 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             exit={{ opacity: 0, y: -10 }}
-                                            transition={{ duration: 0.2 }}
+                                            transition={{ duration: 0.26 }}
                                             className="min-w-[5ch] text-left"
                                         >
                                             {formatTime(currentTime)}
@@ -629,13 +629,13 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                             <div className="text-2xl font-light tracking-widest text-neutral-800 sm:text-3xl dark:text-neutral-100">
                                 <div className="min-w-[5ch] text-left">
                                     <span>{currentWaterAmount}</span>
-                                    <span className="text-sm text-neutral-400 dark:text-neutral-500 ml-1">ml</span>
+                                    <span className="text-sm text-neutral-400 dark:text-neutral-500 ml-1">g</span>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div className="flex items-center space-x-4 sm:space-x-6">
+                    <div className="flex items-center space-x-4 sm:space-x-6 mb-safe">
                         <button
                             onClick={isRunning ? pauseTimer : startTimer}
                             className="w-14 h-14 flex items-center justify-center rounded-full bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400"
@@ -669,7 +669,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                         initial={{ opacity: 0, x: 20 }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -20 }}
-                        transition={{ duration: 0.3 }}
+                        transition={{ duration: 0.26 }}
                         className="absolute inset-0 bg-neutral-50 dark:bg-neutral-900"
                     >
                         <BrewingNoteForm

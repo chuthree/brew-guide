@@ -1,6 +1,6 @@
 {
 	"name": "brew-guide",
-	"version": "2.2.2",
+	"version": "2.2.5",
 	"private": true,
 	"scripts": {
 		"dev": "next dev",
@@ -19,7 +19,8 @@
 		"next-pwa": "^5.6.0",
 		"next-themes": "^0.4.6",
 		"react": "^19.0.0",
-		"react-dom": "^19.0.0"
+		"react-dom": "^19.0.0",
+		"tailwindcss-safe-area": "^0.6.0"
 	},
 	"devDependencies": {
 		"@types/node": "^22.13.10",

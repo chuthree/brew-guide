@@ -363,7 +363,7 @@ stages数组中的每个阶段必须包含以下字段：
     if (!isOpen) return null
 
     return (
-        <div className="h-full w-full overflow-auto overscroll-none bg-neutral-50 dark:bg-neutral-900">
+        <div className="h-full w-full overflow-auto overscroll-none px-safe pt-safe  pb-safe bg-neutral-50 dark:bg-neutral-900">
             <form id={id} onSubmit={handleSubmit} className="relative flex h-full flex-col space-y-8">
                 {/* 隐藏的返回按钮，仅用于导航栏返回按钮查找 */}
                 <button
@@ -386,13 +386,32 @@ stages数组中的每个阶段必须包含以下字段：
                             })}`
                         }
                     </div>
-                    {!showOptimization && (
+                    {!showOptimization ? (
                         <div className="flex items-center space-x-4">
+                            {initialData?.id && (
+                                <button
+                                    type="button"
+                                    onClick={onClose}
+                                    className="text-[10px] tracking-widest text-neutral-500 transition-colors dark:text-neutral-500"
+                                >
+                                    [ 返回 ]
+                                </button>
+                            )}
                             <button
                                 type="submit"
-                                className="text-[10px] tracking-widest text-neutral-500 transition-colors hover:text-neutral-800 dark:text-neutral-500 dark:hover:text-neutral-300"
+                                className="text-[10px] tracking-widest text-neutral-500 transition-colors dark:text-neutral-200"
                             >
                                 [ 保存 ]
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="flex items-center space-x-4">
+                            <button
+                                type="button"
+                                onClick={() => setShowOptimization(false)}
+                                className="text-[10px] tracking-widest text-neutral-500 transition-colors dark:text-neutral-500"
+                            >
+                                [ 返回 ]
                             </button>
                         </div>
                     )}
@@ -517,7 +536,7 @@ stages数组中的每个阶段必须包含以下字段：
                                         }
                                         className={`text-[10px] tracking-widest transition-colors ${star <= formData.rating
                                             ? 'text-neutral-600 dark:text-neutral-300'
-                                            : 'text-neutral-400 dark:text-neutral-500 hover:text-neutral-600 dark:hover:text-neutral-400'
+                                            : 'text-neutral-400 dark:text-neutral-500'
                                             }`}
                                     >
                                         [ {star} ]
@@ -621,7 +640,7 @@ stages数组中的每个阶段必须包含以下字段：
                                 <button
                                     type="button"
                                     onClick={generateOptimizationPrompt}
-                                    className="text-[10px] tracking-widest text-emerald-600 transition-colors hover:text-emerald-700 dark:text-emerald-500 dark:hover:text-emerald-400 font-medium"
+                                    className="text-[10px] tracking-widest text-emerald-600 transition-colors dark:text-emerald-500 font-medium"
                                 >
                                     [ 生成优化提示词 ]
                                 </button>
@@ -645,7 +664,7 @@ stages数组中的每个阶段必须包含以下字段：
                                                             alert('复制失败，请手动复制');
                                                         })
                                                 }}
-                                                className="text-[10px] tracking-widest text-neutral-500 transition-colors hover:text-neutral-800 dark:text-neutral-500 dark:hover:text-neutral-300"
+                                                className="text-[10px] tracking-widest text-neutral-500 transition-colors dark:text-neutral-500"
                                             >
                                                 [ 复制提示词 ]
                                             </button>

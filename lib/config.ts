@@ -1,5 +1,5 @@
 // App Version
-export const APP_VERSION = "2.2.2";
+export const APP_VERSION = "2.2.5";
 
 // Types
 export interface Stage {
@@ -95,11 +95,11 @@ export const equipmentList: Equipment[] = [
 		id: "CleverDripper",
 		name: "聪明杯",
 		description: [
-			"结合浸泡与滤纸过滤的冲煮器具，操作简单",
+			"结合浸泡与滤纸过滤的冲煮滤杯，操作简单",
 			"可控制萃取时间，平衡风味，适合各种烘焙度的咖啡",
 		],
 	},
-	// 可以在这里添加更多器具
+	// 可以在这里添加更多滤杯
 ];
 
 // Brewing Methods Data
@@ -353,7 +353,7 @@ export const brandCoffees: Brand[] = [
 						coffee: "20g",
 						water: "320g",
 						ratio: "1:16",
-						grindSize: "C40 25格(略粗于白砂糖)",
+						grindSize: "C40 25格",
 						temp: "88°C",
 						videoUrl: "",
 						roastLevel: "中浅烘焙",
@@ -404,8 +404,8 @@ export const brandCoffees: Brand[] = [
 					params: {
 						coffee: "15g",
 						water: "240g",
-						ratio: "1:16(粉水比1:10 粉冰比1:8)",
-						grindSize: "Sinloy X1 40格(略细与白砂糖)",
+						ratio: "1:16",
+						grindSize: "Sinloy X1 40格",
 						temp: "90°C",
 						videoUrl: "",
 						roastLevel: "浅度烘焙",

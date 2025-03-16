@@ -443,7 +443,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     const pageTransition = {
         type: "tween",
         ease: "anticipate",
-        duration: 0.3
+        duration: 0.26
     }
 
     // 渲染进度条
@@ -614,7 +614,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                         className="space-y-8 max-w-md mx-auto relative"
                     >
                         {/* 顶部固定导航 */}
-                        <div className="sticky top-0 pt-2 pb-4 bg-white dark:bg-neutral-900 z-10 flex flex-col border-b border-neutral-200 dark:border-neutral-700">
+                        <div className="sticky top-0 pt-2 pb-4 bg-neutral-50 dark:bg-neutral-900 z-10 flex flex-col border-b border-neutral-200 dark:border-neutral-700">
                             <div className="flex justify-between items-center mb-2">
                                 <h3 className="text-base font-medium text-neutral-800 dark:text-neutral-200">
                                     冲煮步骤
@@ -622,7 +622,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                                 <button
                                     type="button"
                                     onClick={addStage}
-                                    className="text-sm text-neutral-600 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200"
+                                    className="text-sm text-neutral-600 dark:text-neutral-400"
                                 >
                                     + 添加步骤
                                 </button>
@@ -658,7 +658,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                                             <button
                                                 type="button"
                                                 onClick={() => removeStage(index)}
-                                                className="text-xs text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
+                                                className="text-xs text-neutral-500 dark:text-neutral-400"
                                             >
                                                 删除
                                             </button>
@@ -950,7 +950,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                     disabled={!isStepValid()}
                     className={`
                         flex items-center justify-center p-4
-                                                        ${!isStepValid() ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-80'}
+                                                        ${!isStepValid() ? 'opacity-50 cursor-not-allowed' : ''}
                                                         ${isLastStep ? 'bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-800 px-6 py-3 rounded-full' : ''}
                     `}
                 >
@@ -982,7 +982,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                 <button
                     type="button"
                     onClick={handleBack}
-                    className="rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                    className="rounded-full"
                 >
                     <ArrowLeft className="w-5 h-5 text-neutral-800 dark:text-neutral-200" />
                 </button>

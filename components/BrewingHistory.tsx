@@ -220,8 +220,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.3 }}
-                    className="h-full"
+                    transition={{ duration: 0.26 }}
+                    className="h-full pt-safe px-safe pb-safe"
                     id="brewing-history-component"
                 >
                     <BrewingNoteForm
@@ -238,8 +238,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.3 }}
-                    className="h-full"
+                    transition={{ duration: 0.26 }}
+                    className="h-full pt-safe px-safe pb-safe"
                     id="brewing-history-component"
                 >
                     <button
@@ -277,7 +277,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    transition={{ duration: 0.3 }}
+                    transition={{ duration: 0.26 }}
                     className="space-y-6"
                     id="brewing-history-component"
                 >
@@ -285,7 +285,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
-                            transition={{ delay: 0.3, duration: 0.3 }}
+                            transition={{ duration: 0.26 }}
                             className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500"
                         >
                             [ 暂无冲煮记录 ]
@@ -294,8 +294,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
-                            transition={{ delay: 0.3, duration: 0.3 }}
-                            className="grid grid-cols-1 gap-6"
+                            transition={{ delay: 0.3, duration: 0.26 }}
+                            className="grid grid-cols-1 gap-6 px-6 py-4"
                         >
                             <AnimatePresence mode="popLayout">
                                 {notes.map((note, index) => (
@@ -308,9 +308,9 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                         transition={{
                                             duration: 0.4,
                                             delay: index * 0.1,
-                                            layout: { duration: 0.3 }
+                                            layout: { duration: 0.26 }
                                         }}
-                                        className="group space-y-4 border-l border-neutral-200/50 pl-6 dark:border-neutral-800"
+                                        className="group space-y-4 border-l border-neutral-200/50 pl-6  dark:border-neutral-800"
                                     >
                                         <motion.div
                                             initial={{ opacity: 0 }}
@@ -343,18 +343,18 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                                                     initial={{ opacity: 0, scale: 0.9, x: 10 }}
                                                                     animate={{ opacity: 1, scale: 1, x: 0 }}
                                                                     exit={{ opacity: 0, scale: 0.9, x: 10 }}
-                                                                    transition={{ duration: 0.2 }}
+                                                                    transition={{ duration: 0.26 }}
                                                                     className="flex items-baseline space-x-3"
                                                                 >
                                                                     <button
                                                                         onClick={() => handleEdit(note)}
-                                                                        className="px-2 text-xs text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300"
+                                                                        className="px-2 text-xs text-neutral-400 dark:text-neutral-500"
                                                                     >
                                                                         编辑
                                                                     </button>
                                                                     <button
                                                                         onClick={() => handleShare(note)}
-                                                                        className="px-2 text-xs text-blue-400 hover:text-blue-600 dark:text-blue-500 dark:hover:text-blue-300 relative"
+                                                                        className="px-2 text-xs text-blue-400 dark:text-blue-500 relative"
                                                                     >
                                                                         {copySuccess[note.id] ? '已复制' : '分享'}
                                                                         {copySuccess[note.id] && (
@@ -370,13 +370,13 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                                                     </button>
                                                                     <button
                                                                         onClick={() => handleOptimize(note)}
-                                                                        className="px-2 text-xs text-emerald-600 hover:text-emerald-700 dark:text-emerald-500 dark:hover:text-emerald-400 font-medium"
+                                                                        className="px-2 text-xs text-emerald-600 dark:text-emerald-500 font-medium"
                                                                     >
                                                                         优化
                                                                     </button>
                                                                     <button
                                                                         onClick={() => handleDelete(note.id)}
-                                                                        className="px-2 text-xs text-red-400 hover:text-red-600"
+                                                                        className="px-2 text-xs text-red-400"
                                                                     >
                                                                         删除
                                                                     </button>
@@ -387,7 +387,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                                                                 [note.id]: false
                                                                             }))
                                                                         }}
-                                                                        className="w-7 h-7 flex items-center justify-center rounded-full text-sm text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                                                                        className="w-7 h-7 flex items-center justify-center rounded-full text-sm text-neutral-400"
                                                                     >
                                                                         ×
                                                                     </button>
@@ -398,14 +398,14 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                                                     initial={{ opacity: 0, scale: 0.9 }}
                                                                     animate={{ opacity: 1, scale: 1 }}
                                                                     exit={{ opacity: 0, scale: 0.9 }}
-                                                                    transition={{ duration: 0.2 }}
+                                                                    transition={{ duration: 0.26 }}
                                                                     onClick={() => {
                                                                         setActionMenuStates(prev => ({
                                                                             ...prev,
                                                                             [note.id]: true
                                                                         }))
                                                                     }}
-                                                                    className="w-7 h-7 flex items-center justify-center text-xs text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300"
+                                                                    className="w-7 h-7 flex items-center justify-center text-xs text-neutral-400 dark:text-neutral-500"
                                                                 >
                                                                     ···
                                                                 </motion.button>

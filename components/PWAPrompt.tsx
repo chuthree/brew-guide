@@ -146,14 +146,14 @@ export default function PWAPrompt() {
                             <div className="flex items-center justify-end space-x-4">
                                 <button
                                     onClick={() => setShowInstallPrompt(false)}
-                                    className="text-[10px] tracking-widest text-neutral-400 transition-colors hover:text-neutral-800 dark:text-neutral-500 dark:hover:text-neutral-300"
+                                    className="text-[10px] tracking-widest text-neutral-400 transition-colors dark:text-neutral-500"
                                 >
                                     [ 稍后 ]
                                 </button>
                                 {!isIOS && (
                                     <button
                                         onClick={handleInstall}
-                                        className="text-[10px] tracking-widest text-neutral-800 transition-colors hover:text-neutral-600 dark:text-neutral-100 dark:hover:text-neutral-300"
+                                        className="text-[10px] tracking-widest text-neutral-800 transition-colors dark:text-neutral-100"
                                     >
                                         [ 安装 ]
                                     </button>
@@ -175,13 +175,13 @@ export default function PWAPrompt() {
                             <div className="flex items-center justify-end space-x-4">
                                 <button
                                     onClick={() => setShowUpdatePrompt(false)}
-                                    className="text-[10px] tracking-widest text-neutral-400 transition-colors hover:text-neutral-800 dark:text-neutral-500 dark:hover:text-neutral-300"
+                                    className="text-[10px] tracking-widest text-neutral-400 transition-colors dark:text-neutral-500"
                                 >
                                     [ 稍后 ]
                                 </button>
                                 <button
                                     onClick={handleUpdate}
-                                    className="text-[10px] tracking-widest text-neutral-800 transition-colors hover:text-neutral-600 dark:text-neutral-100 dark:hover:text-neutral-300"
+                                    className="text-[10px] tracking-widest text-neutral-800 transition-colors dark:text-neutral-100"
                                 >
                                     [ 更新 ]
                                 </button>
