@@ -320,22 +320,22 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                         >
                                             <div className="space-y-2">
                                                 <div className="flex items-baseline justify-between">
-                                                    <div className="flex items-baseline space-x-2">
-                                                        <div className="text-[10px] ">
+                                                    <div className="flex items-baseline space-x-2 min-w-0 overflow-hidden">
+                                                        <div className="text-[10px] truncate">
                                                             {note.equipment}
                                                         </div>
                                                         {note.method && (
                                                             <>
-                                                                <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
+                                                                <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500 shrink-0">
                                                                     ·
                                                                 </div>
-                                                                <div className="text-[10px] font-light tracking-wide">
+                                                                <div className="text-[10px] font-light tracking-wide truncate">
                                                                     {note.method}
                                                                 </div>
                                                             </>
                                                         )}
                                                     </div>
-                                                    <div className="flex items-center">
+                                                    <div className="flex items-baseline ml-2 shrink-0">
                                                         <AnimatePresence mode="wait">
                                                             {actionMenuStates[note.id] ? (
                                                                 <motion.div
@@ -344,7 +344,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                                                     animate={{ opacity: 1, scale: 1, x: 0 }}
                                                                     exit={{ opacity: 0, scale: 0.9, x: 10 }}
                                                                     transition={{ duration: 0.2 }}
-                                                                    className="flex items-center space-x-3"
+                                                                    className="flex items-baseline space-x-3"
                                                                 >
                                                                     <button
                                                                         onClick={() => handleEdit(note)}

@@ -308,12 +308,12 @@ const StageItem = ({
             )}
             <div className={activeTab !== '注水' ? 'cursor-pointer' : ''} onClick={onClick}>
                 <div className="flex items-baseline justify-between">
-                    <div className="flex items-baseline gap-3">
-                        <h3 className="text-xs font-normal tracking-wider">
+                    <div className="flex items-baseline gap-3 min-w-0 overflow-hidden">
+                        <h3 className="text-xs font-normal tracking-wider truncate">
                             {step.title}
                         </h3>
                         {activeTab === '注水' && selectedMethod && (
-                            <div className="flex items-baseline gap-2 text-[10px] text-neutral-400 dark:text-neutral-500">
+                            <div className="flex items-baseline gap-2 text-[10px] text-neutral-400 dark:text-neutral-500 shrink-0">
                                 <span>{formatTime(selectedMethod.params.stages[index].time, true)}</span>
                                 <span>·</span>
                                 <span>{step.items[0]}</span>
@@ -321,7 +321,7 @@ const StageItem = ({
                         )}
                     </div>
                     {onEdit && onDelete && (
-                        <div className="flex items-center">
+                        <div className="flex items-baseline ml-2 shrink-0">
                             <AnimatePresence mode="wait">
                                 {showActions ? (
                                     <motion.div
@@ -330,7 +330,7 @@ const StageItem = ({
                                         animate={{ opacity: 1, scale: 1, x: 0 }}
                                         exit={{ opacity: 0, scale: 0.9, x: 10 }}
                                         transition={{ duration: 0.2 }}
-                                        className="flex items-center space-x-3"
+                                        className="flex items-baseline space-x-3"
                                     >
                                         <button
                                             onClick={(e) => {
