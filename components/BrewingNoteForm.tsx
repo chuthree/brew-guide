@@ -363,7 +363,7 @@ stages数组中的每个阶段必须包含以下字段：
     if (!isOpen) return null
 
     return (
-        <div className="h-full w-full overflow-auto overscroll-none px-safe pt-safe  pb-safe bg-neutral-50 dark:bg-neutral-900">
+        <div className="h-full w-full overflow-auto overscroll-none px-6 py-4 bg-neutral-50 dark:bg-neutral-900">
             <form id={id} onSubmit={handleSubmit} className="relative flex h-full flex-col space-y-8">
                 {/* 隐藏的返回按钮，仅用于导航栏返回按钮查找 */}
                 <button
