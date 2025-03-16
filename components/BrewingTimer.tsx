@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import BrewingNoteForm from '@/components/BrewingNoteForm'
 import type { BrewingNoteData } from '@/app/page'
 import type { Method } from '@/lib/config'
+import type { SettingsOptions } from '@/components/Settings'
 
 // Helper function to format time
 const formatTime = (seconds: number, compact: boolean = false) => {
@@ -26,6 +27,7 @@ interface BrewingTimerProps {
     onStageChange?: (status: { currentStage: number, progress: number }) => void
     onComplete?: (isComplete: boolean, totalTime?: number) => void
     onCountdownChange?: (time: number | null) => void
+    settings: SettingsOptions
 }
 
 const BrewingTimer: React.FC<BrewingTimerProps> = ({
@@ -35,6 +37,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     onStageChange,
     onComplete,
     onCountdownChange,
+    settings,
 }) => {
     const [currentTime, setCurrentTime] = useState(0)
     const [isRunning, setIsRunning] = useState(false)
@@ -132,6 +135,10 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     }, [])
 
     const playSound = useCallback((type: 'start' | 'ding' | 'correct') => {
+        if (!settings.notificationSound) {
+            return;
+        }
+
         if (!audioContext.current || !audioBuffers.current[type]) {
             console.warn(`无法播放音效 ${type}: 音频系统未初始化或音频文件未加载`)
             return
@@ -163,7 +170,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         } catch (error) {
             console.error(`播放音效 ${type} 失败:`, error)
         }
-    }, [])
+    }, [settings.notificationSound])
 
     const getCurrentStage = useCallback(() => {
         if (!currentBrewingMethod?.params?.stages?.length) return -1

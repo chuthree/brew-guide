@@ -414,7 +414,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                 : 'max-h-0 opacity-0'
                 }`}>
                 <div
-                    className="px-4 sm:px-6 py-2 bg-neutral-100/80 dark:bg-neutral-800/80 text-[10px] text-neutral-500 dark:text-neutral-400 relative"
+                    className="px-6 py-2 bg-neutral-100/80 dark:bg-neutral-800/80 text-[10px] text-neutral-500 dark:text-neutral-400 relative"
                 >
                     {/* 左侧设备和方法名称 */}
                     <div className="flex items-center min-w-0 overflow-x-auto no-scrollbar max-w-full">
@@ -458,7 +458,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
 
                     {/* 右侧参数信息 - 使用绝对定位，允许完全覆盖左侧内容 */}
                     {parameterInfo.params && (
-                        <div className="absolute top-2 right-4 sm:right-6 min-w-0 max-w-full text-right z-10">
+                        <div className="absolute top-2 right-6 min-w-0 max-w-full text-right z-10">
                             {editableParams ? (
                                 <div className="flex items-center justify-end space-x-1 sm:space-x-2 overflow-x-auto no-scrollbar bg-gradient-to-r from-transparent via-neutral-100/95 to-neutral-100/95 dark:via-neutral-800/95 dark:to-neutral-800/95 pl-6">
                                     <EditableParameter

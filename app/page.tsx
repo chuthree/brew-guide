@@ -1590,6 +1590,7 @@ const PourOverRecipes = () => {
                                 setCurrentTime(totalTime || 0)
                             }}
                             onCountdownChange={(time) => setCountdownTime(time)}
+                            settings={settings}
                         />
                     </motion.div>
                 )}

@@ -1,6 +1,7 @@
 import { Metadata, Viewport } from 'next'
 import { ThemeProvider } from 'next-themes'
 import PWAPrompt from '@/components/PWAPrompt'
+import NonPWAPrompt from '@/components/NonPWAPrompt'
 import { Analytics } from '@vercel/analytics/next';
 import Script from 'next/script'
 import { GeistSans } from 'geist/font/sans'
@@ -121,11 +122,9 @@ export default function RootLayout({
             {children}
           </div>
           <PWAPrompt />
+          <NonPWAPrompt />
         </ThemeProvider>
         <Analytics />
-
-
-
       </body>
     </html>
   )
