@@ -38,6 +38,7 @@ interface ParameterInfo {
 // Add new interfaces for parameter editing
 interface EditableParams {
     coffee: string
+    water: string
     ratio: string
 }
 
@@ -493,6 +494,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                         if (selectedMethod && !isTimerRunning) {
                                             setEditableParams({
                                                 coffee: selectedMethod.params.coffee,
+                                                water: selectedMethod.params.water,
                                                 ratio: selectedMethod.params.ratio,
                                             });
                                         }
