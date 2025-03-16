@@ -6,7 +6,7 @@ export default function NonPWAPrompt() {
     const [showPrompt, setShowPrompt] = useState(false)
 
     useEffect(() => {
-        setShowPrompt(true)
+        // setShowPrompt(true)
 
         // 恢复原始检测逻辑
         // 检测是否是独立模式（PWA 模式）
