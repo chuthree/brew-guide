@@ -7,6 +7,7 @@ import { loadCustomMethods, saveCustomMethod, deleteCustomMethod, copyMethodToCl
 import CustomMethodFormModal from '@/components/CustomMethodFormModal'
 import NavigationBar from '@/components/NavigationBar'
 import Settings, { SettingsOptions, defaultSettings } from '@/components/Settings'
+import { initCapacitor } from './capacitor'
 
 // 动态导入客户端组件
 const BrewingTimer = dynamic(() => import('@/components/BrewingTimer'), { ssr: false })
@@ -1212,6 +1213,14 @@ const PourOverRecipes = () => {
         }
         setActiveBrewingStep(step);
     };
+
+    useEffect(() => {
+        // 初始化 Capacitor
+        initCapacitor();
+
+        // 其他初始化代码...
+        // ... existing code ...
+    }, []);
 
     return (
         <div className="flex h-full flex-col overflow-hidden mx-auto max-w-[500px] font-mono text-neutral-800 dark:text-neutral-100">

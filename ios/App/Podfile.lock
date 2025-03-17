@@ -1,0 +1,28 @@
+PODS:
+  - Capacitor (7.1.0):
+    - CapacitorCordova
+  - CapacitorCordova (7.1.0)
+  - CapacitorSplashScreen (7.0.0):
+    - Capacitor
+
+DEPENDENCIES:
+  - "Capacitor (from `../../node_modules/@capacitor/ios`)"
+  - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
+  - "CapacitorSplashScreen (from `../../node_modules/@capacitor/splash-screen`)"
+
+EXTERNAL SOURCES:
+  Capacitor:
+    :path: "../../node_modules/@capacitor/ios"
+  CapacitorCordova:
+    :path: "../../node_modules/@capacitor/ios"
+  CapacitorSplashScreen:
+    :path: "../../node_modules/@capacitor/splash-screen"
+
+SPEC CHECKSUMS:
+  Capacitor: bceb785fb78f5e81e4a9e37843bc1c24bd9c7194
+  CapacitorCordova: 866217f32c1d25b326c568a10ea3ed0c36b13e29
+  CapacitorSplashScreen: 7e7a0a1113833032f196b3af6fa437baccacf5bc
+
+PODFILE CHECKSUM: defae69d045aabbbb2d1c81b9ed5ce5a3409e308
+
+COCOAPODS: 1.16.2

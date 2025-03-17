@@ -1,13 +1,11 @@
 import { Metadata, Viewport } from 'next'
 import { ThemeProvider } from 'next-themes'
 import PWAPrompt from '@/components/PWAPrompt'
-import NonPWAPrompt from '@/components/NonPWAPrompt'
 import { Analytics } from '@vercel/analytics/next';
 import Script from 'next/script'
 import { GeistSans } from 'geist/font/sans'
 import { GeistMono } from 'geist/font/mono'
 import './globals.css'
-
 
 // SEO constants
 export const metadata: Metadata = {
@@ -122,7 +120,6 @@ export default function RootLayout({
             {children}
           </div>
           <PWAPrompt />
-          <NonPWAPrompt />
         </ThemeProvider>
         <Analytics />
       </body>

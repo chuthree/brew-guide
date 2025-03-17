@@ -14,6 +14,14 @@ declare global {
     interface WindowEventMap {
         beforeinstallprompt: BeforeInstallPromptEvent;
     }
+
+    // 为 Capacitor 定义接口
+    interface Window {
+        Capacitor?: {
+            isNative: boolean;
+            platform: string;
+        };
+    }
 }
 
 export default function PWAPrompt() {
@@ -21,8 +29,29 @@ export default function PWAPrompt() {
     const [showUpdatePrompt, setShowUpdatePrompt] = useState(false)
     const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
     const [isIOS, setIsIOS] = useState(false)
+    const [isCapacitor, setIsCapacitor] = useState(false)
 
     useEffect(() => {
+        // 检测是否在 Capacitor 环境中运行
+        const checkIsCapacitor = () => {
+            // 检查是否存在 Capacitor 全局对象
+            const isCapacitorApp = typeof window.Capacitor !== 'undefined';
+            // 或者检查 URL scheme
+            const isCapacitorScheme = window.location.protocol === 'capacitor:';
+            // 或者检查 User Agent 中是否包含特定标识
+            const isCapacitorUA = navigator.userAgent.includes('capacitor');
+
+            return isCapacitorApp || isCapacitorScheme || isCapacitorUA;
+        };
+
+        const capacitorApp = checkIsCapacitor();
+        setIsCapacitor(capacitorApp);
+
+        // 如果是 Capacitor 应用，不显示安装提示
+        if (capacitorApp) {
+            return;
+        }
+
         // 检测是否是 iOS 设备
         const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as Window & { MSStream?: unknown }).MSStream
         setIsIOS(isIOSDevice)
@@ -108,6 +137,11 @@ export default function PWAPrompt() {
                 })
             })
         }
+    }
+
+    // 如果是 Capacitor 应用，不显示任何提示
+    if (isCapacitor) {
+        return null;
     }
 
     return (

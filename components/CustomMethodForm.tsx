@@ -638,7 +638,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                             </div>
 
                             {/* 顶部渐变阴影 - 作为导航的伪元素 */}
-                            <div className="absolute mt-[72px] left-0 right-0 h-12 -bottom-12 bg-gradient-to-b from-white dark:from-neutral-900 to-transparent pointer-events-none"></div>
+                            <div className="absolute mt-[72px] left-0 right-0 h-12 -bottom-12 bg-gradient-to-b from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none"></div>
                         </div>
 
                         {/* 步骤内容 */}
@@ -855,7 +855,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                         </div>
 
                         {/* 底部渐变阴影 - 提示有更多内容 */}
-                        <div className="sticky bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-white dark:from-neutral-900 to-transparent pointer-events-none"></div>
+                        <div className="sticky bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none"></div>
                     </motion.div>
                 )
 
@@ -904,7 +904,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                             </div>
                         </div>
                         {/* 底部渐变阴影 - 提示有更多内容 */}
-                        <div className="sticky w-full bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-white dark:from-neutral-900 to-transparent pointer-events-none"></div>
+                        <div className="sticky w-full bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none"></div>
                     </motion.div>
                 )
 

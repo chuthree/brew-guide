@@ -42,3 +42,30 @@ next-env.d.ts
 
 # Service Worker
 public/sw.js
+public/workbox-*.js
+
+# Capacitor
+# iOS specific
+ios/App/App/public/
+ios/App/Pods/
+ios/App/App/build/
+ios/App/DerivedData/
+ios/App/App.xcworkspace/xcuserdata/
+ios/App/App.xcodeproj/xcuserdata/
+ios/App/App.xcodeproj/project.xcworkspace/xcuserdata/
+
+# Android specific
+android/app/build/
+android/build/
+android/captures/
+android/local.properties
+android/.gradle/
+android/.idea/
+android/*.iml
+android/app/release/
+
+# IDE specific
+.idea/
+.vscode/
+*.swp
+*.swo

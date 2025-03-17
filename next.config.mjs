@@ -113,17 +113,11 @@ const withPWA = isDev
 const nextConfig = {
     devIndicators: false,
     reactStrictMode: true,
-    // 在 Vercel 上部署时不需要使用 export 模式
-    // output: 'export',
-    experimental: {
-        // 启用 CSS 优化
-        optimizeCss: true,
-    },
-    // 增加静态页面生成超时时间
-    staticPageGenerationTimeout: 180,
-    // 配置图像优化
+    // 为 Capacitor 启用静态导出模式
+    output: 'export',
+    // 禁用图像优化，因为在静态导出模式下不支持
     images: {
-        unoptimized: false, // 在 Vercel 上可以使用图像优化功能
+        unoptimized: true,
         domains: ['localhost'],
         remotePatterns: [
             {
@@ -132,7 +126,16 @@ const nextConfig = {
             },
         ],
     },
-    // 修改Permissions-Policy，移除可能导致问题的interest-cohort
+    experimental: {
+        // 启用 CSS 优化
+        optimizeCss: true,
+    },
+    // 增加静态页面生成超时时间
+    staticPageGenerationTimeout: 180,
+    // 注意：在静态导出模式下，headers 配置不会自动生效
+    // 但我们保留这个配置，以便在非静态导出模式下使用
+    // 如果您需要这些 headers，请考虑在部署时通过服务器配置添加它们
+    /* 
     async headers() {
         return [
             {
@@ -175,6 +178,7 @@ const nextConfig = {
             }
         ]
     }
+    */
 };
 
 export default withPWA(nextConfig); 

@@ -6,9 +6,19 @@
 		"dev": "next dev",
 		"build": "next build",
 		"start": "next start",
-		"lint": "next lint"
+		"lint": "next lint",
+		"cap:build": "next build && npx cap sync",
+		"cap:ios": "npx cap open ios",
+		"cap:android": "npx cap open android",
+		"cap:add:ios": "npx cap add ios",
+		"cap:add:android": "npx cap add android"
 	},
 	"dependencies": {
+		"@capacitor/android": "^7.1.0",
+		"@capacitor/cli": "^7.1.0",
+		"@capacitor/core": "^7.1.0",
+		"@capacitor/ios": "^7.1.0",
+		"@capacitor/splash-screen": "^7.0.0",
 		"@tailwindcss/postcss": "^4.0.13",
 		"@vercel/analytics": "^1.5.0",
 		"critters": "^0.0.23",
@@ -23,6 +33,7 @@
 		"tailwindcss-safe-area": "^0.6.0"
 	},
 	"devDependencies": {
+		"@capacitor/assets": "^3.0.5",
 		"@types/node": "^22.13.10",
 		"@types/react": "^19.0.10",
 		"@types/react-dom": "^19.0.4",
