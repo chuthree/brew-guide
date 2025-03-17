@@ -8,6 +8,7 @@ import CustomMethodFormModal from '@/components/CustomMethodFormModal'
 import NavigationBar from '@/components/NavigationBar'
 import Settings, { SettingsOptions, defaultSettings } from '@/components/Settings'
 import { initCapacitor } from './capacitor'
+import { Storage } from '@/lib/storage'
 
 // 动态导入客户端组件
 const BrewingTimer = dynamic(() => import('@/components/BrewingTimer'), { ssr: false })
@@ -389,19 +390,25 @@ const PourOverRecipes = () => {
     // 添加设置相关状态
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [settings, setSettings] = useState<SettingsOptions>(() => {
-        // 从本地存储加载设置，如果没有则使用默认设置
-        if (typeof window !== 'undefined') {
-            const savedSettings = localStorage.getItem('brewGuideSettings');
-            if (savedSettings) {
-                try {
-                    return JSON.parse(savedSettings) as SettingsOptions;
-                } catch {
-                    return defaultSettings;
-                }
-            }
-        }
+        // 使用默认设置作为初始值，稍后在 useEffect 中异步加载
         return defaultSettings;
     });
+
+    // 添加异步加载设置的 useEffect
+    useEffect(() => {
+        const loadSettings = async () => {
+            try {
+                const savedSettings = await Storage.get('brewGuideSettings');
+                if (savedSettings) {
+                    setSettings(JSON.parse(savedSettings) as SettingsOptions);
+                }
+            } catch (error) {
+                console.error('Error loading settings:', error);
+            }
+        };
+
+        loadSettings();
+    }, []);
 
     // 处理双击标题打开设置
     const handleTitleDoubleClick = () => {
@@ -493,13 +500,17 @@ const PourOverRecipes = () => {
 
     // 加载自定义方案
     useEffect(() => {
-        try {
-            const loadedMethods = loadCustomMethods();
-            setCustomMethods(loadedMethods);
-        } catch (error) {
-            console.error('Error loading custom methods:', error)
-        }
-    }, [])
+        const loadMethods = async () => {
+            try {
+                const methods = await loadCustomMethods();
+                setCustomMethods(methods);
+            } catch (error) {
+                console.error('Error loading custom methods:', error);
+            }
+        };
+
+        loadMethods();
+    }, []);
 
     useEffect(() => {
         if (selectedEquipment) {
@@ -575,34 +586,38 @@ const PourOverRecipes = () => {
         }
     }, [showComplete])
 
-    // 修改 catch 块中的未使用变量
+    // 修改存储初始化部分
     useEffect(() => {
-        try {
-            // 检查本地存储版本
-            const storageVersion = localStorage.getItem('brewingNotesVersion')
-            const currentVersion = APP_VERSION // 当前数据版本
+        const initStorage = async () => {
+            try {
+                // 检查存储版本
+                const storageVersion = await Storage.get('brewingNotesVersion');
+                const currentVersion = APP_VERSION; // 当前数据版本
 
-            if (!storageVersion) {
-                // 首次使用或旧版本，初始化版本信息
-                localStorage.setItem('brewingNotesVersion', currentVersion)
-            }
-
-            // 确保 brewingNotes 存在且格式正确
-            const notes = localStorage.getItem('brewingNotes')
-            if (notes) {
-                try {
-                    JSON.parse(notes)
-                } catch {
-                    // 如果数据格式错误，初始化为空数组
-                    localStorage.setItem('brewingNotes', '[]')
+                if (!storageVersion) {
+                    // 首次使用或旧版本，初始化版本信息
+                    await Storage.set('brewingNotesVersion', currentVersion);
                 }
-            } else {
-                localStorage.setItem('brewingNotes', '[]')
+
+                // 确保 brewingNotes 存在且格式正确
+                const notes = await Storage.get('brewingNotes');
+                if (notes) {
+                    try {
+                        JSON.parse(notes);
+                    } catch {
+                        // 如果数据格式错误，初始化为空数组
+                        await Storage.set('brewingNotes', '[]');
+                    }
+                } else {
+                    await Storage.set('brewingNotes', '[]');
+                }
+            } catch (error) {
+                console.error('Error initializing storage:', error);
             }
-        } catch (error) {
-            console.error('Error initializing storage:', error)
-        }
-    }, [])
+        };
+
+        initStorage();
+    }, []);
 
     const handleEquipmentSelect = useCallback((equipmentName: string) => {
         // 如果当前在笔记标签，先切换回冲煮标签
@@ -891,9 +906,10 @@ const PourOverRecipes = () => {
     }
 
     // 修改保存笔记的处理函数
-    const handleSaveNote = (data: BrewingNoteData) => {
+    const handleSaveNote = async (data: BrewingNoteData) => {
         try {
-            const notes = JSON.parse(localStorage.getItem('brewingNotes') || '[]')
+            const notesStr = await Storage.get('brewingNotes');
+            const notes = notesStr ? JSON.parse(notesStr) : [];
 
             // 确保包含stages数据
             let stages: Stage[] = [];
@@ -906,65 +922,35 @@ const PourOverRecipes = () => {
                 id: Date.now().toString(),
                 timestamp: Date.now(),
                 stages: stages, // 添加stages数据
-            }
-            const updatedNotes = [newNote, ...notes]
-            localStorage.setItem('brewingNotes', JSON.stringify(updatedNotes))
-            setActiveTab('注水')
-            setShowComplete(false)
+            };
+            const updatedNotes = [newNote, ...notes];
+            await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
+            setActiveTab('注水');
+            setShowComplete(false);
         } catch (error) {
-            console.error('Error saving note:', error)
-            alert('保存笔记时出错，请重试')
+            console.error('Error saving note:', error);
+            alert('保存笔记时出错，请重试');
         }
-    }
+    };
 
     // 保存自定义方案
-    const handleSaveCustomMethod = (method: Method) => {
-        if (!selectedEquipment) return
-
+    const handleSaveCustomMethod = async (method: Method) => {
         try {
-            const { newCustomMethods, methodWithId } = saveCustomMethod(
+            const result = await saveCustomMethod(
                 method,
                 selectedEquipment,
                 customMethods,
                 editingMethod
             );
-
-            setCustomMethods(newCustomMethods);
+            setCustomMethods(result.newCustomMethods);
+            setSelectedMethod(result.methodWithId);
             setShowCustomForm(false);
             setEditingMethod(undefined);
-
-            // 更新内容显示
-            setContent((prev) => {
-                // 如果是编辑模式，先移除旧的方案
-                const filteredSteps = editingMethod
-                    ? prev.方案.steps.filter(step => step.title !== editingMethod?.name)
-                    : prev.方案.steps;
-
-                return {
-                    ...prev,
-                    方案: {
-                        ...prev.方案,
-                        steps: [
-                            ...filteredSteps,
-                            {
-                                title: methodWithId.name,
-                                items: [
-                                    `水粉比 ${methodWithId.params.ratio}`,
-                                    `总时长 ${formatTime(methodWithId.params.stages[methodWithId.params.stages.length - 1].time, true)}`,
-                                    `研磨度 ${methodWithId.params.grindSize}`,
-                                ],
-                                note: '',
-                                methodId: methodWithId.id, // 保存方法ID到步骤中
-                            },
-                        ],
-                    },
-                };
-            });
         } catch (error) {
-            console.error('保存自定义方案失败:', error);
-            alert('保存失败，请重试');
+            console.error('Error saving custom method:', error);
+            alert('保存自定义方案时出错，请重试');
         }
-    }
+    };
 
     // 处理自定义方案的编辑
     const handleEditCustomMethod = (method: Method) => {
@@ -973,29 +959,26 @@ const PourOverRecipes = () => {
     }
 
     // 处理自定义方案的删除
-    const handleDeleteCustomMethod = (method: Method) => {
-        if (!selectedEquipment) return
+    const handleDeleteCustomMethod = async (method: Method) => {
+        if (window.confirm(`确定要删除方案"${method.name}"吗？`)) {
+            try {
+                const newCustomMethods = await deleteCustomMethod(
+                    method,
+                    selectedEquipment,
+                    customMethods
+                );
+                setCustomMethods(newCustomMethods);
 
-        try {
-            const newCustomMethods = deleteCustomMethod(method, selectedEquipment, customMethods);
-            setCustomMethods(newCustomMethods);
-
-            // 更新内容显示
-            setContent((prev) => ({
-                ...prev,
-                方案: {
-                    ...prev.方案,
-                    steps: prev.方案.steps.filter((step) => step.methodId !== method.id),
-                },
-            }));
-
-            // 重置所有菜单状态，解决删除后其他方案菜单状态异常的问题
-            setActionMenuStates({});
-        } catch (error) {
-            console.error('删除自定义方案失败:', error);
-            alert('删除失败，请重试');
+                // 如果删除的是当前选中的方案，重置选中的方案
+                if (selectedMethod && selectedMethod.id === method.id) {
+                    setSelectedMethod(null);
+                }
+            } catch (error) {
+                console.error('Error deleting custom method:', error);
+                alert('删除自定义方案时出错，请重试');
+            }
         }
-    }
+    };
 
     // 处理冲煮步骤点击
     const handleBrewingStepClick = (step: BrewingStep) => {
@@ -1221,6 +1204,33 @@ const PourOverRecipes = () => {
         // 其他初始化代码...
         // ... existing code ...
     }, []);
+
+    // 在 Settings 组件中添加 onDataChange 属性
+    const handleDataChange = async () => {
+        // 重新加载设置
+        try {
+            const savedSettings = await Storage.get('brewGuideSettings');
+            if (savedSettings) {
+                setSettings(JSON.parse(savedSettings) as SettingsOptions);
+            }
+        } catch (error) {
+            console.error('Error loading settings after data change:', error);
+        }
+
+        // 重新加载自定义方案
+        try {
+            const methods = await loadCustomMethods();
+            setCustomMethods(methods);
+        } catch (error) {
+            console.error('Error loading custom methods after data change:', error);
+        }
+
+        // 重置当前选择的方案
+        setSelectedMethod(null);
+
+        // 显示通知
+        alert('数据已更新，应用将重新加载数据');
+    };
 
     return (
         <div className="flex h-full flex-col overflow-hidden mx-auto max-w-[500px] font-mono text-neutral-800 dark:text-neutral-100">
@@ -1626,6 +1636,7 @@ const PourOverRecipes = () => {
                 onClose={() => setIsSettingsOpen(false)}
                 settings={settings}
                 setSettings={setSettings}
+                onDataChange={handleDataChange}
             />
         </div>
     )

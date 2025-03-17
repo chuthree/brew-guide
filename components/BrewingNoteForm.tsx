@@ -15,6 +15,7 @@ import React, { useState, useEffect } from 'react'
 import type { BrewingNoteData } from '@/app/page'
 import { generateOptimizationJson } from '@/lib/jsonUtils'
 import { brewingMethods, type Method, type Stage } from '@/lib/config'
+import { Storage } from '@/lib/storage'
 
 interface TasteRatings {
     acidity: number;
@@ -106,7 +107,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         setShowOptimization(showOptimizationByDefault)
     }, [showOptimizationByDefault])
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         const noteData = {
             id: id || Date.now().toString(),
@@ -118,19 +119,20 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
             totalTime: initialData.totalTime,
         }
 
-        // 直接更新 localStorage
+        // 使用新的 Storage 接口更新存储
         try {
-            const existingNotes = JSON.parse(localStorage.getItem('brewingNotes') || '[]')
+            const existingNotesStr = await Storage.get('brewingNotes');
+            const existingNotes = existingNotesStr ? JSON.parse(existingNotesStr) : [];
             const updatedNotes = id
                 ? existingNotes.map((note: BrewingNoteData) => (note.id === id ? noteData : note))
-                : [noteData, ...existingNotes]
+                : [noteData, ...existingNotes];
 
-            localStorage.setItem('brewingNotes', JSON.stringify(updatedNotes))
-            onSave(noteData)
-            onClose()
+            await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
+            onSave(noteData);
+            onClose();
         } catch (error) {
-            console.error('Error saving note:', error)
-            alert('保存笔记时出错，请重试')
+            console.error('Error saving note:', error);
+            alert('保存笔记时出错，请重试');
         }
     }
 

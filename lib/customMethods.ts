@@ -1,13 +1,14 @@
 import { type Method } from "@/lib/config";
 import { methodToJson } from "@/lib/jsonUtils";
+import { Storage } from "@/lib/storage";
 
 /**
- * 从本地存储加载自定义方案
+ * 从存储加载自定义方案
  * @returns 自定义方案对象
  */
-export function loadCustomMethods(): Record<string, Method[]> {
+export async function loadCustomMethods(): Promise<Record<string, Method[]>> {
 	try {
-		const savedMethods = localStorage.getItem("customMethods");
+		const savedMethods = await Storage.get("customMethods");
 		if (savedMethods) {
 			const parsedMethods = JSON.parse(savedMethods);
 
@@ -27,16 +28,30 @@ export function loadCustomMethods(): Record<string, Method[]> {
 				);
 			});
 
-			// 更新本地存储
-			localStorage.setItem(
-				"customMethods",
-				JSON.stringify(methodsWithIds)
-			);
+			// 更新存储
+			await Storage.set("customMethods", JSON.stringify(methodsWithIds));
 
 			return methodsWithIds;
 		}
 	} catch (error) {
 		console.error("加载自定义方案出错:", error);
+	}
+
+	return {};
+}
+
+/**
+ * 同步从存储加载自定义方案（用于初始化）
+ * @returns 自定义方案对象
+ */
+export function loadCustomMethodsSync(): Record<string, Method[]> {
+	try {
+		const savedMethods = Storage.getSync("customMethods");
+		if (savedMethods) {
+			return JSON.parse(savedMethods);
+		}
+	} catch (error) {
+		console.error("同步加载自定义方案出错:", error);
 	}
 
 	return {};
@@ -50,12 +65,15 @@ export function loadCustomMethods(): Record<string, Method[]> {
  * @param editingMethod 正在编辑的方案（如果有）
  * @returns 更新后的自定义方案对象和新方案
  */
-export function saveCustomMethod(
+export async function saveCustomMethod(
 	method: Method,
 	selectedEquipment: string | null,
 	customMethods: Record<string, Method[]>,
 	editingMethod?: Method
-): { newCustomMethods: Record<string, Method[]>; methodWithId: Method } {
+): Promise<{
+	newCustomMethods: Record<string, Method[]>;
+	methodWithId: Method;
+}> {
 	if (!selectedEquipment) {
 		throw new Error("未选择设备");
 	}
@@ -88,8 +106,8 @@ export function saveCustomMethod(
 		[selectedEquipment]: updatedMethods,
 	};
 
-	// 保存到本地存储
-	localStorage.setItem("customMethods", JSON.stringify(newCustomMethods));
+	// 保存到存储
+	await Storage.set("customMethods", JSON.stringify(newCustomMethods));
 
 	return { newCustomMethods, methodWithId };
 }
@@ -101,11 +119,11 @@ export function saveCustomMethod(
  * @param customMethods 当前的自定义方案
  * @returns 更新后的自定义方案对象
  */
-export function deleteCustomMethod(
+export async function deleteCustomMethod(
 	method: Method,
 	selectedEquipment: string | null,
 	customMethods: Record<string, Method[]>
-): Record<string, Method[]> {
+): Promise<Record<string, Method[]>> {
 	if (!selectedEquipment) {
 		throw new Error("未选择设备");
 	}
@@ -117,8 +135,8 @@ export function deleteCustomMethod(
 		),
 	};
 
-	// 保存到本地存储
-	localStorage.setItem("customMethods", JSON.stringify(newCustomMethods));
+	// 保存到存储
+	await Storage.set("customMethods", JSON.stringify(newCustomMethods));
 
 	return newCustomMethods;
 }

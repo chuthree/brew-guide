@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import type { BrewingNote } from '@/lib/config'
 import type { BrewingNoteData } from '@/app/page'
 import BrewingNoteForm from './BrewingNoteForm'
+import { Storage } from '@/lib/storage'
 
 interface BrewingHistoryProps {
     isOpen: boolean
@@ -34,10 +35,11 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
 
     // 添加本地存储变化监听
     useEffect(() => {
-        const loadNotes = () => {
+        const loadNotes = async () => {
             try {
-                const savedNotes = JSON.parse(localStorage.getItem('brewingNotes') || '[]')
-                setNotes(savedNotes.sort((a: BrewingNote, b: BrewingNote) => b.timestamp - a.timestamp))
+                const savedNotes = await Storage.get('brewingNotes')
+                const parsedNotes = savedNotes ? JSON.parse(savedNotes) : []
+                setNotes(parsedNotes.sort((a: BrewingNote, b: BrewingNote) => b.timestamp - a.timestamp))
             } catch (error) {
                 console.error('Error loading notes:', error)
                 setNotes([])
@@ -49,7 +51,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
             loadNotes()
         }
 
-        // 监听其他标签页的存储变化
+        // 监听其他标签页的存储变化（仅在 Web 平台有效）
         const handleStorageChange = (e: StorageEvent) => {
             if (e.key === 'brewingNotes') {
                 loadNotes()
@@ -60,11 +62,11 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
         return () => window.removeEventListener('storage', handleStorageChange)
     }, [isOpen])
 
-    const handleDelete = (noteId: string) => {
+    const handleDelete = async (noteId: string) => {
         if (window.confirm('确定要删除这条笔记吗？')) {
             try {
                 const updatedNotes = notes.filter(note => note.id !== noteId)
-                localStorage.setItem('brewingNotes', JSON.stringify(updatedNotes))
+                await Storage.set('brewingNotes', JSON.stringify(updatedNotes))
                 setNotes(updatedNotes)
             } catch (error) {
                 console.error('Error deleting note:', error)
@@ -124,7 +126,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
         }
     }
 
-    const handleSaveEdit = (updatedData: BrewingNoteData) => {
+    const handleSaveEdit = async (updatedData: BrewingNoteData) => {
         if (!editingNote) return
 
         const updatedNotes = notes.map(note =>
@@ -138,7 +140,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                 }
                 : note
         )
-        localStorage.setItem('brewingNotes', JSON.stringify(updatedNotes))
+        await Storage.set('brewingNotes', JSON.stringify(updatedNotes))
         setNotes(updatedNotes)
         setEditingNote(null)
     }

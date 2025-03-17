@@ -1,8 +1,10 @@
 'use client'
 
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { APP_VERSION } from '@/lib/config'
 import { useTheme } from 'next-themes'
+import { Storage } from '@/lib/storage'
+import DataManager from './DataManager'
 
 // 定义设置选项接口
 export interface SettingsOptions {
@@ -21,6 +23,7 @@ interface SettingsProps {
     onClose: () => void
     settings: SettingsOptions
     setSettings: (settings: SettingsOptions) => void
+    onDataChange?: () => void
 }
 
 const Settings: React.FC<SettingsProps> = ({
@@ -28,19 +31,23 @@ const Settings: React.FC<SettingsProps> = ({
     onClose,
     settings,
     setSettings,
+    onDataChange,
 }) => {
     // 使用 next-themes 的 useTheme 钩子
     const { setTheme } = useTheme()
 
+    // 添加数据管理状态
+    const [isDataManagerOpen, setIsDataManagerOpen] = useState(false)
+
     // 处理设置变更
-    const handleChange = <K extends keyof SettingsOptions>(
+    const handleChange = async <K extends keyof SettingsOptions>(
         key: K,
         value: SettingsOptions[K]
     ) => {
-        // 直接更新设置并保存到本地存储
+        // 直接更新设置并保存到存储
         const newSettings = { ...settings, [key]: value }
         setSettings(newSettings)
-        localStorage.setItem('brewGuideSettings', JSON.stringify(newSettings))
+        await Storage.set('brewGuideSettings', JSON.stringify(newSettings))
 
         // 如果是深色模式设置，则同步更新 next-themes
         if (key === 'darkMode') {
@@ -162,12 +169,39 @@ const Settings: React.FC<SettingsProps> = ({
                             </div>
                         </div>
                     </div>
+
+                    {/* 数据管理 */}
+                    <div className="space-y-3">
+                        <h3 className="text-xs font-medium uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
+                            数据管理
+                        </h3>
+                        <div className="space-y-3">
+                            <button
+                                onClick={() => setIsDataManagerOpen(true)}
+                                className="w-full rounded-md bg-neutral-100 px-4 py-2 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-600"
+                            >
+                                打开数据管理
+                            </button>
+                            <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                                导入、导出或重置应用数据
+                            </p>
+                        </div>
+                    </div>
                 </div>
 
                 <div className="mt-5 text-center text-xs text-neutral-400 dark:text-neutral-500">
                     v{APP_VERSION}
                 </div>
             </div>
+
+            {/* 数据管理组件 */}
+            {isDataManagerOpen && (
+                <DataManager
+                    isOpen={isDataManagerOpen}
+                    onClose={() => setIsDataManagerOpen(false)}
+                    onDataChange={onDataChange}
+                />
+            )}
         </div>
     )
 }
