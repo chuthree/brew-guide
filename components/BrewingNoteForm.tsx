@@ -16,6 +16,7 @@ import type { BrewingNoteData } from '@/app/page'
 import { generateOptimizationJson } from '@/lib/jsonUtils'
 import { brewingMethods, type Method, type Stage } from '@/lib/config'
 import { Storage } from '@/lib/storage'
+import AutoResizeTextarea from './AutoResizeTextarea'
 
 interface TasteRatings {
     acidity: number;
@@ -78,7 +79,6 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     })
     const [optimizationNotes, setOptimizationNotes] = useState('')
     const [optimizationPrompt, setOptimizationPrompt] = useState('')
-
 
     // Update form data when initialData changes
     useEffect(() => {
@@ -553,7 +553,7 @@ stages数组中的每个阶段必须包含以下字段：
                             <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
                                 笔记
                             </div>
-                            <textarea
+                            <AutoResizeTextarea
                                 value={formData.notes}
                                 onChange={(e) =>
                                     setFormData({
@@ -561,7 +561,7 @@ stages数组中的每个阶段必须包含以下字段：
                                         notes: e.target.value,
                                     })
                                 }
-                                className="w-full resize-none border-b border-neutral-200 rounded-none bg-transparent text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300"
+                                className="text-xs border-b border-neutral-200 focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 pb-4"
                                 placeholder="记录一下这次冲煮的感受、改进点等..."
                             />
                         </div>
@@ -625,10 +625,10 @@ stages数组中的每个阶段必须包含以下字段：
                             <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
                                 优化目标
                             </div>
-                            <textarea
+                            <AutoResizeTextarea
                                 value={optimizationNotes}
                                 onChange={(e) => setOptimizationNotes(e.target.value)}
-                                className="w-full resize-none border-b border-neutral-200 rounded-none bg-transparent text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300"
+                                className="text-xs border-b border-neutral-200 pb-4 focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300"
                                 placeholder="还有其他优化目标？例如：提升层次感、增加果香、改善口感..."
                             />
                         </div>
@@ -672,10 +672,10 @@ stages数组中的每个阶段必须包含以下字段：
                                             </button>
                                         </div>
                                     </div>
-                                    <textarea
+                                    <AutoResizeTextarea
                                         value={optimizationPrompt}
                                         readOnly
-                                        className="w-full h-64 resize-none border border-neutral-200 rounded-md bg-neutral-50 dark:bg-neutral-800 dark:border-neutral-700 text-xs p-4 outline-none text-neutral-800 dark:text-neutral-300 overflow-auto"
+                                        className="text-xs border border-neutral-200 rounded-md bg-neutral-50 dark:bg-neutral-800 dark:border-neutral-700 p-4 text-neutral-800 dark:text-neutral-300"
                                     />
                                 </div>
                             )}

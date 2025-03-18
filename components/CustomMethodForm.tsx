@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { type Method, type Stage } from '@/lib/config'
 import { ArrowLeft, ArrowRight, Check } from 'lucide-react'
+import AutoResizeTextarea from './AutoResizeTextarea'
 
 interface CustomMethodFormProps {
     onSave: (method: Method) => void
@@ -841,8 +842,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                                             <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
                                                 详细说明
                                             </label>
-                                            <input
-                                                type="text"
+                                            <AutoResizeTextarea
                                                 value={stage.detail}
                                                 onChange={(e) => handleStageChange(index, 'detail', e.target.value)}
                                                 placeholder="描述这个阶段的注水方式"

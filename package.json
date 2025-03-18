@@ -1,6 +1,6 @@
 {
 	"name": "brew-guide",
-	"version": "2.2.8",
+	"version": "2.2.9",
 	"private": true,
 	"scripts": {
 		"dev": "next dev",
@@ -14,10 +14,12 @@
 		"cap:add:android": "npx cap add android"
 	},
 	"dependencies": {
+		"@capacitor-community/keep-awake": "^7.0.0",
 		"@capacitor/android": "^7.1.0",
 		"@capacitor/cli": "^7.1.0",
 		"@capacitor/core": "^7.1.0",
 		"@capacitor/filesystem": "^7.0.0",
+		"@capacitor/haptics": "^7.0.0",
 		"@capacitor/ios": "^7.1.0",
 		"@capacitor/preferences": "^7.0.0",
 		"@capacitor/splash-screen": "^7.0.0",

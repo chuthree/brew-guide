@@ -6,6 +6,8 @@ import BrewingNoteForm from '@/components/BrewingNoteForm'
 import type { BrewingNoteData } from '@/app/page'
 import type { Method } from '@/lib/config'
 import type { SettingsOptions } from '@/components/Settings'
+import { KeepAwake } from '@capacitor-community/keep-awake'
+import hapticFeedback from '@/lib/haptics'
 
 // Helper function to format time
 const formatTime = (seconds: number, compact: boolean = false) => {
@@ -47,6 +49,9 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     const [countdownTime, setCountdownTime] = useState<number | null>(null)
     const [hasStartedOnce, setHasStartedOnce] = useState(false)
     const [isCompleted, setIsCompleted] = useState(false)
+    const [isHapticsSupported, setIsHapticsSupported] = useState(false)
+    const lastStageRef = useRef<number>(-1)
+
     const audioContext = useRef<AudioContext | null>(null)
     const audioBuffers = useRef<{
         start: AudioBuffer | null;
@@ -70,6 +75,24 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     const methodStagesRef = useRef(currentBrewingMethod?.params.stages || [])
     const [showNoteForm, setShowNoteForm] = useState(false)
 
+    // 检查设备是否支持触感反馈
+    useEffect(() => {
+        const checkHapticsSupport = async () => {
+            const supported = await hapticFeedback.isSupported();
+            setIsHapticsSupported(supported);
+        };
+
+        checkHapticsSupport();
+    }, []);
+
+    // 封装触感调用函数
+    const triggerHaptic = useCallback(async (type: keyof typeof hapticFeedback) => {
+        if (isHapticsSupported && settings.hapticFeedback && typeof hapticFeedback[type] === 'function') {
+            await hapticFeedback[type]();
+        }
+    }, [isHapticsSupported, settings.hapticFeedback]);
+
+    // 音频系统初始化
     useEffect(() => {
         const initAudioSystem = () => {
             try {
@@ -237,9 +260,39 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         }
     }, [timerId])
 
+    useEffect(() => {
+        const handleKeepAwake = async () => {
+            try {
+                if (isRunning) {
+                    await KeepAwake.keepAwake();
+                    console.log('屏幕保持常亮已启用');
+                } else if (!isRunning && hasStartedOnce) {
+                    await KeepAwake.allowSleep();
+                    console.log('屏幕保持常亮已禁用');
+                }
+            } catch (error) {
+                console.error('无法控制屏幕常亮状态:', error);
+            }
+        };
+
+        handleKeepAwake();
+
+        return () => {
+            const cleanup = async () => {
+                try {
+                    await KeepAwake.allowSleep();
+                } catch (error) {
+                    console.error('无法恢复屏幕休眠状态:', error);
+                }
+            };
+            cleanup();
+        };
+    }, [isRunning, hasStartedOnce]);
+
     const handleComplete = useCallback(() => {
         if (isCompleted) return
 
+        triggerHaptic('success');
         clearTimerAndStates()
         setIsRunning(false)
         setShowComplete(true)
@@ -247,7 +300,16 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         onComplete?.(true, currentTime)
         onTimerComplete?.()
         playSound('correct')
-    }, [clearTimerAndStates, onComplete, onTimerComplete, playSound, currentTime, isCompleted])
+
+        const allowSleep = async () => {
+            try {
+                await KeepAwake.allowSleep();
+            } catch (error) {
+                console.error('无法恢复屏幕休眠状态:', error);
+            }
+        };
+        allowSleep();
+    }, [clearTimerAndStates, onComplete, onTimerComplete, playSound, currentTime, isCompleted, triggerHaptic])
 
     const startMainTimer = useCallback(() => {
         if (currentBrewingMethod) {
@@ -332,6 +394,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
 
     const startTimer = useCallback(() => {
         if (!isRunning && currentBrewingMethod) {
+            triggerHaptic('medium');
             setIsRunning(true)
             if (!hasStartedOnce || currentTime === 0) {
                 setCountdownTime(3)
@@ -340,14 +403,16 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                 startMainTimer()
             }
         }
-    }, [isRunning, currentBrewingMethod, hasStartedOnce, startMainTimer, currentTime])
+    }, [isRunning, currentBrewingMethod, hasStartedOnce, startMainTimer, currentTime, triggerHaptic])
 
     const pauseTimer = useCallback(() => {
+        triggerHaptic('light');
         clearTimerAndStates()
         setIsRunning(false)
-    }, [clearTimerAndStates])
+    }, [clearTimerAndStates, triggerHaptic])
 
     const resetTimer = useCallback(() => {
+        triggerHaptic('warning');
         clearTimerAndStates()
         setIsRunning(false)
         setCurrentTime(0)
@@ -356,7 +421,16 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         setCountdownTime(null)
         setHasStartedOnce(false)
         setIsCompleted(false)
-    }, [clearTimerAndStates])
+
+        const allowSleep = async () => {
+            try {
+                await KeepAwake.allowSleep();
+            } catch (error) {
+                console.error('无法恢复屏幕休眠状态:', error);
+            }
+        };
+        allowSleep();
+    }, [clearTimerAndStates, triggerHaptic])
 
     useEffect(() => {
         if (isRunning) {
@@ -401,6 +475,22 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     useEffect(() => {
         onCountdownChange?.(countdownTime)
     }, [countdownTime, onCountdownChange])
+
+    // 在倒计时结束时添加触感反馈
+    useEffect(() => {
+        if (countdownTime === 0 && isRunning) {
+            triggerHaptic('vibrateMultiple');
+        }
+    }, [countdownTime, isRunning, triggerHaptic]);
+
+    // 在冲泡阶段变化时添加触感反馈
+    useEffect(() => {
+        const currentStage = getCurrentStage();
+        if (currentStage !== lastStageRef.current && isRunning && lastStageRef.current !== -1) {
+            triggerHaptic('medium');
+        }
+        lastStageRef.current = currentStage;
+    }, [currentTime, getCurrentStage, isRunning, triggerHaptic]);
 
     if (!currentBrewingMethod) return null
 

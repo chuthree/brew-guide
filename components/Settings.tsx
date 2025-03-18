@@ -10,12 +10,14 @@ import DataManager from './DataManager'
 export interface SettingsOptions {
     darkMode: 'system' | 'light' | 'dark'
     notificationSound: boolean
+    hapticFeedback: boolean
 }
 
 // 默认设置
 export const defaultSettings: SettingsOptions = {
     darkMode: 'system',
     notificationSound: true,
+    hapticFeedback: true,
 }
 
 interface SettingsProps {
@@ -67,7 +69,7 @@ const Settings: React.FC<SettingsProps> = ({
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-center justify-center"
+            className="fixed mx-6 inset-0 z-50 flex items-center justify-center"
             onClick={onClose} // 点击背景关闭设置
         >
             <div
@@ -103,11 +105,11 @@ const Settings: React.FC<SettingsProps> = ({
 
                 <div className="space-y-5">
                     {/* 外观设置 */}
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                         <h3 className="text-xs font-medium uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
                             外观
                         </h3>
-                        <div className="space-y-3">
+                        <div className="space-y-4">
                             <div className="flex items-center justify-between">
                                 <span className="text-sm text-neutral-600 dark:text-neutral-400">
                                     深色模式
@@ -146,11 +148,11 @@ const Settings: React.FC<SettingsProps> = ({
                     </div>
 
                     {/* 通知设置 */}
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                         <h3 className="text-xs font-medium uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
                             通知
                         </h3>
-                        <div className="space-y-3">
+                        <div className="space-y-4">
                             <div className="flex items-center justify-between">
                                 <span className="text-sm text-neutral-600 dark:text-neutral-400">
                                     提示音
@@ -167,15 +169,31 @@ const Settings: React.FC<SettingsProps> = ({
                                     <div className="peer h-5 w-9 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-500 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
                                 </label>
                             </div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm text-neutral-600 dark:text-neutral-400">
+                                    震动反馈
+                                </span>
+                                <label className="relative inline-flex cursor-pointer items-center">
+                                    <input
+                                        type="checkbox"
+                                        checked={settings.hapticFeedback}
+                                        onChange={(e) =>
+                                            handleChange('hapticFeedback', e.target.checked)
+                                        }
+                                        className="peer sr-only"
+                                    />
+                                    <div className="peer h-5 w-9 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-500 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
+                                </label>
+                            </div>
                         </div>
                     </div>
 
                     {/* 数据管理 */}
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                         <h3 className="text-xs font-medium uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
                             数据管理
                         </h3>
-                        <div className="space-y-3">
+                        <div className="space-y-4">
                             <button
                                 onClick={() => setIsDataManagerOpen(true)}
                                 className="w-full rounded-md bg-neutral-100 px-4 py-2 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-600"

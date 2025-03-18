@@ -9,6 +9,7 @@ import NavigationBar from '@/components/NavigationBar'
 import Settings, { SettingsOptions, defaultSettings } from '@/components/Settings'
 import { initCapacitor } from './capacitor'
 import { Storage } from '@/lib/storage'
+import hapticFeedback from '@/lib/haptics'
 
 // 动态导入客户端组件
 const BrewingTimer = dynamic(() => import('@/components/BrewingTimer'), { ssr: false })
@@ -188,7 +189,7 @@ const StageItem = ({
         <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.26, delay: 0.05 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
             className={`group relative border-l border-neutral-200 pl-6 dark:border-neutral-800 ${activeTab === '注水' && index === currentStage
                 ? 'text-neutral-800 dark:text-neutral-100'
                 : activeTab === '注水' && index < currentStage
@@ -201,7 +202,7 @@ const StageItem = ({
                     className="absolute -left-px top-0 h-full w-px bg-neutral-800 dark:bg-neutral-100"
                     initial={{ scaleY: 0, transformOrigin: "top" }}
                     animate={{ scaleY: 1 }}
-                    transition={{ duration: 0.26, ease: 'linear' }}
+                    transition={{ duration: 0.2, ease: 'linear' }}
                 />
             )}
             <div className={activeTab !== '注水' ? 'cursor-pointer' : ''} onClick={onClick}>
@@ -226,8 +227,8 @@ const StageItem = ({
                                         key="action-buttons"
                                         initial={{ opacity: 0, scale: 0.9, x: 10 }}
                                         animate={{ opacity: 1, scale: 1, x: 0 }}
-                                        exit={{ opacity: 0, scale: 0.9, x: 10 }}
-                                        transition={{ duration: 0.26 }}
+                                        exit={{ opacity: 0 }}
+                                        transition={{ duration: 0.2, ease: "easeOut" }}
                                         className="flex items-baseline space-x-3"
                                     >
                                         <button
@@ -283,8 +284,8 @@ const StageItem = ({
                                         key="more-button"
                                         initial={{ opacity: 0, scale: 0.9 }}
                                         animate={{ opacity: 1, scale: 1 }}
-                                        exit={{ opacity: 0, scale: 0.9 }}
-                                        transition={{ duration: 0.26 }}
+                                        exit={{ opacity: 0 }}
+                                        transition={{ duration: 0.2, ease: "easeOut" }}
                                         onClick={(e) => {
                                             e.stopPropagation()
                                             // 更新全局状态对象，打开当前卡片的菜单
@@ -1252,6 +1253,7 @@ const PourOverRecipes = () => {
                 setShowHistory={setShowHistory}
                 setActiveTab={setActiveTab}
                 onTitleDoubleClick={handleTitleDoubleClick}
+                settings={settings}
             />
 
             {/* 内容区域 - 简化内边距和间距 */}
@@ -1263,7 +1265,7 @@ const PourOverRecipes = () => {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            transition={{ duration: 0.26 }}
+                            transition={{ duration: 0.15, ease: "easeOut" }}
                             className="h-full"
                         >
                             <BrewingHistory
@@ -1280,7 +1282,7 @@ const PourOverRecipes = () => {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            transition={{ duration: 0.26 }}
+                            transition={{ duration: 0.2, ease: "easeOut" }}
                             className="h-full px-6 py-4"
                         >
                             {/* 咖啡豆管理界面将在这里实现 */}
@@ -1294,7 +1296,7 @@ const PourOverRecipes = () => {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            transition={{ duration: 0.26 }}
+                            transition={{ duration: 0.2, ease: "easeOut" }}
                             className="h-full px-6 py-4"
                         >
                             {/* 咖啡豆选择界面将在这里实现 */}
@@ -1308,7 +1310,7 @@ const PourOverRecipes = () => {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            transition={{ duration: 0.26 }}
+                            transition={{ duration: 0.2, ease: "easeOut" }}
                             className=""
                         >
                             <BrewingNoteForm
@@ -1338,7 +1340,7 @@ const PourOverRecipes = () => {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            transition={{ duration: 0.26 }}
+                            transition={{ duration: 0.2, ease: "easeOut" }}
                             className="relative h-full px-6 py-6"
                         >
                             {/* 当计时器运行时显示可视化组件 */}
@@ -1346,14 +1348,12 @@ const PourOverRecipes = () => {
                                 {isTimerRunning && !showComplete && currentBrewingMethod ? (
                                     <motion.div
                                         key="pour-visualizer-container"
-                                        initial={{ opacity: 0, scale: 0.95 }}
+                                        initial={{ opacity: 0, scale: 0.98 }}
                                         animate={{ opacity: 1, scale: 1 }}
-                                        exit={{ opacity: 0, scale: 0.95 }}
+                                        exit={{ opacity: 0 }}
                                         transition={{
-                                            type: "spring",
-                                            stiffness: 400,
-                                            damping: 30,
-                                            opacity: { duration: 0.26 }
+                                            duration: 0.2,
+                                            ease: "easeOut"
                                         }}
                                         className="flex items-center justify-center w-full h-full"
                                     >
@@ -1377,10 +1377,8 @@ const PourOverRecipes = () => {
                                         animate={{ opacity: 1 }}
                                         exit={{ opacity: 0 }}
                                         transition={{
-                                            type: "spring",
-                                            stiffness: 300,
-                                            damping: 30,
-                                            opacity: { duration: 0.26 }
+                                            duration: 0.2,
+                                            ease: "easeOut"
                                         }}
                                         className="space-y-5"
                                     >
@@ -1404,7 +1402,7 @@ const PourOverRecipes = () => {
                                                     initial={{ opacity: 0 }}
                                                     animate={{ opacity: 1 }}
                                                     exit={{ opacity: 0 }}
-                                                    transition={{ duration: 0.26 }}
+                                                    transition={{ duration: 0.2, ease: "easeOut" }}
                                                     className="space-y-5 pb-16"
                                                 >
                                                     {methodType === 'custom' && (
@@ -1427,14 +1425,18 @@ const PourOverRecipes = () => {
                                                             </motion.button>
                                                         </div>
                                                     )}
-                                                    <AnimatePresence initial={false}>
+                                                    <div className="space-y-5">
                                                         {content[activeTab as keyof typeof content].steps.map((step, index) => (
                                                             <motion.div
                                                                 key={step.methodId || `${step.title}-${index}`}
-                                                                initial={{ opacity: 0, height: 0, marginBottom: 0 }}
-                                                                animate={{ opacity: 1, height: 'auto', marginBottom: 20 }}
-                                                                exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-                                                                transition={{ duration: 0.26 }}
+                                                                initial={{ opacity: 0, y: 10 }}
+                                                                animate={{ opacity: 1, y: 0 }}
+                                                                exit={{ opacity: 0 }}
+                                                                transition={{
+                                                                    duration: 0.15,
+                                                                    delay: index * 0.02,
+                                                                    ease: "easeOut"
+                                                                }}
                                                             >
                                                                 <StageItem
                                                                     step={step}
@@ -1464,18 +1466,22 @@ const PourOverRecipes = () => {
                                                                 />
                                                             </motion.div>
                                                         ))}
-                                                    </AnimatePresence>
+                                                    </div>
                                                 </motion.div>
                                             </AnimatePresence>
                                         ) : (
-                                            <AnimatePresence initial={false}>
+                                            <div className="space-y-5">
                                                 {content[activeTab as keyof typeof content].steps.map((step, index) => (
                                                     <motion.div
                                                         key={step.methodId || `${step.title}-${index}`}
-                                                        initial={{ opacity: 0, height: 0, marginBottom: 0 }}
-                                                        animate={{ opacity: 1, height: 'auto', marginBottom: 20 }}
-                                                        exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-                                                        transition={{ duration: 0.26 }}
+                                                        initial={{ opacity: 0, y: 10 }}
+                                                        animate={{ opacity: 1, y: 0 }}
+                                                        exit={{ opacity: 0 }}
+                                                        transition={{
+                                                            duration: 0.15,
+                                                            delay: index * 0.02,
+                                                            ease: "easeOut"
+                                                        }}
                                                     >
                                                         <StageItem
                                                             step={step}
@@ -1505,7 +1511,7 @@ const PourOverRecipes = () => {
                                                         />
                                                     </motion.div>
                                                 ))}
-                                            </AnimatePresence>
+                                            </div>
                                         )}
                                     </motion.div>
                                 )}
@@ -1520,10 +1526,10 @@ const PourOverRecipes = () => {
                 {/* 方案类型选择器 */}
                 {activeMainTab === '冲煮' && activeBrewingStep === 'method' && selectedEquipment !== 'CleverDripper' && (
                     <motion.div
-                        initial={{ opacity: 0, y: 20 }}
+                        initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 20 }}
-                        transition={{ duration: 0.26 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2, ease: "easeOut" }}
                         className="bg-neutral-50 dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-800 pt-3 pb-safe px-6 px-safe"
                         style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 28px)' }}
                     >
@@ -1531,6 +1537,10 @@ const PourOverRecipes = () => {
                             <div className="flex space-x-4">
                                 <button
                                     onClick={() => {
+                                        // 添加轻触反馈
+                                        if (settings.hapticFeedback) {
+                                            hapticFeedback.light();
+                                        }
                                         setMethodType('common');
                                         setSelectedBrand(null);
                                         setSelectedBean(null);
@@ -1550,6 +1560,10 @@ const PourOverRecipes = () => {
                                 </span>
                                 <button
                                     onClick={() => {
+                                        // 添加轻触反馈
+                                        if (settings.hapticFeedback) {
+                                            hapticFeedback.light();
+                                        }
                                         if (methodType === 'brand' && selectedBrand) {
                                             setSelectedBrand(null);
                                         } else {
@@ -1569,6 +1583,10 @@ const PourOverRecipes = () => {
                             </div>
                             <button
                                 onClick={() => {
+                                    // 添加轻触反馈
+                                    if (settings.hapticFeedback) {
+                                        hapticFeedback.light();
+                                    }
                                     setMethodType('custom');
                                     setSelectedBrand(null);
                                     setSelectedBean(null);
@@ -1590,12 +1608,10 @@ const PourOverRecipes = () => {
                         key="brewing-timer"
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
+                        exit={{ opacity: 0 }}
                         transition={{
-                            type: "spring",
-                            stiffness: 500,
-                            damping: 30,
-                            opacity: { duration: 0.26 },
+                            duration: 0.2,
+                            ease: "easeOut"
                         }}
                         className='px-6 px-safe pb-safe'
                         style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 28px)' }}

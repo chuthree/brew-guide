@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { APP_VERSION, equipmentList } from '@/lib/config'
 import { motion, AnimatePresence } from 'framer-motion'
+import hapticFeedback from '@/lib/haptics'
 
 // 定义一个隐藏滚动条的样式
 const noScrollbarStyle = `
@@ -51,6 +52,7 @@ const TabButton = ({
     onClick,
     hasSecondaryLine,
     className = '',
+    triggerHaptic,
 }: {
     tab: string
     isActive: boolean
@@ -58,49 +60,62 @@ const TabButton = ({
     onClick?: () => void
     hasSecondaryLine?: boolean
     className?: string
-}) => (
-    <div
-        onClick={!isDisabled ? onClick : undefined}
-        className={`text-[11px] tracking-widest transition-all duration-300 ${className} ${isActive
-            ? 'text-neutral-800 dark:text-neutral-100'
-            : isDisabled
-                ? 'text-neutral-300 dark:text-neutral-600'
-                : 'cursor-pointer text-neutral-400  dark:text-neutral-500 '
-            }`}
-    >
-        <span className="relative">
-            {tab}
-            {/* 使用纯CSS实现下划线效果，减少动画复杂度 */}
-            <span
-                className={`absolute -bottom-1 left-0 right-0 h-px transition-all duration-200 ${hasSecondaryLine
-                    ? 'bg-neutral-200 dark:bg-neutral-700 opacity-100'
-                    : 'bg-neutral-200 dark:bg-neutral-700 opacity-0'
-                    }`}
-            />
-            {/* 主下划线 */}
-            <motion.span
-                className={`absolute -bottom-1 left-0 right-0 z-10 h-px bg-neutral-800 dark:bg-neutral-100`}
-                initial={false}
-                animate={{
-                    opacity: isActive ? 1 : 0,
-                    scaleX: isActive ? 1 : 0
-                }}
-                transition={{ duration: 0.2, ease: "easeInOut" }}
-                style={{ transformOrigin: 'center' }}
-            />
-        </span>
-    </div>
-)
+    triggerHaptic?: (type: keyof typeof hapticFeedback) => Promise<void>
+}) => {
+    const handleClick = () => {
+        if (!isDisabled && onClick) {
+            // 添加轻触反馈
+            triggerHaptic?.('light');
+            onClick();
+        }
+    };
+
+    return (
+        <div
+            onClick={!isDisabled ? handleClick : undefined}
+            className={`text-[11px] tracking-widest transition-all duration-300 ${className} ${isActive
+                ? 'text-neutral-800 dark:text-neutral-100'
+                : isDisabled
+                    ? 'text-neutral-300 dark:text-neutral-600'
+                    : 'cursor-pointer text-neutral-400  dark:text-neutral-500 '
+                }`}
+        >
+            <span className="relative">
+                {tab}
+                {/* 使用纯CSS实现下划线效果，减少动画复杂度 */}
+                <span
+                    className={`absolute -bottom-1 left-0 right-0 h-px transition-all duration-200 ${hasSecondaryLine
+                        ? 'bg-neutral-200 dark:bg-neutral-700 opacity-100'
+                        : 'bg-neutral-200 dark:bg-neutral-700 opacity-0'
+                        }`}
+                />
+                {/* 主下划线 */}
+                <motion.span
+                    className={`absolute -bottom-1 left-0 right-0 z-10 h-px bg-neutral-800 dark:bg-neutral-100`}
+                    initial={false}
+                    animate={{
+                        opacity: isActive ? 1 : 0,
+                        scaleX: isActive ? 1 : 0
+                    }}
+                    transition={{ duration: 0.2, ease: "easeInOut" }}
+                    style={{ transformOrigin: 'center' }}
+                />
+            </span>
+        </div>
+    )
+}
 
 // 添加步骤指示器组件
 const StepIndicator = ({
     currentStep,
     onStepClick,
     disabledSteps = [],
+    triggerHaptic,
 }: {
     currentStep: BrewingStep
     onStepClick?: (step: BrewingStep) => void
     disabledSteps?: BrewingStep[]
+    triggerHaptic?: (type: keyof typeof hapticFeedback) => Promise<void>
 }) => {
     const steps: { label: string; value: BrewingStep }[] = [
         { label: '咖啡豆', value: 'coffeeBean' },
@@ -161,6 +176,7 @@ const StepIndicator = ({
                         isDisabled={disabledSteps.includes(step.value)}
                         onClick={onStepClick ? () => onStepClick(step.value) : undefined}
                         className="text-[10px] sm:text-xs"
+                        triggerHaptic={triggerHaptic}
                     />
                     {index < steps.length - 1 && (
                         <motion.div
@@ -194,12 +210,14 @@ const EditableParameter = ({
     unit,
     className = '',
     prefix = '',
+    triggerHaptic,
 }: {
     value: string
     onChange: (value: string) => void
     unit: string
     className?: string
     prefix?: string
+    triggerHaptic?: (type: keyof typeof hapticFeedback) => Promise<void>
 }) => {
     const [isEditing, setIsEditing] = useState(false)
     const [tempValue, setTempValue] = useState(value)
@@ -209,8 +227,10 @@ const EditableParameter = ({
         if (isEditing && inputRef.current) {
             inputRef.current.focus()
             inputRef.current.select()
+            // 添加中等触感，表示进入编辑模式
+            triggerHaptic?.('medium');
         }
-    }, [isEditing])
+    }, [isEditing, triggerHaptic])
 
     useEffect(() => {
         setTempValue(value)
@@ -219,23 +239,35 @@ const EditableParameter = ({
     const handleBlur = () => {
         setIsEditing(false)
         if (tempValue !== value) {
+            // 添加成功触感，表示修改成功
+            triggerHaptic?.('success');
             onChange(tempValue)
         }
     }
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter') {
+            // 添加成功触感，表示修改确认
+            triggerHaptic?.('success');
             handleBlur()
         } else if (e.key === 'Escape') {
+            // 添加警告触感，表示取消编辑
+            triggerHaptic?.('warning');
             setTempValue(value)
             setIsEditing(false)
         }
     }
 
+    const handleEditClick = () => {
+        // 添加轻触反馈
+        triggerHaptic?.('light');
+        setIsEditing(true);
+    };
+
     return (
         <span
             className={`group relative inline-flex items-center ${className} cursor-pointer min-w-0 max-w-[40px] sm:max-w-[50px]`}
-            onClick={() => setIsEditing(true)}
+            onClick={handleEditClick}
         >
             {prefix && <span className="flex-shrink-0">{prefix}</span>}
             {isEditing ? (
@@ -289,7 +321,8 @@ interface NavigationBarProps {
     handleParamChange: (type: keyof EditableParams, value: string) => void;
     setShowHistory: (show: boolean) => void;
     setActiveTab: (tab: TabType) => void;
-    onTitleDoubleClick: () => void; // 添加双击标题的回调函数
+    onTitleDoubleClick: () => void;
+    settings: { hapticFeedback: boolean };
 }
 
 const NavigationBar: React.FC<NavigationBarProps> = ({
@@ -308,8 +341,34 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
     handleParamChange,
     setShowHistory,
     setActiveTab,
-    onTitleDoubleClick // 接收双击标题的回调函数
+    onTitleDoubleClick,
+    settings
 }) => {
+    // 添加触感支持状态检测
+    const [isHapticsSupported, setIsHapticsSupported] = useState(false);
+
+    // 初始化检测触感支持
+    useEffect(() => {
+        const checkHapticsSupport = async () => {
+            const supported = await hapticFeedback.isSupported();
+            setIsHapticsSupported(supported);
+            if (supported) {
+                console.log('设备支持触感反馈');
+            } else {
+                console.log('设备不支持触感反馈');
+            }
+        };
+
+        checkHapticsSupport();
+    }, []);
+
+    // 封装触感函数，仅在支持的设备上执行且全局设置允许
+    const triggerHaptic = async (type: keyof typeof hapticFeedback) => {
+        if (isHapticsSupported && settings.hapticFeedback && typeof hapticFeedback[type] === 'function') {
+            await hapticFeedback[type]();
+        }
+    };
+
     // 获取禁用的步骤
     const getDisabledSteps = (): BrewingStep[] => {
         const disabled: BrewingStep[] = [];
@@ -331,9 +390,14 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
 
     // 处理标题点击事件
     const handleTitleClick = () => {
+        // 添加轻触反馈
+        triggerHaptic('light');
+
         const currentTime = new Date().getTime();
         // 如果距离上次点击不超过300毫秒，视为双击
         if (currentTime - lastTitleClickTime < 300) {
+            // 添加强触感，表示双击确认
+            triggerHaptic('heavy');
             onTitleDoubleClick(); // 调用父组件传入的回调函数
         }
         setLastTitleClickTime(currentTime);
@@ -343,14 +407,19 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
     const handleBrewingStepClick = (step: BrewingStep) => {
         // 如果计时器正在运行，不允许切换步骤
         if (isTimerRunning && !showComplete) {
+            // 当操作被拒绝时，提供错误触感反馈
+            triggerHaptic('error');
             return;
         }
 
-        // 如果点击的步骤被禁用，不执行任何操作
+        // 如果点击的步骤被禁用，提供错误触感
         if (getDisabledSteps().includes(step)) {
+            triggerHaptic('error');
             return;
         }
 
+        // 添加成功触感
+        triggerHaptic('medium');
         // 直接调用父组件传入的setActiveBrewingStep函数，让父组件处理所有逻辑
         setActiveBrewingStep(step);
     };
@@ -495,6 +564,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                 }
                             }}
                             className="text-[10px] sm:text-xs"
+                            triggerHaptic={triggerHaptic}
                         />
                         <TabButton
                             tab="咖啡豆"
@@ -506,6 +576,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                 setActiveMainTab('咖啡豆');
                             }}
                             className="text-[10px] sm:text-xs"
+                            triggerHaptic={triggerHaptic}
                         />
                         <TabButton
                             tab="笔记"
@@ -518,6 +589,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                 setShowHistory(true);
                             }}
                             className="text-[10px] sm:text-xs"
+                            triggerHaptic={triggerHaptic}
                         />
                     </div>
                 </div>
@@ -550,6 +622,8 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                     exit={{ opacity: 0, x: 5 }}
                                     transition={{ duration: 0.3, ease: "easeOut" }}
                                     onClick={() => {
+                                        // 添加触感反馈
+                                        triggerHaptic('light');
                                         // 点击设备名称时，跳转到器具步骤
                                         setActiveBrewingStep('equipment');
                                         setActiveTab('器具');
@@ -582,6 +656,8 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                         exit={{ opacity: 0, x: -5 }}
                                         transition={{ duration: 0.3, ease: "easeOut" }}
                                         onClick={() => {
+                                            // 添加触感反馈
+                                            triggerHaptic('light');
                                             // 点击方法名称时，跳转到方案步骤
                                             setActiveBrewingStep('method');
                                             setActiveTab('方案');
@@ -621,6 +697,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                             onChange={(v) => handleParamChange('coffee', v)}
                                             unit="g"
                                             className="border-b border-dashed border-neutral-200 dark:border-neutral-700"
+                                            triggerHaptic={triggerHaptic}
                                         />
                                         <span className="flex-shrink-0">·</span>
                                         <EditableParameter
@@ -629,6 +706,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                             unit=""
                                             prefix="1:"
                                             className="border-b border-dashed border-neutral-200 dark:border-neutral-700"
+                                            triggerHaptic={triggerHaptic}
                                         />
                                         {parameterInfo.params?.grindSize && (
                                             <>
@@ -648,11 +726,16 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                         className="cursor-pointer flex items-center justify-end space-x-1 sm:space-x-2 overflow-x-auto no-scrollbar bg-gradient-to-r from-transparent via-neutral-100/95 to-neutral-100/95 dark:via-neutral-800/95 dark:to-neutral-800/95 pl-6"
                                         onClick={() => {
                                             if (selectedMethod && !isTimerRunning) {
+                                                // 添加中等触感反馈
+                                                triggerHaptic('medium');
                                                 setEditableParams({
                                                     coffee: selectedMethod.params.coffee,
                                                     water: selectedMethod.params.water,
                                                     ratio: selectedMethod.params.ratio,
                                                 });
+                                            } else if (isTimerRunning) {
+                                                // 如果计时器正在运行，不允许编辑，提供错误触感
+                                                triggerHaptic('error');
                                             }
                                         }}
                                     >
@@ -683,6 +766,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                         currentStep={activeBrewingStep}
                         onStepClick={handleBrewingStepClick}
                         disabledSteps={getDisabledSteps()}
+                        triggerHaptic={triggerHaptic}
                     />
                 </div>
             </motion.div>
