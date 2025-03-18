@@ -2,7 +2,7 @@
 
 一个现代化的咖啡冲泡助手应用，帮助咖啡爱好者记录和优化他们的冲泡过程。
 
-![版本](https://img.shields.io/badge/版本-2.2.7-blue)
+![版本](https://img.shields.io/badge/版本-2.2.8-blue)
 
 ## 功能特点
 

@@ -30,20 +30,38 @@
     height: -webkit-fill-available;
   }
 
-  /* 确保安全区域在 iOS 设备上正常工作 */
-  @supports (padding-top: env(safe-area-inset-top)) {
-    .pt-safe {
-      padding-top: env(safe-area-inset-top);
-    }
+  /* 确保安全区域在 iOS 和 Android 设备上正常工作 */
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+    padding-top: constant(safe-area-inset-top);
+    /* 确保顶部状态栏有足够的高度 */
+    padding-top: max(env(safe-area-inset-top), 24px);
+  }
 
-    .pb-safe {
-      padding-bottom: env(safe-area-inset-bottom);
-    }
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-bottom: constant(safe-area-inset-bottom);
+    /* 增加Android底部导航栏的最小高度 */
+    padding-bottom: max(env(safe-area-inset-bottom), 24px);
+  }
 
-    .px-safe {
-      padding-left: env(safe-area-inset-left);
-      padding-right: env(safe-area-inset-right);
-    }
+  .px-safe {
+    padding-left: env(safe-area-inset-left);
+    padding-left: constant(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    padding-right: constant(safe-area-inset-right);
+  }
+
+  /* 针对iOS状态栏的特殊处理 */
+  .ios-pt-safe {
+    padding-top: env(safe-area-inset-top);
+    padding-top: constant(safe-area-inset-top);
+  }
+
+  /* 针对Android状态栏的特殊处理 */
+  .android-pt-safe {
+    padding-top: 24px;
+    /* Android状态栏的固定高度 */
   }
 }
 

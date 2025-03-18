@@ -418,7 +418,8 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
 
     return (
         <div
-            className="sticky top-0 pt-safe bg-neutral-50/95 dark:bg-neutral-900/95 border-b border-neutral-200 dark:border-neutral-800"
+            className="sticky top-0 z-10 pt-safe bg-neutral-50/95 dark:bg-neutral-900/95 border-b border-neutral-200 dark:border-neutral-800"
+            style={{ paddingTop: 'max(env(safe-area-inset-top), 24px)' }}
         >
             {/* 添加隐藏滚动条的样式 */}
             <style jsx global>{noScrollbarStyle}</style>

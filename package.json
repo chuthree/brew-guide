@@ -1,6 +1,6 @@
 {
 	"name": "brew-guide",
-	"version": "2.2.7",
+	"version": "2.2.8",
 	"private": true,
 	"scripts": {
 		"dev": "next dev",
@@ -21,6 +21,8 @@
 		"@capacitor/ios": "^7.1.0",
 		"@capacitor/preferences": "^7.0.0",
 		"@capacitor/splash-screen": "^7.0.0",
+		"@capacitor/status-bar": "^7.0.0",
+		"@heroicons/react": "^2.2.0",
 		"@tailwindcss/postcss": "^4.0.13",
 		"@vercel/analytics": "^1.5.0",
 		"critters": "^0.0.23",

@@ -1516,7 +1516,7 @@ const PourOverRecipes = () => {
             </div>
 
             {/* 底部工具栏 - 根据当前状态显示不同内容 */}
-            <AnimatePresence>
+            <AnimatePresence mode="wait">
                 {/* 方案类型选择器 */}
                 {activeMainTab === '冲煮' && activeBrewingStep === 'method' && selectedEquipment !== 'CleverDripper' && (
                     <motion.div
@@ -1525,6 +1525,7 @@ const PourOverRecipes = () => {
                         exit={{ opacity: 0, y: 20 }}
                         transition={{ duration: 0.26 }}
                         className="bg-neutral-50 dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-800 pt-3 pb-safe px-6 px-safe"
+                        style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 28px)' }}
                     >
                         <div className="flex justify-between items-center">
                             <div className="flex space-x-4">
@@ -1594,9 +1595,10 @@ const PourOverRecipes = () => {
                             type: "spring",
                             stiffness: 500,
                             damping: 30,
-                            opacity: { duration: 0.26 }
+                            opacity: { duration: 0.26 },
                         }}
                         className='px-6 px-safe pb-safe'
+                        style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 28px)' }}
                     >
                         <BrewingTimer
                             currentBrewingMethod={currentBrewingMethod}
