@@ -1,5 +1,5 @@
 // App Version
-export const APP_VERSION = "2.2.6";
+export const APP_VERSION = "2.2.7";
 
 // Types
 export interface Stage {
@@ -227,6 +227,28 @@ export const brewingMethods: BrewingMethods = {
 				],
 			},
 		},
+		{
+			name: "夏季八冲(全宇宙最多人使用的咖啡冲煮手法)",
+			params: {
+				coffee: "(略)",
+				water: "(略)",
+				ratio: "(略)",
+				grindSize: "(略)",
+				temp: "(略)",
+				videoUrl: "",
+				roastLevel: "(略)",
+				stages: [
+					{
+						time: 0,
+						pourTime: 0,
+						label: "(略)",
+						water: "0g",
+						detail: "(略)",
+						pourType: "other",
+					},
+				],
+			},
+		},
 	],
 	CleverDripper: [
 		{
@@ -284,6 +306,29 @@ export const brewingMethods: BrewingMethods = {
 						detail: "打开阀门等等滴滤完成",
 						pourType: "center",
 						valveStatus: "open",
+					},
+				],
+			},
+		},
+
+		{
+			name: "夏季八冲(全宇宙最多人使用的咖啡冲煮手法)",
+			params: {
+				coffee: "(略)",
+				water: "(略)",
+				ratio: "(略)",
+				grindSize: "(略)",
+				temp: "(略)",
+				videoUrl: "",
+				roastLevel: "(略)",
+				stages: [
+					{
+						time: 0,
+						pourTime: 0,
+						label: "(略)",
+						water: "0g",
+						detail: "(略)",
+						pourType: "other",
 					},
 				],
 			},
