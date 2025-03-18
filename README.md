@@ -1,10 +1,9 @@
 # 咖啡冲泡指南 (Brew Guide)
 
 一个现代化的咖啡冲泡助手应用，帮助咖啡爱好者记录和优化他们的冲泡过程。
+=======
+![版本](https://img.shields.io/badge/版本-2.2.6-blue)
 
-**目前代码太烂，要重构了！！！**
-
-![版本](https://img.shields.io/badge/版本-2.2.5-blue)
 
 ## 功能特点
 

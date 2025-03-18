@@ -46,6 +46,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     const [currentWaterAmount, setCurrentWaterAmount] = useState(0)
     const [countdownTime, setCountdownTime] = useState<number | null>(null)
     const [hasStartedOnce, setHasStartedOnce] = useState(false)
+    const [isCompleted, setIsCompleted] = useState(false)
     const audioContext = useRef<AudioContext | null>(null)
     const audioBuffers = useRef<{
         start: AudioBuffer | null;
@@ -237,13 +238,16 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     }, [timerId])
 
     const handleComplete = useCallback(() => {
+        if (isCompleted) return
+
         clearTimerAndStates()
         setIsRunning(false)
         setShowComplete(true)
+        setIsCompleted(true)
         onComplete?.(true, currentTime)
         onTimerComplete?.()
         playSound('correct')
-    }, [clearTimerAndStates, onComplete, onTimerComplete, playSound, currentTime])
+    }, [clearTimerAndStates, onComplete, onTimerComplete, playSound, currentTime, isCompleted])
 
     const startMainTimer = useCallback(() => {
         if (currentBrewingMethod) {
@@ -351,6 +355,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         setCurrentWaterAmount(0)
         setCountdownTime(null)
         setHasStartedOnce(false)
+        setIsCompleted(false)
     }, [clearTimerAndStates])
 
     useEffect(() => {

@@ -356,7 +356,7 @@ const PourOverRecipes = () => {
     // 添加主导航状态
     const [activeMainTab, setActiveMainTab] = useState<MainTabType>('冲煮');
     // 修改冲煮步骤状态
-    const [activeBrewingStep, setActiveBrewingStep] = useState<BrewingStep>('coffeeBean');
+    const [activeBrewingStep, setActiveBrewingStep] = useState<BrewingStep>('equipment');
 
     const [activeTab, setActiveTab] = useState<TabType>('器具')
     const [selectedEquipment, setSelectedEquipment] = useState<string | null>(null)
