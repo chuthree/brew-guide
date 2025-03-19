@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { BrewingNote } from '@/lib/config'
-import type { BrewingNoteData } from '@/app/page'
+import type { BrewingNoteData } from '@/app/types'
 import BrewingNoteForm from './BrewingNoteForm'
 import { Storage } from '@/lib/storage'
 import {

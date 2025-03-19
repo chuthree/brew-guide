@@ -11,8 +11,8 @@ import React, { useState, useEffect } from 'react'
 //     return `${mins}:${secs.toString().padStart(2, '0')}`
 // }
 
-// 从 page.tsx 导入 BrewingNoteData 类型
-import type { BrewingNoteData } from '@/app/page'
+// 从 types.ts 导入 BrewingNoteData 类型
+import type { BrewingNoteData } from '@/app/types'
 import { generateOptimizationJson } from '@/lib/jsonUtils'
 import { brewingMethods, type Method, type Stage } from '@/lib/config'
 import { Storage } from '@/lib/storage'

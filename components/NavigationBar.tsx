@@ -21,10 +21,11 @@ const noScrollbarStyle = `
 type TabType = '器具' | '方案' | '注水' | '记录';
 
 // 添加新的主导航类型
-type MainTabType = '冲煮' | '咖啡豆' | '笔记';
+// type MainTabType = '冲煮' | '咖啡豆' | '笔记';
+type MainTabType = '冲煮' | '笔记';
 // 修改冲煮步骤类型
-type BrewingStep = 'coffeeBean' | 'equipment' | 'method' | 'brewing' | 'notes';
-
+// type BrewingStep = 'coffeeBean' | 'equipment' | 'method' | 'brewing' | 'notes';
+type BrewingStep = 'equipment' | 'method' | 'brewing' | 'notes';
 // Add new interface for parameter display
 interface ParameterInfo {
     equipment: string | null
@@ -74,7 +75,7 @@ const TabButton = ({
     return (
         <div
             onClick={!isDisabled ? handleClick : undefined}
-            className={`text-[11px] tracking-widest transition-all duration-300 ${className} ${isActive
+            className={`text-[12px] tracking-widest transition-all duration-300 ${className} ${isActive
                 ? 'text-neutral-800 dark:text-neutral-100'
                 : isCompleted
                     ? 'cursor-pointer text-neutral-600 dark:text-neutral-400'
@@ -100,7 +101,7 @@ const TabButton = ({
                         opacity: isActive ? 1 : 0,
                         scaleX: isActive ? 1 : 0
                     }}
-                    transition={{ duration: 0.2, ease: "easeInOut" }}
+                    transition={{ duration: 0.26, ease: "easeInOut" }}
                     style={{ transformOrigin: 'center' }}
                 />
             </span>
@@ -119,7 +120,7 @@ const StepIndicator = ({
     disabledSteps?: BrewingStep[]
 }) => {
     const steps: { label: string; value: BrewingStep }[] = [
-        { label: '咖啡豆', value: 'coffeeBean' },
+        // { label: '咖啡豆', value: 'coffeeBean' },
         { label: '器具', value: 'equipment' },
         { label: '方案', value: 'method' },
         { label: '注水', value: 'brewing' },
@@ -175,7 +176,7 @@ const StepIndicator = ({
             className="flex items-center justify-between w-full"
             initial={{ opacity: 0, y: 5 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, ease: "easeOut" }}
+            transition={{ duration: 0.26, ease: "easeOut" }}
         >
             {steps.map((step, index) => (
                 <React.Fragment key={step.value}>
@@ -183,7 +184,7 @@ const StepIndicator = ({
                         tab={step.label}
                         isActive={currentStep === step.value}
                         isDisabled={disabledSteps.includes(step.value)}
-                        isCompleted={index < currentIndex || (currentStep === 'coffeeBean' && step.value === 'equipment' && !disabledSteps.includes(step.value))}
+                        isCompleted={index < currentIndex}
                         onClick={() => handleStepClick(step.value)}
                         className="text-[10px] sm:text-xs"
                     />
@@ -199,7 +200,7 @@ const StepIndicator = ({
                                         ? 'rgb(64, 64, 64)' // dark:neutral-700
                                         : 'rgb(229, 231, 235)' // neutral-200
                             }}
-                            transition={{ duration: 0.3 }}
+                            transition={{ duration: 0.26 }}
                         />
                     )}
                 </React.Fragment>
@@ -336,7 +337,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
     // 获取禁用的步骤
     const getDisabledSteps = (): BrewingStep[] => {
         const disabled: BrewingStep[] = [];
-        const stepOrder = ['coffeeBean', 'equipment', 'method', 'brewing', 'notes'];
+        const stepOrder = ['equipment', 'method', 'brewing', 'notes'];
 
         // 当前步骤索引
         const currentStepIndex = stepOrder.indexOf(activeBrewingStep);
@@ -345,13 +346,13 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
         // 所有后续步骤都被禁用，用户必须按顺序完成当前步骤后系统才会自动导航
         for (let i = 0; i < stepOrder.length; i++) {
             // 添加一个例外：如果处于coffeeBean步骤，但已经选择了设备，则可以点击器具步骤
-            if (activeBrewingStep === 'coffeeBean' && i === 1 && selectedEquipment) {
-                // 不禁用器具步骤
-                continue;
-            }
+            // if (activeBrewingStep === 'coffeeBean' && i === 1 && selectedEquipment) {
+            //     // 不禁用器具步骤
+            //     continue;
+            // }
 
             // 禁用所有当前步骤之后的步骤，咖啡豆步骤除外
-            if (i > currentStepIndex && stepOrder[i] !== 'coffeeBean') {
+            if (i > currentStepIndex) {
                 disabled.push(stepOrder[i] as BrewingStep);
             }
         }
@@ -480,8 +481,8 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
             if (activeMainTab === '笔记') {
                 setShowHistory(false);
             }
-        } else if (tab === '咖啡豆') {
-            setActiveMainTab('咖啡豆');
+            // } else if (tab === '咖啡豆') {
+            //     setActiveMainTab('咖啡豆');
         } else if (tab === '笔记') {
             setActiveMainTab('笔记');
             setShowHistory(true);
@@ -490,7 +491,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
 
     return (
         <div
-            className="sticky top-0 z-10 pt-safe bg-neutral-50/95 dark:bg-neutral-900/95 border-b border-neutral-200 dark:border-neutral-800"
+            className="sticky top-0 z-10 pt-safe bg-neutral-50/95 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800"
             style={{ paddingTop: 'max(env(safe-area-inset-top), 24px)' }}
         >
             {/* 添加隐藏滚动条的样式 */}
@@ -520,12 +521,12 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                             onClick={() => handleMainTabClick('冲煮')}
                             className="text-[10px] sm:text-xs"
                         />
-                        <TabButton
+                        {/* <TabButton
                             tab="咖啡豆"
                             isActive={activeMainTab === '咖啡豆'}
                             onClick={() => handleMainTabClick('咖啡豆')}
                             className="text-[10px] sm:text-xs"
-                        />
+                        /> */}
                         <TabButton
                             tab="笔记"
                             isActive={activeMainTab === '笔记'}
@@ -566,7 +567,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                         // 点击设备名称时，跳转到器具步骤
                                         setActiveBrewingStep('equipment');
                                         setActiveTab('器具');
-                                        // 修复：不完全清空参数信息条，保留当前设备名称
+                                        // 保持当前设备名称
                                         setParameterInfo({
                                             equipment: parameterInfo.equipment,
                                             method: null,

@@ -3,11 +3,20 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import BrewingNoteForm from '@/components/BrewingNoteForm'
-import type { BrewingNoteData } from '@/app/page'
+import type { BrewingNoteData } from '@/app/types'
 import type { Method } from '@/lib/config'
 import type { SettingsOptions } from '@/components/Settings'
 import { KeepAwake } from '@capacitor-community/keep-awake'
 import hapticsUtils from '@/lib/haptics'
+
+// 添加是否支持KeepAwake的检查
+const isKeepAwakeSupported = () => {
+    try {
+        return typeof KeepAwake !== 'undefined';
+    } catch {
+        return false;
+    }
+};
 
 // Helper function to format time
 const formatTime = (seconds: number, compact: boolean = false) => {
@@ -98,7 +107,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     useEffect(() => {
         const initAudioSystem = () => {
             try {
-                if (typeof AudioContext !== 'undefined') {
+                if (typeof window !== 'undefined' && 'AudioContext' in window) {
                     audioContext.current = new AudioContext()
 
                     const loadAudio = async () => {
@@ -264,16 +273,31 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
 
     useEffect(() => {
         const handleKeepAwake = async () => {
+            // 检查是否支持KeepAwake
+            if (!isKeepAwakeSupported()) {
+                // 静默处理，不显示错误
+                return;
+            }
+
             try {
                 if (isRunning) {
                     await KeepAwake.keepAwake();
-                    console.log('屏幕保持常亮已启用');
+                    // 避免在生产环境显示非关键日志
+                    if (process.env.NODE_ENV !== 'production') {
+                        console.log('屏幕保持常亮已启用');
+                    }
                 } else if (!isRunning && hasStartedOnce) {
                     await KeepAwake.allowSleep();
-                    console.log('屏幕保持常亮已禁用');
+                    if (process.env.NODE_ENV !== 'production') {
+                        console.log('屏幕保持常亮已禁用');
+                    }
                 }
-            } catch (error) {
-                console.error('无法控制屏幕常亮状态:', error);
+            } catch {
+                // 静默处理错误，避免在控制台显示
+                // 如果需要调试，可以在开发环境下启用
+                if (process.env.NODE_ENV !== 'production') {
+                    console.log('屏幕常亮功能不可用');
+                }
             }
         };
 
@@ -281,10 +305,14 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
 
         return () => {
             const cleanup = async () => {
+                if (!isKeepAwakeSupported()) {
+                    return;
+                }
+
                 try {
                     await KeepAwake.allowSleep();
-                } catch (error) {
-                    console.error('无法恢复屏幕休眠状态:', error);
+                } catch {
+                    // 静默处理错误
                 }
             };
             cleanup();
@@ -304,10 +332,14 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         playSound('correct')
 
         const allowSleep = async () => {
+            if (!isKeepAwakeSupported()) {
+                return;
+            }
+
             try {
                 await KeepAwake.allowSleep();
-            } catch (error) {
-                console.error('无法恢复屏幕休眠状态:', error);
+            } catch {
+                // 静默处理错误
             }
         };
         allowSleep();
@@ -425,10 +457,14 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         setIsCompleted(false)
 
         const allowSleep = async () => {
+            if (!isKeepAwakeSupported()) {
+                return;
+            }
+
             try {
                 await KeepAwake.allowSleep();
-            } catch (error) {
-                console.error('无法恢复屏幕休眠状态:', error);
+            } catch {
+                // 静默处理错误
             }
         };
         allowSleep();
@@ -503,10 +539,13 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.26 }}
-                className="px-6 sticky bottom-0 border-t border-neutral-200 bg-neutral-50 pt-6 dark:border-neutral-800 dark:bg-neutral-900"
+                className="px-6 sticky bottom-0 border-t border-neutral-200 bg-neutral-50 pt-6 dark:border-neutral-800 dark:bg-neutral-900 pb-safe"
                 style={{
-                    willChange: "transform, opacity"
+                    willChange: "transform, opacity",
+                    paddingBottom: 'max(env(safe-area-inset-bottom), 28px)'
                 }}
+
+
             >
                 <div className="mb-4 space-y-3">
                     <motion.div
