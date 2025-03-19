@@ -101,11 +101,15 @@ const TabContent: React.FC<TabContentProps> = ({
                     key={`content-${activeTab}`}
                     initial={transitionState.source === 'main-tab-click'
                         ? { opacity: 0, y: 10 }
-                        : { opacity: 0, y: 5 }}
+                        : transitionState.source === 'method-type-change'
+                            ? { opacity: 0, y: 5 }
+                            : { opacity: 0, y: 5 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={transitionState.source === 'main-tab-click'
                         ? { opacity: 0, y: 5 }
-                        : { opacity: 0, y: -5 }}
+                        : transitionState.source === 'method-type-change'
+                            ? { opacity: 0, y: -5 }
+                            : { opacity: 0, y: -5 }}
                     transition={{
                         duration: 0.3,
                         ease: "easeOut"
@@ -142,76 +146,102 @@ const TabContent: React.FC<TabContentProps> = ({
 
                             {activeTab === '方案' ? (
                                 <div className="space-y-5 pb-16">
-                                    {methodType === 'custom' && (
-                                        <div className="flex space-x-2 mb-4">
-                                            <motion.button
-                                                onClick={() => setShowCustomForm(true)}
-                                                whileHover={{ scale: 1.02 }}
-                                                whileTap={{ scale: 0.98 }}
-                                                className="flex-1 flex items-center justify-center py-3 border border-dashed border-neutral-300 rounded-md text-xs text-neutral-500 dark:border-neutral-800 dark:text-neutral-400 transition-colors"
-                                            >
-                                                <span className="mr-1">+</span> 新建方案
-                                            </motion.button>
-                                            <motion.button
-                                                onClick={() => setShowImportForm(true)}
-                                                whileHover={{ scale: 1.02 }}
-                                                whileTap={{ scale: 0.98 }}
-                                                className="flex-1 flex items-center justify-center py-3 border border-dashed border-neutral-300 rounded-md text-xs text-neutral-500 dark:border-neutral-800 dark:text-neutral-400 transition-colors"
-                                            >
-                                                <span className="mr-1">↓</span> 导入方案
-                                            </motion.button>
-                                        </div>
-                                    )}
+                                    <AnimatePresence mode="wait" initial={false}>
+                                        <motion.div
+                                            key={`method-type-${methodType}-${selectedBrand?.name || 'none'}`}
+                                            initial={{ opacity: 0, y: 5 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: -5 }}
+                                            transition={{
+                                                duration: 0.3,
+                                                ease: "easeOut"
+                                            }}
+                                            className="space-y-5"
+                                        >
+                                            {methodType === 'custom' && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, y: 5 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    exit={{ opacity: 0, y: -5 }}
+                                                    transition={{ duration: 0.3, ease: "easeOut" }}
+                                                    className="flex space-x-2 mb-4"
+                                                >
+                                                    <motion.button
+                                                        onClick={() => setShowCustomForm(true)}
+                                                        whileHover={{ scale: 1.02 }}
+                                                        whileTap={{ scale: 0.98 }}
+                                                        className="flex-1 flex items-center justify-center py-3 border border-dashed border-neutral-300 rounded-md text-xs text-neutral-500 dark:border-neutral-800 dark:text-neutral-400 transition-colors"
+                                                    >
+                                                        <span className="mr-1">+</span> 新建方案
+                                                    </motion.button>
+                                                    <motion.button
+                                                        onClick={() => setShowImportForm(true)}
+                                                        whileHover={{ scale: 1.02 }}
+                                                        whileTap={{ scale: 0.98 }}
+                                                        className="flex-1 flex items-center justify-center py-3 border border-dashed border-neutral-300 rounded-md text-xs text-neutral-500 dark:border-neutral-800 dark:text-neutral-400 transition-colors"
+                                                    >
+                                                        <span className="mr-1">↓</span> 导入方案
+                                                    </motion.button>
+                                                </motion.div>
+                                            )}
 
-                                    {/* 品牌方案标题 */}
-                                    {methodType === 'brand' && selectedBrand && (
-                                        <div className="mb-4 text-xs text-neutral-500 dark:text-neutral-400">
-                                            {selectedBrand.name} 官方冲煮方案
-                                        </div>
-                                    )}
+                                            {/* 品牌方案标题 */}
+                                            {methodType === 'brand' && selectedBrand && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, y: 5 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    exit={{ opacity: 0, y: -5 }}
+                                                    transition={{ duration: 0.3, ease: "easeOut" }}
+                                                    className="mb-4 text-xs text-neutral-500 dark:text-neutral-400"
+                                                >
+                                                    {selectedBrand.name} 官方冲煮方案
+                                                </motion.div>
+                                            )}
 
-                                    <div className="space-y-5">
-                                        {content[activeTab]?.steps.map((step: Step, index: number) => (
-                                            <motion.div
-                                                key={step.methodId || `${step.title}-${index}`}
-                                                initial={{ opacity: 0, y: 10 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                exit={{ opacity: 0, y: 5 }}
-                                                transition={{
-                                                    duration: 0.3,
-                                                    delay: index * 0.03,
-                                                    ease: "easeOut"
-                                                }}
-                                            >
-                                                <StageItem
-                                                    step={step}
-                                                    index={index}
-                                                    onClick={() => {
-                                                        if (activeTab === '器具' as TabType) {
-                                                            onEquipmentSelect(step.title);
-                                                        } else if (activeTab === '方案' as TabType) {
-                                                            onMethodSelect(index);
-                                                        }
-                                                    }}
-                                                    activeTab={activeTab}
-                                                    selectedMethod={selectedMethod}
-                                                    currentStage={currentStage}
-                                                    onEdit={activeTab === '方案' as TabType && methodType === 'custom' && customMethods[selectedEquipment!] ? () => {
-                                                        const method = customMethods[selectedEquipment!][index];
-                                                        onEditMethod(method);
-                                                    } : undefined}
-                                                    onDelete={activeTab === '方案' as TabType && methodType === 'custom' && customMethods[selectedEquipment!] ? () => {
-                                                        const method = customMethods[selectedEquipment!][index];
-                                                        onDeleteMethod(method);
-                                                    } : undefined}
-                                                    actionMenuStates={actionMenuStates}
-                                                    setActionMenuStates={setActionMenuStates}
-                                                    selectedEquipment={selectedEquipment}
-                                                    customMethods={customMethods}
-                                                />
-                                            </motion.div>
-                                        ))}
-                                    </div>
+                                            <div className="space-y-5">
+                                                {content[activeTab]?.steps.map((step: Step, index: number) => (
+                                                    <motion.div
+                                                        key={step.methodId || `${step.title}-${index}`}
+                                                        initial={{ opacity: 0, y: 10 }}
+                                                        animate={{ opacity: 1, y: 0 }}
+                                                        exit={{ opacity: 0, y: 5 }}
+                                                        transition={{
+                                                            duration: 0.3,
+                                                            delay: index * 0.03,
+                                                            ease: "easeOut"
+                                                        }}
+                                                    >
+                                                        <StageItem
+                                                            step={step}
+                                                            index={index}
+                                                            onClick={() => {
+                                                                if (activeTab === '器具' as TabType) {
+                                                                    onEquipmentSelect(step.title);
+                                                                } else if (activeTab === '方案' as TabType) {
+                                                                    onMethodSelect(index);
+                                                                }
+                                                            }}
+                                                            activeTab={activeTab}
+                                                            selectedMethod={selectedMethod}
+                                                            currentStage={currentStage}
+                                                            onEdit={activeTab === '方案' as TabType && methodType === 'custom' && customMethods[selectedEquipment!] ? () => {
+                                                                const method = customMethods[selectedEquipment!][index];
+                                                                onEditMethod(method);
+                                                            } : undefined}
+                                                            onDelete={activeTab === '方案' as TabType && methodType === 'custom' && customMethods[selectedEquipment!] ? () => {
+                                                                const method = customMethods[selectedEquipment!][index];
+                                                                onDeleteMethod(method);
+                                                            } : undefined}
+                                                            actionMenuStates={actionMenuStates}
+                                                            setActionMenuStates={setActionMenuStates}
+                                                            selectedEquipment={selectedEquipment}
+                                                            customMethods={customMethods}
+                                                        />
+                                                    </motion.div>
+                                                ))}
+                                            </div>
+                                        </motion.div>
+                                    </AnimatePresence>
                                 </div>
                             ) : (
                                 <div className="space-y-5">

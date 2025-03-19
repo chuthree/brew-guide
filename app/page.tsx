@@ -1,28 +1,22 @@
 'use client'
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import React, { useState, useEffect } from 'react'
+import { motion as m, AnimatePresence } from 'framer-motion'
 import dynamic from 'next/dynamic'
-import { equipmentList, APP_VERSION, equipmentMapping, defaultBrewingMethod, brandList } from '@/lib/config'
+import { equipmentList, APP_VERSION } from '@/lib/config'
 import { Storage } from '@/lib/storage'
 import { initCapacitor } from './capacitor'
 import type { BrewingNoteData } from '@/app/types'
-import { saveBrewingNote, getBrewingNotes } from '@/lib/localNotes'
-import { customMethods as customMethodsAPI } from '@/lib/customMethods'
-
-// 导入自定义Hooks
 import { useBrewingState, MainTabType } from '@/lib/hooks/useBrewingState'
 import { useBrewingParameters } from '@/lib/hooks/useBrewingParameters'
 import { useBrewingContent } from '@/lib/hooks/useBrewingContent'
 import { useMethodSelector } from '@/lib/hooks/useMethodSelector'
 import { EditableParams } from '@/lib/hooks/useBrewingParameters'
-import type { Method } from '@/lib/config'
-
-// 导入组件
 import CustomMethodFormModal from '@/components/CustomMethodFormModal'
 import NavigationBar from '@/components/NavigationBar'
 import Settings, { SettingsOptions, defaultSettings } from '@/components/Settings'
 import TabContent from '@/components/TabContent'
 import MethodTypeSelector from '@/components/MethodTypeSelector'
+import Onboarding from '@/components/Onboarding'
 
 // 添加内容转换状态类型
 interface TransitionState {
@@ -250,12 +244,26 @@ const PourOverRecipes = () => {
 
     // 处理方法类型切换
     const handleMethodTypeChange = (type: 'common' | 'brand' | 'custom') => {
+        // 设置动画过渡状态
+        setTransitionState({
+            isTransitioning: true,
+            source: 'method-type-change'
+        });
+
         setMethodType(type);
 
         if (type !== 'brand') {
             setSelectedBrand(null);
             setSelectedBean(null);
         }
+
+        // 延长到350ms确保动画完成
+        setTimeout(() => {
+            setTransitionState({
+                isTransitioning: false,
+                source: ''
+            });
+        }, 350);
     };
 
     // 重置品牌选择
@@ -419,6 +427,43 @@ const PourOverRecipes = () => {
         }, 350);
     };
 
+    const [showOnboarding, setShowOnboarding] = useState(false)
+
+    // 初始化设置
+    useEffect(() => {
+        const initSettings = async () => {
+            try {
+                const savedSettings = await Storage.get('brewGuideSettings')
+                if (savedSettings) {
+                    setSettings(JSON.parse(savedSettings))
+                }
+
+                // 检查是否是首次使用
+                const onboardingCompleted = await Storage.get('onboardingCompleted')
+                setShowOnboarding(!onboardingCompleted)
+            } catch (error) {
+                console.error('初始化设置失败:', error)
+            }
+        }
+
+        initSettings()
+    }, [])
+
+    // 处理设置变更
+    const handleSettingsChange = async (newSettings: SettingsOptions) => {
+        try {
+            setSettings(newSettings)
+            await Storage.set('brewGuideSettings', JSON.stringify(newSettings))
+        } catch (error) {
+            console.error('保存设置失败:', error)
+        }
+    }
+
+    // 处理引导完成
+    const handleOnboardingComplete = () => {
+        setShowOnboarding(false)
+    }
+
     return (
         <div className="flex h-full flex-col overflow-hidden mx-auto max-w-[500px] font-mono text-neutral-800 dark:text-neutral-100">
             {/* 使用 NavigationBar 组件替换原有的导航栏 */}
@@ -446,7 +491,7 @@ const PourOverRecipes = () => {
             <div className="flex-1 overflow-y-auto">
                 <AnimatePresence mode="wait" initial={false}>
                     {activeMainTab === '笔记' ? (
-                        <motion.div
+                        <m.div
                             key="history"
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -460,9 +505,9 @@ const PourOverRecipes = () => {
                                 onOptimizingChange={(isOptimizing) => setIsOptimizing(isOptimizing)}
                                 onJumpToImport={jumpToImport}
                             />
-                        </motion.div>
+                        </m.div>
                     ) : activeTab === '记录' ? (
-                        <motion.div
+                        <m.div
                             key="note-form"
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -492,10 +537,10 @@ const PourOverRecipes = () => {
                                 }}
                                 onJumpToImport={jumpToImport}
                             />
-                        </motion.div>
+                        </m.div>
                     ) : (
                         // 为TabContent添加单独的motion.div包装，确保在主标签切换时有动画效果
-                        <motion.div
+                        <m.div
                             key="brew-content"
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -531,7 +576,7 @@ const PourOverRecipes = () => {
                                 onDeleteMethod={handleDeleteCustomMethod}
                                 transitionState={transitionState}
                             />
-                        </motion.div>
+                        </m.div>
                     )}
                 </AnimatePresence>
             </div>
@@ -540,7 +585,7 @@ const PourOverRecipes = () => {
             <AnimatePresence mode="wait" initial={false}>
                 {/* 方案类型选择器 */}
                 {activeMainTab === '冲煮' && activeBrewingStep === 'method' && selectedEquipment && (
-                    <motion.div
+                    <m.div
                         key="method-selector"
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -555,12 +600,12 @@ const PourOverRecipes = () => {
                             onSelectMethodType={handleMethodTypeChange}
                             onResetBrand={handleResetBrand}
                         />
-                    </motion.div>
+                    </m.div>
                 )}
 
                 {/* 计时器 */}
                 {activeMainTab === '冲煮' && activeBrewingStep === 'brewing' && currentBrewingMethod && !showHistory && (
-                    <motion.div
+                    <m.div
                         key="brewing-timer"
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -581,7 +626,7 @@ const PourOverRecipes = () => {
                             settings={settings}
                             onJumpToImport={jumpToImport}
                         />
-                    </motion.div>
+                    </m.div>
                 )}
             </AnimatePresence>
 
@@ -608,6 +653,14 @@ const PourOverRecipes = () => {
                 setSettings={setSettings}
                 onDataChange={handleDataChange}
             />
+
+            {/* 引导组件 */}
+            {showOnboarding && (
+                <Onboarding
+                    onSettingsChange={handleSettingsChange}
+                    onComplete={handleOnboardingComplete}
+                />
+            )}
         </div>
     )
 }
