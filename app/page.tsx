@@ -59,8 +59,6 @@ const PourOverRecipes = () => {
         showComplete, setShowComplete,
         currentTime, setCurrentTime,
         methodType, setMethodType,
-        selectedBrand, setSelectedBrand,
-        selectedBean, setSelectedBean,
         countdownTime, setCountdownTime,
         isPourVisualizerPreloaded,
         customMethods, setCustomMethods,
@@ -90,7 +88,6 @@ const PourOverRecipes = () => {
     const contentHooks = useBrewingContent({
         selectedEquipment,
         methodType,
-        selectedBrand,
         customMethods,
         selectedMethod
     });
@@ -100,8 +97,6 @@ const PourOverRecipes = () => {
     const methodSelector = useMethodSelector({
         selectedEquipment,
         methodType,
-        selectedBrand,
-        selectedBean,
         customMethods,
         setSelectedMethod,
         setCurrentBrewingMethod,
@@ -109,9 +104,7 @@ const PourOverRecipes = () => {
         setParameterInfo,
         setActiveTab,
         setActiveBrewingStep,
-        updateBrewingSteps,
-        setSelectedBean,
-        setSelectedBrand
+        updateBrewingSteps
     });
 
     const { handleMethodSelect } = methodSelector;
@@ -243,7 +236,7 @@ const PourOverRecipes = () => {
     };
 
     // 处理方法类型切换
-    const handleMethodTypeChange = (type: 'common' | 'brand' | 'custom') => {
+    const handleMethodTypeChange = (type: 'common' | 'custom') => {
         // 设置动画过渡状态
         setTransitionState({
             isTransitioning: true,
@@ -252,11 +245,6 @@ const PourOverRecipes = () => {
 
         setMethodType(type);
 
-        if (type !== 'brand') {
-            setSelectedBrand(null);
-            setSelectedBean(null);
-        }
-
         // 延长到350ms确保动画完成
         setTimeout(() => {
             setTransitionState({
@@ -264,12 +252,6 @@ const PourOverRecipes = () => {
                 source: ''
             });
         }, 350);
-    };
-
-    // 重置品牌选择
-    const handleResetBrand = () => {
-        setSelectedBrand(null);
-        setSelectedBean(null);
     };
 
     // 添加一个新的状态来跟踪是否是保存后的跳转
@@ -528,12 +510,7 @@ const PourOverRecipes = () => {
                                     equipment: selectedEquipment ? (equipmentList.find(e => e.id === selectedEquipment)?.name || selectedEquipment) : undefined,
                                     method: currentBrewingMethod?.name,
                                     params: currentBrewingMethod?.params,
-                                    totalTime: currentTime,
-                                    coffeeBeanInfo: methodType === 'brand' && selectedBean ? {
-                                        name: selectedBean.name,
-                                        roastLevel: selectedBean.roastLevel,
-                                        roastDate: '',
-                                    } : undefined
+                                    totalTime: currentTime
                                 }}
                                 onJumpToImport={jumpToImport}
                             />
@@ -561,7 +538,6 @@ const PourOverRecipes = () => {
                                 selectedEquipment={selectedEquipment}
                                 countdownTime={countdownTime}
                                 methodType={methodType}
-                                selectedBrand={selectedBrand}
                                 customMethods={customMethods}
                                 actionMenuStates={actionMenuStates}
                                 setActionMenuStates={setActionMenuStates}
@@ -594,11 +570,8 @@ const PourOverRecipes = () => {
                     >
                         <MethodTypeSelector
                             methodType={methodType}
-                            selectedEquipment={selectedEquipment}
-                            selectedBrand={selectedBrand}
                             settings={settings}
                             onSelectMethodType={handleMethodTypeChange}
-                            onResetBrand={handleResetBrand}
                         />
                     </m.div>
                 )}

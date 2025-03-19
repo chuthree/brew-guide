@@ -1,13 +1,10 @@
 import { useCallback } from "react";
 import { Method } from "@/lib/config";
 import { ParameterInfo, EditableParams } from "./useBrewingParameters";
-import { Brand, CoffeeBean } from "./useBrewingState";
 
 export interface UseMethodSelectorProps {
 	selectedEquipment: string | null;
-	methodType: "common" | "brand" | "custom";
-	selectedBrand: Brand | null;
-	selectedBean: CoffeeBean | null;
+	methodType: "common" | "custom";
 	customMethods: Record<string, Method[]>;
 	setSelectedMethod: (method: Method | null) => void;
 	setCurrentBrewingMethod: (method: Method | null) => void;
@@ -27,14 +24,11 @@ export interface UseMethodSelectorProps {
 			time: number;
 		}>
 	) => void;
-	setSelectedBean: (bean: CoffeeBean | null) => void;
-	setSelectedBrand: (brand: Brand | null) => void;
 }
 
 export function useMethodSelector({
 	selectedEquipment,
 	methodType,
-	selectedBrand,
 	customMethods,
 	setSelectedMethod,
 	setCurrentBrewingMethod,
@@ -43,8 +37,6 @@ export function useMethodSelector({
 	setActiveTab,
 	setActiveBrewingStep,
 	updateBrewingSteps,
-	setSelectedBean,
-	setSelectedBrand,
 }: UseMethodSelectorProps) {
 	// 处理选中的方法
 	const processSelectedMethod = useCallback(
@@ -106,43 +98,20 @@ export function useMethodSelector({
 
 				if (methodType === "common") {
 					// 导入commonMethods
-					import("@/lib/config").then(
-						({ brewingMethods: commonMethods }) => {
-							method =
-								commonMethods[
-									selectedEquipment as keyof typeof commonMethods
-								][methodIndex];
-							processSelectedMethod(method);
-						}
-					);
-				} else if (methodType === "brand") {
-					if (selectedBrand) {
-						const bean = selectedBrand.beans[methodIndex];
-						setSelectedBean(bean);
-						method = bean.method;
+					import("@/lib/config").then(({ commonMethods }) => {
+						method =
+							commonMethods[
+								selectedEquipment as keyof typeof commonMethods
+							][methodIndex];
 						processSelectedMethod(method);
-					} else {
-						// 选择品牌但还没有选择具体的豆子
-						import("@/lib/config").then(({ brandCoffees }) => {
-							setSelectedBrand(brandCoffees[methodIndex]);
-						});
-						return; // 仅选择品牌，不选择方案
-					}
+					});
 				} else if (methodType === "custom") {
 					method = customMethods[selectedEquipment][methodIndex];
 					processSelectedMethod(method);
 				}
 			}
 		},
-		[
-			selectedEquipment,
-			methodType,
-			selectedBrand,
-			customMethods,
-			setSelectedBean,
-			setSelectedBrand,
-			processSelectedMethod,
-		]
+		[selectedEquipment, methodType, customMethods, processSelectedMethod]
 	);
 
 	return {

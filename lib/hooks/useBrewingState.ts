@@ -30,8 +30,7 @@ export interface Content {
 	};
 	方案: {
 		steps: Step[];
-		type: "common" | "brand" | "custom";
-		selectedBrand?: Brand | null;
+		type: "common" | "custom";
 	};
 	注水: {
 		steps: Step[];
@@ -40,19 +39,6 @@ export interface Content {
 		steps: Step[];
 	};
 }
-
-export type Brand = {
-	name: string;
-	description: string;
-	beans: CoffeeBean[];
-};
-
-export type CoffeeBean = {
-	name: string;
-	description: string;
-	roastLevel: string;
-	method: Method;
-};
 
 export function useBrewingState() {
 	// 添加主导航状态
@@ -75,11 +61,7 @@ export function useBrewingState() {
 	const [showComplete, setShowComplete] = useState(false);
 	const [currentTime, setCurrentTime] = useState(0);
 
-	const [methodType, setMethodType] = useState<"common" | "brand" | "custom">(
-		"common"
-	);
-	const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null);
-	const [selectedBean, setSelectedBean] = useState<CoffeeBean | null>(null);
+	const [methodType, setMethodType] = useState<"common" | "custom">("common");
 
 	const [countdownTime, setCountdownTime] = useState<number | null>(null);
 	const [isPourVisualizerPreloaded, setIsPourVisualizerPreloaded] =
@@ -300,13 +282,6 @@ export function useBrewingState() {
 			// 设置新的设备
 			setSelectedEquipment(equipment);
 
-			// 如果选择的是聪明杯，确保方案类型不是品牌方案
-			if (equipment === "CleverDripper" && methodType === "brand") {
-				setMethodType("common");
-				setSelectedBrand(null);
-				setSelectedBean(null);
-			}
-
 			// 设置步骤和标签
 			setActiveTab("方案");
 			setActiveBrewingStep("method");
@@ -314,7 +289,7 @@ export function useBrewingState() {
 			// 返回实际的设备名称，以便外部函数使用
 			return equipmentName;
 		},
-		[activeMainTab, methodType]
+		[activeMainTab]
 	);
 
 	// 加载自定义方案
@@ -460,10 +435,6 @@ export function useBrewingState() {
 		setCurrentTime,
 		methodType,
 		setMethodType,
-		selectedBrand,
-		setSelectedBrand,
-		selectedBean,
-		setSelectedBean,
 		countdownTime,
 		setCountdownTime,
 		isPourVisualizerPreloaded,

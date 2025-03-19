@@ -3,9 +3,8 @@ import {
 	Method,
 	brewingMethods as commonMethods,
 	equipmentList,
-	brandCoffees,
 } from "@/lib/config";
-import { Content, Brand } from "./useBrewingState";
+import { Content } from "./useBrewingState";
 
 // 格式化时间工具函数
 export const formatTime = (seconds: number, compact: boolean = false) => {
@@ -24,8 +23,7 @@ export const formatTime = (seconds: number, compact: boolean = false) => {
 
 export interface UseBrewingContentProps {
 	selectedEquipment: string | null;
-	methodType: "common" | "brand" | "custom";
-	selectedBrand: Brand | null;
+	methodType: "common" | "custom";
 	customMethods: Record<string, Method[]>;
 	selectedMethod: Method | null;
 }
@@ -33,7 +31,6 @@ export interface UseBrewingContentProps {
 export function useBrewingContent({
 	selectedEquipment,
 	methodType,
-	selectedBrand,
 	customMethods,
 	selectedMethod,
 }: UseBrewingContentProps) {
@@ -62,18 +59,9 @@ export function useBrewingContent({
 	// 更新方案列表内容
 	useEffect(() => {
 		if (selectedEquipment) {
-			// 修改聪明杯的处理逻辑，只禁用品牌方案，允许自定义方案
-			let currentMethodType = methodType;
-			if (
-				selectedEquipment === "CleverDripper" &&
-				methodType === "brand"
-			) {
-				currentMethodType = "common";
-			}
-
 			setContent((prev) => {
 				const methodsForEquipment =
-					currentMethodType === "custom"
+					methodType === "custom"
 						? customMethods[selectedEquipment] || []
 						: commonMethods[
 								selectedEquipment as keyof typeof commonMethods
@@ -82,10 +70,9 @@ export function useBrewingContent({
 				return {
 					...prev,
 					方案: {
-						type: currentMethodType,
-						selectedBrand,
+						type: methodType,
 						steps:
-							currentMethodType === "common"
+							methodType === "common"
 								? methodsForEquipment.map((method) => {
 										const totalTime =
 											method.params.stages[
@@ -104,21 +91,6 @@ export function useBrewingContent({
 											note: "",
 										};
 								  })
-								: currentMethodType === "brand"
-								? selectedBrand
-									? selectedBrand.beans.map((bean) => ({
-											title: bean.name,
-											items: [
-												bean.description,
-												`烘焙度：${bean.roastLevel}`,
-											],
-											note: "",
-									  }))
-									: brandCoffees.map((brand) => ({
-											title: brand.name,
-											items: [brand.description],
-											note: "",
-									  }))
 								: methodsForEquipment.map((method) => ({
 										title: method.name,
 										methodId: method.id,
@@ -139,7 +111,7 @@ export function useBrewingContent({
 				};
 			});
 		}
-	}, [selectedEquipment, methodType, selectedBrand, customMethods]);
+	}, [selectedEquipment, methodType, customMethods]);
 
 	// 更新注水步骤内容
 	const updateBrewingSteps = (

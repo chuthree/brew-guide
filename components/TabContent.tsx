@@ -4,7 +4,7 @@ import dynamic from 'next/dynamic';
 import { Method } from '@/lib/config';
 import StageItem from '@/components/StageItem';
 import { SettingsOptions } from './Settings';
-import { TabType, MainTabType, Content, Brand, Step } from '@/lib/hooks/useBrewingState';
+import { TabType, MainTabType, Content, Step } from '@/lib/hooks/useBrewingState';
 
 // 添加TransitionState接口
 interface TransitionState {
@@ -34,8 +34,7 @@ interface TabContentProps {
     isPourVisualizerPreloaded: boolean;
     selectedEquipment: string | null;
     countdownTime: number | null;
-    methodType: 'common' | 'brand' | 'custom';
-    selectedBrand: Brand | null;
+    methodType: 'common' | 'custom';
     customMethods: Record<string, Method[]>;
     actionMenuStates: Record<string, boolean>;
     setActionMenuStates: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
@@ -64,7 +63,6 @@ const TabContent: React.FC<TabContentProps> = ({
     selectedEquipment,
     countdownTime,
     methodType,
-    selectedBrand,
     customMethods,
     actionMenuStates,
     setActionMenuStates,
@@ -148,7 +146,7 @@ const TabContent: React.FC<TabContentProps> = ({
                                 <div className="space-y-5 pb-16">
                                     <AnimatePresence mode="wait" initial={false}>
                                         <motion.div
-                                            key={`method-type-${methodType}-${selectedBrand?.name || 'none'}`}
+                                            key={`method-type-${methodType}`}
                                             initial={{ opacity: 0, y: 5 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             exit={{ opacity: 0, y: -5 }}
@@ -182,19 +180,6 @@ const TabContent: React.FC<TabContentProps> = ({
                                                     >
                                                         <span className="mr-1">↓</span> 导入方案
                                                     </motion.button>
-                                                </motion.div>
-                                            )}
-
-                                            {/* 品牌方案标题 */}
-                                            {methodType === 'brand' && selectedBrand && (
-                                                <motion.div
-                                                    initial={{ opacity: 0, y: 5 }}
-                                                    animate={{ opacity: 1, y: 0 }}
-                                                    exit={{ opacity: 0, y: -5 }}
-                                                    transition={{ duration: 0.3, ease: "easeOut" }}
-                                                    className="mb-4 text-xs text-neutral-500 dark:text-neutral-400"
-                                                >
-                                                    {selectedBrand.name} 官方冲煮方案
                                                 </motion.div>
                                             )}
 
