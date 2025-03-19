@@ -1,131 +1,165 @@
+"use client";
+
+import { Capacitor } from "@capacitor/core";
 import { Haptics, ImpactStyle, NotificationType } from "@capacitor/haptics";
 
 /**
- * 触感反馈工具类
- *
- * 提供各种触感反馈功能，适配移动设备
- * - impact: 轻、中、重不同级别的触感反馈
- * - notification: 成功、警告、错误等状态反馈
- * - vibrate: 自定义振动模式
+ * 触感反馈类型
  */
-export const hapticFeedback = {
-	/**
-	 * 轻触反馈 - 用于普通点击、轻微交互
-	 */
-	light: async () => {
-		try {
-			await Haptics.impact({ style: ImpactStyle.Light });
-		} catch {
-			console.log("Haptics not available");
-		}
-	},
+export enum HapticFeedbackType {
+	/** 轻触反馈 - 用于普通UI元素点击 */
+	LIGHT = "light",
+	/** 中等触感 - 用于重要操作确认 */
+	MEDIUM = "medium",
+	/** 重触感 - 用于关键操作完成 */
+	HEAVY = "heavy",
+	/** 成功通知 */
+	SUCCESS = "success",
+	/** 警告通知 */
+	WARNING = "warning",
+	/** 错误通知 */
+	ERROR = "error",
+}
 
-	/**
-	 * 中等触感 - 用于确认操作、重要切换
-	 */
-	medium: async () => {
-		try {
-			await Haptics.impact({ style: ImpactStyle.Medium });
-		} catch {
-			console.log("Haptics not available");
-		}
-	},
-
-	/**
-	 * 重触感 - 用于重要操作、强调反馈
-	 */
-	heavy: async () => {
-		try {
-			await Haptics.impact({ style: ImpactStyle.Heavy });
-		} catch {
-			console.log("Haptics not available");
-		}
-	},
-
-	/**
-	 * 成功触感 - 用于操作成功完成
-	 */
-	success: async () => {
-		try {
-			await Haptics.notification({ type: NotificationType.Success });
-		} catch {
-			console.log("Haptics not available");
-		}
-	},
-
-	/**
-	 * 警告触感 - 用于需要注意的操作
-	 */
-	warning: async () => {
-		try {
-			await Haptics.notification({ type: NotificationType.Warning });
-		} catch {
-			console.log("Haptics not available");
-		}
-	},
-
-	/**
-	 * 错误触感 - 用于操作被拒绝或错误
-	 */
-	error: async () => {
-		try {
-			await Haptics.notification({ type: NotificationType.Error });
-		} catch {
-			console.log("Haptics not available");
-		}
-	},
-
-	/**
-	 * 自定义振动模式
-	 * @param {number} duration - 振动持续时间（毫秒）
-	 */
-	vibrate: async (duration: number = 300) => {
-		try {
-			await Haptics.vibrate({ duration });
-		} catch {
-			console.log("Haptics not available");
-		}
-	},
-
-	/**
-	 * 多次振动
-	 * 可用于计时器等特殊场景
-	 * @param {number} count - 振动次数
-	 * @param {number} interval - 振动间隔（毫秒）
-	 * @param {number} duration - 每次振动持续时间（毫秒）
-	 */
-	vibrateMultiple: async (
-		count: number = 3,
-		interval: number = 150,
-		duration: number = 100
-	) => {
-		try {
-			for (let i = 0; i < count; i++) {
-				await Haptics.vibrate({ duration });
-				if (i < count - 1) {
-					await new Promise((resolve) =>
-						setTimeout(resolve, interval)
-					);
-				}
-			}
-		} catch {
-			console.log("Haptics not available");
-		}
-	},
-
-	/**
-	 * 根据设备环境检测是否支持触感反馈
-	 * @returns {Promise<boolean>} - 是否支持触感反馈
-	 */
-	isSupported: async (): Promise<boolean> => {
-		try {
-			// 尝试一个简单的触感来检测是否支持
-			await Haptics.impact({ style: ImpactStyle.Light });
-			return true;
-		} catch {
-			return false;
-		}
-	},
+/**
+ * 检查设备是否支持触感反馈
+ * @returns 返回一个Promise<boolean>，表示设备是否支持触感反馈
+ */
+export const isHapticsSupported = async (): Promise<boolean> => {
+	return Capacitor.isPluginAvailable("Haptics");
 };
 
-export default hapticFeedback;
+/**
+ * 提供触感反馈功能
+ *
+ * @param type 触感类型
+ * @returns 返回一个Promise
+ */
+export const impactFeedback = async (
+	type: HapticFeedbackType = HapticFeedbackType.LIGHT
+): Promise<void> => {
+	try {
+		switch (type) {
+			case HapticFeedbackType.LIGHT:
+				await Haptics.impact({ style: ImpactStyle.Light });
+				break;
+			case HapticFeedbackType.MEDIUM:
+				await Haptics.impact({ style: ImpactStyle.Medium });
+				break;
+			case HapticFeedbackType.HEAVY:
+				await Haptics.impact({ style: ImpactStyle.Heavy });
+				break;
+			case HapticFeedbackType.SUCCESS:
+				await Haptics.notification({ type: NotificationType.Success });
+				break;
+			case HapticFeedbackType.WARNING:
+				await Haptics.notification({ type: NotificationType.Warning });
+				break;
+			case HapticFeedbackType.ERROR:
+				await Haptics.notification({ type: NotificationType.Error });
+				break;
+			default:
+				await Haptics.impact({ style: ImpactStyle.Light });
+		}
+	} catch (error) {
+		console.error("触感反馈失败:", error);
+		// 静默失败，不影响用户体验
+	}
+};
+
+/**
+ * 震动反馈
+ *
+ * @param duration 震动持续时间（毫秒）
+ */
+export const vibrate = async (duration: number = 100): Promise<void> => {
+	try {
+		await Haptics.vibrate({ duration });
+	} catch (error) {
+		console.error("震动反馈失败:", error);
+		// 静默失败，不影响用户体验
+	}
+};
+
+/**
+ * 多次震动
+ *
+ * @param count 震动次数
+ * @param duration 每次震动持续时间
+ * @param interval 震动间隔时间
+ */
+export const vibrateMultiple = async (
+	count: number = 3,
+	duration: number = 100,
+	interval: number = 100
+): Promise<void> => {
+	try {
+		for (let i = 0; i < count; i++) {
+			await Haptics.vibrate({ duration });
+			if (i < count - 1) {
+				// 最后一次震动后不需要等待
+				await new Promise((resolve) => setTimeout(resolve, interval));
+			}
+		}
+	} catch (error) {
+		console.error("多次震动反馈失败:", error);
+		// 静默失败，不影响用户体验
+	}
+};
+
+/**
+ * 开始选择触感反馈
+ */
+export const selectionStart = async (): Promise<void> => {
+	try {
+		await Haptics.selectionStart();
+	} catch (error) {
+		console.error("选择开始触感反馈失败:", error);
+	}
+};
+
+/**
+ * 选择变化触感反馈
+ */
+export const selectionChanged = async (): Promise<void> => {
+	try {
+		await Haptics.selectionChanged();
+	} catch (error) {
+		console.error("选择变化触感反馈失败:", error);
+	}
+};
+
+/**
+ * 结束选择触感反馈
+ */
+export const selectionEnd = async (): Promise<void> => {
+	try {
+		await Haptics.selectionEnd();
+	} catch (error) {
+		console.error("选择结束触感反馈失败:", error);
+	}
+};
+
+/**
+ * 为了兼容现有代码，提供与旧函数名对应的别名
+ */
+export const hapticFeedback = impactFeedback;
+
+// 导出所有函数作为默认导出
+const hapticsUtils = {
+	isSupported: isHapticsSupported,
+	impact: impactFeedback,
+	light: () => impactFeedback(HapticFeedbackType.LIGHT),
+	medium: () => impactFeedback(HapticFeedbackType.MEDIUM),
+	heavy: () => impactFeedback(HapticFeedbackType.HEAVY),
+	success: () => impactFeedback(HapticFeedbackType.SUCCESS),
+	warning: () => impactFeedback(HapticFeedbackType.WARNING),
+	error: () => impactFeedback(HapticFeedbackType.ERROR),
+	vibrate,
+	vibrateMultiple,
+	selectionStart,
+	selectionChanged,
+	selectionEnd,
+};
+
+export default hapticsUtils;

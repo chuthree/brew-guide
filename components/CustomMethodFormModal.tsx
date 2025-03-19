@@ -82,6 +82,7 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
                                     onSave={onSaveCustomMethod}
                                     onCancel={onCloseCustomForm}
                                     initialMethod={editingMethod}
+                                    selectedEquipment={selectedEquipment}
                                 />
                             </motion.div>
                         </motion.div>

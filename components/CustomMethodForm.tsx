@@ -10,6 +10,7 @@ interface CustomMethodFormProps {
     onSave: (method: Method) => void
     onCancel: () => void
     initialMethod?: Method
+    selectedEquipment?: string | null
 }
 
 // 定义步骤类型
@@ -19,6 +20,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     onSave,
     onCancel,
     initialMethod,
+    selectedEquipment,
 }) => {
     // 当前步骤状态
     const [currentStep, setCurrentStep] = useState<Step>('name')
@@ -35,10 +37,37 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     const [method, setMethod] = useState<Method>(() => {
         // 如果有初始方法，直接使用
         if (initialMethod) {
+            // 如果是聪明杯，确保从标签中移除阀门状态标记
+            if (selectedEquipment === 'CleverDripper' && initialMethod.params.stages) {
+                const cleanedMethod = { ...initialMethod };
+                cleanedMethod.params = { ...initialMethod.params };
+                cleanedMethod.params.stages = initialMethod.params.stages.map(stage => ({
+                    ...stage,
+                    label: stage.label.replace(/\s*\[开阀\]|\s*\[关阀\]/g, '').trim()
+                }));
+                return cleanedMethod;
+            }
             return initialMethod;
         }
 
         // 否则创建新方法，并预设第一个步骤和基本参数
+        const initialStage: Stage = {
+            time: 25,
+            pourTime: 10,
+            label: '焖蒸',
+            water: '30g', // 咖啡粉量的2倍
+            detail: '使咖啡粉充分吸水并释放气体，提升萃取效果',
+            pourType: 'circle',
+            ...(selectedEquipment === 'CleverDripper' ? { valveStatus: 'closed' as 'closed' | 'open' } : {})
+        };
+
+        // 不再自动给步骤名称添加阀门状态
+        /* 
+        if (selectedEquipment === 'CleverDripper') {
+            initialStage.label = '焖蒸 [关阀]';
+        }
+        */
+
         return {
             name: '',
             params: {
@@ -48,16 +77,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                 grindSize: '中细',
                 temp: '92°C',
                 videoUrl: '',
-                stages: [
-                    {
-                        time: 25,
-                        pourTime: 10,
-                        label: '焖蒸',
-                        water: '30g', // 咖啡粉量的2倍
-                        detail: '使咖啡粉充分吸水并释放气体，提升萃取效果',
-                        pourType: 'circle',
-                    }
-                ],
+                stages: [initialStage],
             },
         };
     })
@@ -200,6 +220,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
             water: '',
             detail: '',
             pourType: '' as 'center' | 'circle' | 'other', // 不预设注水方式，但保持类型正确
+            ...(selectedEquipment === 'CleverDripper' ? { valveStatus: 'closed' as 'closed' | 'open' } : {}) // 如果是聪明杯，默认设置阀门状态为关闭
         };
 
         setMethod({
@@ -251,11 +272,21 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         // 创建一个方法的深拷贝，以便修改
         const finalMethod = JSON.parse(JSON.stringify(method)) as Method;
 
-        // 不需要处理 ID，因为 Method 类型中没有 id 属性
-        // 在 app/page.tsx 中会根据方法名称进行匹配和更新
-
-        // 注意：不再计算累计值，直接使用用户输入的值
-        // 因为表单中用户已经直接输入了累计值
+        // 如果是聪明杯，将阀门状态添加到步骤名称中
+        if (selectedEquipment === 'CleverDripper' && finalMethod.params.stages) {
+            finalMethod.params.stages = finalMethod.params.stages.map(stage => {
+                if (stage.valveStatus) {
+                    const valveStatusText = stage.valveStatus === 'open' ? '[开阀]' : '[关阀]';
+                    // 确保没有重复添加
+                    const baseLabel = stage.label.replace(/\s*\[开阀\]|\s*\[关阀\]/g, '').trim();
+                    return {
+                        ...stage,
+                        label: `${baseLabel} ${valveStatusText}`.trim()
+                    };
+                }
+                return stage;
+            });
+        }
 
         // 保存方法
         onSave(finalMethod);
@@ -405,6 +436,30 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         })
     }
 
+    // 处理阀门状态变更 - 直接切换开关状态
+    const toggleValveStatus = (index: number) => {
+        const newStages = [...method.params.stages]
+        const stage = { ...newStages[index] }
+
+        // 切换阀门状态
+        const newStatus = stage.valveStatus === 'open' ? 'closed' : 'open'
+        stage.valveStatus = newStatus
+
+        // 我们不再修改标签内容，只更新阀门状态
+        // 保留原始的标签内容，移除可能已存在的阀门状态标记
+        const baseLabel = stage.label.replace(/\s*\[开阀\]|\s*\[关阀\]/g, '')
+        stage.label = baseLabel.trim()
+
+        newStages[index] = stage
+        setMethod({
+            ...method,
+            params: {
+                ...method.params,
+                stages: newStages,
+            },
+        })
+    }
+
     // 计算当前已使用的水量
     const calculateCurrentWater = () => {
         // 如果没有步骤，返回0
@@ -488,17 +543,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                                         value={method.name}
                                         onChange={(e) => setMethod({ ...method, name: e.target.value })}
                                         placeholder="叫做..."
-                                        autoFocus={false}
-                                        onFocus={(e) => {
-                                            // 防止自动聚焦时弹出键盘
-                                            if (!e.currentTarget.dataset.userInitiated) {
-                                                e.currentTarget.blur();
-                                            }
-                                        }}
-                                        onClick={(e) => {
-                                            // 标记用户主动点击
-                                            e.currentTarget.dataset.userInitiated = 'true';
-                                        }}
+                                        autoFocus={true}
                                         className={`
                                             text-center text-lg py-2 bg-transparent outline-none
                                             focus:border-neutral-800 dark:focus:border-neutral-400
@@ -667,7 +712,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                                     </div>
 
                                     <div className="space-y-6">
-                                        <div className="grid grid-cols-2 gap-6">
+                                        <div className="grid grid-cols-3 gap-6">
                                             <div className="space-y-2">
                                                 <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
                                                     注水方式
@@ -683,17 +728,31 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                                                     <option value="other">其他方式</option>
                                                 </select>
                                             </div>
-                                            <div className="space-y-2">
+                                            <div className="col-span-2 space-y-2">
                                                 <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
                                                     步骤名称
                                                 </label>
-                                                <input
-                                                    type="text"
-                                                    value={stage.label}
-                                                    onChange={(e) => handleStageChange(index, 'label', e.target.value)}
-                                                    placeholder="请输入步骤名称"
-                                                    className="w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
-                                                />
+                                                <div className="relative">
+                                                    <input
+                                                        type="text"
+                                                        value={stage.label}
+                                                        onChange={(e) => handleStageChange(index, 'label', e.target.value)}
+                                                        placeholder="请输入步骤名称"
+                                                        className="w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
+                                                    />
+                                                    {selectedEquipment === 'CleverDripper' && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => toggleValveStatus(index)}
+                                                            className={`absolute right-0 bottom-2 px-2 py-1 text-xs rounded ${stage.valveStatus === 'open'
+                                                                ? 'text-green-600 dark:text-green-400'
+                                                                : 'text-red-600 dark:text-red-400'
+                                                                }`}
+                                                        >
+                                                            {stage.valveStatus === 'open' ? '[开阀]' : '[关阀]'}
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
 
@@ -930,13 +989,23 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                         !!method.params.grindSize.trim();
                 case 'stages':
                     return method.params.stages.length > 0 &&
-                        method.params.stages.every(stage =>
-                            stage.time > 0 &&
-                            !!stage.label.trim() &&
-                            !!stage.water.trim() &&
-                            !!stage.detail.trim() &&
-                            !!stage.pourType
-                        );
+                        method.params.stages.every(stage => {
+                            // 基本验证
+                            const basicValidation =
+                                stage.time > 0 &&
+                                !!stage.label.trim() &&
+                                !!stage.water.trim() &&
+                                !!stage.detail.trim() &&
+                                !!stage.pourType;
+
+                            // 如果是聪明杯，验证阀门状态
+                            if (selectedEquipment === 'CleverDripper') {
+                                return basicValidation &&
+                                    (stage.valveStatus === 'open' || stage.valveStatus === 'closed');
+                            }
+
+                            return basicValidation;
+                        });
                 default:
                     return true;
             }

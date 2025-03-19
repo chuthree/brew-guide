@@ -43,6 +43,7 @@ interface BrewingNoteFormProps {
     onSave: (data: BrewingNoteData) => void;
     initialData: Partial<BrewingNoteData>;
     showOptimizationByDefault?: boolean;
+    onJumpToImport?: () => void;
 }
 
 const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
@@ -52,6 +53,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     onSave,
     initialData,
     showOptimizationByDefault = false,
+    onJumpToImport,
 }) => {
     const [formData, setFormData] = useState<FormData>({
         coffeeBeanInfo: {
@@ -128,8 +130,10 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                 : [noteData, ...existingNotes];
 
             await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
+            // 只调用onSave，不调用onClose
+            // 让onSave函数处理导航逻辑
             onSave(noteData);
-            onClose();
+            // 不再调用onClose
         } catch (error) {
             console.error('Error saving note:', error);
             alert('保存笔记时出错，请重试');
@@ -655,7 +659,42 @@ stages数组中的每个阶段必须包含以下字段：
                                             将提示词复制给 AI(推荐 DeepSeek)
                                         </div>
                                         <div className="flex space-x-4">
-
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    copyTextToClipboard(optimizationPrompt)
+                                                        .then(() => {
+                                                            // 成功复制后显示提示并跳转
+                                                            alert('提示词已复制到剪贴板，正在跳转到方案导入页面...');
+                                                            // 保存当前数据
+                                                            const noteData = {
+                                                                id: id || Date.now().toString(),
+                                                                timestamp: Date.now(),
+                                                                ...formData,
+                                                                equipment: initialData.equipment,
+                                                                method: initialData.method,
+                                                                params: initialData.params,
+                                                                totalTime: initialData.totalTime,
+                                                            };
+                                                            // 先调用onSave保存当前数据
+                                                            onSave(noteData);
+                                                            // 如果有跳转回调，调用它
+                                                            if (onJumpToImport) {
+                                                                onJumpToImport();
+                                                            } else {
+                                                                // 没有跳转回调，仅关闭当前窗口
+                                                                onClose();
+                                                            }
+                                                        })
+                                                        .catch(err => {
+                                                            console.error('复制失败:', err);
+                                                            alert('复制失败，请手动复制');
+                                                        })
+                                                }}
+                                                className="text-[10px] tracking-widest text-emerald-600 font-medium transition-colors dark:text-emerald-500 hover:text-emerald-700 dark:hover:text-emerald-400"
+                                            >
+                                                [ 复制并跳转 ]
+                                            </button>
                                             <button
                                                 type="button"
                                                 onClick={() => {
@@ -666,9 +705,9 @@ stages数组中的每个阶段必须包含以下字段：
                                                             alert('复制失败，请手动复制');
                                                         })
                                                 }}
-                                                className="text-[10px] tracking-widest text-neutral-500 transition-colors dark:text-neutral-500"
+                                                className="text-[10px] tracking-widest text-neutral-500 transition-colors dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-400"
                                             >
-                                                [ 复制提示词 ]
+                                                [ 仅复制 ]
                                             </button>
                                         </div>
                                     </div>

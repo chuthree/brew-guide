@@ -6,11 +6,37 @@ import type { BrewingNote } from '@/lib/config'
 import type { BrewingNoteData } from '@/app/page'
 import BrewingNoteForm from './BrewingNoteForm'
 import { Storage } from '@/lib/storage'
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from './ui/select'
+
+// 排序类型定义
+const SORT_OPTIONS = {
+    TIME_DESC: 'time_desc',
+    TIME_ASC: 'time_asc',
+    RATING_DESC: 'rating_desc',
+    RATING_ASC: 'rating_asc',
+} as const;
+
+type SortOption = typeof SORT_OPTIONS[keyof typeof SORT_OPTIONS];
+
+// 排序选项的显示名称
+const SORT_LABELS: Record<SortOption, string> = {
+    [SORT_OPTIONS.TIME_DESC]: '时间 (新→旧)',
+    [SORT_OPTIONS.TIME_ASC]: '时间 (旧→新)',
+    [SORT_OPTIONS.RATING_DESC]: '评分 (高→低)',
+    [SORT_OPTIONS.RATING_ASC]: '评分 (低→高)',
+};
 
 interface BrewingHistoryProps {
     isOpen: boolean
     onClose: () => void
     onOptimizingChange?: (isOptimizing: boolean) => void
+    onJumpToImport?: () => void
 }
 
 const formatDate = (timestamp: number) => {
@@ -26,12 +52,29 @@ const formatRating = (rating: number) => {
     return `[ ${rating}/5 ]`
 }
 
-const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingChange }) => {
+const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingChange, onJumpToImport }) => {
     const [notes, setNotes] = useState<BrewingNote[]>([])
     const [editingNote, setEditingNote] = useState<BrewingNote | null>(null)
     const [optimizingNote, setOptimizingNote] = useState<BrewingNote | null>(null)
     const [actionMenuStates, setActionMenuStates] = useState<Record<string, boolean>>({})
     const [copySuccess, setCopySuccess] = useState<Record<string, boolean>>({})
+    const [sortOption, setSortOption] = useState<SortOption>(SORT_OPTIONS.TIME_DESC)
+
+    // 排序笔记的函数
+    const sortNotes = (notesToSort: BrewingNote[], option: SortOption): BrewingNote[] => {
+        switch (option) {
+            case SORT_OPTIONS.TIME_DESC:
+                return [...notesToSort].sort((a, b) => b.timestamp - a.timestamp)
+            case SORT_OPTIONS.TIME_ASC:
+                return [...notesToSort].sort((a, b) => a.timestamp - b.timestamp)
+            case SORT_OPTIONS.RATING_DESC:
+                return [...notesToSort].sort((a, b) => b.rating - a.rating)
+            case SORT_OPTIONS.RATING_ASC:
+                return [...notesToSort].sort((a, b) => a.rating - b.rating)
+            default:
+                return notesToSort
+        }
+    }
 
     // 添加本地存储变化监听
     useEffect(() => {
@@ -39,7 +82,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
             try {
                 const savedNotes = await Storage.get('brewingNotes')
                 const parsedNotes = savedNotes ? JSON.parse(savedNotes) : []
-                setNotes(parsedNotes.sort((a: BrewingNote, b: BrewingNote) => b.timestamp - a.timestamp))
+                setNotes(sortNotes(parsedNotes, sortOption))
             } catch (error) {
                 console.error('Error loading notes:', error)
                 setNotes([])
@@ -58,14 +101,19 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
 
         window.addEventListener('storage', handleStorageChange)
         return () => window.removeEventListener('storage', handleStorageChange)
-    }, [])
+    }, [sortOption])
+
+    useEffect(() => {
+        // 当排序选项变化时，重新排序笔记
+        setNotes(prevNotes => sortNotes([...prevNotes], sortOption))
+    }, [sortOption])
 
     const handleDelete = async (noteId: string) => {
         if (window.confirm('确定要删除这条笔记吗？')) {
             try {
                 const updatedNotes = notes.filter(note => note.id !== noteId)
                 await Storage.set('brewingNotes', JSON.stringify(updatedNotes))
-                setNotes(updatedNotes)
+                setNotes(sortNotes(updatedNotes, sortOption))
             } catch (error) {
                 console.error('Error deleting note:', error)
                 alert('删除笔记时出错，请重试')
@@ -139,7 +187,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                 : note
         )
         await Storage.set('brewingNotes', JSON.stringify(updatedNotes))
-        setNotes(updatedNotes)
+        setNotes(sortNotes(updatedNotes, sortOption))
         setEditingNote(null)
     }
 
@@ -269,6 +317,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                         }}
                         initialData={optimizingNote as unknown as Partial<BrewingNoteData>}
                         showOptimizationByDefault={true}
+                        onJumpToImport={onJumpToImport}
                     />
                 </motion.div>
             ) : (
@@ -292,6 +341,50 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                         </motion.div>
                     ) : (
                         <div className="space-y-6 p-6">
+                            {/* 排序控件 */}
+                            <div className="flex justify-between items-center mb-6">
+                                <div className="text-xs tracking-wide text-neutral-400 dark:text-neutral-500">
+                                    共 {notes.length} 条记录
+                                </div>
+                                <Select
+                                    value={sortOption}
+                                    onValueChange={(value) => setSortOption(value as SortOption)}
+                                >
+                                    <SelectTrigger
+                                        variant="minimal"
+                                        className="w-auto min-w-[90px] tracking-wide text-neutral-400 dark:text-neutral-500 hover:text-neutral-600 dark:hover:text-neutral-400 transition-colors group"
+                                    >
+                                        <div className="flex items-center">
+                                            <SelectValue />
+                                            <svg
+                                                className="mr-1 w-3 h-3 opacity-90 transition-opacity"
+                                                viewBox="0 0 15 15"
+                                                fill="none"
+                                                xmlns="http://www.w3.org/2000/svg"
+                                            >
+                                                <path d="M4.5 6.5L7.5 3.5L10.5 6.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+                                                <path d="M4.5 8.5L7.5 11.5L10.5 8.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+                                            </svg>
+                                        </div>
+                                    </SelectTrigger>
+                                    <SelectContent
+                                        position="popper"
+                                        sideOffset={5}
+                                        className="border-neutral-200/70 dark:border-neutral-800/70 shadow-lg backdrop-blur-sm bg-white/95 dark:bg-neutral-900/95 rounded-lg overflow-hidden"
+                                    >
+                                        {Object.values(SORT_OPTIONS).map((value) => (
+                                            <SelectItem
+                                                key={value}
+                                                value={value}
+                                                className="tracking-wide text-neutral-400 dark:text-neutral-500 data-[highlighted]:text-neutral-600 dark:data-[highlighted]:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800/70 transition-colors"
+                                            >
+                                                {SORT_LABELS[value]}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
                             {notes.map((note, index) => (
                                 <motion.div
                                     key={note.id}

@@ -7,7 +7,7 @@ import type { BrewingNoteData } from '@/app/page'
 import type { Method } from '@/lib/config'
 import type { SettingsOptions } from '@/components/Settings'
 import { KeepAwake } from '@capacitor-community/keep-awake'
-import hapticFeedback from '@/lib/haptics'
+import hapticsUtils from '@/lib/haptics'
 
 // Helper function to format time
 const formatTime = (seconds: number, compact: boolean = false) => {
@@ -30,6 +30,7 @@ interface BrewingTimerProps {
     onComplete?: (isComplete: boolean, totalTime?: number) => void
     onCountdownChange?: (time: number | null) => void
     settings: SettingsOptions
+    onJumpToImport?: () => void
 }
 
 const BrewingTimer: React.FC<BrewingTimerProps> = ({
@@ -40,6 +41,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     onComplete,
     onCountdownChange,
     settings,
+    onJumpToImport,
 }) => {
     const [currentTime, setCurrentTime] = useState(0)
     const [isRunning, setIsRunning] = useState(false)
@@ -78,7 +80,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     // 检查设备是否支持触感反馈
     useEffect(() => {
         const checkHapticsSupport = async () => {
-            const supported = await hapticFeedback.isSupported();
+            const supported = await hapticsUtils.isSupported();
             setIsHapticsSupported(supported);
         };
 
@@ -86,9 +88,9 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     }, []);
 
     // 封装触感调用函数
-    const triggerHaptic = useCallback(async (type: keyof typeof hapticFeedback) => {
-        if (isHapticsSupported && settings.hapticFeedback && typeof hapticFeedback[type] === 'function') {
-            await hapticFeedback[type]();
+    const triggerHaptic = useCallback(async (type: keyof typeof hapticsUtils) => {
+        if (isHapticsSupported && settings.hapticFeedback && typeof hapticsUtils[type] === 'function') {
+            await hapticsUtils[type]();
         }
     }, [isHapticsSupported, settings.hapticFeedback]);
 
@@ -501,7 +503,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.26 }}
-                className="sticky bottom-0 border-t border-neutral-200 bg-neutral-50 pt-6 dark:border-neutral-800 dark:bg-neutral-900"
+                className="px-6 sticky bottom-0 border-t border-neutral-200 bg-neutral-50 pt-6 dark:border-neutral-800 dark:bg-neutral-900"
                 style={{
                     willChange: "transform, opacity"
                 }}
@@ -785,6 +787,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                                 params: currentBrewingMethod.params,
                                 totalTime: currentTime,
                             }}
+                            onJumpToImport={onJumpToImport}
                         />
                     </motion.div>
                 )}

@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import dynamic from 'next/dynamic'
 import { brewingMethods as commonMethods, equipmentList, brandCoffees, APP_VERSION, type Method, type Stage, type Brand, type CoffeeBean } from '@/lib/config'
@@ -9,7 +9,7 @@ import NavigationBar from '@/components/NavigationBar'
 import Settings, { SettingsOptions, defaultSettings } from '@/components/Settings'
 import { initCapacitor } from './capacitor'
 import { Storage } from '@/lib/storage'
-import hapticFeedback from '@/lib/haptics'
+import hapticsUtils from '@/lib/haptics'
 
 // 动态导入客户端组件
 const BrewingTimer = dynamic(() => import('@/components/BrewingTimer'), { ssr: false })
@@ -387,6 +387,8 @@ const PourOverRecipes = () => {
     const [actionMenuStates, setActionMenuStates] = useState<Record<string, boolean>>({})
     // 添加导入方案表单状态
     const [showImportForm, setShowImportForm] = useState(false)
+    // 添加优化状态追踪
+    const [isOptimizing, setIsOptimizing] = useState(false)
 
     // 添加设置相关状态
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -394,6 +396,92 @@ const PourOverRecipes = () => {
         // 使用默认设置作为初始值，稍后在 useEffect 中异步加载
         return defaultSettings;
     });
+
+    // 在PourOverRecipes组件的开头添加前一个标签的引用
+    const prevMainTabRef = useRef<MainTabType | null>(null);
+
+    // 添加从笔记页面跳转到导入方案页面的函数
+    const jumpToImport = useCallback(async () => {
+        try {
+            // 重置优化状态
+            if (isOptimizing) {
+                setIsOptimizing(false);
+            }
+
+            // 1. 获取当前优化笔记的器具信息
+            const notesStr = await Storage.get('brewingNotes');
+            if (!notesStr) return;
+
+            const notes = JSON.parse(notesStr);
+            // 获取最新的笔记（通常是刚刚保存的优化笔记）
+            const latestNote = notes[0];
+            if (!latestNote || !latestNote.equipment) return;
+
+            // 2. 切换到冲煮页面
+            setActiveMainTab('冲煮');
+            // 3. 隐藏历史记录
+            setShowHistory(false);
+
+            // 4. 查找对应的设备ID
+            const equipmentId = equipmentList.find(e => e.name === latestNote.equipment)?.id || latestNote.equipment;
+
+            // 5. 使用setTimeout确保状态更新完成后再执行后续操作
+            setTimeout(() => {
+                // 6. 选择对应的器具
+                setSelectedEquipment(equipmentId);
+                // 7. 设置冲煮步骤为"method"
+                setActiveBrewingStep('method');
+                // 8. 设置标签为"方案"
+                setActiveTab('方案');
+                // 9. 设置为自定义方案模式
+                setMethodType('custom');
+
+                // 10. 等待界面更新后显示导入表单
+                setTimeout(() => {
+                    setShowImportForm(true);
+                }, 100);
+            }, 100);
+        } catch (error) {
+            console.error('获取笔记数据失败:', error);
+            // 发生错误时的备用方案：直接跳转到冲煮页面
+            setActiveMainTab('冲煮');
+            setShowHistory(false);
+            setTimeout(() => {
+                setMethodType('custom');
+                setShowImportForm(true);
+            }, 100);
+        }
+    }, [isOptimizing]);
+
+    // 在其他状态定义之后，添加resetBrewingState函数
+    const resetBrewingState = useCallback(() => {
+        // 记住当前选择的设备，以便保留设备选择状态
+        const currentEquipment = selectedEquipment;
+        const equipmentName = currentEquipment ?
+            (equipmentList.find(e => e.id === currentEquipment)?.name || currentEquipment) : null;
+
+        // 重置所有冲煮相关状态到初始值
+        setActiveBrewingStep('coffeeBean');
+        // 不重置设备选择，允许用户从咖啡豆步骤返回到之前的设备
+        // setSelectedEquipment(null); 
+        setSelectedMethod(null);
+        setCurrentBrewingMethod(null);
+        setEditableParams(null);
+        setShowComplete(false);
+        setCurrentStage(-1);
+        setIsTimerRunning(false);
+        setCountdownTime(null);
+
+        // 更新参数信息，保留设备信息但清除方案信息
+        setParameterInfo({
+            equipment: equipmentName,
+            method: null,
+            params: null,
+        });
+
+        // 设置标签为器具，这样用户可以继续选择器具
+        setActiveTab('器具');
+    }, [selectedEquipment]);
 
     // 添加异步加载设置的 useEffect
     useEffect(() => {
@@ -427,7 +515,7 @@ const PourOverRecipes = () => {
             // 映射旧的 activeTab 到新的 activeBrewingStep
             switch (activeTab) {
                 case '器具':
-                    setActiveBrewingStep('equipment');
+                    setActiveBrewingStep(activeBrewingStep === 'coffeeBean' ? 'coffeeBean' : 'equipment');
                     break;
                 case '方案':
                     setActiveBrewingStep('method');
@@ -442,7 +530,7 @@ const PourOverRecipes = () => {
                     break;
             }
         }
-    }, [activeTab, activeMainTab, showHistory]);
+    }, [activeTab, activeMainTab, showHistory, activeBrewingStep]);
 
     // 处理主导航标签切换
     useEffect(() => {
@@ -455,6 +543,7 @@ const PourOverRecipes = () => {
             // 不需要额外操作，因为参数信息条已经通过条件渲染控制只在冲煮标签显示
         } else if (activeMainTab === '冲煮') {
             // 切换回冲煮标签时，根据当前步骤恢复显示参数信息条和步骤指示器
+
             // 如果当前步骤是咖啡豆，确保参数信息条为空
             if (activeBrewingStep === 'coffeeBean') {
                 setParameterInfo({
@@ -515,8 +604,8 @@ const PourOverRecipes = () => {
 
     useEffect(() => {
         if (selectedEquipment) {
-            // 如果是聪明杯，强制使用通用方案
-            if (selectedEquipment === 'CleverDripper' && methodType !== 'common') {
+            // 修改聪明杯的处理逻辑，只禁用品牌方案，允许自定义方案
+            if (selectedEquipment === 'CleverDripper' && methodType === 'brand') {
                 setMethodType('common');
                 setSelectedBrand(null);
                 setSelectedBean(null);
@@ -641,8 +730,8 @@ const PourOverRecipes = () => {
         // 设置新的设备
         setSelectedEquipment(equipment);
 
-        // 如果选择的是聪明杯，确保方案类型设置为通用方案
-        if (equipment === 'CleverDripper') {
+        // 如果选择的是聪明杯，确保方案类型不是品牌方案
+        if (equipment === 'CleverDripper' && methodType === 'brand') {
             setMethodType('common');
             setSelectedBrand(null);
             setSelectedBean(null);
@@ -926,8 +1015,13 @@ const PourOverRecipes = () => {
             };
             const updatedNotes = [newNote, ...notes];
             await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
-            setActiveTab('注水');
-            setShowComplete(false);
+
+            // 保存后跳转到笔记页面
+            setActiveMainTab('笔记');
+            setShowHistory(true);
+
+            // 重置冲煮状态
+            resetBrewingState();
         } catch (error) {
             console.error('Error saving note:', error);
             alert('保存笔记时出错，请重试');
@@ -997,77 +1091,34 @@ const PourOverRecipes = () => {
             return;
         }
 
-        // 获取步骤索引，用于判断是否是回到上一步
+        // 获取步骤索引，用于验证导航
         const stepOrder = ['coffeeBean', 'equipment', 'method', 'brewing', 'notes'];
         const currentStepIndex = stepOrder.indexOf(activeBrewingStep);
         const targetStepIndex = stepOrder.indexOf(step);
 
-        // 实现新的导航逻辑：
-        // 1. 允许用户返回上一步（targetStepIndex < currentStepIndex）
-        // 2. 允许用户前进到下一步，但只能是相邻的下一步（targetStepIndex === currentStepIndex + 1）
-        // 3. 咖啡豆步骤可以随时访问
-        // 4. 从记录步骤可以返回到任何步骤
-        if (step !== 'coffeeBean' &&
-            activeBrewingStep !== 'notes' &&
-            targetStepIndex > currentStepIndex &&
-            targetStepIndex !== currentStepIndex + 1) {
-            // 不允许跳过步骤前进，直接返回
-            return;
-        }
-
-        // 关键修改：对所有步骤实施相同的逻辑，一旦返回就必须重新选择才能前进
-        // 从器具步骤到方案步骤
-        if (step === 'method' && activeBrewingStep === 'equipment' && !selectedEquipment) {
-            // 如果没有选择器具，不允许进入方案步骤
-            return;
-        }
-        // 从方案步骤到注水步骤
-        if (step === 'brewing' && activeBrewingStep === 'method' && !selectedMethod) {
-            // 如果没有选择方案，不允许进入注水步骤
-            return;
-        }
-        // 从注水步骤到记录步骤
-        if (step === 'notes' && activeBrewingStep === 'brewing' && !showComplete) {
-            // 如果没有完成冲煮，不允许进入记录步骤
-            return;
-        }
-
-        // 如果是回到咖啡豆步骤，重置所有选择
+        // 特殊处理coffeeBean步骤 - 可以随时访问，并重置整个流程
         if (step === 'coffeeBean') {
-            setSelectedEquipment(null);
-            setSelectedMethod(null);
-            setCurrentBrewingMethod(null);
-            setEditableParams(null);
-            setParameterInfo({
-                equipment: null,
-                method: null,
-                params: null,
-            });
+            resetBrewingState();
+            return; // 已经在resetBrewingState中设置了activeBrewingStep，直接返回
         }
-        // 如果回到器具步骤，重置方案和注水相关状态
-        else if (step === 'equipment' && targetStepIndex < currentStepIndex) {
-            // 重置器具选择，强制用户重新选择器具
-            setSelectedEquipment(null);
-            setSelectedMethod(null);
-            setCurrentBrewingMethod(null);
-            setEditableParams(null);
-            setParameterInfo({
-                equipment: null,
-                method: null,
-                params: null,
-            });
-        }
-        // 如果回到方案步骤，重置注水相关状态
-        else if (step === 'method' && targetStepIndex < currentStepIndex) {
-            // 重置注水相关状态，并且重置方案选择，强制用户重新选择方案
-            setIsTimerRunning(false);
-            setCurrentStage(-1);
-            setCountdownTime(null);
-            setSelectedMethod(null);
-            setCurrentBrewingMethod(null);
-            setEditableParams(null);
 
-            // 更新参数信息，只保留设备信息
+        // 简化导航逻辑：不允许向前跳转，但有例外
+        if (targetStepIndex > currentStepIndex) {
+            // 添加例外：从咖啡豆步骤可以直接跳到器具步骤（如果已选择过器具）
+            if (activeBrewingStep === 'coffeeBean' && step === 'equipment' && selectedEquipment) {
+                // 允许从咖啡豆到器具的跳转
+            } else {
+                // 其他情况禁止向前跳转，用户必须通过完成当前步骤来前进
+                return;
+            }
+        }
+
+        // 处理返回到不同步骤的状态重置
+        if (step === 'equipment') {
+            // 返回到器具步骤，清空方案相关状态
+            setSelectedMethod(null);
+            setCurrentBrewingMethod(null);
+            setEditableParams(null);
             if (selectedEquipment) {
                 const equipmentName = equipmentList.find(e => e.id === selectedEquipment)?.name || selectedEquipment;
                 setParameterInfo({
@@ -1077,125 +1128,43 @@ const PourOverRecipes = () => {
                 });
             }
         }
-        // 如果回到注水步骤，重置记录相关状态
-        else if (step === 'brewing' && targetStepIndex < currentStepIndex) {
-            // 重置计时器状态，强制用户重新开始冲煮
+        else if (step === 'method') {
+            // 验证导航条件 - 必须先选择器具
+            if (!selectedEquipment) return;
+
+            // 返回到方案步骤，重置注水相关状态
             setIsTimerRunning(false);
             setCurrentStage(-1);
             setCountdownTime(null);
-            setShowComplete(false);
+            setShowComplete(false); // 确保重置完成状态
+        }
+        else if (step === 'brewing') {
+            // 验证导航条件 - 必须先选择方案
+            if (!selectedMethod) return;
+        }
+        else if (step === 'notes') {
+            // 验证导航条件 - 必须先完成冲煮
+            if (!showComplete) return;
         }
 
-        // 如果点击的步骤被禁用，不执行任何操作
-        const disabledSteps: BrewingStep[] = [];
-        if (!selectedEquipment) {
-            disabledSteps.push('method', 'brewing', 'notes');
-        } else if (!selectedMethod) {
-            disabledSteps.push('brewing', 'notes');
-        } else if (!showComplete) {
-            disabledSteps.push('notes');
-        }
+        // 设置活动步骤和对应的标签页
+        setActiveBrewingStep(step);
 
-        if (disabledSteps.includes(step)) {
-            return;
-        }
-
-        // 当离开当前步骤时，重置相关状态
-        if (activeBrewingStep !== step) {
-            // 如果离开咖啡豆步骤，重置所有选择
-            if (activeBrewingStep === 'coffeeBean' && step !== 'coffeeBean') {
-                // 不需要额外操作，因为咖啡豆步骤本身就是初始状态
-            }
-
-            // 如果离开器具步骤，重置方案和注水相关状态
-            else if (activeBrewingStep === 'equipment' && step !== 'equipment') {
-                setSelectedMethod(null);
-                setCurrentBrewingMethod(null);
-                setEditableParams(null);
-                // 保留selectedEquipment，但更新参数信息
-                if (selectedEquipment) {
-                    const equipmentName = equipmentList.find(e => e.id === selectedEquipment)?.name || selectedEquipment;
-                    setParameterInfo({
-                        equipment: equipmentName,
-                        method: null,
-                        params: null,
-                    });
-                }
-            }
-
-            // 如果离开方案步骤，重置注水相关状态
-            else if (activeBrewingStep === 'method' && step !== 'method') {
-                // 如果没有选择方案就离开，则重置方案相关状态
-                if (!selectedMethod) {
-                    setSelectedMethod(null);
-                    setCurrentBrewingMethod(null);
-                    setEditableParams(null);
-                }
-            }
-
-            // 如果离开注水步骤，重置计时器状态
-            else if (activeBrewingStep === 'brewing' && step !== 'brewing') {
-                setIsTimerRunning(false);
-                setCurrentStage(-1);
-                setCountdownTime(null);
-            }
-
-            // 如果离开记录步骤，重置完成状态
-            else if (activeBrewingStep === 'notes' && step !== 'notes') {
-                setShowComplete(false);
-            }
-        }
-
-        // 根据步骤更新对应的旧状态
+        // 根据步骤设置对应的标签页
         switch (step) {
-            case 'coffeeBean':
-                // 处理咖啡豆选择
-                // 重置参数信息显示和相关状态
-                setParameterInfo({
-                    equipment: null,
-                    method: null,
-                    params: null,
-                });
-                setSelectedEquipment(null);
-                setSelectedMethod(null);
-                setEditableParams(null);
-                break;
             case 'equipment':
                 setActiveTab('器具');
-                // 完全清空参数信息条，因为用户正在选择器具
-                setParameterInfo({
-                    equipment: null,
-                    method: null,
-                    params: null,
-                });
-                // 重置方法选择，但保留设备选择
-                setSelectedMethod(null);
-                setEditableParams(null);
                 break;
             case 'method':
-                if (selectedEquipment) {
-                    setActiveTab('方案');
-                    // 保持设备信息，清空方法和参数信息
-                    const equipmentName = equipmentList.find(e => e.id === selectedEquipment)?.name || selectedEquipment;
-                    setParameterInfo({
-                        equipment: equipmentName,
-                        method: null,
-                        params: null,
-                    });
-                }
+                setActiveTab('方案');
                 break;
             case 'brewing':
-                if (selectedMethod) {
-                    setActiveTab('注水');
-                }
+                setActiveTab('注水');
                 break;
             case 'notes':
-                if (showComplete) {
-                    setActiveTab('记录');
-                }
+                setActiveTab('记录');
                 break;
         }
-        setActiveBrewingStep(step);
     };
 
     useEffect(() => {
@@ -1233,6 +1202,22 @@ const PourOverRecipes = () => {
         alert('数据已更新，应用将重新加载数据');
     };
 
+    // 添加新的标签切换检测逻辑
+    useEffect(() => {
+        // 处理标签切换，特别是从笔记切换到冲煮时的情况
+        if (activeMainTab === '冲煮' && prevMainTabRef.current === '笔记') {
+            setShowHistory(false);
+
+            // 如果处于notes步骤，则重置整个冲煮流程
+            if (activeBrewingStep === 'notes') {
+                resetBrewingState();
+            }
+        }
+
+        // 更新前一个标签的引用
+        prevMainTabRef.current = activeMainTab;
+    }, [activeMainTab, activeBrewingStep, resetBrewingState]);
+
     return (
         <div className="flex h-full flex-col overflow-hidden mx-auto max-w-[500px] font-mono text-neutral-800 dark:text-neutral-100">
             {/* 使用 NavigationBar 组件替换原有的导航栏 */}
@@ -1269,11 +1254,10 @@ const PourOverRecipes = () => {
                             className="h-full"
                         >
                             <BrewingHistory
-                                isOpen={true}
-                                onClose={() => {
-                                    setActiveMainTab('冲煮');
-                                    setShowHistory(false);
-                                }}
+                                isOpen={showHistory}
+                                onClose={() => setShowHistory(false)}
+                                onOptimizingChange={(isOptimizing) => setIsOptimizing(isOptimizing)}
+                                onJumpToImport={jumpToImport}
                             />
                         </motion.div>
                     ) : activeMainTab === '咖啡豆' ? (
@@ -1290,7 +1274,7 @@ const PourOverRecipes = () => {
                                 [ 咖啡豆管理功能即将推出 ]
                             </div>
                         </motion.div>
-                    ) : activeBrewingStep === 'coffeeBean' ? (
+                    ) : activeMainTab === '冲煮' && activeBrewingStep === 'coffeeBean' ? (
                         <motion.div
                             key="coffee-bean-selection"
                             initial={{ opacity: 0 }}
@@ -1317,6 +1301,7 @@ const PourOverRecipes = () => {
                                 id="brewingNoteForm"
                                 isOpen={true}
                                 onClose={() => {
+                                    // 用户取消记录，返回到注水页面
                                     setActiveTab('注水');
                                     setActiveBrewingStep('brewing');
                                 }}
@@ -1332,6 +1317,7 @@ const PourOverRecipes = () => {
                                         roastDate: '',
                                     } : undefined
                                 }}
+                                onJumpToImport={jumpToImport}
                             />
                         </motion.div>
                     ) : (
@@ -1523,7 +1509,7 @@ const PourOverRecipes = () => {
 
             {/* 底部工具栏 - 根据当前状态显示不同内容 */}
             <AnimatePresence mode="wait">
-                {/* 方案类型选择器 */}
+                {/* 方案类型选择器 - V60等器具显示全部选项 */}
                 {activeMainTab === '冲煮' && activeBrewingStep === 'method' && selectedEquipment !== 'CleverDripper' && (
                     <motion.div
                         initial={{ opacity: 0, y: 10 }}
@@ -1537,9 +1523,8 @@ const PourOverRecipes = () => {
                             <div className="flex space-x-4">
                                 <button
                                     onClick={() => {
-                                        // 添加轻触反馈
                                         if (settings.hapticFeedback) {
-                                            hapticFeedback.light();
+                                            hapticsUtils.light(); // 添加轻触感反馈
                                         }
                                         setMethodType('common');
                                         setSelectedBrand(null);
@@ -1560,9 +1545,8 @@ const PourOverRecipes = () => {
                                 </span>
                                 <button
                                     onClick={() => {
-                                        // 添加轻触反馈
                                         if (settings.hapticFeedback) {
-                                            hapticFeedback.light();
+                                            hapticsUtils.light(); // 添加轻触感反馈
                                         }
                                         if (methodType === 'brand' && selectedBrand) {
                                             setSelectedBrand(null);
@@ -1583,9 +1567,55 @@ const PourOverRecipes = () => {
                             </div>
                             <button
                                 onClick={() => {
-                                    // 添加轻触反馈
                                     if (settings.hapticFeedback) {
-                                        hapticFeedback.light();
+                                        hapticsUtils.light(); // 添加轻触感反馈
+                                    }
+                                    setMethodType('custom');
+                                    setSelectedBrand(null);
+                                    setSelectedBean(null);
+                                }}
+                                className={`text-[12px] tracking-wider transition-colors ${methodType === 'custom'
+                                    ? 'text-neutral-800 dark:text-neutral-100'
+                                    : 'text-neutral-400 dark:text-neutral-500'
+                                    }`}
+                            >
+                                自定义方案
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+
+                {/* 聪明杯专用方案类型选择器 - 只显示通用方案和自定义方案 */}
+                {activeMainTab === '冲煮' && activeBrewingStep === 'method' && selectedEquipment === 'CleverDripper' && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2, ease: "easeOut" }}
+                        className="bg-neutral-50 dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-800 pt-3 pb-safe px-6 px-safe"
+                        style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 28px)' }}
+                    >
+                        <div className="flex justify-between items-center">
+                            <button
+                                onClick={() => {
+                                    if (settings.hapticFeedback) {
+                                        hapticsUtils.light(); // 添加轻触感反馈
+                                    }
+                                    setMethodType('common');
+                                    setSelectedBrand(null);
+                                    setSelectedBean(null);
+                                }}
+                                className={`text-[12px] tracking-wider transition-colors ${methodType === 'common'
+                                    ? 'text-neutral-800 dark:text-neutral-100'
+                                    : 'text-neutral-400 dark:text-neutral-500 '
+                                    }`}
+                            >
+                                通用方案
+                            </button>
+                            <button
+                                onClick={() => {
+                                    if (settings.hapticFeedback) {
+                                        hapticsUtils.light(); // 添加轻触感反馈
                                     }
                                     setMethodType('custom');
                                     setSelectedBrand(null);
@@ -1613,7 +1643,7 @@ const PourOverRecipes = () => {
                             duration: 0.2,
                             ease: "easeOut"
                         }}
-                        className='px-6 px-safe pb-safe'
+                        className='pb-safe'
                         style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 28px)' }}
                     >
                         <BrewingTimer
@@ -1628,6 +1658,7 @@ const PourOverRecipes = () => {
                             }}
                             onCountdownChange={(time) => setCountdownTime(time)}
                             settings={settings}
+                            onJumpToImport={jumpToImport}
                         />
                     </motion.div>
                 )}

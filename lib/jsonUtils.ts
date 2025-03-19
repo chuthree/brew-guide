@@ -8,6 +8,7 @@ interface StageData {
 	water?: string;
 	detail?: string;
 	pourType?: string;
+	valveStatus?: string;
 }
 
 /**
@@ -112,6 +113,15 @@ export function parseMethodFromJson(jsonString: string): Method | null {
 						else pourType = "circle"; // 默认为circle
 					}
 
+					// 确保阀门状态是有效的值
+					let valveStatus = stage.valveStatus || "";
+					if (
+						valveStatus &&
+						!["open", "closed"].includes(valveStatus)
+					) {
+						valveStatus = ""; // 如果不是有效值，则设置为空
+					}
+
 					return {
 						time: stage.time || 0,
 						pourTime: stage.pourTime || 0,
@@ -123,6 +133,7 @@ export function parseMethodFromJson(jsonString: string): Method | null {
 							| "circle"
 							| "ice"
 							| "other",
+						valveStatus: valveStatus as "open" | "closed" | "",
 					};
 				}
 			);
@@ -218,6 +229,7 @@ export function cleanJsonForOptimization(jsonString: string): string {
 			water?: string;
 			detail?: string;
 			pourType?: string;
+			valveStatus?: string;
 		}
 
 		// 保留必要的字段
@@ -237,6 +249,7 @@ export function cleanJsonForOptimization(jsonString: string): string {
 					water: stage.water,
 					detail: stage.detail,
 					pourType: stage.pourType,
+					valveStatus: stage.valveStatus,
 				})),
 			},
 			currentTaste: data.currentTaste,
