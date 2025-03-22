@@ -1,8 +1,7 @@
 import { useCallback } from "react";
-import { Method } from "@/lib/config";
+import { Method, equipmentList, Stage } from "@/lib/config";
 import { EditableParams } from "./useBrewingParameters";
 import { TabType, BrewingStep } from "./useBrewingState";
-import { Stage } from "./useBrewingContent";
 
 export interface UseMethodSelectorProps {
 	selectedEquipment: string | null;
@@ -56,9 +55,15 @@ export function useMethodSelector({
 						`[选择方案] 默认咖啡用量: ${method.params.coffee}`
 					);
 
+					// 获取设备的中文名称而不是使用ID
+					const equipmentName = selectedEquipment
+						? equipmentList.find((e) => e.id === selectedEquipment)
+								?.name || selectedEquipment
+						: null;
+
 					// 直接更新参数信息，不依赖于useEffect
 					setParameterInfo({
-						equipment: selectedEquipment,
+						equipment: equipmentName,
 						method: method.name,
 						params: {
 							coffee: method.params.coffee,

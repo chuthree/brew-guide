@@ -466,14 +466,32 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
             });
         }
 
-        // 如果是方案步骤且已选择器具，只显示器具信息
-        if (step === 'method' && selectedEquipment) {
+        // 确保在任何步骤切换时，如果有选择的设备，都始终使用设备的中文名称而不是ID
+        if (selectedEquipment && step !== 'equipment' && step !== 'notes') {
             const equipmentName = equipmentList.find(e => e.id === selectedEquipment)?.name || selectedEquipment;
-            setParameterInfo({
-                equipment: equipmentName,
-                method: null,
-                params: null
-            });
+
+            // 如果是切换到brewing步骤且已有方案，保留方案信息
+            if (step === 'brewing' && selectedMethod) {
+                setParameterInfo({
+                    equipment: equipmentName,
+                    method: selectedMethod.name,
+                    params: null
+                });
+            } else if (step === 'method') {
+                // 如果是方案步骤且已选择器具，只显示器具信息
+                setParameterInfo({
+                    equipment: equipmentName,
+                    method: null,
+                    params: null
+                });
+            } else {
+                // 其他情况下，只显示设备名称
+                setParameterInfo({
+                    equipment: equipmentName,
+                    method: null,
+                    params: null
+                });
+            }
         }
 
         // 直接调用父组件传入的setActiveBrewingStep函数，让父组件处理所有逻辑
