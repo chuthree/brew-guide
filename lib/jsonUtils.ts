@@ -167,7 +167,7 @@ export function getExampleJson() {
     "coffee": "15g",
     "water": "225g",
     "ratio": "1:15",
-    "grindSize": "细（白砂糖颗粒级）",
+    "grindSize": "中细",
     "temp": "94°C",
     "videoUrl": "",
     "stages": [
@@ -284,4 +284,27 @@ export function methodToJson(method: Method): string {
 
 	// 返回格式化的JSON字符串
 	return JSON.stringify(configObject, null, 2);
+}
+
+/**
+ * 生成咖啡豆识别模板JSON
+ * 用于生成AI识别咖啡豆图片的提示词
+ */
+export function generateBeanTemplateJson() {
+	return `{
+  "id": "",
+  "name": "",
+  "image": "",
+  "price": "",
+  "capacity": "",
+  "remaining": "",
+  "roastLevel": "",
+  "roastDate": "",
+  "flavor": [],
+  "origin": "",
+  "process": "",
+  "variety": "",
+  "type": "",
+  "notes": ""
+}`;
 }

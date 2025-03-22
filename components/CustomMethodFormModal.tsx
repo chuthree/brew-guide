@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import CustomMethodForm from '@/components/CustomMethodForm'
 import ImportMethodForm from '@/components/ImportMethodForm'
 import { type Method } from '@/lib/config'
+import { SettingsOptions } from '@/components/Settings'
 
 interface CustomMethodFormModalProps {
     showCustomForm: boolean
@@ -15,6 +16,7 @@ interface CustomMethodFormModalProps {
     onSaveCustomMethod: (method: Method) => void
     onCloseCustomForm: () => void
     onCloseImportForm: () => void
+    settings: SettingsOptions
 }
 
 const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
@@ -25,7 +27,8 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
     customMethods,
     onSaveCustomMethod,
     onCloseCustomForm,
-    onCloseImportForm
+    onCloseImportForm,
+    settings
 }) => {
     return (
         <>
@@ -83,6 +86,7 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
                                     onCancel={onCloseCustomForm}
                                     initialMethod={editingMethod}
                                     selectedEquipment={selectedEquipment}
+                                    settings={settings}
                                 />
                             </motion.div>
                         </motion.div>

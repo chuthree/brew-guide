@@ -20,6 +20,7 @@ import TabContent from '@/components/TabContent'
 import MethodTypeSelector from '@/components/MethodTypeSelector'
 import Onboarding from '@/components/Onboarding'
 import CoffeeBeanFormModal from '@/components/CoffeeBeanFormModal'
+import ImportModal from '@/components/ImportModal'
 import { CoffeeBeanManager } from '@/lib/coffeeBeanManager'
 
 // 添加内容转换状态类型
@@ -116,6 +117,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     const [editingBean, setEditingBean] = useState<CoffeeBean | null>(null);
     // 添加一个用于强制重新渲染咖啡豆列表的key
     const [beanListKey, setBeanListKey] = useState(0);
+    // 导入咖啡豆状态
+    const [showImportBeanForm, setShowImportBeanForm] = useState(false);
 
     // 添加动画过渡状态
     const [transitionState, setTransitionState] = useState<TransitionState>({
@@ -143,7 +146,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         countdownTime, setCountdownTime,
         isPourVisualizerPreloaded,
         customMethods, setCustomMethods,
-        selectedCoffeeBean, selectedCoffeeBeanData,
+        selectedCoffeeBean, selectedCoffeeBeanData, setSelectedCoffeeBean, setSelectedCoffeeBeanData,
         showCustomForm, setShowCustomForm,
         editingMethod, setEditingMethod,
         actionMenuStates, setActionMenuStates,
@@ -171,7 +174,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         selectedEquipment,
         methodType,
         customMethods,
-        selectedMethod
+        selectedMethod,
+        settings
     });
 
     const { content, updateBrewingSteps } = contentHooks;
@@ -346,7 +350,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
     // 修改标签切换检测逻辑，确保有咖啡豆时始终从咖啡豆步骤开始
     useEffect(() => {
-        // 处理标签切换，特别是从笔记切换到冲煮时的情况
+        // 只在activeMainTab为冲煮时执行，避免其他标签页的干扰
         if (activeMainTab === '冲煮') {
             setShowHistory(false);
 
@@ -470,6 +474,37 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         setShowOnboarding(false)
     }
 
+    // 处理导入咖啡豆
+    const handleImportBean = async (jsonData: string) => {
+        try {
+            const data = JSON.parse(jsonData);
+
+            // 检查数据是单个对象还是数组
+            const beansToImport = Array.isArray(data) ? data : [data];
+
+            for (const bean of beansToImport) {
+                // 验证必要的字段
+                if (!bean.name || !bean.capacity) {
+                    throw new Error('导入数据缺少必要字段');
+                }
+
+                // 添加到数据库
+                await CoffeeBeanManager.addBean(bean);
+            }
+
+            // 关闭导入表单
+            setShowImportBeanForm(false);
+
+            // 更新咖啡豆状态
+            handleBeanListChange();
+
+            alert(`成功导入 ${beansToImport.length} 款咖啡豆`);
+        } catch (error) {
+            console.error('导入咖啡豆失败:', error);
+            alert('导入失败，请检查数据格式');
+        }
+    };
+
     // 处理咖啡豆表单
     const handleBeanForm = (bean: CoffeeBean | null = null) => {
         setEditingBean(bean);
@@ -484,36 +519,66 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             const wasHasBeans = hasCoffeeBeans;
             setHasCoffeeBeans(hasAnyBeans);
 
-            // 只在冲煮页面且咖啡豆状态变化时调整步骤
-            if (activeMainTab === '冲煮') {
-                // 咖啡豆从有到无：切换到器具步骤
-                if (!hasAnyBeans && wasHasBeans && activeBrewingStep === 'coffeeBean') {
+            // 咖啡豆从有到无的情况需要特殊处理
+            if (!hasAnyBeans && wasHasBeans) {
+                console.log('[checkCoffeeBeans] 咖啡豆从有到无，执行重置');
+                // 重置选中的咖啡豆
+                setSelectedCoffeeBean(null);
+                setSelectedCoffeeBeanData(null);
+
+                // 如果在冲煮页面，执行更彻底的重置
+                if (activeMainTab === '冲煮') {
+                    // 执行一次完整的状态重置
+                    resetBrewingState(false);
+
+                    // 确保切换到器具步骤
                     setActiveBrewingStep('equipment');
                     setActiveTab('器具');
-                }
-                // 咖啡豆从无到有：切换到咖啡豆步骤
-                else if (hasAnyBeans && !wasHasBeans) {
-                    setActiveBrewingStep('coffeeBean');
-                    setActiveTab('咖啡豆');
+
+                    // 延迟再次确认步骤，确保UI更新正确
+                    setTimeout(() => {
+                        setActiveBrewingStep('equipment');
+                        setActiveTab('器具');
+                    }, 100);
                 }
             }
-        } catch {
-            // 静默处理错误
+            // 咖啡豆从无到有：切换到咖啡豆步骤
+            else if (hasAnyBeans && !wasHasBeans && activeMainTab === '冲煮') {
+                console.log('[checkCoffeeBeans] 咖啡豆从无到有，切换到咖啡豆步骤');
+                setActiveBrewingStep('coffeeBean');
+                setActiveTab('咖啡豆');
+            }
+        } catch (error) {
+            // 错误处理并记录日志
+            console.error('[checkCoffeeBeans] 发生错误:', error);
             setHasCoffeeBeans(false);
         }
-    }, [activeBrewingStep, setActiveBrewingStep, setActiveTab, hasCoffeeBeans, activeMainTab]);
+    }, [setActiveBrewingStep, setActiveTab, hasCoffeeBeans, activeMainTab, setSelectedCoffeeBean, setSelectedCoffeeBeanData, resetBrewingState]);
 
     // 当添加或删除咖啡豆时，更新状态
     const handleBeanListChange = useCallback(() => {
+        // 先执行咖啡豆状态检查
         checkCoffeeBeans();
+
         // 增加beanListKey以触发重新渲染
         setBeanListKey(prevKey => prevKey + 1);
+
+        // 延迟再次检查，确保状态已更新
+        setTimeout(() => {
+            console.log('[handleBeanListChange] 延迟再次检查咖啡豆状态');
+            checkCoffeeBeans();
+        }, 300);
     }, [checkCoffeeBeans]);
 
     // 修改咖啡豆列表变化的处理
     useEffect(() => {
         // 监听咖啡豆列表变化的自定义事件
-        const handleBeanListChanged = (e: CustomEvent<{ hasBeans: boolean, isFirstBean?: boolean, lastBeanDeleted?: boolean }>) => {
+        const handleBeanListChanged = (e: CustomEvent<{
+            hasBeans: boolean,
+            isFirstBean?: boolean,
+            lastBeanDeleted?: boolean,
+            deletedBeanId?: string  // 添加被删除的咖啡豆ID
+        }>) => {
             // 强制检查咖啡豆状态
             checkCoffeeBeans();
 
@@ -526,12 +591,39 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
             // 特殊处理：删除最后一个咖啡豆的情况
             if (e.detail.lastBeanDeleted) {
-                // 立即修正冲煮页面状态，但不切换页面
+                // 强制重置所有状态
+                setSelectedCoffeeBean(null);
+                setSelectedCoffeeBeanData(null);
+
+                // 无论当前在哪个页面，立即修正冲煮页面状态
+                setActiveBrewingStep('equipment');
+                setActiveTab('器具');
+
+                // 如果在咖啡豆页面，不做任何切换
+                // 如果在冲煮页面，强制刷新内容
+                if (activeMainTab === '冲煮') {
+                    // 触发一次重置，确保UI更新
+                    resetBrewingState(false);
+                    // 如果是在冲煮流程中，强制重新加载内容
+                    setTimeout(() => {
+                        // 确保已经设置为器具步骤
+                        setActiveBrewingStep('equipment');
+                        setActiveTab('器具');
+                    }, 100);
+                }
+            }
+
+            // 特殊处理：删除了当前选中的咖啡豆，但不是最后一个
+            else if (e.detail.deletedBeanId && selectedCoffeeBean === e.detail.deletedBeanId) {
+                // 重置选中的咖啡豆
+                setSelectedCoffeeBean(null);
+                setSelectedCoffeeBeanData(null);
+
+                // 在冲煮页面时，如果在咖啡豆步骤，则切换到器具步骤
                 if (activeMainTab === '冲煮' && activeBrewingStep === 'coffeeBean') {
                     setActiveBrewingStep('equipment');
                     setActiveTab('器具');
                 }
-                // 不强制切换到冲煮页面
             }
         };
 
@@ -542,7 +634,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         return () => {
             window.removeEventListener('coffeeBeanListChanged', handleBeanListChanged as EventListener);
         };
-    }, [checkCoffeeBeans, activeMainTab, activeBrewingStep, setActiveBrewingStep, setActiveTab]);
+    }, [checkCoffeeBeans, activeMainTab, activeBrewingStep, setActiveBrewingStep, setActiveTab, selectedCoffeeBean, setSelectedCoffeeBean, setSelectedCoffeeBeanData, resetBrewingState]);
 
     // 添加从咖啡豆页面切换回冲煮页面的特殊处理
     useEffect(() => {
@@ -748,7 +840,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                             onEquipmentSelect={handleEquipmentSelectWithName}
                             onMethodSelect={handleMethodSelectWrapper}
                             onCoffeeBeanSelect={handleCoffeeBeanSelect}
-                            onAddNewCoffeeBean={() => handleBeanForm()}
                             onEditMethod={handleEditCustomMethod}
                             onDeleteMethod={handleDeleteCustomMethod}
                             transitionState={transitionState}
@@ -789,10 +880,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                         className="flex-1 overflow-auto"
                     >
                         <CoffeeBeansComponent
-                            isOpen={true}
-                            onClose={() => setActiveMainTab('冲煮')}
-                            showBeanForm={handleBeanForm}
                             key={beanListKey}
+                            isOpen={true}
+                            showBeanForm={handleBeanForm}
+                            onShowImport={() => setShowImportBeanForm(true)}
                         />
                     </m.div>
                 )}
@@ -868,6 +959,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                     setEditingMethod(undefined);
                 }}
                 onCloseImportForm={() => setShowImportForm(false)}
+                settings={settings}
             />
 
             {/* 咖啡豆表单模态框组件 */}
@@ -879,6 +971,13 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                     setShowBeanForm(false);
                     setEditingBean(null);
                 }}
+            />
+
+            {/* 导入咖啡豆模态框组件 */}
+            <ImportModal
+                showForm={showImportBeanForm}
+                onImport={handleImportBean}
+                onClose={() => setShowImportBeanForm(false)}
             />
 
             {/* 设置组件 - 放在页面级别确保正确覆盖整个内容 */}

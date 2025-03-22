@@ -10,12 +10,14 @@ import hapticsUtils from '@/lib/haptics'
 export interface SettingsOptions {
     notificationSound: boolean
     hapticFeedback: boolean
+    grindType: "通用" | "幻刺"
 }
 
 // 默认设置
 export const defaultSettings: SettingsOptions = {
     notificationSound: true,
     hapticFeedback: true,
+    grindType: "通用",
 }
 
 interface SettingsProps {
@@ -130,6 +132,69 @@ const Settings: React.FC<SettingsProps> = ({
                                     <div className="peer h-5 w-9 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-500 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
                                 </label>
                             </div>
+                        </div>
+                    </div>
+
+                    {/* 研磨度设置 */}
+                    <div className="space-y-3">
+                        <h3 className="text-xs font-medium uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
+                            研磨度设置
+                        </h3>
+                        <div className="space-y-2">
+                            <div className="text-sm text-neutral-600 dark:text-neutral-400">
+                                研磨度类型
+                            </div>
+                            <div className="flex rounded-md bg-neutral-100 dark:bg-neutral-700">
+                                <button
+                                    className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${settings.grindType === '通用'
+                                        ? 'bg-neutral-800 text-white dark:bg-neutral-200 dark:text-neutral-800'
+                                        : 'text-neutral-500 hover:bg-neutral-200 dark:text-neutral-400 dark:hover:bg-neutral-600'
+                                        }`}
+                                    onClick={() => handleChange('grindType', '通用')}
+                                >
+                                    通用
+                                </button>
+                                <button
+                                    className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${settings.grindType === '幻刺'
+                                        ? 'bg-neutral-800 text-white dark:bg-neutral-200 dark:text-neutral-800'
+                                        : 'text-neutral-500 hover:bg-neutral-200 dark:text-neutral-400 dark:hover:bg-neutral-600'
+                                        }`}
+                                    onClick={() => handleChange('grindType', '幻刺')}
+                                >
+                                    幻刺
+                                </button>
+                            </div>
+                            <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                                选择&quot;幻刺&quot;将显示专用于幻刺(Pro)磨豆机的研磨度设置
+                            </p>
+
+                            {settings.grindType === '幻刺' && (
+                                <div className="mt-2 space-y-2 bg-neutral-50 dark:bg-neutral-800 p-3 rounded-md">
+                                    <p className="text-xs font-medium text-neutral-600 dark:text-neutral-300">
+                                        幻刺(Pro)研磨度参考
+                                    </p>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div className="text-xs text-neutral-600 dark:text-neutral-400">
+                                            <span className="font-medium">意式</span>: 2-4格
+                                        </div>
+                                        <div className="text-xs text-neutral-600 dark:text-neutral-400">
+                                            <span className="font-medium">摩卡壶</span>: 3-6.5格
+                                        </div>
+                                        <div className="text-xs text-neutral-600 dark:text-neutral-400">
+                                            <span className="font-medium text-neutral-800 dark:text-neutral-200">手冲</span>: 6-10格
+                                        </div>
+                                        <div className="text-xs text-neutral-600 dark:text-neutral-400">
+                                            <span className="font-medium">法压壶</span>: 9-11.5格
+                                        </div>
+                                        <div className="text-xs text-neutral-600 dark:text-neutral-400">
+                                            <span className="font-medium">冷萃</span>: 8-12格
+                                        </div>
+                                    </div>
+                                    <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                                        手冲中细常用建议：8-9格
+                                    </p>
+                                </div>
+                            )}
                         </div>
                     </div>
 

@@ -5,6 +5,8 @@ import {
 	equipmentList,
 } from "@/lib/config";
 import { Content } from "./useBrewingState";
+import { formatGrindSize } from "@/lib/grindUtils";
+import { SettingsOptions } from "@/components/Settings";
 
 // 格式化时间工具函数
 export const formatTime = (seconds: number, compact: boolean = false) => {
@@ -26,6 +28,7 @@ export interface UseBrewingContentProps {
 	methodType: "common" | "custom";
 	customMethods: Record<string, Method[]>;
 	selectedMethod: Method | null;
+	settings: SettingsOptions;
 }
 
 export function useBrewingContent({
@@ -33,6 +36,7 @@ export function useBrewingContent({
 	methodType,
 	customMethods,
 	selectedMethod,
+	settings,
 }: UseBrewingContentProps) {
 	const initialContent: Content = {
 		咖啡豆: {
@@ -95,7 +99,10 @@ export function useBrewingContent({
 													totalTime,
 													true
 												)}`,
-												`研磨度 ${method.params.grindSize}`,
+												`研磨度 ${formatGrindSize(
+													method.params.grindSize,
+													settings.grindType
+												)}`,
 											],
 											note: "",
 										};
@@ -112,7 +119,10 @@ export function useBrewingContent({
 												].time,
 												true
 											)}`,
-											`研磨度 ${method.params.grindSize}`,
+											`研磨度 ${formatGrindSize(
+												method.params.grindSize,
+												settings.grindType
+											)}`,
 										],
 										note: "",
 								  })),
@@ -120,7 +130,7 @@ export function useBrewingContent({
 				};
 			});
 		}
-	}, [selectedEquipment, methodType, customMethods]);
+	}, [selectedEquipment, methodType, customMethods, settings.grindType]);
 
 	// 更新注水步骤内容
 	const updateBrewingSteps = (stages: Stage[]) => {

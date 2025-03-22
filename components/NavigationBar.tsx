@@ -5,6 +5,7 @@ import { APP_VERSION, equipmentList } from '@/lib/config'
 import { motion, AnimatePresence } from 'framer-motion'
 import hapticsUtils from '@/lib/haptics'
 import { SettingsOptions } from '@/components/Settings'
+import { formatGrindSize } from '@/lib/grindUtils'
 
 // 定义一个隐藏滚动条的样式
 const noScrollbarStyle = `
@@ -750,7 +751,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                         {parameterInfo.params?.grindSize && (
                                             <>
                                                 <span className="flex-shrink-0">·</span>
-                                                <span className="whitespace-nowrap">{parameterInfo.params.grindSize}</span>
+                                                <span className="whitespace-nowrap">{formatGrindSize(parameterInfo.params.grindSize || "", settings.grindType)}</span>
                                             </>
                                         )}
                                         {parameterInfo.params?.temp && (
@@ -777,7 +778,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                         <span className="flex-shrink-0">·</span>
                                         <span className="whitespace-nowrap">{parameterInfo.params.ratio}</span>
                                         <span className="flex-shrink-0">·</span>
-                                        <span className="whitespace-nowrap">{parameterInfo.params.grindSize}</span>
+                                        <span className="whitespace-nowrap">{formatGrindSize(parameterInfo.params.grindSize || "", settings.grindType)}</span>
                                         <span className="flex-shrink-0">·</span>
                                         <span className="whitespace-nowrap">{parameterInfo.params.temp}</span>
                                     </span>

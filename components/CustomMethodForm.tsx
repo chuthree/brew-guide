@@ -5,12 +5,16 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { type Method, type Stage } from '@/lib/config'
 import { ArrowLeft, ArrowRight, Check } from 'lucide-react'
 import AutoResizeTextarea from './AutoResizeTextarea'
+import { formatGrindSize } from '@/lib/grindUtils'
+import { SettingsOptions } from '@/components/Settings'
+import { Storage } from '@/lib/storage'
 
 interface CustomMethodFormProps {
     onSave: (method: Method) => void
     onCancel: () => void
     initialMethod?: Method
     selectedEquipment?: string | null
+    settings?: SettingsOptions
 }
 
 // 定义步骤类型
@@ -21,6 +25,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     onCancel,
     initialMethod,
     selectedEquipment,
+    settings,
 }) => {
     // 当前步骤状态
     const [currentStep, setCurrentStep] = useState<Step>('name')
@@ -81,6 +86,29 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
             },
         };
     })
+
+    // 获取设置，如果没有提供设置，则使用默认设置
+    const [localSettings, setLocalSettings] = useState<SettingsOptions>({
+        notificationSound: true,
+        hapticFeedback: true,
+        grindType: '通用'
+    });
+
+    // 加载设置
+    useEffect(() => {
+        if (settings) {
+            setLocalSettings(settings);
+        } else {
+            // 尝试从存储中加载设置
+            const loadSettings = async () => {
+                const savedSettings = await Storage.get('brewGuideSettings');
+                if (savedSettings) {
+                    setLocalSettings(JSON.parse(savedSettings) as SettingsOptions);
+                }
+            };
+            loadSettings();
+        }
+    }, [settings]);
 
     // 点击外部关闭
     useEffect(() => {
@@ -607,7 +635,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
 
                             <div className="space-y-2">
                                 <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                                    研磨度
+                                    研磨度 {localSettings.grindType === '幻刺' && <span className="text-xs text-neutral-400">（将自动转换为幻刺刻度）</span>}
                                 </label>
                                 <input
                                     type="text"
@@ -620,9 +648,31 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                                         }
                                     })}
                                     onFocus={(e) => e.target.select()}
-                                    placeholder='例如：中细'
+                                    placeholder={
+                                        localSettings.grindType === "幻刺"
+                                            ? "例如：中细 (8-9格)"
+                                            : undefined
+                                    }
                                     className="w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
                                 />
+                                {method.params.grindSize && localSettings.grindType === '幻刺' && (
+                                    <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                                        幻刺研磨度：{formatGrindSize(method.params.grindSize, '幻刺')}
+                                    </p>
+                                )}
+
+                                {/* 研磨度参考提示 */}
+                                {!method.params.grindSize && (
+                                    <div className="mt-1 text-xs space-y-1">
+                                        <p className="text-neutral-500 dark:text-neutral-400">研磨度参考:</p>
+                                        <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+                                            <p className="text-neutral-500 dark:text-neutral-400">· 意式: 极细/特细</p>
+                                            <p className="text-neutral-500 dark:text-neutral-400">· 摩卡壶: 细</p>
+                                            <p className="text-neutral-500 dark:text-neutral-400">· 手冲: 中细{localSettings.grindType === '幻刺' && " (8-9格)"}</p>
+                                            <p className="text-neutral-500 dark:text-neutral-400">· 法压: 中粗/粗</p>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="space-y-2">

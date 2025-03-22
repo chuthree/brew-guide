@@ -353,10 +353,24 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
 
                     let shouldPlayDing = false
                     let shouldPlayStart = false
+                    let shouldNotifyPourEnd = false
+                    let shouldPreNotifyPourEnd = false
 
                     for (let index = 0; index < stages.length; index++) {
                         const prevStageTime = index > 0 ? stages[index - 1].time : 0
                         const nextStageTime = stages[index].time
+                        const stagePourTime = stages[index].pourTime === 0 ? 0 : (stages[index].pourTime || Math.floor((nextStageTime - prevStageTime) / 3))
+                        const pourEndTime = prevStageTime + stagePourTime
+
+                        // 检查是否在注水阶段的结束点
+                        if (newTime === pourEndTime && stagePourTime > 0) {
+                            shouldNotifyPourEnd = true
+                        }
+
+                        // 检查是否在注水阶段结束前1-2秒
+                        if ((newTime === pourEndTime - 2 || newTime === pourEndTime - 1) && stagePourTime > 0) {
+                            shouldPreNotifyPourEnd = true
+                        }
 
                         if (newTime === prevStageTime) {
                             shouldPlayDing = true
@@ -373,6 +387,15 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                     if (shouldPlayStart) {
                         playSound('start')
                     }
+                    if (shouldPreNotifyPourEnd) {
+                        playSound('start')
+                    }
+                    if (shouldNotifyPourEnd) {
+                        playSound('ding')
+                        if (isHapticsSupported && settings.hapticFeedback) {
+                            triggerHaptic('medium')
+                        }
+                    }
 
                     if (newTime > stages[lastStageIndex].time) {
                         clearInterval(id)
@@ -386,7 +409,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
             }, 1000)
             setTimerId(id)
         }
-    }, [currentBrewingMethod, playSound, handleComplete])
+    }, [currentBrewingMethod, playSound, handleComplete, triggerHaptic, isHapticsSupported, settings.hapticFeedback])
 
     useEffect(() => {
         if (countdownTime !== null && isRunning) {

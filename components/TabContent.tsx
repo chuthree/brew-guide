@@ -59,7 +59,6 @@ interface TabContentProps {
     onEquipmentSelect: (name: string) => void;
     onMethodSelect: (index: number) => void;
     onCoffeeBeanSelect?: (beanId: string, bean: CoffeeBean) => void;
-    onAddNewCoffeeBean?: () => void;
     onEditMethod: (method: Method) => void;
     onDeleteMethod: (method: Method) => void;
     transitionState: TransitionState;
@@ -93,7 +92,6 @@ const TabContent: React.FC<TabContentProps> = ({
     onEquipmentSelect,
     onMethodSelect,
     onCoffeeBeanSelect,
-    onAddNewCoffeeBean,
     onEditMethod,
     onDeleteMethod,
     transitionState,
@@ -227,7 +225,6 @@ const TabContent: React.FC<TabContentProps> = ({
                                 onSelect={(beanId: string | null, bean: CoffeeBean | null) => {
                                     if (onCoffeeBeanSelect) onCoffeeBeanSelect(beanId!, bean!);
                                 }}
-                                onAddNew={onAddNewCoffeeBean!}
                             />
                         </motion.div>
                     ) : activeTab === ('记录' as TabType) && currentBrewingMethod ? (

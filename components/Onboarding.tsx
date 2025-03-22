@@ -96,7 +96,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
     }
 
     // 处理设置变更
-    const handleSettingChange = (key: keyof SettingsOptions, value: boolean) => {
+    const handleSettingChange = <K extends keyof SettingsOptions>(key: K, value: SettingsOptions[K]) => {
         setSettings(prev => {
             const newSettings = { ...prev, [key]: value }
             return newSettings
@@ -316,6 +316,25 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
                                 >
                                     <div
                                         className={`absolute top-1 left-1 bg-white dark:bg-black w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${settings.hapticFeedback ? 'translate-x-6' : ''}`}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex items-center justify-between bg-neutral-50 dark:bg-neutral-900 p-4 rounded-xl">
+                                <div className="flex flex-col">
+                                    <label className="text-sm font-medium text-neutral-900 dark:text-white">
+                                        幻刺研磨度
+                                    </label>
+                                    <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                                        使用幻刺(Pro)磨豆机专用刻度
+                                    </p>
+                                </div>
+                                <div
+                                    className={`relative w-12 h-6 rounded-full transition-colors duration-200 ease-in-out ${settings.grindType === '幻刺' ? 'bg-neutral-900 dark:bg-white' : 'bg-neutral-200 dark:bg-neutral-800'}`}
+                                    onClick={() => handleSettingChange('grindType', settings.grindType === '幻刺' ? '通用' : '幻刺')}
+                                >
+                                    <div
+                                        className={`absolute top-1 left-1 bg-white dark:bg-black w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${settings.grindType === '幻刺' ? 'translate-x-6' : ''}`}
                                     />
                                 </div>
                             </div>
