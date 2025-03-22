@@ -39,6 +39,7 @@ export const APP_DATA_KEYS = [
 	"brewingNotes", // 冲煮记录
 	"brewGuideSettings", // 应用设置
 	"brewingNotesVersion", // 数据版本
+	"coffeeBeans", // 咖啡豆数据
 ];
 
 /**

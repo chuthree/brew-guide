@@ -39,6 +39,11 @@ const formatRatio = (ratio: number) => {
 	return Number.isInteger(ratio) ? ratio.toString() : ratio.toFixed(1);
 };
 
+// 格式化数值显示，整数不带小数点
+const formatNumber = (value: number) => {
+	return Number.isInteger(value) ? value.toString() : value.toFixed(1);
+};
+
 export function useBrewingParameters() {
 	// 参数状态
 	const [parameterInfo, setParameterInfo] = useState<ParameterInfo>({
@@ -54,13 +59,14 @@ export function useBrewingParameters() {
 
 	// 处理参数变更
 	const handleParamChange = useCallback(
-		(
+		async (
 			type: keyof EditableParams,
 			value: string,
 			selectedMethod: Method | null,
 			currentBrewingMethod: Method | null,
 			updateBrewingSteps: (stages: Stage[]) => void,
-			setCurrentBrewingMethod: (method: Method) => void
+			setCurrentBrewingMethod: (method: Method) => void,
+			selectedCoffeeBean?: string | null
 		) => {
 			if (!editableParams || !selectedMethod || !currentBrewingMethod)
 				return;
@@ -73,8 +79,12 @@ export function useBrewingParameters() {
 
 			if (isNaN(parsedValue) || parsedValue <= 0) return;
 
+			// 记录新咖啡量
+			let newCoffeeAmount = currentCoffee;
+
 			switch (type) {
 				case "coffee": {
+					newCoffeeAmount = parsedValue;
 					const calculatedWater = Math.round(
 						parsedValue * currentRatioNumber
 					);
@@ -181,6 +191,51 @@ export function useBrewingParameters() {
 					...newParams,
 				},
 			}));
+
+			// 如果咖啡粉量发生变化，并且提供了咖啡豆ID，则更新咖啡豆剩余量
+			if (
+				type === "coffee" &&
+				selectedCoffeeBean &&
+				newCoffeeAmount !== currentCoffee
+			) {
+				try {
+					console.log(
+						`[参数变更] 咖啡粉量变化: ${formatNumber(
+							currentCoffee
+						)}g -> ${formatNumber(newCoffeeAmount)}g`
+					);
+
+					const coffeeChangeAmount = newCoffeeAmount - currentCoffee;
+					console.log(
+						`[参数变更] 变化量: ${formatNumber(
+							coffeeChangeAmount
+						)}g`
+					);
+
+					// 移除这里的咖啡豆扣减逻辑，只记录变化，等冲煮完成后再统一扣减
+					console.log(
+						`[参数变更] 已记录咖啡粉量变化，将在冲煮完成后统一扣减`
+					);
+					console.log(`[参数变更] 咖啡豆ID: ${selectedCoffeeBean}`);
+					console.log(
+						`[参数变更] 新咖啡用量: ${formatNumber(
+							newCoffeeAmount
+						)}g (冲煮完成后扣减)`
+					);
+				} catch (error) {
+					console.error("[参数变更] 记录咖啡用量变化失败:", error);
+				}
+			} else {
+				if (type === "coffee") {
+					if (!selectedCoffeeBean) {
+						console.log("[参数变更] 未选择咖啡豆");
+					} else if (newCoffeeAmount === currentCoffee) {
+						console.log(
+							`[参数变更] 咖啡粉量未变化: ${currentCoffee}g`
+						);
+					}
+				}
+			}
 		},
 		[editableParams]
 	);
@@ -195,5 +250,6 @@ export function useBrewingParameters() {
 		extractNumber,
 		extractRatioNumber,
 		formatRatio,
+		formatNumber,
 	};
 }

@@ -269,7 +269,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.2, ease: "easeOut" }}
-                    className="h-full pt-safe px-safe pb-safe"
+                    className="h-full p-6"
                     id="brewing-history-component"
                 >
                     <BrewingNoteForm
@@ -287,7 +287,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.2, ease: "easeOut" }}
-                    className="h-full pt-safe px-safe pb-safe"
+                    className="h-full p-6"
                     id="brewing-history-component"
                 >
                     <button

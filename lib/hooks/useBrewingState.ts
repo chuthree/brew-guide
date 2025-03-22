@@ -1,21 +1,27 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { Method, equipmentList, Stage } from "@/lib/config";
 import { Storage } from "@/lib/storage";
-import { BrewingNoteData } from "@/app/types";
+import { BrewingNoteData, CoffeeBean } from "@/app/types";
 import {
 	loadCustomMethods,
 	saveCustomMethod,
 	deleteCustomMethod,
 } from "@/lib/customMethods";
+import { CoffeeBeanManager } from "@/lib/coffeeBeanManager";
 
 // 定义标签类型
-export type TabType = "器具" | "方案" | "注水" | "记录";
+export type TabType = "咖啡豆" | "器具" | "方案" | "注水" | "记录";
 
 // 添加新的主导航类型
-export type MainTabType = "冲煮" | "笔记";
+export type MainTabType = "冲煮" | "笔记" | "咖啡豆";
 
 // 修改冲煮步骤类型
-export type BrewingStep = "equipment" | "method" | "brewing" | "notes";
+export type BrewingStep =
+	| "coffeeBean"
+	| "equipment"
+	| "method"
+	| "brewing"
+	| "notes";
 
 export interface Step {
 	title: string;
@@ -25,6 +31,9 @@ export interface Step {
 }
 
 export interface Content {
+	咖啡豆: {
+		steps: Step[];
+	};
 	器具: {
 		steps: Step[];
 	};
@@ -40,13 +49,23 @@ export interface Content {
 	};
 }
 
-export function useBrewingState() {
+export function useBrewingState(initialBrewingStep?: BrewingStep) {
 	// 添加主导航状态
 	const [activeMainTab, setActiveMainTab] = useState<MainTabType>("冲煮");
-	// 修改冲煮步骤状态
-	const [activeBrewingStep, setActiveBrewingStep] =
-		useState<BrewingStep>("equipment");
-	const [activeTab, setActiveTab] = useState<TabType>("器具");
+	// 修改默认步骤为器具或传入的参数
+	const [activeBrewingStep, setActiveBrewingStep] = useState<BrewingStep>(
+		initialBrewingStep || "equipment"
+	);
+	const [activeTab, setActiveTab] = useState<TabType>(
+		initialBrewingStep === "coffeeBean" ? "咖啡豆" : "器具"
+	);
+
+	// 添加咖啡豆选择状态
+	const [selectedCoffeeBean, setSelectedCoffeeBean] = useState<string | null>(
+		null
+	);
+	const [selectedCoffeeBeanData, setSelectedCoffeeBeanData] =
+		useState<CoffeeBean | null>(null);
 
 	const [selectedEquipment, setSelectedEquipment] = useState<string | null>(
 		null
@@ -87,27 +106,81 @@ export function useBrewingState() {
 	const prevMainTabRef = useRef<MainTabType | null>(null);
 
 	// 重置冲煮状态函数
-	const resetBrewingState = useCallback(() => {
-		// 记住当前选择的设备，以便保留设备选择状态
-		const currentEquipment = selectedEquipment;
-		const equipmentName = currentEquipment
-			? equipmentList.find((e) => e.id === currentEquipment)?.name ||
-			  currentEquipment
-			: null;
+	const resetBrewingState = useCallback(
+		(preserveMethod = false) => {
+			// 如果是从记录页面返回到注水页面的特殊情况，不执行重置
+			const fromNotesToBrewing =
+				localStorage.getItem("fromNotesToBrewing");
+			if (fromNotesToBrewing === "true") {
+				// 清除标记
+				localStorage.removeItem("fromNotesToBrewing");
+				console.log(`[状态重置] 从记录到注水的特殊跳转，跳过重置`);
+				return;
+			}
 
-		// 重置所有冲煮相关状态到初始值
-		setActiveBrewingStep("equipment");
-		// 不重置设备选择，允许用户从咖啡豆步骤返回到之前的设备
-		// setSelectedEquipment(null);
-		setSelectedMethod(null);
-		setCurrentBrewingMethod(null);
-		setShowComplete(false);
-		setCurrentStage(-1);
-		setIsTimerRunning(false);
-		setCountdownTime(null);
+			if (!preserveMethod) {
+				// 完全重置所有状态
+				console.log(`[状态重置] 完全重置所有状态`);
+				setIsTimerRunning(false);
+				setCurrentStage(0);
+				setShowComplete(false);
+				setCurrentTime(0);
+				setCountdownTime(null);
+				setIsPourVisualizerPreloaded(false);
+				setSelectedMethod(null);
+				setCurrentBrewingMethod(null);
+				setSelectedCoffeeBean(null);
+				setSelectedCoffeeBeanData(null);
+				setActiveBrewingStep("equipment"); // 默认回到器具选择
+				setActiveTab("器具");
+			} else {
+				// 部分重置状态，但保留已选方案、咖啡豆和参数
+				console.log(`[状态重置] 部分重置状态，保留已选方案和咖啡豆`);
+				setIsTimerRunning(false);
+				setCurrentStage(0);
+				setShowComplete(false);
+				setCurrentTime(0);
+				setCountdownTime(null);
+				setIsPourVisualizerPreloaded(false);
 
-		return { currentEquipment, equipmentName };
-	}, [selectedEquipment]);
+				// 检查是否有已经选择的方案和咖啡豆
+				if (selectedMethod) {
+					// 返回到方案步骤或注水步骤
+					setActiveBrewingStep("brewing"); // 直接返回到注水步骤而不是方案步骤
+					setActiveTab("注水");
+				} else if (selectedEquipment) {
+					// 有设备但无方案，返回到方案步骤
+					setActiveBrewingStep("method");
+					setActiveTab("方案");
+				} else if (selectedCoffeeBean) {
+					// 只有咖啡豆，返回到设备步骤
+					setActiveBrewingStep("equipment");
+					setActiveTab("器具");
+				} else {
+					// 没有任何选择，从头开始
+					setActiveBrewingStep("equipment");
+					setActiveTab("器具");
+				}
+			}
+		},
+		[
+			setIsTimerRunning,
+			setCurrentStage,
+			setShowComplete,
+			setCurrentTime,
+			setCountdownTime,
+			setIsPourVisualizerPreloaded,
+			setSelectedMethod,
+			setCurrentBrewingMethod,
+			setSelectedCoffeeBean,
+			setSelectedCoffeeBeanData,
+			setActiveBrewingStep,
+			setActiveTab,
+			selectedMethod,
+			selectedEquipment,
+			selectedCoffeeBean,
+		]
+	);
 
 	// 处理从笔记页面跳转到导入方案页面的函数
 	const jumpToImport = useCallback(async () => {
@@ -140,7 +213,7 @@ export function useBrewingState() {
 			setTimeout(() => {
 				// 6. 选择对应的器具
 				setSelectedEquipment(equipmentId);
-				// 7. 设置冲煮步骤为"method"
+				// 7. 直接跳到方案步骤
 				setActiveBrewingStep("method");
 				// 8. 设置标签为"方案"
 				setActiveTab("方案");
@@ -176,13 +249,47 @@ export function useBrewingState() {
 				return;
 			}
 
+			// 特殊处理：从笔记页面返回注水页面的情况
+			if (activeBrewingStep === "notes" && step === "brewing") {
+				// 当前在记录页面，要返回到注水页面
+				console.log(
+					"[步骤导航] 从记录页面返回到注水页面，完全保留参数"
+				);
+
+				// 完全保留所有参数，只改变当前步骤
+				setActiveBrewingStep("brewing");
+				setActiveTab("注水");
+
+				// 重置部分冲煮状态，但保留方法和参数
+				setIsTimerRunning(false);
+				setCurrentStage(0);
+				setShowComplete(false);
+				setCurrentTime(0);
+				setCountdownTime(null);
+
+				// 触发事件，仅关闭记录表单，不做任何其他操作
+				const event = new CustomEvent("closeBrewingNoteForm", {
+					detail: { force: true },
+				});
+				window.dispatchEvent(event);
+
+				// 设置标记，标识这是从记录到注水的特殊跳转
+				localStorage.setItem("fromNotesToBrewing", "true");
+
+				return;
+			}
+
 			// 如果计时器正在运行，不允许切换步骤
 			if (isTimerRunning && !showComplete) {
 				return;
 			}
 
+			// 清除特殊标记
+			localStorage.removeItem("fromNotesToBrewing");
+
 			// 获取步骤索引，用于验证导航
 			const stepOrder: BrewingStep[] = [
+				"coffeeBean",
 				"equipment",
 				"method",
 				"brewing",
@@ -198,7 +305,10 @@ export function useBrewingState() {
 			}
 
 			// 处理返回到不同步骤的状态重置，但不清除参数信息
-			if (step === "equipment") {
+			if (step === "coffeeBean") {
+				// coffeeBean 步骤不需要重置状态
+				// 不重置设备选择，允许用户从咖啡豆步骤返回到之前的设备
+			} else if (step === "equipment") {
 				// 返回到器具步骤，清空方案相关状态，但不清除selectedEquipment
 				setSelectedMethod(null);
 				setCurrentBrewingMethod(null);
@@ -214,29 +324,19 @@ export function useBrewingState() {
 			} else if (step === "brewing") {
 				// 验证导航条件 - 必须先选择方案
 				if (!selectedMethod) return;
+
+				// 返回到注水步骤，重置注水相关状态
+				setIsTimerRunning(false);
+				setCurrentStage(0);
+				setCountdownTime(null);
+				setShowComplete(false); // 确保重置完成状态
 			} else if (step === "notes") {
 				// 验证导航条件 - 必须先完成冲煮
 				if (!showComplete) return;
 			}
 
-			// 设置活动步骤和对应的标签页
+			// 设置活动步骤
 			setActiveBrewingStep(step);
-
-			// 根据步骤设置对应的标签页
-			switch (step) {
-				case "equipment":
-					setActiveTab("器具");
-					break;
-				case "method":
-					setActiveTab("方案");
-					break;
-				case "brewing":
-					setActiveTab("注水");
-					break;
-				case "notes":
-					setActiveTab("记录");
-					break;
-			}
 		},
 		[
 			activeBrewingStep,
@@ -306,21 +406,6 @@ export function useBrewingState() {
 		loadMethods();
 	}, []);
 
-	// 预加载 PourVisualizer 组件
-	useEffect(() => {
-		// 当用户选择了器具后就开始预加载 PourVisualizer 组件
-		if (selectedEquipment && !isPourVisualizerPreloaded) {
-			// 使用动态导入预加载组件
-			const preloadComponent = async () => {
-				// 动态导入PourVisualizer组件，组件内部会自动处理图片预加载
-				await import("@/components/PourVisualizer");
-			};
-
-			preloadComponent();
-			setIsPourVisualizerPreloaded(true);
-		}
-	}, [selectedEquipment, isPourVisualizerPreloaded]);
-
 	// 保存笔记的处理函数
 	const handleSaveNote = useCallback(
 		async (data: BrewingNoteData) => {
@@ -343,6 +428,85 @@ export function useBrewingState() {
 				const updatedNotes = [newNote, ...notes];
 				await Storage.set("brewingNotes", JSON.stringify(updatedNotes));
 
+				// 在保存笔记时扣减咖啡豆用量（冲煮完成后）
+				if (selectedCoffeeBean && currentBrewingMethod?.params.coffee) {
+					try {
+						console.log(`===== 冲煮完成，扣减咖啡豆用量 =====`);
+						console.log(`咖啡豆ID: ${selectedCoffeeBean}`);
+
+						// 解析最终使用的咖啡粉量
+						const match =
+							currentBrewingMethod.params.coffee.match(
+								/(\d+\.?\d*)/
+							);
+						if (!match) {
+							console.error(
+								`无法从 "${currentBrewingMethod.params.coffee}" 中提取咖啡用量数字`
+							);
+						} else {
+							const coffeeAmount = parseFloat(match[1]);
+							// 格式化数值，如果没有小数部分则显示整数
+							const formattedAmount = Number.isInteger(
+								coffeeAmount
+							)
+								? coffeeAmount.toString()
+								: coffeeAmount.toFixed(1);
+
+							console.log(`最终咖啡用量: ${formattedAmount}g`);
+
+							if (!isNaN(coffeeAmount) && coffeeAmount > 0) {
+								const updatedBean =
+									await CoffeeBeanManager.updateBeanRemaining(
+										selectedCoffeeBean,
+										coffeeAmount
+									);
+
+								if (updatedBean) {
+									// 格式化剩余量和容量显示
+									// 确保剩余量和容量都是数字类型
+									const remainingNum =
+										typeof updatedBean.remaining ===
+										"string"
+											? parseFloat(updatedBean.remaining)
+											: updatedBean.remaining;
+
+									const capacityNum =
+										typeof updatedBean.capacity === "string"
+											? parseFloat(updatedBean.capacity)
+											: updatedBean.capacity;
+
+									const formattedRemaining = Number.isInteger(
+										remainingNum
+									)
+										? remainingNum.toString()
+										: remainingNum.toFixed(1);
+
+									const formattedCapacity = Number.isInteger(
+										capacityNum
+									)
+										? capacityNum.toString()
+										: capacityNum.toFixed(1);
+
+									console.log(
+										`咖啡豆扣减成功，剩余: ${formattedRemaining}g / ${formattedCapacity}g`
+									);
+								} else {
+									console.error(
+										"咖啡豆扣减失败：无法找到对应咖啡豆"
+									);
+								}
+							} else {
+								console.error(
+									`无效的咖啡用量: ${coffeeAmount}g`
+								);
+							}
+						}
+						console.log(`===== 扣减完成 =====`);
+					} catch (error) {
+						console.error("扣减咖啡豆用量失败:", error);
+					}
+				}
+
 				// 保存后跳转到笔记页面
 				setActiveMainTab("笔记");
 				setShowHistory(true);
@@ -354,7 +518,12 @@ export function useBrewingState() {
 				alert("保存笔记时出错，请重试");
 			}
 		},
-		[selectedMethod, resetBrewingState]
+		[
+			selectedMethod,
+			resetBrewingState,
+			selectedCoffeeBean,
+			currentBrewingMethod,
+		]
 	);
 
 	// 保存自定义方案
@@ -410,6 +579,16 @@ export function useBrewingState() {
 		[selectedEquipment, customMethods, selectedMethod]
 	);
 
+	// 处理咖啡豆选择
+	const handleCoffeeBeanSelect = (beanId: string, bean: CoffeeBean) => {
+		setSelectedCoffeeBean(beanId);
+		setSelectedCoffeeBeanData(bean);
+
+		// 当选择了咖啡豆后，引导用户进入下一步（器具选择）
+		setActiveBrewingStep("equipment");
+		setActiveTab("器具");
+	};
+
 	return {
 		activeMainTab,
 		setActiveMainTab,
@@ -440,6 +619,10 @@ export function useBrewingState() {
 		isPourVisualizerPreloaded,
 		customMethods,
 		setCustomMethods,
+		selectedCoffeeBean,
+		setSelectedCoffeeBean,
+		selectedCoffeeBeanData,
+		setSelectedCoffeeBeanData,
 		showCustomForm,
 		setShowCustomForm,
 		editingMethod,
@@ -454,6 +637,7 @@ export function useBrewingState() {
 		jumpToImport,
 		handleBrewingStepClick,
 		handleEquipmentSelect,
+		handleCoffeeBeanSelect,
 		handleSaveNote,
 		handleSaveCustomMethod,
 		handleEditCustomMethod,

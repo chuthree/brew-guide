@@ -35,6 +35,15 @@ export function useBrewingContent({
 	selectedMethod,
 }: UseBrewingContentProps) {
 	const initialContent: Content = {
+		咖啡豆: {
+			steps: [
+				{
+					title: "咖啡豆选择",
+					items: ["选择您喜欢的咖啡豆"],
+					note: "正在开发中",
+				},
+			],
+		},
 		器具: {
 			steps: equipmentList.map((equipment) => ({
 				title: equipment.name,
@@ -114,14 +123,7 @@ export function useBrewingContent({
 	}, [selectedEquipment, methodType, customMethods]);
 
 	// 更新注水步骤内容
-	const updateBrewingSteps = (
-		stages: Array<{
-			label: string;
-			water: string;
-			detail: string;
-			time: number;
-		}>
-	) => {
+	const updateBrewingSteps = (stages: Stage[]) => {
 		setContent((prev) => ({
 			...prev,
 			注水: {
@@ -147,4 +149,13 @@ export function useBrewingContent({
 		updateBrewingSteps,
 		formatTime,
 	};
+}
+
+// 定义Stage类型，并导出供其他模块使用
+export interface Stage {
+	label: string;
+	water: string;
+	detail: string;
+	time: number;
+	pourTime?: number;
 }

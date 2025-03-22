@@ -82,7 +82,6 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
             img.onerror = () => {
                 errors[src] = true
                 loadedCount++
-                console.error(`图像加载失败: ${src}`)
                 if (loadedCount === imagesToPreload.length) {
                     setImagesPreloaded(true)
                 }
@@ -222,7 +221,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                     priority
                     sizes="(max-width: 768px) 100vw, 300px"
                     quality={85}
-                    onError={() => console.error('设备图像加载失败')}
+                    onError={() => { }}
                 />
                 {equipmentId === 'CleverDripper' && (
                     <div className="absolute inset-0">
@@ -233,7 +232,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                             className="object-contain invert-0 dark:invert opacity-50 transition-opacity duration-300"
                             sizes="(max-width: 768px) 100vw, 300px"
                             quality={85}
-                            onError={() => console.error('阀门图像加载失败')}
+                            onError={() => { }}
                         />
                     </div>
                 )}
@@ -262,7 +261,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                 priority
                 sizes="(max-width: 768px) 100vw, 300px"
                 quality={85}
-                onError={() => console.error('设备图像加载失败')}
+                onError={() => { }}
             />
 
             {/* 聪明杯阀门图层 */}
@@ -275,7 +274,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                         className={`object-contain invert-0 dark:invert ${equipmentOpacity} transition-opacity duration-300`}
                         sizes="(max-width: 768px) 100vw, 300px"
                         quality={85}
-                        onError={() => console.error('阀门图像加载失败')}
+                        onError={() => { }}
                     />
                 </div>
             )}
@@ -302,9 +301,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                                     sizes="(max-width: 768px) 100vw, 300px"
                                     quality={85}
                                     loading="eager"
-                                    onError={() => {
-                                        console.error(`动画图像加载失败: ${motionSrc}`)
-                                    }}
+                                    onError={() => { }}
                                 />
                             </motion.div>
                         )}
@@ -326,9 +323,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                                     sizes="(max-width: 768px) 100vw, 300px"
                                     quality={85}
                                     loading="eager"
-                                    onError={() => {
-                                        console.error(`冰块图像加载失败: /images/pour-ice-motion-${index}.svg`)
-                                    }}
+                                    onError={() => { }}
                                 />
                             </motion.div>
                         ))}

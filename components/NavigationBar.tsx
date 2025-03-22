@@ -21,11 +21,9 @@ const noScrollbarStyle = `
 type TabType = '器具' | '方案' | '注水' | '记录';
 
 // 添加新的主导航类型
-// type MainTabType = '冲煮' | '咖啡豆' | '笔记';
-type MainTabType = '冲煮' | '笔记';
+type MainTabType = '冲煮' | '咖啡豆' | '笔记';
 // 修改冲煮步骤类型
-// type BrewingStep = 'coffeeBean' | 'equipment' | 'method' | 'brewing' | 'notes';
-type BrewingStep = 'equipment' | 'method' | 'brewing' | 'notes';
+type BrewingStep = 'coffeeBean' | 'equipment' | 'method' | 'brewing' | 'notes';
 // Add new interface for parameter display
 interface ParameterInfo {
     equipment: string | null
@@ -114,18 +112,28 @@ const StepIndicator = ({
     currentStep,
     onStepClick,
     disabledSteps = [],
+    hasCoffeeBeans = false
 }: {
     currentStep: BrewingStep
     onStepClick?: (step: BrewingStep) => void
     disabledSteps?: BrewingStep[]
+    hasCoffeeBeans?: boolean
 }) => {
-    const steps: { label: string; value: BrewingStep }[] = [
-        // { label: '咖啡豆', value: 'coffeeBean' },
-        { label: '器具', value: 'equipment' },
-        { label: '方案', value: 'method' },
-        { label: '注水', value: 'brewing' },
-        { label: '记录', value: 'notes' },
-    ];
+    // 根据是否有咖啡豆动态生成步骤数组
+    const steps: { label: string; value: BrewingStep }[] = hasCoffeeBeans
+        ? [
+            { label: '咖啡豆', value: 'coffeeBean' },
+            { label: '器具', value: 'equipment' },
+            { label: '方案', value: 'method' },
+            { label: '注水', value: 'brewing' },
+            { label: '记录', value: 'notes' },
+        ]
+        : [
+            { label: '器具', value: 'equipment' },
+            { label: '方案', value: 'method' },
+            { label: '注水', value: 'brewing' },
+            { label: '记录', value: 'notes' },
+        ];
 
     const getStepIndex = (step: BrewingStep) => {
         return steps.findIndex(s => s.value === step);
@@ -178,33 +186,41 @@ const StepIndicator = ({
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.26, ease: "easeOut" }}
         >
-            {steps.map((step, index) => (
-                <React.Fragment key={step.value}>
-                    <TabButton
-                        tab={step.label}
-                        isActive={currentStep === step.value}
-                        isDisabled={disabledSteps.includes(step.value)}
-                        isCompleted={index < currentIndex}
-                        onClick={() => handleStepClick(step.value)}
-                        className="text-[10px] sm:text-xs"
-                    />
-                    {index < steps.length - 1 && (
-                        <motion.div
-                            className="h-px w-full max-w-[20px] sm:max-w-[30px]"
-                            style={{
-                                backgroundColor: index < currentIndex
-                                    ? isDarkMode
-                                        ? 'rgb(107, 114, 128)' // dark:neutral-500
-                                        : 'rgb(156, 163, 175)' // neutral-400
-                                    : isDarkMode
-                                        ? 'rgb(64, 64, 64)' // dark:neutral-700
-                                        : 'rgb(229, 231, 235)' // neutral-200
-                            }}
-                            transition={{ duration: 0.26 }}
+            {steps.map((step, index) => {
+                // 判断步骤状态
+                const stepIndex = getStepIndex(step.value);
+                const isActive = currentStep === step.value;
+                const isDisabled = disabledSteps.includes(step.value);
+                const isCompleted = stepIndex < currentIndex;
+
+                return (
+                    <React.Fragment key={step.value}>
+                        <TabButton
+                            tab={step.label}
+                            isActive={isActive}
+                            isDisabled={isDisabled}
+                            isCompleted={isCompleted}
+                            onClick={() => handleStepClick(step.value)}
+                            className="text-[10px] sm:text-xs"
                         />
-                    )}
-                </React.Fragment>
-            ))}
+                        {index < steps.length - 1 && (
+                            <motion.div
+                                className="h-px w-full max-w-[20px] sm:max-w-[30px]"
+                                style={{
+                                    backgroundColor: stepIndex < currentIndex
+                                        ? isDarkMode
+                                            ? 'rgb(107, 114, 128)' // dark:neutral-500
+                                            : 'rgb(156, 163, 175)' // neutral-400
+                                        : isDarkMode
+                                            ? 'rgb(64, 64, 64)' // dark:neutral-700
+                                            : 'rgb(229, 231, 235)' // neutral-200
+                                }}
+                                transition={{ duration: 0.26 }}
+                            />
+                        )}
+                    </React.Fragment>
+                );
+            })}
         </motion.div>
     );
 };
@@ -313,6 +329,9 @@ interface NavigationBarProps {
     setActiveTab: (tab: TabType) => void;
     onTitleDoubleClick: () => void; // 添加双击标题的回调函数
     settings: SettingsOptions; // 添加settings属性
+    // 添加咖啡豆相关字段
+    selectedCoffeeBean: string | null;
+    hasCoffeeBeans?: boolean; // 添加是否有咖啡豆的属性
 }
 
 const NavigationBar: React.FC<NavigationBarProps> = ({
@@ -333,41 +352,52 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
     setActiveTab,
     onTitleDoubleClick, // 接收双击标题的回调函数
     settings, // 接收设置
+    selectedCoffeeBean,
+    hasCoffeeBeans // 接收是否有咖啡豆的属性
 }) => {
     // 获取禁用的步骤
     const getDisabledSteps = (): BrewingStep[] => {
-        const disabled: BrewingStep[] = [];
-        const stepOrder = ['equipment', 'method', 'brewing', 'notes'];
+        const disabledSteps: BrewingStep[] = [];
 
-        // 当前步骤索引
-        const currentStepIndex = stepOrder.indexOf(activeBrewingStep);
+        // 定义步骤顺序
+        const steps: BrewingStep[] = hasCoffeeBeans
+            ? ['coffeeBean', 'equipment', 'method', 'brewing', 'notes']
+            : ['equipment', 'method', 'brewing', 'notes'];
 
-        // 简化的导航逻辑：用户只能点击当前步骤或之前的步骤
-        // 所有后续步骤都被禁用，用户必须按顺序完成当前步骤后系统才会自动导航
-        for (let i = 0; i < stepOrder.length; i++) {
-            // 添加一个例外：如果处于coffeeBean步骤，但已经选择了设备，则可以点击器具步骤
-            // if (activeBrewingStep === 'coffeeBean' && i === 1 && selectedEquipment) {
-            //     // 不禁用器具步骤
-            //     continue;
-            // }
+        const currentIndex = steps.indexOf(activeBrewingStep);
 
-            // 禁用所有当前步骤之后的步骤，咖啡豆步骤除外
-            if (i > currentStepIndex) {
-                disabled.push(stepOrder[i] as BrewingStep);
-            }
+        // 如果没有咖啡豆，禁用咖啡豆步骤
+        if (!hasCoffeeBeans) {
+            disabledSteps.push('coffeeBean');
         }
 
-        // 额外的条件禁用
+        // 禁用当前步骤后面的所有步骤（严格顺序）
+        for (let i = currentIndex + 1; i < steps.length; i++) {
+            disabledSteps.push(steps[i]);
+        }
+
+        // 添加后置条件检查 - 无论当前步骤如何，都确保这些条件生效
+        // 如果没有选择器具，禁用方案、冲煮和记录步骤
         if (!selectedEquipment) {
-            disabled.push('method', 'brewing', 'notes');
-        } else if (!selectedMethod) {
-            disabled.push('brewing', 'notes');
-        } else if (!showComplete) {
-            disabled.push('notes');
+            if (!disabledSteps.includes('method')) disabledSteps.push('method');
+            if (!disabledSteps.includes('brewing')) disabledSteps.push('brewing');
+            if (!disabledSteps.includes('notes')) disabledSteps.push('notes');
+        }
+        // 如果没有选择方案，禁用冲煮和记录步骤
+        if (!selectedMethod) {
+            if (!disabledSteps.includes('brewing')) disabledSteps.push('brewing');
+            if (!disabledSteps.includes('notes')) disabledSteps.push('notes');
+        }
+        // 如果没有完成冲煮，禁用记录步骤
+        if (!showComplete) {
+            if (!disabledSteps.includes('notes')) disabledSteps.push('notes');
         }
 
-        return disabled;
+        return disabledSteps;
     };
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const hasCoffeeBean = !!selectedCoffeeBean;
 
     // 添加双击计时器和计数器
     const [lastTitleClickTime, setLastTitleClickTime] = useState(0);
@@ -398,11 +428,64 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
             return;
         }
 
+        // 如果没有咖啡豆且尝试切换到咖啡豆步骤，则跳转到器具步骤
+        if (step === 'coffeeBean' && !hasCoffeeBeans) {
+            // 直接调用父组件传入的setActiveBrewingStep函数，让父组件处理所有逻辑
+            if (settings.hapticFeedback) {
+                hapticsUtils.light(); // 添加轻触感反馈
+            }
+            setActiveBrewingStep('equipment');
+            return;
+        }
+
+        // 特殊处理：从记录跳转到注水时，完全保留参数
+        if (activeBrewingStep === 'notes' && step === 'brewing') {
+            // 仅改变当前步骤，不清空参数栏
+            if (settings.hapticFeedback) {
+                hapticsUtils.light();
+            }
+            setActiveBrewingStep(step);
+            setActiveTab('注水');
+
+            // 触发事件，仅关闭记录表单，不做任何其他操作
+            const event = new CustomEvent("closeBrewingNoteForm", {
+                detail: { force: true },
+            });
+            window.dispatchEvent(event);
+
+            // 不修改参数信息，直接返回
+            return;
+        }
+
+        // 只在非特殊情况下清空参数栏
+        if (step !== 'brewing') {
+            setParameterInfo({
+                equipment: null,
+                method: null,
+                params: null
+            });
+        }
+
+        // 如果是方案步骤且已选择器具，只显示器具信息
+        if (step === 'method' && selectedEquipment) {
+            const equipmentName = equipmentList.find(e => e.id === selectedEquipment)?.name || selectedEquipment;
+            setParameterInfo({
+                equipment: equipmentName,
+                method: null,
+                params: null
+            });
+        }
+
         // 直接调用父组件传入的setActiveBrewingStep函数，让父组件处理所有逻辑
         if (settings.hapticFeedback) {
             hapticsUtils.light(); // 添加轻触感反馈
         }
         setActiveBrewingStep(step);
+
+        // 如果不在冲煮主标签，先切换到冲煮主标签
+        if (activeMainTab !== '冲煮') {
+            setActiveMainTab('冲煮');
+        }
     };
 
     // 判断是否应该隐藏标题和导航
@@ -427,6 +510,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
             }
         }
     };
+
 
     const fadeInVariants = {
         visible: {
@@ -466,7 +550,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
         }
     };
 
-    // 处理主导航标签点击
+    // 处理主标签点击
     const handleMainTabClick = (tab: MainTabType) => {
         // 如果已经在选中的标签，不做任何操作
         if (activeMainTab === tab) return;
@@ -481,8 +565,9 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
             if (activeMainTab === '笔记') {
                 setShowHistory(false);
             }
-            // } else if (tab === '咖啡豆') {
-            //     setActiveMainTab('咖啡豆');
+            // 移除强制设置到器具步骤的代码
+        } else if (tab === '咖啡豆') {
+            setActiveMainTab('咖啡豆');
         } else if (tab === '笔记') {
             setActiveMainTab('笔记');
             setShowHistory(true);
@@ -521,12 +606,12 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                             onClick={() => handleMainTabClick('冲煮')}
                             className="text-[10px] sm:text-xs"
                         />
-                        {/* <TabButton
+                        <TabButton
                             tab="咖啡豆"
                             isActive={activeMainTab === '咖啡豆'}
                             onClick={() => handleMainTabClick('咖啡豆')}
                             className="text-[10px] sm:text-xs"
-                        /> */}
+                        />
                         <TabButton
                             tab="笔记"
                             isActive={activeMainTab === '笔记'}
@@ -697,6 +782,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                         currentStep={activeBrewingStep}
                         onStepClick={handleBrewingStepClick}
                         disabledSteps={getDisabledSteps()}
+                        hasCoffeeBeans={hasCoffeeBeans}
                     />
                 </div>
             </motion.div>

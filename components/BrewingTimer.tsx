@@ -8,6 +8,7 @@ import type { Method } from '@/lib/config'
 import type { SettingsOptions } from '@/components/Settings'
 import { KeepAwake } from '@capacitor-community/keep-awake'
 import hapticsUtils from '@/lib/haptics'
+import { Storage } from '@/lib/storage'
 
 // 添加是否支持KeepAwake的检查
 const isKeepAwakeSupported = () => {
@@ -134,18 +135,17 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                             }
 
                             audioLoaded.current = true
-                            console.log('音频文件加载完成')
-                        } catch (error) {
-                            console.error('加载音频文件失败:', error)
+                        } catch {
+                            // 加载音频文件失败，静默处理
                         }
                     }
 
                     loadAudio()
                 } else {
-                    console.warn('浏览器不支持 Web Audio API，将使用备用方案')
+                    // 浏览器不支持Web Audio API，静默处理
                 }
-            } catch (error) {
-                console.error('初始化音频系统失败:', error)
+            } catch {
+                // 初始化音频系统失败，静默处理
             }
         }
 
@@ -175,7 +175,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         }
 
         if (!audioContext.current || !audioBuffers.current[type]) {
-            console.warn(`无法播放音效 ${type}: 音频系统未初始化或音频文件未加载`)
+            // 音频系统未初始化或音频文件未加载，静默处理
             return
         }
 
@@ -202,8 +202,8 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
             source.start(0)
 
             lastPlayedTime.current[type] = now
-        } catch (error) {
-            console.error(`播放音效 ${type} 失败:`, error)
+        } catch {
+            // 播放音效失败，静默处理
         }
     }, [settings.notificationSound])
 
@@ -282,22 +282,11 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
             try {
                 if (isRunning) {
                     await KeepAwake.keepAwake();
-                    // 避免在生产环境显示非关键日志
-                    if (process.env.NODE_ENV !== 'production') {
-                        console.log('屏幕保持常亮已启用');
-                    }
                 } else if (!isRunning && hasStartedOnce) {
                     await KeepAwake.allowSleep();
-                    if (process.env.NODE_ENV !== 'production') {
-                        console.log('屏幕保持常亮已禁用');
-                    }
                 }
             } catch {
-                // 静默处理错误，避免在控制台显示
-                // 如果需要调试，可以在开发环境下启用
-                if (process.env.NODE_ENV !== 'production') {
-                    console.log('屏幕常亮功能不可用');
-                }
+                // 静默处理错误
             }
         };
 
@@ -319,17 +308,26 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         };
     }, [isRunning, hasStartedOnce]);
 
+    // 完成冲煮，显示笔记表单
     const handleComplete = useCallback(() => {
-        if (isCompleted) return
+        if (isCompleted) return;
 
         triggerHaptic('success');
-        clearTimerAndStates()
-        setIsRunning(false)
-        setShowComplete(true)
-        setIsCompleted(true)
-        onComplete?.(true, currentTime)
-        onTimerComplete?.()
-        playSound('correct')
+        clearTimerAndStates();
+        setIsRunning(false);
+        setShowComplete(true);
+        setIsCompleted(true);
+        onComplete?.(true, currentTime);
+        onTimerComplete?.();
+        playSound('correct');
+
+        // 添加延迟，在计时器结束后自动显示笔记表单
+        setTimeout(() => {
+            setShowNoteForm(true);
+
+            // 设置笔记状态标记，表示笔记表单已显示但尚未保存
+            localStorage.setItem('brewingNoteInProgress', 'true');
+        }, 1500); // 延迟1.5秒后显示表单，给用户时间感知冲煮完成
 
         const allowSleep = async () => {
             if (!isKeepAwakeSupported()) {
@@ -343,7 +341,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
             }
         };
         allowSleep();
-    }, [clearTimerAndStates, onComplete, onTimerComplete, playSound, currentTime, isCompleted, triggerHaptic])
+    }, [clearTimerAndStates, onComplete, onTimerComplete, playSound, currentTime, isCompleted, triggerHaptic]);
 
     const startMainTimer = useCallback(() => {
         if (currentBrewingMethod) {
@@ -410,15 +408,35 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         }
     }, [countdownTime, isRunning, playSound, startMainTimer])
 
-    const handleSaveNote = useCallback((note: BrewingNoteData) => {
-        const notes = JSON.parse(localStorage.getItem('brewingNotes') || '[]')
-        const newNote = {
-            ...note,
-            id: Date.now().toString(),
-            timestamp: Date.now(),
+    // 修改保存笔记函数，添加保存成功反馈
+    const handleSaveNote = useCallback(async (note: BrewingNoteData) => {
+        try {
+            // 从Storage获取现有笔记
+            const existingNotesStr = await Storage.get('brewingNotes');
+            const existingNotes = existingNotesStr ? JSON.parse(existingNotesStr) : [];
+
+            // 创建新笔记
+            const newNote = {
+                ...note,
+                id: Date.now().toString(),
+                timestamp: Date.now(),
+            };
+
+            // 将新笔记添加到列表开头
+            const updatedNotes = [newNote, ...existingNotes];
+
+            // 存储更新后的笔记列表
+            await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
+
+            // 设置笔记已保存标记
+            localStorage.setItem('brewingNoteInProgress', 'false');
+
+            // 关闭笔记表单
+            setShowNoteForm(false);
+        } catch {
+            alert('保存失败，请重试');
         }
-        localStorage.setItem('brewingNotes', JSON.stringify([newNote, ...notes]))
-    }, [])
+    }, []);
 
     useEffect(() => {
         if (currentTime > 0 && currentTime >= methodStagesRef.current[methodStagesRef.current.length - 1]?.time) {
@@ -530,6 +548,27 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         lastStageRef.current = currentStage;
     }, [currentTime, getCurrentStage, isRunning, triggerHaptic]);
 
+    // 添加监听自定义事件，用于外部控制关闭笔记表单
+    useEffect(() => {
+        const handleForceCloseNoteForm = (e: CustomEvent<{ force?: boolean }>) => {
+            if (e.detail?.force) {
+                // 只关闭笔记表单，不改变任何状态
+                setShowNoteForm(false);
+                // 不重置完成状态
+                // 不清空参数
+                // 不做任何其他操作
+            }
+        };
+
+        // 添加事件监听器
+        window.addEventListener('closeBrewingNoteForm', handleForceCloseNoteForm as EventListener);
+
+        // 清理函数
+        return () => {
+            window.removeEventListener('closeBrewingNoteForm', handleForceCloseNoteForm as EventListener);
+        };
+    }, []);
+
     if (!currentBrewingMethod) return null
 
     return (
@@ -544,8 +583,6 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                     willChange: "transform, opacity",
                     paddingBottom: 'max(env(safe-area-inset-bottom), 28px)'
                 }}
-
-
             >
                 <div className="mb-4 space-y-3">
                     <motion.div

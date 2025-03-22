@@ -12,7 +12,7 @@ import React, { useState, useEffect } from 'react'
 // }
 
 // 从 types.ts 导入 BrewingNoteData 类型
-import type { BrewingNoteData } from '@/app/types'
+import type { BrewingNoteData, CoffeeBean } from '@/app/types'
 import { generateOptimizationJson } from '@/lib/jsonUtils'
 import { brewingMethods, type Method, type Stage } from '@/lib/config'
 import { Storage } from '@/lib/storage'
@@ -41,7 +41,9 @@ interface BrewingNoteFormProps {
     isOpen: boolean;
     onClose: () => void;
     onSave: (data: BrewingNoteData) => void;
-    initialData: Partial<BrewingNoteData>;
+    initialData: Partial<BrewingNoteData> & {
+        coffeeBean?: CoffeeBean | null;
+    };
     showOptimizationByDefault?: boolean;
     onJumpToImport?: () => void;
 }
@@ -55,12 +57,21 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     showOptimizationByDefault = false,
     onJumpToImport,
 }) => {
+    // 处理咖啡豆数据，如果有提供coffeeBean则使用，否则使用coffeeBeanInfo
+    const initialCoffeeBeanInfo = initialData.coffeeBean
+        ? {
+            name: initialData.coffeeBean.name || '',
+            roastLevel: initialData.coffeeBean.roastLevel || '中度烘焙',
+            roastDate: initialData.coffeeBean.roastDate || ''
+        }
+        : {
+            name: initialData.coffeeBeanInfo?.name || '',
+            roastLevel: initialData.coffeeBeanInfo?.roastLevel || '中度烘焙',
+            roastDate: initialData.coffeeBeanInfo?.roastDate || '',
+        };
+
     const [formData, setFormData] = useState<FormData>({
-        coffeeBeanInfo: {
-            name: initialData?.coffeeBeanInfo?.name || '',
-            roastLevel: initialData?.coffeeBeanInfo?.roastLevel || '中度烘焙',
-            roastDate: initialData?.coffeeBeanInfo?.roastDate || '',
-        },
+        coffeeBeanInfo: initialCoffeeBeanInfo,
         rating: initialData?.rating || 3,
         taste: {
             acidity: initialData?.taste?.acidity || 3,
@@ -85,12 +96,21 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     // Update form data when initialData changes
     useEffect(() => {
         if (initialData) {
-            setFormData({
-                coffeeBeanInfo: {
+            // 重新处理咖啡豆数据
+            const coffeeBeanInfo = initialData.coffeeBean
+                ? {
+                    name: initialData.coffeeBean.name || '',
+                    roastLevel: initialData.coffeeBean.roastLevel || '中度烘焙',
+                    roastDate: initialData.coffeeBean.roastDate || ''
+                }
+                : {
                     name: initialData.coffeeBeanInfo?.name || '',
                     roastLevel: initialData.coffeeBeanInfo?.roastLevel || '中度烘焙',
                     roastDate: initialData.coffeeBeanInfo?.roastDate || '',
-                },
+                };
+
+            setFormData({
+                coffeeBeanInfo: coffeeBeanInfo,
                 rating: initialData.rating || 3,
                 taste: {
                     acidity: initialData.taste?.acidity || 3,
@@ -369,7 +389,7 @@ stages数组中的每个阶段必须包含以下字段：
     if (!isOpen) return null
 
     return (
-        <div className="h-full w-full overflow-auto overscroll-none px-6 py-4 bg-neutral-50 dark:bg-neutral-900">
+        <div className="h-full w-full overflow-auto overscroll-none bg-neutral-50 dark:bg-neutral-900">
             <form id={id} onSubmit={handleSubmit} className="relative flex h-full flex-col space-y-8">
                 {/* 隐藏的返回按钮，仅用于导航栏返回按钮查找 */}
                 <button
@@ -694,20 +714,6 @@ stages数组中的每个阶段必须包含以下字段：
                                                 className="text-[10px] tracking-widest text-emerald-600 font-medium transition-colors dark:text-emerald-500 hover:text-emerald-700 dark:hover:text-emerald-400"
                                             >
                                                 [ 复制并跳转 ]
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    copyTextToClipboard(optimizationPrompt)
-                                                        .then(() => alert('提示词已复制到剪贴板'))
-                                                        .catch(err => {
-                                                            console.error('复制失败:', err);
-                                                            alert('复制失败，请手动复制');
-                                                        })
-                                                }}
-                                                className="text-[10px] tracking-widest text-neutral-500 transition-colors dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-400"
-                                            >
-                                                [ 仅复制 ]
                                             </button>
                                         </div>
                                     </div>

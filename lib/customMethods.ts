@@ -16,16 +16,25 @@ export async function loadCustomMethods(): Promise<Record<string, Method[]>> {
 			const methodsWithIds: Record<string, Method[]> = {};
 
 			Object.keys(parsedMethods).forEach((equipment) => {
-				methodsWithIds[equipment] = parsedMethods[equipment].map(
-					(method: Method) => ({
-						...method,
-						id:
-							method.id ||
-							`${Date.now()}-${Math.random()
-								.toString(36)
-								.substr(2, 9)}`,
-					})
-				);
+				// 检查 parsedMethods[equipment] 是否为数组
+				if (Array.isArray(parsedMethods[equipment])) {
+					methodsWithIds[equipment] = parsedMethods[equipment].map(
+						(method: Method) => ({
+							...method,
+							id:
+								method.id ||
+								`${Date.now()}-${Math.random()
+									.toString(36)
+									.substr(2, 9)}`,
+						})
+					);
+				} else {
+					// 如果不是数组，初始化为空数组
+					console.warn(
+						`Equipment ${equipment} has invalid method data, initializing as empty array`
+					);
+					methodsWithIds[equipment] = [];
+				}
 			});
 
 			// 更新存储

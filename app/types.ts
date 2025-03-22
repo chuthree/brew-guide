@@ -7,6 +7,25 @@ export interface TasteRatings {
 	body: number;
 }
 
+// 咖啡豆数据模型
+export interface CoffeeBean {
+	id: string;
+	name: string;
+	image?: string; // 图片URL或Base64
+	price?: string; // 价格
+	capacity: string; // 总容量
+	remaining: string; // 剩余容量
+	roastLevel?: string; // 烘焙程度
+	roastDate?: string; // 烘焙日期
+	flavor?: string[]; // 风味描述
+	origin?: string; // 产地
+	process?: string; // 处理法
+	variety?: string; // 品种
+	type?: string; // 类型
+	notes?: string; // 备注
+	timestamp: number; // 创建/添加时间
+}
+
 // 修改 BrewingNoteData 接口，避免使用 any
 export interface BrewingNoteData {
 	id: string;

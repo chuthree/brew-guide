@@ -5,6 +5,9 @@ import { Method } from '@/lib/config';
 import StageItem from '@/components/StageItem';
 import { SettingsOptions } from './Settings';
 import { TabType, MainTabType, Content, Step } from '@/lib/hooks/useBrewingState';
+import { CoffeeBean } from '@/app/types';
+import type { BrewingNoteData } from '@/app/types';
+import { CoffeeBeanManager } from '@/lib/coffeeBeanManager';
 
 // 添加TransitionState接口
 interface TransitionState {
@@ -15,11 +18,19 @@ interface TransitionState {
 // 动态导入客户端组件
 const PourVisualizer = dynamic(() => import('@/components/PourVisualizer'), {
     ssr: false,
-    loading: () => (
-        <div className="relative w-full aspect-square max-w-[300px] mx-auto opacity-50">
-            <div className="animate-pulse bg-neutral-100 dark:bg-neutral-800 w-full h-full rounded-full"></div>
-        </div>
-    )
+    loading: () => null
+});
+
+// 使用新的 CoffeeBeanList 组件替换 CoffeeBeanSelector
+const CoffeeBeanList = dynamic(() => import('@/components/CoffeeBeanList'), {
+    ssr: false,
+    loading: () => null
+});
+
+// 动态导入笔记表单组件
+const BrewingNoteForm = dynamic(() => import('@/components/BrewingNoteForm'), {
+    ssr: false,
+    loading: () => null
 });
 
 interface TabContentProps {
@@ -33,6 +44,8 @@ interface TabContentProps {
     currentStage: number;
     isPourVisualizerPreloaded: boolean;
     selectedEquipment: string | null;
+    selectedCoffeeBean?: string | null;
+    selectedCoffeeBeanData?: CoffeeBean | null;  // 添加咖啡豆数据
     countdownTime: number | null;
     methodType: 'common' | 'custom';
     customMethods: Record<string, Method[]>;
@@ -45,9 +58,13 @@ interface TabContentProps {
     settings: SettingsOptions;
     onEquipmentSelect: (name: string) => void;
     onMethodSelect: (index: number) => void;
+    onCoffeeBeanSelect?: (beanId: string, bean: CoffeeBean) => void;
+    onAddNewCoffeeBean?: () => void;
     onEditMethod: (method: Method) => void;
     onDeleteMethod: (method: Method) => void;
     transitionState: TransitionState;
+    setActiveMainTab?: (tab: MainTabType) => void;  // 添加切换主标签页的函数
+    resetBrewingState?: (shouldReset: boolean) => void;  // 添加重置brewing状态的函数
 }
 
 const TabContent: React.FC<TabContentProps> = ({
@@ -61,6 +78,8 @@ const TabContent: React.FC<TabContentProps> = ({
     currentStage,
     isPourVisualizerPreloaded,
     selectedEquipment,
+    selectedCoffeeBean,
+    selectedCoffeeBeanData,  // 获取咖啡豆数据
     countdownTime,
     methodType,
     customMethods,
@@ -73,18 +92,99 @@ const TabContent: React.FC<TabContentProps> = ({
     settings,
     onEquipmentSelect,
     onMethodSelect,
+    onCoffeeBeanSelect,
+    onAddNewCoffeeBean,
     onEditMethod,
     onDeleteMethod,
-    transitionState
+    transitionState,
+    setActiveMainTab,  // 获取切换主标签页的函数
+    resetBrewingState  // 获取重置brewing状态的函数
 }) => {
+    // 笔记表单状态
+    const [noteSaved, setNoteSaved] = React.useState(false);
+
+    // 处理保存笔记
+    const handleSaveNote = async (note: BrewingNoteData) => {
+        try {
+            // 从Storage获取现有笔记
+            const Storage = (await import('@/lib/storage')).Storage;
+            const existingNotesStr = await Storage.get('brewingNotes');
+            const existingNotes = existingNotesStr ? JSON.parse(existingNotesStr) : [];
+
+            // 创建新笔记
+            const newNote = {
+                ...note,
+                id: Date.now().toString(),
+                timestamp: Date.now(),
+            };
+
+            // 将新笔记添加到列表开头
+            const updatedNotes = [newNote, ...existingNotes];
+
+            // 存储更新后的笔记列表
+            await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
+
+            setNoteSaved(true);
+
+            // 根据咖啡粉量减少咖啡豆的剩余量
+            if (selectedCoffeeBean && currentBrewingMethod?.params.coffee) {
+                try {
+                    const coffeeAmount = parseFloat(currentBrewingMethod.params.coffee);
+                    if (!isNaN(coffeeAmount) && coffeeAmount > 0) {
+                        await CoffeeBeanManager.updateBeanRemaining(selectedCoffeeBean, coffeeAmount);
+                    }
+                } catch {
+                    // 静默处理错误
+                }
+            }
+
+            // 成功保存后，跳转到笔记列表并重置brewing状态
+            if (setActiveMainTab) {
+                setActiveMainTab('笔记');
+            }
+
+            // 重置brewing状态，并确保重置后定位到咖啡豆步骤
+            if (resetBrewingState) {
+                resetBrewingState(false); // 完全重置状态
+                // 在localStorage中设置标记，下次进入冲煮页面时从咖啡豆步骤开始
+                localStorage.setItem('shouldStartFromCoffeeBeanStep', 'true');
+            }
+
+            // 移除成功提示
+        } catch {
+            alert('保存失败，请重试');
+        }
+    };
+
+    // 处理关闭笔记表单
+    const handleCloseNoteForm = () => {
+        if (noteSaved && setActiveMainTab) {
+            // 如果已经保存过笔记，跳转到笔记列表并重置brewing状态
+            setActiveMainTab('笔记');
+
+            // 重置brewing状态，并确保重置后定位到咖啡豆步骤
+            if (resetBrewingState) {
+                resetBrewingState(false); // 完全重置状态
+                // 在localStorage中设置标记，下次进入冲煮页面时从咖啡豆步骤开始
+                localStorage.setItem('shouldStartFromCoffeeBeanStep', 'true');
+            }
+        } else {
+            // 如果没有保存笔记，只设置标记，不做任何其他操作
+            localStorage.setItem('brewingNoteInProgress', 'false');
+
+            // 不调用任何重置函数，不清除任何状态
+            // 页面的切换由NavigationBar中的点击处理
+        }
+    };
+
     // 使用这些变量以避免"未使用变量"的警告
     React.useEffect(() => {
         if (process.env.NODE_ENV === 'development') {
-            const unusedVars = { showCustomForm, showImportForm, settings };
-            // 这是为了解决 ESLint 警告，实际上并不会执行这个日志
-            if (false) console.log(unusedVars);
+            const unusedVars = { showCustomForm, showImportForm, settings, isPourVisualizerPreloaded };
+            // 这是为了解决 ESLint 警告，实际上不会执行
+            void unusedVars;
         }
-    }, [showCustomForm, showImportForm, settings]);
+    }, [showCustomForm, showImportForm, settings, isPourVisualizerPreloaded]);
 
     // 如果不是在冲煮主Tab，显示占位内容
     if (activeMainTab !== '冲煮') {
@@ -114,8 +214,46 @@ const TabContent: React.FC<TabContentProps> = ({
                     }}
                     className="relative h-full"
                 >
-                    {/* 当计时器运行时显示可视化组件 */}
-                    {isTimerRunning && !showComplete && currentBrewingMethod ? (
+                    {/* 添加咖啡豆步骤 */}
+                    {activeTab === ('咖啡豆' as TabType) ? (
+                        <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 5 }}
+                            transition={{ duration: 0.3, ease: "easeOut" }}
+                        >
+                            <CoffeeBeanList
+                                selectedId={selectedCoffeeBean === undefined ? null : selectedCoffeeBean}
+                                onSelect={(beanId: string | null, bean: CoffeeBean | null) => {
+                                    if (onCoffeeBeanSelect) onCoffeeBeanSelect(beanId!, bean!);
+                                }}
+                                onAddNew={onAddNewCoffeeBean!}
+                            />
+                        </motion.div>
+                    ) : activeTab === ('记录' as TabType) && currentBrewingMethod ? (
+                        <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 5 }}
+                            transition={{ duration: 0.3, ease: "easeOut" }}
+                            className="absolute inset-0 bg-neutral-50 dark:bg-neutral-900"
+                        >
+                            <BrewingNoteForm
+                                id="brewingNoteForm"
+                                isOpen={true}
+                                onClose={handleCloseNoteForm}
+                                onSave={handleSaveNote}
+                                initialData={{
+                                    equipment: currentBrewingMethod.name.split(' ')[0],
+                                    method: currentBrewingMethod.name,
+                                    params: currentBrewingMethod.params,
+                                    totalTime: showComplete ? currentBrewingMethod.params.stages[currentBrewingMethod.params.stages.length - 1].time : 0,
+                                    // 如果有选中的咖啡豆，自动填充咖啡豆信息
+                                    coffeeBean: selectedCoffeeBeanData || undefined
+                                }}
+                            />
+                        </motion.div>
+                    ) : isTimerRunning && !showComplete && currentBrewingMethod ? (
                         <div className="flex items-center justify-center w-full h-full">
                             <div className="w-full max-w-[300px]">
                                 <PourVisualizer
@@ -129,19 +267,6 @@ const TabContent: React.FC<TabContentProps> = ({
                         </div>
                     ) : (
                         <div className="space-y-5">
-                            {/* 预渲染 PourVisualizer 组件，但设置为不可见 */}
-                            {activeTab === '注水' && currentBrewingMethod && isPourVisualizerPreloaded && (
-                                <div className="hidden">
-                                    <PourVisualizer
-                                        isRunning={false}
-                                        currentStage={-1}
-                                        stages={currentBrewingMethod.params.stages}
-                                        countdownTime={null}
-                                        equipmentId={selectedEquipment || 'V60'}
-                                    />
-                                </div>
-                            )}
-
                             {activeTab === '方案' ? (
                                 <div className="space-y-5 pb-16">
                                     <AnimatePresence mode="wait" initial={false}>
