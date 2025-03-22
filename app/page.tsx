@@ -806,8 +806,12 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                         key="method-selector"
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 5 }}
-                        transition={{ duration: 0.3, ease: "easeOut" }}
+                        exit={{ opacity: 0, y: 10 }}
+                        transition={{
+                            duration: 0.28,
+                            ease: "easeOut",
+                            exit: { duration: 0.2 }
+                        }}
                     >
                         <MethodTypeSelector
                             methodType={methodType}
@@ -816,41 +820,40 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                         />
                     </m.div>
                 )}
-            </AnimatePresence>
 
-            {/* 计时器 */}
-            {activeMainTab === '冲煮' && activeBrewingStep === 'brewing' && currentBrewingMethod && !showHistory && (
-                <m.div
-                    key="brewing-timer"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 20 }}
-                    transition={{
-                        duration: 0.3,
-                        type: "spring",
-                        stiffness: 300,
-                        damping: 30
-                    }}
-                >
-                    <BrewingTimer
-                        currentBrewingMethod={currentBrewingMethod}
-                        onStatusChange={({ isRunning }) => setIsTimerRunning(isRunning)}
-                        onStageChange={({ currentStage }) => {
-                            setCurrentStage(currentStage);
+                {/* 计时器 */}
+                {activeMainTab === '冲煮' && activeBrewingStep === 'brewing' && currentBrewingMethod && !showHistory && (
+                    <m.div
+                        key="brewing-timer"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 10 }}
+                        transition={{
+                            duration: 0.28,
+                            ease: "easeOut",
+                            exit: { duration: 0.2 }
                         }}
-                        onComplete={(isComplete) => {
-                            setShowComplete(isComplete);
-                        }}
-                        onTimerComplete={() => {
-                            // 冲煮完成后的处理，确保显示笔记表单
-                            // 这里不需要额外设置，因为BrewingTimer组件内部已经处理了显示笔记表单的逻辑
-                        }}
-                        onCountdownChange={(time) => setCountdownTime(time)}
-                        settings={settings}
-                        onJumpToImport={jumpToImport}
-                    />
-                </m.div>
-            )}
+                    >
+                        <BrewingTimer
+                            currentBrewingMethod={currentBrewingMethod}
+                            onStatusChange={({ isRunning }) => setIsTimerRunning(isRunning)}
+                            onStageChange={({ currentStage }) => {
+                                setCurrentStage(currentStage);
+                            }}
+                            onComplete={(isComplete) => {
+                                setShowComplete(isComplete);
+                            }}
+                            onTimerComplete={() => {
+                                // 冲煮完成后的处理，确保显示笔记表单
+                                // 这里不需要额外设置，因为BrewingTimer组件内部已经处理了显示笔记表单的逻辑
+                            }}
+                            onCountdownChange={(time) => setCountdownTime(time)}
+                            settings={settings}
+                            onJumpToImport={jumpToImport}
+                        />
+                    </m.div>
+                )}
+            </AnimatePresence>
 
             {/* 使用自定义方案表单模态框组件 */}
             <CustomMethodFormModal

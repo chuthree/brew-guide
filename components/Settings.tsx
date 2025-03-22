@@ -1,22 +1,19 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import { APP_VERSION } from '@/lib/config'
-import { useTheme } from 'next-themes'
 import { Storage } from '@/lib/storage'
 import DataManager from './DataManager'
 import hapticsUtils from '@/lib/haptics'
 
 // 定义设置选项接口
 export interface SettingsOptions {
-    darkMode: 'system' | 'light' | 'dark'
     notificationSound: boolean
     hapticFeedback: boolean
 }
 
 // 默认设置
 export const defaultSettings: SettingsOptions = {
-    darkMode: 'system',
     notificationSound: true,
     hapticFeedback: true,
 }
@@ -36,9 +33,6 @@ const Settings: React.FC<SettingsProps> = ({
     setSettings,
     onDataChange,
 }) => {
-    // 使用 next-themes 的 useTheme 钩子
-    const { setTheme } = useTheme()
-
     // 添加数据管理状态
     const [isDataManagerOpen, setIsDataManagerOpen] = useState(false)
 
@@ -51,19 +45,7 @@ const Settings: React.FC<SettingsProps> = ({
         const newSettings = { ...settings, [key]: value }
         setSettings(newSettings)
         await Storage.set('brewGuideSettings', JSON.stringify(newSettings))
-
-        // 如果是深色模式设置，则同步更新 next-themes
-        if (key === 'darkMode') {
-            setTheme(value as string)
-        }
     }
-
-    // 同步设置到 next-themes
-    useEffect(() => {
-        if (settings.darkMode) {
-            setTheme(settings.darkMode)
-        }
-    }, [settings.darkMode, setTheme])
 
     // 如果不是打开状态，不渲染任何内容
     if (!isOpen) return null
@@ -105,49 +87,6 @@ const Settings: React.FC<SettingsProps> = ({
                 </div>
 
                 <div className="space-y-5">
-                    {/* 外观设置 */}
-                    <div className="space-y-3">
-                        <h3 className="text-xs font-medium uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
-                            外观
-                        </h3>
-                        <div className="space-y-3">
-                            <div className="flex items-center justify-between">
-                                <span className="text-sm text-neutral-600 dark:text-neutral-400">
-                                    深色模式
-                                </span>
-                                <div className="flex overflow-hidden rounded-md border border-neutral-200 text-xs dark:border-neutral-700">
-                                    <button
-                                        className={`px-3 py-1.5 transition-colors ${settings.darkMode === 'light'
-                                            ? 'bg-neutral-100 text-neutral-800 dark:bg-neutral-700 dark:text-neutral-200'
-                                            : 'text-neutral-500 dark:text-neutral-500'
-                                            }`}
-                                        onClick={() => handleChange('darkMode', 'light')}
-                                    >
-                                        浅色
-                                    </button>
-                                    <button
-                                        className={`px-3 py-1.5 transition-colors ${settings.darkMode === 'system'
-                                            ? 'bg-neutral-100 text-neutral-800 dark:bg-neutral-700 dark:text-neutral-200'
-                                            : 'text-neutral-500 dark:text-neutral-500'
-                                            }`}
-                                        onClick={() => handleChange('darkMode', 'system')}
-                                    >
-                                        系统
-                                    </button>
-                                    <button
-                                        className={`px-3 py-1.5 transition-colors ${settings.darkMode === 'dark'
-                                            ? 'bg-neutral-100 text-neutral-800 dark:bg-neutral-700 dark:text-neutral-200'
-                                            : 'text-neutral-500 dark:text-neutral-500'
-                                            }`}
-                                        onClick={() => handleChange('darkMode', 'dark')}
-                                    >
-                                        深色
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
                     {/* 通知设置 */}
                     <div className="space-y-3">
                         <h3 className="text-xs font-medium uppercase tracking-wider text-neutral-400 dark:text-neutral-500">

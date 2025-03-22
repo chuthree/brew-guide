@@ -224,43 +224,43 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
                         <div className="flex flex-col">
                             <div className="text-center mb-5">
                                 <div className="mb-6 flex justify-center">
-                                    <div className="w-20 h-20 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
+                                    <div className="w-20 h-20 rounded-full bg-neutral-50 dark:bg-neutral-900 flex items-center justify-center">
                                         <span className="text-3xl">☕</span>
                                     </div>
                                 </div>
-                                <h2 className="text-xl font-bold text-neutral-800 dark:text-neutral-100">
+                                <h2 className="text-xl font-bold text-neutral-900 dark:text-white">
                                     欢迎使用手冲咖啡指南
                                 </h2>
-                                <p className="text-sm mt-2 text-neutral-600 dark:text-neutral-400">
-                                    手冲咖啡爱好者必备软件
+                                <p className="text-sm mt-2 text-neutral-500 dark:text-neutral-400">
+                                    完全离线的咖啡冲煮助手
                                 </p>
                             </div>
 
                             <div className="mt-4 space-y-3">
-                                <div className="bg-neutral-100 dark:bg-neutral-800 rounded-xl p-3 flex items-center">
-                                    <div className="w-8 h-8 bg-neutral-200 dark:bg-neutral-700 rounded-full flex items-center justify-center mr-3">
+                                <div className="bg-neutral-50 dark:bg-neutral-900 rounded-xl p-3 flex items-center">
+                                    <div className="w-8 h-8 bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center justify-center mr-3">
                                         <span className="text-neutral-700 dark:text-neutral-300">✓</span>
                                     </div>
                                     <p className="text-sm text-neutral-700 dark:text-neutral-300">
-                                        专业冲煮方案库 - AI智能优化
+                                        专业冲煮方案 - 直观计时指导
                                     </p>
                                 </div>
 
-                                <div className="bg-neutral-100 dark:bg-neutral-800 rounded-xl p-3 flex items-center">
-                                    <div className="w-8 h-8 bg-neutral-200 dark:bg-neutral-700 rounded-full flex items-center justify-center mr-3">
+                                <div className="bg-neutral-50 dark:bg-neutral-900 rounded-xl p-3 flex items-center">
+                                    <div className="w-8 h-8 bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center justify-center mr-3">
                                         <span className="text-neutral-700 dark:text-neutral-300">✓</span>
                                     </div>
                                     <p className="text-sm text-neutral-700 dark:text-neutral-300">
-                                        可视化冲煮指导 - 精确计时
+                                        咖啡豆管理 - 记录风味与烘焙度
                                     </p>
                                 </div>
 
-                                <div className="bg-neutral-100 dark:bg-neutral-800 rounded-xl p-3 flex items-center">
-                                    <div className="w-8 h-8 bg-neutral-200 dark:bg-neutral-700 rounded-full flex items-center justify-center mr-3">
+                                <div className="bg-neutral-50 dark:bg-neutral-900 rounded-xl p-3 flex items-center">
+                                    <div className="w-8 h-8 bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center justify-center mr-3">
                                         <span className="text-neutral-700 dark:text-neutral-300">✓</span>
                                     </div>
                                     <p className="text-sm text-neutral-700 dark:text-neutral-300">
-                                        个性化笔记系统 - 记录每次冲煮
+                                        离线使用 - 露营旅行随时冲煮
                                     </p>
                                 </div>
                             </div>
@@ -272,19 +272,19 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
                     <div className={commonClassNames}>
                         <div className="text-center mb-5">
                             <div className="mb-6 flex justify-center">
-                                <div className="w-20 h-20 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
+                                <div className="w-20 h-20 rounded-full bg-neutral-50 dark:bg-neutral-900 flex items-center justify-center">
                                     <span className="text-3xl">⚙️</span>
                                 </div>
                             </div>
-                            <h2 className="text-xl font-bold mb-6 text-neutral-800 dark:text-neutral-100 text-center">
+                            <h2 className="text-xl font-bold mb-6 text-neutral-900 dark:text-white text-center">
                                 偏好设置
                             </h2>
                         </div>
 
                         <div className="w-full space-y-5 mb-4">
-                            <div className="flex items-center justify-between bg-neutral-100 dark:bg-neutral-800 p-4 rounded-xl">
+                            <div className="flex items-center justify-between bg-neutral-50 dark:bg-neutral-900 p-4 rounded-xl">
                                 <div className="flex flex-col">
-                                    <label className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                                    <label className="text-sm font-medium text-neutral-900 dark:text-white">
                                         声音提示
                                     </label>
                                     <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
@@ -292,18 +292,18 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
                                     </p>
                                 </div>
                                 <div
-                                    className={`relative w-12 h-6 rounded-full transition-colors duration-200 ease-in-out ${settings.notificationSound ? 'bg-neutral-700 dark:bg-neutral-300' : 'bg-neutral-300 dark:bg-neutral-700'}`}
+                                    className={`relative w-12 h-6 rounded-full transition-colors duration-200 ease-in-out ${settings.notificationSound ? 'bg-neutral-900 dark:bg-white' : 'bg-neutral-200 dark:bg-neutral-800'}`}
                                     onClick={() => handleSettingChange('notificationSound', !settings.notificationSound)}
                                 >
                                     <div
-                                        className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${settings.notificationSound ? 'translate-x-6' : ''}`}
+                                        className={`absolute top-1 left-1 bg-white dark:bg-black w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${settings.notificationSound ? 'translate-x-6' : ''}`}
                                     />
                                 </div>
                             </div>
 
-                            <div className="flex items-center justify-between bg-neutral-100 dark:bg-neutral-800 p-4 rounded-xl">
+                            <div className="flex items-center justify-between bg-neutral-50 dark:bg-neutral-900 p-4 rounded-xl">
                                 <div className="flex flex-col">
-                                    <label className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                                    <label className="text-sm font-medium text-neutral-900 dark:text-white">
                                         震动反馈
                                     </label>
                                     <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
@@ -311,11 +311,11 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
                                     </p>
                                 </div>
                                 <div
-                                    className={`relative w-12 h-6 rounded-full transition-colors duration-200 ease-in-out ${settings.hapticFeedback ? 'bg-neutral-700 dark:bg-neutral-300' : 'bg-neutral-300 dark:bg-neutral-700'}`}
+                                    className={`relative w-12 h-6 rounded-full transition-colors duration-200 ease-in-out ${settings.hapticFeedback ? 'bg-neutral-900 dark:bg-white' : 'bg-neutral-200 dark:bg-neutral-800'}`}
                                     onClick={() => handleSettingChange('hapticFeedback', !settings.hapticFeedback)}
                                 >
                                     <div
-                                        className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${settings.hapticFeedback ? 'translate-x-6' : ''}`}
+                                        className={`absolute top-1 left-1 bg-white dark:bg-black w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${settings.hapticFeedback ? 'translate-x-6' : ''}`}
                                     />
                                 </div>
                             </div>
@@ -331,15 +331,15 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
                     <div className={commonClassNames}>
                         <div className="text-center mb-5">
                             <div className="mb-6 flex justify-center">
-                                <div className="w-20 h-20 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
+                                <div className="w-20 h-20 rounded-full bg-neutral-50 dark:bg-neutral-900 flex items-center justify-center">
                                     <span className="text-3xl">✨</span>
                                 </div>
                             </div>
-                            <h2 className="text-xl font-bold text-neutral-800 dark:text-neutral-100">
+                            <h2 className="text-xl font-bold text-neutral-900 dark:text-white">
                                 准备就绪！
                             </h2>
-                            <p className="text-sm mt-2 text-neutral-600 dark:text-neutral-400">
-                                开始你的精品咖啡冲煮之旅吧！
+                            <p className="text-sm mt-2 text-neutral-500 dark:text-neutral-400">
+                                随时随地享受完美手冲咖啡
                             </p>
                         </div>
                     </div>
@@ -359,10 +359,10 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
                     <div
                         key={step}
                         className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${index === currentIndex
-                            ? 'bg-neutral-800 dark:bg-neutral-200 w-3'
+                            ? 'bg-neutral-900 dark:bg-white w-3'
                             : index < currentIndex
                                 ? 'bg-neutral-400 dark:bg-neutral-600'
-                                : 'bg-neutral-300 dark:bg-neutral-700'
+                                : 'bg-neutral-200 dark:bg-neutral-800'
                             }`}
                     />
                 ))}
@@ -378,13 +378,13 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
             <div className="absolute inset-0 bg-black/30 backdrop-blur-md" />
 
             {/* 引导内容卡片 */}
-            <div className="relative w-full bg-white dark:bg-neutral-900 rounded-t-2xl pb-safe">
+            <div className="relative w-full bg-white dark:bg-black rounded-t-2xl pb-safe">
 
                 {/* 内容容器 */}
                 <div className="relative h-full flex flex-col pt-4 pb-6 px-5">
                     {/* 上方把手示意 */}
                     <div className="flex justify-center mb-3">
-                        <div className="w-10 h-1 bg-neutral-300 dark:bg-neutral-700 rounded-full"></div>
+                        <div className="w-10 h-1 bg-neutral-200 dark:bg-neutral-800 rounded-full"></div>
                     </div>
 
                     {/* 内容区域 */}
@@ -405,7 +405,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
                             {/* 下一步/完成按钮 */}
                             <button
                                 onClick={currentStep === 'complete' ? handleComplete : goToNextStep}
-                                className="w-full py-3 px-4 bg-black text-white rounded-lg font-medium hover:bg-neutral-800 transition-colors"
+                                className="w-full py-3 px-4 bg-neutral-900 dark:bg-white text-white dark:text-black rounded-lg font-medium hover:bg-neutral-800 dark:hover:bg-neutral-100 transition-colors"
                             >
                                 {currentStep === 'complete' ? '开始使用' : '继续'}
                             </button>
@@ -414,7 +414,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
                             {currentStep !== 'welcome' ? (
                                 <button
                                     onClick={goToPrevStep}
-                                    className="py-3 px-4 rounded-xl w-full bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 text-sm"
+                                    className="py-3 px-4 rounded-xl w-full bg-neutral-100 dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 text-sm"
                                 >
                                     返回
                                 </button>
