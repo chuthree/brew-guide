@@ -932,7 +932,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                                                             const water = parseInt(value) || 0;
 
                                                             // 确保累计水量不超过总水量
-                                                            const totalWater = parseInt(method.params.water?.replace('', '') || '0');
+                                                            const totalWater = parseInt(method.params.water || '0');
                                                             if (water > totalWater) {
                                                                 handleStageChange(index, 'water', `${totalWater}`);
                                                             } else {
