@@ -237,6 +237,163 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 		}
 	}, [isOptimizing]);
 
+	// 添加一个函数，在导入方案后自动跳转到注水步骤
+	const autoNavigateToBrewingAfterImport = useCallback(
+		(methodId?: string) => {
+			try {
+				// 1. 确保已经选择了方案（如果提供了ID）
+				if (methodId) {
+					console.log("[自动跳转] 尝试查找方法ID:", methodId);
+					console.log("[自动跳转] 当前设备:", selectedEquipment);
+
+					// 确保自定义方法对象已更新
+					let allCustomMethods = {};
+					try {
+						// 重新从存储加载最新的自定义方法
+						import("@/lib/customMethods").then(
+							({ loadCustomMethods }) => {
+								loadCustomMethods().then((methods) => {
+									allCustomMethods = methods;
+									processMethodSearch(methods);
+								});
+							}
+						);
+					} catch (error) {
+						console.error("[自动跳转] 加载自定义方法失败:", error);
+						// 使用当前内存中的方法
+						processMethodSearch(customMethods);
+					}
+
+					// 定义查找和处理方法的函数
+					const processMethodSearch = (
+						methodsToSearch: Record<string, Method[]>
+					) => {
+						// 通过ID查找方法对象
+						let foundMethod = null;
+
+						// 打印调试信息
+						console.log(
+							"[自动跳转] 可用的设备方法:",
+							JSON.stringify(methodsToSearch)
+						);
+
+						// 在所有设备中查找方法，不仅限于当前选中的设备
+						if (
+							selectedEquipment &&
+							methodsToSearch[selectedEquipment]
+						) {
+							// 先在当前选中的设备中查找
+							foundMethod = methodsToSearch[
+								selectedEquipment
+							].find((m) => m.id === methodId);
+							console.log(
+								`[自动跳转] 在设备 ${selectedEquipment} 中${
+									foundMethod ? "找到" : "未找到"
+								}方法`
+							);
+						}
+
+						// 如果在当前设备中没找到，尝试在所有设备中查找
+						if (!foundMethod) {
+							console.log("[自动跳转] 在所有设备中查找方法");
+							// 遍历所有设备的方法
+							for (const equipId in methodsToSearch) {
+								if (equipId === selectedEquipment) continue; // 跳过已检查的设备
+
+								const methodInEquip = methodsToSearch[
+									equipId
+								].find((m) => m.id === methodId);
+
+								if (methodInEquip) {
+									foundMethod = methodInEquip;
+									// 如果在其他设备中找到了方法，更新当前选中的设备
+									console.log(
+										`[自动跳转] 在设备 ${equipId} 中找到方法，更新当前设备`
+									);
+									setSelectedEquipment(equipId);
+									break;
+								}
+							}
+						}
+
+						// 如果找到了方法对象，设置为当前方法
+						if (foundMethod) {
+							console.log(
+								"[自动跳转] 找到导入的方法:",
+								foundMethod.name
+							);
+
+							// 1.1 设置为选中的方法
+							setSelectedMethod(foundMethod);
+
+							// 1.2 设置为当前冲煮方法
+							setCurrentBrewingMethod(foundMethod);
+
+							// 1.3 获取设备的中文名称
+							const equipmentId =
+								selectedEquipment ||
+								Object.keys(methodsToSearch).find((key) =>
+									methodsToSearch[key].some(
+										(m) => m.id === methodId
+									)
+								);
+
+							const equipmentName = equipmentId
+								? equipmentList.find(
+										(e) => e.id === equipmentId
+								  )?.name || equipmentId
+								: null;
+
+							// 1.4 更新参数信息并刷新UI
+							if (typeof window !== "undefined") {
+								// 创建一个方案选择事件
+								window.dispatchEvent(
+									new CustomEvent("methodSelected", {
+										detail: {
+											methodName: foundMethod.name,
+											equipment: equipmentName,
+											coffee: foundMethod.params.coffee,
+											water: foundMethod.params.water,
+											ratio: foundMethod.params.ratio,
+											grindSize:
+												foundMethod.params.grindSize,
+											temp: foundMethod.params.temp,
+											stages: foundMethod.params.stages,
+										},
+									})
+								);
+							}
+
+							// 2. 切换到注水步骤
+							setTimeout(() => {
+								setActiveBrewingStep("brewing");
+								setActiveTab("注水");
+							}, 100);
+						} else {
+							console.error(
+								"[自动跳转] 无法找到方法对象，ID:",
+								methodId
+							);
+						}
+					};
+				} else {
+					console.error("[自动跳转] 没有提供方法ID");
+				}
+			} catch (error) {
+				console.error("自动跳转到注水步骤失败:", error);
+			}
+		},
+		[
+			selectedEquipment,
+			customMethods,
+			setSelectedMethod,
+			setCurrentBrewingMethod,
+			setSelectedEquipment,
+			setActiveTab,
+			setActiveBrewingStep,
+		]
+	);
+
 	// 处理冲煮步骤点击
 	const handleBrewingStepClick = useCallback(
 		(step: BrewingStep) => {
@@ -635,6 +792,7 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 		prevMainTabRef,
 		resetBrewingState,
 		jumpToImport,
+		autoNavigateToBrewingAfterImport,
 		handleBrewingStepClick,
 		handleEquipmentSelect,
 		handleCoffeeBeanSelect,

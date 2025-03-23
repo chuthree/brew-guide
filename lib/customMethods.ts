@@ -87,11 +87,16 @@ export async function saveCustomMethod(
 		throw new Error("未选择设备");
 	}
 
-	// 始终生成新的ID，确保每次修改都有唯一标识
+	// 保留原始ID（如果存在），否则生成新ID
 	const methodWithId = {
 		...method,
-		id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+		id:
+			method.id ||
+			`${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
 	};
+
+	// 在控制台记录方法ID，方便调试
+	console.log("[saveCustomMethod] 保存方法，ID:", methodWithId.id);
 
 	// 检查是否是编辑模式
 	const isEditing = editingMethod !== undefined;
@@ -100,7 +105,7 @@ export async function saveCustomMethod(
 	let updatedMethods = [...(customMethods[selectedEquipment] || [])];
 
 	if (isEditing) {
-		// 编辑模式：移除旧方法，添加新方法（使用新ID）
+		// 编辑模式：移除旧方法，添加新方法
 		updatedMethods = updatedMethods.filter(
 			(m) => m.id !== editingMethod?.id
 		);

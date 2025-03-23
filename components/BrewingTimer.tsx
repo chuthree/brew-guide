@@ -700,14 +700,53 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
             }
         };
 
-        // 添加事件监听器
-        window.addEventListener('closeBrewingNoteForm', handleForceCloseNoteForm as EventListener);
+        // 添加自定义事件监听器
+        window.addEventListener('closeNoteForm', handleForceCloseNoteForm as EventListener);
 
-        // 清理函数
         return () => {
-            window.removeEventListener('closeBrewingNoteForm', handleForceCloseNoteForm as EventListener);
+            window.removeEventListener('closeNoteForm', handleForceCloseNoteForm as EventListener);
         };
     }, []);
+
+    // 添加监听methodSelected事件，确保在导入后正确更新参数
+    useEffect(() => {
+        const handleMethodSelected = (e: CustomEvent<{
+            methodName?: string;
+            equipment?: string;
+            coffee?: string;
+            water?: string;
+            ratio?: string;
+            grindSize?: string;
+            temp?: string;
+            stages?: any[];
+        }>) => {
+            // 记录接收到事件
+            console.log("[BrewingTimer] 接收到方案选择事件:", e.detail);
+
+            // 如果计时器正在运行，不进行更新
+            if (isRunning) {
+                console.log("[BrewingTimer] 计时器正在运行，忽略方案更新");
+                return;
+            }
+
+            // 重置计时器状态
+            resetTimer();
+
+            // 更新扩展阶段引用
+            if (e.detail.stages) {
+                methodStagesRef.current = e.detail.stages;
+                expandedStagesRef.current = createExpandedStages();
+                console.log("[BrewingTimer] 已更新扩展阶段:", expandedStagesRef.current);
+            }
+        };
+
+        // 添加自定义事件监听器
+        window.addEventListener('methodSelected', handleMethodSelected as EventListener);
+
+        return () => {
+            window.removeEventListener('methodSelected', handleMethodSelected as EventListener);
+        };
+    }, [isRunning, resetTimer, createExpandedStages]);
 
     // 恢复onCountdownChange钩子的使用
     useEffect(() => {

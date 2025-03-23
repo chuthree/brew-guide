@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CoffeeBean } from '@/app/types'
 import { equipmentList } from '@/lib/config'
@@ -100,23 +100,75 @@ ${selectedEquipment}滤杯${userSuggestionSection}
 \`\`\`
 
 ## 字段说明
-- method: 方案名称
+- method: 方案名称，如"三段式冲煮法"
 - params.coffee: 咖啡粉量，如"15g"
 - params.water: 总水量，如"225g"
 - params.ratio: 咖啡粉与水的比例，如"1:15"
 - params.grindSize: 研磨度描述，如"中细"、"中细偏粗"
 - params.temp: 精确水温，如"92°C"
+
 stages数组中的每个阶段必须包含以下字段：
-- time: 累计时间（秒），表示从开始冲煮到当前阶段结束的总秒数
+- time: 累计时间点（秒），表示该阶段结束时的时间点，约2分钟完成整个冲煮过程
+- pourTime: 该阶段注水时间（秒），表示在该阶段需要花多少秒完成注水
 - label: 操作简要描述，如"焖蒸"、"绕圈注水"、"中心注水"等
 - water: 累计水量（克），表示到当前阶段结束时的总水量
 - detail: 详细操作说明或补充信息
-- pourTime: 当前阶段实际注水时间（秒）
 - pourType: 注水方式，必须是以下值之一：
   * "center": 中心注水
   * "circle": 绕圈注水
   * "ice": 冰滴
   * "other": 其他方式
+
+参考实例：
+三段式冲煮方案：第一阶段焖蒸25秒(注水时间10秒)，第二阶段注水到50秒(注水时间25秒)，第三阶段注水到2分钟(注水时间40秒)。
+总冲煮时间约2分钟，按这个思路设计。
+
+完整JSON示例:
+\`\`\`json
+{
+  "equipment": "V60",
+  "method": "三段式精品咖啡萃取法",
+  "coffeeBeanInfo": {
+    "name": "埃塞俄比亚耶加雪菲",
+    "roastLevel": "中浅烘焙",
+    "roastDate": "2025-03-23"
+  },
+  "params": {
+    "coffee": "15g",
+    "water": "225g",
+    "ratio": "1:15",
+    "grindSize": "中细",
+    "temp": "92°C",
+    "videoUrl": "",
+    "stages": [
+      {
+        "time": 25,
+        "pourTime": 10,
+        "label": "焖蒸",
+        "water": "30g",
+        "detail": "中心向外绕圈注水，确保咖啡粉均匀湿润",
+        "pourType": "circle"
+      },
+      {
+        "time": 50,
+        "pourTime": 25,
+        "label": "绕圈注水",
+        "water": "140g",
+        "detail": "中心向外缓慢画圈注水，均匀萃取咖啡风味",
+        "pourType": "circle"
+      },
+      {
+        "time": 120,
+        "pourTime": 40,
+        "label": "中心注水",
+        "water": "225g",
+        "detail": "中心定点注水，降低萃取率，完成冲煮",
+        "pourType": "center"
+      }
+    ]
+  }
+}
+\`\`\`
 
 只返回JSON数据，不要添加任何额外解释。`
 
@@ -144,45 +196,61 @@ stages数组中的每个阶段必须包含以下字段：
                     duration: 10000 // 10秒
                 })
 
-                return
+                // 设置一个定时器，1.5秒后重置按钮状态
+                // 这确保即使用户没有点击跳转，按钮也会恢复
+                setTimeout(() => {
+                    setShowLocalCopySuccess(false)
+                }, 1500)
+
+                return true
+            } else {
+                // 使用传统方法复制
+                const textArea = document.createElement('textarea')
+                textArea.value = prompt
+                document.body.appendChild(textArea)
+                textArea.select()
+                const successful = document.execCommand('copy')
+                document.body.removeChild(textArea)
+
+                if (successful) {
+                    setShowLocalCopySuccess(true)
+
+                    // 显示全局提示
+                    showToast({
+                        type: 'success',
+                        title: '提示词已复制!',
+                        listItems: [
+                            '将提示词发送给 DeepSeek',
+                            '复制 AI 返回的 JSON 代码',
+                            '粘贴到导入页面中'
+                        ],
+                        duration: 10000 // 10秒
+                    })
+
+                    // 同样设置定时器重置状态
+                    setTimeout(() => {
+                        setShowLocalCopySuccess(false)
+                    }, 1500)
+
+                    return true
+                } else {
+                    showToast({
+                        type: 'error',
+                        title: '复制失败!',
+                        listItems: ['请手动复制提示词']
+                    })
+                }
             }
-
-            // 回退方法：创建临时textarea元素
-            const textArea = document.createElement('textarea')
-            textArea.value = prompt
-            textArea.style.position = 'fixed'
-            textArea.style.left = '-999999px'
-            textArea.style.top = '-999999px'
-            document.body.appendChild(textArea)
-            textArea.focus()
-            textArea.select()
-
-            document.execCommand('copy')
-            document.body.removeChild(textArea)
-            setShowLocalCopySuccess(true)
-
-            // 显示全局提示
-            showToast({
-                type: 'success',
-                title: '提示词已复制!',
-                listItems: [
-                    '将提示词发送给 DeepSeek',
-                    '复制 AI 返回的 JSON 代码',
-                    '粘贴到导入页面中'
-                ],
-                duration: 10000 // 10秒
-            })
-        } catch (err) {
-            console.error('复制失败:', err)
-
-            // 显示错误提示
+        } catch (error) {
+            console.error('复制到剪贴板失败:', error)
             showToast({
                 type: 'error',
-                title: '复制失败',
-                listItems: ['请重试或手动复制'],
-                duration: 5000
+                title: '复制失败!',
+                listItems: ['请手动复制提示词']
             })
         }
+
+        return false
     }
 
     // 跳转到方案导入页面
@@ -192,6 +260,12 @@ stages数组中的每个阶段必须包含以下字段：
         // 立即跳转，不等待
         onJumpToImport()
         onClose()
+
+        // 设置一个延时器，确保在跳转完成后重置按钮状态
+        // 这样当用户返回时，按钮不会显示"正在跳转"
+        setTimeout(() => {
+            setShowLocalCopySuccess(false)
+        }, 500)
     }
 
     // 动画变体
@@ -214,6 +288,18 @@ stages数组中的每个阶段必须包含以下字段：
             }
         }
     };
+
+    // 当模态框关闭时，重置状态
+    useEffect(() => {
+        if (!showModal) {
+            // 短暂延迟后重置状态，确保动画完成后再重置
+            const timer = setTimeout(() => {
+                setShowLocalCopySuccess(false)
+            }, 300)
+
+            return () => clearTimeout(timer)
+        }
+    }, [showModal])
 
     return (
         <AnimatePresence>

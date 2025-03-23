@@ -1,11 +1,11 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import CustomMethodForm from '@/components/CustomMethodForm'
 import MethodImportModal from '@/components/MethodImportModal'
-import { type Method } from '@/lib/config'
-import { SettingsOptions } from '@/components/Settings'
+import type { Method } from '@/lib/config'
+import type { SettingsOptions } from '@/components/Settings'
 
 interface CustomMethodFormModalProps {
     showCustomForm: boolean
@@ -30,6 +30,58 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
     onCloseImportForm,
     settings
 }) => {
+    const [formData, setFormData] = useState<Partial<Method>>({})
+    const [validationError, setValidationError] = useState<string | null>(null)
+
+    // 根据表单数据保存自定义方法
+    const handleSaveMethod = async () => {
+        try {
+            if (!formData.name) {
+                setValidationError('请输入方案名称')
+                return
+            }
+
+            if (!formData.params?.coffee || !formData.params?.water) {
+                setValidationError('请输入咖啡粉量和水量')
+                return
+            }
+
+            if (!formData.params.stages || formData.params.stages.length === 0) {
+                setValidationError('至少需要添加一个阶段')
+                return
+            }
+
+            // 确保所有必要属性都存在
+            const method: Method = {
+                id: formData.id || `method-${Date.now()}`, // 确保有唯一ID
+                name: formData.name,
+                params: {
+                    coffee: formData.params.coffee,
+                    water: formData.params.water,
+                    ratio: formData.params.ratio,
+                    grindSize: formData.params.grindSize,
+                    temp: formData.params.temp,
+                    videoUrl: formData.params.videoUrl || "",
+                    roastLevel: formData.params.roastLevel,
+                    stages: formData.params.stages
+                }
+            }
+
+            // 调用父组件传入的保存方法
+            console.log("[CustomMethodFormModal] 准备保存方法，ID:", method.id)
+            onSaveCustomMethod(method)
+
+            // 清除验证错误
+            setValidationError(null)
+
+            return method.id // 返回方法ID
+        } catch (error) {
+            console.error("保存方法时出错:", error)
+            setValidationError('保存失败，请重试')
+            return null
+        }
+    }
+
     return (
         <>
             {/* 自定义方案表单 */}
@@ -82,7 +134,7 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
                                 className="px-6 px-safe pb-6 pb-safe overflow-auto max-h-[calc(90vh-40px)]"
                             >
                                 <CustomMethodForm
-                                    onSave={onSaveCustomMethod}
+                                    onSave={handleSaveMethod}
                                     onCancel={onCloseCustomForm}
                                     initialMethod={editingMethod}
                                     selectedEquipment={selectedEquipment}

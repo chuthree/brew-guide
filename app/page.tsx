@@ -124,6 +124,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     // AI方案生成器状态
     const [showAIRecipeModal, setShowAIRecipeModal] = useState(false);
     const [selectedBeanForAI, setSelectedBeanForAI] = useState<CoffeeBean | null>(null);
+    // 添加一个标志，跟踪是否是从AI方案跳转过来
+    const [isFromAIRecipe, setIsFromAIRecipe] = useState(false);
 
     // 添加动画过渡状态
     const [transitionState, setTransitionState] = useState<TransitionState>({
@@ -160,6 +162,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         prevMainTabRef,
         resetBrewingState,
         jumpToImport,
+        autoNavigateToBrewingAfterImport,
         handleBrewingStepClick,
         handleEquipmentSelect,
         handleCoffeeBeanSelect,
@@ -971,12 +974,40 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 editingMethod={editingMethod}
                 selectedEquipment={selectedEquipment}
                 customMethods={customMethods}
-                onSaveCustomMethod={handleSaveCustomMethod}
+                onSaveCustomMethod={(method) => {
+                    // 保存方法
+                    handleSaveCustomMethod(method);
+
+                    // 如果是从AI方案导入的，自动跳转到注水步骤
+                    if (isFromAIRecipe) {
+                        // 确保方法有ID
+                        if (method.id) {
+                            console.log("[导入方案] 准备自动跳转，方法ID:", method.id);
+
+                            // 等待保存完成后跳转
+                            setTimeout(() => {
+                                // 自动跳转到注水步骤（使用保存后的方法ID）
+                                autoNavigateToBrewingAfterImport(method.id);
+                                // 重置标志
+                                setIsFromAIRecipe(false);
+                            }, 100); // 减少延迟，确保更流畅的体验
+                        } else {
+                            console.error("[导入方案] 方法没有ID，无法自动跳转");
+                            setIsFromAIRecipe(false);
+                        }
+                    }
+                }}
                 onCloseCustomForm={() => {
                     setShowCustomForm(false);
                     setEditingMethod(undefined);
                 }}
-                onCloseImportForm={() => setShowImportForm(false)}
+                onCloseImportForm={() => {
+                    setShowImportForm(false);
+                    // 如果关闭导入表单但未导入，也重置标志
+                    if (isFromAIRecipe) {
+                        setIsFromAIRecipe(false);
+                    }
+                }}
                 settings={settings}
             />
 
@@ -1004,7 +1035,9 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 onClose={() => setShowAIRecipeModal(false)}
                 coffeeBean={selectedBeanForAI}
                 onJumpToImport={() => {
-                    setShowImportForm(true);
+                    // 设置标志，表示是从AI方案跳转过来
+                    setIsFromAIRecipe(true);
+                    jumpToImport();
                     setShowAIRecipeModal(false);
                 }}
             />
