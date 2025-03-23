@@ -33,7 +33,7 @@ const MethodTypeSelector: React.FC<MethodTypeSelectorProps> = ({
                 willChange: "transform, opacity"
             }}
         >
-            <div className="flex justify-between items-center">
+            <div className="flex justify-start items-center">
                 <button
                     onClick={() => handleMethodTypeChange('common')}
                     className={`text-[12px] tracking-wider transition-colors ${methodType === 'common'
@@ -43,6 +43,7 @@ const MethodTypeSelector: React.FC<MethodTypeSelectorProps> = ({
                 >
                     通用方案
                 </button>
+                <span className="mx-2 text-neutral-300 dark:text-neutral-600 text-xs">|</span>
                 <button
                     onClick={() => handleMethodTypeChange('custom')}
                     className={`text-[12px] tracking-wider transition-colors ${methodType === 'custom'
