@@ -147,11 +147,13 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     // 下一步
     const handleNextStep = () => {
         const currentIndex = getCurrentStepIndex()
+        console.log('切换到下一步 - 当前步骤:', currentStep, '索引:', currentIndex, '总步骤:', steps.length);
+
         if (currentIndex < steps.length - 1) {
+            // 只处理步骤切换
             setCurrentStep(steps[currentIndex + 1].id)
-        } else {
-            handleSubmit()
         }
+        // 移除了提交逻辑，因为这已经在handleButtonClick中处理
     }
 
     // 上一步/返回
@@ -297,6 +299,9 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     }
 
     const handleSubmit = () => {
+        // 添加调试日志
+        console.log('准备提交方案:', method);
+
         // 创建一个方法的深拷贝，以便修改
         const finalMethod = JSON.parse(JSON.stringify(method)) as Method;
 
@@ -316,8 +321,18 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
             });
         }
 
-        // 保存方法
-        onSave(finalMethod);
+        try {
+            console.log('最终方案数据:', finalMethod);
+            // 保存方法
+            onSave(finalMethod);
+            console.log('方案提交完成');
+
+            // 如果有需要，可以在这里添加返回主页面的逻辑
+        } catch (error) {
+            console.error('保存方案时出错:', error);
+            // 可以在这里添加用户友好的错误提示
+            alert('保存方案失败，请重试');
+        }
     }
 
     const handleCoffeeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1056,8 +1071,33 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
 
                             return basicValidation;
                         });
+                case 'complete':
+                    return true;
                 default:
                     return true;
+            }
+        };
+
+        // 检查当前步骤是否有效
+        const stepValid = isStepValid();
+        console.log('当前步骤有效性:', stepValid);
+
+        // 处理按钮点击
+        const handleButtonClick = () => {
+            console.log('点击了按钮 - 当前步骤:', currentStep, '是最后步骤:', isLastStep);
+
+            if (isLastStep) {
+                // 如果是最后一步，直接提交
+                console.log('这是完成按钮，直接提交方案');
+                try {
+                    handleSubmit();
+                } catch (error) {
+                    console.error('完成按钮点击处理出错:', error);
+                }
+            } else {
+                // 否则进入下一步
+                console.log('前进到下一步');
+                handleNextStep();
             }
         };
 
@@ -1065,12 +1105,12 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
             <div className="flex items-center justify-center my-8">
                 <button
                     type="button"
-                    onClick={handleNextStep}
-                    disabled={!isStepValid()}
+                    onClick={handleButtonClick}
+                    disabled={!stepValid}
                     className={`
                         flex items-center justify-center p-4
-                                                        ${!isStepValid() ? 'opacity-50 cursor-not-allowed' : ''}
-                                                        ${isLastStep ? 'bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-800 px-6 py-3 rounded-full' : ''}
+                        ${!stepValid ? 'opacity-50 cursor-not-allowed' : ''}
+                        ${isLastStep ? 'bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-800 px-6 py-3 rounded-full' : ''}
                     `}
                 >
                     {isLastStep ? (

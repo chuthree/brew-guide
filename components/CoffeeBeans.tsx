@@ -471,7 +471,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                                     </button>
                                                                     <button
                                                                         onClick={() => handleGenerateAIRecipe(bean)}
-                                                                        className="px-2 text-xs text-neutral-400 dark:text-neutral-500"
+                                                                        className="px-2 text-xs text-emerald-600 dark:text-emerald-500"
                                                                     >
                                                                         AI方案
                                                                     </button>

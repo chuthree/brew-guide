@@ -34,51 +34,49 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
     const [validationError, setValidationError] = useState<string | null>(null)
 
     // 根据表单数据保存自定义方法
-    const handleSaveMethod = async () => {
+    const handleSaveMethod = async (method: Method) => {
         try {
-            if (!formData.name) {
-                setValidationError('请输入方案名称')
-                return
+            console.log("收到来自表单的方法对象:", method);
+
+            // 检查必要字段
+            if (!method.name) {
+                setValidationError('请输入方案名称');
+                return null;
             }
 
-            if (!formData.params?.coffee || !formData.params?.water) {
-                setValidationError('请输入咖啡粉量和水量')
-                return
+            if (!method.params?.coffee || !method.params?.water) {
+                setValidationError('请输入咖啡粉量和水量');
+                return null;
             }
 
-            if (!formData.params.stages || formData.params.stages.length === 0) {
-                setValidationError('至少需要添加一个阶段')
-                return
+            if (!method.params.stages || method.params.stages.length === 0) {
+                setValidationError('至少需要添加一个阶段');
+                return null;
             }
 
-            // 确保所有必要属性都存在
-            const method: Method = {
-                id: formData.id || `method-${Date.now()}`, // 确保有唯一ID
-                name: formData.name,
-                params: {
-                    coffee: formData.params.coffee,
-                    water: formData.params.water,
-                    ratio: formData.params.ratio,
-                    grindSize: formData.params.grindSize,
-                    temp: formData.params.temp,
-                    videoUrl: formData.params.videoUrl || "",
-                    roastLevel: formData.params.roastLevel,
-                    stages: formData.params.stages
-                }
-            }
+            // 确保有唯一ID
+            const methodWithId: Method = {
+                ...method,
+                id: method.id || `method-${Date.now()}`
+            };
 
-            // 调用父组件传入的保存方法
-            console.log("[CustomMethodFormModal] 准备保存方法，ID:", method.id)
-            onSaveCustomMethod(method)
+            console.log("[CustomMethodFormModal] 准备保存方法，ID:", methodWithId.id);
 
-            // 清除验证错误
-            setValidationError(null)
+            // 直接调用父组件的保存方法并传递完整的方法对象
+            onSaveCustomMethod(methodWithId);
 
-            return method.id // 返回方法ID
+            // 清除数据和错误
+            setFormData({});
+            setValidationError(null);
+
+            // 关闭表单
+            onCloseCustomForm();
+
+            return methodWithId.id;
         } catch (error) {
-            console.error("保存方法时出错:", error)
-            setValidationError('保存失败，请重试')
-            return null
+            console.error("保存方法时出错:", error);
+            setValidationError('保存失败，请重试');
+            return null;
         }
     }
 
