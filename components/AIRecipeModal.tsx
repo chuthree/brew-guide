@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CoffeeBean } from '@/app/types'
 import { equipmentList } from '@/lib/config'
+import { useToast } from './GlobalToast'
 
 interface AIRecipeModalProps {
     showModal: boolean
@@ -20,6 +21,8 @@ const AIRecipeModal: React.FC<AIRecipeModalProps> = ({
 }) => {
     const [selectedEquipment, setSelectedEquipment] = useState<string>('V60')
     const [userSuggestion, setUserSuggestion] = useState<string>('')
+    const [showLocalCopySuccess, setShowLocalCopySuccess] = useState<boolean>(false)
+    const { showToast } = useToast()
 
     // 计算烘焙天数
     const calculateRoastDays = (roastDate?: string) => {
@@ -96,21 +99,26 @@ ${selectedEquipment}滤杯${userSuggestionSection}
 }
 \`\`\`
 
-## 关键字段说明
+## 字段说明
 - method: 方案名称
 - params.coffee: 咖啡粉量，如"15g"
 - params.water: 总水量，如"225g"
 - params.ratio: 咖啡粉与水的比例，如"1:15"
 - params.grindSize: 研磨度描述，如"中细"、"中细偏粗"
 - params.temp: 精确水温，如"92°C"
-- stages[].time: 该阶段结束时的累计秒数
-- stages[].pourTime: 该阶段的实际注水持续时间(秒)
-- stages[].label: 注水类型+目的，如"绕圈注水(焖蒸)"
-- stages[].water: 该阶段结束时的累计水量，如"30g"
-- stages[].detail: 步骤说明(控制在20字内)
-- stages[].pourType: 必须是以下值之一: "center"、"circle"、"ice"、"other"
+stages数组中的每个阶段必须包含以下字段：
+- time: 累计时间（秒），表示从开始冲煮到当前阶段结束的总秒数
+- label: 操作简要描述，如"焖蒸"、"绕圈注水"、"中心注水"等
+- water: 累计水量（克），表示到当前阶段结束时的总水量
+- detail: 详细操作说明或补充信息
+- pourTime: 当前阶段实际注水时间（秒）
+- pourType: 注水方式，必须是以下值之一：
+  * "center": 中心注水
+  * "circle": 绕圈注水
+  * "ice": 冰滴
+  * "other": 其他方式
 
-请精确遵循以上规范设计方案，只返回JSON数据，不要添加任何额外解释。`
+只返回JSON数据，不要添加任何额外解释。`
 
         return prompt
     }
@@ -122,6 +130,20 @@ ${selectedEquipment}滤杯${userSuggestionSection}
         try {
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 await navigator.clipboard.writeText(prompt)
+                setShowLocalCopySuccess(true)
+
+                // 显示全局提示
+                showToast({
+                    type: 'success',
+                    title: '提示词已复制!',
+                    listItems: [
+                        '将提示词发送给 DeepSeek',
+                        '复制 AI 返回的 JSON 代码',
+                        '粘贴到导入页面中'
+                    ],
+                    duration: 10000 // 10秒
+                })
+
                 return
             }
 
@@ -137,14 +159,37 @@ ${selectedEquipment}滤杯${userSuggestionSection}
 
             document.execCommand('copy')
             document.body.removeChild(textArea)
+            setShowLocalCopySuccess(true)
+
+            // 显示全局提示
+            showToast({
+                type: 'success',
+                title: '提示词已复制!',
+                listItems: [
+                    '将提示词发送给 DeepSeek',
+                    '复制 AI 返回的 JSON 代码',
+                    '粘贴到导入页面中'
+                ],
+                duration: 10000 // 10秒
+            })
         } catch (err) {
             console.error('复制失败:', err)
+
+            // 显示错误提示
+            showToast({
+                type: 'error',
+                title: '复制失败',
+                listItems: ['请重试或手动复制'],
+                duration: 5000
+            })
         }
     }
 
     // 跳转到方案导入页面
     const handleCopyAndJump = async () => {
         await copyPromptToClipboard()
+
+        // 立即跳转，不等待
         onJumpToImport()
         onClose()
     }
@@ -186,6 +231,7 @@ ${selectedEquipment}滤杯${userSuggestionSection}
                             }
                         }}
                     />
+
                     <motion.div
                         initial={{ y: '100%' }}
                         animate={{ y: 0 }}
@@ -359,7 +405,7 @@ ${selectedEquipment}滤杯${userSuggestionSection}
                                             className={`py-2 px-3.5 bg-neutral-800 hover:bg-neutral-700 dark:bg-neutral-200 dark:hover:bg-neutral-300 text-white dark:text-neutral-800 rounded text-xs font-medium transition-colors
                                                 ${!coffeeBean ? 'opacity-50 cursor-not-allowed' : ''}`}
                                         >
-                                            复制并导入
+                                            {showLocalCopySuccess ? '已复制，正在跳转...' : '复制并导入'}
                                         </button>
                                     </div>
                                 </motion.div>

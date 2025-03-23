@@ -5,6 +5,7 @@ import { Analytics } from '@vercel/analytics/next';
 import Script from 'next/script'
 import { GeistSans } from 'geist/font/sans'
 import { GeistMono } from 'geist/font/mono'
+import { ToastProvider } from '@/components/GlobalToast'
 import './globals.css'
 
 // SEO constants
@@ -116,10 +117,12 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <div className="h-full w-full overflow-hidden">
-            {children}
-          </div>
-          <PWAPrompt />
+          <ToastProvider>
+            <div className="h-full w-full overflow-hidden">
+              {children}
+            </div>
+            <PWAPrompt />
+          </ToastProvider>
         </ThemeProvider>
         <Analytics />
       </body>
