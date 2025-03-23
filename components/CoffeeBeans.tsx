@@ -598,13 +598,13 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
 
                                                             let status = '';
                                                             if (daysSinceRoast < startDay) {
-                                                                status = `距开始赏味期还剩 ${startDay - daysSinceRoast} 天`;
+                                                                status = `养豆期还剩 ${startDay - daysSinceRoast} 天`;
                                                             } else if (daysSinceRoast <= endDay) {
                                                                 status = `最佳赏味期剩余 ${endDay - daysSinceRoast} 天`;
                                                             } else if (daysSinceRoast <= maxDay) {
-                                                                status = `已过最佳赏味期 ${daysSinceRoast - endDay} 天`;
+                                                                status = `赏味期剩余 ${maxDay - daysSinceRoast} 天`;
                                                             } else {
-                                                                status = '已超过推荐饮用期限';
+                                                                status = '已进入赏味衰退期';
                                                             }
 
                                                             return (

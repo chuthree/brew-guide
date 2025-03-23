@@ -130,19 +130,19 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
 
                         if (daysSinceRoast < startDay) {
                             // 还没到最佳赏味期
-                            freshStatus = `(醒豆中)`;
+                            freshStatus = `(养豆期)`;
                             statusClass = "text-neutral-500 dark:text-neutral-400";
                         } else if (daysSinceRoast <= endDay) {
                             // 处于最佳赏味期
-                            freshStatus = `(赏味期)`;
+                            freshStatus = `(最佳赏味期)`;
                             statusClass = "text-emerald-500 dark:text-emerald-400";
                         } else if (daysSinceRoast <= maxDay) {
                             // 已过最佳赏味期但仍可饮用
-                            freshStatus = `(已过赏味期)`;
+                            freshStatus = `(赏味期)`;
                             statusClass = "text-neutral-500 dark:text-neutral-400";
                         } else {
                             // 已超过推荐饮用期限
-                            freshStatus = "(已过期)";
+                            freshStatus = "(赏味衰退期)";
                             statusClass = "text-neutral-500 dark:text-neutral-400";
                         }
                     } catch {

@@ -881,7 +881,7 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                                 </div>
                             </div>
                             <div className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
-                                <p>说明：{bean.startDay}天前为养豆期，{bean.startDay}-{bean.endDay}天为最佳赏味期，{bean.endDay}-{bean.maxDay}天为赏味期，{bean.maxDay}天后为衰退期</p>
+                                <p>说明：{bean.startDay}天前为养豆期，{bean.startDay}-{bean.endDay}天为最佳赏味期，{bean.endDay}-{bean.maxDay}天为赏味期，{bean.maxDay}天后为赏味衰退期</p>
                             </div>
                         </div>
 
