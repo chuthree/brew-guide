@@ -246,24 +246,6 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 					console.log("[自动跳转] 尝试查找方法ID:", methodId);
 					console.log("[自动跳转] 当前设备:", selectedEquipment);
 
-					// 确保自定义方法对象已更新
-					let allCustomMethods = {};
-					try {
-						// 重新从存储加载最新的自定义方法
-						import("@/lib/customMethods").then(
-							({ loadCustomMethods }) => {
-								loadCustomMethods().then((methods) => {
-									allCustomMethods = methods;
-									processMethodSearch(methods);
-								});
-							}
-						);
-					} catch (error) {
-						console.error("[自动跳转] 加载自定义方法失败:", error);
-						// 使用当前内存中的方法
-						processMethodSearch(customMethods);
-					}
-
 					// 定义查找和处理方法的函数
 					const processMethodSearch = (
 						methodsToSearch: Record<string, Method[]>
@@ -376,6 +358,22 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 							);
 						}
 					};
+
+					// 确保自定义方法对象已更新
+					try {
+						// 重新从存储加载最新的自定义方法
+						import("@/lib/customMethods").then(
+							({ loadCustomMethods }) => {
+								loadCustomMethods().then((methods) => {
+									processMethodSearch(methods);
+								});
+							}
+						);
+					} catch (error) {
+						console.error("[自动跳转] 加载自定义方法失败:", error);
+						// 使用当前内存中的方法
+						processMethodSearch(customMethods);
+					}
 				} else {
 					console.error("[自动跳转] 没有提供方法ID");
 				}

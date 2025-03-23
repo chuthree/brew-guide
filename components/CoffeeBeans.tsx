@@ -482,7 +482,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                                                 [bean.id]: false
                                                                             }))
                                                                         }}
-                                                                        className="w-7 h-7 flex items-center justify-center rounded-full text-sm text-neutral-400"
+                                                                        className="w-7 h-7 flex items-center justif-center rounded-full text-sm text-neutral-400"
                                                                     >
                                                                         ×
                                                                     </button>

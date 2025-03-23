@@ -6,11 +6,11 @@ export interface ParameterInfo {
 	equipment: string | null;
 	method: string | null;
 	params: {
-		coffee?: string;
-		water?: string;
-		ratio?: string;
-		grindSize?: string;
-		temp?: string;
+		coffee?: string | null;
+		water?: string | null;
+		ratio?: string | null;
+		grindSize?: string | null;
+		temp?: string | null;
 	} | null;
 }
 
@@ -58,39 +58,53 @@ export function useBrewingParameters() {
 	);
 
 	// 监听methodSelected事件，确保在导入后正确设置参数信息
-	const handleMethodSelectedEvent = useCallback((event: CustomEvent<any>) => {
-		const detail = event.detail;
-		console.log("[useBrewingParameters] 收到方案选择事件:", detail);
+	const handleMethodSelectedEvent = useCallback(
+		(
+			event: CustomEvent<{
+				methodName?: string;
+				equipment?: string;
+				coffee?: string;
+				water?: string;
+				ratio?: string;
+				grindSize?: string;
+				temp?: string;
+				stages?: Stage[];
+			}>
+		) => {
+			const detail = event.detail;
+			console.log("[useBrewingParameters] 收到方案选择事件:", detail);
 
-		if (detail) {
-			// 更新参数信息
-			setParameterInfo({
-				equipment: detail.equipment || null,
-				method: detail.methodName || null,
-				params: {
-					coffee: detail.coffee || null,
-					water: detail.water || null,
-					ratio: detail.ratio || null,
-					grindSize: detail.grindSize || null,
-					temp: detail.temp || null,
-				},
-			});
+			if (detail) {
+				// 更新参数信息
+				setParameterInfo({
+					equipment: detail.equipment || null,
+					method: detail.methodName || null,
+					params: {
+						coffee: detail.coffee || null,
+						water: detail.water || null,
+						ratio: detail.ratio || null,
+						grindSize: detail.grindSize || null,
+						temp: detail.temp || null,
+					},
+				});
 
-			// 如果有水和咖啡参数，更新可编辑参数
-			if (detail.coffee && detail.water && detail.ratio) {
-				setEditableParams({
-					coffee: detail.coffee,
-					water: detail.water,
-					ratio: detail.ratio,
-				});
-				console.log("[useBrewingParameters] 已更新可编辑参数:", {
-					coffee: detail.coffee,
-					water: detail.water,
-					ratio: detail.ratio,
-				});
+				// 如果有水和咖啡参数，更新可编辑参数
+				if (detail.coffee && detail.water && detail.ratio) {
+					setEditableParams({
+						coffee: detail.coffee,
+						water: detail.water,
+						ratio: detail.ratio,
+					});
+					console.log("[useBrewingParameters] 已更新可编辑参数:", {
+						coffee: detail.coffee,
+						water: detail.water,
+						ratio: detail.ratio,
+					});
+				}
 			}
-		}
-	}, []);
+		},
+		[]
+	);
 
 	// 添加事件监听器
 	useEffect(() => {

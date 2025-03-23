@@ -43,7 +43,7 @@ const MethodTypeSelector: React.FC<MethodTypeSelectorProps> = ({
                 >
                     通用方案
                 </button>
-                <span className="mx-2 text-neutral-300 dark:text-neutral-600 text-xs">|</span>
+                <span className="mx-3 text-neutral-300 dark:text-neutral-600 text-xs">|</span>
                 <button
                     onClick={() => handleMethodTypeChange('custom')}
                     className={`text-[12px] tracking-wider transition-colors ${methodType === 'custom'

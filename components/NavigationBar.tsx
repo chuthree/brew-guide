@@ -30,11 +30,11 @@ interface ParameterInfo {
     equipment: string | null
     method: string | null
     params: {
-        coffee?: string
-        water?: string
-        ratio?: string
-        grindSize?: string
-        temp?: string
+        coffee?: string | null
+        water?: string | null
+        ratio?: string | null
+        grindSize?: string | null
+        temp?: string | null
     } | null
 }
 

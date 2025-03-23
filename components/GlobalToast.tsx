@@ -64,7 +64,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 // Toast容器组件
 const ToastContainer: React.FC<{ toasts: ToastMessage[], hideToast: (id: string) => void }> = ({ toasts, hideToast }) => {
     return (
-        <div className="fixed top-4 right-4 z-[200] flex flex-col gap-2 max-w-[320px]">
+        <div className="fixed top-[calc(env(safe-area-inset-top)+16px)] right-4 z-[200] flex flex-col gap-2 max-w-[320px]">
             <AnimatePresence>
                 {toasts.map((toast) => (
                     <Toast key={toast.id} toast={toast} onClose={() => hideToast(toast.id)} />

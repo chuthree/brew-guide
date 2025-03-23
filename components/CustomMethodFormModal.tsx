@@ -30,8 +30,8 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
     onCloseImportForm,
     settings
 }) => {
-    const [formData, setFormData] = useState<Partial<Method>>({})
-    const [validationError, setValidationError] = useState<string | null>(null)
+    const [, setFormData] = useState<Partial<Method>>({})
+    const [, setValidationError] = useState<string | null>(null)
 
     // 根据表单数据保存自定义方法
     const handleSaveMethod = async (method: Method) => {

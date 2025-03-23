@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import BrewingNoteForm from '@/components/BrewingNoteForm'
 import type { BrewingNoteData } from '@/app/types'
-import type { Method } from '@/lib/config'
+import type { Method, Stage } from '@/lib/config'
 import type { SettingsOptions } from '@/components/Settings'
 import { KeepAwake } from '@capacitor-community/keep-awake'
 import hapticsUtils from '@/lib/haptics'
@@ -718,7 +718,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
             ratio?: string;
             grindSize?: string;
             temp?: string;
-            stages?: any[];
+            stages?: Stage[];
         }>) => {
             // 记录接收到事件
             console.log("[BrewingTimer] 接收到方案选择事件:", e.detail);

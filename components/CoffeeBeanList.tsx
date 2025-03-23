@@ -70,7 +70,7 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
                 transition={{ duration: 0.3, ease: "easeOut" }}
             >
                 <div
-                    className="group relative border-l border-neutral-200 dark:border-neutral-800 pl-6 cursor-pointer text-neutral-500 dark:text-neutral-400"
+                    className={`group relative border-l border-neutral-200 dark:border-neutral-800 pl-6 cursor-pointer text-neutral-500 dark:text-neutral-400`}
                     onClick={() => onSelect(null, null)}
                 >
                     <div className="cursor-pointer">
@@ -91,17 +91,56 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
             {beans.map((bean, index) => {
                 // 获取赏味期状态（添加到咖啡豆名称后面）
                 let freshStatus = "";
+                let statusClass = "text-rose-500 dark:text-rose-400";
+
                 if (bean.roastDate) {
                     try {
-                        const roastTime = new Date(bean.roastDate).getTime();
-                        const now = new Date().getTime();
-                        const daysPassed = Math.floor((now - roastTime) / (1000 * 60 * 60 * 24));
-                        const daysLeft = 30 - daysPassed;
+                        // 消除时区和时间差异，只比较日期部分
+                        const today = new Date();
+                        const roastDate = new Date(bean.roastDate);
 
-                        if (daysLeft <= 0) {
+                        const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                        const roastDateOnly = new Date(roastDate.getFullYear(), roastDate.getMonth(), roastDate.getDate());
+
+                        // 计算天数差
+                        const daysSinceRoast = Math.ceil((todayDate.getTime() - roastDateOnly.getTime()) / (1000 * 60 * 60 * 24));
+
+                        // 根据烘焙程度确定赏味期范围
+                        let startDay = 0;
+                        let endDay = 0;
+                        let maxDay = 0;
+
+                        if (bean.roastLevel?.includes('浅')) {
+                            startDay = 7;
+                            endDay = 14;
+                            maxDay = 28;
+                        } else if (bean.roastLevel?.includes('深')) {
+                            startDay = 14;
+                            endDay = 28;
+                            maxDay = 42;
+                        } else {
+                            // 默认为中烘焙
+                            startDay = 10;
+                            endDay = 21;
+                            maxDay = 35;
+                        }
+
+                        if (daysSinceRoast < startDay) {
+                            // 还没到最佳赏味期
+                            freshStatus = `(醒豆中)`;
+                            statusClass = "text-neutral-500 dark:text-neutral-400";
+                        } else if (daysSinceRoast <= endDay) {
+                            // 处于最佳赏味期
+                            freshStatus = `(赏味期)`;
+                            statusClass = "text-emerald-500 dark:text-emerald-400";
+                        } else if (daysSinceRoast <= maxDay) {
+                            // 已过最佳赏味期但仍可饮用
+                            freshStatus = `(已过期)`;
+                            statusClass = "text-neutral-500 dark:text-neutral-400";
+                        } else {
+                            // 已超过推荐饮用期限
                             freshStatus = "(已过期)";
-                        } else if (daysLeft <= 7) {
-                            freshStatus = `(急)`;
+                            statusClass = "text-neutral-500 dark:text-neutral-400";
                         }
                     } catch {
                         // 忽略日期解析错误
@@ -141,14 +180,14 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
                         }}
                     >
                         <div
-                            className="group relative border-l border-neutral-200 dark:border-neutral-800 pl-6 cursor-pointer text-neutral-500 dark:text-neutral-400"
+                            className={`group relative border-l border-neutral-200 dark:border-neutral-800 pl-6 cursor-pointer text-neutral-500 dark:text-neutral-400`}
                             onClick={() => onSelect(bean.id, bean)}
                         >
                             <div className="cursor-pointer">
                                 <div className="flex items-baseline justify-between">
                                     <div className="flex items-baseline gap-3 min-w-0 overflow-hidden">
                                         <h3 className="text-xs font-normal tracking-wider truncate">
-                                            {bean.name} <span className="text-rose-500 dark:text-rose-400">{freshStatus}</span>
+                                            {bean.name} <span className={statusClass}>{freshStatus}</span>
                                         </h3>
                                     </div>
                                 </div>

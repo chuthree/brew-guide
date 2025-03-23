@@ -223,7 +223,6 @@ const TabContent: React.FC<TabContentProps> = ({
                             transition={{ duration: 0.3, ease: "easeOut" }}
                         >
                             <CoffeeBeanList
-                                selectedId={selectedCoffeeBean === undefined ? null : selectedCoffeeBean}
                                 onSelect={(beanId: string | null, bean: CoffeeBean | null) => {
                                     if (onCoffeeBeanSelect) onCoffeeBeanSelect(beanId!, bean!);
                                 }}

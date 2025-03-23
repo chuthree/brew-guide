@@ -330,7 +330,7 @@ stages数组中的每个阶段必须包含以下字段：
                         style={{
                             willChange: "transform"
                         }}
-                        className="fixed inset-x-0 bottom-0 max-h-[75vh] overflow-hidden rounded-t-2xl bg-neutral-50 dark:bg-neutral-900 shadow-xl"
+                        className="fixed inset-x-0 bottom-0 max-h-[85vh] overflow-hidden rounded-t-2xl bg-neutral-50 dark:bg-neutral-900 shadow-xl"
                     >
                         {/* 拖动条 */}
                         <div className="sticky top-0 z-10 flex justify-center py-2 bg-neutral-50 dark:bg-neutral-900">
@@ -350,7 +350,7 @@ stages数组中的每个阶段必须包含以下字段：
                             style={{
                                 willChange: "opacity, transform"
                             }}
-                            className="px-6 px-safe pb-6 pb-safe overflow-auto max-h-[calc(75vh-40px)]"
+                            className="px-6 px-safe pb-6 pb-safe overflow-auto max-h-[calc(85vh-40px)]"
                         >
                             <div className="flex flex-col">
                                 {/* 顶部标题 */}
@@ -473,7 +473,7 @@ stages数组中的每个阶段必须包含以下字段：
 
                                     {/* 提示词预览 - 缩短高度 */}
                                     {coffeeBean && (
-                                        <div className="p-3 rounded-lg bg-neutral-100/80 dark:bg-neutral-800/60 border border-neutral-200/80 dark:border-neutral-700/60 max-h-[150px] overflow-auto text-xs font-mono">
+                                        <div className="p-3 rounded-lg bg-neutral-100/80 dark:bg-neutral-800/60 border border-neutral-200/80 dark:border-neutral-700/60 max-h-[100px] overflow-auto text-xs font-mono">
                                             <div className="text-[10px] text-neutral-500 dark:text-neutral-400 mb-1">
                                                 预览（点击下方按钮复制完整提示词）：
                                             </div>
