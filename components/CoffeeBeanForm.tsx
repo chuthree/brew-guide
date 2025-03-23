@@ -164,6 +164,36 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
         if (initialBean) {
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
             const { id, timestamp, ...beanData } = initialBean;
+
+            // 检查是否有赏味期数据，如果没有，则根据烘焙度计算默认值
+            const needFlavorPeriodInit = !beanData.startDay && !beanData.endDay && !beanData.maxDay;
+
+            if (needFlavorPeriodInit && beanData.roastLevel) {
+                let startDay = 0;
+                let endDay = 0;
+                let maxDay = 0;
+
+                if (beanData.roastLevel.includes('浅')) {
+                    startDay = 7;
+                    endDay = 14;
+                    maxDay = 28;
+                } else if (beanData.roastLevel.includes('深')) {
+                    startDay = 14;
+                    endDay = 28;
+                    maxDay = 42;
+                } else {
+                    // 默认为中烘焙
+                    startDay = 10;
+                    endDay = 21;
+                    maxDay = 35;
+                }
+
+                // 为初始数据添加赏味期参数
+                beanData.startDay = startDay;
+                beanData.endDay = endDay;
+                beanData.maxDay = maxDay;
+            }
+
             return beanData;
         }
 
@@ -181,6 +211,9 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
             price: '',
             type: '单品',
             notes: '',
+            startDay: 0,
+            endDay: 0,
+            maxDay: 0,
         };
         return newBean;
     });
@@ -403,6 +436,20 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                 ...prev,
                 remaining: numericValue
             }));
+        } else if (field === 'roastLevel') {
+            // 当烘焙度改变时，询问是否要更新赏味期参数
+            setBean(prev => ({
+                ...prev,
+                [field]: safeValue
+            }));
+
+            // 提示用户是否要根据新的烘焙度更新赏味期
+            if (bean.startDay !== 0 || bean.endDay !== 0 || bean.maxDay !== 0) {
+                if (window.confirm('是否要根据新的烘焙度更新赏味期参数？')) {
+                    // 根据新的烘焙度自动设置赏味期参数
+                    setTimeout(() => autoSetFlavorPeriod(), 100);
+                }
+            }
         } else {
             // 处理其他字段
             setBean(prev => ({
@@ -457,6 +504,115 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                 />
             </div>
         );
+    };
+
+    // 初始化赏味期默认值 - 修改为只对新创建的豆子有效
+    useEffect(() => {
+        // 仅当是新创建的豆子（而不是编辑已有的豆子）且未设置赏味期参数时，才自动设置默认值
+        if (!initialBean && bean.startDay === 0 && bean.endDay === 0 && bean.maxDay === 0) {
+            let startDay = 0;
+            let endDay = 0;
+            let maxDay = 0;
+
+            if (bean.roastLevel?.includes('浅')) {
+                startDay = 7;
+                endDay = 14;
+                maxDay = 28;
+            } else if (bean.roastLevel?.includes('深')) {
+                startDay = 14;
+                endDay = 28;
+                maxDay = 42;
+            } else {
+                // 默认为中烘焙
+                startDay = 10;
+                endDay = 21;
+                maxDay = 35;
+            }
+
+            setBean(prev => ({
+                ...prev,
+                startDay,
+                endDay,
+                maxDay
+            }));
+        }
+    }, [bean.roastLevel, bean.startDay, bean.endDay, bean.maxDay, initialBean]);
+
+    // 验证赏味期参数，确保 startDay < endDay < maxDay
+    const validateFlavorPeriod = (value: string, field: 'startDay' | 'endDay' | 'maxDay') => {
+        const numValue = parseInt(value) || 0;
+
+        if (field === 'startDay') {
+            const endDay = bean.endDay || 0;
+            if (numValue >= endDay && endDay > 0) {
+                return { valid: false, message: '养豆期天数必须小于最佳赏味期天数' };
+            }
+        } else if (field === 'endDay') {
+            const startDay = bean.startDay || 0;
+            const maxDay = bean.maxDay || 0;
+            if (numValue <= startDay) {
+                return { valid: false, message: '最佳赏味期天数必须大于养豆期天数' };
+            }
+            if (numValue >= maxDay && maxDay > 0) {
+                return { valid: false, message: '最佳赏味期天数必须小于赏味衰退期天数' };
+            }
+        } else if (field === 'maxDay') {
+            const endDay = bean.endDay || 0;
+            if (numValue <= endDay) {
+                return { valid: false, message: '赏味衰退期天数必须大于最佳赏味期天数' };
+            }
+        }
+
+        return { valid: true, message: '' };
+    };
+
+    // 处理赏味期参数变更
+    const handleFlavorPeriodChange = (field: 'startDay' | 'endDay' | 'maxDay') => (value: string) => {
+        // 确保值为正整数
+        const numericValue = value.replace(/[^0-9]/g, '');
+        const numValue = parseInt(numericValue) || 0;
+
+        // 验证值的合法性
+        const validation = validateFlavorPeriod(numericValue, field);
+
+        if (validation.valid) {
+            setBean(prev => ({
+                ...prev,
+                [field]: numValue
+            }));
+        } else {
+            // 保持原值不变，可以考虑添加提示
+            console.log(validation.message);
+        }
+    };
+
+    // 根据烘焙度自动设置赏味期参数
+    const autoSetFlavorPeriod = () => {
+        let startDay = 0;
+        let endDay = 0;
+        let maxDay = 0;
+
+        if (bean.roastLevel?.includes('浅')) {
+            startDay = 7;
+            endDay = 14;
+            maxDay = 28;
+        } else if (bean.roastLevel?.includes('深')) {
+            startDay = 14;
+            endDay = 28;
+            maxDay = 42;
+        } else {
+            // 默认为中烘焙
+            startDay = 10;
+            endDay = 21;
+            maxDay = 35;
+        }
+
+        setBean(prev => ({
+            ...prev,
+            startDay,
+            endDay,
+            maxDay
+        }));
     };
 
     // 渲染步骤内容
@@ -554,7 +710,7 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                                 </label>
                                 <select
                                     value={bean.roastLevel || '浅度烘焙'}
-                                    onChange={(e) => setBean({ ...bean, roastLevel: e.target.value })}
+                                    onChange={(e) => handleInputChange('roastLevel')(e.target.value)}
                                     className="w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400 appearance-none"
                                 >
                                     <option value="浅度烘焙">浅度烘焙</option>
@@ -663,6 +819,69 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                                         </div>
                                     ))}
                                 </div>
+                            </div>
+                        </div>
+
+                        {/* 自定义赏味期参数 */}
+                        <div className="space-y-4 w-full">
+                            <div className="flex items-center justify-between">
+                                <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                                    赏味期设置
+                                </label>
+                                <button
+                                    type="button"
+                                    onClick={autoSetFlavorPeriod}
+                                    className="text-xs text-neutral-600 dark:text-neutral-400 underline"
+                                >
+                                    按烘焙度重置
+                                </button>
+                            </div>
+                            <div className="grid grid-cols-3 gap-4">
+                                <div className="space-y-1">
+                                    <label className="block text-xs text-neutral-500 dark:text-neutral-400">
+                                        养豆期结束
+                                    </label>
+                                    <AutocompleteInput
+                                        value={bean.startDay ? String(bean.startDay) : ''}
+                                        onChange={handleFlavorPeriodChange('startDay')}
+                                        placeholder="天数"
+                                        unit="天"
+                                        clearable={false}
+                                        suggestions={[]}
+                                        inputType="tel"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="block text-xs text-neutral-500 dark:text-neutral-400">
+                                        最佳期结束
+                                    </label>
+                                    <AutocompleteInput
+                                        value={bean.endDay ? String(bean.endDay) : ''}
+                                        onChange={handleFlavorPeriodChange('endDay')}
+                                        placeholder="天数"
+                                        unit="天"
+                                        clearable={false}
+                                        suggestions={[]}
+                                        inputType="tel"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="block text-xs text-neutral-500 dark:text-neutral-400">
+                                        赏味期结束
+                                    </label>
+                                    <AutocompleteInput
+                                        value={bean.maxDay ? String(bean.maxDay) : ''}
+                                        onChange={handleFlavorPeriodChange('maxDay')}
+                                        placeholder="天数"
+                                        unit="天"
+                                        clearable={false}
+                                        suggestions={[]}
+                                        inputType="tel"
+                                    />
+                                </div>
+                            </div>
+                            <div className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                                <p>说明：{bean.startDay}天前为养豆期，{bean.startDay}-{bean.endDay}天为最佳赏味期，{bean.endDay}-{bean.maxDay}天为赏味期，{bean.maxDay}天后为衰退期</p>
                             </div>
                         </div>
 
@@ -838,6 +1057,10 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                                     <span className="text-sm font-medium">{bean.flavor.join(', ')}</span>
                                 </div>
                             )}
+                            <div className="flex justify-between py-2 border-b border-neutral-200 dark:border-neutral-700">
+                                <span className="text-sm text-neutral-500 dark:text-neutral-400">赏味期</span>
+                                <span className="text-sm font-medium">{bean.startDay}-{bean.endDay}-{bean.maxDay}天</span>
+                            </div>
                         </div>
                     </motion.div>
                 );

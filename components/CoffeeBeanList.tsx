@@ -105,24 +105,27 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
                         // 计算天数差
                         const daysSinceRoast = Math.ceil((todayDate.getTime() - roastDateOnly.getTime()) / (1000 * 60 * 60 * 24));
 
-                        // 根据烘焙程度确定赏味期范围
-                        let startDay = 0;
-                        let endDay = 0;
-                        let maxDay = 0;
+                        // 优先使用自定义赏味期参数，如果没有则根据烘焙度计算
+                        let startDay = bean.startDay || 0;
+                        let endDay = bean.endDay || 0;
+                        let maxDay = bean.maxDay || 0;
 
-                        if (bean.roastLevel?.includes('浅')) {
-                            startDay = 7;
-                            endDay = 14;
-                            maxDay = 28;
-                        } else if (bean.roastLevel?.includes('深')) {
-                            startDay = 14;
-                            endDay = 28;
-                            maxDay = 42;
-                        } else {
-                            // 默认为中烘焙
-                            startDay = 10;
-                            endDay = 21;
-                            maxDay = 35;
+                        // 如果没有自定义值，则根据烘焙度设置默认值
+                        if (startDay === 0 && endDay === 0 && maxDay === 0) {
+                            if (bean.roastLevel?.includes('浅')) {
+                                startDay = 7;
+                                endDay = 14;
+                                maxDay = 28;
+                            } else if (bean.roastLevel?.includes('深')) {
+                                startDay = 14;
+                                endDay = 28;
+                                maxDay = 42;
+                            } else {
+                                // 默认为中烘焙
+                                startDay = 10;
+                                endDay = 21;
+                                maxDay = 35;
+                            }
                         }
 
                         if (daysSinceRoast < startDay) {
@@ -135,7 +138,7 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
                             statusClass = "text-emerald-500 dark:text-emerald-400";
                         } else if (daysSinceRoast <= maxDay) {
                             // 已过最佳赏味期但仍可饮用
-                            freshStatus = `(已过期)`;
+                            freshStatus = `(已过赏味期)`;
                             statusClass = "text-neutral-500 dark:text-neutral-400";
                         } else {
                             // 已超过推荐饮用期限

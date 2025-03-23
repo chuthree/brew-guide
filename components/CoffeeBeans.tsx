@@ -562,7 +562,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                             赏味期
                                                         </div>
                                                         {(() => {
-                                                            // 计算烘焙天数
+                                                            // 计算天数差，向上取整确保当天也会显示进度
                                                             const today = new Date();
                                                             const roastDate = new Date(bean.roastDate);
 
@@ -573,24 +573,27 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                             // 计算天数差，向上取整确保当天也会显示进度
                                                             const daysSinceRoast = Math.ceil((todayDate.getTime() - roastDateOnly.getTime()) / (1000 * 60 * 60 * 24));
 
-                                                            // 根据烘焙程度确定赏味期范围
-                                                            let startDay = 0;
-                                                            let endDay = 0;
-                                                            let maxDay = 0;
+                                                            // 优先使用自定义赏味期参数，如果没有则根据烘焙度计算
+                                                            let startDay = bean.startDay || 0;
+                                                            let endDay = bean.endDay || 0;
+                                                            let maxDay = bean.maxDay || 0;
 
-                                                            if (bean.roastLevel?.includes('浅')) {
-                                                                startDay = 7;
-                                                                endDay = 14;
-                                                                maxDay = 28;
-                                                            } else if (bean.roastLevel?.includes('深')) {
-                                                                startDay = 14;
-                                                                endDay = 28;
-                                                                maxDay = 42;
-                                                            } else {
-                                                                // 默认为中烘焙
-                                                                startDay = 10;
-                                                                endDay = 21;
-                                                                maxDay = 35;
+                                                            // 如果没有自定义值，则根据烘焙度设置默认值
+                                                            if (startDay === 0 && endDay === 0 && maxDay === 0) {
+                                                                if (bean.roastLevel?.includes('浅')) {
+                                                                    startDay = 7;
+                                                                    endDay = 14;
+                                                                    maxDay = 28;
+                                                                } else if (bean.roastLevel?.includes('深')) {
+                                                                    startDay = 14;
+                                                                    endDay = 28;
+                                                                    maxDay = 42;
+                                                                } else {
+                                                                    // 默认为中烘焙
+                                                                    startDay = 10;
+                                                                    endDay = 21;
+                                                                    maxDay = 35;
+                                                                }
                                                             }
 
                                                             let status = '';
@@ -613,7 +616,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                     </div>
                                                     <motion.div className="h-px w-full overflow-hidden bg-neutral-200/50 dark:bg-neutral-800 relative">
                                                         {(() => {
-                                                            // 计算烘焙天数
+                                                            // 计算天数差，向上取整确保当天也会显示进度
                                                             const today = new Date();
                                                             const roastDate = new Date(bean.roastDate);
 
@@ -624,24 +627,27 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                             // 计算天数差，向上取整确保当天也会显示进度
                                                             const daysSinceRoast = Math.ceil((todayDate.getTime() - roastDateOnly.getTime()) / (1000 * 60 * 60 * 24));
 
-                                                            // 根据烘焙程度确定赏味期范围
-                                                            let startDay = 0;
-                                                            let endDay = 0;
-                                                            let maxDay = 0;
+                                                            // 优先使用自定义赏味期参数，如果没有则根据烘焙度计算
+                                                            let startDay = bean.startDay || 0;
+                                                            let endDay = bean.endDay || 0;
+                                                            let maxDay = bean.maxDay || 0;
 
-                                                            if (bean.roastLevel?.includes('浅')) {
-                                                                startDay = 7;
-                                                                endDay = 14;
-                                                                maxDay = 28;
-                                                            } else if (bean.roastLevel?.includes('深')) {
-                                                                startDay = 14;
-                                                                endDay = 28;
-                                                                maxDay = 42;
-                                                            } else {
-                                                                // 默认为中烘焙
-                                                                startDay = 10;
-                                                                endDay = 21;
-                                                                maxDay = 35;
+                                                            // 如果没有自定义值，则根据烘焙度设置默认值
+                                                            if (startDay === 0 && endDay === 0 && maxDay === 0) {
+                                                                if (bean.roastLevel?.includes('浅')) {
+                                                                    startDay = 7;
+                                                                    endDay = 14;
+                                                                    maxDay = 28;
+                                                                } else if (bean.roastLevel?.includes('深')) {
+                                                                    startDay = 14;
+                                                                    endDay = 28;
+                                                                    maxDay = 42;
+                                                                } else {
+                                                                    // 默认为中烘焙
+                                                                    startDay = 10;
+                                                                    endDay = 21;
+                                                                    maxDay = 35;
+                                                                }
                                                             }
 
                                                             // 计算各区间宽度百分比

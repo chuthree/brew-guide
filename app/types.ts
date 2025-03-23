@@ -24,6 +24,9 @@ export interface CoffeeBean {
 	type?: string; // 类型
 	notes?: string; // 备注
 	timestamp: number; // 创建/添加时间
+	startDay?: number; // 养豆期结束天数
+	endDay?: number; // 最佳赏味期结束天数
+	maxDay?: number; // 赏味期结束天数
 }
 
 // 修改 BrewingNoteData 接口，避免使用 any
