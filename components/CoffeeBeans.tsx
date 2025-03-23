@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { CoffeeBean } from '@/app/types'
 import { CoffeeBeanManager } from '@/lib/coffeeBeanManager'
 import CoffeeBeanFormModal from './CoffeeBeanFormModal'
+import AIRecipeModal from './AIRecipeModal'
 import {
     Select,
     SelectContent,
@@ -35,15 +36,19 @@ interface CoffeeBeansProps {
     isOpen: boolean
     showBeanForm?: (bean: CoffeeBean | null) => void  // 可选属性，用于在页面级显示咖啡豆表单
     onShowImport?: () => void // 新增属性，用于显示导入表单
+    onJumpToImport?: () => void // 新增属性，用于跳转到方案导入页面
+    onGenerateAIRecipe?: (bean: CoffeeBean) => void // 新增属性，用于生成AI方案
 }
 
-const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowImport }) => {
+const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowImport, onJumpToImport, onGenerateAIRecipe }) => {
     const [beans, setBeans] = useState<CoffeeBean[]>([])
     const [showAddForm, setShowAddForm] = useState(false)
     const [editingBean, setEditingBean] = useState<CoffeeBean | null>(null)
     const [actionMenuStates, setActionMenuStates] = useState<Record<string, boolean>>({})
     const [copySuccess, setCopySuccess] = useState<Record<string, boolean>>({})
     const [sortOption, setSortOption] = useState<SortOption>(SORT_OPTIONS.TIME_DESC)
+    const [showAIRecipeModal, setShowAIRecipeModal] = useState(false)
+    const [selectedBeanForAI, setSelectedBeanForAI] = useState<CoffeeBean | null>(null)
 
     // 排序咖啡豆的函数
     const sortBeans = (beansToSort: CoffeeBean[], option: SortOption): CoffeeBean[] => {
@@ -263,10 +268,35 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
         }
     };
 
+    // 添加方法处理AI方案生成
+    const handleGenerateAIRecipe = (bean: CoffeeBean) => {
+        if (onGenerateAIRecipe) {
+            onGenerateAIRecipe(bean);
+        } else {
+            setSelectedBeanForAI(bean);
+            setShowAIRecipeModal(true);
+        }
+        // 关闭操作菜单
+        setActionMenuStates(prev => ({
+            ...prev,
+            [bean.id]: false
+        }));
+    }
+
     if (!isOpen) return null
 
     return (
         <>
+            {/* AI方案生成模态框 - 只在没有提供 onGenerateAIRecipe 时才显示 */}
+            {!onGenerateAIRecipe && (
+                <AIRecipeModal
+                    showModal={showAIRecipeModal}
+                    onClose={() => setShowAIRecipeModal(false)}
+                    coffeeBean={selectedBeanForAI}
+                    onJumpToImport={onJumpToImport || (() => { })}
+                />
+            )}
+
             {/* 咖啡豆表单弹出框 */}
             <CoffeeBeanFormModal
                 showForm={showAddForm || editingBean !== null}
@@ -438,6 +468,12 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                                         className="px-2 text-xs text-red-400"
                                                                     >
                                                                         删除
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleGenerateAIRecipe(bean)}
+                                                                        className="px-2 text-xs text-neutral-400 dark:text-neutral-500"
+                                                                    >
+                                                                        AI方案
                                                                     </button>
                                                                     <button
                                                                         onClick={() => {

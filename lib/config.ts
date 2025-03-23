@@ -148,7 +148,7 @@ export const brewingMethods: BrewingMethods = {
 						pourType: "circle",
 					},
 					{
-						time: 90,
+						time: 120,
 						pourTime: 40,
 						label: "中心注水",
 						water: "225g",

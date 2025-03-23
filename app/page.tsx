@@ -22,6 +22,7 @@ import Onboarding from '@/components/Onboarding'
 import CoffeeBeanFormModal from '@/components/CoffeeBeanFormModal'
 import ImportModal from '@/components/ImportModal'
 import { CoffeeBeanManager } from '@/lib/coffeeBeanManager'
+import AIRecipeModal from '@/components/AIRecipeModal'
 
 // 添加内容转换状态类型
 interface TransitionState {
@@ -119,6 +120,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     const [beanListKey, setBeanListKey] = useState(0);
     // 导入咖啡豆状态
     const [showImportBeanForm, setShowImportBeanForm] = useState(false);
+
+    // AI方案生成器状态
+    const [showAIRecipeModal, setShowAIRecipeModal] = useState(false);
+    const [selectedBeanForAI, setSelectedBeanForAI] = useState<CoffeeBean | null>(null);
 
     // 添加动画过渡状态
     const [transitionState, setTransitionState] = useState<TransitionState>({
@@ -511,6 +516,12 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         setShowBeanForm(true);
     };
 
+    // 处理AI方案生成
+    const handleGenerateAIRecipe = (bean: CoffeeBean) => {
+        setSelectedBeanForAI(bean);
+        setShowAIRecipeModal(true);
+    };
+
     // 完全重写checkCoffeeBeans函数，简化逻辑
     const checkCoffeeBeans = useCallback(async () => {
         try {
@@ -885,9 +896,11 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                     >
                         <CoffeeBeansComponent
                             key={beanListKey}
-                            isOpen={true}
+                            isOpen={activeMainTab === '咖啡豆'}
                             showBeanForm={handleBeanForm}
                             onShowImport={() => setShowImportBeanForm(true)}
+                            onJumpToImport={jumpToImport}
+                            onGenerateAIRecipe={handleGenerateAIRecipe}
                         />
                     </m.div>
                 )}
@@ -983,6 +996,17 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 showForm={showImportBeanForm}
                 onImport={handleImportBean}
                 onClose={() => setShowImportBeanForm(false)}
+            />
+
+            {/* AI 方案生成器模态框组件 */}
+            <AIRecipeModal
+                showModal={showAIRecipeModal}
+                onClose={() => setShowAIRecipeModal(false)}
+                coffeeBean={selectedBeanForAI}
+                onJumpToImport={() => {
+                    setShowImportForm(true);
+                    setShowAIRecipeModal(false);
+                }}
             />
 
             {/* 设置组件 - 放在页面级别确保正确覆盖整个内容 */}
