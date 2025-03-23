@@ -134,13 +134,86 @@ export function useBrewingContent({
 
 	// 更新注水步骤内容
 	const updateBrewingSteps = (stages: Stage[]) => {
+		// 创建扩展阶段数组
+		const expandedStages: {
+			type: "pour" | "wait";
+			label: string;
+			water: string;
+			detail: string;
+			startTime: number; // 开始时间
+			endTime: number; // 结束时间
+			originalIndex: number;
+			pourType?: "center" | "circle" | "ice" | "other";
+			valveStatus?: "open" | "closed";
+		}[] = [];
+
+		// 按照BrewingTimer的逻辑扩展阶段
+		stages.forEach((stage, index) => {
+			const prevStageTime = index > 0 ? stages[index - 1].time : 0;
+			const stagePourTime =
+				stage.pourTime === 0
+					? 0
+					: stage.pourTime ||
+					  Math.floor((stage.time - prevStageTime) / 3);
+
+			// 如果有注水时间，添加一个注水阶段
+			if (stagePourTime > 0) {
+				// 创建注水阶段
+				expandedStages.push({
+					type: "pour",
+					label: stage.label,
+					water: stage.water,
+					detail: stage.detail,
+					startTime: prevStageTime,
+					endTime: prevStageTime + stagePourTime,
+					pourType: stage.pourType,
+					valveStatus: stage.valveStatus,
+					originalIndex: index,
+				});
+
+				// 只有当注水结束时间小于阶段结束时间时，才添加等待阶段
+				if (prevStageTime + stagePourTime < stage.time) {
+					// 创建等待阶段
+					expandedStages.push({
+						type: "wait",
+						label: "等待",
+						water: stage.water, // 水量与前一阶段相同
+						detail: "保持耐心，等待咖啡萃取",
+						startTime: prevStageTime + stagePourTime,
+						endTime: stage.time,
+						pourType: stage.pourType, // 保留注水类型以便视觉一致性
+						valveStatus: stage.valveStatus,
+						originalIndex: index,
+					});
+				}
+			} else {
+				// 如果没有注水时间，只添加一个等待阶段
+				expandedStages.push({
+					type: "wait",
+					label: "等待",
+					water: stage.water,
+					detail: "保持耐心，等待咖啡萃取",
+					startTime: prevStageTime,
+					endTime: stage.time,
+					pourType: stage.pourType,
+					valveStatus: stage.valveStatus,
+					originalIndex: index,
+				});
+			}
+		});
+
+		// 更新content的注水部分
 		setContent((prev) => ({
 			...prev,
 			注水: {
-				steps: stages.map((stage) => ({
+				steps: expandedStages.map((stage) => ({
 					title: stage.label,
 					items: [`${stage.water}`, stage.detail],
-					note: stage.time + "秒",
+					note: stage.endTime - stage.startTime + "秒", // 显示当前阶段的时长
+					type: stage.type, // 添加类型标记
+					originalIndex: stage.originalIndex, // 保留原始索引以便于参考
+					startTime: stage.startTime, // 保存开始时间
+					endTime: stage.endTime, // 保存结束时间
 				})),
 			},
 		}));
@@ -168,4 +241,6 @@ export interface Stage {
 	detail: string;
 	time: number;
 	pourTime?: number;
+	pourType?: "center" | "circle" | "ice" | "other";
+	valveStatus?: "open" | "closed";
 }

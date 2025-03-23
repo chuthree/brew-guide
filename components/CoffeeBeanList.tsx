@@ -7,12 +7,10 @@ import { CoffeeBeanManager } from '@/lib/coffeeBeanManager'
 
 // 定义组件属性接口
 interface CoffeeBeanListProps {
-    selectedId?: string | null;
     onSelect: (beanId: string | null, bean: CoffeeBean | null) => void
 }
 
 const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
-    selectedId,
     onSelect,
 }) => {
     const [beans, setBeans] = useState<CoffeeBean[]>([])
@@ -72,7 +70,7 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
                 transition={{ duration: 0.3, ease: "easeOut" }}
             >
                 <div
-                    className={`group relative border-l ${selectedId === null ? 'border-neutral-800 dark:border-neutral-200' : 'border-neutral-200 dark:border-neutral-800'} pl-6 cursor-pointer ${selectedId === null ? 'text-neutral-800 dark:text-neutral-200' : 'text-neutral-500 dark:text-neutral-400'}`}
+                    className="group relative border-l border-neutral-200 dark:border-neutral-800 pl-6 cursor-pointer text-neutral-500 dark:text-neutral-400"
                     onClick={() => onSelect(null, null)}
                 >
                     <div className="cursor-pointer">
@@ -143,7 +141,7 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
                         }}
                     >
                         <div
-                            className={`group relative border-l ${selectedId === bean.id ? 'border-neutral-800 dark:border-neutral-200' : 'border-neutral-200 dark:border-neutral-800'} pl-6 cursor-pointer ${selectedId === bean.id ? 'text-neutral-800 dark:text-neutral-200' : 'text-neutral-500 dark:text-neutral-400'}`}
+                            className="group relative border-l border-neutral-200 dark:border-neutral-800 pl-6 cursor-pointer text-neutral-500 dark:text-neutral-400"
                             onClick={() => onSelect(bean.id, bean)}
                         >
                             <div className="cursor-pointer">

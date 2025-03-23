@@ -36,7 +36,7 @@ interface BrewingTimerProps {
     currentBrewingMethod: Method | null
     onTimerComplete?: () => void
     onStatusChange?: (status: { isRunning: boolean }) => void
-    onStageChange?: (status: { currentStage: number, progress: number }) => void
+    onStageChange?: (status: { currentStage: number, progress: number, isWaiting: boolean }) => void
     onComplete?: (isComplete: boolean, totalTime?: number) => void
     onCountdownChange?: (time: number | null) => void
     settings: SettingsOptions
@@ -63,6 +63,24 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     const [isCompleted, setIsCompleted] = useState(false)
     const [isHapticsSupported, setIsHapticsSupported] = useState(false)
     const lastStageRef = useRef<number>(-1)
+
+    // 创建扩展阶段数组的引用
+    const expandedStagesRef = useRef<{
+        type: 'pour' | 'wait';
+        label: string;
+        startTime: number;
+        endTime: number;
+        time: number;
+        pourTime?: number;
+        water: string;
+        detail: string;
+        pourType?: 'center' | 'circle' | 'ice' | 'other';
+        valveStatus?: 'open' | 'closed';
+        originalIndex: number;
+    }[]>([])
+
+    // 当前扩展阶段索引
+    const [currentExpandedStageIndex, setCurrentExpandedStageIndex] = useState(-1)
 
     const audioContext = useRef<AudioContext | null>(null)
     const audioBuffers = useRef<{
@@ -207,50 +225,149 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         }
     }, [settings.notificationSound])
 
+    // 创建扩展阶段数组，将原始阶段的注水和等待部分拆分为独立阶段
+    const createExpandedStages = useCallback(() => {
+        if (!currentBrewingMethod?.params?.stages?.length) return [];
+
+        const originalStages = currentBrewingMethod.params.stages;
+        const expandedStages: {
+            type: 'pour' | 'wait';
+            label: string;
+            startTime: number;
+            endTime: number;
+            time: number;
+            pourTime?: number;
+            water: string;
+            detail: string;
+            pourType?: 'center' | 'circle' | 'ice' | 'other';
+            valveStatus?: 'open' | 'closed';
+            originalIndex: number;
+        }[] = [];
+
+        originalStages.forEach((stage, index) => {
+            const prevStageTime = index > 0 ? originalStages[index - 1].time : 0;
+            const stagePourTime = stage.pourTime === 0 ? 0 : (stage.pourTime || Math.floor((stage.time - prevStageTime) / 3));
+
+            // 如果有注水时间，添加一个注水阶段
+            if (stagePourTime > 0) {
+                // 创建注水阶段
+                expandedStages.push({
+                    type: 'pour',
+                    label: stage.label,
+                    startTime: prevStageTime,
+                    endTime: prevStageTime + stagePourTime,
+                    time: stagePourTime,
+                    pourTime: stagePourTime,
+                    water: stage.water,
+                    detail: stage.detail,
+                    pourType: stage.pourType,
+                    valveStatus: stage.valveStatus,
+                    originalIndex: index
+                });
+
+                // 只有当注水结束时间小于阶段结束时间时，才添加等待阶段
+                if (prevStageTime + stagePourTime < stage.time) {
+                    // 创建等待阶段
+                    expandedStages.push({
+                        type: 'wait',
+                        label: '等待',
+                        startTime: prevStageTime + stagePourTime,
+                        endTime: stage.time,
+                        time: stage.time - (prevStageTime + stagePourTime),
+                        water: stage.water, // 水量与前一阶段相同
+                        detail: "保持耐心，等待咖啡萃取",
+                        pourType: stage.pourType, // 保留注水类型以便视觉一致性
+                        valveStatus: stage.valveStatus,
+                        originalIndex: index
+                    });
+                }
+            } else {
+                // 如果没有注水时间，只添加一个等待阶段
+                expandedStages.push({
+                    type: 'wait',
+                    label: '等待',
+                    startTime: prevStageTime,
+                    endTime: stage.time,
+                    time: stage.time - prevStageTime,
+                    water: stage.water,
+                    detail: "保持耐心，等待咖啡萃取",
+                    pourType: stage.pourType,
+                    valveStatus: stage.valveStatus,
+                    originalIndex: index
+                });
+            }
+        });
+
+        return expandedStages;
+    }, [currentBrewingMethod]);
+
+    // 更新扩展阶段数组当配方变化时
+    useEffect(() => {
+        expandedStagesRef.current = createExpandedStages();
+    }, [createExpandedStages]);
+
+    // 获取当前阶段 - 修改为使用扩展阶段
     const getCurrentStage = useCallback(() => {
-        if (!currentBrewingMethod?.params?.stages?.length) return -1
+        if (!currentBrewingMethod?.params?.stages?.length) return -1;
 
-        const stageIndex = currentBrewingMethod.params.stages.findIndex(
-            (stage) => currentTime <= stage.time
-        )
+        // 确保扩展阶段已创建
+        const expandedStages = expandedStagesRef.current;
+        if (expandedStages.length === 0) return -1;
 
-        return stageIndex === -1
-            ? currentBrewingMethod.params.stages.length - 1
-            : stageIndex
-    }, [currentTime, currentBrewingMethod])
+        // 在扩展的阶段中查找当前阶段
+        const expandedStageIndex = expandedStages.findIndex(
+            (stage) => currentTime >= stage.startTime && currentTime <= stage.endTime
+        );
 
+        // 如果找不到合适的阶段，返回最后一个扩展阶段
+        if (expandedStageIndex === -1) {
+            return expandedStages.length - 1;
+        }
+
+        // 更新当前扩展阶段索引
+        setCurrentExpandedStageIndex(expandedStageIndex);
+
+        return expandedStageIndex;
+    }, [currentTime, currentBrewingMethod]);
+
+    // 修改计算水量的函数
     const calculateCurrentWater = useCallback(() => {
-        if (!currentBrewingMethod || currentTime === 0) return 0
+        if (!currentBrewingMethod || currentTime === 0) return 0;
 
-        const stages = currentBrewingMethod.params.stages
-        const currentStageIndex = getCurrentStage()
+        const expandedStages = expandedStagesRef.current;
+        if (expandedStages.length === 0) return 0;
+
+        const currentStageIndex = getCurrentStage();
 
         if (currentStageIndex === -1) {
-            return parseInt(stages[stages.length - 1].water)
+            return parseInt(expandedStages[expandedStages.length - 1].water);
         }
 
-        const currentStage = stages[currentStageIndex]
-        const prevStage = currentStageIndex > 0 ? stages[currentStageIndex - 1] : null
+        const currentStage = expandedStages[currentStageIndex];
+        const prevStageIndex = currentStageIndex > 0 ? currentStageIndex - 1 : -1;
+        const prevStage = prevStageIndex >= 0 ? expandedStages[prevStageIndex] : null;
 
-        const prevStageTime = prevStage ? prevStage.time : 0
-        const prevStageWater = prevStage ? parseInt(prevStage.water) : 0
+        const prevStageTime = currentStage.startTime;
+        const prevStageWater = prevStage?.type === 'pour' ?
+            parseInt(prevStage.water) :
+            (prevStageIndex > 0 ? parseInt(expandedStages[prevStageIndex - 1].water) : 0);
 
-        if (currentStage.pourTime === 0) {
-            return parseInt(currentStage.water)
+        if (currentStage.type === 'wait') {
+            // 等待阶段，水量已经达到目标
+            return parseInt(currentStage.water);
         }
 
-        const pourTime = currentStage.pourTime || Math.floor((currentStage.time - prevStageTime) / 3)
-
-        const timeInCurrentStage = currentTime - prevStageTime
-        const currentTargetWater = parseInt(currentStage.water)
+        const pourTime = currentStage.time;
+        const timeInCurrentStage = currentTime - prevStageTime;
+        const currentTargetWater = parseInt(currentStage.water);
 
         if (timeInCurrentStage <= pourTime) {
-            const pourProgress = timeInCurrentStage / pourTime
-            return prevStageWater + (currentTargetWater - prevStageWater) * pourProgress
+            const pourProgress = timeInCurrentStage / pourTime;
+            return prevStageWater + (currentTargetWater - prevStageWater) * pourProgress;
         }
 
-        return currentTargetWater
-    }, [currentTime, currentBrewingMethod, getCurrentStage])
+        return currentTargetWater;
+    }, [currentTime, currentBrewingMethod, getCurrentStage]);
 
     useEffect(() => {
         methodStagesRef.current = currentBrewingMethod?.params.stages || []
@@ -343,73 +460,79 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         allowSleep();
     }, [clearTimerAndStates, onComplete, onTimerComplete, playSound, currentTime, isCompleted, triggerHaptic]);
 
+    // 修改开始计时器函数以使用扩展阶段
     const startMainTimer = useCallback(() => {
         if (currentBrewingMethod) {
             const id = setInterval(() => {
                 setCurrentTime((time) => {
-                    const stages = methodStagesRef.current
-                    const newTime = time + 1
-                    const lastStageIndex = stages.length - 1
+                    const expandedStages = expandedStagesRef.current;
+                    const newTime = time + 1;
+                    const lastStageIndex = expandedStages.length - 1;
 
-                    let shouldPlayDing = false
-                    let shouldPlayStart = false
-                    let shouldNotifyPourEnd = false
-                    let shouldPreNotifyPourEnd = false
+                    let shouldPlayDing = false;
+                    let shouldPlayStart = false;
+                    let shouldNotifyPourEnd = false;
+                    let shouldPreNotifyPourEnd = false;
 
-                    for (let index = 0; index < stages.length; index++) {
-                        const prevStageTime = index > 0 ? stages[index - 1].time : 0
-                        const nextStageTime = stages[index].time
-                        const stagePourTime = stages[index].pourTime === 0 ? 0 : (stages[index].pourTime || Math.floor((nextStageTime - prevStageTime) / 3))
-                        const pourEndTime = prevStageTime + stagePourTime
-
-                        // 检查是否在注水阶段的结束点
-                        if (newTime === pourEndTime && stagePourTime > 0) {
-                            shouldNotifyPourEnd = true
+                    for (let index = 0; index < expandedStages.length; index++) {
+                        // 阶段开始时播放提示音
+                        if (newTime === expandedStages[index].startTime) {
+                            shouldPlayDing = true;
                         }
 
-                        // 检查是否在注水阶段结束前1-2秒
-                        if ((newTime === pourEndTime - 2 || newTime === pourEndTime - 1) && stagePourTime > 0) {
-                            shouldPreNotifyPourEnd = true
+                        // 阶段即将结束时播放提示音
+                        if (newTime === expandedStages[index].endTime - 2 ||
+                            newTime === expandedStages[index].endTime - 1) {
+                            shouldPlayStart = true;
                         }
 
-                        if (newTime === prevStageTime) {
-                            shouldPlayDing = true
-                        }
+                        // 注水阶段特殊处理
+                        if (expandedStages[index].type === 'pour') {
+                            const pourEndTime = expandedStages[index].endTime;
 
-                        if (newTime === nextStageTime - 2 || newTime === nextStageTime - 1) {
-                            shouldPlayStart = true
+                            // 注水阶段结束时
+                            if (newTime === pourEndTime) {
+                                shouldNotifyPourEnd = true;
+                            }
+
+                            // 注水阶段即将结束时
+                            if (newTime === pourEndTime - 2 || newTime === pourEndTime - 1) {
+                                shouldPreNotifyPourEnd = true;
+                            }
                         }
                     }
 
                     if (shouldPlayDing) {
-                        playSound('ding')
+                        playSound('ding');
                     }
                     if (shouldPlayStart) {
-                        playSound('start')
+                        playSound('start');
                     }
                     if (shouldPreNotifyPourEnd) {
-                        playSound('start')
+                        playSound('start');
                     }
                     if (shouldNotifyPourEnd) {
-                        playSound('ding')
+                        playSound('ding');
                         if (isHapticsSupported && settings.hapticFeedback) {
-                            triggerHaptic('medium')
+                            triggerHaptic('medium');
                         }
                     }
 
-                    if (newTime > stages[lastStageIndex].time) {
-                        clearInterval(id)
-                        setTimerId(null)
-                        setIsRunning(false)
-                        handleComplete()
-                        return stages[lastStageIndex].time
+                    // 检查是否完成所有阶段
+                    if (newTime > expandedStages[lastStageIndex].endTime) {
+                        clearInterval(id);
+                        setTimerId(null);
+                        setIsRunning(false);
+                        handleComplete();
+                        return expandedStages[lastStageIndex].endTime;
                     }
-                    return newTime
-                })
-            }, 1000)
-            setTimerId(id)
+
+                    return newTime;
+                });
+            }, 1000);
+            setTimerId(id);
         }
-    }, [currentBrewingMethod, playSound, handleComplete, triggerHaptic, isHapticsSupported, settings.hapticFeedback])
+    }, [currentBrewingMethod, playSound, handleComplete, triggerHaptic, isHapticsSupported, settings.hapticFeedback]);
 
     useEffect(() => {
         if (countdownTime !== null && isRunning) {
@@ -522,47 +645,41 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         onStatusChange?.({ isRunning })
     }, [isRunning, onStatusChange])
 
+    // 修改获取阶段进度的函数
     const getStageProgress = useCallback(
         (stageIndex: number) => {
-            if (!currentBrewingMethod?.params?.stages) return 0
-            const methodStages = currentBrewingMethod.params.stages
+            if (stageIndex < 0 || expandedStagesRef.current.length === 0) return 0;
 
-            if (stageIndex < 0 || stageIndex >= methodStages.length) return 0
+            if (stageIndex >= expandedStagesRef.current.length) return 0;
 
-            const stage = methodStages[stageIndex]
-            if (!stage) return 0
+            const stage = expandedStagesRef.current[stageIndex];
+            if (!stage) return 0;
 
-            const prevStageTime =
-                stageIndex > 0 && methodStages[stageIndex - 1]
-                    ? methodStages[stageIndex - 1].time
-                    : 0
+            if (currentTime < stage.startTime) return 0;
+            if (currentTime > stage.endTime) return 100;
 
-            if (currentTime < prevStageTime) return 0
-            if (currentTime > stage.time) return 100
-
-            return ((currentTime - prevStageTime) / (stage.time - prevStageTime)) * 100
+            return ((currentTime - stage.startTime) / (stage.endTime - stage.startTime)) * 100;
         },
-        [currentTime, currentBrewingMethod]
-    )
+        [currentTime]
+    );
 
+    // 修改向外通知阶段变化的函数
     useEffect(() => {
-        const currentStage = getCurrentStage()
-        const progress = getStageProgress(currentStage)
-        onStageChange?.({ currentStage, progress })
-    }, [currentTime, getCurrentStage, getStageProgress, onStageChange])
+        const currentStage = getCurrentStage();
+        const progress = getStageProgress(currentStage);
 
-    useEffect(() => {
-        onCountdownChange?.(countdownTime)
-    }, [countdownTime, onCountdownChange])
+        if (currentStage >= 0 && expandedStagesRef.current.length > 0) {
+            const currentExpandedStage = expandedStagesRef.current[currentStage];
 
-    // 在倒计时结束时添加触感反馈
-    useEffect(() => {
-        if (countdownTime === 0 && isRunning) {
-            triggerHaptic('vibrateMultiple');
+            onStageChange?.({
+                currentStage: currentStage,
+                progress: progress,
+                isWaiting: currentExpandedStage.type === 'wait'
+            });
         }
-    }, [countdownTime, isRunning, triggerHaptic]);
+    }, [currentTime, getCurrentStage, getStageProgress, onStageChange]);
 
-    // 在冲泡阶段变化时添加触感反馈
+    // 触感反馈在阶段变化时
     useEffect(() => {
         const currentStage = getCurrentStage();
         if (currentStage !== lastStageRef.current && isRunning && lastStageRef.current !== -1) {
@@ -592,7 +709,35 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         };
     }, []);
 
+    // 恢复onCountdownChange钩子的使用
+    useEffect(() => {
+        onCountdownChange?.(countdownTime)
+    }, [countdownTime, onCountdownChange])
+
+    // 在倒计时结束时添加触感反馈
+    useEffect(() => {
+        if (countdownTime === 0 && isRunning) {
+            triggerHaptic('vibrateMultiple');
+        }
+    }, [countdownTime, isRunning, triggerHaptic]);
+
     if (!currentBrewingMethod) return null
+
+    // 获取当前扩展阶段
+    const currentStageIndex = currentExpandedStageIndex >= 0 ?
+        currentExpandedStageIndex :
+        (expandedStagesRef.current.length > 0 ? 0 : -1);
+
+    const currentStage = currentStageIndex >= 0 && expandedStagesRef.current.length > 0 ?
+        expandedStagesRef.current[currentStageIndex] :
+        null;
+
+    // 获取下一个扩展阶段
+    const nextStageIndex = currentStageIndex >= 0 && currentStageIndex < expandedStagesRef.current.length - 1 ?
+        currentStageIndex + 1 :
+        -1;
+
+    const nextStage = nextStageIndex >= 0 ? expandedStagesRef.current[nextStageIndex] : null;
 
     return (
         <>
@@ -618,31 +763,34 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                                 当前阶段
                             </div>
                             <motion.div
-                                key={getCurrentStage()}
+                                key={currentStageIndex}
                                 initial={{ opacity: 0, y: -10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.26 }}
                                 className="mt-1 text-sm font-medium tracking-wide"
                             >
-                                {currentBrewingMethod.params.stages[getCurrentStage()]?.label || '完成冲煮'}
+                                {currentStage ?
+                                    (currentStage.type === 'pour' ?
+                                        currentStage.label :
+                                        `等待`) :
+                                    '完成冲煮'}
                             </motion.div>
                         </div>
                         <div className="flex items-baseline text-right">
-
                             <div>
                                 <div className="text-xs text-neutral-400 dark:text-neutral-500">
-                                    预计时间
+                                    目标时间
                                 </div>
                                 <motion.div
-                                    key={`time-${getCurrentStage()}`}
+                                    key={`time-${currentStageIndex}`}
                                     initial={{ opacity: 0.8 }}
                                     animate={{ opacity: 1 }}
                                     transition={{ duration: 0.26 }}
                                     className="mt-1 text-sm font-medium tracking-wide"
                                 >
-                                    {currentBrewingMethod.params.stages[getCurrentStage()]
-                                        ? formatTime(currentBrewingMethod.params.stages[getCurrentStage()].time, true)
-                                        : '-'}
+                                    {currentStage ?
+                                        formatTime(currentStage.endTime, true) :
+                                        '-'}
                                 </motion.div>
                             </div>
                             <div className='min-w-24'>
@@ -650,31 +798,30 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                                     目标水量
                                 </div>
                                 <motion.div
-                                    key={`water-${getCurrentStage()}`}
+                                    key={`water-${currentStageIndex}`}
                                     initial={{ opacity: 0.8 }}
                                     animate={{ opacity: 1 }}
                                     transition={{ duration: 0.26 }}
                                     className="mt-1 flex flex-col text-sm font-medium tracking-wide"
                                 >
-                                    {currentBrewingMethod.params.stages[getCurrentStage()]?.water ? (
+                                    {currentStage?.water ? (
                                         <div className="flex items-baseline justify-end">
                                             <span>{currentWaterAmount}</span>
                                             <span className="mx-0.5 text-neutral-300 dark:text-neutral-600">/</span>
-                                            <span>{currentBrewingMethod.params.stages[getCurrentStage()].water}</span>
+                                            <span>{currentStage.water}</span>
                                         </div>
                                     ) : (
                                         '-'
                                     )}
                                 </motion.div>
                             </div>
-
                         </div>
                     </motion.div>
 
                     <AnimatePresence mode="wait">
-                        {getCurrentStage() < currentBrewingMethod.params.stages.length - 1 && (
+                        {nextStage && (
                             <motion.div
-                                key={`next-${getCurrentStage() + 1}`}
+                                key={`next-${nextStageIndex}`}
                                 initial={{ opacity: 0, height: 0, y: -20 }}
                                 animate={{ opacity: 1, height: 'auto', y: 0 }}
                                 exit={{ opacity: 0, height: 0, y: -20 }}
@@ -692,7 +839,9 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                                         className="mt-1"
                                     >
                                         <span className="text-sm font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
-                                            {currentBrewingMethod.params.stages[getCurrentStage() + 1].label}
+                                            {nextStage.type === 'pour' ?
+                                                nextStage.label :
+                                                `等待`}
                                         </span>
                                     </motion.div>
                                 </div>
@@ -704,10 +853,10 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                                 >
                                     <div>
                                         <div className="text-xs text-neutral-400 dark:text-neutral-500">
-                                            预计时间
+                                            目标时间
                                         </div>
                                         <div className="mt-1 text-sm font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
-                                            {formatTime(currentBrewingMethod.params.stages[getCurrentStage() + 1].time, true)}
+                                            {formatTime(nextStage.endTime, true)}
                                         </div>
                                     </div>
                                     <div className='min-w-24'>
@@ -715,7 +864,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                                             目标水量
                                         </div>
                                         <div className="mt-1 text-sm font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
-                                            {currentBrewingMethod.params.stages[getCurrentStage() + 1].water}
+                                            {nextStage.water}
                                         </div>
                                     </div>
                                 </motion.div>
@@ -725,34 +874,32 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                 </div>
 
                 <div className="relative mb-4">
-                    {currentBrewingMethod.params.stages.map((stage) => {
-                        const totalTime = currentBrewingMethod.params.stages[currentBrewingMethod.params.stages.length - 1].time
-                        const percentage = (stage.time / totalTime) * 100
+                    {expandedStagesRef.current.map((stage) => {
+                        const totalTime = expandedStagesRef.current[expandedStagesRef.current.length - 1].endTime;
+                        const percentage = (stage.endTime / totalTime) * 100;
                         return (
                             <div
-                                key={stage.time}
+                                key={stage.endTime}
                                 className="absolute top-0 h-1 w-[2px] bg-neutral-50 dark:bg-neutral-900"
                                 style={{ left: `${percentage}%` }}
                             />
-                        )
+                        );
                     })}
 
                     <div className="h-1 w-full overflow-hidden bg-neutral-200/50 dark:bg-neutral-800">
-                        {currentBrewingMethod.params.stages.map((stage, index) => {
-                            const totalTime = currentBrewingMethod.params.stages[currentBrewingMethod.params.stages.length - 1].time
-                            const prevStageTime = index > 0 ? currentBrewingMethod.params.stages[index - 1].time : 0
+                        {expandedStagesRef.current.map((stage) => {
+                            const totalTime = expandedStagesRef.current[expandedStagesRef.current.length - 1].endTime;
+                            const startPercentage = (stage.startTime / totalTime) * 100;
+                            const width = ((stage.endTime - stage.startTime) / totalTime) * 100;
 
-                            const stagePourTime = stage.pourTime === 0 ? 0 : (stage.pourTime || Math.floor((stage.time - prevStageTime) / 3))
-                            const waitingStartPercentage = ((prevStageTime + stagePourTime) / totalTime) * 100
-                            const waitingWidth = ((stage.time - (prevStageTime + stagePourTime)) / totalTime) * 100
-
-                            return waitingWidth > 0 ? (
+                            // 显示等待阶段的条纹背景
+                            return stage.type === 'wait' ? (
                                 <div
-                                    key={`waiting-${stage.time}`}
+                                    key={`waiting-${stage.endTime}`}
                                     className="absolute h-1"
                                     style={{
-                                        left: `${waitingStartPercentage}%`,
-                                        width: `${waitingWidth}%`,
+                                        left: `${startPercentage}%`,
+                                        width: `${width}%`,
                                         background: `repeating-linear-gradient(
                                             45deg,
                                             transparent,
@@ -762,34 +909,36 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                                         )`,
                                     }}
                                 />
-                            ) : null
+                            ) : null;
                         })}
                         <motion.div
                             className="h-full bg-neutral-800 dark:bg-neutral-100"
                             initial={{ width: 0 }}
                             animate={{
-                                width: `${(currentTime / currentBrewingMethod.params.stages[currentBrewingMethod.params.stages.length - 1].time) * 100}%`,
+                                width: currentTime > 0 && expandedStagesRef.current.length > 0 ?
+                                    `${(currentTime / (expandedStagesRef.current[expandedStagesRef.current.length - 1]?.endTime || 1)) * 100}%` :
+                                    "0%",
                             }}
                             transition={{ duration: 0.26 }}
                         />
                     </div>
 
                     <div className="relative mt-1 h-4 w-full">
-                        {currentBrewingMethod.params.stages.map((stage) => {
-                            const totalTime = currentBrewingMethod.params.stages[currentBrewingMethod.params.stages.length - 1].time
-                            const percentage = (stage.time / totalTime) * 100
+                        {expandedStagesRef.current.map((stage) => {
+                            const totalTime = expandedStagesRef.current[expandedStagesRef.current.length - 1].endTime;
+                            const percentage = (stage.endTime / totalTime) * 100;
                             return (
                                 <div
-                                    key={stage.time}
+                                    key={stage.endTime}
                                     className="absolute top-0 text-[8px] text-neutral-400 dark:text-neutral-500"
                                     style={{
                                         left: `${percentage}%`,
                                         transform: 'translateX(-100%)',
                                     }}
                                 >
-                                    {formatTime(stage.time, true)}
+                                    {formatTime(stage.endTime, true)}
                                 </div>
-                            )
+                            );
                         })}
                     </div>
                 </div>

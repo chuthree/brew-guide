@@ -780,6 +780,9 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         }
     }, [activeMainTab, activeBrewingStep, setActiveBrewingStep, setActiveTab]);
 
+    // 添加等待状态
+    const [isStageWaiting, setIsStageWaiting] = useState(false);
+
     return (
         <div className="flex h-full flex-col overflow-hidden mx-auto max-w-[500px] font-mono text-neutral-800 dark:text-neutral-100">
             {/* 使用 NavigationBar 组件替换原有的导航栏 */}
@@ -825,6 +828,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                             isTimerRunning={isTimerRunning}
                             showComplete={showComplete}
                             currentStage={currentStage}
+                            isWaiting={isStageWaiting}
                             isPourVisualizerPreloaded={isPourVisualizerPreloaded}
                             selectedEquipment={selectedEquipment}
                             countdownTime={countdownTime}
@@ -928,8 +932,9 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                         <BrewingTimer
                             currentBrewingMethod={currentBrewingMethod}
                             onStatusChange={({ isRunning }) => setIsTimerRunning(isRunning)}
-                            onStageChange={({ currentStage }) => {
+                            onStageChange={({ currentStage, isWaiting }) => {
                                 setCurrentStage(currentStage);
+                                setIsStageWaiting(isWaiting);
                             }}
                             onComplete={(isComplete) => {
                                 setShowComplete(isComplete);

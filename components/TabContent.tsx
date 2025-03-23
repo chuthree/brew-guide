@@ -75,6 +75,7 @@ const TabContent: React.FC<TabContentProps> = ({
     isTimerRunning,
     showComplete,
     currentStage,
+    isWaiting = false,
     isPourVisualizerPreloaded,
     selectedEquipment,
     selectedCoffeeBean,
@@ -259,13 +260,14 @@ const TabContent: React.FC<TabContentProps> = ({
                                     stages={currentBrewingMethod.params.stages}
                                     countdownTime={countdownTime}
                                     equipmentId={selectedEquipment || 'V60'}
+                                    isWaiting={isWaiting}
                                 />
                             </div>
                         </div>
                     ) : (
                         <div className="space-y-5">
                             {activeTab === '方案' ? (
-                                <div className="space-y-5 pb-16">
+                                <div className="space-y-5 pb-6">
                                     <AnimatePresence mode="wait" initial={false}>
                                         <motion.div
                                             key={`method-type-${methodType}`}
@@ -351,7 +353,7 @@ const TabContent: React.FC<TabContentProps> = ({
                                     </AnimatePresence>
                                 </div>
                             ) : (
-                                <div className="space-y-5">
+                                <div className="space-y-5 pb-6">
                                     {content[activeTab]?.steps.map((step: Step, index: number) => (
                                         <motion.div
                                             key={step.methodId || `${step.title}-${index}`}

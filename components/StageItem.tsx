@@ -8,6 +8,10 @@ interface StageItemProps {
         items: string[]
         note: string
         methodId?: string
+        type?: 'pour' | 'wait'
+        originalIndex?: number
+        startTime?: number
+        endTime?: number
     }
     index: number
     onClick: () => void
@@ -59,6 +63,9 @@ const StageItem: React.FC<StageItemProps> = ({
     // 添加复制成功状态
     const [copySuccess, setCopySuccess] = useState(false)
 
+    // 判断是否为等待阶段
+    const isWaitingStage = step.type === 'wait';
+
     // 处理分享方法
     const handleShare = useCallback((e: React.MouseEvent) => {
         e.stopPropagation()
@@ -88,7 +95,7 @@ const StageItem: React.FC<StageItemProps> = ({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.26, ease: "easeOut" }}
-            className={`group relative border-l border-neutral-200 pl-6 dark:border-neutral-800 ${activeTab === '注水' && index === currentStage
+            className={`group relative border-l ${isWaitingStage ? 'border-dashed' : ''} border-neutral-200 pl-6 dark:border-neutral-800 ${activeTab === '注水' && index === currentStage
                 ? 'text-neutral-800 dark:text-neutral-100'
                 : activeTab === '注水' && index < currentStage
                     ? 'text-neutral-400 dark:text-neutral-500'
@@ -97,7 +104,7 @@ const StageItem: React.FC<StageItemProps> = ({
         >
             {activeTab === '注水' && index === currentStage && (
                 <motion.div
-                    className="absolute -left-px top-0 h-full w-px bg-neutral-800 dark:bg-neutral-100"
+                    className={`absolute -left-px top-0 h-full w-px ${isWaitingStage ? 'bg-neutral-500 dark:bg-neutral-400' : 'bg-neutral-800 dark:bg-neutral-100'}`}
                     initial={{ scaleY: 0, transformOrigin: "top" }}
                     animate={{ scaleY: 1 }}
                     transition={{ duration: 0.26, ease: 'linear' }}
@@ -106,12 +113,12 @@ const StageItem: React.FC<StageItemProps> = ({
             <div className={activeTab !== '注水' ? 'cursor-pointer' : ''} onClick={onClick}>
                 <div className="flex items-baseline justify-between">
                     <div className="flex items-baseline gap-3 min-w-0 overflow-hidden">
-                        <h3 className="text-xs font-normal tracking-wider truncate">
+                        <h3 className={`text-xs font-normal tracking-wider truncate`}>
                             {step.title}
                         </h3>
-                        {activeTab === '注水' && selectedMethod && (
+                        {activeTab === '注水' && selectedMethod && step.originalIndex !== undefined && (
                             <div className="flex items-baseline gap-2 text-[10px] text-neutral-400 dark:text-neutral-500 shrink-0">
-                                <span>{formatTime(selectedMethod.params.stages[index].time, true)}</span>
+                                <span>{step.endTime ? formatTime(step.endTime, true) : formatTime(parseInt(step.note), true)}</span>
                                 <span>·</span>
                                 <span>{step.items[0]}</span>
                             </div>
@@ -203,7 +210,7 @@ const StageItem: React.FC<StageItemProps> = ({
                 </div>
                 <div className="mt-2">
                     {activeTab === '注水' ? (
-                        <p className="text-xs font-light">{step.items[1]}</p>
+                        <p className={`text-xs font-light`}>{step.items[1]}</p>
                     ) : (
                         <ul className="space-y-1">
                             {step.items.map((item: string, i: number) => (

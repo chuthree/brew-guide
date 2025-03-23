@@ -17,6 +17,7 @@ interface PourVisualizerProps {
     stages: Stage[]
     countdownTime: number | null
     equipmentId?: string // 添加设备ID属性
+    isWaiting?: boolean // 添加是否处于等待阶段的属性
 }
 
 const PourVisualizer: React.FC<PourVisualizerProps> = ({
@@ -24,7 +25,8 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
     currentStage,
     stages,
     countdownTime,
-    equipmentId = 'V60' // 默认为V60
+    equipmentId = 'V60', // 默认为V60
+    isWaiting = false // 默认不是等待阶段
 }) => {
     const [currentMotionIndex, setCurrentMotionIndex] = useState(1)
     const [isPouring, setIsPouring] = useState(false)
@@ -100,7 +102,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
 
     // 跟踪当前阶段的经过时间，用于确定是否在注水时间内
     useEffect(() => {
-        if (!isRunning || currentStage < 0 || countdownTime !== null) {
+        if (!isRunning || currentStage < 0 || countdownTime !== null || isWaiting) {
             setIsPouring(false)
             return
         }
@@ -132,7 +134,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
         }, 1000)
 
         return () => clearInterval(timer)
-    }, [isRunning, currentStage, countdownTime, stages])
+    }, [isRunning, currentStage, countdownTime, stages, isWaiting])
 
     // 只有在注水时间内才切换动画图片
     useEffect(() => {
