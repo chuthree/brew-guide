@@ -1,6 +1,6 @@
 'use client'
 // 导入React和必要的hooks
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { motion as m, AnimatePresence } from 'framer-motion'
 import dynamic from 'next/dynamic'
 import { equipmentList, APP_VERSION } from '@/lib/config'
@@ -797,6 +797,21 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     // 添加等待状态
     const [isStageWaiting, setIsStageWaiting] = useState(false);
 
+    // 添加扩展阶段状态 - 使用ref而不是state
+    const expandedStagesRef = useRef<{
+        type: 'pour' | 'wait';
+        label: string;
+        startTime: number;
+        endTime: number;
+        time: number;
+        pourTime?: number;
+        water: string;
+        detail: string;
+        pourType?: 'center' | 'circle' | 'ice' | 'other';
+        valveStatus?: 'open' | 'closed';
+        originalIndex: number;
+    }[]>([]);
+
     return (
         <div className="flex h-full flex-col overflow-hidden mx-auto max-w-[500px] font-mono text-neutral-800 dark:text-neutral-100">
             {/* 使用 NavigationBar 组件替换原有的导航栏 */}
@@ -845,6 +860,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                             isWaiting={isStageWaiting}
                             isPourVisualizerPreloaded={isPourVisualizerPreloaded}
                             selectedEquipment={selectedEquipment}
+                            selectedCoffeeBean={selectedCoffeeBean}
+                            selectedCoffeeBeanData={selectedCoffeeBeanData}
                             countdownTime={countdownTime}
                             methodType={methodType}
                             customMethods={customMethods}
@@ -861,10 +878,9 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                             onEditMethod={handleEditCustomMethod}
                             onDeleteMethod={handleDeleteCustomMethod}
                             transitionState={transitionState}
-                            selectedCoffeeBean={selectedCoffeeBean}
-                            selectedCoffeeBeanData={selectedCoffeeBeanData}
                             setActiveMainTab={setActiveMainTab}
                             resetBrewingState={resetBrewingState}
+                            expandedStages={expandedStagesRef.current}
                         />
                     </m.div>
                 )}
@@ -960,6 +976,9 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                                 // 这里不需要额外设置，因为BrewingTimer组件内部已经处理了显示笔记表单的逻辑
                             }}
                             onCountdownChange={(time) => setCountdownTime(time)}
+                            onExpandedStagesChange={(stages) => {
+                                expandedStagesRef.current = stages;
+                            }}
                             settings={settings}
                             onJumpToImport={jumpToImport}
                         />

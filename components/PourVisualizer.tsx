@@ -5,6 +5,14 @@ import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Stage } from '@/lib/config'
 
+// 定义扩展阶段类型
+interface ExtendedStage extends Partial<Stage> {
+    type?: "pour" | "wait";
+    startTime?: number;
+    endTime?: number;
+    originalIndex?: number;
+}
+
 // 定义动画配置类型
 interface AnimationConfig {
     maxIndex: number;
@@ -14,7 +22,7 @@ interface AnimationConfig {
 interface PourVisualizerProps {
     isRunning: boolean
     currentStage: number
-    stages: Stage[]
+    stages: (Stage | ExtendedStage)[]
     countdownTime: number | null
     equipmentId?: string // 添加设备ID属性
     isWaiting?: boolean // 添加是否处于等待阶段的属性
@@ -102,7 +110,16 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
 
     // 跟踪当前阶段的经过时间，用于确定是否在注水时间内
     useEffect(() => {
-        if (!isRunning || currentStage < 0 || countdownTime !== null || isWaiting) {
+        if (!isRunning || currentStage < 0 || countdownTime !== null) {
+            setIsPouring(false)
+            return
+        }
+
+        // 检查当前阶段是否为等待阶段
+        const currentStageType = stages[currentStage]?.type || 'pour'
+
+        // 如果是等待阶段、isWaiting为true、或pourTime明确设为0，不显示注水动画
+        if (currentStageType === 'wait' || isWaiting || stages[currentStage]?.pourTime === 0) {
             setIsPouring(false)
             return
         }
@@ -116,11 +133,18 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
             return
         }
 
-        // 如果有注水时间，立即设置为注水状态
+        // 使用函数形式的setState，避免闭包陷阱
+        // 只有当前状态与期望状态不同时才更新
         if (currentPourTime && currentPourTime > 0) {
-            setIsPouring(true)
+            setIsPouring(current => {
+                if (!current) return true;
+                return current;
+            });
         } else {
-            setIsPouring(false)
+            setIsPouring(current => {
+                if (current) return false;
+                return current;
+            });
             return
         }
 
@@ -130,7 +154,11 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
             secondsElapsed += 1
 
             // 判断是否在注水时间内
-            setIsPouring(secondsElapsed <= currentPourTime)
+            const shouldPour = secondsElapsed <= currentPourTime;
+            setIsPouring(current => {
+                if (current !== shouldPour) return shouldPour;
+                return current;
+            });
         }, 1000)
 
         return () => clearInterval(timer)
@@ -174,7 +202,11 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
 
     // 当阶段变化时重置冰块显示
     useEffect(() => {
-        setDisplayedIceIndices([])
+        // 只有当前阶段真的改变时才重置
+        setDisplayedIceIndices(prev => {
+            if (prev.length > 0) return [];
+            return prev;
+        });
     }, [currentStage])
 
     // 更新阀门状态 - 针对聪明杯
@@ -186,14 +218,23 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
         // 使用阶段中的valveStatus字段
         const currentValveStatus = stages[currentStage]?.valveStatus
         if (currentValveStatus) {
-            setValveStatus(currentValveStatus)
+            setValveStatus(prev => {
+                if (prev !== currentValveStatus) return currentValveStatus;
+                return prev;
+            })
         } else {
             // 如果没有明确设置，则从标签中判断（向后兼容）
             const currentLabel = stages[currentStage]?.label || ''
             if (currentLabel.includes('[开阀]')) {
-                setValveStatus('open')
+                setValveStatus(prev => {
+                    if (prev !== 'open') return 'open';
+                    return prev;
+                })
             } else if (currentLabel.includes('[关阀]')) {
-                setValveStatus('closed')
+                setValveStatus(prev => {
+                    if (prev !== 'closed') return 'closed';
+                    return prev;
+                })
             }
         }
     }, [equipmentId, currentStage, stages])
@@ -245,6 +286,9 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
     // 当 pourType 未设置或 pourTime 为 0 时，默认使用 center 类型，但不会显示注水动画
     const currentPourType = stages[currentStage]?.pourType || 'center'
     const motionSrc = `/images/pour-${currentPourType}-motion-${currentMotionIndex}.svg`
+
+    // 使用当前阶段的类型检查是否为等待阶段
+    const currentStageType = stages[currentStage]?.type
 
     // 检查当前动画类型是否有效
     const isValidAnimation = availableAnimations[currentPourType as keyof typeof availableAnimations] !== undefined

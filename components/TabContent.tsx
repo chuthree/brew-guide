@@ -65,6 +65,19 @@ interface TabContentProps {
     transitionState: TransitionState;
     setActiveMainTab?: (tab: MainTabType) => void;  // 添加切换主标签页的函数
     resetBrewingState?: (shouldReset: boolean) => void;  // 添加重置brewing状态的函数
+    expandedStages?: {
+        type: 'pour' | 'wait';
+        label: string;
+        startTime: number;
+        endTime: number;
+        time: number;
+        pourTime?: number;
+        water: string;
+        detail: string;
+        pourType?: 'center' | 'circle' | 'ice' | 'other';
+        valveStatus?: 'open' | 'closed';
+        originalIndex: number;
+    }[];
 }
 
 const TabContent: React.FC<TabContentProps> = ({
@@ -98,7 +111,8 @@ const TabContent: React.FC<TabContentProps> = ({
     onDeleteMethod,
     transitionState,
     setActiveMainTab,  // 获取切换主标签页的函数
-    resetBrewingState  // 获取重置brewing状态的函数
+    resetBrewingState,  // 获取重置brewing状态的函数
+    expandedStages
 }) => {
     // 笔记表单状态
     const [noteSaved, setNoteSaved] = React.useState(false);
@@ -257,7 +271,7 @@ const TabContent: React.FC<TabContentProps> = ({
                                 <PourVisualizer
                                     isRunning={isTimerRunning}
                                     currentStage={currentStage}
-                                    stages={currentBrewingMethod.params.stages}
+                                    stages={expandedStages && expandedStages.length > 0 ? expandedStages : currentBrewingMethod?.params?.stages || []}
                                     countdownTime={countdownTime}
                                     equipmentId={selectedEquipment || 'V60'}
                                     isWaiting={isWaiting}

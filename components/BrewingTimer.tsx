@@ -39,9 +39,37 @@ interface BrewingTimerProps {
     onStageChange?: (status: { currentStage: number, progress: number, isWaiting: boolean }) => void
     onComplete?: (isComplete: boolean, totalTime?: number) => void
     onCountdownChange?: (time: number | null) => void
+    onExpandedStagesChange?: (stages: {
+        type: 'pour' | 'wait';
+        label: string;
+        startTime: number;
+        endTime: number;
+        time: number;
+        pourTime?: number;
+        water: string;
+        detail: string;
+        pourType?: 'center' | 'circle' | 'ice' | 'other';
+        valveStatus?: 'open' | 'closed';
+        originalIndex: number;
+    }[]) => void
     settings: SettingsOptions
     onJumpToImport?: () => void
 }
+
+// 定义扩展阶段类型
+type ExpandedStage = {
+    type: 'pour' | 'wait';
+    label: string;
+    startTime: number;
+    endTime: number;
+    time: number;
+    pourTime?: number;
+    water: string;
+    detail: string;
+    pourType?: 'center' | 'circle' | 'ice' | 'other';
+    valveStatus?: 'open' | 'closed';
+    originalIndex: number;
+};
 
 const BrewingTimer: React.FC<BrewingTimerProps> = ({
     currentBrewingMethod,
@@ -50,6 +78,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     onStageChange,
     onComplete,
     onCountdownChange,
+    onExpandedStagesChange,
     settings,
     onJumpToImport,
 }) => {
@@ -65,19 +94,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     const lastStageRef = useRef<number>(-1)
 
     // 创建扩展阶段数组的引用
-    const expandedStagesRef = useRef<{
-        type: 'pour' | 'wait';
-        label: string;
-        startTime: number;
-        endTime: number;
-        time: number;
-        pourTime?: number;
-        water: string;
-        detail: string;
-        pourType?: 'center' | 'circle' | 'ice' | 'other';
-        valveStatus?: 'open' | 'closed';
-        originalIndex: number;
-    }[]>([])
+    const expandedStagesRef = useRef<ExpandedStage[]>([])
 
     // 当前扩展阶段索引
     const [currentExpandedStageIndex, setCurrentExpandedStageIndex] = useState(-1)
@@ -230,19 +247,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         if (!currentBrewingMethod?.params?.stages?.length) return [];
 
         const originalStages = currentBrewingMethod.params.stages;
-        const expandedStages: {
-            type: 'pour' | 'wait';
-            label: string;
-            startTime: number;
-            endTime: number;
-            time: number;
-            pourTime?: number;
-            water: string;
-            detail: string;
-            pourType?: 'center' | 'circle' | 'ice' | 'other';
-            valveStatus?: 'open' | 'closed';
-            originalIndex: number;
-        }[] = [];
+        const expandedStages: ExpandedStage[] = [];
 
         originalStages.forEach((stage, index) => {
             const prevStageTime = index > 0 ? originalStages[index - 1].time : 0;
@@ -283,14 +288,15 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                 }
             } else {
                 // 如果没有注水时间，只添加一个等待阶段
+                // 当pourTime明确设为0时，保留原始标签，否则使用默认"等待"标签
                 expandedStages.push({
                     type: 'wait',
-                    label: '等待',
+                    label: stage.pourTime === 0 ? stage.label : '等待',
                     startTime: prevStageTime,
                     endTime: stage.time,
                     time: stage.time - prevStageTime,
                     water: stage.water,
-                    detail: "保持耐心，等待咖啡萃取",
+                    detail: stage.pourTime === 0 ? stage.detail : "保持耐心，等待咖啡萃取",
                     pourType: stage.pourType,
                     valveStatus: stage.valveStatus,
                     originalIndex: index
@@ -303,7 +309,19 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
 
     // 更新扩展阶段数组当配方变化时
     useEffect(() => {
-        expandedStagesRef.current = createExpandedStages();
+        const newExpandedStages = createExpandedStages();
+        const currentStagesJSON = JSON.stringify(expandedStagesRef.current);
+        const newStagesJSON = JSON.stringify(newExpandedStages);
+
+        // 使用字符串比较检查是否真的需要更新
+        if (currentStagesJSON !== newStagesJSON) {
+            expandedStagesRef.current = newExpandedStages;
+
+            // 通知扩展阶段变化，确保父组件能更新
+            if (onExpandedStagesChange) {
+                onExpandedStagesChange(newExpandedStages);
+            }
+        }
     }, [createExpandedStages]);
 
     // 获取当前阶段 - 修改为使用扩展阶段

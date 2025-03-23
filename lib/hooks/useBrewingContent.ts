@@ -142,6 +142,8 @@ export function useBrewingContent({
 			detail: string;
 			startTime: number; // 开始时间
 			endTime: number; // 结束时间
+			time: number; // 阶段持续时间
+			pourTime?: number; // 注水时间
 			originalIndex: number;
 			pourType?: "center" | "circle" | "ice" | "other";
 			valveStatus?: "open" | "closed";
@@ -156,8 +158,23 @@ export function useBrewingContent({
 					: stage.pourTime ||
 					  Math.floor((stage.time - prevStageTime) / 3);
 
+			// 如果pourTime明确设置为0，直接添加一个等待阶段而不拆分
+			if (stage.pourTime === 0) {
+				expandedStages.push({
+					type: "wait",
+					label: stage.label,
+					water: stage.water,
+					detail: stage.detail,
+					startTime: prevStageTime,
+					endTime: stage.time,
+					time: stage.time - prevStageTime,
+					pourType: stage.pourType,
+					valveStatus: stage.valveStatus,
+					originalIndex: index,
+				});
+			}
 			// 如果有注水时间，添加一个注水阶段
-			if (stagePourTime > 0) {
+			else if (stagePourTime > 0) {
 				// 创建注水阶段
 				expandedStages.push({
 					type: "pour",
@@ -166,6 +183,8 @@ export function useBrewingContent({
 					detail: stage.detail,
 					startTime: prevStageTime,
 					endTime: prevStageTime + stagePourTime,
+					time: stagePourTime,
+					pourTime: stagePourTime,
 					pourType: stage.pourType,
 					valveStatus: stage.valveStatus,
 					originalIndex: index,
@@ -181,6 +200,7 @@ export function useBrewingContent({
 						detail: "保持耐心，等待咖啡萃取",
 						startTime: prevStageTime + stagePourTime,
 						endTime: stage.time,
+						time: stage.time - (prevStageTime + stagePourTime),
 						pourType: stage.pourType, // 保留注水类型以便视觉一致性
 						valveStatus: stage.valveStatus,
 						originalIndex: index,
@@ -195,6 +215,7 @@ export function useBrewingContent({
 					detail: "保持耐心，等待咖啡萃取",
 					startTime: prevStageTime,
 					endTime: stage.time,
+					time: stage.time - prevStageTime,
 					pourType: stage.pourType,
 					valveStatus: stage.valveStatus,
 					originalIndex: index,
