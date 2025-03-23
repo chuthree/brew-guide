@@ -42,6 +42,7 @@ interface TabContentProps {
     isTimerRunning: boolean;
     showComplete: boolean;
     currentStage: number;
+    isWaiting?: boolean;
     isPourVisualizerPreloaded: boolean;
     selectedEquipment: string | null;
     selectedCoffeeBean?: string | null;
