@@ -2,18 +2,21 @@
 
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { generateBeanTemplateJson } from '@/lib/jsonUtils'
+import { parseMethodFromJson } from '@/lib/jsonUtils'
+import { type Method } from '@/lib/config'
 
-interface ImportBeanModalProps {
+interface MethodImportModalProps {
     showForm: boolean
-    onImport: (jsonData: string) => Promise<void>
+    onImport: (method: Method) => void
     onClose: () => void
+    existingMethods?: Method[]
 }
 
-const ImportBeanModal: React.FC<ImportBeanModalProps> = ({
+const MethodImportModal: React.FC<MethodImportModalProps> = ({
     showForm,
     onImport,
-    onClose
+    onClose,
+    existingMethods = []
 }) => {
     // 导入数据的状态
     const [importData, setImportData] = useState('');
@@ -23,92 +26,18 @@ const ImportBeanModal: React.FC<ImportBeanModalProps> = ({
     useEffect(() => {
         if (!showForm) {
             setImportData('');
-            if (error) setError(null);
+            setError(null);
         }
-    }, [showForm, error]);
+    }, [showForm]);
 
     // 关闭并清除输入
     const handleClose = () => {
         setImportData('');
-        if (error) setError(null);
+        setError(null);
         onClose();
     };
 
-    // 生成模板提示词
-    const templatePrompt = (() => {
-        const templateJson = generateBeanTemplateJson();
-        return `
-我有一张咖啡豆的包装袋（或商品详情页）的照片，请根据图片中的信息，帮我提取咖啡豆的详细信息，并按照以下JSON格式输出：
-
-\`\`\`json
-${templateJson}
-\`\`\`
-
-数据格式说明：
-- name: 咖啡豆名称，通常包含产地/品种信息
-- price: 价格，纯数字（如68，不要包含货币符号）
-- capacity: 包装总容量，纯数字（如200，不要包含单位）
-- remaining: 剩余容量，纯数字（如果图片中没有明确标示，请与capacity填相同的值）
-- roastLevel: 烘焙程度（浅/中/深）
-- roastDate: 烘焙日期
-- flavor: 风味描述标签数组
-- origin: 咖啡豆原产地
-- process: 处理法（如水洗、日晒等）
-- variety: 咖啡豆品种
-- type: 咖啡豆类型（单品/拼配）
-- notes: 其他备注信息
-
-使用说明：
-1. 请填充所有可以从图片中辨识的字段
-2. 对于无法辨识的字段，请保留为空字符串或空数组
-3. flavor数组请填入所有从图片中可识别的风味标签
-4. roastDate请按YYYY-MM-DD格式填写
-5. remaining与capacity字段：如果包装上只标注了总容量，请在两个字段中填写相同的值
-6. 请确保返回的是有效的JSON格式
-7. 如果有多个咖啡豆，可以返回JSON数组格式，例如：[${templateJson}, ${templateJson}]
-
-请在回复中只包含JSON内容，不需要其他解释，这样我可以直接复制使用。
-`;
-    })();
-
-    // 兼容性更好的复制文本方法
-    const copyTextToClipboard = async (text: string) => {
-        // 首先尝试使用现代API
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            return navigator.clipboard.writeText(text);
-        }
-
-        // 回退方法：创建临时textarea元素
-        const textArea = document.createElement('textarea');
-        textArea.value = text;
-
-        // 设置样式使其不可见
-        textArea.style.position = 'fixed';
-        textArea.style.left = '-999999px';
-        textArea.style.top = '-999999px';
-        document.body.appendChild(textArea);
-
-        // 选择文本并复制
-        textArea.focus();
-        textArea.select();
-
-        return new Promise<void>((resolve, reject) => {
-            try {
-                const successful = document.execCommand('copy');
-                if (successful) {
-                    resolve();
-                } else {
-                    reject(new Error('复制命令执行失败'));
-                }
-            } catch (err) {
-                reject(err);
-            } finally {
-                document.body.removeChild(textArea);
-            }
-        });
-    }
-
-    // 处理导入数据，添加时间戳
+    // 处理导入数据
     const handleImport = () => {
         if (!importData) {
             setError('请输入要导入的数据');
@@ -117,41 +46,27 @@ ${templateJson}
 
         try {
             // 解析JSON数据
-            const jsonData = JSON.parse(importData);
+            setError(null);
+            const method = parseMethodFromJson(importData);
 
-            // 如果是数组，为每个对象添加时间戳
-            if (Array.isArray(jsonData)) {
-                const dataWithTimestamp = jsonData.map(item => ({
-                    ...item,
-                    timestamp: Date.now()
-                }));
-                onImport(JSON.stringify(dataWithTimestamp))
-                    .then(() => {
-                        // 导入成功后清空输入框
-                        setImportData('');
-                        setError(null);
-                    })
-                    .catch(error => {
-                        console.error('导入失败:', error);
-                        setError('导入失败，请重试');
-                    });
-            } else {
-                // 为单个对象添加时间戳
-                const dataWithTimestamp = {
-                    ...jsonData,
-                    timestamp: Date.now()
-                };
-                onImport(JSON.stringify(dataWithTimestamp))
-                    .then(() => {
-                        // 导入成功后清空输入框
-                        setImportData('');
-                        setError(null);
-                    })
-                    .catch(error => {
-                        console.error('导入失败:', error);
-                        setError('导入失败，请重试');
-                    });
+            if (!method) {
+                setError('解析JSON失败，请检查格式');
+                return;
             }
+
+            // 检查是否已存在同名方案
+            const existingMethod = existingMethods.find(m => m.name === method.name);
+            if (existingMethod) {
+                setError(`已存在同名方案"${method.name}"，请修改后再导入`);
+                return;
+            }
+
+            // 导入方案
+            onImport(method);
+            // 导入成功后清空输入框和错误信息
+            setImportData('');
+            setError(null);
+
         } catch (error) {
             console.error('JSON解析失败:', error);
             setError('JSON格式错误，请检查导入的数据');
@@ -169,7 +84,7 @@ ${templateJson}
                     className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
                     onClick={(e) => {
                         if (e.target === e.currentTarget) {
-                            handleClose()
+                            handleClose();
                         }
                     }}
                 >
@@ -232,45 +147,20 @@ ${templateJson}
                                             />
                                         </svg>
                                     </button>
-                                    <h3 className="text-base font-medium">导入咖啡豆数据</h3>
+                                    <h3 className="text-base font-medium">导入冲煮方案</h3>
                                     <div className="w-8"></div>
                                 </div>
 
                                 {/* 表单内容 */}
                                 <div className="space-y-4 mt-2">
                                     <div className="flex flex-col space-y-2">
-                                        <div className="p-3 border border-neutral-200 dark:border-neutral-700 rounded-md bg-neutral-50 dark:bg-neutral-800/50">
-                                            <div className="flex justify-between items-center">
-                                                <p className="text-xs text-neutral-600 dark:text-neutral-400">
-                                                    使用AI识别导入咖啡豆信息(推荐使用豆包)
-                                                </p>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        copyTextToClipboard(templatePrompt)
-                                                            .then(() => {
-                                                                setError('✅ 提示词已复制到剪贴板，请打开豆包应用，将此提示词和咖啡豆商品页一起发送');
-                                                                setTimeout(() => setError(null), 3000); // 3秒后自动清除提示
-                                                            })
-                                                            .catch(err => {
-                                                                console.error('复制失败:', err);
-                                                                setError('❌ 复制失败，请手动复制');
-                                                                setTimeout(() => setError(null), 3000); // 3秒后自动清除提示
-                                                            });
-                                                    }}
-                                                    className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300"
-                                                >
-                                                    复制提示词
-                                                </button>
-                                            </div>
-                                        </div>
                                         <p className="text-xs text-neutral-500 dark:text-neutral-500">
-                                            粘贴JSON格式的咖啡豆数据：
+                                            粘贴JSON格式的冲煮方案：
                                         </p>
                                     </div>
                                     <textarea
                                         className="w-full h-40 p-3 border border-neutral-300 dark:border-neutral-700 rounded-md bg-transparent focus:border-neutral-800 dark:focus:border-neutral-400 focus:outline-none text-neutral-800 dark:text-neutral-200"
-                                        placeholder='例如: {"name": "埃塞俄比亚耶加雪菲", "capacity": "200g", ...}'
+                                        placeholder='例如: {"method": "改良分段式一刀流", "params": {"coffee": "15g", ...}}'
                                         value={importData}
                                         onChange={(e) => setImportData(e.target.value)}
                                     />
@@ -303,4 +193,4 @@ ${templateJson}
     )
 }
 
-export default ImportBeanModal 
+export default MethodImportModal 
