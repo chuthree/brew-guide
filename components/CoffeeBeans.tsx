@@ -501,18 +501,20 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                             {bean.remaining}g / {bean.capacity}g
                                                         </div>
                                                     </div>
-                                                    <div
+                                                    <motion.div
                                                         className="h-px w-full overflow-hidden bg-neutral-200/50 dark:bg-neutral-800"
                                                     >
-                                                        <div
-                                                            className="h-full bg-neutral-800 dark:bg-neutral-100"
-                                                            style={{
-                                                                width: `${(parseFloat(bean.remaining.replace('g', '')) /
-                                                                    parseFloat(bean.capacity.replace('g', ''))) * 100
-                                                                    }%`
+                                                        <motion.div
+                                                            initial={{ width: 0 }}
+                                                            animate={{ width: `${(parseFloat(bean.remaining.replace('g', '')) / parseFloat(bean.capacity.replace('g', ''))) * 100}%` }}
+                                                            transition={{
+                                                                delay: 0.1,
+                                                                duration: 0.8,
+                                                                ease: "easeInOut"
                                                             }}
-                                                        ></div>
-                                                    </div>
+                                                            className="h-full bg-neutral-800 dark:bg-neutral-100"
+                                                        />
+                                                    </motion.div>
                                                 </div>
                                             )}
 
@@ -573,7 +575,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                             );
                                                         })()}
                                                     </div>
-                                                    <div className="h-px w-full overflow-hidden bg-neutral-200/50 dark:bg-neutral-800 relative">
+                                                    <motion.div className="h-px w-full overflow-hidden bg-neutral-200/50 dark:bg-neutral-800 relative">
                                                         {(() => {
                                                             // 计算烘焙天数
                                                             const today = new Date();
@@ -625,45 +627,53 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                             return (
                                                                 <>
                                                                     {/* 赏味期前区间 */}
-                                                                    <div
+                                                                    <motion.div
+                                                                        initial={{ width: 0, opacity: 0 }}
+                                                                        animate={{ width: `${preFlavorPercent}%`, opacity: 1 }}
+                                                                        transition={{ delay: 0.1, duration: 0.6, ease: "easeInOut" }}
                                                                         className="absolute h-full bg-neutral-400/10 dark:bg-neutral-400/10"
                                                                         style={{
-                                                                            left: '0%',
-                                                                            width: `${preFlavorPercent}%`
+                                                                            left: '0%'
                                                                         }}
-                                                                    ></div>
+                                                                    ></motion.div>
 
                                                                     {/* 最佳赏味期区间（带纹理） */}
-                                                                    <div
+                                                                    <motion.div
+                                                                        initial={{ width: 0, opacity: 0 }}
+                                                                        animate={{ width: `${flavorPercent}%`, opacity: 1 }}
+                                                                        transition={{ delay: 0.2, duration: 0.6, ease: "easeInOut" }}
                                                                         className="absolute h-full bg-green-500/20 dark:bg-green-600/30"
                                                                         style={{
                                                                             left: `${preFlavorPercent}%`,
-                                                                            width: `${flavorPercent}%`,
                                                                             backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(0, 0, 0, 0.1) 2px, rgba(0, 0, 0, 0.1) 4px)'
                                                                         }}
-                                                                    ></div>
+                                                                    ></motion.div>
 
                                                                     {/* 赏味期后区间 */}
-                                                                    <div
+                                                                    <motion.div
+                                                                        initial={{ width: 0, opacity: 0 }}
+                                                                        animate={{ width: `${postFlavorPercent}%`, opacity: 1 }}
+                                                                        transition={{ delay: 0.3, duration: 0.6, ease: "easeInOut" }}
                                                                         className="absolute h-full bg-neutral-400/10 dark:bg-neutral-400/10"
                                                                         style={{
-                                                                            left: `${preFlavorPercent + flavorPercent}%`,
-                                                                            width: `${postFlavorPercent}%`
+                                                                            left: `${preFlavorPercent + flavorPercent}%`
                                                                         }}
-                                                                    ></div>
+                                                                    ></motion.div>
 
                                                                     {/* 进度指示 */}
-                                                                    <div
+                                                                    <motion.div
+                                                                        initial={{ width: 0 }}
+                                                                        animate={{ width: `${progressPercent}%` }}
+                                                                        transition={{ delay: 0.4, duration: 0.9, ease: "easeInOut" }}
                                                                         className={`absolute h-full ${fillColor}`}
                                                                         style={{
-                                                                            width: `${progressPercent}%`,
                                                                             zIndex: 10
                                                                         }}
-                                                                    ></div>
+                                                                    ></motion.div>
                                                                 </>
                                                             );
                                                         })()}
-                                                    </div>
+                                                    </motion.div>
                                                 </div>
                                             )}
 

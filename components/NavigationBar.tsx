@@ -458,6 +458,22 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
             return;
         }
 
+        // 特殊处理：当切换到咖啡豆步骤时，完全清空参数信息
+        if (step === 'coffeeBean') {
+            setParameterInfo({
+                equipment: null,
+                method: null,
+                params: null
+            });
+
+            if (settings.hapticFeedback) {
+                hapticsUtils.light();
+            }
+            setActiveBrewingStep(step);
+
+            return;
+        }
+
         // 只在非特殊情况下清空参数栏
         if (step !== 'brewing') {
             setParameterInfo({

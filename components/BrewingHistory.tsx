@@ -524,9 +524,12 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                         </div>
 
                                         <div className="grid grid-cols-2 gap-4">
-                                            {Object.entries(note.taste).map(([key, value]) => (
-                                                <div
+                                            {Object.entries(note.taste).map(([key, value], i) => (
+                                                <motion.div
                                                     key={key}
+                                                    initial={{ opacity: 0, x: -10 }}
+                                                    animate={{ opacity: 1, x: 0 }}
+                                                    transition={{ delay: 0.1 + i * 0.05, duration: 0.3 }}
                                                     className="space-y-1"
                                                 >
                                                     <div className="flex items-center justify-between">
@@ -544,15 +547,21 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                                             [ {value} ]
                                                         </div>
                                                     </div>
-                                                    <div
+                                                    <motion.div
                                                         className="h-px w-full overflow-hidden bg-neutral-200/50 dark:bg-neutral-800"
                                                     >
-                                                        <div
+                                                        <motion.div
+                                                            initial={{ width: 0 }}
+                                                            animate={{ width: `${(value / 5) * 100}%` }}
+                                                            transition={{
+                                                                delay: 0.15 + i * 0.05,
+                                                                duration: 0.5,
+                                                                ease: "easeOut"
+                                                            }}
                                                             className="h-full bg-neutral-800 dark:bg-neutral-100"
-                                                            style={{ width: `${(value / 5) * 100}%` }}
-                                                        ></div>
-                                                    </div>
-                                                </div>
+                                                        />
+                                                    </motion.div>
+                                                </motion.div>
                                             ))}
                                         </div>
 
