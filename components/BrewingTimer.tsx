@@ -322,7 +322,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                 onExpandedStagesChange(newExpandedStages);
             }
         }
-    }, [createExpandedStages]);
+    }, [createExpandedStages, onExpandedStagesChange]);
 
     // 获取当前阶段 - 修改为使用扩展阶段
     const getCurrentStage = useCallback(() => {

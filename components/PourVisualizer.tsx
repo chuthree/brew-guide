@@ -116,7 +116,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
         }
 
         // 检查当前阶段是否为等待阶段
-        const currentStageType = stages[currentStage]?.type || 'pour'
+        const currentStageType = (stages[currentStage] as ExtendedStage)?.type || 'pour'
 
         // 如果是等待阶段、isWaiting为true、或pourTime明确设为0，不显示注水动画
         if (currentStageType === 'wait' || isWaiting || stages[currentStage]?.pourTime === 0) {
@@ -286,9 +286,6 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
     // 当 pourType 未设置或 pourTime 为 0 时，默认使用 center 类型，但不会显示注水动画
     const currentPourType = stages[currentStage]?.pourType || 'center'
     const motionSrc = `/images/pour-${currentPourType}-motion-${currentMotionIndex}.svg`
-
-    // 使用当前阶段的类型检查是否为等待阶段
-    const currentStageType = stages[currentStage]?.type
 
     // 检查当前动画类型是否有效
     const isValidAnimation = availableAnimations[currentPourType as keyof typeof availableAnimations] !== undefined
