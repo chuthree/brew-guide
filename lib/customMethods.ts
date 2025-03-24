@@ -1,5 +1,5 @@
 import { type Method } from "@/lib/config";
-import { methodToJson } from "@/lib/jsonUtils";
+import { methodToJson, methodToReadableText } from "@/lib/jsonUtils";
 import { Storage } from "@/lib/storage";
 
 /**
@@ -30,9 +30,6 @@ export async function loadCustomMethods(): Promise<Record<string, Method[]>> {
 					);
 				} else {
 					// 如果不是数组，初始化为空数组
-					console.warn(
-						`Equipment ${equipment} has invalid method data, initializing as empty array`
-					);
 					methodsWithIds[equipment] = [];
 				}
 			});
@@ -42,8 +39,8 @@ export async function loadCustomMethods(): Promise<Record<string, Method[]>> {
 
 			return methodsWithIds;
 		}
-	} catch (error) {
-		console.error("加载自定义方案出错:", error);
+	} catch {
+		// 错误处理
 	}
 
 	return {};
@@ -59,8 +56,8 @@ export function loadCustomMethodsSync(): Record<string, Method[]> {
 		if (savedMethods) {
 			return JSON.parse(savedMethods);
 		}
-	} catch (error) {
-		console.error("同步加载自定义方案出错:", error);
+	} catch {
+		// 错误处理
 	}
 
 	return {};
@@ -94,9 +91,6 @@ export async function saveCustomMethod(
 			method.id ||
 			`${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
 	};
-
-	// 在控制台记录方法ID，方便调试
-	console.log("[saveCustomMethod] 保存方法，ID:", methodWithId.id);
 
 	// 检查是否是编辑模式
 	const isEditing = editingMethod !== undefined;
@@ -156,40 +150,28 @@ export async function deleteCustomMethod(
 }
 
 /**
- * 复制方案到剪贴板
- * @param method 要复制的方案
- * @returns Promise<boolean> 是否复制成功
+ * 复制冲煮方案到剪贴板
+ * @param method 冲煮方案对象
  */
-export async function copyMethodToClipboard(method: Method): Promise<boolean> {
+export async function copyMethodToClipboard(method: Method) {
 	try {
-		const jsonString = methodToJson(method);
+		// 使用新的自然语言格式
+		const text = methodToReadableText(method);
 
-		// 兼容性更好的复制文本方法
-		if (navigator.clipboard && navigator.clipboard.writeText) {
-			await navigator.clipboard.writeText(jsonString);
-			return true;
+		// 尝试使用现代API
+		if (navigator.clipboard && window.isSecureContext) {
+			await navigator.clipboard.writeText(text);
+		} else {
+			// 降级方案
+			const textarea = document.createElement("textarea");
+			textarea.value = text;
+			document.body.appendChild(textarea);
+			textarea.select();
+			document.execCommand("copy");
+			document.body.removeChild(textarea);
 		}
-
-		// 回退方法：创建临时textarea元素
-		const textArea = document.createElement("textarea");
-		textArea.value = jsonString;
-
-		// 设置样式使其不可见
-		textArea.style.position = "fixed";
-		textArea.style.left = "-999999px";
-		textArea.style.top = "-999999px";
-		document.body.appendChild(textArea);
-
-		// 选择文本并复制
-		textArea.focus();
-		textArea.select();
-
-		const successful = document.execCommand("copy");
-		document.body.removeChild(textArea);
-
-		return successful;
 	} catch (err) {
 		console.error("复制失败:", err);
-		return false;
+		throw err;
 	}
 }

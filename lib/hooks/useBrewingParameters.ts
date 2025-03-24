@@ -72,7 +72,6 @@ export function useBrewingParameters() {
 			}>
 		) => {
 			const detail = event.detail;
-			console.log("[useBrewingParameters] 收到方案选择事件:", detail);
 
 			if (detail) {
 				// 更新参数信息
@@ -91,11 +90,6 @@ export function useBrewingParameters() {
 				// 如果有水和咖啡参数，更新可编辑参数
 				if (detail.coffee && detail.water && detail.ratio) {
 					setEditableParams({
-						coffee: detail.coffee,
-						water: detail.water,
-						ratio: detail.ratio,
-					});
-					console.log("[useBrewingParameters] 已更新可编辑参数:", {
 						coffee: detail.coffee,
 						water: detail.water,
 						ratio: detail.ratio,
@@ -265,41 +259,9 @@ export function useBrewingParameters() {
 				newCoffeeAmount !== currentCoffee
 			) {
 				try {
-					console.log(
-						`[参数变更] 咖啡粉量变化: ${formatNumber(
-							currentCoffee
-						)}g -> ${formatNumber(newCoffeeAmount)}g`
-					);
-
-					const coffeeChangeAmount = newCoffeeAmount - currentCoffee;
-					console.log(
-						`[参数变更] 变化量: ${formatNumber(
-							coffeeChangeAmount
-						)}g`
-					);
-
-					// 移除这里的咖啡豆扣减逻辑，只记录变化，等冲煮完成后再统一扣减
-					console.log(
-						`[参数变更] 已记录咖啡粉量变化，将在冲煮完成后统一扣减`
-					);
-					console.log(`[参数变更] 咖啡豆ID: ${selectedCoffeeBean}`);
-					console.log(
-						`[参数变更] 新咖啡用量: ${formatNumber(
-							newCoffeeAmount
-						)}g (冲煮完成后扣减)`
-					);
-				} catch (error) {
-					console.error("[参数变更] 记录咖啡用量变化失败:", error);
-				}
-			} else {
-				if (type === "coffee") {
-					if (!selectedCoffeeBean) {
-						console.log("[参数变更] 未选择咖啡豆");
-					} else if (newCoffeeAmount === currentCoffee) {
-						console.log(
-							`[参数变更] 咖啡粉量未变化: ${currentCoffee}g`
-						);
-					}
+					// 只是记录变化，等冲煮完成后再统一扣减
+				} catch {
+					// 错误处理
 				}
 			}
 		},

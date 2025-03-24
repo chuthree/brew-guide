@@ -122,8 +122,8 @@ ${templateJson}
                 } else {
                     reject(new Error('复制命令执行失败'));
                 }
-            } catch (err) {
-                reject(err);
+            } catch (_err) {
+                reject(_err);
             } finally {
                 document.body.removeChild(textArea);
             }
@@ -153,8 +153,7 @@ ${templateJson}
                         setImportData('');
                         setError(null);
                     })
-                    .catch(error => {
-                        console.error('导入失败:', error);
+                    .catch(() => {
                         setError('导入失败，请重试');
                     });
             } else {
@@ -169,13 +168,11 @@ ${templateJson}
                         setImportData('');
                         setError(null);
                     })
-                    .catch(error => {
-                        console.error('导入失败:', error);
+                    .catch(() => {
                         setError('导入失败，请重试');
                     });
             }
-        } catch (error) {
-            console.error('JSON解析失败:', error);
+        } catch {
             setError('JSON格式错误，请检查导入的数据');
         }
     };
@@ -486,7 +483,7 @@ ${templateJson}
                                     </p>
                                     <textarea
                                         className="w-full h-40 p-3 border border-neutral-300 dark:border-neutral-700 rounded-md bg-transparent focus:border-neutral-800 dark:focus:border-neutral-400 focus:outline-none text-neutral-800 dark:text-neutral-200"
-                                        placeholder='例如: {"name": "埃塞俄比亚耶加雪菲", "capacity": "200g", ...}'
+                                        placeholder='支持粘贴分享的文本或JSON格式，例如："【咖啡豆】埃塞俄比亚耶加雪菲"或{"name":"埃塞俄比亚耶加雪菲",...}'
                                         value={importData}
                                         onChange={(e) => setImportData(e.target.value)}
                                     />

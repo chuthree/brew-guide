@@ -68,9 +68,9 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
 
                 setStatus({ type: 'success', message: '数据导出成功，文件已下载' })
             }
-        } catch (error) {
-            console.error('导出数据失败:', error)
-            setStatus({ type: 'error', message: `导出失败: ${(error as Error).message}` })
+        } catch (_error) {
+
+            setStatus({ type: 'error', message: `导出失败: ${(_error as Error).message}` })
         } finally {
             setIsExporting(false)
         }
@@ -110,9 +110,9 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
                     } else {
                         setStatus({ type: 'error', message: result.message })
                     }
-                } catch (error) {
-                    console.error('处理导入文件失败:', error)
-                    setStatus({ type: 'error', message: `导入失败: ${(error as Error).message}` })
+                } catch (_error) {
+
+                    setStatus({ type: 'error', message: `导入失败: ${(_error as Error).message}` })
                 } finally {
                     setIsImporting(false)
                     // 重置文件输入，以便可以重新选择同一个文件
@@ -128,9 +128,9 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
             }
 
             reader.readAsText(file)
-        } catch (error) {
-            console.error('导入数据失败:', error)
-            setStatus({ type: 'error', message: `导入失败: ${(error as Error).message}` })
+        } catch (_error) {
+
+            setStatus({ type: 'error', message: `导入失败: ${(_error as Error).message}` })
             setIsImporting(false)
         }
     }
@@ -150,9 +150,9 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
             } else {
                 setStatus({ type: 'error', message: result.message })
             }
-        } catch (error) {
-            console.error('重置数据失败:', error)
-            setStatus({ type: 'error', message: `重置失败: ${(error as Error).message}` })
+        } catch (_error) {
+
+            setStatus({ type: 'error', message: `重置失败: ${(_error as Error).message}` })
         } finally {
             setIsResetting(false)
             setShowConfirmReset(false)
@@ -211,10 +211,10 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
                             initial={{ opacity: 0, y: -10 }}
                             animate={{ opacity: 1, y: 0 }}
                             className={`mb-4 rounded-md p-3 text-sm ${status.type === 'success'
-                                    ? 'bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-400'
-                                    : status.type === 'error'
-                                        ? 'bg-red-50 text-red-800 dark:bg-red-900/20 dark:text-red-400'
-                                        : 'bg-blue-50 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400'
+                                ? 'bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-400'
+                                : status.type === 'error'
+                                    ? 'bg-red-50 text-red-800 dark:bg-red-900/20 dark:text-red-400'
+                                    : 'bg-blue-50 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400'
                                 }`}
                         >
                             {status.message}

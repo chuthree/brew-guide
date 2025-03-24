@@ -195,6 +195,11 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
             const { id, timestamp, ...beanData } = initialBean;
 
+            // 确保烘焙度不为空，如果为空则设置为浅度烘焙
+            if (!beanData.roastLevel) {
+                beanData.roastLevel = '浅度烘焙';
+            }
+
             // 检查是否有赏味期数据，如果没有，则根据烘焙度计算默认值
             const needFlavorPeriodInit = !beanData.startDay && !beanData.endDay && !beanData.maxDay;
 
@@ -468,19 +473,14 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                 remaining: numericValue
             }));
         } else if (field === 'roastLevel') {
-            // 当烘焙度改变时，询问是否要更新赏味期参数
+            // 当烘焙度改变时，直接更新赏味期参数
             setBean(prev => ({
                 ...prev,
                 [field]: safeValue
             }));
 
-            // 提示用户是否要根据新的烘焙度更新赏味期
-            if (bean.startDay !== 0 || bean.endDay !== 0 || bean.maxDay !== 0) {
-                if (window.confirm('是否要根据新的烘焙度更新赏味期参数？')) {
-                    // 根据新的烘焙度自动设置赏味期参数
-                    setTimeout(() => autoSetFlavorPeriod(), 100);
-                }
-            }
+            // 直接根据新的烘焙度自动设置赏味期参数
+            setTimeout(() => autoSetFlavorPeriod(), 100);
         } else {
             // 处理其他字段
             setBean(prev => ({
@@ -718,7 +718,7 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
             }));
         } else {
             // 保持原值不变，可以考虑添加提示
-            console.log(validation.message);
+
         }
     };
 
@@ -832,8 +832,8 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                                                     }
                                                 };
                                                 reader.readAsDataURL(file);
-                                            } catch (error) {
-                                                console.error('读取图片失败:', error);
+                                            } catch {
+
                                                 alert('上传图片失败，请重试');
                                             }
                                         };

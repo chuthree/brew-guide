@@ -83,8 +83,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                 const savedNotes = await Storage.get('brewingNotes')
                 const parsedNotes = savedNotes ? JSON.parse(savedNotes) : []
                 setNotes(sortNotes(parsedNotes, sortOption))
-            } catch (error) {
-                console.error('Error loading notes:', error)
+            } catch {
+                // 加载失败时设置空数组
                 setNotes([])
             }
         }
@@ -114,8 +114,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                 const updatedNotes = notes.filter(note => note.id !== noteId)
                 await Storage.set('brewingNotes', JSON.stringify(updatedNotes))
                 setNotes(sortNotes(updatedNotes, sortOption))
-            } catch (error) {
-                console.error('Error deleting note:', error)
+            } catch {
+                // 删除失败时提示用户
                 alert('删除笔记时出错，请重试')
             }
         }
@@ -215,8 +215,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                 } else {
                     reject(new Error('复制命令执行失败'));
                 }
-            } catch (err) {
-                reject(err);
+            } catch (error) {
+                reject(error);
             } finally {
                 document.body.removeChild(textArea);
             }
@@ -235,26 +235,37 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                 notes: note.notes
             };
 
-            const jsonString = JSON.stringify(shareableNote, null, 2);
-            copyTextToClipboard(jsonString)
-                .then(() => {
-                    setCopySuccess(prev => ({
-                        ...prev,
-                        [note.id]: true
-                    }));
-                    setTimeout(() => {
+            // 导入转换工具并生成可读文本
+            import('@/lib/jsonUtils').then(({ brewingNoteToReadableText }) => {
+                const readableText = brewingNoteToReadableText(shareableNote);
+
+                copyTextToClipboard(readableText)
+                    .then(() => {
                         setCopySuccess(prev => ({
                             ...prev,
-                            [note.id]: false
+                            [note.id]: true
                         }));
-                    }, 2000);
-                })
-                .catch(err => {
-                    console.error('复制失败:', err);
-                    alert('复制失败，请手动复制');
-                });
-        } catch (err) {
-            console.error('复制失败:', err);
+                        setTimeout(() => {
+                            setCopySuccess(prev => ({
+                                ...prev,
+                                [note.id]: false
+                            }));
+                        }, 2000);
+                    })
+                    .catch(() => {
+                        // 复制失败时提示用户
+                        alert('复制失败，请手动复制');
+                    });
+            }).catch(() => {
+                // 转换失败时回退到JSON格式
+                const jsonString = JSON.stringify(shareableNote, null, 2);
+                copyTextToClipboard(jsonString)
+                    .catch(() => {
+                        alert('复制失败，请手动复制');
+                    });
+            });
+        } catch {
+            // 忽略异常
         }
     };
 

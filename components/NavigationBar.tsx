@@ -1,11 +1,14 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { APP_VERSION, equipmentList } from '@/lib/config'
+import { APP_VERSION, equipmentList, Method } from '@/lib/config'
 import { motion, AnimatePresence } from 'framer-motion'
 import hapticsUtils from '@/lib/haptics'
 import { SettingsOptions } from '@/components/Settings'
 import { formatGrindSize } from '@/lib/grindUtils'
+import { BREWING_EVENTS } from '@/lib/brewing/constants'
+import { listenToEvent } from '@/lib/brewing/events'
+import { updateParameterInfo } from '@/lib/brewing/parameters'
 
 // 定义一个隐藏滚动条的样式
 const noScrollbarStyle = `
@@ -333,6 +336,14 @@ interface NavigationBarProps {
     // 添加咖啡豆相关字段
     selectedCoffeeBean: string | null;
     hasCoffeeBeans?: boolean; // 添加是否有咖啡豆的属性
+    navigateToStep?: (step: BrewingStep, options?: {
+        resetParams?: boolean,
+        preserveMethod?: boolean,
+        preserveEquipment?: boolean,
+        preserveCoffeeBean?: boolean,
+        force?: boolean
+    }) => void; // 添加统一的步骤导航函数
+    onStepClick?: (step: BrewingStep) => void; // 添加步骤点击回调
 }
 
 const NavigationBar: React.FC<NavigationBarProps> = ({
@@ -354,7 +365,9 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
     onTitleDoubleClick, // 接收双击标题的回调函数
     settings, // 接收设置
     selectedCoffeeBean,
-    hasCoffeeBeans // 接收是否有咖啡豆的属性
+    hasCoffeeBeans, // 接收是否有咖啡豆的属性
+    navigateToStep, // 接收统一的步骤导航函数
+    onStepClick // 接收步骤点击回调
 }) => {
     // 获取禁用的步骤
     const getDisabledSteps = (): BrewingStep[] => {
@@ -372,9 +385,16 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
             disabledSteps.push('coffeeBean');
         }
 
-        // 禁用当前步骤后面的所有步骤（严格顺序）
-        for (let i = currentIndex + 1; i < steps.length; i++) {
-            disabledSteps.push(steps[i]);
+        // 修改冲煮完成后的步骤禁用逻辑
+        if (showComplete) {
+            // 冲煮完成后，所有步骤都允许点击，不再禁用前面的步骤
+            // 只有当没有选择设备、方法等情况时才禁用对应步骤（通过下面的逻辑判断）
+        } else {
+            // 未完成冲煮时保持原来的禁用逻辑
+            // 禁用当前步骤后面的所有步骤（严格顺序）
+            for (let i = currentIndex + 1; i < steps.length; i++) {
+                disabledSteps.push(steps[i]);
+            }
         }
 
         // 添加后置条件检查 - 无论当前步骤如何，都确保这些条件生效
@@ -393,6 +413,21 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
         if (!showComplete) {
             if (!disabledSteps.includes('notes')) disabledSteps.push('notes');
         }
+
+        // 当showComplete为true时，总是保证brewing和notes可点击
+        if (showComplete) {
+            const index = disabledSteps.indexOf('brewing');
+            if (index !== -1) {
+                disabledSteps.splice(index, 1);
+            }
+
+            const notesIndex = disabledSteps.indexOf('notes');
+            if (notesIndex !== -1) {
+                disabledSteps.splice(notesIndex, 1);
+            }
+        }
+
+        
 
         return disabledSteps;
     };
@@ -419,7 +454,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
 
     // 处理冲煮步骤点击
     const handleBrewingStepClick = (step: BrewingStep) => {
-        // 如果计时器正在运行，不允许切换步骤
+        // 如果计时器正在运行且冲煮未完成，不允许切换步骤
         if (isTimerRunning && !showComplete) {
             return;
         }
@@ -429,99 +464,141 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
             return;
         }
 
-        // 如果没有咖啡豆且尝试切换到咖啡豆步骤，则跳转到器具步骤
-        if (step === 'coffeeBean' && !hasCoffeeBeans) {
-            // 直接调用父组件传入的setActiveBrewingStep函数，让父组件处理所有逻辑
-            if (settings.hapticFeedback) {
-                hapticsUtils.light(); // 添加轻触感反馈
-            }
-            setActiveBrewingStep('equipment');
-            return;
-        }
-
-        // 特殊处理：从记录跳转到注水时，完全保留参数
-        if (activeBrewingStep === 'notes' && step === 'brewing') {
-            // 仅改变当前步骤，不清空参数栏
-            if (settings.hapticFeedback) {
-                hapticsUtils.light();
-            }
-            setActiveBrewingStep(step);
-            setActiveTab('注水');
-
-            // 触发事件，仅关闭记录表单，不做任何其他操作
-            const event = new CustomEvent("closeBrewingNoteForm", {
-                detail: { force: true },
-            });
-            window.dispatchEvent(event);
-
-            // 不修改参数信息，直接返回
-            return;
-        }
-
-        // 特殊处理：当切换到咖啡豆步骤时，完全清空参数信息
-        if (step === 'coffeeBean') {
-            setParameterInfo({
-                equipment: null,
-                method: null,
-                params: null
-            });
-
-            if (settings.hapticFeedback) {
-                hapticsUtils.light();
-            }
-            setActiveBrewingStep(step);
-
-            return;
-        }
-
-        // 只在非特殊情况下清空参数栏
-        if (step !== 'brewing') {
-            setParameterInfo({
-                equipment: null,
-                method: null,
-                params: null
-            });
-        }
-
-        // 确保在任何步骤切换时，如果有选择的设备，都始终使用设备的中文名称而不是ID
-        if (selectedEquipment && step !== 'equipment' && step !== 'notes') {
-            const equipmentName = equipmentList.find(e => e.id === selectedEquipment)?.name || selectedEquipment;
-
-            // 如果是切换到brewing步骤且已有方案，保留方案信息
-            if (step === 'brewing' && selectedMethod) {
-                setParameterInfo({
-                    equipment: equipmentName,
-                    method: selectedMethod.name,
-                    params: null
-                });
-            } else if (step === 'method') {
-                // 如果是方案步骤且已选择器具，只显示器具信息
-                setParameterInfo({
-                    equipment: equipmentName,
-                    method: null,
-                    params: null
-                });
-            } else {
-                // 其他情况下，只显示设备名称
-                setParameterInfo({
-                    equipment: equipmentName,
-                    method: null,
-                    params: null
-                });
-            }
-        }
-
-        // 直接调用父组件传入的setActiveBrewingStep函数，让父组件处理所有逻辑
+        // 提供触感反馈
         if (settings.hapticFeedback) {
-            hapticsUtils.light(); // 添加轻触感反馈
+            hapticsUtils.light();
         }
-        setActiveBrewingStep(step);
 
-        // 如果不在冲煮主标签，先切换到冲煮主标签
-        if (activeMainTab !== '冲煮') {
-            setActiveMainTab('冲煮');
+        // 调用父组件传入的回调函数
+        if (onStepClick) {
+            // 使用回调而不是直接导航
+            onStepClick(step);
+            return;
+        }
+
+        // 仅当没有提供父组件回调时才使用内部导航逻辑
+        if (navigateToStep) {
+            // 根据步骤特点使用统一导航函数
+            switch (step) {
+                case 'coffeeBean':
+                    // 咖啡豆步骤：完全重置参数
+                    navigateToStep(step, { resetParams: true });
+                    break;
+
+                case 'equipment':
+                    // 设备步骤：保留咖啡豆信息，重置其他参数
+                    navigateToStep(step, {
+                        resetParams: true,
+                        preserveCoffeeBean: true
+                    });
+                    break;
+
+                case 'method':
+                    // 方案步骤：保留咖啡豆和设备信息，重置其他参数
+                    navigateToStep(step, {
+                        resetParams: true,
+                        preserveCoffeeBean: true,
+                        preserveEquipment: true
+                    });
+                    break;
+
+                case 'brewing':
+                    // 无论从哪里跳转到注水，都应该保留所有参数
+                    navigateToStep(step, {
+                        force: showComplete, // 如果冲煮完成，强制允许跳转
+                        preserveMethod: true,
+                        preserveEquipment: true,
+                        preserveCoffeeBean: true
+                    });
+                    break;
+
+                case 'notes':
+                    // 记录步骤：如果冲煮完成，强制允许跳转
+                    navigateToStep(step, {
+                        force: showComplete
+                    });
+                    break;
+
+                default:
+                    // 其他情况使用默认导航
+                    navigateToStep(step);
+                    break;
+            }
         }
     };
+
+    // 修复updateParameterInfo处理逻辑
+    useEffect(() => {
+        // 定义事件处理函数
+        const handleStepChanged = (detail: {
+            step: BrewingStep;
+            resetParams?: boolean;
+            preserveStates?: string[];
+            preserveMethod?: boolean;
+            preserveEquipment?: boolean;
+            preserveCoffeeBean?: boolean;
+        }) => {
+            // 记录步骤变化
+            
+
+            // 确保更新参数栏，使用统一的标准化函数
+            if (selectedMethod) {
+                const methodForUpdate: Method = {
+                    // id是可选的，可以忽略
+                    name: selectedMethod.name,
+                    params: {
+                        coffee: selectedMethod.params.coffee,
+                        water: selectedMethod.params.water,
+                        ratio: selectedMethod.params.ratio,
+                        grindSize: selectedMethod.params.grindSize,
+                        temp: selectedMethod.params.temp,
+                        videoUrl: '',  // 添加必需的videoUrl字段
+                        stages: selectedMethod.params.stages.map(stage => ({
+                            time: stage.time,
+                            label: stage.label,
+                            water: stage.water,
+                            detail: stage.detail
+                        }))
+                    }
+                };
+                updateParameterInfo(detail.step, selectedEquipment, methodForUpdate, equipmentList);
+            } else {
+                updateParameterInfo(detail.step, selectedEquipment, null, equipmentList);
+            }
+        };
+
+        // 添加事件监听
+        const cleanup = listenToEvent(BREWING_EVENTS.STEP_CHANGED, handleStepChanged);
+
+        // 移除事件监听
+        return cleanup;
+    }, [selectedEquipment, selectedMethod]); // 依赖项包括会影响参数栏的状态
+
+    // 添加参数信息更新事件监听
+    useEffect(() => {
+        // 定义处理函数
+        const handleParameterInfoUpdate = (detail: {
+            equipment: string | null;
+            method: string | null;
+            params: {
+                coffee?: string | null;
+                water?: string | null;
+                ratio?: string | null;
+                grindSize?: string | null;
+                temp?: string | null;
+            } | null;
+        }) => {
+            
+            // 直接更新参数信息
+            setParameterInfo(detail);
+        };
+
+        // 添加事件监听
+        const cleanup = listenToEvent(BREWING_EVENTS.PARAMS_UPDATED, handleParameterInfoUpdate);
+
+        // 移除事件监听
+        return cleanup;
+    }, [setParameterInfo]); // 添加setParameterInfo作为依赖项
 
     // 判断是否应该隐藏标题和导航
     const shouldHideHeader = isTimerRunning && !showComplete;

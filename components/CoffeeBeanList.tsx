@@ -25,8 +25,8 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
                 // 按时间降序排序，最新添加的在最前面
                 const sortedBeans = [...loadedBeans].sort((a, b) => b.timestamp - a.timestamp)
                 setBeans(sortedBeans)
-            } catch (error) {
-                console.error('加载咖啡豆数据失败:', error)
+            } catch {
+
             } finally {
                 setLoading(false)
             }

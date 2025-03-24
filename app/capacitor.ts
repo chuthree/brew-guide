@@ -48,9 +48,7 @@ export const initCapacitor = async () => {
 						el.classList.add("android-pt-safe");
 					}
 				});
-			} catch (error) {
-				console.error("设置Android状态栏失败:", error);
-			}
+			} catch {}
 		} else if (platform === "ios") {
 			// 在iOS上配置状态栏
 			try {
@@ -79,9 +77,7 @@ export const initCapacitor = async () => {
 						el.classList.add("ios-pt-safe");
 					}
 				});
-			} catch (error) {
-				console.error("设置iOS状态栏失败:", error);
-			}
+			} catch {}
 		}
 
 		// 监听系统深色模式变化，动态调整状态栏
@@ -92,9 +88,7 @@ export const initCapacitor = async () => {
 					await StatusBar.setStyle({
 						style: e.matches ? Style.Dark : Style.Light,
 					});
-				} catch (error) {
-					console.error("更新状态栏样式失败:", error);
-				}
+				} catch {}
 			});
 	}
 };

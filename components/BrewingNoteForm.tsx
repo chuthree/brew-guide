@@ -154,8 +154,8 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
             // 让onSave函数处理导航逻辑
             onSave(noteData);
             // 不再调用onClose
-        } catch (error) {
-            console.error('Error saving note:', error);
+        } catch {
+
             alert('保存笔记时出错，请重试');
         }
     }
@@ -361,8 +361,8 @@ stages数组中的每个阶段必须包含以下字段：
                 } else {
                     reject(new Error('复制命令执行失败'));
                 }
-            } catch (err) {
-                reject(err);
+            } catch (_err) {
+                reject(_err);
             } finally {
                 document.body.removeChild(textArea);
             }
@@ -706,8 +706,8 @@ stages数组中的每个阶段必须包含以下字段：
                                                                 onClose();
                                                             }
                                                         })
-                                                        .catch(err => {
-                                                            console.error('复制失败:', err);
+                                                        .catch(() => {
+
                                                             alert('复制失败，请手动复制');
                                                         })
                                                 }}
