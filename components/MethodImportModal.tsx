@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { parseMethodFromJson } from '@/lib/jsonUtils'
 import { type Method } from '@/lib/config'
 
 interface MethodImportModalProps {
@@ -48,7 +47,7 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
             // 尝试从文本中提取数据
             import('@/lib/jsonUtils').then(async ({ extractJsonFromText }) => {
                 setError(null);
-                const method = extractJsonFromText(importData);
+                const method = extractJsonFromText(importData) as Method;
 
                 if (!method) {
                     setError('无法从输入中提取有效数据');

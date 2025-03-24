@@ -1,5 +1,5 @@
 import { type Method } from "@/lib/config";
-import { methodToJson, methodToReadableText } from "@/lib/jsonUtils";
+import { methodToReadableText } from "@/lib/jsonUtils";
 import { Storage } from "@/lib/storage";
 
 /**

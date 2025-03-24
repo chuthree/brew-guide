@@ -214,7 +214,6 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 			setCountdownTime,
 			selectedEquipment,
 			selectedMethod,
-			equipmentList,
 		]
 	);
 
@@ -421,7 +420,6 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 			setActiveTab,
 			selectedEquipment,
 			selectedMethod,
-			equipmentList,
 		]
 	);
 
@@ -495,13 +493,7 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 				}
 			}
 		},
-		[
-			navigateToStep,
-			selectedMethod,
-			selectedEquipment,
-			selectedCoffeeBean,
-			equipmentList,
-		]
+		[navigateToStep, selectedMethod, selectedEquipment, selectedCoffeeBean]
 	);
 
 	// 处理从笔记页面跳转到导入方案页面的函数

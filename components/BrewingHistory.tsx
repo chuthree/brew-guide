@@ -237,6 +237,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
 
             // 导入转换工具并生成可读文本
             import('@/lib/jsonUtils').then(({ brewingNoteToReadableText }) => {
+                // @ts-expect-error - 我们知道这个对象结构与函数期望的类型兼容
                 const readableText = brewingNoteToReadableText(shareableNote);
 
                 copyTextToClipboard(readableText)

@@ -11,6 +11,78 @@ interface StageData {
 	valveStatus?: string;
 }
 
+interface CoffeeBean {
+	id?: string;
+	name: string;
+	origin?: string;
+	roaster?: string;
+	roastLevel: string;
+	roastDate?: string;
+	processingMethod?: string;
+	process?: string;
+	variety?: string;
+	flavor?: string[];
+	notes?: string;
+	favorite?: boolean;
+	timestamp?: number;
+	capacity?: string;
+	remaining?: string;
+	price?: string;
+	type?: string;
+	blendComponents?: BlendComponent[] | undefined;
+}
+
+interface BrewingNote {
+	id: string;
+	beanId: string;
+	methodId: string;
+	methodName: string;
+	equipment: string;
+	date: string;
+	method?: string;
+	coffeeBeanInfo?: {
+		name: string;
+		roastLevel: string;
+	};
+	params: {
+		coffee: string;
+		water: string;
+		ratio: string;
+		grindSize: string;
+		temp: string;
+	};
+	rating: number;
+	notes: string;
+	taste: {
+		acidity: number;
+		sweetness: number;
+		bitterness: number;
+		body: number;
+	};
+	brewTime?: string;
+	timestamp: number;
+}
+
+// 定义BlendComponent接口
+interface BlendComponent {
+	percentage: string;
+	origin?: string;
+	process?: string;
+	variety?: string;
+	name?: string;
+}
+
+// 定义ParsedStage接口
+interface ParsedStage {
+	time: number;
+	pourTime?: number;
+	label: string;
+	water: string;
+	detail: string;
+	pourType?: "center" | "circle" | "ice" | "other";
+	valveStatus?: "open" | "closed";
+}
+
 /**
  * 将冲煮方案转换为优化用的JSON格式
  */
@@ -312,7 +384,7 @@ export function generateBeanTemplateJson() {
  * @param bean 咖啡豆对象
  * @returns 格式化的可读文本
  */
-export function beanToReadableText(bean: any): string {
+export function beanToReadableText(bean: CoffeeBean): string {
 	const {
 		name,
 		capacity,
@@ -347,9 +419,9 @@ export function beanToReadableText(bean: any): string {
 		text += `风味标签: ${flavor.join(", ")}\n`;
 	}
 
-	if (blendComponents && blendComponents.length > 0) {
+	if (blendComponents && Array.isArray(blendComponents)) {
 		text += "\n拼配成分:\n";
-		blendComponents.forEach((comp: any, index: number) => {
+		blendComponents.forEach((comp: BlendComponent, index: number) => {
 			const details = [];
 			if (comp.origin) details.push(comp.origin);
 			if (comp.process) details.push(comp.process);
@@ -377,48 +449,50 @@ export function beanToReadableText(bean: any): string {
  * @param text 包含数据的文本
  * @returns 提取的JSON数据或null
  */
-export function extractJsonFromText(text: string): any {
+export function extractJsonFromText(
+	text: string
+): Method | CoffeeBean | BrewingNote | null {
 	try {
 		// 检查是否是普通JSON
 		try {
-			const data = JSON.parse(text);
-			return data;
-		} catch {
-			// 不是有效JSON，继续检查是否包含隐藏的JSON数据
+			const jsonData = JSON.parse(text);
+
+			// 尝试确定JSON类型
+			if (
+				jsonData.params &&
+				jsonData.params.stages &&
+				Array.isArray(jsonData.params.stages)
+			) {
+				return jsonData as Method; // 可能是Method类型
+			} else if (jsonData.roastLevel || jsonData.processingMethod) {
+				return jsonData as CoffeeBean; // 可能是CoffeeBean类型
+			} else if (jsonData.beanId && jsonData.methodId) {
+				return jsonData as BrewingNote; // 可能是BrewingNote类型
+			}
+
+			return jsonData as Method | CoffeeBean | BrewingNote;
+		} catch (_) {
+			// 不是有效JSON，继续尝试从文本中提取
 		}
 
-		// 查找旧版的隐藏JSON数据
-		const jsonMatch = text.match(/<!--JSON_DATA:([^]*?)-->/);
-		if (jsonMatch && jsonMatch[1]) {
-			return JSON.parse(jsonMatch[1]);
-		}
-
-		// 检查是否是自然语言咖啡豆描述
-		if (text.includes("@DATA_TYPE:COFFEE_BEAN@")) {
-			return parseCoffeeBeanText(text);
-		}
-
-		// 检查是否是自然语言冲煮方案描述
-		if (text.includes("@DATA_TYPE:BREWING_METHOD@")) {
-			return parseMethodText(text);
-		}
-
-		// 检查是否是自然语言冲煮记录描述
-		if (text.includes("@DATA_TYPE:BREWING_NOTE@")) {
+		// 尝试解析为冲煮记录格式 - 优先级最高，因为包含其他数据
+		if (text.includes("冲煮记录") || text.includes("日期:")) {
 			return parseBrewingNoteText(text);
 		}
 
-		// 尝试自动检测文本类型并解析
-		if (text.includes("【咖啡豆】")) {
-			return parseCoffeeBeanText(text);
-		} else if (text.includes("【冲煮方案】")) {
+		// 尝试解析为冲煮方案格式
+		if (text.includes("冲煮方案") || text.includes("步骤 1:")) {
 			return parseMethodText(text);
-		} else if (text.includes("【冲煮记录】")) {
-			return parseBrewingNoteText(text);
+		}
+
+		// 尝试解析为咖啡豆格式
+		if (text.includes("咖啡豆信息") || text.includes("烘焙度:")) {
+			return parseCoffeeBeanText(text);
 		}
 
 		return null;
-	} catch {
+	} catch (err) {
+		console.error("数据解析错误:", err);
 		return null;
 	}
 }
@@ -428,7 +502,7 @@ export function extractJsonFromText(text: string): any {
  * @param method 冲煮方案对象
  * @returns 格式化的可读文本
  */
-export function methodToReadableText(method: any): string {
+export function methodToReadableText(method: Method): string {
 	const { name, params } = method;
 
 	// 构建可读文本
@@ -441,7 +515,7 @@ export function methodToReadableText(method: any): string {
 
 	if (params.stages && params.stages.length > 0) {
 		text += "\n冲煮步骤:\n\n";
-		params.stages.forEach((stage: any, index: number) => {
+		params.stages.forEach((stage: ParsedStage, index: number) => {
 			const timeText = `${Math.floor(stage.time / 60)}分${
 				stage.time % 60
 			}秒`;
@@ -491,7 +565,7 @@ function getPourTypeText(pourType: string): string {
  * @param note 冲煮记录对象
  * @returns 格式化的可读文本
  */
-export function brewingNoteToReadableText(note: any): string {
+export function brewingNoteToReadableText(note: BrewingNote): string {
 	const { equipment, method, params, coffeeBeanInfo, rating, taste, notes } =
 		note;
 
@@ -541,8 +615,8 @@ export function brewingNoteToReadableText(note: any): string {
  * @param text 咖啡豆的文本描述
  * @returns 结构化的咖啡豆数据
  */
-function parseCoffeeBeanText(text: string): any {
-	const bean: any = {
+function parseCoffeeBeanText(text: string): CoffeeBean | null {
+	const bean: CoffeeBean = {
 		name: "",
 		capacity: "",
 		remaining: "",
@@ -632,11 +706,16 @@ function parseCoffeeBeanText(text: string): any {
 
 		if (components) {
 			components.forEach((comp: string) => {
+				// 先确保blendComponents不是undefined
+				if (!bean.blendComponents) {
+					bean.blendComponents = [];
+				}
+
 				const compMatch = comp.match(/\d+\.\s*(.*?)\s*\((\d+)%\)/);
 				if (compMatch && compMatch[1] && compMatch[2]) {
 					bean.blendComponents.push({
 						name: compMatch[1].trim(),
-						percentage: parseInt(compMatch[2]),
+						percentage: String(parseInt(compMatch[2])), // 转为字符串类型
 					});
 				}
 			});
@@ -651,8 +730,8 @@ function parseCoffeeBeanText(text: string): any {
  * @param text 冲煮方案的文本描述
  * @returns 结构化的冲煮方案数据
  */
-function parseMethodText(text: string): any {
-	const method: any = {
+function parseMethodText(text: string): Method | null {
+	const method: Method = {
 		id: `method-${Date.now()}`,
 		name: "",
 		params: {
@@ -765,7 +844,7 @@ function parseMethodText(text: string): any {
 						}
 					}
 
-					const stage: any = {
+					const stage: ParsedStage = {
 						time,
 						pourTime: Math.min(20, Math.ceil(time * 0.25)), // 默认倒水时间约为总时间的1/4，但不超过20秒
 						label,
@@ -792,14 +871,14 @@ function parseMethodText(text: string): any {
  * @param text 冲煮记录的文本描述
  * @returns 结构化的冲煮记录数据
  */
-function parseBrewingNoteText(text: string): any {
-	const note: any = {
+function parseBrewingNoteText(text: string): BrewingNote | null {
+	const note: BrewingNote = {
+		id: `note-${Date.now()}`,
+		beanId: "",
+		methodId: "",
+		methodName: "",
 		equipment: "",
-		method: "",
-		coffeeBeanInfo: {
-			name: "",
-			roastLevel: "",
-		},
+		date: "",
 		params: {
 			coffee: "",
 			water: "",
@@ -807,14 +886,15 @@ function parseBrewingNoteText(text: string): any {
 			grindSize: "",
 			temp: "",
 		},
+		rating: 0,
+		notes: "",
 		taste: {
 			acidity: 0,
 			sweetness: 0,
 			bitterness: 0,
 			body: 0,
 		},
-		rating: 0,
-		notes: "",
+		timestamp: Date.now(),
 	};
 
 	// 提取设备
@@ -826,18 +906,13 @@ function parseBrewingNoteText(text: string): any {
 	// 提取方法
 	const methodMatch = text.match(/方法:\s*(.*?)(?:\n|$)/);
 	if (methodMatch && methodMatch[1] && methodMatch[1] !== "未设置") {
-		note.method = methodMatch[1].trim();
+		note.methodName = methodMatch[1].trim();
 	}
 
 	// 提取咖啡豆信息
 	const beanMatch = text.match(/咖啡豆:\s*(.*?)(?:\n|$)/);
 	if (beanMatch && beanMatch[1] && beanMatch[1] !== "未设置") {
-		note.coffeeBeanInfo.name = beanMatch[1].trim();
-	}
-
-	const roastMatch = text.match(/烘焙度:\s*(.*?)(?:\n|$)/);
-	if (roastMatch && roastMatch[1] && roastMatch[1] !== "未设置") {
-		note.coffeeBeanInfo.roastLevel = roastMatch[1].trim();
+		note.beanId = beanMatch[1].trim();
 	}
 
 	// 提取参数
@@ -902,9 +977,6 @@ function parseBrewingNoteText(text: string): any {
 		const notesSection = text.split("笔记:")[1].split("\n---")[0];
 		note.notes = notesSection.trim();
 	}
-
-	// 生成ID
-	note.id = `note-${Date.now()}`;
 
 	return note;
 }

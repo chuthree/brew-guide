@@ -220,6 +220,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
 
             // 导入转换工具并生成可读文本
             import('@/lib/jsonUtils').then(({ beanToReadableText }) => {
+                // @ts-expect-error - 我们知道这个对象结构与函数期望的类型兼容
                 const readableText = beanToReadableText(shareableBean);
 
                 copyTextToClipboard(readableText)
