@@ -1,8 +1,10 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { generateBeanTemplateJson } from '@/lib/jsonUtils'
+import ReactCrop, { Crop } from 'react-image-crop'
+import 'react-image-crop/dist/ReactCrop.css'
 
 interface ImportBeanModalProps {
     showForm: boolean
@@ -18,19 +20,39 @@ const ImportBeanModal: React.FC<ImportBeanModalProps> = ({
     // 导入数据的状态
     const [importData, setImportData] = useState('');
     const [error, setError] = useState<string | null>(null);
+    const [success, setSuccess] = useState<string | null>(null);
+    const [isUploading, setIsUploading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [selectedImage, setSelectedImage] = useState<string | null>(null);
+    const [crop, setCrop] = useState<Crop>({
+        unit: '%',
+        width: 90,
+        height: 90,
+        x: 5,
+        y: 5
+    });
+    const [croppedImage, setCroppedImage] = useState<string | null>(null);
+    const [showCropper, setShowCropper] = useState(false);
+    const imgRef = useRef<HTMLImageElement>(null);
+
+    // 清除所有状态消息
+    const clearMessages = () => {
+        setError(null);
+        setSuccess(null);
+    };
 
     // 监听showForm变化，当表单关闭时清除输入框内容
     useEffect(() => {
         if (!showForm) {
             setImportData('');
-            if (error) setError(null);
+            clearMessages();
         }
-    }, [showForm, error]);
+    }, [showForm]);
 
     // 关闭并清除输入
     const handleClose = () => {
         setImportData('');
-        if (error) setError(null);
+        clearMessages();
         onClose();
     };
 
@@ -158,6 +180,226 @@ ${templateJson}
         }
     };
 
+    // Function to handle image selection from camera or gallery
+    const handleImageSelect = (source: 'camera' | 'gallery') => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        if (source === 'camera') {
+            input.capture = 'environment';
+        }
+        
+        input.onchange = (e) => {
+            const file = (e.target as HTMLInputElement).files?.[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    // 创建一个新的图片对象来获取实际尺寸
+                    const img = new Image();
+                    img.onload = () => {
+                        setSelectedImage(img.src);
+                        setShowCropper(true);
+                        // 根据图片实际尺寸设置初始裁剪区域
+                        setCrop({
+                            unit: '%',
+                            width: 90,
+                            height: 90,
+                            x: 5,
+                            y: 5
+                        });
+                    };
+                    img.src = reader.result as string;
+                };
+                reader.readAsDataURL(file);
+            }
+        };
+        
+        input.click();
+    };
+
+    // Function to handle crop complete
+    const handleCropComplete = async (crop: Crop) => {
+        if (!selectedImage || !imgRef.current) return;
+
+        const image = new Image();
+        image.src = selectedImage;
+
+        // 等待图片加载完成
+        await new Promise((resolve) => {
+            if (image.complete) {
+                resolve(true);
+            } else {
+                image.onload = () => resolve(true);
+            }
+        });
+
+        const canvas = document.createElement('canvas');
+        // 获取显示的图片元素
+        const displayedImage = imgRef.current;
+        
+        // 计算实际比例
+        const scaleX = image.naturalWidth / displayedImage.width;
+        const scaleY = image.naturalHeight / displayedImage.height;
+
+        // 设置画布尺寸为裁剪区域的实际大小
+        canvas.width = crop.width! * scaleX;
+        canvas.height = crop.height! * scaleY;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        ctx.drawImage(
+            image,
+            crop.x! * scaleX,
+            crop.y! * scaleY,
+            crop.width! * scaleX,
+            crop.height! * scaleY,
+            0,
+            0,
+            canvas.width,
+            canvas.height
+        );
+
+        const croppedDataUrl = canvas.toDataURL('image/jpeg', 1.0);
+        console.log('crop success', {
+            naturalSize: { width: image.naturalWidth, height: image.naturalHeight },
+            displaySize: { width: displayedImage.width, height: displayedImage.height },
+            scale: { x: scaleX, y: scaleY },
+            crop: { ...crop },
+            canvasSize: { width: canvas.width, height: canvas.height }
+        });
+        setCroppedImage(croppedDataUrl);
+    };
+
+    // Function to handle image recognition process
+    const handleImageRecognition = async () => {
+        // handleCropComplete(crop);
+        if (!croppedImage) return;
+
+        setIsUploading(true);
+        clearMessages();
+
+        try {
+            const response = await fetch(croppedImage);
+            const blob = await response.blob();
+
+            const formData = new FormData();
+            formData.append('file', blob, 'coffee-bean.jpg');
+
+            const recognitionResponse = await fetch('/api/upload', {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (!recognitionResponse.ok) {
+                throw new Error('Recognition failed');
+            }
+
+            const data = await recognitionResponse.json();
+            
+            if (data.success && data.result) {
+                console.log(data.result);
+                setImportData(JSON.stringify(data.result));
+                setSuccess('✨ AI识别成功！请检查识别结果是否正确');
+            } else {
+                throw new Error('Invalid response format');
+            }
+
+        } catch (err) {
+            console.error('识别失败:', err);
+            setError('图片识别失败，请重试');
+        } finally {
+            setIsUploading(false);
+            setShowCropper(false);
+            setSelectedImage(null);
+            setCroppedImage(null);
+        }
+    };
+
+    // Replace the existing renderUploadSection with this new version
+    const renderUploadSection = () => (
+        <div className="p-3 border border-neutral-200 dark:border-neutral-700 rounded-md bg-neutral-50 dark:bg-neutral-800/50">
+            <div className="flex flex-col space-y-3">
+                <div className="flex justify-between items-center">
+                    <p className="text-xs text-neutral-600 dark:text-neutral-400">
+                        上传咖啡豆包装图片，自动识别信息
+                    </p>
+                </div>
+                
+                {showCropper && selectedImage ? (
+                    <div className="space-y-3">
+                        <ReactCrop
+                            crop={crop}
+                            onChange={c => setCrop(c)}
+                            onComplete={handleCropComplete}
+                        >
+                            <img 
+                                ref={imgRef}
+                                src={selectedImage} 
+                                alt="Upload preview" 
+                            />
+                        </ReactCrop>
+                        <div className="flex justify-end space-x-2">
+                            <button
+                                onClick={() => {
+                                    setShowCropper(false);
+                                    setSelectedImage(null);
+                                }}
+                                className="px-3 py-1 text-sm border border-neutral-300 dark:border-neutral-600 rounded"
+                            >
+                                取消
+                            </button>
+                            <button
+                                onClick={handleImageRecognition}
+                                className="px-3 py-1 text-sm bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-800 rounded"
+                            >
+                                确认裁剪并识别
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="flex space-x-2">
+                        <button
+                            onClick={() => handleImageSelect('camera')}
+                            disabled={isUploading}
+                            className="flex-1 py-2 px-4 border border-dashed border-neutral-300 dark:border-neutral-600 rounded-md text-sm text-neutral-600 dark:text-neutral-400 hover:border-neutral-400 dark:hover:border-neutral-500 transition-colors"
+                        >
+                            <span className="flex items-center justify-center space-x-2">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                <span>拍照</span>
+                            </span>
+                        </button>
+                        <button
+                            onClick={() => handleImageSelect('gallery')}
+                            disabled={isUploading}
+                            className="flex-1 py-2 px-4 border border-dashed border-neutral-300 dark:border-neutral-600 rounded-md text-sm text-neutral-600 dark:text-neutral-400 hover:border-neutral-400 dark:hover:border-neutral-500 transition-colors"
+                        >
+                            <span className="flex items-center justify-center space-x-2">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                <span>相册</span>
+                            </span>
+                        </button>
+                    </div>
+                )}
+                
+                {isUploading && (
+                    <div className="flex items-center justify-center space-x-2">
+                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        <span className="text-sm">处理中...</span>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+
     return (
         <AnimatePresence>
             {showForm && (
@@ -238,36 +480,10 @@ ${templateJson}
 
                                 {/* 表单内容 */}
                                 <div className="space-y-4 mt-2">
-                                    <div className="flex flex-col space-y-2">
-                                        <div className="p-3 border border-neutral-200 dark:border-neutral-700 rounded-md bg-neutral-50 dark:bg-neutral-800/50">
-                                            <div className="flex justify-between items-center">
-                                                <p className="text-xs text-neutral-600 dark:text-neutral-400">
-                                                    使用AI识别导入咖啡豆信息(推荐使用豆包)
-                                                </p>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        copyTextToClipboard(templatePrompt)
-                                                            .then(() => {
-                                                                setError('✅ 提示词已复制到剪贴板，请打开豆包应用，将此提示词和咖啡豆商品页一起发送');
-                                                                setTimeout(() => setError(null), 3000); // 3秒后自动清除提示
-                                                            })
-                                                            .catch(err => {
-                                                                console.error('复制失败:', err);
-                                                                setError('❌ 复制失败，请手动复制');
-                                                                setTimeout(() => setError(null), 3000); // 3秒后自动清除提示
-                                                            });
-                                                    }}
-                                                    className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300"
-                                                >
-                                                    复制提示词
-                                                </button>
-                                            </div>
-                                        </div>
-                                        <p className="text-xs text-neutral-500 dark:text-neutral-500">
-                                            粘贴JSON格式的咖啡豆数据：
-                                        </p>
-                                    </div>
+                                    {renderUploadSection()}
+                                    <p className="text-xs text-neutral-500 dark:text-neutral-500">
+                                        粘贴JSON格式的咖啡豆数据：
+                                    </p>
                                     <textarea
                                         className="w-full h-40 p-3 border border-neutral-300 dark:border-neutral-700 rounded-md bg-transparent focus:border-neutral-800 dark:focus:border-neutral-400 focus:outline-none text-neutral-800 dark:text-neutral-200"
                                         placeholder='例如: {"name": "埃塞俄比亚耶加雪菲", "capacity": "200g", ...}'
@@ -277,6 +493,11 @@ ${templateJson}
                                     {error && (
                                         <div className="text-sm text-red-500 dark:text-red-400">
                                             {error}
+                                        </div>
+                                    )}
+                                    {success && (
+                                        <div className="text-sm text-green-500 dark:text-green-400">
+                                            {success}
                                         </div>
                                     )}
                                     <div className="flex justify-end space-x-3 mt-4">
