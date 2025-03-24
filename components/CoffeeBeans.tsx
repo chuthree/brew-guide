@@ -231,7 +231,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
     const handleShare = (bean: CoffeeBean) => {
         try {
             // 创建可共享的咖啡豆对象
-            const shareableBean: any = {
+            const shareableBean: Omit<CoffeeBean, 'id' | 'timestamp'> = {
                 name: bean.name,
                 capacity: bean.capacity,
                 remaining: bean.remaining,
