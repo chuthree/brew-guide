@@ -8,10 +8,24 @@ import AutoResizeTextarea from './AutoResizeTextarea'
 import AutocompleteInput from './AutocompleteInput'
 // 移除Capacitor导入
 
+// 添加拼配成分接口定义
+interface BlendComponent {
+    name: string;        // 成分豆名称
+    percentage: number;  // 百分比 (1-100)
+    origin?: string;     // 产地
+    process?: string;    // 处理法
+    variety?: string;    // 品种
+}
+
+// 扩展CoffeeBean类型以支持拼配成分
+interface ExtendedCoffeeBean extends CoffeeBean {
+    blendComponents?: BlendComponent[];
+}
+
 interface CoffeeBeanFormProps {
-    onSave: (bean: Omit<CoffeeBean, 'id' | 'timestamp'>) => void
+    onSave: (bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>) => void
     onCancel: () => void
-    initialBean?: CoffeeBean
+    initialBean?: ExtendedCoffeeBean
 }
 
 // 定义步骤类型
@@ -159,7 +173,23 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
     // 添加一个状态来跟踪正在编辑的剩余容量输入
     const [editingRemaining, setEditingRemaining] = useState<string | null>(null);
 
-    const [bean, setBean] = useState<Omit<CoffeeBean, 'id' | 'timestamp'>>(() => {
+    // 添加拼配成分状态
+    const [blendComponents, setBlendComponents] = useState<BlendComponent[]>(() => {
+        // 如果没有初始豆子数据且是拼配豆，提取拼配成分
+        if (initialBean && initialBean.type === '拼配' && initialBean.blendComponents) {
+            return initialBean.blendComponents;
+        }
+        // 默认添加一个空成分
+        return [{
+            name: '',
+            percentage: 100,
+            origin: '',
+            process: '',
+            variety: ''
+        }];
+    });
+
+    const [bean, setBean] = useState<Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>>(() => {
         // 如果有初始豆子数据，直接使用
         if (initialBean) {
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -214,6 +244,7 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
             startDay: 0,
             endDay: 0,
             maxDay: 0,
+            blendComponents: [] // 添加拼配成分字段
         };
         return newBean;
     });
@@ -379,7 +410,7 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
     };
 
     // 处理输入变化
-    const handleInputChange = (field: keyof Omit<CoffeeBean, 'id' | 'timestamp' | 'flavor'>) => (value: string) => {
+    const handleInputChange = (field: keyof Omit<ExtendedCoffeeBean, 'id' | 'timestamp' | 'flavor'>) => (value: string) => {
         // 强制转换为字符串并确保有值
         const safeValue = String(value || '');
 
@@ -459,11 +490,116 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
         }
     };
 
-    // 提交表单
+    // 添加拼配成分处理函数
+    const handleAddBlendComponent = () => {
+        // 计算当前所有成分的百分比总和
+        const currentSum = blendComponents.reduce((sum, comp) => sum + (comp.percentage || 0), 0);
+
+        // 如果总和已经接近或超过100%，则不添加新成分
+        if (currentSum >= 99.9) {
+            alert('拼配比例总和已达100%，请先调整现有成分比例');
+            return;
+        }
+
+        // 添加新成分，使用剩余的百分比
+        setBlendComponents([
+            ...blendComponents,
+            {
+                name: '',  // 保留空字符串，而不是undefined
+                percentage: Math.max(0, 100 - currentSum),
+                origin: '',
+                process: '',
+                variety: ''
+            }
+        ]);
+    };
+
+    const handleRemoveBlendComponent = (index: number) => {
+        if (blendComponents.length <= 1) return; // 至少保留一个成分
+
+        const newComponents = blendComponents.filter((_, i) => i !== index);
+        // 重新分配百分比
+        const totalPercentage = newComponents.reduce((sum, comp) => sum + comp.percentage, 0);
+        if (totalPercentage < 100) {
+            // 分配剩余百分比
+            const remaining = 100 - totalPercentage;
+            const perComponent = remaining / newComponents.length;
+            newComponents.forEach(comp => {
+                comp.percentage += perComponent;
+            });
+        }
+
+        setBlendComponents(newComponents);
+    };
+
+    const handleBlendComponentChange = (index: number, field: keyof BlendComponent, value: string | number) => {
+        const newComponents = [...blendComponents];
+        if (field === 'percentage') {
+            // 处理空值的情况
+            if (value === '' || value === null || value === undefined) {
+                newComponents[index][field] = 0; // 空值设为0
+            } else {
+                // 确保是数字且在0-100范围内
+                const numValue = typeof value === 'string' ? parseInt(value) || 0 : value;
+                newComponents[index][field] = Math.max(0, Math.min(100, numValue));
+            }
+
+            // 调整其他成分的百分比，确保总和为100%
+            const totalOthers = newComponents.reduce((sum, comp, i) =>
+                i !== index ? sum + comp.percentage : sum, 0);
+
+            if (totalOthers + newComponents[index].percentage > 100) {
+                // 如果总和超过100%，按比例缩减其他成分
+                const excess = totalOthers + newComponents[index].percentage - 100;
+                const factor = excess / totalOthers;
+
+                if (totalOthers > 0) { // 防止除以零
+                    newComponents.forEach((comp, i) => {
+                        if (i !== index) {
+                            comp.percentage = Math.max(0, comp.percentage - (comp.percentage * factor));
+                        }
+                    });
+                }
+            }
+        } else {
+            // 处理其他字段（字符串）
+            newComponents[index][field] = value as string;
+        }
+
+        setBlendComponents(newComponents);
+    };
+
+    // 提交表单前，确保拼配数据正确保存
     const handleSubmit = () => {
         // 再次验证剩余容量，确保数据正确
         validateRemaining();
-        onSave(bean);
+
+        // 如果是拼配豆，添加拼配成分到bean中
+        if (bean.type === '拼配') {
+            // 确保百分比总和为100
+            const components = [...blendComponents];
+            const totalPercentage = components.reduce((sum, comp) => sum + comp.percentage, 0);
+
+            if (totalPercentage !== 100) {
+                // 调整最后一个成分的百分比使总和为100
+                const lastIndex = components.length - 1;
+                components[lastIndex].percentage += (100 - totalPercentage);
+            }
+
+            // 确保每个成分都有name属性
+            components.forEach(comp => {
+                if (!comp.name) {
+                    comp.name = '未命名成分';
+                }
+            });
+
+            onSave({
+                ...bean,
+                blendComponents: components
+            });
+        } else {
+            onSave(bean);
+        }
     };
 
     // 添加动画变体
@@ -631,6 +767,120 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                     >
                         <div className="space-y-2 w-full">
                             <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                                咖啡豆图片
+                            </label>
+                            <div className="flex items-center justify-center relative">
+                                <div
+                                    className="w-32 h-32 rounded-lg border-2 border-dashed border-neutral-300 dark:border-neutral-700 flex flex-col items-center justify-center cursor-pointer overflow-visible relative"
+                                    onClick={() => {
+                                        const fileInput = document.createElement('input');
+                                        fileInput.type = 'file';
+                                        fileInput.accept = 'image/*';
+                                        fileInput.onchange = async (e) => {
+                                            const input = e.target as HTMLInputElement;
+                                            if (!input.files || input.files.length === 0) return;
+
+                                            const file = input.files[0];
+                                            try {
+                                                // 读取文件并转换为Base64
+                                                const reader = new FileReader();
+                                                reader.onload = () => {
+                                                    if (typeof reader.result === 'string') {
+                                                        const imageData = reader.result as string;
+
+                                                        // 检查图片大小是否需要压缩
+                                                        if (imageData.length > 1024 * 1024) { // 如果大于1MB
+                                                            // 压缩图片
+                                                            const img = new Image();
+                                                            img.onload = () => {
+                                                                const canvas = document.createElement('canvas');
+                                                                let width = img.width;
+                                                                let height = img.height;
+
+                                                                // 限制最大尺寸为800px
+                                                                const maxSize = 800;
+                                                                if (width > height && width > maxSize) {
+                                                                    height = (height * maxSize) / width;
+                                                                    width = maxSize;
+                                                                } else if (height > maxSize) {
+                                                                    width = (width * maxSize) / height;
+                                                                    height = maxSize;
+                                                                }
+
+                                                                canvas.width = width;
+                                                                canvas.height = height;
+                                                                const ctx = canvas.getContext('2d');
+                                                                ctx?.drawImage(img, 0, 0, width, height);
+
+                                                                // 转换为base64，使用较低的质量
+                                                                const compressedImage = canvas.toDataURL('image/jpeg', 0.6);
+
+                                                                // 更新豆子图片
+                                                                setBean(prev => ({
+                                                                    ...prev,
+                                                                    image: compressedImage
+                                                                }));
+                                                            };
+                                                            img.src = imageData;
+                                                        } else {
+                                                            // 如果图片不大，直接使用
+                                                            setBean(prev => ({
+                                                                ...prev,
+                                                                image: imageData
+                                                            }));
+                                                        }
+                                                    }
+                                                };
+                                                reader.readAsDataURL(file);
+                                            } catch (error) {
+                                                console.error('读取图片失败:', error);
+                                                alert('上传图片失败，请重试');
+                                            }
+                                        };
+                                        fileInput.click();
+                                    }}
+                                >
+                                    {bean.image ? (
+                                        <div className="relative w-full h-full">
+                                            <img
+                                                src={bean.image}
+                                                alt="咖啡豆图片"
+                                                className="w-full h-full object-cover"
+                                            />
+                                            <div className="absolute inset-0 bg-black bg-opacity-30 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                <span className="text-white text-xs font-medium">点击更换</span>
+                                            </div>
+                                            {/* 删除按钮放在图片容器内，定位在右上角 */}
+                                            <button
+                                                type="button"
+                                                className="absolute top-1 right-1 w-6 h-6 bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-800 rounded-full flex items-center justify-center shadow-md hover:bg-red-500 dark:hover:bg-red-500 dark:hover:text-white transition-colors z-10"
+                                                onClick={(e) => {
+                                                    e.stopPropagation(); // 阻止冒泡，避免触发父元素的点击事件
+                                                    setBean(prev => ({
+                                                        ...prev,
+                                                        image: undefined
+                                                    }));
+                                                }}
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-neutral-400 dark:text-neutral-600 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                            </svg>
+                                            <span className="text-xs text-neutral-500 dark:text-neutral-400">点击上传图片</span>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="space-y-2 w-full">
+                            <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
                                 咖啡豆名称 <span className="text-red-500">*</span>
                             </label>
                             <AutocompleteInput
@@ -761,36 +1011,7 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                         transition={pageTransition}
                         className="space-y-8 max-w-md mx-auto flex flex-col items-center justify-center h-full"
                     >
-                        <div className="grid grid-cols-2 gap-6 w-full">
-                            <AutocompleteInput
-                                label="产地"
-                                value={bean.origin || ''}
-                                onChange={handleInputChange('origin')}
-                                placeholder="例如：埃塞俄比亚"
-                                suggestions={ORIGINS}
-                                clearable
-                            />
-
-                            <AutocompleteInput
-                                label="处理法"
-                                value={bean.process || ''}
-                                onChange={handleInputChange('process')}
-                                placeholder="例如：水洗"
-                                suggestions={PROCESSES}
-                                clearable
-                            />
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-6 w-full">
-                            <AutocompleteInput
-                                label="品种"
-                                value={bean.variety || ''}
-                                onChange={handleInputChange('variety')}
-                                placeholder="例如：卡杜拉"
-                                suggestions={VARIETIES}
-                                clearable
-                            />
-
+                        <div className="grid grid-cols-1 gap-6 w-full">
                             <div className="space-y-2">
                                 <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
                                     类型
@@ -800,7 +1021,19 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                                         <div
                                             key={type.value}
                                             className="w-1/2 relative py-2"
-                                            onClick={() => setBean({ ...bean, type: type.value })}
+                                            onClick={() => {
+                                                // 当类型从拼配变为单品时，清空拼配成分
+                                                if (bean.type === '拼配' && type.value === '单品') {
+                                                    setBlendComponents([{
+                                                        name: '未命名成分',
+                                                        percentage: 100,
+                                                        origin: '',
+                                                        process: '',
+                                                        variety: ''
+                                                    }]);
+                                                }
+                                                setBean({ ...bean, type: type.value })
+                                            }}
                                         >
                                             <button
                                                 type="button"
@@ -821,6 +1054,45 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                                 </div>
                             </div>
                         </div>
+
+                        {/* 单品模式下显示产地、处理法和品种 */}
+                        {bean.type === '单品' && (
+                            <>
+                                <div className="grid grid-cols-2 gap-6 w-full">
+                                    <AutocompleteInput
+                                        label="产地"
+                                        value={bean.origin || ''}
+                                        onChange={handleInputChange('origin')}
+                                        placeholder="例如：埃塞俄比亚"
+                                        suggestions={ORIGINS}
+                                        clearable
+                                    />
+
+                                    <AutocompleteInput
+                                        label="处理法"
+                                        value={bean.process || ''}
+                                        onChange={handleInputChange('process')}
+                                        placeholder="例如：水洗"
+                                        suggestions={PROCESSES}
+                                        clearable
+                                    />
+                                </div>
+
+                                <div className="w-full">
+                                    <AutocompleteInput
+                                        label="品种"
+                                        value={bean.variety || ''}
+                                        onChange={handleInputChange('variety')}
+                                        placeholder="例如：卡杜拉"
+                                        suggestions={VARIETIES}
+                                        clearable
+                                    />
+                                </div>
+                            </>
+                        )}
+
+                        {/* 拼配豆模式显示拼配成分管理 */}
+                        {bean.type === '拼配' && renderBlendComponents()}
 
                         {/* 自定义赏味期参数 */}
                         <div className="space-y-4 w-full">
@@ -1038,29 +1310,80 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                                 <span className="text-sm font-medium">{bean.name}</span>
                             </div>
                             <div className="flex justify-between py-2 border-b border-neutral-200 dark:border-neutral-700">
+                                <span className="text-sm text-neutral-500 dark:text-neutral-400">类型</span>
+                                <span className="text-sm font-medium">{bean.type}</span>
+                            </div>
+                            <div className="flex justify-between py-2 border-b border-neutral-200 dark:border-neutral-700">
                                 <span className="text-sm text-neutral-500 dark:text-neutral-400">总容量</span>
-                                <span className="text-sm font-medium">{bean.capacity}</span>
+                                <span className="text-sm font-medium">{bean.capacity}g</span>
                             </div>
                             <div className="flex justify-between py-2 border-b border-neutral-200 dark:border-neutral-700">
                                 <span className="text-sm text-neutral-500 dark:text-neutral-400">烘焙度</span>
                                 <span className="text-sm font-medium">{bean.roastLevel}</span>
                             </div>
-                            {bean.origin && (
+                            {bean.type === '单品' && bean.origin && (
                                 <div className="flex justify-between py-2 border-b border-neutral-200 dark:border-neutral-700">
                                     <span className="text-sm text-neutral-500 dark:text-neutral-400">产地</span>
                                     <span className="text-sm font-medium">{bean.origin}</span>
                                 </div>
                             )}
+                            {bean.type === '单品' && bean.process && (
+                                <div className="flex justify-between py-2 border-b border-neutral-200 dark:border-neutral-700">
+                                    <span className="text-sm text-neutral-500 dark:text-neutral-400">处理法</span>
+                                    <span className="text-sm font-medium">{bean.process}</span>
+                                </div>
+                            )}
+                            {bean.type === '单品' && bean.variety && (
+                                <div className="flex justify-between py-2 border-b border-neutral-200 dark:border-neutral-700">
+                                    <span className="text-sm text-neutral-500 dark:text-neutral-400">品种</span>
+                                    <span className="text-sm font-medium">{bean.variety}</span>
+                                </div>
+                            )}
                             {bean.flavor && bean.flavor.length > 0 && (
                                 <div className="flex justify-between py-2 border-b border-neutral-200 dark:border-neutral-700">
                                     <span className="text-sm text-neutral-500 dark:text-neutral-400">风味</span>
-                                    <span className="text-sm font-medium">{bean.flavor.join(', ')}</span>
+                                    <span className="text-sm font-medium text-right">{bean.flavor.join(', ')}</span>
                                 </div>
                             )}
                             <div className="flex justify-between py-2 border-b border-neutral-200 dark:border-neutral-700">
                                 <span className="text-sm text-neutral-500 dark:text-neutral-400">赏味期</span>
                                 <span className="text-sm font-medium">{bean.startDay}-{bean.endDay}-{bean.maxDay}天</span>
                             </div>
+                            {bean.type === '拼配' && blendComponents.length > 0 && (
+                                <div className="flex flex-col py-2 border-b border-neutral-200 dark:border-neutral-700">
+                                    <div className="flex justify-between mb-2">
+                                        <span className="text-sm text-neutral-500 dark:text-neutral-400">拼配成分</span>
+                                        <span className="text-xs text-neutral-400 dark:text-neutral-500">比例</span>
+                                    </div>
+                                    <div className="space-y-3">
+                                        {blendComponents.map((comp, index) => (
+                                            <div key={index} className="text-left">
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-sm font-medium">成分 #{index + 1}</span>
+                                                    <span className="text-sm font-medium">{comp.percentage}%</span>
+                                                </div>
+                                                <div className="flex flex-wrap gap-1 mt-1">
+                                                    {comp.origin && (
+                                                        <span className="inline-block px-2 py-0.5 text-xs bg-neutral-100 dark:bg-neutral-800 rounded-full">
+                                                            {comp.origin}
+                                                        </span>
+                                                    )}
+                                                    {comp.process && (
+                                                        <span className="inline-block px-2 py-0.5 text-xs bg-neutral-100 dark:bg-neutral-800 rounded-full">
+                                                            {comp.process}
+                                                        </span>
+                                                    )}
+                                                    {comp.variety && (
+                                                        <span className="inline-block px-2 py-0.5 text-xs bg-neutral-100 dark:bg-neutral-800 rounded-full">
+                                                            {comp.variety}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </motion.div>
                 );
@@ -1111,6 +1434,120 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                         </div>
                     )}
                 </button>
+            </div>
+        );
+    };
+
+    // 渲染拼配成分管理组件
+    const renderBlendComponents = () => {
+        if (bean.type !== '拼配') return null;
+
+        return (
+            <div className="space-y-5 w-full">
+                <div className="flex items-center justify-between">
+                    <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                        拼配成分
+                    </label>
+                    <button
+                        type="button"
+                        onClick={handleAddBlendComponent}
+                        className="text-xs px-3 py-1 rounded-full bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-300 dark:hover:bg-neutral-600 transition-colors"
+                    >
+                        添加成分
+                    </button>
+                </div>
+
+                <div className="space-y-4">
+                    {blendComponents.map((component, index) => (
+                        <div
+                            key={index}
+                            className="border-b border-neutral-200 dark:border-neutral-700 pb-4"
+                        >
+                            <div className="flex items-center justify-between mb-3">
+                                <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                                    成分 #{index + 1}
+                                </span>
+                                {blendComponents.length > 1 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => handleRemoveBlendComponent(index)}
+                                        className="text-xs text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
+                                    >
+                                        移除
+                                    </button>
+                                )}
+                            </div>
+
+                            <div className="space-y-1 mb-3">
+                                <label className="block text-xs text-neutral-500 dark:text-neutral-400">
+                                    比例
+                                </label>
+                                <AutocompleteInput
+                                    value={component.percentage === 0 ? '' : component.percentage.toString()}
+                                    onChange={(value) => handleBlendComponentChange(index, 'percentage', value)}
+                                    placeholder="0-100"
+                                    unit="%"
+                                    inputType="tel"
+                                    clearable={false}
+                                    suggestions={[]}
+                                    onBlur={() => {
+                                        // 当失焦时，如果比例为0或NaN，设置为1%
+                                        if (component.percentage === 0 || isNaN(component.percentage)) {
+                                            handleBlendComponentChange(index, 'percentage', 1);
+                                        }
+                                    }}
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-3">
+                                <AutocompleteInput
+                                    label="产地"
+                                    value={component.origin || ''}
+                                    onChange={(value) => handleBlendComponentChange(index, 'origin', value)}
+                                    placeholder="产地"
+                                    suggestions={ORIGINS}
+                                    clearable
+                                />
+
+                                <AutocompleteInput
+                                    label="处理法"
+                                    value={component.process || ''}
+                                    onChange={(value) => handleBlendComponentChange(index, 'process', value)}
+                                    placeholder="处理法"
+                                    suggestions={PROCESSES}
+                                    clearable
+                                />
+
+                                <AutocompleteInput
+                                    label="品种"
+                                    value={component.variety || ''}
+                                    onChange={(value) => handleBlendComponentChange(index, 'variety', value)}
+                                    placeholder="品种"
+                                    suggestions={VARIETIES}
+                                    clearable
+                                />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                <div className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 flex items-center">
+                    <div className="h-1 w-full bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden mr-2">
+                        <div
+                            className={`h-full transition-all duration-300 ease-in-out ${Math.abs(blendComponents.reduce((sum, comp) => sum + (comp.percentage || 0), 0) - 100) < 0.1
+                                ? 'bg-neutral-800 dark:bg-neutral-200'
+                                : 'bg-amber-500'
+                                }`}
+                            style={{ width: `${Math.min(100, blendComponents.reduce((sum, comp) => sum + (comp.percentage || 0), 0))}%` }}
+                        />
+                    </div>
+                    <span>
+                        {Math.round(blendComponents.reduce((sum, comp) => sum + (comp.percentage || 0), 0))}%
+                    </span>
+                </div>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                    各成分比例总和应为100%
+                </p>
             </div>
         );
     };

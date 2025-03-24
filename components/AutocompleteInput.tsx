@@ -18,6 +18,7 @@ interface AutocompleteInputProps {
     onBlur?: () => void
     containerClassName?: string
     inputType?: 'text' | 'number' | 'tel' | 'email' // 新增输入框类型属性
+    disabled?: boolean // 添加禁用属性
 }
 
 const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
@@ -33,7 +34,8 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
     matchStartsWith = false,
     onBlur,
     containerClassName,
-    inputType = 'text' // 默认为text类型
+    inputType = 'text', // 默认为text类型
+    disabled = false // 默认为不禁用
 }) => {
     const [open, setOpen] = useState(false)
     const [inputValue, setInputValue] = useState(value)
@@ -222,8 +224,10 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
                         onBlur={handleBlur}
                         onKeyDown={handleKeyDown}
                         placeholder={placeholder}
+                        disabled={disabled}
                         className={cn(
                             "w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400",
+                            disabled && "opacity-60 cursor-not-allowed",
                             className
                         )}
                     />
