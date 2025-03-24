@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import dynamic from 'next/dynamic';
-import { Method } from '@/lib/config';
+import { Method, equipmentList } from '@/lib/config';
 import StageItem from '@/components/StageItem';
 import { SettingsOptions } from './Settings';
 import { TabType, MainTabType, Content, Step } from '@/lib/hooks/useBrewingState';
@@ -256,11 +256,10 @@ const TabContent: React.FC<TabContentProps> = ({
                                 onClose={handleCloseNoteForm}
                                 onSave={handleSaveNote}
                                 initialData={{
-                                    equipment: currentBrewingMethod.name.split(' ')[0],
+                                    equipment: selectedEquipment ? equipmentList.find(e => e.id === selectedEquipment)?.name || selectedEquipment : '',
                                     method: currentBrewingMethod.name,
                                     params: currentBrewingMethod.params,
                                     totalTime: showComplete ? currentBrewingMethod.params.stages[currentBrewingMethod.params.stages.length - 1].time : 0,
-                                    // 如果有选中的咖啡豆，自动填充咖啡豆信息
                                     coffeeBean: selectedCoffeeBeanData || undefined
                                 }}
                             />

@@ -9,6 +9,7 @@ import type { SettingsOptions } from '@/components/Settings'
 import { KeepAwake } from '@capacitor-community/keep-awake'
 import hapticsUtils from '@/lib/haptics'
 import { Storage } from '@/lib/storage'
+import { equipmentList } from '@/lib/config'
 
 // 添加是否支持KeepAwake的检查
 const isKeepAwakeSupported = () => {
@@ -54,6 +55,7 @@ interface BrewingTimerProps {
     }[]) => void
     settings: SettingsOptions
     onJumpToImport?: () => void
+    selectedEquipment: string | null
 }
 
 // 定义扩展阶段类型
@@ -81,6 +83,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     onExpandedStagesChange,
     settings,
     onJumpToImport,
+    selectedEquipment,
 }) => {
     const [currentTime, setCurrentTime] = useState(0)
     const [isRunning, setIsRunning] = useState(false)
@@ -1087,9 +1090,9 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                             onClose={() => setShowNoteForm(false)}
                             onSave={handleSaveNote}
                             initialData={{
-                                equipment: currentBrewingMethod.name.split(' ')[0],
-                                method: currentBrewingMethod.name,
-                                params: currentBrewingMethod.params,
+                                equipment: selectedEquipment ? equipmentList.find(e => e.id === selectedEquipment)?.name || selectedEquipment : '',
+                                method: currentBrewingMethod?.name || '',
+                                params: currentBrewingMethod?.params || {},
                                 totalTime: currentTime,
                             }}
                             onJumpToImport={onJumpToImport}
