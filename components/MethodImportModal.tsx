@@ -45,31 +45,41 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
         }
 
         try {
-            // 解析JSON数据
-            setError(null);
-            const method = parseMethodFromJson(importData);
+            // 尝试从文本中提取数据
+            import('@/lib/jsonUtils').then(async ({ extractJsonFromText }) => {
+                setError(null);
+                const method = extractJsonFromText(importData);
 
-            if (!method) {
-                setError('解析JSON失败，请检查格式');
-                return;
-            }
+                if (!method) {
+                    setError('无法从输入中提取有效数据');
+                    return;
+                }
 
-            // 检查是否已存在同名方案
-            const existingMethod = existingMethods.find(m => m.name === method.name);
-            if (existingMethod) {
-                setError(`已存在同名方案"${method.name}"，请修改后再导入`);
-                return;
-            }
+                // 验证方法对象是否有必要的字段
+                if (!method.name || !method.params || !method.params.stages || method.params.stages.length === 0) {
+                    setError('冲煮方案格式不完整，缺少必要字段');
+                    return;
+                }
 
-            // 导入方案
-            onImport(method);
-            // 导入成功后清空输入框和错误信息
-            setImportData('');
-            setError(null);
+                // 检查是否已存在同名方案
+                const existingMethod = existingMethods.find(m => m.name === method.name);
+                if (existingMethod) {
+                    setError(`已存在同名方案"${method.name}"，请修改后再导入`);
+                    return;
+                }
 
-        } catch {
-
-            setError('JSON格式错误，请检查导入的数据');
+                // 导入方案
+                onImport(method);
+                // 导入成功后清空输入框和错误信息
+                setImportData('');
+                setError(null);
+            }).catch((err) => {
+                console.error('导入失败:', err);
+                setError('数据格式错误，请检查导入的数据');
+            });
+        } catch (err) {
+            console.error('导入失败:', err);
+            setError('数据格式错误，请检查导入的数据');
         }
     };
 
@@ -155,12 +165,12 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
                                 <div className="space-y-4 mt-2">
                                     <div className="flex flex-col space-y-2">
                                         <p className="text-xs text-neutral-500 dark:text-neutral-500">
-                                            粘贴JSON格式的冲煮方案：
+                                            粘贴冲煮方案（支持分享的文本格式或JSON格式）：
                                         </p>
                                     </div>
                                     <textarea
                                         className="w-full h-40 p-3 border border-neutral-300 dark:border-neutral-700 rounded-md bg-transparent focus:border-neutral-800 dark:focus:border-neutral-400 focus:outline-none text-neutral-800 dark:text-neutral-200"
-                                        placeholder='例如: {"method": "改良分段式一刀流", "params": {"coffee": "15g", ...}}'
+                                        placeholder='支持粘贴分享的文本或JSON格式，例如："【冲煮方案】改良分段式一刀流"或{"method":"改良分段式一刀流",...}'
                                         value={importData}
                                         onChange={(e) => setImportData(e.target.value)}
                                     />

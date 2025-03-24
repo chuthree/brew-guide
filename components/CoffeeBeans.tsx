@@ -218,24 +218,35 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                 shareableBean.blendComponents = bean.blendComponents;
             }
 
-            const jsonString = JSON.stringify(shareableBean, null, 2);
-            copyTextToClipboard(jsonString)
-                .then(() => {
-                    setCopySuccess(prev => ({
-                        ...prev,
-                        [bean.id]: true
-                    }));
-                    setTimeout(() => {
+            // 导入转换工具并生成可读文本
+            import('@/lib/jsonUtils').then(({ beanToReadableText }) => {
+                const readableText = beanToReadableText(shareableBean);
+
+                copyTextToClipboard(readableText)
+                    .then(() => {
                         setCopySuccess(prev => ({
                             ...prev,
-                            [bean.id]: false
+                            [bean.id]: true
                         }));
-                    }, 2000);
-                })
-                .catch(() => {
-                    // 复制失败时提示用户
-                    alert('复制失败，请手动复制');
-                });
+                        setTimeout(() => {
+                            setCopySuccess(prev => ({
+                                ...prev,
+                                [bean.id]: false
+                            }));
+                        }, 2000);
+                    })
+                    .catch(() => {
+                        // 复制失败时提示用户
+                        alert('复制失败，请手动复制');
+                    });
+            }).catch(() => {
+                // 转换失败时回退到JSON格式
+                const jsonString = JSON.stringify(shareableBean, null, 2);
+                copyTextToClipboard(jsonString)
+                    .catch(() => {
+                        alert('复制失败，请手动复制');
+                    });
+            });
         } catch {
             // 忽略异常
         }

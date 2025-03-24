@@ -71,21 +71,49 @@ const StageItem: React.FC<StageItemProps> = ({
         e.stopPropagation()
         if (onEdit && activeTab === '方案' && selectedEquipment && customMethods && customMethods[selectedEquipment]) {
             try {
-                // 导入copyMethodToClipboard函数
-                import('@/lib/customMethods').then(({ copyMethodToClipboard }) => {
+                // 直接导入jsonUtils中的方法转换函数
+                import('@/lib/jsonUtils').then(({ methodToReadableText }) => {
                     const method = customMethods[selectedEquipment][index]
-                    copyMethodToClipboard(method)
-                        .then(() => {
-                            setCopySuccess(true)
-                            setTimeout(() => setCopySuccess(false), 2000)
-                        })
-                        .catch(() => {
+                    const readableText = methodToReadableText(method);
 
+                    // 复制到剪贴板
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(readableText)
+                            .then(() => {
+                                setCopySuccess(true)
+                                setTimeout(() => setCopySuccess(false), 2000)
+                            })
+                            .catch(() => {
+                                alert('复制失败，请手动复制')
+                            });
+                    } else {
+                        // 回退方法：创建临时textarea元素
+                        const textArea = document.createElement("textarea");
+                        textArea.value = readableText;
+                        textArea.style.position = "fixed";
+                        textArea.style.left = "-999999px";
+                        textArea.style.top = "-999999px";
+                        document.body.appendChild(textArea);
+                        textArea.focus();
+                        textArea.select();
+
+                        try {
+                            const successful = document.execCommand("copy");
+                            if (successful) {
+                                setCopySuccess(true)
+                                setTimeout(() => setCopySuccess(false), 2000)
+                            } else {
+                                alert('复制失败，请手动复制')
+                            }
+                        } catch {
                             alert('复制失败，请手动复制')
-                        })
+                        } finally {
+                            document.body.removeChild(textArea);
+                        }
+                    }
                 })
             } catch {
-
+                // 忽略异常
             }
         }
     }, [onEdit, activeTab, index, selectedEquipment, customMethods])

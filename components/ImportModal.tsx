@@ -261,12 +261,12 @@ ${templateJson}
                                             </div>
                                         </div>
                                         <p className="text-xs text-neutral-500 dark:text-neutral-500">
-                                            粘贴JSON格式的咖啡豆数据：
+                                            粘贴咖啡豆数据（支持分享的文本格式或JSON格式）：
                                         </p>
                                     </div>
                                     <textarea
                                         className="w-full h-40 p-3 border border-neutral-300 dark:border-neutral-700 rounded-md bg-transparent focus:border-neutral-800 dark:focus:border-neutral-400 focus:outline-none text-neutral-800 dark:text-neutral-200"
-                                        placeholder='例如: {"name": "埃塞俄比亚耶加雪菲", "capacity": "200g", ...}'
+                                        placeholder='支持粘贴分享的文本或JSON格式，例如："【咖啡豆】埃塞俄比亚耶加雪菲"或{"name":"埃塞俄比亚耶加雪菲",...}'
                                         value={importData}
                                         onChange={(e) => setImportData(e.target.value)}
                                     />

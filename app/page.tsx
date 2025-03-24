@@ -513,15 +513,29 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     // 处理导入咖啡豆
     const handleImportBean = async (jsonData: string) => {
         try {
-            const data = JSON.parse(jsonData);
+            // 尝试从文本中提取数据
+            const extractedData = await import('@/lib/jsonUtils').then(
+                ({ extractJsonFromText }) => extractJsonFromText(jsonData)
+            );
+
+            if (!extractedData) {
+                throw new Error('无法从输入中提取有效数据');
+            }
 
             // 检查数据是单个对象还是数组
-            const beansToImport = Array.isArray(data) ? data : [data];
+            const beansToImport = Array.isArray(extractedData) ? extractedData : [extractedData];
 
+            let importCount = 0;
             for (const bean of beansToImport) {
                 // 验证必要的字段
-                if (!bean.name || !bean.capacity) {
-                    throw new Error('导入数据缺少必要字段');
+                if (!bean.name) {
+                    console.warn('导入数据缺少咖啡豆名称，跳过');
+                    continue;
+                }
+
+                // 确保有容量（默认为200g）
+                if (!bean.capacity) {
+                    bean.capacity = "200";
                 }
 
                 // 确保烘焙度有默认值
@@ -531,6 +545,11 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
                 // 添加到数据库
                 await CoffeeBeanManager.addBean(bean);
+                importCount++;
+            }
+
+            if (importCount === 0) {
+                throw new Error('没有导入任何有效咖啡豆数据');
             }
 
             // 关闭导入表单
@@ -539,10 +558,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             // 更新咖啡豆状态
             handleBeanListChange();
 
-            alert(`成功导入 ${beansToImport.length} 款咖啡豆`);
-        } catch {
-
-            alert('导入失败，请检查数据格式');
+            alert(`成功导入 ${importCount} 款咖啡豆`);
+        } catch (error) {
+            console.error('导入失败:', error);
+            alert('导入失败: ' + (error instanceof Error ? error.message : '请检查数据格式'));
         }
     };
 
