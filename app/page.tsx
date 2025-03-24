@@ -998,6 +998,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                             }}
                             settings={settings}
                             onJumpToImport={jumpToImport}
+                            selectedEquipment={selectedEquipment}
                         />
                     </m.div>
                 )}
