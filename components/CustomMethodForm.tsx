@@ -91,7 +91,8 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     const [localSettings, setLocalSettings] = useState<SettingsOptions>({
         notificationSound: true,
         hapticFeedback: true,
-        grindType: '通用'
+        grindType: '通用',
+        textZoomLevel: 1.0
     });
 
     // 加载设置

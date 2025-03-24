@@ -25,6 +25,7 @@
 		"@capacitor/preferences": "^7.0.0",
 		"@capacitor/splash-screen": "^7.0.0",
 		"@capacitor/status-bar": "^7.0.0",
+		"@capacitor/text-zoom": "^7.0.0",
 		"@heroicons/react": "^2.2.0",
 		"@radix-ui/react-dialog": "^1.1.6",
 		"@radix-ui/react-popover": "^1.1.6",

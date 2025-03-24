@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react'
 import { Storage } from '@/lib/storage'
 import { SettingsOptions, defaultSettings } from '@/components/Settings'
 import hapticsUtils from '@/lib/haptics'
+import textZoomUtils from '@/lib/textZoom'
 
 // 引导步骤类型
 export type OnboardingStep = 'welcome' | 'settings' | 'complete'
@@ -30,12 +31,17 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
     const direction = useRef(0)
     // 设置方向
     const previous = useRef(currentStep)
+    // 检查TextZoom功能是否可用
+    const [isTextZoomEnabled, setIsTextZoomEnabled] = useState(false)
 
     // 初始化音频环境
     useEffect(() => {
         if (typeof window !== 'undefined' && 'AudioContext' in window) {
             audioContext.current = new AudioContext()
         }
+
+        // 检查文本缩放功能是否可用
+        setIsTextZoomEnabled(textZoomUtils.isAvailable());
 
         return () => {
             audioContext.current?.close()
@@ -120,6 +126,12 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
             await Storage.set('brewGuideSettings', JSON.stringify(settings))
             // 标记引导已完成
             await Storage.set('onboardingCompleted', 'true')
+
+            // 应用文本缩放级别
+            if (settings.textZoomLevel) {
+                await textZoomUtils.set(settings.textZoomLevel);
+            }
+
             // 提供成功的触感反馈（如果启用）
             if (settings.hapticFeedback) {
                 await hapticsUtils.success()
@@ -338,6 +350,45 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
                                     />
                                 </div>
                             </div>
+
+                            {/* 文本缩放选项 - 仅在原生应用中显示 */}
+                            {isTextZoomEnabled && (
+                                <div className="flex items-center justify-between bg-neutral-50 dark:bg-neutral-900 p-4 rounded-xl">
+                                    <div className="flex flex-col">
+                                        <label className="text-sm font-medium text-neutral-900 dark:text-white">
+                                            文本大小
+                                        </label>
+                                        <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                                            缩放级别: {settings.textZoomLevel.toFixed(1)}×
+                                        </p>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <button
+                                            onClick={() => handleSettingChange('textZoomLevel', Math.max(0.8, settings.textZoomLevel - 0.1))}
+                                            className="w-7 h-7 flex items-center justify-center rounded-full bg-neutral-200 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200"
+                                            disabled={settings.textZoomLevel <= 0.8}
+                                        >
+                                            <span className="text-base font-semibold">−</span>
+                                        </button>
+                                        <button
+                                            onClick={() => handleSettingChange('textZoomLevel', 1.0)}
+                                            className={`px-2 py-1 text-xs rounded-md transition-colors ${Math.abs(settings.textZoomLevel - 1.0) < 0.05
+                                                    ? 'bg-neutral-900 dark:bg-white text-white dark:text-black'
+                                                    : 'bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300'
+                                                }`}
+                                        >
+                                            标准
+                                        </button>
+                                        <button
+                                            onClick={() => handleSettingChange('textZoomLevel', Math.min(1.4, settings.textZoomLevel + 0.1))}
+                                            className="w-7 h-7 flex items-center justify-center rounded-full bg-neutral-200 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200"
+                                            disabled={settings.textZoomLevel >= 1.4}
+                                        >
+                                            <span className="text-base font-semibold">+</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         <p className="text-xs text-neutral-500 dark:text-neutral-400 text-center italic">

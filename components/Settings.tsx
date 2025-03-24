@@ -1,16 +1,18 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { APP_VERSION } from '@/lib/config'
 import { Storage } from '@/lib/storage'
 import DataManager from './DataManager'
 import hapticsUtils from '@/lib/haptics'
+import textZoomUtils from '@/lib/textZoom'
 
 // 定义设置选项接口
 export interface SettingsOptions {
     notificationSound: boolean
     hapticFeedback: boolean
     grindType: "通用" | "幻刺"
+    textZoomLevel: number
 }
 
 // 默认设置
@@ -18,6 +20,7 @@ export const defaultSettings: SettingsOptions = {
     notificationSound: true,
     hapticFeedback: true,
     grindType: "通用",
+    textZoomLevel: 1.0,
 }
 
 interface SettingsProps {
@@ -38,6 +41,29 @@ const Settings: React.FC<SettingsProps> = ({
     // 添加数据管理状态
     const [isDataManagerOpen, setIsDataManagerOpen] = useState(false)
 
+    // 添加文本缩放状态追踪
+    const [zoomLevel, setZoomLevel] = useState(settings.textZoomLevel || 1.0)
+
+    // 添加检查TextZoom是否可用的状态
+    const [isTextZoomEnabled, setIsTextZoomEnabled] = useState(false)
+
+    // 初始化时检查TextZoom功能是否可用并加载当前缩放级别
+    useEffect(() => {
+        // 检查TextZoom功能是否可用
+        setIsTextZoomEnabled(textZoomUtils.isAvailable());
+
+        const loadTextZoomLevel = async () => {
+            if (textZoomUtils.isAvailable()) {
+                const currentZoom = await textZoomUtils.get();
+                setZoomLevel(currentZoom);
+            }
+        };
+
+        if (isOpen) {
+            loadTextZoomLevel();
+        }
+    }, [isOpen]);
+
     // 处理设置变更
     const handleChange = async <K extends keyof SettingsOptions>(
         key: K,
@@ -47,6 +73,18 @@ const Settings: React.FC<SettingsProps> = ({
         const newSettings = { ...settings, [key]: value }
         setSettings(newSettings)
         await Storage.set('brewGuideSettings', JSON.stringify(newSettings))
+    }
+
+    // 处理文本缩放变更
+    const handleTextZoomChange = async (newValue: number) => {
+        setZoomLevel(newValue);
+        await textZoomUtils.set(newValue);
+        await handleChange('textZoomLevel', newValue);
+
+        // 触发震动反馈
+        if (settings.hapticFeedback) {
+            hapticsUtils.light();
+        }
     }
 
     // 如果不是打开状态，不渲染任何内容
@@ -134,6 +172,59 @@ const Settings: React.FC<SettingsProps> = ({
                             </div>
                         </div>
                     </div>
+
+                    {/* 文本缩放设置 - 只在原生应用中显示 */}
+                    {isTextZoomEnabled && (
+                        <div className="space-y-3">
+                            <h3 className="text-xs font-medium uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
+                                显示
+                            </h3>
+                            <div className="space-y-2">
+                                <div className="text-sm text-neutral-600 dark:text-neutral-400">
+                                    文本大小
+                                </div>
+                                <div className="flex flex-col space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-xs text-neutral-500">缩放级别: {zoomLevel.toFixed(1)}×</span>
+                                        <div className="flex items-center space-x-2">
+                                            <button
+                                                onClick={() => handleTextZoomChange(Math.max(0.8, zoomLevel - 0.1))}
+                                                className="w-8 h-8 flex items-center justify-center rounded-full bg-neutral-100 text-neutral-800 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+                                                disabled={zoomLevel <= 0.8}
+                                            >
+                                                <span className="text-lg font-semibold">−</span>
+                                            </button>
+                                            <button
+                                                onClick={() => handleTextZoomChange(1.0)}
+                                                className={`px-3 py-1 text-xs rounded-md transition-colors ${Math.abs(zoomLevel - 1.0) < 0.05
+                                                    ? 'bg-neutral-800 text-white dark:bg-neutral-200 dark:text-neutral-800'
+                                                    : 'bg-neutral-100 text-neutral-500 hover:bg-neutral-200 dark:bg-neutral-700 dark:text-neutral-400 dark:hover:bg-neutral-600'
+                                                    }`}
+                                            >
+                                                标准
+                                            </button>
+                                            <button
+                                                onClick={() => handleTextZoomChange(Math.min(1.4, zoomLevel + 0.1))}
+                                                className="w-8 h-8 flex items-center justify-center rounded-full bg-neutral-100 text-neutral-800 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+                                                disabled={zoomLevel >= 1.4}
+                                            >
+                                                <span className="text-lg font-semibold">+</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <input
+                                        type="range"
+                                        min="0.8"
+                                        max="1.4"
+                                        step="0.1"
+                                        value={zoomLevel}
+                                        onChange={(e) => handleTextZoomChange(parseFloat(e.target.value))}
+                                        className="w-full h-1.5 bg-neutral-200 rounded-lg appearance-none cursor-pointer dark:bg-neutral-700"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* 研磨度设置 */}
                     <div className="space-y-3">

@@ -23,6 +23,7 @@ import CoffeeBeanFormModal from '@/components/CoffeeBeanFormModal'
 import ImportModal from '@/components/ImportModal'
 import { CoffeeBeanManager } from '@/lib/coffeeBeanManager'
 import AIRecipeModal from '@/components/AIRecipeModal'
+import textZoomUtils from '@/lib/textZoom'
 
 // 添加内容转换状态类型
 interface TransitionState {
@@ -215,7 +216,13 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 try {
                     const savedSettings = await Storage.get('brewGuideSettings');
                     if (savedSettings && isMounted) {
-                        setSettings(JSON.parse(savedSettings) as SettingsOptions);
+                        const parsedSettings = JSON.parse(savedSettings) as SettingsOptions;
+                        setSettings(parsedSettings);
+
+                        // 应用文本缩放级别
+                        if (parsedSettings.textZoomLevel) {
+                            await textZoomUtils.set(parsedSettings.textZoomLevel);
+                        }
                     }
                 } catch {
                     // 静默处理错误
@@ -472,6 +479,11 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         setSettings(newSettings);
         try {
             await Storage.set('brewGuideSettings', JSON.stringify(newSettings))
+
+            // 如果文本缩放设置发生变化，应用新的缩放级别
+            if (newSettings.textZoomLevel) {
+                await textZoomUtils.set(newSettings.textZoomLevel);
+            }
         } catch {
             // 静默处理错误
         }
