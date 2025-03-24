@@ -46,8 +46,15 @@ export const CoffeeBeanManager = {
 	): Promise<CoffeeBean> {
 		try {
 			const beans = await this.getAllBeans();
-			const newBean: CoffeeBean = {
+
+			// 确保烘焙度有默认值
+			const beanWithDefaults = {
 				...bean,
+				roastLevel: bean.roastLevel || "浅度烘焙",
+			};
+
+			const newBean: CoffeeBean = {
+				...beanWithDefaults,
 				id: nanoid(),
 				timestamp: Date.now(),
 			};

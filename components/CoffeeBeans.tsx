@@ -804,4 +804,4 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
     )
 }
 
-export default CoffeeBeans 
+export default CoffeeBeans

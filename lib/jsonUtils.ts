@@ -298,7 +298,7 @@ export function generateBeanTemplateJson() {
   "price": "",
   "capacity": "",
   "remaining": "",
-  "roastLevel": "",
+  "roastLevel": "浅度烘焙",
   "roastDate": "",
   "flavor": [],
   "origin": "",

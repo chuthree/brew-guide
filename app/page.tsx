@@ -508,6 +508,11 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                     throw new Error('导入数据缺少必要字段');
                 }
 
+                // 确保烘焙度有默认值
+                if (!bean.roastLevel) {
+                    bean.roastLevel = '浅度烘焙';
+                }
+
                 // 添加到数据库
                 await CoffeeBeanManager.addBean(bean);
             }
