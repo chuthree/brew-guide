@@ -36,7 +36,7 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
     // 根据表单数据保存自定义方法
     const handleSaveMethod = async (method: Method) => {
         try {
-            console.log("收到来自表单的方法对象:", method);
+
 
             // 检查必要字段
             if (!method.name) {
@@ -60,7 +60,7 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
                 id: method.id || `method-${Date.now()}`
             };
 
-            console.log("[CustomMethodFormModal] 准备保存方法，ID:", methodWithId.id);
+
 
             // 直接调用父组件的保存方法并传递完整的方法对象
             onSaveCustomMethod(methodWithId);
@@ -73,8 +73,8 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
             onCloseCustomForm();
 
             return methodWithId.id;
-        } catch (error) {
-            console.error("保存方法时出错:", error);
+        } catch {
+
             setValidationError('保存失败，请重试');
             return null;
         }

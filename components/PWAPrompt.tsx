@@ -120,12 +120,12 @@ export default function PWAPrompt() {
             await deferredPrompt.prompt()
             const choiceResult = await deferredPrompt.userChoice
             if (choiceResult.outcome === 'accepted') {
-                console.log('用户接受了安装提示')
+
             }
             setDeferredPrompt(null)
             setShowInstallPrompt(false)
-        } catch (err) {
-            console.error('安装 PWA 时出错:', err)
+        } catch {
+
         }
     }
 

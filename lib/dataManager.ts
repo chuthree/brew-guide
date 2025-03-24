@@ -73,8 +73,7 @@ export const DataManager = {
 			}
 
 			return JSON.stringify(exportData, null, 2);
-		} catch (error) {
-			console.error("导出数据失败:", error);
+		} catch {
 			throw new Error("导出数据失败");
 		}
 	},
@@ -118,11 +117,10 @@ export const DataManager = {
 						: "未知"
 				}`,
 			};
-		} catch (error) {
-			console.error("导入数据失败:", error);
+		} catch (_error) {
 			return {
 				success: false,
-				message: `导入数据失败: ${(error as Error).message}`,
+				message: `导入数据失败: ${(_error as Error).message}`,
 			};
 		}
 	},
@@ -142,11 +140,10 @@ export const DataManager = {
 				success: true,
 				message: "所有数据已重置",
 			};
-		} catch (error) {
-			console.error("重置数据失败:", error);
+		} catch (_error) {
 			return {
 				success: false,
-				message: `重置数据失败: ${(error as Error).message}`,
+				message: `重置数据失败: ${(_error as Error).message}`,
 			};
 		}
 	},
@@ -315,11 +312,10 @@ export const DataManager = {
 						: "未知"
 				}`,
 			};
-		} catch (error) {
-			console.error("合并数据失败:", error);
+		} catch (_error) {
 			return {
 				success: false,
-				message: `合并数据失败: ${(error as Error).message}`,
+				message: `合并数据失败: ${(_error as Error).message}`,
 			};
 		}
 	},

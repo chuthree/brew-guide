@@ -79,13 +79,13 @@ const StageItem: React.FC<StageItemProps> = ({
                             setCopySuccess(true)
                             setTimeout(() => setCopySuccess(false), 2000)
                         })
-                        .catch(err => {
-                            console.error('复制失败:', err)
+                        .catch(() => {
+
                             alert('复制失败，请手动复制')
                         })
                 })
-            } catch (err) {
-                console.error('复制失败:', err)
+            } catch {
+
             }
         }
     }, [onEdit, activeTab, index, selectedEquipment, customMethods])

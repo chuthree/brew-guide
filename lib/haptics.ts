@@ -61,8 +61,7 @@ export const impactFeedback = async (
 			default:
 				await Haptics.impact({ style: ImpactStyle.Light });
 		}
-	} catch (error) {
-		console.error("触感反馈失败:", error);
+	} catch {
 		// 静默失败，不影响用户体验
 	}
 };
@@ -75,8 +74,7 @@ export const impactFeedback = async (
 export const vibrate = async (duration: number = 100): Promise<void> => {
 	try {
 		await Haptics.vibrate({ duration });
-	} catch (error) {
-		console.error("震动反馈失败:", error);
+	} catch {
 		// 静默失败，不影响用户体验
 	}
 };
@@ -101,8 +99,7 @@ export const vibrateMultiple = async (
 				await new Promise((resolve) => setTimeout(resolve, interval));
 			}
 		}
-	} catch (error) {
-		console.error("多次震动反馈失败:", error);
+	} catch {
 		// 静默失败，不影响用户体验
 	}
 };
@@ -113,8 +110,8 @@ export const vibrateMultiple = async (
 export const selectionStart = async (): Promise<void> => {
 	try {
 		await Haptics.selectionStart();
-	} catch (error) {
-		console.error("选择开始触感反馈失败:", error);
+	} catch {
+		// 错误处理
 	}
 };
 
@@ -124,8 +121,8 @@ export const selectionStart = async (): Promise<void> => {
 export const selectionChanged = async (): Promise<void> => {
 	try {
 		await Haptics.selectionChanged();
-	} catch (error) {
-		console.error("选择变化触感反馈失败:", error);
+	} catch {
+		// 错误处理
 	}
 };
 
@@ -135,8 +132,8 @@ export const selectionChanged = async (): Promise<void> => {
 export const selectionEnd = async (): Promise<void> => {
 	try {
 		await Haptics.selectionEnd();
-	} catch (error) {
-		console.error("选择结束触感反馈失败:", error);
+	} catch {
+		// 错误处理
 	}
 };
 

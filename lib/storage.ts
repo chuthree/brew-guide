@@ -20,8 +20,7 @@ export const Storage = {
 				// 在 Web 平台上使用 localStorage
 				return localStorage.getItem(key);
 			}
-		} catch (error) {
-			console.error(`获取存储值出错 (${key}):`, error);
+		} catch (_error) {
 			return null;
 		}
 	},
@@ -40,8 +39,8 @@ export const Storage = {
 				// 在 Web 平台上使用 localStorage
 				localStorage.setItem(key, value);
 			}
-		} catch (error) {
-			console.error(`设置存储值出错 (${key}):`, error);
+		} catch (_error) {
+			// 错误处理
 		}
 	},
 
@@ -58,8 +57,8 @@ export const Storage = {
 				// 在 Web 平台上使用 localStorage
 				localStorage.removeItem(key);
 			}
-		} catch (error) {
-			console.error(`删除存储值出错 (${key}):`, error);
+		} catch (_error) {
+			// 错误处理
 		}
 	},
 
@@ -75,8 +74,8 @@ export const Storage = {
 				// 在 Web 平台上使用 localStorage
 				localStorage.clear();
 			}
-		} catch (error) {
-			console.error("清除存储出错:", error);
+		} catch (_error) {
+			// 错误处理
 		}
 	},
 
@@ -94,8 +93,7 @@ export const Storage = {
 				// 在 Web 平台上使用 localStorage
 				return Object.keys(localStorage);
 			}
-		} catch (error) {
-			console.error("获取所有键出错:", error);
+		} catch (_error) {
 			return [];
 		}
 	},
@@ -108,8 +106,7 @@ export const Storage = {
 	getSync(key: string): string | null {
 		try {
 			return localStorage.getItem(key);
-		} catch (error) {
-			console.error(`同步获取存储值出错 (${key}):`, error);
+		} catch (_error) {
 			return null;
 		}
 	},
@@ -122,8 +119,8 @@ export const Storage = {
 	setSync(key: string, value: string): void {
 		try {
 			localStorage.setItem(key, value);
-		} catch (error) {
-			console.error(`同步设置存储值出错 (${key}):`, error);
+		} catch (_error) {
+			// 错误处理
 		}
 	},
 };

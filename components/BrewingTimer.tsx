@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import BrewingNoteForm from '@/components/BrewingNoteForm'
-import type { BrewingNoteData } from '@/app/types'
+import type { BrewingNoteData, CoffeeBean } from '@/app/types'
 import type { Method, Stage } from '@/lib/config'
 import type { SettingsOptions } from '@/components/Settings'
 import { KeepAwake } from '@capacitor-community/keep-awake'
@@ -56,6 +56,7 @@ interface BrewingTimerProps {
     settings: SettingsOptions
     onJumpToImport?: () => void
     selectedEquipment: string | null
+    isCoffeeBrewed?: boolean
 }
 
 // 定义扩展阶段类型
@@ -84,6 +85,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     settings,
     onJumpToImport,
     selectedEquipment,
+    isCoffeeBrewed,
 }) => {
     const [currentTime, setCurrentTime] = useState(0)
     const [isRunning, setIsRunning] = useState(false)
@@ -124,6 +126,11 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     const audioLoaded = useRef<boolean>(false)
     const methodStagesRef = useRef(currentBrewingMethod?.params.stages || [])
     const [showNoteForm, setShowNoteForm] = useState(false)
+
+    // 添加一个状态来保存笔记表单的初始内容
+    const [noteFormInitialData, setNoteFormInitialData] = useState<Partial<BrewingNoteData> & {
+        coffeeBean?: CoffeeBean | null;
+    } | null>(null);
 
     // 检查设备是否支持触感反馈
     useEffect(() => {
@@ -448,7 +455,11 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
 
     // 完成冲煮，显示笔记表单
     const handleComplete = useCallback(() => {
-        if (isCompleted) return;
+        // 防止重复触发
+        if (isCompleted) {
+            
+            return;
+        }
 
         triggerHaptic('success');
         clearTimerAndStates();
@@ -458,6 +469,26 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         onComplete?.(true, currentTime);
         onTimerComplete?.();
         playSound('correct');
+
+        // 发送一个brewing:complete事件，通知其他组件冲煮已完成
+        const completeEvent = new CustomEvent('brewing:complete');
+        window.dispatchEvent(completeEvent);
+        
+
+        // 保存笔记表单的初始数据
+        const initialData: Partial<BrewingNoteData> = {
+            equipment: selectedEquipment ? equipmentList.find(e => e.id === selectedEquipment)?.name || selectedEquipment : '',
+            method: currentBrewingMethod?.name || '',
+            params: {
+                coffee: currentBrewingMethod?.params?.coffee || '',
+                water: currentBrewingMethod?.params?.water || '',
+                ratio: currentBrewingMethod?.params?.ratio || '',
+                grindSize: currentBrewingMethod?.params?.grindSize || '',
+                temp: currentBrewingMethod?.params?.temp || '',
+            },
+            totalTime: currentTime,
+        };
+        setNoteFormInitialData(initialData);
 
         // 添加延迟，在计时器结束后自动显示笔记表单
         setTimeout(() => {
@@ -479,7 +510,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
             }
         };
         allowSleep();
-    }, [clearTimerAndStates, onComplete, onTimerComplete, playSound, currentTime, isCompleted, triggerHaptic]);
+    }, [clearTimerAndStates, onComplete, onTimerComplete, playSound, currentTime, isCompleted, triggerHaptic, currentBrewingMethod, selectedEquipment]);
 
     // 修改开始计时器函数以使用扩展阶段
     const startMainTimer = useCallback(() => {
@@ -544,7 +575,12 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                         clearInterval(id);
                         setTimerId(null);
                         setIsRunning(false);
-                        handleComplete();
+
+                        // 不要在这里直接调用handleComplete，而是在下一个事件循环中调用
+                        setTimeout(() => {
+                            handleComplete();
+                        }, 0);
+
                         return expandedStages[lastStageIndex].endTime;
                     }
 
@@ -597,6 +633,8 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
 
             // 设置笔记已保存标记
             localStorage.setItem('brewingNoteInProgress', 'false');
+            // 清空表单初始数据，表示已完全保存
+            setNoteFormInitialData(null);
 
             // 关闭笔记表单
             setShowNoteForm(false);
@@ -606,23 +644,38 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     }, []);
 
     useEffect(() => {
-        if (currentTime > 0 && currentTime >= methodStagesRef.current[methodStagesRef.current.length - 1]?.time) {
-            handleComplete()
+        if (currentTime > 0 && expandedStagesRef.current.length > 0 &&
+            currentTime >= expandedStagesRef.current[expandedStagesRef.current.length - 1]?.endTime && !isCompleted) {
+            // 使用setTimeout将handleComplete的调用推迟到下一个事件循环
+            
+            setTimeout(() => {
+                handleComplete();
+            }, 0);
         }
-    }, [currentTime, handleComplete])
+    }, [currentTime, handleComplete, isCompleted])
 
-    const startTimer = useCallback(() => {
-        if (!isRunning && currentBrewingMethod) {
-            triggerHaptic('medium');
-            setIsRunning(true)
-            if (!hasStartedOnce || currentTime === 0) {
-                setCountdownTime(3)
-                setHasStartedOnce(true)
-            } else {
-                startMainTimer()
-            }
-        }
-    }, [isRunning, currentBrewingMethod, hasStartedOnce, startMainTimer, currentTime, triggerHaptic])
+    const resetTimer = useCallback(() => {
+        triggerHaptic('warning');
+        clearTimerAndStates();
+        setIsRunning(false);
+        setCurrentTime(0);
+        setShowComplete(false);
+        setCurrentWaterAmount(0);
+        setCountdownTime(null);
+        setHasStartedOnce(false);
+        setIsCompleted(false);
+
+        // 清除笔记进度标记和保存的表单数据
+        localStorage.setItem('brewingNoteInProgress', 'false');
+        setNoteFormInitialData(null);
+
+        // 关闭笔记表单(如果打开的话)
+        setShowNoteForm(false);
+
+        // 触发一个事件通知其他组件重置
+        const event = new CustomEvent('brewing:reset');
+        window.dispatchEvent(event);
+    }, [clearTimerAndStates, triggerHaptic]);
 
     const pauseTimer = useCallback(() => {
         triggerHaptic('light');
@@ -630,30 +683,45 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         setIsRunning(false)
     }, [clearTimerAndStates, triggerHaptic])
 
-    const resetTimer = useCallback(() => {
-        triggerHaptic('warning');
-        clearTimerAndStates()
-        setIsRunning(false)
-        setCurrentTime(0)
-        setShowComplete(false)
-        setCurrentWaterAmount(0)
-        setCountdownTime(null)
-        setHasStartedOnce(false)
-        setIsCompleted(false)
+    const startTimer = useCallback(() => {
+        // 检查是否有问题的状态
+        
 
-        const allowSleep = async () => {
-            if (!isKeepAwakeSupported()) {
+        if (!isRunning && currentBrewingMethod) {
+            // 如果冲煮已完成，先重置所有状态
+            // 同时检查组件内部状态和外部传入的isCoffeeBrewed状态
+            if (showComplete || isCompleted || isCoffeeBrewed) {
+                
+
+                // 确保触发resetTimer函数，这会同时触发brewing:reset事件
+                resetTimer();
+
+                // 确保通知所有组件冲煮已经重置
+                window.dispatchEvent(new CustomEvent('brewing:reset'));
+                
+
+                // 延迟启动计时器，确保状态已完全重置
+                setTimeout(() => {
+                    triggerHaptic('medium');
+                    setIsRunning(true);
+                    setCountdownTime(3);
+                    setHasStartedOnce(true);
+                }, 100);
+
                 return;
             }
 
-            try {
-                await KeepAwake.allowSleep();
-            } catch {
-                // 静默处理错误
+            // 常规启动逻辑
+            triggerHaptic('medium');
+            setIsRunning(true);
+            if (!hasStartedOnce || currentTime === 0) {
+                setCountdownTime(3);
+                setHasStartedOnce(true);
+            } else {
+                startMainTimer();
             }
-        };
-        allowSleep();
-    }, [clearTimerAndStates, triggerHaptic])
+        }
+    }, [isRunning, currentBrewingMethod, hasStartedOnce, startMainTimer, currentTime, triggerHaptic, showComplete, isCompleted, isCoffeeBrewed, resetTimer]);
 
     useEffect(() => {
         if (isRunning) {
@@ -709,23 +777,33 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         lastStageRef.current = currentStage;
     }, [currentTime, getCurrentStage, isRunning, triggerHaptic]);
 
-    // 添加监听自定义事件，用于外部控制关闭笔记表单
+    // 处理外部显示和关闭笔记表单的事件
     useEffect(() => {
-        const handleForceCloseNoteForm = (e: CustomEvent<{ force?: boolean }>) => {
-            if (e.detail?.force) {
-                // 只关闭笔记表单，不改变任何状态
-                setShowNoteForm(false);
-                // 不重置完成状态
-                // 不清空参数
-                // 不做任何其他操作
-            }
+        const handleShowNoteForm = () => {
+            
+            setShowNoteForm(true);
         };
 
-        // 添加自定义事件监听器
-        window.addEventListener('closeNoteForm', handleForceCloseNoteForm as EventListener);
+        const handleCloseNoteForm = (e: CustomEvent<{ force?: boolean }>) => {
+            
+            // 强制关闭时无需询问
+            if (e.detail?.force) {
+                setShowNoteForm(false);
+                return;
+            }
+
+            // 常规关闭可添加确认逻辑
+            setShowNoteForm(false);
+        };
+
+        // 添加事件监听
+        window.addEventListener('showBrewingNoteForm', handleShowNoteForm);
+        window.addEventListener('closeBrewingNoteForm', handleCloseNoteForm as EventListener);
 
         return () => {
-            window.removeEventListener('closeNoteForm', handleForceCloseNoteForm as EventListener);
+            // 移除事件监听
+            window.removeEventListener('showBrewingNoteForm', handleShowNoteForm);
+            window.removeEventListener('closeBrewingNoteForm', handleCloseNoteForm as EventListener);
         };
     }, []);
 
@@ -742,11 +820,11 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
             stages?: Stage[];
         }>) => {
             // 记录接收到事件
-            console.log("[BrewingTimer] 接收到方案选择事件:", e.detail);
+            
 
             // 如果计时器正在运行，不进行更新
             if (isRunning) {
-                console.log("[BrewingTimer] 计时器正在运行，忽略方案更新");
+                
                 return;
             }
 
@@ -757,7 +835,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
             if (e.detail.stages) {
                 methodStagesRef.current = e.detail.stages;
                 expandedStagesRef.current = createExpandedStages();
-                console.log("[BrewingTimer] 已更新扩展阶段:", expandedStagesRef.current);
+                
             }
         };
 
@@ -780,6 +858,44 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
             triggerHaptic('vibrateMultiple');
         }
     }, [countdownTime, isRunning, triggerHaptic]);
+
+    // 在组件挂载后，同步外部冲煮状态到内部状态
+    useEffect(() => {
+        if (isCoffeeBrewed !== undefined) {
+            setShowComplete(isCoffeeBrewed);
+            setIsCompleted(isCoffeeBrewed);
+            
+        }
+    }, [isCoffeeBrewed]);
+
+    // 监听当前阶段变化并发送事件
+    useEffect(() => {
+        if (currentExpandedStageIndex >= 0 && expandedStagesRef.current.length > 0) {
+            const currentStage = expandedStagesRef.current[currentExpandedStageIndex];
+            const stageProgress = (currentTime - currentStage.startTime) / (currentStage.endTime - currentStage.startTime);
+            const isWaiting = currentStage.type === 'wait';
+
+            // 发送阶段变化事件
+            const stageEvent = new CustomEvent('brewing:stageChange', {
+                detail: {
+                    currentStage: currentExpandedStageIndex,
+                    stage: currentExpandedStageIndex, // 同时包含stage和currentStage，确保兼容性
+                    progress: stageProgress,
+                    isWaiting: isWaiting
+                }
+            });
+            window.dispatchEvent(stageEvent);
+
+            // 调用回调
+            onStageChange?.({
+                currentStage: currentExpandedStageIndex,
+                progress: stageProgress,
+                isWaiting: isWaiting
+            });
+
+            
+        }
+    }, [currentExpandedStageIndex, currentTime, onStageChange]);
 
     if (!currentBrewingMethod) return null
 
@@ -1051,7 +1167,6 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                         <button
                             onClick={isRunning ? pauseTimer : startTimer}
                             className="w-14 h-14 flex items-center justify-center rounded-full bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400"
-                            disabled={showComplete}
                         >
                             {isRunning ?
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
@@ -1087,12 +1202,22 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                         <BrewingNoteForm
                             id="brewingNoteForm"
                             isOpen={showNoteForm}
-                            onClose={() => setShowNoteForm(false)}
+                            onClose={() => {
+                                setShowNoteForm(false);
+                                // 注意：这里不清除brewingNoteInProgress，保留未完成状态
+                                // 允许用户稍后返回继续填写
+                            }}
                             onSave={handleSaveNote}
-                            initialData={{
+                            initialData={noteFormInitialData || {
                                 equipment: selectedEquipment ? equipmentList.find(e => e.id === selectedEquipment)?.name || selectedEquipment : '',
                                 method: currentBrewingMethod?.name || '',
-                                params: currentBrewingMethod?.params || {},
+                                params: {
+                                    coffee: currentBrewingMethod?.params?.coffee || '',
+                                    water: currentBrewingMethod?.params?.water || '',
+                                    ratio: currentBrewingMethod?.params?.ratio || '',
+                                    grindSize: currentBrewingMethod?.params?.grindSize || '',
+                                    temp: currentBrewingMethod?.params?.temp || '',
+                                },
                                 totalTime: currentTime,
                             }}
                             onJumpToImport={onJumpToImport}

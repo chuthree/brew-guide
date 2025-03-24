@@ -24,8 +24,7 @@ export const getTextZoom = async (): Promise<number> => {
 			return value;
 		}
 		return 1.0; // 默认值
-	} catch (error) {
-		console.error("获取文本缩放级别失败:", error);
+	} catch (_error) {
 		return 1.0; // 出错时返回默认值
 	}
 };
@@ -41,8 +40,8 @@ export const setTextZoom = async (value: number): Promise<void> => {
 			const safeValue = Math.min(Math.max(value, 0.8), 1.4);
 			await TextZoom.set({ value: safeValue });
 		}
-	} catch (error) {
-		console.error("设置文本缩放级别失败:", error);
+	} catch (_error) {
+		// 错误处理
 	}
 };
 

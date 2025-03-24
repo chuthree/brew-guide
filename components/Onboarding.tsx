@@ -87,8 +87,8 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
             // 播放并在0.3秒后停止
             oscillator.start()
             oscillator.stop(audioContext.current.currentTime + 0.3)
-        } catch (error) {
-            console.error('播放测试音效失败:', error)
+        } catch {
+
         }
     }
 
@@ -96,8 +96,8 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
     const testHapticFeedback = async () => {
         try {
             await hapticsUtils.medium()
-        } catch (error) {
-            console.error('触感测试失败:', error)
+        } catch {
+
         }
     }
 
@@ -152,8 +152,8 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
             // 如果没有音效，直接完成
             onSettingsChange(settings)
             onComplete()
-        } catch (error) {
-            console.error('保存设置失败:', error)
+        } catch {
+
         }
     }
 
@@ -373,8 +373,8 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
                                         <button
                                             onClick={() => handleSettingChange('textZoomLevel', 1.0)}
                                             className={`px-2 py-1 text-xs rounded-md transition-colors ${Math.abs(settings.textZoomLevel - 1.0) < 0.05
-                                                    ? 'bg-neutral-900 dark:bg-white text-white dark:text-black'
-                                                    : 'bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300'
+                                                ? 'bg-neutral-900 dark:bg-white text-white dark:text-black'
+                                                : 'bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300'
                                                 }`}
                                         >
                                             标准

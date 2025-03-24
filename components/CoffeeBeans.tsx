@@ -13,6 +13,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from './ui/select'
+import { Storage } from '@/lib/storage'
 
 // 排序类型定义
 const SORT_OPTIONS = {
@@ -70,10 +71,12 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
     useEffect(() => {
         const loadBeans = async () => {
             try {
-                const loadedBeans = await CoffeeBeanManager.getAllBeans()
-                setBeans(sortBeans(loadedBeans, sortOption))
-            } catch (error) {
-                console.error('加载咖啡豆数据失败:', error)
+                const savedBeans = await Storage.get('coffeeBeans')
+                const parsedBeans = savedBeans ? JSON.parse(savedBeans) : []
+                setBeans(sortBeans(parsedBeans, sortOption))
+            } catch {
+                // 获取失败设置为空数组
+                setBeans([])
             }
         }
 
@@ -119,70 +122,37 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                     window.dispatchEvent(event);
                 }
             }
-        } catch (error) {
-            console.error('保存咖啡豆失败:', error)
+        } catch {
+            // 保存失败时提示用户
             alert('保存失败，请重试')
         }
     }
 
     // 处理咖啡豆删除
     const handleDelete = async (bean: CoffeeBean) => {
-        if (window.confirm(`确定要删除咖啡豆 "${bean.name}" 吗？`)) {
+        if (window.confirm(`确认要删除咖啡豆"${bean.name}"吗？`)) {
             try {
-                await CoffeeBeanManager.deleteBean(bean.id)
-                console.log('删除咖啡豆成功')
-
-                // 重新加载咖啡豆数据
-                const updatedBeans = await CoffeeBeanManager.getAllBeans()
+                const updatedBeans = beans.filter(b => b.id !== bean.id)
+                await Storage.set('coffeeBeans', JSON.stringify(updatedBeans))
                 setBeans(sortBeans(updatedBeans, sortOption))
-
-                // 检查是否删除的是最后一个咖啡豆
-                const isLastBeanDeleted = updatedBeans.length === 0;
-
-                // 先立即更新本地界面
-                if (isLastBeanDeleted) {
-                    console.log('已删除最后一个咖啡豆，正在更新界面状态');
-                }
-
-                // 触发咖啡豆列表变化事件，附加信息指示是否删除了最后一个豆子以及被删除的咖啡豆ID
-                window.dispatchEvent(
-                    new CustomEvent('coffeeBeanListChanged', {
-                        detail: {
-                            hasBeans: updatedBeans.length > 0,
-                            lastBeanDeleted: isLastBeanDeleted,
-                            deletedBeanId: bean.id  // 添加被删除的咖啡豆ID
-                        }
-                    })
-                );
-
-                // 如果删除的是最后一个咖啡豆，为了确保UI状态更新，延迟再触发一次事件
-                if (isLastBeanDeleted) {
-                    setTimeout(() => {
-                        console.log('延迟再次触发事件确保状态更新');
-                        window.dispatchEvent(
-                            new CustomEvent('coffeeBeanListChanged', {
-                                detail: {
-                                    hasBeans: false,
-                                    lastBeanDeleted: true,
-                                    deletedBeanId: bean.id
-                                }
-                            })
-                        );
-                    }, 200);
-                }
-            } catch (error) {
-                console.error('删除咖啡豆失败:', error)
-                alert('删除失败，请重试')
+            } catch {
+                // 删除失败时提示用户
+                alert('删除咖啡豆时出错，请重试')
             }
         }
     }
 
     // 处理编辑咖啡豆
     const handleEdit = (bean: CoffeeBean) => {
-        if (showBeanForm) {
-            showBeanForm(bean);
-        } else {
-            setEditingBean(bean);
+        try {
+            if (showBeanForm) {
+                showBeanForm(bean)
+            } else {
+                setEditingBean(bean)
+            }
+        } catch {
+            // 处理错误
+            alert('编辑咖啡豆时出错，请重试')
         }
     }
 
@@ -193,8 +163,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
             try {
                 await navigator.clipboard.writeText(text);
                 return Promise.resolve();
-            } catch (err) {
-                console.error('使用clipboard API复制失败:', err);
+            } catch {
                 // 如果是安全或权限错误，尝试回退方法
             }
         }
@@ -218,12 +187,10 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
             } else {
                 return Promise.reject(new Error('复制命令执行失败'));
             }
-        } catch (err) {
-            console.error('回退复制方法失败:', err);
-
+        } catch {
             // 如果是在安全上下文中不支持clipboard，则提供用户可以手动复制的选项
             alert('自动复制不可用，请手动复制以下内容:\n\n' + text);
-            return Promise.reject(err);
+            return Promise.reject(new Error('复制到剪贴板失败'));
         }
     };
 
@@ -265,12 +232,12 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                         }));
                     }, 2000);
                 })
-                .catch(err => {
-                    console.error('复制失败:', err);
+                .catch(() => {
+                    // 复制失败时提示用户
                     alert('复制失败，请手动复制');
                 });
-        } catch (err) {
-            console.error('复制失败:', err);
+        } catch {
+            // 忽略异常
         }
     };
 

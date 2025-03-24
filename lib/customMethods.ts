@@ -30,9 +30,6 @@ export async function loadCustomMethods(): Promise<Record<string, Method[]>> {
 					);
 				} else {
 					// 如果不是数组，初始化为空数组
-					console.warn(
-						`Equipment ${equipment} has invalid method data, initializing as empty array`
-					);
 					methodsWithIds[equipment] = [];
 				}
 			});
@@ -42,8 +39,8 @@ export async function loadCustomMethods(): Promise<Record<string, Method[]>> {
 
 			return methodsWithIds;
 		}
-	} catch (error) {
-		console.error("加载自定义方案出错:", error);
+	} catch {
+		// 错误处理
 	}
 
 	return {};
@@ -59,8 +56,8 @@ export function loadCustomMethodsSync(): Record<string, Method[]> {
 		if (savedMethods) {
 			return JSON.parse(savedMethods);
 		}
-	} catch (error) {
-		console.error("同步加载自定义方案出错:", error);
+	} catch {
+		// 错误处理
 	}
 
 	return {};
@@ -94,9 +91,6 @@ export async function saveCustomMethod(
 			method.id ||
 			`${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
 	};
-
-	// 在控制台记录方法ID，方便调试
-	console.log("[saveCustomMethod] 保存方法，ID:", methodWithId.id);
 
 	// 检查是否是编辑模式
 	const isEditing = editingMethod !== undefined;
@@ -188,8 +182,7 @@ export async function copyMethodToClipboard(method: Method): Promise<boolean> {
 		document.body.removeChild(textArea);
 
 		return successful;
-	} catch (err) {
-		console.error("复制失败:", err);
+	} catch {
 		return false;
 	}
 }

@@ -67,8 +67,8 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
             setImportData('');
             setError(null);
 
-        } catch (error) {
-            console.error('JSON解析失败:', error);
+        } catch {
+
             setError('JSON格式错误，请检查导入的数据');
         }
     };

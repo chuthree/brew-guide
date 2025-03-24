@@ -145,8 +145,7 @@ export function parseMethodFromJson(jsonString: string): Method | null {
 		}
 
 		return method;
-	} catch (err) {
-		console.error("JSON解析错误:", err);
+	} catch (_err) {
 		return null;
 	}
 }
@@ -259,8 +258,7 @@ export function cleanJsonForOptimization(jsonString: string): string {
 		};
 
 		return JSON.stringify(cleanedData, null, 2);
-	} catch (err) {
-		console.error("JSON清理错误:", err);
+	} catch (_err) {
 		return jsonString;
 	}
 }

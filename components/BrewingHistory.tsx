@@ -83,8 +83,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                 const savedNotes = await Storage.get('brewingNotes')
                 const parsedNotes = savedNotes ? JSON.parse(savedNotes) : []
                 setNotes(sortNotes(parsedNotes, sortOption))
-            } catch (error) {
-                console.error('Error loading notes:', error)
+            } catch {
+                // 加载失败时设置空数组
                 setNotes([])
             }
         }
@@ -114,8 +114,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                 const updatedNotes = notes.filter(note => note.id !== noteId)
                 await Storage.set('brewingNotes', JSON.stringify(updatedNotes))
                 setNotes(sortNotes(updatedNotes, sortOption))
-            } catch (error) {
-                console.error('Error deleting note:', error)
+            } catch {
+                // 删除失败时提示用户
                 alert('删除笔记时出错，请重试')
             }
         }
@@ -215,8 +215,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                 } else {
                     reject(new Error('复制命令执行失败'));
                 }
-            } catch (err) {
-                reject(err);
+            } catch (error) {
+                reject(error);
             } finally {
                 document.body.removeChild(textArea);
             }
@@ -249,12 +249,12 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                         }));
                     }, 2000);
                 })
-                .catch(err => {
-                    console.error('复制失败:', err);
+                .catch(() => {
+                    // 复制失败时提示用户
                     alert('复制失败，请手动复制');
                 });
-        } catch (err) {
-            console.error('复制失败:', err);
+        } catch {
+            // 忽略异常
         }
     };
 

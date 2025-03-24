@@ -241,8 +241,8 @@ stages数组中的每个阶段必须包含以下字段：
                     })
                 }
             }
-        } catch (error) {
-            console.error('复制到剪贴板失败:', error)
+        } catch {
+            
             showToast({
                 type: 'error',
                 title: '复制失败!',

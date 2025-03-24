@@ -100,8 +100,8 @@ ${templateJson}
                 } else {
                     reject(new Error('复制命令执行失败'));
                 }
-            } catch (err) {
-                reject(err);
+            } catch (_err) {
+                reject(_err);
             } finally {
                 document.body.removeChild(textArea);
             }
@@ -131,8 +131,7 @@ ${templateJson}
                         setImportData('');
                         setError(null);
                     })
-                    .catch(error => {
-                        console.error('导入失败:', error);
+                    .catch(() => {
                         setError('导入失败，请重试');
                     });
             } else {
@@ -147,13 +146,11 @@ ${templateJson}
                         setImportData('');
                         setError(null);
                     })
-                    .catch(error => {
-                        console.error('导入失败:', error);
+                    .catch(() => {
                         setError('导入失败，请重试');
                     });
             }
-        } catch (error) {
-            console.error('JSON解析失败:', error);
+        } catch {
             setError('JSON格式错误，请检查导入的数据');
         }
     };
@@ -252,8 +249,7 @@ ${templateJson}
                                                                 setError('✅ 提示词已复制到剪贴板，请打开豆包应用，将此提示词和咖啡豆商品页一起发送');
                                                                 setTimeout(() => setError(null), 3000); // 3秒后自动清除提示
                                                             })
-                                                            .catch(err => {
-                                                                console.error('复制失败:', err);
+                                                            .catch(() => {
                                                                 setError('❌ 复制失败，请手动复制');
                                                                 setTimeout(() => setError(null), 3000); // 3秒后自动清除提示
                                                             });

@@ -718,7 +718,7 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
             }));
         } else {
             // 保持原值不变，可以考虑添加提示
-            console.log(validation.message);
+
         }
     };
 
@@ -832,8 +832,8 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                                                     }
                                                 };
                                                 reader.readAsDataURL(file);
-                                            } catch (error) {
-                                                console.error('读取图片失败:', error);
+                                            } catch {
+
                                                 alert('上传图片失败，请重试');
                                             }
                                         };
