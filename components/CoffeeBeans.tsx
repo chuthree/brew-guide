@@ -20,8 +20,8 @@ import { SORT_OPTIONS as RANKING_SORT_OPTIONS, RankingSortOption } from './Coffe
 
 // 排序类型定义
 const SORT_OPTIONS = {
-    TIME_DESC: 'time_desc',
-    TIME_ASC: 'time_asc',
+    REMAINING_DAYS_ASC: 'remaining_days_asc', // 按照剩余天数排序（少→多）
+    REMAINING_DAYS_DESC: 'remaining_days_desc', // 按照剩余天数排序（多→少）
     NAME_ASC: 'name_asc',
     NAME_DESC: 'name_desc',
 } as const;
@@ -30,8 +30,8 @@ type SortOption = typeof SORT_OPTIONS[keyof typeof SORT_OPTIONS];
 
 // 排序选项的显示名称
 const SORT_LABELS: Record<SortOption, string> = {
-    [SORT_OPTIONS.TIME_DESC]: '时间 (新→旧)',
-    [SORT_OPTIONS.TIME_ASC]: '时间 (旧→新)',
+    [SORT_OPTIONS.REMAINING_DAYS_ASC]: '赏味期 (少→多)',
+    [SORT_OPTIONS.REMAINING_DAYS_DESC]: '赏味期 (多→少)',
     [SORT_OPTIONS.NAME_ASC]: '名称 (A→Z)',
     [SORT_OPTIONS.NAME_DESC]: '名称 (Z→A)',
 };
@@ -65,7 +65,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
     const [editingBean, setEditingBean] = useState<CoffeeBean | null>(null)
     const [actionMenuStates, setActionMenuStates] = useState<Record<string, boolean>>({})
     const [copySuccess, setCopySuccess] = useState<Record<string, boolean>>({})
-    const [sortOption, setSortOption] = useState<SortOption>(SORT_OPTIONS.TIME_DESC)
+    const [sortOption, setSortOption] = useState<SortOption>(SORT_OPTIONS.REMAINING_DAYS_ASC)
     const [showAIRecipeModal, setShowAIRecipeModal] = useState(false)
     const [selectedBeanForAI, setSelectedBeanForAI] = useState<CoffeeBean | null>(null)
     // 新增状态
@@ -78,16 +78,183 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
     // 排序咖啡豆的函数
     const sortBeans = (beansToSort: CoffeeBean[], option: SortOption): CoffeeBean[] => {
         switch (option) {
-            case SORT_OPTIONS.TIME_DESC:
-                return [...beansToSort].sort((a, b) => b.timestamp - a.timestamp)
-            case SORT_OPTIONS.TIME_ASC:
-                return [...beansToSort].sort((a, b) => a.timestamp - b.timestamp)
             case SORT_OPTIONS.NAME_ASC:
                 return [...beansToSort].sort((a, b) => a.name.localeCompare(b.name))
             case SORT_OPTIONS.NAME_DESC:
                 return [...beansToSort].sort((a, b) => b.name.localeCompare(a.name))
+            case SORT_OPTIONS.REMAINING_DAYS_ASC:
+                return [...beansToSort].sort((a, b) => {
+                    const { phase: phaseA, remainingDays: daysA } = getFlavorInfo(a);
+                    const { phase: phaseB, remainingDays: daysB } = getFlavorInfo(b);
+
+                    // 首先按照阶段排序：最佳期 > 赏味期 > 养豆期 > 衰退期
+                    if (phaseA !== phaseB) {
+                        // 将阶段转换为数字进行比较
+                        const phaseValueA = getPhaseValue(phaseA);
+                        const phaseValueB = getPhaseValue(phaseB);
+                        return phaseValueA - phaseValueB;
+                    }
+
+                    // 如果阶段相同，根据不同阶段有不同的排序逻辑
+                    if (phaseA === '最佳赏味期') {
+                        // 最佳赏味期内，剩余天数少的排在前面
+                        return daysA - daysB;
+                    } else if (phaseA === '赏味期') {
+                        // 赏味期内，剩余天数少的排在前面
+                        return daysA - daysB;
+                    } else if (phaseA === '养豆期') {
+                        // 养豆期内，剩余天数少的排在前面（离最佳期近的优先）
+                        return daysA - daysB;
+                    } else {
+                        // 衰退期按烘焙日期新的在前
+                        if (!a.roastDate || !b.roastDate) return 0;
+                        return new Date(b.roastDate).getTime() - new Date(a.roastDate).getTime();
+                    }
+                });
+            case SORT_OPTIONS.REMAINING_DAYS_DESC:
+                return [...beansToSort].sort((a, b) => {
+                    const { phase: phaseA, remainingDays: daysA } = getFlavorInfo(a);
+                    const { phase: phaseB, remainingDays: daysB } = getFlavorInfo(b);
+
+                    // 首先按照阶段排序：最佳期 > 赏味期 > 养豆期 > 衰退期
+                    if (phaseA !== phaseB) {
+                        // 将阶段转换为数字进行比较
+                        const phaseValueA = getPhaseValue(phaseA);
+                        const phaseValueB = getPhaseValue(phaseB);
+                        return phaseValueA - phaseValueB;
+                    }
+
+                    // 如果阶段相同，根据不同阶段有不同的排序逻辑
+                    if (phaseA === '最佳赏味期') {
+                        // 最佳赏味期内，剩余天数多的排在前面
+                        return daysB - daysA;
+                    } else if (phaseA === '赏味期') {
+                        // 赏味期内，剩余天数多的排在前面
+                        return daysB - daysA;
+                    } else if (phaseA === '养豆期') {
+                        // 养豆期内，剩余天数多的排在前面
+                        return daysB - daysA;
+                    } else {
+                        // 衰退期按烘焙日期新的在前
+                        if (!a.roastDate || !b.roastDate) return 0;
+                        return new Date(b.roastDate).getTime() - new Date(a.roastDate).getTime();
+                    }
+                });
             default:
                 return beansToSort
+        }
+    }
+
+    // 获取阶段数值用于排序
+    const getPhaseValue = (phase: string): number => {
+        switch (phase) {
+            case '最佳赏味期': return 0;
+            case '赏味期': return 1;
+            case '养豆期': return 2;
+            case '衰退期':
+            default: return 3;
+        }
+    }
+
+    // 获取咖啡豆的赏味期信息
+    const getFlavorInfo = (bean: CoffeeBean): { phase: string, remainingDays: number } => {
+        if (!bean.roastDate) {
+            return { phase: '衰退期', remainingDays: 0 };
+        }
+
+        // 计算天数差
+        const today = new Date();
+        const roastDate = new Date(bean.roastDate);
+        const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const roastDateOnly = new Date(roastDate.getFullYear(), roastDate.getMonth(), roastDate.getDate());
+        const daysSinceRoast = Math.ceil((todayDate.getTime() - roastDateOnly.getTime()) / (1000 * 60 * 60 * 24));
+
+        // 优先使用自定义赏味期参数，如果没有则根据烘焙度计算
+        let startDay = bean.startDay || 0;
+        let endDay = bean.endDay || 0;
+        let maxDay = bean.maxDay || 0;
+
+        // 如果没有自定义值，则根据烘焙度设置默认值
+        if (startDay === 0 && endDay === 0 && maxDay === 0) {
+            if (bean.roastLevel?.includes('浅')) {
+                startDay = 7;
+                endDay = 14;
+                maxDay = 28;
+            } else if (bean.roastLevel?.includes('深')) {
+                startDay = 14;
+                endDay = 28;
+                maxDay = 42;
+            } else {
+                // 默认为中烘焙
+                startDay = 10;
+                endDay = 21;
+                maxDay = 35;
+            }
+        }
+
+        let phase = '';
+        let remainingDays = 0;
+
+        if (daysSinceRoast < startDay) {
+            phase = '养豆期';
+            remainingDays = startDay - daysSinceRoast;
+        } else if (daysSinceRoast <= endDay) {
+            phase = '最佳赏味期';
+            remainingDays = endDay - daysSinceRoast;
+        } else if (daysSinceRoast <= maxDay) {
+            phase = '赏味期';
+            remainingDays = maxDay - daysSinceRoast;
+        } else {
+            phase = '衰退期';
+            remainingDays = 0;
+        }
+
+        return { phase, remainingDays };
+    }
+
+    // 计算咖啡豆赏味期状态函数 (0:最佳期, 1:赏味期, 2:养豆期, 3:衰退期)
+    const getBeanFlavorState = (bean: CoffeeBean): number => {
+        if (!bean.roastDate) return 3; // 没有烘焙日期的放在最后
+
+        // 计算天数差
+        const today = new Date();
+        const roastDate = new Date(bean.roastDate);
+        const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const roastDateOnly = new Date(roastDate.getFullYear(), roastDate.getMonth(), roastDate.getDate());
+        const daysSinceRoast = Math.ceil((todayDate.getTime() - roastDateOnly.getTime()) / (1000 * 60 * 60 * 24));
+
+        // 优先使用自定义赏味期参数，如果没有则根据烘焙度计算
+        let startDay = bean.startDay || 0;
+        let endDay = bean.endDay || 0;
+        let maxDay = bean.maxDay || 0;
+
+        // 如果没有自定义值，则根据烘焙度设置默认值
+        if (startDay === 0 && endDay === 0 && maxDay === 0) {
+            if (bean.roastLevel?.includes('浅')) {
+                startDay = 7;
+                endDay = 14;
+                maxDay = 28;
+            } else if (bean.roastLevel?.includes('深')) {
+                startDay = 14;
+                endDay = 28;
+                maxDay = 42;
+            } else {
+                // 默认为中烘焙
+                startDay = 10;
+                endDay = 21;
+                maxDay = 35;
+            }
+        }
+
+        // 返回赏味期阶段 (0:最佳期, 1:赏味期, 2:养豆期, 3:衰退期)
+        if (daysSinceRoast >= startDay && daysSinceRoast <= endDay) {
+            return 0; // 最佳赏味期
+        } else if (daysSinceRoast > endDay && daysSinceRoast <= maxDay) {
+            return 1; // 赏味期
+        } else if (daysSinceRoast < startDay) {
+            return 2; // 养豆期
+        } else {
+            return 3; // 衰退期
         }
     }
 
@@ -359,10 +526,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                 return RANKING_SORT_OPTIONS.NAME_ASC;
             case SORT_OPTIONS.NAME_DESC:
                 return RANKING_SORT_OPTIONS.NAME_DESC;
-            // 在榜单中显示评分排序
-            case SORT_OPTIONS.TIME_DESC:
+            case SORT_OPTIONS.REMAINING_DAYS_ASC:
                 return RANKING_SORT_OPTIONS.RATING_DESC;
-            case SORT_OPTIONS.TIME_ASC:
+            case SORT_OPTIONS.REMAINING_DAYS_DESC:
                 return RANKING_SORT_OPTIONS.RATING_ASC;
             default:
                 return RANKING_SORT_OPTIONS.RATING_DESC;
@@ -373,7 +539,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
     useEffect(() => {
         if (viewMode === VIEW_OPTIONS.RANKING) {
             // 当切换到榜单视图时，保持现有的排序类型，但更改其语义
-            // 例如：TIME_DESC -> RATING_DESC, TIME_ASC -> RATING_ASC
+            // 例如：REMAINING_DAYS_ASC -> RATING_DESC, REMAINING_DAYS_DESC -> RATING_ASC
             // 无需更改 NAME_ASC 和 NAME_DESC
         }
     }, [viewMode]);
@@ -568,15 +734,15 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                 // 榜单视图的排序选项
                                                 <>
                                                     <SelectItem
-                                                        key={SORT_OPTIONS.TIME_DESC}
-                                                        value={SORT_OPTIONS.TIME_DESC}
+                                                        key={SORT_OPTIONS.REMAINING_DAYS_ASC}
+                                                        value={SORT_OPTIONS.REMAINING_DAYS_ASC}
                                                         className="tracking-wide text-neutral-400 dark:text-neutral-500 data-[highlighted]:text-neutral-600 dark:data-[highlighted]:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800/70 transition-colors"
                                                     >
                                                         评分 (高→低)
                                                     </SelectItem>
                                                     <SelectItem
-                                                        key={SORT_OPTIONS.TIME_ASC}
-                                                        value={SORT_OPTIONS.TIME_ASC}
+                                                        key={SORT_OPTIONS.REMAINING_DAYS_DESC}
+                                                        value={SORT_OPTIONS.REMAINING_DAYS_DESC}
                                                         className="tracking-wide text-neutral-400 dark:text-neutral-500 data-[highlighted]:text-neutral-600 dark:data-[highlighted]:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800/70 transition-colors"
                                                     >
                                                         评分 (低→高)
