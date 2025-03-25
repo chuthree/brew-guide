@@ -211,10 +211,13 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
                                         <p className="text-xs text-neutral-500 dark:text-neutral-500">
                                             粘贴冲煮方案（支持分享的文本格式或JSON格式）：
                                         </p>
+                                        <p className="text-xs text-neutral-500 dark:text-neutral-500">
+                                            支持常见复制格式，如Markdown代码块、掐头掐尾的JSON。系统会自动提取有效数据。
+                                        </p>
                                     </div>
                                     <textarea
                                         className="w-full h-40 p-3 border border-neutral-300 dark:border-neutral-700 rounded-md bg-transparent focus:border-neutral-800 dark:focus:border-neutral-400 focus:outline-none text-neutral-800 dark:text-neutral-200"
-                                        placeholder='支持粘贴分享的文本或JSON格式，例如："【冲煮方案】改良分段式一刀流"或{"method":"改良分段式一刀流",...}'
+                                        placeholder='支持粘贴分享的文本或各种JSON格式，如{"method":"改良分段式一刀流",...} 或带有代码块的JSON'
                                         value={importData}
                                         onChange={(e) => setImportData(e.target.value)}
                                     />
