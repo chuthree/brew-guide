@@ -413,6 +413,12 @@ stages数组中的每个阶段必须包含以下字段：
                                     [ 返回 ]
                                 </button>
                             )}
+                            <button
+                                type="submit"
+                                className="text-[10px] tracking-widest text-emerald-600 transition-colors dark:text-emerald-500 font-medium"
+                            >
+                                [ 保存 ]
+                            </button>
                         </div>
                     ) : (
                         <div className="flex items-center space-x-4">
