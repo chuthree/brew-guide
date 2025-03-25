@@ -10,13 +10,15 @@ interface CoffeeBeanRatingModalProps {
     coffeeBean: CoffeeBean | null
     onClose: () => void
     onSave: (id: string, ratings: Partial<CoffeeBean>) => void
+    onAfterSave?: () => void
 }
 
 const CoffeeBeanRatingModal: React.FC<CoffeeBeanRatingModalProps> = ({
     showModal,
     coffeeBean,
     onClose,
-    onSave
+    onSave,
+    onAfterSave
 }) => {
     const [beanType, setBeanType] = useState<'espresso' | 'filter'>('filter')
     const [overallRating, setOverallRating] = useState<number>(0)
@@ -31,7 +33,7 @@ const CoffeeBeanRatingModal: React.FC<CoffeeBeanRatingModalProps> = ({
         }
     }, [coffeeBean])
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!coffeeBean) return
 
         const ratings: Partial<CoffeeBean> = {
@@ -47,7 +49,20 @@ const CoffeeBeanRatingModal: React.FC<CoffeeBeanRatingModalProps> = ({
             purchaseChannel: undefined
         }
 
-        onSave(coffeeBean.id, ratings)
+        try {
+            // 先保存数据
+            await onSave(coffeeBean.id, ratings)
+
+            // 保存成功后再调用回调函数
+            if (onAfterSave) {
+                // 延迟50ms确保数据已更新
+                setTimeout(() => {
+                    onAfterSave()
+                }, 50)
+            }
+        } catch (error) {
+            console.error('保存评分失败:', error)
+        }
     }
 
     if (!showModal || !coffeeBean) return null

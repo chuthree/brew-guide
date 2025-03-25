@@ -73,6 +73,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
     const [showRatingModal, setShowRatingModal] = useState(false)
     const [selectedBeanForRating, setSelectedBeanForRating] = useState<CoffeeBean | null>(null)
     const [lastRatedBeanId, setLastRatedBeanId] = useState<string | null>(null) // 新增，追踪最近评分的咖啡豆ID
+    const [ratingSavedCallback, setRatingSavedCallback] = useState<(() => void) | null>(null) // 新增，存储评分保存后的回调
 
     // 排序咖啡豆的函数
     const sortBeans = (beansToSort: CoffeeBean[], option: SortOption): CoffeeBean[] => {
@@ -304,9 +305,16 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
     }
 
     // 处理咖啡豆评分
-    const handleShowRatingForm = (bean: CoffeeBean) => {
+    const handleShowRatingForm = (bean: CoffeeBean, onRatingSaved?: () => void) => {
         setSelectedBeanForRating(bean);
         setShowRatingModal(true);
+
+        // 存储回调函数
+        if (onRatingSaved) {
+            setRatingSavedCallback(() => onRatingSaved);
+        } else {
+            setRatingSavedCallback(null);
+        }
     };
 
     // 保存咖啡豆评分
@@ -322,24 +330,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                     return sortBeans(newBeans, sortOption);
                 });
 
-                // 记录最近评分的咖啡豆ID
+                // 记录最近评分的咖啡豆ID，用于高亮显示
                 setLastRatedBeanId(id);
-
-                // 同时更新榜单数据
-                if (viewMode === VIEW_OPTIONS.RANKING) {
-                    // 重新加载榜单数据
-                    const loadRatedBeans = async () => {
-                        try {
-                            const beans = await CoffeeBeanManager.getRatedBeans();
-                            setRatedBeans(beans);
-                        } catch (error) {
-                            console.error("加载评分咖啡豆失败:", error);
-                        }
-                    };
-                    loadRatedBeans();
-                }
-
-                setShowRatingModal(false);
 
                 // 自动切换到榜单视图
                 setViewMode(VIEW_OPTIONS.RANKING);
@@ -348,10 +340,15 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                 setTimeout(() => {
                     setLastRatedBeanId(null);
                 }, 2000);
+
+                // 返回更新后的咖啡豆
+                return updatedBean;
             }
+            return null;
         } catch (error) {
             console.error("保存咖啡豆评分失败:", error);
             alert("保存评分失败，请重试");
+            throw error; // 抛出错误以便上层处理
         }
     };
 
@@ -411,7 +408,37 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                 showModal={showRatingModal}
                 coffeeBean={selectedBeanForRating}
                 onClose={() => setShowRatingModal(false)}
-                onSave={handleSaveRating}
+                onSave={async (id, ratings) => {
+                    try {
+                        // 等待保存评分完成
+                        const result = await handleSaveRating(id, ratings);
+                        return result;
+                    } catch (error) {
+                        console.error("评分保存失败:", error);
+                        throw error;
+                    }
+                }}
+                onAfterSave={() => {
+                    // 强制刷新榜单数据
+                    const loadRatedBeans = async () => {
+                        try {
+                            const beans = await CoffeeBeanManager.getRatedBeans();
+                            setRatedBeans(beans);
+                        } catch (error) {
+                            console.error("加载评分咖啡豆失败:", error);
+                        }
+                    };
+                    loadRatedBeans();
+
+                    // 关闭评分模态框
+                    setShowRatingModal(false);
+
+                    // 调用存储的回调函数
+                    if (ratingSavedCallback) {
+                        ratingSavedCallback();
+                        setRatingSavedCallback(null); // 使用后清除
+                    }
+                }}
             />
 
             <AnimatePresence mode="wait">

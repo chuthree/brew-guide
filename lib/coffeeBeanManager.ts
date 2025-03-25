@@ -180,7 +180,24 @@ export const CoffeeBeanManager = {
 		ratings: Partial<CoffeeBean>
 	): Promise<CoffeeBean | null> {
 		try {
-			return await this.updateBean(id, ratings);
+			// 确保评分是有效的数字
+			if (
+				ratings.overallRating !== undefined &&
+				ratings.overallRating > 0
+			) {
+				// 如果bean类型未定义，设置默认值
+				if (!ratings.beanType) {
+					ratings.beanType = "filter";
+				}
+			}
+
+			// 更新咖啡豆
+			const updatedBean = await this.updateBean(id, ratings);
+
+			// 刷新所有已评分的咖啡豆列表（这里可以做一些额外的处理确保列表更新）
+			// 暂不实现缓存机制，每次调用都重新获取数据
+
+			return updatedBean;
 		} catch {
 			throw new Error("更新咖啡豆评分失败");
 		}

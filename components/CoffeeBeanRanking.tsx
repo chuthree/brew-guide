@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CoffeeBean } from '@/app/types'
 import { CoffeeBeanManager } from '@/lib/coffeeBeanManager'
@@ -28,7 +28,7 @@ export const SORT_LABELS: Record<RankingSortOption, string> = {
 
 interface CoffeeBeanRankingProps {
     isOpen: boolean
-    onShowRatingForm: (bean: CoffeeBean) => void
+    onShowRatingForm: (bean: CoffeeBean, onRatingSaved?: () => void) => void
     sortOption?: RankingSortOption
     updatedBeanId?: string | null
 }
@@ -45,6 +45,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
     const [updatedBeanId, setUpdatedBeanId] = useState<string | null>(externalUpdatedBeanId)
     const [editMode, setEditMode] = useState(false)
     const [showUnrated, setShowUnrated] = useState(false) // 新增：是否显示未评分区域
+    const [refreshTrigger, setRefreshTrigger] = useState(0) // 新增：刷新触发器
 
     // 监听外部传入的ID变化
     useEffect(() => {
@@ -60,45 +61,47 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
         }
     }, [externalUpdatedBeanId]);
 
-    useEffect(() => {
-        if (!isOpen) return
+    // 加载咖啡豆数据的函数
+    const loadBeans = useCallback(async () => {
+        if (!isOpen) return;
 
-        const loadBeans = async () => {
-            try {
-                let ratedBeansData: CoffeeBean[];
-                let unratedBeansData: CoffeeBean[] = []; // 未评分的咖啡豆
+        try {
+            let ratedBeansData: CoffeeBean[];
+            let unratedBeansData: CoffeeBean[] = []; // 未评分的咖啡豆
 
-                // 加载已评分的咖啡豆
-                if (beanType === 'all') {
-                    ratedBeansData = await CoffeeBeanManager.getRatedBeans();
-                } else {
-                    ratedBeansData = await CoffeeBeanManager.getRatedBeansByType(beanType);
-                }
-
-                // 加载所有咖啡豆，过滤出未评分的
-                const allBeans = await CoffeeBeanManager.getAllBeans();
-                const ratedIds = new Set(ratedBeansData.map(bean => bean.id));
-
-                // 过滤未评分的咖啡豆，并根据beanType筛选
-                unratedBeansData = allBeans.filter(bean => {
-                    const isUnrated = !ratedIds.has(bean.id) && (!bean.overallRating || bean.overallRating === 0);
-                    if (beanType === 'all') return isUnrated;
-                    if (beanType === 'espresso') return isUnrated && bean.beanType === 'espresso';
-                    if (beanType === 'filter') return isUnrated && bean.beanType === 'filter';
-                    return isUnrated;
-                });
-
-                setRatedBeans(sortBeans(ratedBeansData, sortOption));
-                setUnratedBeans(unratedBeansData.sort((a, b) => b.timestamp - a.timestamp)); // 按添加时间排序
-            } catch (error) {
-                console.error("加载咖啡豆数据失败:", error);
-                setRatedBeans([]);
-                setUnratedBeans([]);
+            // 加载已评分的咖啡豆
+            if (beanType === 'all') {
+                ratedBeansData = await CoffeeBeanManager.getRatedBeans();
+            } else {
+                ratedBeansData = await CoffeeBeanManager.getRatedBeansByType(beanType);
             }
-        };
 
-        loadBeans();
+            // 加载所有咖啡豆，过滤出未评分的
+            const allBeans = await CoffeeBeanManager.getAllBeans();
+            const ratedIds = new Set(ratedBeansData.map(bean => bean.id));
+
+            // 过滤未评分的咖啡豆，并根据beanType筛选
+            unratedBeansData = allBeans.filter(bean => {
+                const isUnrated = !ratedIds.has(bean.id) && (!bean.overallRating || bean.overallRating === 0);
+                if (beanType === 'all') return isUnrated;
+                if (beanType === 'espresso') return isUnrated && bean.beanType === 'espresso';
+                if (beanType === 'filter') return isUnrated && bean.beanType === 'filter';
+                return isUnrated;
+            });
+
+            setRatedBeans(sortBeans(ratedBeansData, sortOption));
+            setUnratedBeans(unratedBeansData.sort((a, b) => b.timestamp - a.timestamp)); // 按添加时间排序
+        } catch (error) {
+            console.error("加载咖啡豆数据失败:", error);
+            setRatedBeans([]);
+            setUnratedBeans([]);
+        }
     }, [isOpen, beanType, sortOption]);
+
+    // 在组件挂载、isOpen变化、beanType变化、sortOption变化或refreshTrigger变化时重新加载数据
+    useEffect(() => {
+        loadBeans();
+    }, [loadBeans, refreshTrigger]);
 
     // 排序咖啡豆的函数
     const sortBeans = (beansToSort: CoffeeBean[], option: RankingSortOption): CoffeeBean[] => {
@@ -150,8 +153,17 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
         return (price / capacity).toFixed(2);
     };
 
+    // 评分保存后的回调函数
+    const handleRatingSaved = useCallback(() => {
+        // 触发数据刷新
+        setRefreshTrigger(prev => prev + 1);
+
+        // 不再自动折叠未评分列表，让用户自行控制
+    }, []);
+
     const handleRateBeanClick = (bean: CoffeeBean) => {
-        onShowRatingForm(bean);
+        // 将回调函数传递给评分表单
+        onShowRatingForm(bean, handleRatingSaved);
     };
 
     // 切换编辑模式
@@ -328,7 +340,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                                                     {/* 添加评分按钮 */}
                                                     <motion.button
                                                         onClick={() => handleRateBeanClick(bean)}
-                                                        className="text-[10px] text-amber-500 dark:text-amber-400 hover:text-amber-600 dark:hover:text-amber-300"
+                                                        className="text-[10px] text-neutral-800 dark:text-white"
                                                     >
                                                         添加评分
                                                     </motion.button>
