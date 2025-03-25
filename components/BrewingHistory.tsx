@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import type { BrewingNote } from '@/lib/config'
 import type { BrewingNoteData, CoffeeBean } from '@/app/types'
 import BrewingNoteForm from './BrewingNoteForm'
+import BrewingNoteFormModalNew from './BrewingNoteFormModalNew'
 import { Storage } from '@/lib/storage'
 import {
     Select,
@@ -57,6 +58,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
     const [optimizingNote, setOptimizingNote] = useState<(Partial<BrewingNoteData> & { coffeeBean?: CoffeeBean | null }) | null>(null)
     const [editingNote, setEditingNote] = useState<(Partial<BrewingNoteData> & { coffeeBean?: CoffeeBean | null }) | null>(null)
     const [actionMenuStates, setActionMenuStates] = useState<Record<string, boolean>>({})
+    const [showNoteFormModal, setShowNoteFormModal] = useState(false)
+    const [currentEditingNote, setCurrentEditingNote] = useState<Partial<BrewingNoteData>>({})
 
     // 排序笔记的函数，用useCallback包装以避免无限渲染
     const sortNotes = useCallback((notesToSort: BrewingNote[]): BrewingNote[] => {
@@ -215,9 +218,9 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
         }
     };
 
-    // Add a separate new note handler
+    // 修改新建笔记处理函数
     const handleAddNote = () => {
-        setEditingNote({
+        setCurrentEditingNote({
             coffeeBeanInfo: {
                 name: '',
                 roastLevel: '中度烘焙',
@@ -232,6 +235,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
             rating: 3,
             notes: ''
         });
+        setShowNoteFormModal(true);
     }
 
     if (!isOpen) return null
@@ -569,6 +573,18 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                     </div>
                 </motion.div>
             )}
+
+            {/* 添加笔记表单模态框 */}
+            <BrewingNoteFormModalNew
+                key="note-form-modal"
+                showForm={showNoteFormModal}
+                initialNote={currentEditingNote}
+                onSave={handleSaveEdit}
+                onClose={() => {
+                    setShowNoteFormModal(false);
+                    setCurrentEditingNote({});
+                }}
+            />
         </AnimatePresence>
     )
 }
