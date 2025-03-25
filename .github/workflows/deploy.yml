@@ -19,6 +19,7 @@ jobs:
             cd ~/brew-guide  # 替换为你的服务器项目路径
             export http_proxy=http://127.0.0.1:47890                                                                   
             export https_proxy=http://127.0.0.1:47890
+            export PATH=$PATH:~/node-v20.9.0-linux-x64/bin/
             git pull origin main   # 如果需要同步最新代码
             pnpm install
             pnpm run build
