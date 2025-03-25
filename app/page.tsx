@@ -354,29 +354,65 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
     // 监听冲煮完成和重置事件
     useEffect(() => {
-        // 确保isCoffeeBrewed始终跟踪showComplete的变化
-        setIsCoffeeBrewed(showComplete);
-
-        // 处理冲煮完成事件
         const handleBrewingComplete = () => {
+            // 当冲煮完成时，设置完成状态
+            setShowComplete(true);
             setIsCoffeeBrewed(true);
         };
 
-        // 处理冲煮重置事件
         const handleBrewingReset = () => {
+            // 重置自动跳转标志
+            setHasAutoNavigatedToNotes(false);
+            // 确保showComplete状态被重置
+            setShowComplete(false);
+            // 重置冲煮状态
             setIsCoffeeBrewed(false);
         };
 
-        // 添加事件监听器
+        const handleMethodToBrewing = () => {
+            // 重置冲煮完成状态，但保留其他状态
+            setShowComplete(false);
+            setIsCoffeeBrewed(false);
+        };
+
+        const handleTimerStatusChange = (e: CustomEvent) => {
+            if (e.detail?.status === 'running') {
+                setIsTimerRunning(true);
+            } else {
+                setIsTimerRunning(false);
+            }
+        };
+
+        const handleStageChange = (e: CustomEvent) => {
+            if (typeof e.detail?.stage === 'number') {
+                setCurrentStage(e.detail.stage);
+            }
+        };
+
+        const handleCountdownChange = (e: CustomEvent) => {
+            if (typeof e.detail?.remainingTime === 'number') {
+                setCountdownTime(e.detail.remainingTime);
+            }
+        };
+
+        // 添加事件监听
         window.addEventListener('brewing:complete', handleBrewingComplete);
         window.addEventListener('brewing:reset', handleBrewingReset);
+        window.addEventListener('brewing:methodToBrewing', handleMethodToBrewing);
+        window.addEventListener('brewing:timerStatus', handleTimerStatusChange as EventListener);
+        window.addEventListener('brewing:stageChange', handleStageChange as EventListener);
+        window.addEventListener('brewing:countdownChange', handleCountdownChange as EventListener);
 
-        // 清理事件监听器
+        // 清理函数
         return () => {
             window.removeEventListener('brewing:complete', handleBrewingComplete);
             window.removeEventListener('brewing:reset', handleBrewingReset);
+            window.removeEventListener('brewing:methodToBrewing', handleMethodToBrewing);
+            window.removeEventListener('brewing:timerStatus', handleTimerStatusChange as EventListener);
+            window.removeEventListener('brewing:stageChange', handleStageChange as EventListener);
+            window.removeEventListener('brewing:countdownChange', handleCountdownChange as EventListener);
         };
-    }, [showComplete]);
+    }, [setShowComplete, setIsCoffeeBrewed, setHasAutoNavigatedToNotes, setIsTimerRunning, setCurrentStage, setCountdownTime]);
 
     // 修改处理步骤点击的包装函数，允许在冲煮完成后切换到记录
     const handleBrewingStepClickWrapper = (step: BrewingStep) => {
@@ -828,9 +864,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         }
     }, [activeMainTab, setIsCoffeeBrewed]);
 
-    // 添加等待状态
-    const [isStageWaiting, setIsStageWaiting] = useState(false);
-
     // 添加扩展阶段状态 - 使用ref而不是state
     const expandedStagesRef = useRef<{
         type: 'pour' | 'wait';
@@ -874,125 +907,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         // 显示通知
         alert('数据已更新，应用将重新加载数据');
     };
-
-    // 添加更多事件监听器用于安全地更新状态
-    useEffect(() => {
-        // 添加事件监听
-        const handleBrewingComplete = () => {
-            setTimeout(() => {
-                setShowComplete(true);
-
-            }, 0);
-        };
-
-        const handleBrewingReset = () => {
-            setTimeout(() => {
-                setShowComplete(false);
-                setIsTimerRunning(false);
-                setCurrentStage(0);
-                setCountdownTime(0);
-
-            }, 0);
-        };
-
-        const handleMethodToBrewing = () => {
-            // 清空冲煮完成状态，但保留其他状态
-            setTimeout(() => {
-                setShowComplete(false);
-
-            }, 0);
-        };
-
-        const handleTimerStatusChange = (e: CustomEvent) => {
-            if (e?.detail) {
-                setTimeout(() => {
-                    setIsTimerRunning(e.detail.isRunning);
-
-                }, 0);
-            }
-        };
-
-        const handleStageChange = (e: CustomEvent) => {
-            if (e?.detail) {
-                setTimeout(() => {
-                    // 检查是否有currentStage属性，兼容不同的事件格式
-                    if ('currentStage' in e.detail) {
-                        setCurrentStage(e.detail.currentStage as number);
-                    } else if ('stage' in e.detail) {
-                        setCurrentStage(e.detail.stage as number);
-                    }
-
-                    // 如果有isWaiting属性，也设置它
-                    if ('isWaiting' in e.detail) {
-                        setIsStageWaiting(e.detail.isWaiting as boolean);
-                    }
-
-                    // 记录详细日志，帮助调试
-
-                }, 0);
-            }
-        };
-
-        const handleCountdownChange = (e: CustomEvent) => {
-            if (e?.detail) {
-                setTimeout(() => {
-                    setCountdownTime(e.detail.time as number);
-
-                }, 0);
-            }
-        };
-
-        window.addEventListener('brewing:complete', handleBrewingComplete);
-        window.addEventListener('brewing:reset', handleBrewingReset);
-        window.addEventListener('brewing:methodToBrewing', handleMethodToBrewing);
-        window.addEventListener('brewing:timerStatus', handleTimerStatusChange as EventListener);
-        window.addEventListener('brewing:stageChange', handleStageChange as EventListener);
-        window.addEventListener('brewing:countdownChange', handleCountdownChange as EventListener);
-
-        // 清理函数
-        return () => {
-            window.removeEventListener('brewing:complete', handleBrewingComplete);
-            window.removeEventListener('brewing:reset', handleBrewingReset);
-            window.removeEventListener('brewing:methodToBrewing', handleMethodToBrewing);
-            window.removeEventListener('brewing:timerStatus', handleTimerStatusChange as EventListener);
-            window.removeEventListener('brewing:stageChange', handleStageChange as EventListener);
-            window.removeEventListener('brewing:countdownChange', handleCountdownChange as EventListener);
-        };
-    }, []);
-
-    // 监听冲煮重置事件，重置自动跳转标志和状态
-    useEffect(() => {
-        const handleBrewingReset = () => {
-            // 重置自动跳转标志
-            setHasAutoNavigatedToNotes(false);
-            // 确保showComplete状态被重置
-            setShowComplete(false);
-            // 重置冲煮状态
-            setIsCoffeeBrewed(false);
-
-
-        };
-
-        // 添加从方案到注水特殊跳转事件处理
-        const handleMethodToBrewing = () => {
-            // 重置冲煮完成状态，但保留其他状态
-            setShowComplete(false);
-            setIsCoffeeBrewed(false);
-
-            // 确保设置了允许从注水返回到方案的特殊标记
-            localStorage.setItem("fromMethodToBrewing", "true");
-
-
-        };
-
-        window.addEventListener('brewing:reset', handleBrewingReset);
-        window.addEventListener('brewing:methodToBrewing', handleMethodToBrewing);
-
-        return () => {
-            window.removeEventListener('brewing:reset', handleBrewingReset);
-            window.removeEventListener('brewing:methodToBrewing', handleMethodToBrewing);
-        };
-    }, [setShowComplete]);
 
     return (
         <div className="flex h-full flex-col overflow-hidden mx-auto max-w-[500px] font-mono text-neutral-800 dark:text-neutral-100">
@@ -1041,7 +955,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                             isTimerRunning={isTimerRunning}
                             showComplete={showComplete}
                             currentStage={currentStage}
-                            isWaiting={isStageWaiting}
+                            isWaiting={false}
                             isPourVisualizerPreloaded={isPourVisualizerPreloaded}
                             selectedEquipment={selectedEquipment}
                             selectedCoffeeBean={selectedCoffeeBean}

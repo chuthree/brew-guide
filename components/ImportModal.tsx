@@ -23,7 +23,7 @@ const ImportBeanModal: React.FC<ImportBeanModalProps> = ({
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
     const [isUploading, setIsUploading] = useState(false);
-    const fileInputRef = useRef<HTMLInputElement>(null);
+    const _fileInputRef = useRef<HTMLInputElement>(null);
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
     const [crop, setCrop] = useState<Crop>({
         unit: '%',
@@ -70,7 +70,7 @@ const ImportBeanModal: React.FC<ImportBeanModalProps> = ({
     };
 
     // 生成模板提示词
-    const templatePrompt = (() => {
+    const _templatePrompt = (() => {
         const templateJson = generateBeanTemplateJson();
         return `
 我有一张咖啡豆的包装袋（或商品详情页）的照片，请根据图片中的信息，帮我提取咖啡豆的详细信息，并按照以下JSON格式输出：
@@ -107,7 +107,7 @@ ${templateJson}
     })();
 
     // 兼容性更好的复制文本方法
-    const copyTextToClipboard = async (text: string) => {
+    const _copyTextToClipboard = async (text: string) => {
         // 首先尝试使用现代API
         if (navigator.clipboard && navigator.clipboard.writeText) {
             return navigator.clipboard.writeText(text);
@@ -198,7 +198,7 @@ ${templateJson}
         if (source === 'camera') {
             input.capture = 'environment';
         }
-        
+
         input.onchange = (e) => {
             const file = (e.target as HTMLInputElement).files?.[0];
             if (file) {
@@ -223,7 +223,7 @@ ${templateJson}
                 reader.readAsDataURL(file);
             }
         };
-        
+
         input.click();
     };
 
@@ -246,7 +246,7 @@ ${templateJson}
         const canvas = document.createElement('canvas');
         // 获取显示的图片元素
         const displayedImage = imgRef.current;
-        
+
         // 计算实际比例
         const scaleX = image.naturalWidth / displayedImage.width;
         const scaleY = image.naturalHeight / displayedImage.height;
@@ -340,7 +340,7 @@ ${templateJson}
                         上传咖啡豆包装图片，自动识别信息
                     </p>
                 </div>
-                
+
                 {showCropper && selectedImage ? (
                     <div className="space-y-3">
                         <ReactCrop
@@ -348,10 +348,10 @@ ${templateJson}
                             onChange={c => setCrop(c)}
                             onComplete={handleCropComplete}
                         >
-                            <img 
+                            <img
                                 ref={imgRef}
-                                src={selectedImage} 
-                                alt="Upload preview" 
+                                src={selectedImage}
+                                alt="Upload preview"
                             />
                         </ReactCrop>
                         <div className="flex justify-end space-x-2">
@@ -401,7 +401,7 @@ ${templateJson}
                         </button>
                     </div>
                 )}
-                
+
                 {isUploading && (
                     <div className="flex items-center justify-center space-x-2">
                         <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
