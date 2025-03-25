@@ -141,21 +141,11 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
             totalTime: initialData.totalTime,
         }
 
-        // 使用新的 Storage 接口更新存储
+        // 不再直接保存到Storage，只传递数据给onSave回调
         try {
-            const existingNotesStr = await Storage.get('brewingNotes');
-            const existingNotes = existingNotesStr ? JSON.parse(existingNotesStr) : [];
-            const updatedNotes = id
-                ? existingNotes.map((note: BrewingNoteData) => (note.id === id ? noteData : note))
-                : [noteData, ...existingNotes];
-
-            await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
-            // 只调用onSave，不调用onClose
-            // 让onSave函数处理导航逻辑
+            // 让外层组件处理存储和导航逻辑
             onSave(noteData);
-            // 不再调用onClose
         } catch {
-
             alert('保存笔记时出错，请重试');
         }
     }
@@ -423,12 +413,6 @@ stages数组中的每个阶段必须包含以下字段：
                                     [ 返回 ]
                                 </button>
                             )}
-                            <button
-                                type="submit"
-                                className="text-[10px] tracking-widest text-neutral-500 transition-colors dark:text-neutral-200"
-                            >
-                                [ 保存 ]
-                            </button>
                         </div>
                     ) : (
                         <div className="flex items-center space-x-4">

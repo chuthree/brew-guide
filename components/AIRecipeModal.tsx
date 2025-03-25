@@ -100,15 +100,15 @@ ${selectedEquipment}滤杯${userSuggestionSection}
 \`\`\`
 
 ## 字段说明
-- method: 方案名称，如"三段式冲煮法"
+- method: 方案名称
 - params.coffee: 咖啡粉量，如"15g"
 - params.water: 总水量，如"225g"
 - params.ratio: 咖啡粉与水的比例，如"1:15"
-- params.grindSize: 研磨度描述，如"中细"、"中细偏粗"
+- params.grindSize: 研磨度描述，如"中细"
 - params.temp: 精确水温，如"92°C"
 
 stages数组中的每个阶段必须包含以下字段：
-- time: 累计时间点（秒），表示该阶段结束时的时间点，约2分钟完成整个冲煮过程
+- time: 累计时间点（秒），表示该阶段结束时的时间点
 - pourTime: 该阶段注水时间（秒），表示在该阶段需要花多少秒完成注水
 - label: 操作简要描述，如"焖蒸"、"绕圈注水"、"中心注水"等
 - water: 累计水量（克），表示到当前阶段结束时的总水量
@@ -118,57 +118,6 @@ stages数组中的每个阶段必须包含以下字段：
   * "circle": 绕圈注水
   * "ice": 冰滴
   * "other": 其他方式
-
-参考实例：
-三段式冲煮方案：第一阶段焖蒸25秒(注水时间10秒)，第二阶段注水到50秒(注水时间25秒)，第三阶段注水到2分钟(注水时间40秒)。
-总冲煮时间约2分钟，按这个思路设计。
-
-完整JSON示例:
-\`\`\`json
-{
-  "equipment": "V60",
-  "method": "三段式精品咖啡萃取法",
-  "coffeeBeanInfo": {
-    "name": "埃塞俄比亚耶加雪菲",
-    "roastLevel": "中浅烘焙",
-    "roastDate": "2025-03-23"
-  },
-  "params": {
-    "coffee": "15g",
-    "water": "225g",
-    "ratio": "1:15",
-    "grindSize": "中细",
-    "temp": "92°C",
-    "videoUrl": "",
-    "stages": [
-      {
-        "time": 25,
-        "pourTime": 10,
-        "label": "焖蒸",
-        "water": "30g",
-        "detail": "中心向外绕圈注水，确保咖啡粉均匀湿润",
-        "pourType": "circle"
-      },
-      {
-        "time": 50,
-        "pourTime": 25,
-        "label": "绕圈注水",
-        "water": "140g",
-        "detail": "中心向外缓慢画圈注水，均匀萃取咖啡风味",
-        "pourType": "circle"
-      },
-      {
-        "time": 120,
-        "pourTime": 40,
-        "label": "中心注水",
-        "water": "225g",
-        "detail": "中心定点注水，降低萃取率，完成冲煮",
-        "pourType": "center"
-      }
-    ]
-  }
-}
-\`\`\`
 
 只返回JSON数据，不要添加任何额外解释。`
 
@@ -242,7 +191,7 @@ stages数组中的每个阶段必须包含以下字段：
                 }
             }
         } catch {
-            
+
             showToast({
                 type: 'error',
                 title: '复制失败!',

@@ -148,15 +148,20 @@ export function parseMethodFromJson(jsonString: string): Method | null {
 		// 解析JSON
 		const parsedData = JSON.parse(jsonString);
 
-		// 验证必要字段
-		if (!parsedData.method && !parsedData.equipment) {
+		// 验证必要字段 - 更灵活地查找method字段
+		const methodName =
+			parsedData.method ||
+			parsedData.coffeeBeanInfo?.method ||
+			`${parsedData.equipment}优化方案`;
+
+		if (!methodName && !parsedData.equipment) {
 			throw new Error("导入的JSON缺少必要字段 (method)");
 		}
 
 		// 构建Method对象 - 始终生成新的ID，避免ID冲突
 		const method: Method = {
 			id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-			name: parsedData.method || `${parsedData.equipment}优化方案`,
+			name: methodName,
 			params: {
 				coffee: parsedData.params?.coffee || "15g",
 				water: parsedData.params?.water || "225g",
@@ -216,8 +221,17 @@ export function parseMethodFromJson(jsonString: string): Method | null {
 			throw new Error("导入的JSON缺少冲煮步骤");
 		}
 
+		// 强制确保name字段不为空
+		if (!method.name) {
+			method.name = `${parsedData.equipment || ""}优化冲煮方案`;
+		}
+
+		// 调试信息
+		console.log("解析后的Method对象:", method);
+
 		return method;
-	} catch (_err) {
+	} catch (err) {
+		console.error("解析方法JSON出错:", err);
 		return null;
 	}
 }
@@ -456,37 +470,96 @@ export function extractJsonFromText(
 		// 检查是否是普通JSON
 		try {
 			const jsonData = JSON.parse(text);
+			console.log("JSON解析成功:", jsonData);
 
-			// 尝试确定JSON类型
+			// 尝试确定JSON类型，更灵活地处理不同的数据结构
 			if (
 				jsonData.params &&
 				jsonData.params.stages &&
 				Array.isArray(jsonData.params.stages)
 			) {
-				return jsonData as Method; // 可能是Method类型
+				console.log("识别为标准Method类型");
+				return jsonData as Method; // 标准Method类型
 			} else if (jsonData.roastLevel || jsonData.processingMethod) {
+				console.log("识别为CoffeeBean类型");
 				return jsonData as CoffeeBean; // 可能是CoffeeBean类型
 			} else if (jsonData.beanId && jsonData.methodId) {
+				console.log("识别为BrewingNote类型");
 				return jsonData as BrewingNote; // 可能是BrewingNote类型
+			} else if (
+				// 处理AI生成的更复杂的优化结构（method字段在最顶层）
+				(jsonData.method || jsonData.coffeeBeanInfo) &&
+				jsonData.params &&
+				jsonData.params.stages &&
+				Array.isArray(jsonData.params.stages)
+			) {
+				console.log("识别为AI生成的复杂方法类型，将转换为Method对象");
+				// 直接构建Method对象
+				const method: Method = {
+					id: `${Date.now()}-${Math.random()
+						.toString(36)
+						.substr(2, 9)}`,
+					name: jsonData.method || `${jsonData.equipment}优化方案`,
+					params: jsonData.params,
+				};
+
+				// 确保返回的对象有名称
+				if (!method.name) {
+					method.name = `冲煮方案-${new Date().toLocaleDateString()}`;
+				}
+
+				console.log("转换后的Method对象:", method);
+				return method;
 			}
 
+			// 如果无法识别具体类型，尝试使用parseMethodFromJson
+			console.log("无法直接识别类型，尝试使用parseMethodFromJson");
+			const method = parseMethodFromJson(text);
+			if (method) {
+				return method;
+			}
+
+			console.log("无法识别的JSON结构:", jsonData);
 			return jsonData as Method | CoffeeBean | BrewingNote;
-		} catch (_) {
+		} catch (err) {
+			console.error("JSON解析错误:", err);
 			// 不是有效JSON，继续尝试从文本中提取
 		}
 
-		// 尝试解析为冲煮记录格式 - 优先级最高，因为包含其他数据
-		if (text.includes("冲煮记录") || text.includes("日期:")) {
+		// 增强自然语言格式检测 - 放宽检测条件
+
+		// 尝试解析为冲煮记录格式
+		if (
+			text.includes("冲煮记录") ||
+			text.includes("设备:") ||
+			text.includes("方法:") ||
+			text.includes("咖啡豆:") ||
+			text.includes("参数设置:") ||
+			text.includes("风味评分:")
+		) {
 			return parseBrewingNoteText(text);
 		}
 
 		// 尝试解析为冲煮方案格式
-		if (text.includes("冲煮方案") || text.includes("步骤 1:")) {
+		if (
+			text.includes("冲煮方案") ||
+			text.includes("步骤 1:") ||
+			text.includes("冲煮步骤") ||
+			text.includes("分钟") ||
+			(text.includes("咖啡粉量:") &&
+				text.includes("水量:") &&
+				text.includes("水温:"))
+		) {
 			return parseMethodText(text);
 		}
 
 		// 尝试解析为咖啡豆格式
-		if (text.includes("咖啡豆信息") || text.includes("烘焙度:")) {
+		if (
+			text.includes("咖啡豆") ||
+			text.includes("烘焙度:") ||
+			(text.includes("产地:") && text.includes("处理法:")) ||
+			text.includes("风味标签:")
+		) {
 			return parseCoffeeBeanText(text);
 		}
 

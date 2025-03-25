@@ -47,7 +47,9 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
             // 尝试从文本中提取数据
             import('@/lib/jsonUtils').then(async ({ extractJsonFromText }) => {
                 setError(null);
+                console.log('正在解析导入数据...');
                 const method = extractJsonFromText(importData) as Method;
+                console.log('解析结果:', method);
 
                 if (!method) {
                     setError('无法从输入中提取有效数据');
@@ -55,8 +57,34 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
                 }
 
                 // 验证方法对象是否有必要的字段
-                if (!method.name || !method.params || !method.params.stages || method.params.stages.length === 0) {
-                    setError('冲煮方案格式不完整，缺少必要字段');
+                if (!method.name) {
+                    console.log('缺少name字段');
+                    // 尝试获取method字段，使用接口扩展
+                    interface ExtendedMethod extends Method {
+                        method?: string;
+                    }
+                    const extendedMethod = method as ExtendedMethod;
+                    if (typeof extendedMethod.method === 'string') {
+                        // 如果有method字段，使用它作为name
+                        method.name = extendedMethod.method;
+                        console.log('使用method字段作为name:', method.name);
+                    } else {
+                        setError('冲煮方案缺少名称');
+                        return;
+                    }
+                }
+
+                // 验证params
+                if (!method.params) {
+                    console.log('缺少params字段');
+                    setError('冲煮方案格式不完整，缺少参数字段');
+                    return;
+                }
+
+                // 验证stages
+                if (!method.params.stages || method.params.stages.length === 0) {
+                    console.log('缺少stages字段或为空数组');
+                    setError('冲煮方案格式不完整，缺少冲煮步骤');
                     return;
                 }
 
@@ -67,8 +95,25 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
                     return;
                 }
 
+                // 确保method对象完全符合Method接口
+                const validMethod: Method = {
+                    id: method.id || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                    name: method.name,
+                    params: {
+                        coffee: method.params.coffee || '15g',
+                        water: method.params.water || '225g',
+                        ratio: method.params.ratio || '1:15',
+                        grindSize: method.params.grindSize || '中细',
+                        temp: method.params.temp || '92°C',
+                        videoUrl: method.params.videoUrl || '',
+                        stages: method.params.stages,
+                    }
+                };
+
+                console.log('最终导入的方案:', validMethod);
+
                 // 导入方案
-                onImport(method);
+                onImport(validMethod);
                 // 导入成功后清空输入框和错误信息
                 setImportData('');
                 setError(null);

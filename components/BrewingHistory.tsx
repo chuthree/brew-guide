@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { BrewingNote } from '@/lib/config'
 import type { BrewingNoteData } from '@/app/types'
-import BrewingNoteForm from './BrewingNoteForm'
+import BrewingNoteFormModalNew from './BrewingNoteFormModalNew'
 import { Storage } from '@/lib/storage'
 import {
     Select,
@@ -54,15 +54,15 @@ const formatRating = (rating: number) => {
 
 const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingChange, onJumpToImport }) => {
     const [notes, setNotes] = useState<BrewingNote[]>([])
-    const [editingNote, setEditingNote] = useState<BrewingNote | null>(null)
+    const [sortOption, setSortOption] = useState<SortOption>(SORT_OPTIONS.TIME_DESC)
     const [optimizingNote, setOptimizingNote] = useState<BrewingNote | null>(null)
     const [actionMenuStates, setActionMenuStates] = useState<Record<string, boolean>>({})
-    const [copySuccess, setCopySuccess] = useState<Record<string, boolean>>({})
-    const [sortOption, setSortOption] = useState<SortOption>(SORT_OPTIONS.TIME_DESC)
+    const [showNoteFormModal, setShowNoteFormModal] = useState(false)
+    const [currentEditingNote, setCurrentEditingNote] = useState<Partial<BrewingNoteData>>({})
 
     // 排序笔记的函数
-    const sortNotes = (notesToSort: BrewingNote[], option: SortOption): BrewingNote[] => {
-        switch (option) {
+    const sortNotes = (notesToSort: BrewingNote[]): BrewingNote[] => {
+        switch (sortOption) {
             case SORT_OPTIONS.TIME_DESC:
                 return [...notesToSort].sort((a, b) => b.timestamp - a.timestamp)
             case SORT_OPTIONS.TIME_ASC:
@@ -76,19 +76,20 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
         }
     }
 
+    // 加载笔记的函数 - 将其移到effect外部
+    const loadNotes = async () => {
+        try {
+            const savedNotes = await Storage.get('brewingNotes')
+            const parsedNotes = savedNotes ? JSON.parse(savedNotes) : []
+            setNotes(sortNotes(parsedNotes))
+        } catch {
+            // 加载失败时设置空数组
+            setNotes([])
+        }
+    }
+
     // 添加本地存储变化监听
     useEffect(() => {
-        const loadNotes = async () => {
-            try {
-                const savedNotes = await Storage.get('brewingNotes')
-                const parsedNotes = savedNotes ? JSON.parse(savedNotes) : []
-                setNotes(sortNotes(parsedNotes, sortOption))
-            } catch {
-                // 加载失败时设置空数组
-                setNotes([])
-            }
-        }
-
         // 立即加载，不管是否显示
         loadNotes()
 
@@ -105,7 +106,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
 
     useEffect(() => {
         // 当排序选项变化时，重新排序笔记
-        setNotes(prevNotes => sortNotes([...prevNotes], sortOption))
+        setNotes(prevNotes => sortNotes([...prevNotes]))
     }, [sortOption])
 
     const handleDelete = async (noteId: string) => {
@@ -113,7 +114,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
             try {
                 const updatedNotes = notes.filter(note => note.id !== noteId)
                 await Storage.set('brewingNotes', JSON.stringify(updatedNotes))
-                setNotes(sortNotes(updatedNotes, sortOption))
+                setNotes(sortNotes(updatedNotes))
             } catch {
                 // 删除失败时提示用户
                 alert('删除笔记时出错，请重试')
@@ -123,7 +124,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
 
     const handleEdit = (note: BrewingNote) => {
         const formattedNote = {
-            ...note,
+            id: note.id,
             coffeeBeanInfo: {
                 name: note.coffeeBeanInfo?.name || '',
                 roastLevel: note.coffeeBeanInfo?.roastLevel || '中度烘焙',
@@ -142,7 +143,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
             params: note.params,
             totalTime: note.totalTime,
         }
-        setEditingNote(formattedNote)
+        setCurrentEditingNote(formattedNote)
+        setShowNoteFormModal(true)
     }
 
     const handleOptimize = (note: BrewingNote) => {
@@ -173,126 +175,60 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
     }
 
     const handleSaveEdit = async (updatedData: BrewingNoteData) => {
-        if (!editingNote) return
-
-        const updatedNotes = notes.map(note =>
-            note.id === editingNote.id
-                ? {
-                    ...note,
-                    coffeeBeanInfo: updatedData.coffeeBeanInfo,
-                    rating: updatedData.rating,
-                    taste: updatedData.taste,
-                    notes: updatedData.notes,
-                }
-                : note
-        )
-        await Storage.set('brewingNotes', JSON.stringify(updatedNotes))
-        setNotes(sortNotes(updatedNotes, sortOption))
-        setEditingNote(null)
-    }
-
-    const copyTextToClipboard = async (text: string) => {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            return navigator.clipboard.writeText(text);
-        }
-
-        const textArea = document.createElement('textarea');
-        textArea.value = text;
-
-        textArea.style.position = 'fixed';
-        textArea.style.left = '-999999px';
-        textArea.style.top = '-999999px';
-        document.body.appendChild(textArea);
-
-        textArea.focus();
-        textArea.select();
-
-        return new Promise<void>((resolve, reject) => {
-            try {
-                const successful = document.execCommand('copy');
-                if (successful) {
-                    resolve();
-                } else {
-                    reject(new Error('复制命令执行失败'));
-                }
-            } catch (error) {
-                reject(error);
-            } finally {
-                document.body.removeChild(textArea);
-            }
-        });
-    }
-
-    const handleShare = (note: BrewingNote) => {
         try {
-            const shareableNote = {
-                equipment: note.equipment,
-                method: note.method,
-                params: note.params,
-                coffeeBeanInfo: note.coffeeBeanInfo,
-                rating: note.rating,
-                taste: note.taste,
-                notes: note.notes
-            };
+            const existingNotesStr = await Storage.get('brewingNotes');
+            const existingNotes = existingNotesStr ? JSON.parse(existingNotesStr) : [];
 
-            // 导入转换工具并生成可读文本
-            import('@/lib/jsonUtils').then(({ brewingNoteToReadableText }) => {
-                // @ts-expect-error - 我们知道这个对象结构与函数期望的类型兼容
-                const readableText = brewingNoteToReadableText(shareableNote);
+            if (currentEditingNote.id) {
+                const updatedNotes = existingNotes.map((note: BrewingNoteData) =>
+                    note.id === currentEditingNote.id
+                        ? {
+                            ...note,
+                            coffeeBeanInfo: updatedData.coffeeBeanInfo,
+                            rating: updatedData.rating,
+                            taste: updatedData.taste,
+                            notes: updatedData.notes,
+                            equipment: updatedData.equipment,
+                            method: updatedData.method,
+                            params: updatedData.params,
+                        }
+                        : note
+                );
 
-                copyTextToClipboard(readableText)
-                    .then(() => {
-                        setCopySuccess(prev => ({
-                            ...prev,
-                            [note.id]: true
-                        }));
-                        setTimeout(() => {
-                            setCopySuccess(prev => ({
-                                ...prev,
-                                [note.id]: false
-                            }));
-                        }, 2000);
-                    })
-                    .catch(() => {
-                        // 复制失败时提示用户
-                        alert('复制失败，请手动复制');
-                    });
-            }).catch(() => {
-                // 转换失败时回退到JSON格式
-                const jsonString = JSON.stringify(shareableNote, null, 2);
-                copyTextToClipboard(jsonString)
-                    .catch(() => {
-                        alert('复制失败，请手动复制');
-                    });
-            });
-        } catch {
-            // 忽略异常
+                await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
+                setNotes(sortNotes(updatedNotes));
+            }
+            else {
+                const newNote = {
+                    ...updatedData,
+                    id: Date.now().toString(),
+                    timestamp: Date.now()
+                };
+
+                const updatedNotes = [newNote, ...existingNotes];
+                await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
+                setNotes(sortNotes(updatedNotes));
+            }
+
+            setShowNoteFormModal(false);
+            setCurrentEditingNote({});
+        } catch (error) {
+            console.error('保存笔记失败:', error);
+            alert('保存笔记时出错，请重试');
         }
+    };
+
+    // 添加新建笔记的处理函数
+    const handleAddNote = () => {
+        setCurrentEditingNote({});
+        setShowNoteFormModal(true);
     };
 
     if (!isOpen) return null
 
     return (
         <AnimatePresence mode="wait">
-            {editingNote ? (
-                <motion.div
-                    key="edit-form"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.2, ease: "easeOut" }}
-                    className="h-full p-6"
-                    id="brewing-history-component"
-                >
-                    <BrewingNoteForm
-                        id={editingNote.id}
-                        isOpen={true}
-                        onClose={() => setEditingNote(null)}
-                        onSave={handleSaveEdit}
-                        initialData={editingNote as unknown as Partial<BrewingNoteData>}
-                    />
-                </motion.div>
-            ) : optimizingNote ? (
+            {optimizingNote ? (
                 <motion.div
                     key="optimize-form"
                     initial={{ opacity: 0, x: 20 }}
@@ -312,23 +248,23 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                         }}
                         className="hidden"
                     />
-                    <BrewingNoteForm
-                        id={optimizingNote.id}
-                        isOpen={true}
-                        onClose={() => {
-                            setOptimizingNote(null)
-                            if (onOptimizingChange) {
-                                onOptimizingChange(false)
-                            }
-                        }}
+                    <BrewingNoteFormModalNew
+                        key="optimize-form-modal"
+                        showForm={true}
+                        initialNote={optimizingNote as unknown as Partial<BrewingNoteData>}
+                        showOptimizationByDefault={true}
                         onSave={() => {
                             setOptimizingNote(null)
                             if (onOptimizingChange) {
                                 onOptimizingChange(false)
                             }
                         }}
-                        initialData={optimizingNote as unknown as Partial<BrewingNoteData>}
-                        showOptimizationByDefault={true}
+                        onClose={() => {
+                            setOptimizingNote(null)
+                            if (onOptimizingChange) {
+                                onOptimizingChange(false)
+                            }
+                        }}
                         onJumpToImport={onJumpToImport}
                     />
                 </motion.div>
@@ -342,262 +278,279 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                     className="space-y-6"
                     id="brewing-history-component"
                 >
-                    {notes.length === 0 ? (
+                    <div className="p-6 space-y-6">
+                        {/* 修改为只有添加按钮 */}
                         <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ duration: 0.2, ease: "easeOut" }}
-                            className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500"
+                            initial={{ opacity: 0, y: 5 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -5 }}
+                            transition={{ duration: 0.3, ease: "easeOut" }}
+                            className="mb-4"
                         >
-                            [ 暂无冲煮记录 ]
+                            <motion.button
+                                onClick={handleAddNote}
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                className="w-full flex items-center justify-center py-3 border border-dashed border-neutral-300 rounded-md text-xs text-neutral-500 dark:border-neutral-800 dark:text-neutral-400 transition-colors"
+                            >
+                                <span className="mr-1">+</span> 添加笔记
+                            </motion.button>
                         </motion.div>
-                    ) : (
-                        <div className="space-y-6 p-6">
-                            {/* 排序控件 */}
-                            <div className="flex justify-between items-center mb-6">
-                                <div className="text-xs tracking-wide text-neutral-400 dark:text-neutral-500">
-                                    共 {notes.length} 条记录
-                                </div>
-                                <Select
-                                    value={sortOption}
-                                    onValueChange={(value) => setSortOption(value as SortOption)}
-                                >
-                                    <SelectTrigger
-                                        variant="minimal"
-                                        className="w-auto min-w-[90px] tracking-wide text-neutral-400 dark:text-neutral-500 hover:text-neutral-600 dark:hover:text-neutral-400 transition-colors group"
-                                    >
-                                        <div className="flex items-center">
-                                            <SelectValue />
-                                            <svg
-                                                className="mr-1 w-3 h-3 opacity-90 transition-opacity"
-                                                viewBox="0 0 15 15"
-                                                fill="none"
-                                                xmlns="http://www.w3.org/2000/svg"
-                                            >
-                                                <path d="M4.5 6.5L7.5 3.5L10.5 6.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
-                                                <path d="M4.5 8.5L7.5 11.5L10.5 8.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
-                                            </svg>
-                                        </div>
-                                    </SelectTrigger>
-                                    <SelectContent
-                                        position="popper"
-                                        sideOffset={5}
-                                        className="border-neutral-200/70 dark:border-neutral-800/70 shadow-lg backdrop-blur-sm bg-white/95 dark:bg-neutral-900/95 rounded-lg overflow-hidden"
-                                    >
-                                        {Object.values(SORT_OPTIONS).map((value) => (
-                                            <SelectItem
-                                                key={value}
-                                                value={value}
-                                                className="tracking-wide text-neutral-400 dark:text-neutral-500 data-[highlighted]:text-neutral-600 dark:data-[highlighted]:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800/70 transition-colors"
-                                            >
-                                                {SORT_LABELS[value]}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
 
-                            {notes.map((note, index) => (
-                                <motion.div
-                                    key={note.id}
-                                    initial={{ opacity: 0, y: 15 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0 }}
-                                    transition={{
-                                        duration: 0.2,
-                                        delay: Math.min(index * 0.05, 0.3),
-                                        ease: "easeOut"
-                                    }}
-                                    className="group space-y-4 border-l border-neutral-200/50 pl-6 dark:border-neutral-800"
-                                >
-                                    <div className="flex flex-col space-y-4">
-                                        <div className="space-y-2">
-                                            <div className="flex items-baseline justify-between">
-                                                <div className="flex items-baseline space-x-2 min-w-0 overflow-hidden">
-                                                    <div className="text-[10px] truncate">
-                                                        {note.equipment}
+                        {notes.length === 0 ? (
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ duration: 0.2, ease: "easeOut" }}
+                                className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500"
+                            >
+                                [ 暂无冲煮记录 ]
+                            </motion.div>
+                        ) : (
+                            <div className="space-y-6">
+                                {/* 排序控件和数量显示 */}
+                                <div className="flex justify-between items-center mb-6">
+                                    <div className="text-xs tracking-wide text-neutral-400 dark:text-neutral-500">
+                                        共 {notes.length} 条记录
+                                    </div>
+                                    <Select
+                                        value={sortOption}
+                                        onValueChange={(value) => setSortOption(value as SortOption)}
+                                    >
+                                        <SelectTrigger
+                                            variant="minimal"
+                                            className="w-auto min-w-[90px] tracking-wide text-neutral-400 dark:text-neutral-500 hover:text-neutral-600 dark:hover:text-neutral-400 transition-colors group"
+                                        >
+                                            <div className="flex items-center">
+                                                <SelectValue />
+                                                <svg
+                                                    className="mr-1 w-3 h-3 opacity-90 transition-opacity"
+                                                    viewBox="0 0 15 15"
+                                                    fill="none"
+                                                    xmlns="http://www.w3.org/2000/svg"
+                                                >
+                                                    <path d="M4.5 6.5L7.5 3.5L10.5 6.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+                                                    <path d="M4.5 8.5L7.5 11.5L10.5 8.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+                                                </svg>
+                                            </div>
+                                        </SelectTrigger>
+                                        <SelectContent
+                                            position="popper"
+                                            sideOffset={5}
+                                            className="border-neutral-200/70 dark:border-neutral-800/70 shadow-lg backdrop-blur-sm bg-white/95 dark:bg-neutral-900/95 rounded-lg overflow-hidden"
+                                        >
+                                            {Object.values(SORT_OPTIONS).map((value) => (
+                                                <SelectItem
+                                                    key={value}
+                                                    value={value}
+                                                    className="tracking-wide text-neutral-400 dark:text-neutral-500 data-[highlighted]:text-neutral-600 dark:data-[highlighted]:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800/70 transition-colors"
+                                                >
+                                                    {SORT_LABELS[value]}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                {/* 笔记列表 */}
+                                {notes.map((note, index) => (
+                                    <motion.div
+                                        key={note.id}
+                                        initial={{ opacity: 0, y: 15 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0 }}
+                                        transition={{
+                                            duration: 0.2,
+                                            delay: Math.min(index * 0.05, 0.3),
+                                            ease: "easeOut"
+                                        }}
+                                        className="group space-y-4 border-l border-neutral-200/50 pl-6 dark:border-neutral-800"
+                                    >
+                                        <div className="flex flex-col space-y-4">
+                                            <div className="space-y-2">
+                                                <div className="flex items-baseline justify-between">
+                                                    <div className="flex items-baseline space-x-2 min-w-0 overflow-hidden">
+                                                        <div className="text-[10px] truncate">
+                                                            {note.equipment}
+                                                        </div>
+                                                        {note.method && (
+                                                            <>
+                                                                <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500 shrink-0">
+                                                                    ·
+                                                                </div>
+                                                                <div className="text-[10px] font-light tracking-wide truncate">
+                                                                    {note.method}
+                                                                </div>
+                                                            </>
+                                                        )}
                                                     </div>
-                                                    {note.method && (
-                                                        <>
-                                                            <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500 shrink-0">
-                                                                ·
-                                                            </div>
-                                                            <div className="text-[10px] font-light tracking-wide truncate">
-                                                                {note.method}
-                                                            </div>
-                                                        </>
-                                                    )}
-                                                </div>
-                                                <div className="flex items-baseline ml-2 shrink-0">
-                                                    <AnimatePresence mode="wait">
-                                                        {actionMenuStates[note.id] ? (
-                                                            <motion.div
-                                                                key="action-buttons"
-                                                                initial={{ opacity: 0, scale: 0.98 }}
-                                                                animate={{ opacity: 1, scale: 1 }}
-                                                                exit={{ opacity: 0 }}
-                                                                transition={{ duration: 0.15, ease: "easeOut" }}
-                                                                className="flex items-baseline space-x-3"
-                                                            >
-                                                                <button
-                                                                    onClick={() => handleEdit(note)}
-                                                                    className="px-2 text-xs text-neutral-400 dark:text-neutral-500"
+                                                    <div className="flex items-baseline ml-2 shrink-0">
+                                                        <AnimatePresence mode="wait">
+                                                            {actionMenuStates[note.id] ? (
+                                                                <motion.div
+                                                                    key="action-buttons"
+                                                                    initial={{ opacity: 0, scale: 0.98 }}
+                                                                    animate={{ opacity: 1, scale: 1 }}
+                                                                    exit={{ opacity: 0 }}
+                                                                    transition={{ duration: 0.15, ease: "easeOut" }}
+                                                                    className="flex items-baseline space-x-3"
                                                                 >
-                                                                    编辑
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => handleShare(note)}
-                                                                    className="px-2 text-xs text-blue-400 dark:text-blue-500 relative"
-                                                                >
-                                                                    {copySuccess[note.id] ? '已复制' : '分享'}
-                                                                    {copySuccess[note.id] && (
-                                                                        <motion.div
-                                                                            initial={{ opacity: 0, y: 5 }}
-                                                                            animate={{ opacity: 1, y: 0 }}
-                                                                            exit={{ opacity: 0 }}
-                                                                            transition={{ duration: 0.15, ease: "easeOut" }}
-                                                                            className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-neutral-800 dark:bg-neutral-700 text-white px-2 py-1 rounded text-[10px] whitespace-nowrap"
-                                                                        >
-                                                                            已复制到剪贴板
-                                                                        </motion.div>
-                                                                    )}
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => handleOptimize(note)}
-                                                                    className="px-2 text-xs text-emerald-600 dark:text-emerald-500 font-medium"
-                                                                >
-                                                                    优化
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => handleDelete(note.id)}
-                                                                    className="px-2 text-xs text-red-400"
-                                                                >
-                                                                    删除
-                                                                </button>
-                                                                <button
+                                                                    <button
+                                                                        onClick={() => handleEdit(note)}
+                                                                        className="px-2 text-xs text-neutral-400 dark:text-neutral-500"
+                                                                    >
+                                                                        编辑
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleOptimize(note)}
+                                                                        className="px-2 text-xs text-emerald-600 dark:text-emerald-500 font-medium"
+                                                                    >
+                                                                        优化
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleDelete(note.id)}
+                                                                        className="px-2 text-xs text-red-400"
+                                                                    >
+                                                                        删除
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            setActionMenuStates(prev => ({
+                                                                                ...prev,
+                                                                                [note.id]: false
+                                                                            }))
+                                                                        }}
+                                                                        className="w-7 h-7 flex items-center justify-center rounded-full text-sm text-neutral-400"
+                                                                    >
+                                                                        ×
+                                                                    </button>
+                                                                </motion.div>
+                                                            ) : (
+                                                                <motion.button
+                                                                    key="more-button"
+                                                                    initial={{ opacity: 0, scale: 0.98 }}
+                                                                    animate={{ opacity: 1, scale: 1 }}
+                                                                    exit={{ opacity: 0 }}
+                                                                    transition={{ duration: 0.15, ease: "easeOut" }}
                                                                     onClick={() => {
                                                                         setActionMenuStates(prev => ({
                                                                             ...prev,
-                                                                            [note.id]: false
+                                                                            [note.id]: true
                                                                         }))
                                                                     }}
-                                                                    className="w-7 h-7 flex items-center justify-center rounded-full text-sm text-neutral-400"
+                                                                    className="w-7 h-7 flex items-center justify-center text-xs text-neutral-400 dark:text-neutral-500"
                                                                 >
-                                                                    ×
-                                                                </button>
-                                                            </motion.div>
-                                                        ) : (
-                                                            <motion.button
-                                                                key="more-button"
-                                                                initial={{ opacity: 0, scale: 0.98 }}
-                                                                animate={{ opacity: 1, scale: 1 }}
-                                                                exit={{ opacity: 0 }}
-                                                                transition={{ duration: 0.15, ease: "easeOut" }}
-                                                                onClick={() => {
-                                                                    setActionMenuStates(prev => ({
-                                                                        ...prev,
-                                                                        [note.id]: true
-                                                                    }))
-                                                                }}
-                                                                className="w-7 h-7 flex items-center justify-center text-xs text-neutral-400 dark:text-neutral-500"
-                                                            >
-                                                                ···
-                                                            </motion.button>
-                                                        )}
-                                                    </AnimatePresence>
+                                                                    ···
+                                                                </motion.button>
+                                                            )}
+                                                        </AnimatePresence>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex flex-wrap gap-2 text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
+                                                    {note.coffeeBeanInfo?.name && (
+                                                        <>
+                                                            <span>{note.coffeeBeanInfo.name}</span>
+                                                            <span>·</span>
+                                                        </>
+                                                    )}
+                                                    <span>{note.coffeeBeanInfo?.roastLevel}</span>
+                                                    {note.coffeeBeanInfo?.roastDate && (
+                                                        <>
+                                                            <span>·</span>
+                                                            <span>{note.coffeeBeanInfo.roastDate}</span>
+                                                        </>
+                                                    )}
+                                                    {note.params && (
+                                                        <>
+                                                            <span>·</span>
+                                                            <span>{note.params.coffee}</span>
+                                                            <span>·</span>
+                                                            <span>{note.params.water}</span>
+                                                            <span>·</span>
+                                                            <span>{note.params.ratio}</span>
+                                                        </>
+                                                    )}
                                                 </div>
                                             </div>
 
-                                            <div className="flex flex-wrap gap-2 text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
-                                                {note.coffeeBeanInfo?.name && (
-                                                    <>
-                                                        <span>{note.coffeeBeanInfo.name}</span>
-                                                        <span>·</span>
-                                                    </>
-                                                )}
-                                                <span>{note.coffeeBeanInfo?.roastLevel}</span>
-                                                {note.coffeeBeanInfo?.roastDate && (
-                                                    <>
-                                                        <span>·</span>
-                                                        <span>{note.coffeeBeanInfo.roastDate}</span>
-                                                    </>
-                                                )}
-                                                {note.params && (
-                                                    <>
-                                                        <span>·</span>
-                                                        <span>{note.params.coffee}</span>
-                                                        <span>·</span>
-                                                        <span>{note.params.water}</span>
-                                                        <span>·</span>
-                                                        <span>{note.params.ratio}</span>
-                                                    </>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        <div className="grid grid-cols-2 gap-4">
-                                            {Object.entries(note.taste).map(([key, value], i) => (
-                                                <motion.div
-                                                    key={key}
-                                                    initial={{ opacity: 0, x: -10 }}
-                                                    animate={{ opacity: 1, x: 0 }}
-                                                    transition={{ delay: 0.1 + i * 0.05, duration: 0.3 }}
-                                                    className="space-y-1"
-                                                >
-                                                    <div className="flex items-center justify-between">
-                                                        <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
-                                                            {
-                                                                {
-                                                                    acidity: '酸度',
-                                                                    sweetness: '甜度',
-                                                                    bitterness: '苦度',
-                                                                    body: '醇度',
-                                                                }[key]
-                                                            }
-                                                        </div>
-                                                        <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
-                                                            [ {value} ]
-                                                        </div>
-                                                    </div>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                {Object.entries(note.taste).map(([key, value], i) => (
                                                     <motion.div
-                                                        className="h-px w-full overflow-hidden bg-neutral-200/50 dark:bg-neutral-800"
+                                                        key={key}
+                                                        initial={{ opacity: 0, x: -10 }}
+                                                        animate={{ opacity: 1, x: 0 }}
+                                                        transition={{ delay: 0.1 + i * 0.05, duration: 0.3 }}
+                                                        className="space-y-1"
                                                     >
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
+                                                                {
+                                                                    {
+                                                                        acidity: '酸度',
+                                                                        sweetness: '甜度',
+                                                                        bitterness: '苦度',
+                                                                        body: '醇度',
+                                                                    }[key]
+                                                                }
+                                                            </div>
+                                                            <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
+                                                                [ {value} ]
+                                                            </div>
+                                                        </div>
                                                         <motion.div
-                                                            initial={{ width: 0 }}
-                                                            animate={{ width: `${(value / 5) * 100}%` }}
-                                                            transition={{
-                                                                delay: 0.15 + i * 0.05,
-                                                                duration: 0.5,
-                                                                ease: "easeOut"
-                                                            }}
-                                                            className="h-full bg-neutral-800 dark:bg-neutral-100"
-                                                        />
+                                                            className="h-px w-full overflow-hidden bg-neutral-200/50 dark:bg-neutral-800"
+                                                        >
+                                                            <motion.div
+                                                                initial={{ width: 0 }}
+                                                                animate={{ width: `${(value / 5) * 100}%` }}
+                                                                transition={{
+                                                                    delay: 0.15 + i * 0.05,
+                                                                    duration: 0.5,
+                                                                    ease: "easeOut"
+                                                                }}
+                                                                className="h-full bg-neutral-800 dark:bg-neutral-100"
+                                                            />
+                                                        </motion.div>
                                                     </motion.div>
-                                                </motion.div>
-                                            ))}
-                                        </div>
+                                                ))}
+                                            </div>
 
-                                        <div className="flex items-baseline justify-between">
-                                            <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
-                                                {formatDate(note.timestamp)}
+                                            <div className="flex items-baseline justify-between">
+                                                <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
+                                                    {formatDate(note.timestamp)}
+                                                </div>
+                                                <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
+                                                    {formatRating(note.rating)}
+                                                </div>
                                             </div>
-                                            <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
-                                                {formatRating(note.rating)}
-                                            </div>
-                                        </div>
 
-                                        {note.notes && (
-                                            <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
-                                                {note.notes}
-                                            </div>
-                                        )}
-                                    </div>
-                                </motion.div>
-                            ))}
-                        </div>
-                    )}
+                                            {note.notes && (
+                                                <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
+                                                    {note.notes}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </motion.div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </motion.div>
             )}
+
+            {/* 添加笔记表单模态框 */}
+            <BrewingNoteFormModalNew
+                key="note-form-modal"
+                showForm={showNoteFormModal}
+                initialNote={currentEditingNote}
+                onSave={handleSaveEdit}
+                onClose={() => {
+                    setShowNoteFormModal(false);
+                    setCurrentEditingNote({});
+                }}
+                onJumpToImport={onJumpToImport}
+            />
         </AnimatePresence>
     )
 }

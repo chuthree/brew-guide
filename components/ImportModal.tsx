@@ -153,60 +153,63 @@ const ImportBeanModal: React.FC<ImportBeanModalProps> = ({
         }
 
         try {
-            // 解析JSON数据
-            const jsonData = JSON.parse(importData);
+            // 尝试从文本中提取数据
+            import('@/lib/jsonUtils').then(async ({ extractJsonFromText }) => {
+                setError(null);
+                const beanData = extractJsonFromText(importData);
 
-            // 确保某些字段始终是字符串类型
-            const ensureStringFields = (item: ImportedBean) => {
-                const result = { ...item };
-                // 确保 capacity 和 remaining 是字符串
-                if (result.capacity !== undefined && result.capacity !== null) {
-                    result.capacity = String(result.capacity);
+                if (!beanData) {
+                    setError('无法从输入中提取有效数据');
+                    return;
                 }
-                if (result.remaining !== undefined && result.remaining !== null) {
-                    result.remaining = String(result.remaining);
-                }
-                // 确保 price 是字符串
-                if (result.price !== undefined && result.price !== null) {
-                    result.price = String(result.price);
-                }
-                return result;
-            };
 
-            // 如果是数组，为每个对象添加时间戳
-            if (Array.isArray(jsonData)) {
-                const dataWithTimestamp = jsonData.map(item => ({
-                    ...ensureStringFields(item),
-                    timestamp: Date.now()
-                }));
-                onImport(JSON.stringify(dataWithTimestamp))
-                    .then(() => {
-                        // 导入成功后清空输入框
-                        setImportData('');
-                        setError(null);
-                    })
-                    .catch(() => {
-                        setError('导入失败，请重试');
-                    });
-            } else {
-                // 为单个对象添加时间戳
+                // 检查是否是咖啡豆类型数据
+                if (!('roastLevel' in beanData)) {
+                    setError('提取的数据不是有效的咖啡豆信息');
+                    return;
+                }
+
+                // 确保某些字段始终是字符串类型
+                const ensureStringFields = (item: ImportedBean) => {
+                    const result = { ...item };
+                    // 确保 capacity 和 remaining 是字符串
+                    if (result.capacity !== undefined && result.capacity !== null) {
+                        result.capacity = String(result.capacity);
+                    }
+                    if (result.remaining !== undefined && result.remaining !== null) {
+                        result.remaining = String(result.remaining);
+                    }
+                    // 确保 price 是字符串
+                    if (result.price !== undefined && result.price !== null) {
+                        result.price = String(result.price);
+                    }
+                    return result;
+                };
+
+                // 为对象添加时间戳
                 const dataWithTimestamp = {
-                    ...ensureStringFields(jsonData),
+                    ...ensureStringFields(beanData as unknown as ImportedBean),
                     timestamp: Date.now()
                 };
+
                 onImport(JSON.stringify(dataWithTimestamp))
                     .then(() => {
                         // 导入成功后清空输入框
                         setImportData('');
                         setError(null);
+                        setSuccess('导入成功');
+                        setTimeout(() => setSuccess(null), 2000);
                     })
                     .catch(() => {
                         setError('导入失败，请重试');
                     });
-            }
+            }).catch((err) => {
+                console.error('导入失败:', err);
+                setError('数据格式错误，请检查导入的数据');
+            });
         } catch (error) {
-            console.error('JSON解析错误:', error);
-            setError('JSON格式错误，请检查导入的数据');
+            console.error('数据处理错误:', error);
+            setError('数据格式错误，请检查导入的数据');
         }
     };
 
