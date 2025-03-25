@@ -1,5 +1,6 @@
 import { Storage } from "@/lib/storage";
 import { Method } from "@/lib/config";
+import { CoffeeBean } from "@/app/types";
 
 // 定义导出数据的接口
 interface ExportData {
@@ -290,6 +291,86 @@ export const DataManager = {
 								typeof importData.data[key] === "object"
 									? JSON.stringify(importData.data[key])
 									: String(importData.data[key])
+							);
+						}
+					} else if (
+						key === "coffeeBeans" &&
+						existingData &&
+						importData.data[key]
+					) {
+						// 合并咖啡豆数据
+						const existingBeans = Array.isArray(existingData)
+							? (existingData as CoffeeBean[])
+							: [];
+						const importedBeans = Array.isArray(
+							importData.data[key]
+						)
+							? (importData.data[key] as CoffeeBean[])
+							: [];
+
+						// 创建ID映射以避免重复
+						const existingIds = new Set(
+							existingBeans.map((bean) => bean.id)
+						);
+
+						// 添加不重复的咖啡豆
+						const newBeans = importedBeans.filter(
+							(bean) => !existingIds.has(bean.id)
+						);
+
+						// 为导入的咖啡豆生成新ID
+						const beansWithNewIds = newBeans.map((bean) => ({
+							...bean,
+							id: `${Date.now()}-${Math.random()
+								.toString(36)
+								.substr(2, 9)}`,
+						}));
+
+						const mergedBeans = [
+							...existingBeans,
+							...beansWithNewIds,
+						];
+
+						// 按时间戳排序（如果有）
+						if (
+							mergedBeans.length > 0 &&
+							mergedBeans[0].timestamp
+						) {
+							mergedBeans.sort(
+								(a, b) => b.timestamp - a.timestamp
+							);
+						}
+
+						await Storage.set(key, JSON.stringify(mergedBeans));
+					} else if (key === "brewingNotesVersion") {
+						// 数据版本处理：保留较大的版本号
+						if (existingData && importData.data[key]) {
+							const existingVersion = Number(existingData);
+							const importedVersion = Number(
+								importData.data[key]
+							);
+
+							if (
+								!isNaN(existingVersion) &&
+								!isNaN(importedVersion)
+							) {
+								const newVersion = Math.max(
+									existingVersion,
+									importedVersion
+								);
+								await Storage.set(key, String(newVersion));
+							} else {
+								// 如果现有版本无效，使用导入的版本
+								await Storage.set(
+									key,
+									String(importData.data[key])
+								);
+							}
+						} else if (importData.data[key]) {
+							// 如果不存在现有版本，使用导入的版本
+							await Storage.set(
+								key,
+								String(importData.data[key])
 							);
 						}
 					} else {

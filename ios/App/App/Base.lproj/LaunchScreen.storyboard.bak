@@ -2,7 +2,7 @@
 <document
 	type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB"
 	version="3.0"
-	toolsVersion="21701"
+	toolsVersion="24132"
 	targetRuntime="iOS.CocoaTouch"
 	propertyAccessControl="none"
 	useAutolayout="YES"
@@ -17,7 +17,7 @@
         <deployment identifier="iOS" />
         <plugIn
 			identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin"
-			version="21701"
+			version="24132"
 		/>
         <capability
 			name="System colors in document resources"
@@ -73,7 +73,7 @@
 				white="1"
 				alpha="1"
 				colorSpace="custom"
-				customColorSpace="genericGamma22GrayColorSpace"
+				customColorSpace="genericGamma22neutralColorSpace"
 			/>
         </systemColor>
     </resources>
