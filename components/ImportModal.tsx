@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { generateBeanTemplateJson } from '@/lib/jsonUtils'
 import ReactCrop, { Crop } from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
+import { recognizeImage, RecognitionError } from '@/services/recognition'
 
 interface ImportBeanModalProps {
     showForm: boolean
@@ -34,6 +35,18 @@ const ImportBeanModal: React.FC<ImportBeanModalProps> = ({
     const [croppedImage, setCroppedImage] = useState<string | null>(null);
     const [showCropper, setShowCropper] = useState(false);
     const imgRef = useRef<HTMLImageElement>(null);
+
+    // Automatically trigger crop complete when cropper is shown
+    useEffect(() => {
+        if (showCropper && selectedImage && crop.width && crop.height) {
+            const imageElement = imgRef.current;
+            if (imageElement && imageElement.complete) {
+                handleCropComplete(crop);
+            } else if (imageElement) {
+                imageElement.onload = () => handleCropComplete(crop);
+            }
+        }
+    }, [showCropper, selectedImage, crop]);
 
     // 清除所有状态消息
     const clearMessages = () => {
@@ -238,19 +251,33 @@ ${templateJson}
         const scaleX = image.naturalWidth / displayedImage.width;
         const scaleY = image.naturalHeight / displayedImage.height;
 
+        // 根据单位计算裁剪区域的实际尺寸
+        let cropWidth, cropHeight, cropX, cropY;
+        if (crop.unit === '%') {
+            cropWidth = (crop.width! / 100) * displayedImage.width;
+            cropHeight = (crop.height! / 100) * displayedImage.height;
+            cropX = (crop.x! / 100) * displayedImage.width;
+            cropY = (crop.y! / 100) * displayedImage.height;
+        } else {
+            cropWidth = crop.width!;
+            cropHeight = crop.height!;
+            cropX = crop.x!;
+            cropY = crop.y!;
+        }
+
         // 设置画布尺寸为裁剪区域的实际大小
-        canvas.width = crop.width! * scaleX;
-        canvas.height = crop.height! * scaleY;
+        canvas.width = cropWidth * scaleX;
+        canvas.height = cropHeight * scaleY;
 
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
         ctx.drawImage(
             image,
-            crop.x! * scaleX,
-            crop.y! * scaleY,
-            crop.width! * scaleX,
-            crop.height! * scaleY,
+            cropX * scaleX,
+            cropY * scaleY,
+            cropWidth * scaleX,
+            cropHeight * scaleY,
             0,
             0,
             canvas.width,
@@ -270,7 +297,6 @@ ${templateJson}
 
     // Function to handle image recognition process
     const handleImageRecognition = async () => {
-        // handleCropComplete(crop);
         if (!croppedImage) return;
 
         setIsUploading(true);
@@ -283,28 +309,20 @@ ${templateJson}
             const formData = new FormData();
             formData.append('file', blob, 'coffee-bean.jpg');
 
-            const recognitionResponse = await fetch('/api/upload', {
-                method: 'POST',
-                body: formData,
-            });
-
-            if (!recognitionResponse.ok) {
-                throw new Error('Recognition failed');
-            }
-
-            const data = await recognitionResponse.json();
+            const data = await recognizeImage(formData);
             
-            if (data.success && data.result) {
-                console.log(data.result);
+            if (data.result) {
                 setImportData(JSON.stringify(data.result));
                 setSuccess('✨ AI识别成功！请检查识别结果是否正确');
-            } else {
-                throw new Error('Invalid response format');
             }
 
         } catch (err) {
             console.error('识别失败:', err);
-            setError('图片识别失败，请重试');
+            if (err instanceof RecognitionError) {
+                setError(err.message);
+            } else {
+                setError('图片识别失败，请重试');
+            }
         } finally {
             setIsUploading(false);
             setShowCropper(false);
