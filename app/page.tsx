@@ -140,6 +140,9 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     // 使用自定义Hooks，传入初始步骤
     const initialStep: BrewingStep = initialHasBeans ? 'coffeeBean' : 'equipment';
 
+    // 添加一个状态来跟踪当前阶段是否为等待阶段
+    const [isStageWaiting, setIsStageWaiting] = useState(false);
+
     // 创建自定义的useBrewingState hook调用，传入初始步骤
     const brewingState = useBrewingState(initialStep);
     const {
@@ -376,16 +379,27 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         };
 
         const handleTimerStatusChange = (e: CustomEvent) => {
-            if (e.detail?.status === 'running') {
+            // 检查e.detail中的isRunning或status属性
+            if (typeof e.detail?.isRunning === 'boolean') {
+                setIsTimerRunning(e.detail.isRunning);
+            } else if (e.detail?.status === 'running') {
                 setIsTimerRunning(true);
-            } else {
+            } else if (e.detail?.status === 'stopped') {
                 setIsTimerRunning(false);
             }
         };
 
         const handleStageChange = (e: CustomEvent) => {
+            // 处理stage/currentStage属性
             if (typeof e.detail?.stage === 'number') {
                 setCurrentStage(e.detail.stage);
+            } else if (typeof e.detail?.currentStage === 'number') {
+                setCurrentStage(e.detail.currentStage);
+            }
+
+            // 检查并更新等待状态
+            if (typeof e.detail?.isWaiting === 'boolean') {
+                setIsStageWaiting(e.detail.isWaiting);
             }
         };
 
@@ -412,7 +426,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             window.removeEventListener('brewing:stageChange', handleStageChange as EventListener);
             window.removeEventListener('brewing:countdownChange', handleCountdownChange as EventListener);
         };
-    }, [setShowComplete, setIsCoffeeBrewed, setHasAutoNavigatedToNotes, setIsTimerRunning, setCurrentStage, setCountdownTime]);
+    }, [setShowComplete, setIsCoffeeBrewed, setHasAutoNavigatedToNotes, setIsTimerRunning, setCurrentStage, setCountdownTime, setIsStageWaiting]);
 
     // 修改处理步骤点击的包装函数，允许在冲煮完成后切换到记录
     const handleBrewingStepClickWrapper = (step: BrewingStep) => {
@@ -955,7 +969,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                             isTimerRunning={isTimerRunning}
                             showComplete={showComplete}
                             currentStage={currentStage}
-                            isWaiting={false}
+                            isWaiting={isStageWaiting}
                             isPourVisualizerPreloaded={isPourVisualizerPreloaded}
                             selectedEquipment={selectedEquipment}
                             selectedCoffeeBean={selectedCoffeeBean}
@@ -1064,14 +1078,22 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                             onStatusChange={({ isRunning }) => {
                                 // 使用事件而不是直接更新状态
                                 const event = new CustomEvent('brewing:timerStatus', {
-                                    detail: { isRunning }
+                                    detail: {
+                                        isRunning,
+                                        status: isRunning ? 'running' : 'stopped'
+                                    }
                                 });
                                 window.dispatchEvent(event);
                             }}
-                            onStageChange={({ currentStage, isWaiting }) => {
+                            onStageChange={({ currentStage, progress, isWaiting }) => {
                                 // 使用事件而不是直接更新状态
                                 const event = new CustomEvent('brewing:stageChange', {
-                                    detail: { currentStage, isWaiting }
+                                    detail: {
+                                        currentStage,
+                                        stage: currentStage, // 兼容旧的处理方式
+                                        progress,
+                                        isWaiting
+                                    }
                                 });
                                 window.dispatchEvent(event);
                             }}
