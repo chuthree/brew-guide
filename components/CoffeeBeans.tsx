@@ -355,16 +355,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
         }
     };
 
-    // 添加评分选项到操作菜单
-    const handleRateBean = (bean: CoffeeBean) => {
-        handleShowRatingForm(bean);
-        // 关闭操作菜单
-        setActionMenuStates(prev => ({
-            ...prev,
-            [bean.id]: false
-        }));
-    };
-
     // 转换仓库排序选项到榜单排序选项
     const convertToRankingSortOption = (option: SortOption): RankingSortOption => {
         switch (option) {
@@ -702,12 +692,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                                                     className="px-2 text-xs text-emerald-600 dark:text-emerald-500"
                                                                                 >
                                                                                     AI方案
-                                                                                </button>
-                                                                                <button
-                                                                                    onClick={() => handleRateBean(bean)}
-                                                                                    className="px-2 text-xs text-amber-500 dark:text-amber-400"
-                                                                                >
-                                                                                    评分
                                                                                 </button>
                                                                                 <button
                                                                                     onClick={() => {

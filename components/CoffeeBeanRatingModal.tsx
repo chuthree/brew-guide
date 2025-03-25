@@ -27,12 +27,6 @@ const CoffeeBeanRatingModal: React.FC<CoffeeBeanRatingModalProps> = ({
 }) => {
     const [beanType, setBeanType] = useState<'espresso' | 'filter'>('filter')
     const [overallRating, setOverallRating] = useState<number>(0)
-    const [ratingEspresso, setRatingEspresso] = useState<number>(0)
-    const [ratingMilkBased, setRatingMilkBased] = useState<number>(0)
-    const [ratingAroma, setRatingAroma] = useState<number>(0)
-    const [ratingFlavor, setRatingFlavor] = useState<number>(0)
-    const [ratingAftertaste, setRatingAftertaste] = useState<number>(0)
-    const [purchaseChannel, setPurchaseChannel] = useState<string>('')
     const [ratingNotes, setRatingNotes] = useState<string>('')
 
     // 当咖啡豆数据加载时，初始化表单状态
@@ -40,12 +34,6 @@ const CoffeeBeanRatingModal: React.FC<CoffeeBeanRatingModalProps> = ({
         if (coffeeBean) {
             setBeanType(coffeeBean.beanType || 'filter')
             setOverallRating(coffeeBean.overallRating || 0)
-            setRatingEspresso(coffeeBean.ratingEspresso || 0)
-            setRatingMilkBased(coffeeBean.ratingMilkBased || 0)
-            setRatingAroma(coffeeBean.ratingAroma || 0)
-            setRatingFlavor(coffeeBean.ratingFlavor || 0)
-            setRatingAftertaste(coffeeBean.ratingAftertaste || 0)
-            setPurchaseChannel(coffeeBean.purchaseChannel || '')
             setRatingNotes(coffeeBean.ratingNotes || '')
         }
     }, [coffeeBean])
@@ -56,25 +44,14 @@ const CoffeeBeanRatingModal: React.FC<CoffeeBeanRatingModalProps> = ({
         const ratings: Partial<CoffeeBean> = {
             beanType,
             overallRating,
-            purchaseChannel: purchaseChannel.trim() || undefined,
-            ratingNotes: ratingNotes.trim() || undefined
-        }
-
-        // 根据豆子类型保存不同的评分
-        if (beanType === 'espresso') {
-            ratings.ratingEspresso = ratingEspresso
-            ratings.ratingMilkBased = ratingMilkBased
-            // 清空手冲豆相关评分
-            ratings.ratingAroma = 0
-            ratings.ratingFlavor = 0
-            ratings.ratingAftertaste = 0
-        } else {
-            ratings.ratingAroma = ratingAroma
-            ratings.ratingFlavor = ratingFlavor
-            ratings.ratingAftertaste = ratingAftertaste
-            // 清空意式豆相关评分
-            ratings.ratingEspresso = 0
-            ratings.ratingMilkBased = 0
+            ratingNotes: ratingNotes.trim() || undefined,
+            // 清空所有其他评分字段
+            ratingEspresso: 0,
+            ratingMilkBased: 0,
+            ratingAroma: 0,
+            ratingFlavor: 0,
+            ratingAftertaste: 0,
+            purchaseChannel: undefined
         }
 
         onSave(coffeeBean.id, ratings)
@@ -153,7 +130,7 @@ const CoffeeBeanRatingModal: React.FC<CoffeeBeanRatingModalProps> = ({
 
                             {/* 总体评分 */}
                             <div className="space-y-2">
-                                <div className="text-[11px] tracking-wide text-neutral-500 dark:text-neutral-400">总体喜好</div>
+                                <div className="text-[11px] tracking-wide text-neutral-500 dark:text-neutral-400">评分</div>
                                 <StarRating
                                     value={overallRating}
                                     onChange={setOverallRating}
@@ -162,72 +139,13 @@ const CoffeeBeanRatingModal: React.FC<CoffeeBeanRatingModalProps> = ({
                                 />
                             </div>
 
-                            {/* 意式豆评分 */}
-                            {beanType === 'espresso' && (
-                                <div className="space-y-4">
-                                    <div className="space-y-2">
-                                        <div className="text-[11px] tracking-wide text-neutral-500 dark:text-neutral-400">美式</div>
-                                        <StarRating
-                                            value={ratingEspresso}
-                                            onChange={setRatingEspresso}
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <div className="text-[11px] tracking-wide text-neutral-500 dark:text-neutral-400">奶咖</div>
-                                        <StarRating
-                                            value={ratingMilkBased}
-                                            onChange={setRatingMilkBased}
-                                        />
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* 手冲豆评分 */}
-                            {beanType === 'filter' && (
-                                <div className="space-y-4">
-                                    <div className="space-y-2">
-                                        <div className="text-[11px] tracking-wide text-neutral-500 dark:text-neutral-400">香气</div>
-                                        <StarRating
-                                            value={ratingAroma}
-                                            onChange={setRatingAroma}
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <div className="text-[11px] tracking-wide text-neutral-500 dark:text-neutral-400">风味</div>
-                                        <StarRating
-                                            value={ratingFlavor}
-                                            onChange={setRatingFlavor}
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <div className="text-[11px] tracking-wide text-neutral-500 dark:text-neutral-400">余韵</div>
-                                        <StarRating
-                                            value={ratingAftertaste}
-                                            onChange={setRatingAftertaste}
-                                        />
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* 购买渠道 */}
-                            <div className="space-y-2">
-                                <div className="text-[11px] tracking-wide text-neutral-500 dark:text-neutral-400">购买渠道</div>
-                                <input
-                                    type="text"
-                                    value={purchaseChannel}
-                                    onChange={(e) => setPurchaseChannel(e.target.value)}
-                                    placeholder="输入购买渠道"
-                                    className="w-full px-3 py-2 text-xs bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-md focus:outline-none focus:ring-1 focus:ring-neutral-300 dark:focus:ring-neutral-600"
-                                />
-                            </div>
-
                             {/* 评价备注 */}
                             <div className="space-y-2">
-                                <div className="text-[11px] tracking-wide text-neutral-500 dark:text-neutral-400">评价备注</div>
+                                <div className="text-[11px] tracking-wide text-neutral-500 dark:text-neutral-400">备注</div>
                                 <textarea
                                     value={ratingNotes}
                                     onChange={(e) => setRatingNotes(e.target.value)}
-                                    placeholder="添加对这款咖啡豆的评价备注"
+                                    placeholder="添加对这款咖啡豆的备注"
                                     className="w-full px-3 py-2 text-xs bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-md focus:outline-none focus:ring-1 focus:ring-neutral-300 dark:focus:ring-neutral-600 min-h-[60px] resize-none"
                                 />
                             </div>
