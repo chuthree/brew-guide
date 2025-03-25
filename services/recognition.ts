@@ -76,7 +76,7 @@ export async function recognizeImage(formData: FormData): Promise<RecognitionRes
     } catch (error) {
         // 处理网络错误
         if (error instanceof TypeError) {
-            throw new RecognitionError('网络连接失败', 'NETWORK_ERROR',error);
+            throw new RecognitionError('网络连接失败', 'NETWORK_ERROR');
         }
 
         // 如果是我们的自定义错误，直接抛出
