@@ -34,6 +34,16 @@ export interface CoffeeBean {
 		process?: string; // 处理法
 		variety?: string; // 品种
 	}>; // 拼配组成成分
+	// 榜单相关字段
+	beanType?: "espresso" | "filter"; // 豆子类型：意式/手冲
+	overallRating?: number; // 总体评分/喜好星值 (1-5)
+	ratingEspresso?: number; // 美式评分 (意式豆)
+	ratingMilkBased?: number; // 奶咖评分 (意式豆)
+	ratingAroma?: number; // 香气评分 (手冲豆)
+	ratingFlavor?: number; // 风味评分 (手冲豆)
+	ratingAftertaste?: number; // 余韵评分 (手冲豆)
+	purchaseChannel?: string; // 购买渠道
+	ratingNotes?: string; // 评价备注
 }
 
 // 修改 BrewingNoteData 接口，避免使用 any

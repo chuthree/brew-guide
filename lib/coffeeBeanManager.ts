@@ -168,4 +168,52 @@ export const CoffeeBeanManager = {
 			return null;
 		}
 	},
+
+	/**
+	 * 更新咖啡豆评分
+	 * @param id 咖啡豆ID
+	 * @param ratings 评分数据
+	 * @returns 更新后的咖啡豆对象，如果不存在则返回null
+	 */
+	async updateBeanRatings(
+		id: string,
+		ratings: Partial<CoffeeBean>
+	): Promise<CoffeeBean | null> {
+		try {
+			return await this.updateBean(id, ratings);
+		} catch {
+			throw new Error("更新咖啡豆评分失败");
+		}
+	},
+
+	/**
+	 * 获取所有已评分的咖啡豆
+	 * @returns 已评分的咖啡豆数组
+	 */
+	async getRatedBeans(): Promise<CoffeeBean[]> {
+		try {
+			const beans = await this.getAllBeans();
+			return beans.filter(
+				(bean) => bean.overallRating && bean.overallRating > 0
+			);
+		} catch {
+			return [];
+		}
+	},
+
+	/**
+	 * 获取特定类型的已评分咖啡豆（意式或手冲）
+	 * @param type 豆子类型：'espresso' 或 'filter'
+	 * @returns 指定类型的已评分咖啡豆数组
+	 */
+	async getRatedBeansByType(
+		type: "espresso" | "filter"
+	): Promise<CoffeeBean[]> {
+		try {
+			const beans = await this.getRatedBeans();
+			return beans.filter((bean) => bean.beanType === type);
+		} catch {
+			return [];
+		}
+	},
 };
