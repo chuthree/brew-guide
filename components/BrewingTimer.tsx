@@ -54,7 +54,6 @@ interface BrewingTimerProps {
         originalIndex: number;
     }[]) => void
     settings: SettingsOptions
-    onJumpToImport?: () => void
     selectedEquipment: string | null
     isCoffeeBrewed?: boolean
 }
@@ -83,7 +82,6 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     onCountdownChange,
     onExpandedStagesChange,
     settings,
-    onJumpToImport,
     selectedEquipment,
     isCoffeeBrewed,
 }) => {
@@ -457,7 +455,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     const handleComplete = useCallback(() => {
         // 防止重复触发
         if (isCompleted) {
-            
+
             return;
         }
 
@@ -473,7 +471,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         // 发送一个brewing:complete事件，通知其他组件冲煮已完成
         const completeEvent = new CustomEvent('brewing:complete');
         window.dispatchEvent(completeEvent);
-        
+
 
         // 保存笔记表单的初始数据
         const initialData: Partial<BrewingNoteData> = {
@@ -647,7 +645,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         if (currentTime > 0 && expandedStagesRef.current.length > 0 &&
             currentTime >= expandedStagesRef.current[expandedStagesRef.current.length - 1]?.endTime && !isCompleted) {
             // 使用setTimeout将handleComplete的调用推迟到下一个事件循环
-            
+
             setTimeout(() => {
                 handleComplete();
             }, 0);
@@ -685,20 +683,20 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
 
     const startTimer = useCallback(() => {
         // 检查是否有问题的状态
-        
+
 
         if (!isRunning && currentBrewingMethod) {
             // 如果冲煮已完成，先重置所有状态
             // 同时检查组件内部状态和外部传入的isCoffeeBrewed状态
             if (showComplete || isCompleted || isCoffeeBrewed) {
-                
+
 
                 // 确保触发resetTimer函数，这会同时触发brewing:reset事件
                 resetTimer();
 
                 // 确保通知所有组件冲煮已经重置
                 window.dispatchEvent(new CustomEvent('brewing:reset'));
-                
+
 
                 // 延迟启动计时器，确保状态已完全重置
                 setTimeout(() => {
@@ -780,12 +778,12 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     // 处理外部显示和关闭笔记表单的事件
     useEffect(() => {
         const handleShowNoteForm = () => {
-            
+
             setShowNoteForm(true);
         };
 
         const handleCloseNoteForm = (e: CustomEvent<{ force?: boolean }>) => {
-            
+
             // 强制关闭时无需询问
             if (e.detail?.force) {
                 setShowNoteForm(false);
@@ -820,11 +818,11 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
             stages?: Stage[];
         }>) => {
             // 记录接收到事件
-            
+
 
             // 如果计时器正在运行，不进行更新
             if (isRunning) {
-                
+
                 return;
             }
 
@@ -835,7 +833,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
             if (e.detail.stages) {
                 methodStagesRef.current = e.detail.stages;
                 expandedStagesRef.current = createExpandedStages();
-                
+
             }
         };
 
@@ -864,7 +862,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         if (isCoffeeBrewed !== undefined) {
             setShowComplete(isCoffeeBrewed);
             setIsCompleted(isCoffeeBrewed);
-            
+
         }
     }, [isCoffeeBrewed]);
 
@@ -893,7 +891,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                 isWaiting: isWaiting
             });
 
-            
+
         }
     }, [currentExpandedStageIndex, currentTime, onStageChange]);
 
@@ -1220,7 +1218,6 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                                 },
                                 totalTime: currentTime,
                             }}
-                            onJumpToImport={onJumpToImport}
                         />
                     </motion.div>
                 )}

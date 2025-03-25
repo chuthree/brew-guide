@@ -15,7 +15,6 @@ interface BrewingNoteFormModalProps {
     onSave: (note: BrewingNoteData) => void
     onClose: () => void
     showOptimizationByDefault?: boolean
-    onJumpToImport?: () => void
 }
 
 const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
@@ -23,8 +22,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
     initialNote,
     onSave,
     onClose,
-    showOptimizationByDefault = false,
-    onJumpToImport
+    showOptimizationByDefault = false
 }) => {
     // 添加滤杯和方案选择状态
     const [selectedEquipment, setSelectedEquipment] = useState<string>(initialNote?.equipment || '');
@@ -335,7 +333,6 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
                                             }}
                                             initialData={getDefaultNote()}
                                             showOptimizationByDefault={showOptimizationByDefault}
-                                            onJumpToImport={onJumpToImport}
                                         />
                                     </motion.div>
                                 )}

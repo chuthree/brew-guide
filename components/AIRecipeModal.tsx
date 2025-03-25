@@ -10,14 +10,12 @@ interface AIRecipeModalProps {
     showModal: boolean
     onClose: () => void
     coffeeBean: CoffeeBean | null
-    onJumpToImport: () => void
 }
 
 const AIRecipeModal: React.FC<AIRecipeModalProps> = ({
     showModal,
     onClose,
-    coffeeBean,
-    onJumpToImport
+    coffeeBean
 }) => {
     const [selectedEquipment, setSelectedEquipment] = useState<string>('V60')
     const [userSuggestion, setUserSuggestion] = useState<string>('')
@@ -146,7 +144,6 @@ stages数组中的每个阶段必须包含以下字段：
                 })
 
                 // 设置一个定时器，1.5秒后重置按钮状态
-                // 这确保即使用户没有点击跳转，按钮也会恢复
                 setTimeout(() => {
                     setShowLocalCopySuccess(false)
                 }, 1500)
@@ -200,21 +197,6 @@ stages数组中的每个阶段必须包含以下字段：
         }
 
         return false
-    }
-
-    // 跳转到方案导入页面
-    const handleCopyAndJump = async () => {
-        await copyPromptToClipboard()
-
-        // 立即跳转，不等待
-        onJumpToImport()
-        onClose()
-
-        // 设置一个延时器，确保在跳转完成后重置按钮状态
-        // 这样当用户返回时，按钮不会显示"正在跳转"
-        setTimeout(() => {
-            setShowLocalCopySuccess(false)
-        }, 500)
     }
 
     // 动画变体
@@ -415,7 +397,7 @@ stages数组中的每个阶段必须包含以下字段：
                                             </svg>
                                             <div className="flex-1 flex items-center">
                                                 <span className="w-5 h-5 flex items-center justify-center rounded-full bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 mr-1.5">3</span>
-                                                <span>复制返回的代码导入进来</span>
+                                                <span>复制返回的代码到导入页面</span>
                                             </div>
                                         </div>
                                     </div>
@@ -435,12 +417,12 @@ stages数组中的每个阶段必须包含以下字段：
                                     {/* 操作按钮 - 优化样式 */}
                                     <div className="flex justify-end pt-2">
                                         <button
-                                            onClick={handleCopyAndJump}
+                                            onClick={copyPromptToClipboard}
                                             disabled={!coffeeBean}
                                             className={`py-2 px-3.5 bg-neutral-800 hover:bg-neutral-700 dark:bg-neutral-200 dark:hover:bg-neutral-300 text-white dark:text-neutral-800 rounded text-xs font-medium transition-colors
                                                 ${!coffeeBean ? 'opacity-50 cursor-not-allowed' : ''}`}
                                         >
-                                            {showLocalCopySuccess ? '已复制，正在跳转...' : '复制并导入'}
+                                            {showLocalCopySuccess ? '已复制' : '复制提示词'}
                                         </button>
                                     </div>
                                 </motion.div>

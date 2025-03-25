@@ -581,7 +581,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                     showModal={showAIRecipeModal}
                     onClose={() => setShowAIRecipeModal(false)}
                     coffeeBean={selectedBeanForAI}
-                    onJumpToImport={onJumpToImport || (() => { })}
                 />
             )}
 

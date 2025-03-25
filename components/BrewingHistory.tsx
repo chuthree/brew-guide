@@ -36,7 +36,6 @@ interface BrewingHistoryProps {
     isOpen: boolean
     onClose: () => void
     onOptimizingChange?: (isOptimizing: boolean) => void
-    onJumpToImport?: () => void
 }
 
 const formatDate = (timestamp: number) => {
@@ -52,7 +51,7 @@ const formatRating = (rating: number) => {
     return `[ ${rating}/5 ]`
 }
 
-const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingChange, onJumpToImport }) => {
+const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingChange }) => {
     const [notes, setNotes] = useState<BrewingNote[]>([])
     const [sortOption, setSortOption] = useState<SortOption>(SORT_OPTIONS.TIME_DESC)
     const [optimizingNote, setOptimizingNote] = useState<(Partial<BrewingNoteData> & { coffeeBean?: CoffeeBean | null }) | null>(null)
@@ -297,7 +296,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                         }}
                         initialData={optimizingNote}
                         showOptimizationByDefault={true}
-                        onJumpToImport={onJumpToImport}
                     />
                 </motion.div>
             ) : (

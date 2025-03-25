@@ -45,7 +45,6 @@ interface BrewingNoteFormProps {
         coffeeBean?: CoffeeBean | null;
     };
     showOptimizationByDefault?: boolean;
-    onJumpToImport?: () => void;
 }
 
 const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
@@ -55,7 +54,6 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     onSave,
     initialData,
     showOptimizationByDefault = false,
-    onJumpToImport,
 }) => {
     // 处理咖啡豆数据，如果有提供coffeeBean则使用，否则使用coffeeBeanInfo
     const initialCoffeeBeanInfo = initialData.coffeeBean
@@ -674,8 +672,8 @@ stages数组中的每个阶段必须包含以下字段：
                                                 onClick={() => {
                                                     copyTextToClipboard(optimizationPrompt)
                                                         .then(() => {
-                                                            // 成功复制后显示提示并跳转
-                                                            alert('提示词已复制到剪贴板，正在跳转到方案导入页面...');
+                                                            // 成功复制后显示提示
+                                                            alert('提示词已复制到剪贴板');
                                                             // 保存当前数据
                                                             const noteData = {
                                                                 id: id || Date.now().toString(),
@@ -686,24 +684,16 @@ stages数组中的每个阶段必须包含以下字段：
                                                                 params: initialData.params,
                                                                 totalTime: initialData.totalTime,
                                                             };
-                                                            // 先调用onSave保存当前数据
+                                                            // 调用onSave保存当前数据
                                                             onSave(noteData);
-                                                            // 如果有跳转回调，调用它
-                                                            if (onJumpToImport) {
-                                                                onJumpToImport();
-                                                            } else {
-                                                                // 没有跳转回调，仅关闭当前窗口
-                                                                onClose();
-                                                            }
                                                         })
                                                         .catch(() => {
-
                                                             alert('复制失败，请手动复制');
                                                         })
                                                 }}
                                                 className="text-[10px] tracking-widest text-emerald-600 font-medium transition-colors dark:text-emerald-500 hover:text-emerald-700 dark:hover:text-emerald-400"
                                             >
-                                                [ 复制并跳转 ]
+                                                [ 复制提示词 ]
                                             </button>
                                         </div>
                                     </div>

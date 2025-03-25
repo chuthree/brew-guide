@@ -18,7 +18,6 @@ interface BrewingNoteFormModalNewProps {
     onSave: (note: BrewingNoteData) => void
     onClose: () => void
     showOptimizationByDefault?: boolean
-    onJumpToImport?: () => void
     skipToLastStep?: boolean
 }
 
@@ -28,7 +27,6 @@ const BrewingNoteFormModalNew: React.FC<BrewingNoteFormModalNewProps> = ({
     onSave,
     onClose,
     showOptimizationByDefault = false,
-    onJumpToImport,
     skipToLastStep = false
 }) => {
     // 添加咖啡豆选择状态
@@ -495,7 +493,6 @@ const BrewingNoteFormModalNew: React.FC<BrewingNoteFormModalNewProps> = ({
                 onSave={handleSaveNote}
                 initialData={getDefaultNote()}
                 showOptimizationByDefault={showOptimizationByDefault}
-                onJumpToImport={onJumpToImport}
             />
         </div>
     );

@@ -1012,7 +1012,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                                 setShowHistory(false);
                             }}
                             onOptimizingChange={setIsOptimizing}
-                            onJumpToImport={jumpToImport}
                         />
                     </m.div>
                 )}
@@ -1030,7 +1029,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                             isOpen={activeMainTab === '咖啡豆'}
                             showBeanForm={handleBeanForm}
                             onShowImport={() => setShowImportBeanForm(true)}
-                            onJumpToImport={jumpToImport}
                             onGenerateAIRecipe={handleGenerateAIRecipe}
                         />
                     </m.div>
@@ -1119,7 +1117,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                                 expandedStagesRef.current = stages;
                             }}
                             settings={settings}
-                            onJumpToImport={jumpToImport}
                             selectedEquipment={selectedEquipment}
                             isCoffeeBrewed={isCoffeeBrewed}
                         />
@@ -1194,12 +1191,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 showModal={showAIRecipeModal}
                 onClose={() => setShowAIRecipeModal(false)}
                 coffeeBean={selectedBeanForAI}
-                onJumpToImport={() => {
-                    // 设置标志，表示是从AI方案跳转过来
-                    setIsFromAIRecipe(true);
-                    jumpToImport();
-                    setShowAIRecipeModal(false);
-                }}
             />
 
             {/* 设置组件 - 放在页面级别确保正确覆盖整个内容 */}
