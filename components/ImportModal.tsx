@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { generateBeanTemplateJson } from '@/lib/jsonUtils'
 import ReactCrop, { Crop } from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
 import { recognizeImage, RecognitionError } from '@/services/recognition'
@@ -11,6 +10,13 @@ interface ImportBeanModalProps {
     showForm: boolean
     onImport: (jsonData: string) => Promise<void>
     onClose: () => void
+}
+
+interface ImportedBean {
+    capacity?: number | string;
+    remaining?: number | string;
+    price?: number | string | null;
+    [key: string]: unknown;
 }
 
 const ImportBeanModal: React.FC<ImportBeanModalProps> = ({
@@ -35,6 +41,9 @@ const ImportBeanModal: React.FC<ImportBeanModalProps> = ({
     const [croppedImage, setCroppedImage] = useState<string | null>(null);
     const [showCropper, setShowCropper] = useState(false);
     const imgRef = useRef<HTMLImageElement>(null);
+
+    // 添加手动模式状态
+    const [manualMode, setManualMode] = useState(false);
 
     // Automatically trigger crop complete when cropper is shown
     useEffect(() => {
@@ -71,39 +80,32 @@ const ImportBeanModal: React.FC<ImportBeanModalProps> = ({
 
     // 生成模板提示词
     const _templatePrompt = (() => {
-        const templateJson = generateBeanTemplateJson();
-        return `
-我有一张咖啡豆的包装袋（或商品详情页）的照片，请根据图片中的信息，帮我提取咖啡豆的详细信息，并按照以下JSON格式输出：
+        // 不再使用模板生成
+        // const templateJson = generateBeanTemplateJson();
+        return `提取咖啡豆数据，返回JSON格式。
 
-\`\`\`json
-${templateJson}
-\`\`\`
-
-数据格式说明：
-- name: 咖啡豆名称，通常包含产地/品种信息
-- price: 价格，纯数字（如68，不要包含货币符号）
-- capacity: 包装总容量，纯数字（如200，不要包含单位）
-- remaining: 剩余容量，纯数字（如果图片中没有明确标示，请与capacity填相同的值）
-- roastLevel: 烘焙程度（浅/中/深）
-- roastDate: 烘焙日期
+数据字段：
+- id: 留空
+- name: 咖啡豆名称（必填）
+- capacity: 总容量，纯数字
+- remaining: 剩余容量，纯数字（若无标注则与capacity相同）
+- price: 价格，纯数字
+- roastLevel: 烘焙度（浅度烘焙/中浅烘焙/中度烘焙/中深烘焙/深度烘焙）
+- roastDate: 烘焙日期，格式YYYY-MM-DD
 - flavor: 风味描述标签数组
-- origin: 咖啡豆原产地
-- process: 处理法（如水洗、日晒等）
-- variety: 咖啡豆品种
-- type: 咖啡豆类型（单品/拼配）
-- notes: 其他备注信息
+- origin: 产地
+- process: 处理法
+- variety: 品种（如瑰夏）
+- type: 类型，必须为"单品"或"拼配"
+- notes: 备注信息
+- startDay: 养豆期天数，纯数字
+- endDay: 最佳赏味期天数，纯数字
+- maxDay: 赏味期结束天数，纯数字
+- blendComponents: 拼配成分，格式[{"percentage":比例(纯数字),"origin":"产地","process":"处理法","variety":"品种"}]
 
-使用说明：
-1. 请填充所有可以从图片中辨识的字段
-2. 对于无法辨识的字段，请保留为空字符串或空数组
-3. flavor数组请填入所有从图片中可识别的风味标签
-4. roastDate请按YYYY-MM-DD格式填写
-5. remaining与capacity字段：如果包装上只标注了总容量，请在两个字段中填写相同的值
-6. 请确保返回的是有效的JSON格式
-7. 如果有多个咖啡豆，可以返回JSON数组格式，例如：[${templateJson}, ${templateJson}]
-
-请在回复中只包含JSON内容，不需要其他解释，这样我可以直接复制使用。
-`;
+要求：
+1. 不确定的字段留空或为[]
+2. 确保JSON格式有效，数值字段不包含单位`;
     })();
 
     // 兼容性更好的复制文本方法
@@ -154,10 +156,27 @@ ${templateJson}
             // 解析JSON数据
             const jsonData = JSON.parse(importData);
 
+            // 确保某些字段始终是字符串类型
+            const ensureStringFields = (item: ImportedBean) => {
+                const result = { ...item };
+                // 确保 capacity 和 remaining 是字符串
+                if (result.capacity !== undefined && result.capacity !== null) {
+                    result.capacity = String(result.capacity);
+                }
+                if (result.remaining !== undefined && result.remaining !== null) {
+                    result.remaining = String(result.remaining);
+                }
+                // 确保 price 是字符串
+                if (result.price !== undefined && result.price !== null) {
+                    result.price = String(result.price);
+                }
+                return result;
+            };
+
             // 如果是数组，为每个对象添加时间戳
             if (Array.isArray(jsonData)) {
                 const dataWithTimestamp = jsonData.map(item => ({
-                    ...item,
+                    ...ensureStringFields(item),
                     timestamp: Date.now()
                 }));
                 onImport(JSON.stringify(dataWithTimestamp))
@@ -172,7 +191,7 @@ ${templateJson}
             } else {
                 // 为单个对象添加时间戳
                 const dataWithTimestamp = {
-                    ...jsonData,
+                    ...ensureStringFields(jsonData),
                     timestamp: Date.now()
                 };
                 onImport(JSON.stringify(dataWithTimestamp))
@@ -185,7 +204,8 @@ ${templateJson}
                         setError('导入失败，请重试');
                     });
             }
-        } catch {
+        } catch (error) {
+            console.error('JSON解析错误:', error);
             setError('JSON格式错误，请检查导入的数据');
         }
     };
@@ -310,9 +330,9 @@ ${templateJson}
             formData.append('file', blob, 'coffee-bean.jpg');
 
             const data = await recognizeImage(formData);
-            
+
             if (data.result) {
-                setImportData(JSON.stringify(data.result));
+                setImportData(JSON.stringify(data.result, null, 2));
                 setSuccess('✨ AI识别成功！请检查识别结果是否正确');
             }
 
@@ -331,17 +351,57 @@ ${templateJson}
         }
     };
 
-    // Replace the existing renderUploadSection with this new version
+    // 手动模式切换
+    const toggleManualMode = () => {
+        setManualMode(!manualMode);
+        clearMessages();
+    };
+
+    // 渲染上传部分
     const renderUploadSection = () => (
         <div className="p-3 border border-neutral-200 dark:border-neutral-700 rounded-md bg-neutral-50 dark:bg-neutral-800/50">
             <div className="flex flex-col space-y-3">
                 <div className="flex justify-between items-center">
                     <p className="text-xs text-neutral-600 dark:text-neutral-400">
-                        上传咖啡豆包装图片，自动识别信息
+                        {manualMode ? '手动填写咖啡豆信息' : '上传咖啡豆包装图片，自动识别信息'}
                     </p>
+                    <button
+                        onClick={toggleManualMode}
+                        className="text-xs px-2 py-1 rounded bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300"
+                    >
+                        {manualMode ? '切换到图片识别' : '切换到手动模式'}
+                    </button>
                 </div>
 
-                {showCropper && selectedImage ? (
+                {manualMode ? (
+                    <div className="space-y-3 pt-2 pb-1">
+                        <div className="bg-neutral-100 dark:bg-neutral-800 p-3 rounded-md text-xs text-neutral-600 dark:text-neutral-400">
+                            <p className="mb-2">使用《豆包》AI获取JSON数据的步骤：</p>
+                            <ol className="list-decimal pl-4 space-y-1">
+                                <li>复制下方的提示词</li>
+                                <li>准备好咖啡豆包装或商品页的图片</li>
+                                <li>打开《豆包》AI应用</li>
+                                <li>将提示词和图片一起发送给AI</li>
+                                <li>复制AI返回的JSON</li>
+                                <li>粘贴到下方输入框</li>
+                            </ol>
+                        </div>
+                        <div className="bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 p-3 rounded-md text-xs">
+                            <div className="flex justify-between mb-1">
+                                <span className="text-neutral-500 dark:text-neutral-400">提示词：</span>
+                                <button
+                                    onClick={() => _copyTextToClipboard(_templatePrompt)}
+                                    className="text-neutral-500 dark:text-neutral-400 px-1.5 py-0.5 rounded text-[10px] border border-neutral-300 dark:border-neutral-700"
+                                >
+                                    复制
+                                </button>
+                            </div>
+                            <p className="text-neutral-800 dark:text-neutral-200 text-[10px] line-clamp-2">
+                                提取咖啡豆数据，返回JSON格式。包含名称、产地、处理法、风味等信息...
+                            </p>
+                        </div>
+                    </div>
+                ) : showCropper && selectedImage ? (
                     <div className="space-y-3">
                         <ReactCrop
                             crop={crop}
@@ -372,12 +432,12 @@ ${templateJson}
                             </button>
                         </div>
                     </div>
-                ) : (
+                ) : !manualMode && (
                     <div className="flex space-x-2">
                         <button
                             onClick={() => handleImageSelect('camera')}
                             disabled={isUploading}
-                            className="flex-1 py-2 px-4 border border-dashed border-neutral-300 dark:border-neutral-600 rounded-md text-sm text-neutral-600 dark:text-neutral-400 hover:border-neutral-400 dark:hover:border-neutral-500 transition-colors"
+                            className="flex-1 py-2 px-4 border border-dashed border-neutral-300 dark:border-neutral-600 rounded-md text-sm text-neutral-600 dark:text-neutral-400"
                         >
                             <span className="flex items-center justify-center space-x-2">
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -390,7 +450,7 @@ ${templateJson}
                         <button
                             onClick={() => handleImageSelect('gallery')}
                             disabled={isUploading}
-                            className="flex-1 py-2 px-4 border border-dashed border-neutral-300 dark:border-neutral-600 rounded-md text-sm text-neutral-600 dark:text-neutral-400 hover:border-neutral-400 dark:hover:border-neutral-500 transition-colors"
+                            className="flex-1 py-2 px-4 border border-dashed border-neutral-300 dark:border-neutral-600 rounded-md text-sm text-neutral-600 dark:text-neutral-400"
                         >
                             <span className="flex items-center justify-center space-x-2">
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -496,12 +556,14 @@ ${templateJson}
                                 {/* 表单内容 */}
                                 <div className="space-y-4 mt-2">
                                     {renderUploadSection()}
-                                    <p className="text-xs text-neutral-500 dark:text-neutral-500">
-                                        粘贴JSON格式的咖啡豆数据：
-                                    </p>
+                                    <div className="flex items-center">
+                                        <p className="text-xs text-neutral-500 dark:text-neutral-500 flex-1">
+                                            {manualMode ? '粘贴JSON格式的咖啡豆数据：' : '粘贴JSON格式的咖啡豆数据：'}
+                                        </p>
+                                    </div>
                                     <textarea
                                         className="w-full h-40 p-3 border border-neutral-300 dark:border-neutral-700 rounded-md bg-transparent focus:border-neutral-800 dark:focus:border-neutral-400 focus:outline-none text-neutral-800 dark:text-neutral-200"
-                                        placeholder='支持粘贴分享的文本或JSON格式，例如："【咖啡豆】埃塞俄比亚耶加雪菲"或{"name":"埃塞俄比亚耶加雪菲",...}'
+                                        placeholder={manualMode ? '{"name":"埃塞俄比亚耶加雪菲", "capacity":"200",...}' : '支持粘贴分享的文本或JSON格式，例如："【咖啡豆】埃塞俄比亚耶加雪菲"或{"name":"埃塞俄比亚耶加雪菲",...}'}
                                         value={importData}
                                         onChange={(e) => setImportData(e.target.value)}
                                     />
