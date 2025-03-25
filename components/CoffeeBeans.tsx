@@ -74,6 +74,10 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
     const [selectedBeanForRating, setSelectedBeanForRating] = useState<CoffeeBean | null>(null)
     const [lastRatedBeanId, setLastRatedBeanId] = useState<string | null>(null) // 新增，追踪最近评分的咖啡豆ID
     const [ratingSavedCallback, setRatingSavedCallback] = useState<(() => void) | null>(null) // 新增，存储评分保存后的回调
+    // 豆种筛选相关状态
+    const [availableVarieties, setAvailableVarieties] = useState<string[]>([])
+    const [selectedVariety, setSelectedVariety] = useState<string | null>(null)
+    const [filteredBeans, setFilteredBeans] = useState<CoffeeBean[]>([])
 
     // 排序咖啡豆的函数
     const sortBeans = (beansToSort: CoffeeBean[], option: SortOption): CoffeeBean[] => {
@@ -264,10 +268,28 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
             try {
                 const savedBeans = await Storage.get('coffeeBeans')
                 const parsedBeans = savedBeans ? JSON.parse(savedBeans) : []
-                setBeans(sortBeans(parsedBeans, sortOption))
+                const sortedBeans = sortBeans(parsedBeans, sortOption)
+                setBeans(sortedBeans)
+
+                // 提取所有唯一的豆种(品种)
+                const varieties = sortedBeans
+                    .filter(bean => bean.variety) // 过滤掉没有品种的豆子
+                    .map(bean => bean.variety as string)
+                    .filter((value, index, self) => self.indexOf(value) === index) // 去重
+                    .sort() // 按字母排序
+
+                setAvailableVarieties(varieties)
+
+                // 根据当前选中的品种过滤咖啡豆
+                if (selectedVariety) {
+                    setFilteredBeans(sortedBeans.filter(bean => bean.variety === selectedVariety))
+                } else {
+                    setFilteredBeans(sortedBeans)
+                }
             } catch {
                 // 获取失败设置为空数组
                 setBeans([])
+                setFilteredBeans([])
             }
         }
 
@@ -286,7 +308,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
             loadBeans()
             loadRatedBeans() // 加载评分咖啡豆
         }
-    }, [isOpen, sortOption])
+    }, [isOpen, sortOption, selectedVariety])
 
     // 处理添加咖啡豆
     const handleSaveBean = async (bean: Omit<CoffeeBean, 'id' | 'timestamp'>) => {
@@ -544,6 +566,11 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
         }
     }, [viewMode]);
 
+    // 处理品种标签点击
+    const handleVarietyClick = (variety: string | null) => {
+        setSelectedVariety(variety)
+    }
+
     if (!isOpen) return null
 
     return (
@@ -657,8 +684,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                             <div className="flex items-center space-x-3">
                                 <div className="text-xs tracking-wide text-neutral-400 dark:text-neutral-500">
                                     {viewMode === VIEW_OPTIONS.INVENTORY ?
-                                        `共 ${beans.length} 款咖啡豆` :
-                                        `共 ${ratedBeans?.length || 0} 款已评分咖啡豆`}
+                                        `${selectedVariety ? `${filteredBeans.length}/${beans.length}` : beans.length} 款咖啡豆` :
+                                        `${ratedBeans?.length || 0} 款已评分咖啡豆`}
                                 </div>
                             </div>
 
@@ -779,6 +806,40 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                 )}
                             </div>
                         </div>
+
+                        {/* 品种标签筛选 - 仅在仓库视图显示 */}
+                        {viewMode === VIEW_OPTIONS.INVENTORY && availableVarieties.length > 0 && (
+                            <div className="mb-4">
+                                <div className="flex flex-wrap gap-2">
+                                    <motion.button
+                                        onClick={() => handleVarietyClick(null)}
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
+                                        className={`px-3 py-1 rounded-full text-xs transition-colors ${selectedVariety === null
+                                            ? 'bg-neutral-800 text-white dark:bg-white dark:text-neutral-800'
+                                            : 'bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400'
+                                            }`}
+                                    >
+                                        全部
+                                    </motion.button>
+
+                                    {availableVarieties.map(variety => (
+                                        <motion.button
+                                            key={variety}
+                                            onClick={() => handleVarietyClick(variety)}
+                                            whileHover={{ scale: 1.05 }}
+                                            whileTap={{ scale: 0.95 }}
+                                            className={`px-3 py-1 rounded-full text-xs transition-colors ${selectedVariety === variety
+                                                ? 'bg-neutral-800 text-white dark:bg-white dark:text-neutral-800'
+                                                : 'bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400'
+                                                }`}
+                                        >
+                                            {variety}
+                                        </motion.button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* 内容区域：根据视图模式显示不同内容 */}
@@ -794,18 +855,18 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                 className="w-full"
                             >
                                 {/* 咖啡豆列表 */}
-                                {beans.length === 0 ? (
+                                {filteredBeans.length === 0 ? (
                                     <motion.div
                                         initial={{ opacity: 0 }}
                                         animate={{ opacity: 1 }}
                                         transition={{ duration: 0.2, ease: "easeOut" }}
                                         className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500"
                                     >
-                                        [ 暂无咖啡豆数据 ]
+                                        {beans.length === 0 ? '[ 暂无咖啡豆数据 ]' : '[ 没有符合当前筛选条件的咖啡豆 ]'}
                                     </motion.div>
                                 ) : (
                                     <div className="space-y-6 px-6">
-                                        {beans.map((bean, index) => (
+                                        {filteredBeans.map((bean, index) => (
                                             <motion.div
                                                 key={bean.id}
                                                 initial={{ opacity: 0, y: 15 }}
