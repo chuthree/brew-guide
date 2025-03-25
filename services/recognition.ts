@@ -27,7 +27,7 @@ const checkFileType = (file: File | Blob): void => {
     }
 };
 
-const RECOGNITION_API_URL = 'http://llm1.zrzz.site/upload';
+const RECOGNITION_API_URL = 'https://llm1.zrzz.site/upload';
 
 export async function recognizeImage(formData: FormData): Promise<RecognitionResponse> {
     try {
