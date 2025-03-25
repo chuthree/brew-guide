@@ -34,15 +34,19 @@ const SteppedFormModal: React.FC<SteppedFormModalProps> = ({
 }) => {
     const [currentStepIndex, setCurrentStepIndex] = useState(initialStep)
 
+    // 当initialStep变化时更新当前步骤
+    useEffect(() => {
+        if (showForm) {
+            setCurrentStepIndex(initialStep);
+        }
+    }, [showForm, initialStep]);
+
+    // 当不显示表单且不保持状态时，重置为初始步骤
     useEffect(() => {
         if (!showForm && !preserveState) {
             setCurrentStepIndex(initialStep);
         }
     }, [showForm, preserveState, initialStep]);
-
-    useEffect(() => {
-        setCurrentStepIndex(initialStep);
-    }, [initialStep]);
 
     // 获取当前步骤
     const currentStep = steps[currentStepIndex]

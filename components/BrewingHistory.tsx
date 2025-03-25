@@ -3,8 +3,8 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { BrewingNote } from '@/lib/config'
-import type { BrewingNoteData } from '@/app/types'
-import BrewingNoteFormModalNew from './BrewingNoteFormModalNew'
+import type { BrewingNoteData, CoffeeBean } from '@/app/types'
+import BrewingNoteForm from './BrewingNoteForm'
 import { Storage } from '@/lib/storage'
 import {
     Select,
@@ -55,10 +55,9 @@ const formatRating = (rating: number) => {
 const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingChange, onJumpToImport }) => {
     const [notes, setNotes] = useState<BrewingNote[]>([])
     const [sortOption, setSortOption] = useState<SortOption>(SORT_OPTIONS.TIME_DESC)
-    const [optimizingNote, setOptimizingNote] = useState<BrewingNote | null>(null)
+    const [optimizingNote, setOptimizingNote] = useState<(Partial<BrewingNoteData> & { coffeeBean?: CoffeeBean | null }) | null>(null)
+    const [editingNote, setEditingNote] = useState<(Partial<BrewingNoteData> & { coffeeBean?: CoffeeBean | null }) | null>(null)
     const [actionMenuStates, setActionMenuStates] = useState<Record<string, boolean>>({})
-    const [showNoteFormModal, setShowNoteFormModal] = useState(false)
-    const [currentEditingNote, setCurrentEditingNote] = useState<Partial<BrewingNoteData>>({})
 
     // 排序笔记的函数，用useCallback包装以避免无限渲染
     const sortNotes = useCallback((notesToSort: BrewingNote[]): BrewingNote[] => {
@@ -123,8 +122,9 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
     }
 
     const handleEdit = (note: BrewingNote) => {
-        const formattedNote = {
+        const formattedNote: Partial<BrewingNoteData> & { coffeeBean?: CoffeeBean | null } = {
             id: note.id,
+            timestamp: note.timestamp,
             coffeeBeanInfo: {
                 name: note.coffeeBeanInfo?.name || '',
                 roastLevel: note.coffeeBeanInfo?.roastLevel || '中度烘焙',
@@ -143,13 +143,13 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
             params: note.params,
             totalTime: note.totalTime,
         }
-        setCurrentEditingNote(formattedNote)
-        setShowNoteFormModal(true)
+        setEditingNote(formattedNote)
     }
 
     const handleOptimize = (note: BrewingNote) => {
-        const formattedNote = {
-            ...note,
+        const formattedNote: Partial<BrewingNoteData> & { coffeeBean?: CoffeeBean | null } = {
+            id: note.id,
+            timestamp: note.timestamp,
             coffeeBeanInfo: {
                 name: note.coffeeBeanInfo?.name || '',
                 roastLevel: note.coffeeBeanInfo?.roastLevel || '中度烘焙',
@@ -179,9 +179,9 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
             const existingNotesStr = await Storage.get('brewingNotes');
             const existingNotes = existingNotesStr ? JSON.parse(existingNotesStr) : [];
 
-            if (currentEditingNote.id) {
+            if (editingNote?.id) {
                 const updatedNotes = existingNotes.map((note: BrewingNoteData) =>
-                    note.id === currentEditingNote.id
+                    note.id === editingNote.id
                         ? {
                             ...note,
                             coffeeBeanInfo: updatedData.coffeeBeanInfo,
@@ -197,6 +197,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
 
                 await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
                 setNotes(sortNotes(updatedNotes));
+                setEditingNote(null);
             }
             else {
                 const newNote = {
@@ -209,26 +210,54 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                 await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
                 setNotes(sortNotes(updatedNotes));
             }
-
-            setShowNoteFormModal(false);
-            setCurrentEditingNote({});
         } catch (error) {
             console.error('保存笔记失败:', error);
             alert('保存笔记时出错，请重试');
         }
     };
 
-    // 添加新建笔记的处理函数
+    // Add a separate new note handler
     const handleAddNote = () => {
-        setCurrentEditingNote({});
-        setShowNoteFormModal(true);
-    };
+        setEditingNote({
+            coffeeBeanInfo: {
+                name: '',
+                roastLevel: '中度烘焙',
+                roastDate: ''
+            },
+            taste: {
+                acidity: 3,
+                sweetness: 3,
+                bitterness: 3,
+                body: 3
+            },
+            rating: 3,
+            notes: ''
+        });
+    }
 
     if (!isOpen) return null
 
     return (
         <AnimatePresence mode="wait">
-            {optimizingNote ? (
+            {editingNote ? (
+                <motion.div
+                    key="edit-form"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2, ease: "easeOut" }}
+                    className="h-full p-6"
+                    id="brewing-history-component"
+                >
+                    <BrewingNoteForm
+                        id={editingNote.id}
+                        isOpen={true}
+                        onClose={() => setEditingNote(null)}
+                        onSave={handleSaveEdit}
+                        initialData={editingNote}
+                    />
+                </motion.div>
+            ) : optimizingNote ? (
                 <motion.div
                     key="optimize-form"
                     initial={{ opacity: 0, x: 20 }}
@@ -248,23 +277,26 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                         }}
                         className="hidden"
                     />
-                    <BrewingNoteFormModalNew
-                        key="optimize-form-modal"
-                        showForm={true}
-                        initialNote={optimizingNote as unknown as Partial<BrewingNoteData>}
-                        showOptimizationByDefault={true}
-                        onSave={() => {
-                            setOptimizingNote(null)
-                            if (onOptimizingChange) {
-                                onOptimizingChange(false)
-                            }
-                        }}
+                    <BrewingNoteForm
+                        id={optimizingNote.id}
+                        isOpen={true}
                         onClose={() => {
                             setOptimizingNote(null)
                             if (onOptimizingChange) {
                                 onOptimizingChange(false)
                             }
                         }}
+                        onSave={(updatedData) => {
+                            // 保存更新后的笔记
+                            handleSaveEdit(updatedData);
+                            // 关闭优化模式
+                            setOptimizingNote(null);
+                            if (onOptimizingChange) {
+                                onOptimizingChange(false);
+                            }
+                        }}
+                        initialData={optimizingNote}
+                        showOptimizationByDefault={true}
                         onJumpToImport={onJumpToImport}
                     />
                 </motion.div>
@@ -279,7 +311,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                     id="brewing-history-component"
                 >
                     <div className="p-6 space-y-6">
-                        {/* 修改为只有添加按钮 */}
+                        {/* 添加按钮 */}
                         <motion.div
                             initial={{ opacity: 0, y: 5 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -384,6 +416,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                                             </>
                                                         )}
                                                     </div>
+
                                                     <div className="flex items-baseline ml-2 shrink-0">
                                                         <AnimatePresence mode="wait">
                                                             {actionMenuStates[note.id] ? (
@@ -538,19 +571,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                     </div>
                 </motion.div>
             )}
-
-            {/* 添加笔记表单模态框 */}
-            <BrewingNoteFormModalNew
-                key="note-form-modal"
-                showForm={showNoteFormModal}
-                initialNote={currentEditingNote}
-                onSave={handleSaveEdit}
-                onClose={() => {
-                    setShowNoteFormModal(false);
-                    setCurrentEditingNote({});
-                }}
-                onJumpToImport={onJumpToImport}
-            />
         </AnimatePresence>
     )
 }

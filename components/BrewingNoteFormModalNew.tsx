@@ -19,6 +19,7 @@ interface BrewingNoteFormModalNewProps {
     onClose: () => void
     showOptimizationByDefault?: boolean
     onJumpToImport?: () => void
+    skipToLastStep?: boolean
 }
 
 const BrewingNoteFormModalNew: React.FC<BrewingNoteFormModalNewProps> = ({
@@ -27,7 +28,8 @@ const BrewingNoteFormModalNew: React.FC<BrewingNoteFormModalNewProps> = ({
     onSave,
     onClose,
     showOptimizationByDefault = false,
-    onJumpToImport
+    onJumpToImport,
+    skipToLastStep = false
 }) => {
     // 添加咖啡豆选择状态
     const [selectedCoffeeBean, setSelectedCoffeeBean] = useState<CoffeeBean | null>(initialNote?.coffeeBean || null);
@@ -526,15 +528,26 @@ const BrewingNoteFormModalNew: React.FC<BrewingNoteFormModalNewProps> = ({
         }
     ];
 
+    // 获取表单标题
+    const getFormTitle = () => {
+        if (skipToLastStep) {
+            if (showOptimizationByDefault) {
+                return "优化冲煮参数";
+            }
+            return initialNote?.id ? "编辑冲煮笔记" : "创建冲煮笔记";
+        }
+        return "创建冲煮笔记";
+    };
+
     return (
         <SteppedFormModal
             showForm={showForm}
             onClose={handleClose}
             onComplete={handleStepComplete}
             steps={steps}
-            initialStep={0} // 始终从第一步开始
-            title="创建冲煮笔记"
-            preserveState={false} // 不保持状态
+            initialStep={skipToLastStep ? steps.length - 1 : 0}
+            title={getFormTitle()}
+            preserveState={false}
         />
     );
 };

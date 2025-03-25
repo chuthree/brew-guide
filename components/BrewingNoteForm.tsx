@@ -418,7 +418,7 @@ stages数组中的每个阶段必须包含以下字段：
                         <div className="flex items-center space-x-4">
                             <button
                                 type="button"
-                                onClick={() => setShowOptimization(false)}
+                                onClick={onClose}
                                 className="text-[10px] tracking-widest text-neutral-500 transition-colors dark:text-neutral-500"
                             >
                                 [ 返回 ]
