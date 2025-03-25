@@ -15,7 +15,7 @@ import React, { useState, useEffect } from 'react'
 import type { BrewingNoteData, CoffeeBean } from '@/app/types'
 import { generateOptimizationJson } from '@/lib/jsonUtils'
 import { brewingMethods, type Method, type Stage } from '@/lib/config'
-import { Storage } from '@/lib/storage'
+// import { Storage } from '@/lib/storage'
 import AutoResizeTextarea from './AutoResizeTextarea'
 
 interface TasteRatings {

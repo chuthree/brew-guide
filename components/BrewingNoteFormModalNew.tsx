@@ -140,7 +140,8 @@ const BrewingNoteFormModalNew: React.FC<BrewingNoteFormModalNewProps> = ({
                 setMethodType('common'); // 默认为通用方案
             }
         }
-    }, [showForm, initialNote, customMethods, brewingMethods]);
+        // 从依赖数组中移除brewingMethods，因为它是一个常量
+    }, [showForm, initialNote, customMethods]);
 
     // 根据选中的方案获取默认参数
     const getMethodParams = () => {

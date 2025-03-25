@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { BrewingNote } from '@/lib/config'
 import type { BrewingNoteData } from '@/app/types'
@@ -60,8 +60,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
     const [showNoteFormModal, setShowNoteFormModal] = useState(false)
     const [currentEditingNote, setCurrentEditingNote] = useState<Partial<BrewingNoteData>>({})
 
-    // 排序笔记的函数
-    const sortNotes = (notesToSort: BrewingNote[]): BrewingNote[] => {
+    // 排序笔记的函数，用useCallback包装以避免无限渲染
+    const sortNotes = useCallback((notesToSort: BrewingNote[]): BrewingNote[] => {
         switch (sortOption) {
             case SORT_OPTIONS.TIME_DESC:
                 return [...notesToSort].sort((a, b) => b.timestamp - a.timestamp)
@@ -74,10 +74,10 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
             default:
                 return notesToSort
         }
-    }
+    }, [sortOption])
 
-    // 加载笔记的函数 - 将其移到effect外部
-    const loadNotes = async () => {
+    // 加载笔记的函数 - 使用useCallback包装
+    const loadNotes = useCallback(async () => {
         try {
             const savedNotes = await Storage.get('brewingNotes')
             const parsedNotes = savedNotes ? JSON.parse(savedNotes) : []
@@ -86,7 +86,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
             // 加载失败时设置空数组
             setNotes([])
         }
-    }
+    }, [sortNotes])
 
     // 添加本地存储变化监听
     useEffect(() => {
@@ -102,12 +102,12 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
 
         window.addEventListener('storage', handleStorageChange)
         return () => window.removeEventListener('storage', handleStorageChange)
-    }, [sortOption])
+    }, [sortOption, loadNotes])
 
     useEffect(() => {
         // 当排序选项变化时，重新排序笔记
         setNotes(prevNotes => sortNotes([...prevNotes]))
-    }, [sortOption])
+    }, [sortOption, sortNotes])
 
     const handleDelete = async (noteId: string) => {
         if (window.confirm('确定要删除这条笔记吗？')) {

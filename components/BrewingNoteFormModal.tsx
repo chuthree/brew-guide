@@ -1,10 +1,10 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import BrewingNoteForm from '@/components/BrewingNoteForm'
 import type { BrewingNoteData, CoffeeBean } from '@/app/types'
-import { equipmentList, brewingMethods, type Method } from '@/lib/config'
+import { equipmentList, brewingMethods } from '@/lib/config'
 
 interface BrewingNoteFormModalProps {
     showForm: boolean
@@ -31,8 +31,11 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
     const [selectedMethod, setSelectedMethod] = useState<string>(initialNote?.method || '');
     const [showNoteForm, setShowNoteForm] = useState(false);
 
-    // 根据选择的滤杯生成可用的方案列表
-    const availableMethods = selectedEquipment ? brewingMethods[selectedEquipment] || [] : [];
+    // 使用useMemo包装availableMethods的初始化
+    const availableMethods = useMemo(() => {
+        if (!selectedEquipment) return []
+        return brewingMethods[selectedEquipment] || []
+    }, [selectedEquipment])
 
     // 根据选中的方案获取默认参数
     const getMethodParams = () => {
