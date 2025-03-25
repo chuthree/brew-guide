@@ -69,3 +69,6 @@ android/app/release/
 .vscode/
 *.swp
 *.swo
+
+
+logs/
