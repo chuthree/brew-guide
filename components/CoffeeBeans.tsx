@@ -78,6 +78,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
     const [availableVarieties, setAvailableVarieties] = useState<string[]>([])
     const [selectedVariety, setSelectedVariety] = useState<string | null>(null)
     const [filteredBeans, setFilteredBeans] = useState<CoffeeBean[]>([])
+    // 咖啡豆显示控制
+    const [showEmptyBeans, setShowEmptyBeans] = useState<boolean>(false)
 
     // 获取阶段数值用于排序
     const getPhaseValue = (phase: string): number => {
@@ -144,6 +146,11 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
         }
 
         return { phase, remainingDays };
+    }
+
+    // 检查咖啡豆是否用完
+    const isBeanEmpty = (bean: CoffeeBean): boolean => {
+        return (bean.remaining === "0" || bean.remaining === "0g") && bean.capacity !== undefined;
     }
 
     // 排序咖啡豆的函数 - 使用useCallback缓存函数以避免无限循环
@@ -227,7 +234,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
 
                 // 提取所有唯一的豆种(品种)
                 const varieties = sortedBeans
-                    .filter(bean => bean.variety) // 过滤掉没有品种的豆子
+                    .filter(bean => bean.variety && (showEmptyBeans || !isBeanEmpty(bean))) // 过滤掉没有品种的豆子和已用完的豆子(如果不显示已用完)
                     .map(bean => bean.variety as string)
                     .filter((value, index, self) => self.indexOf(value) === index) // 去重
                     .sort() // 按字母排序
@@ -236,9 +243,16 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
 
                 // 根据当前选中的品种过滤咖啡豆
                 if (selectedVariety) {
-                    setFilteredBeans(sortedBeans.filter(bean => bean.variety === selectedVariety))
+                    setFilteredBeans(sortedBeans.filter(bean =>
+                        bean.variety === selectedVariety &&
+                        // 根据showEmptyBeans状态决定是否显示用完的咖啡豆
+                        (showEmptyBeans || !isBeanEmpty(bean))
+                    ))
                 } else {
-                    setFilteredBeans(sortedBeans)
+                    setFilteredBeans(sortedBeans.filter(bean =>
+                        // 根据showEmptyBeans状态决定是否显示用完的咖啡豆
+                        (showEmptyBeans || !isBeanEmpty(bean))
+                    ))
                 }
             } catch {
                 // 获取失败设置为空数组
@@ -262,7 +276,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
             loadBeans()
             loadRatedBeans() // 加载评分咖啡豆
         }
-    }, [isOpen, sortOption, selectedVariety, sortBeans])
+    }, [isOpen, sortOption, selectedVariety, sortBeans, showEmptyBeans])
 
     // 处理添加咖啡豆
     const handleSaveBean = async (bean: Omit<CoffeeBean, 'id' | 'timestamp'>) => {
@@ -742,6 +756,19 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                         全部
                                     </motion.button>
 
+                                    {/* 添加显示/隐藏已用完的咖啡豆标签 */}
+                                    <motion.button
+                                        onClick={() => setShowEmptyBeans(!showEmptyBeans)}
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
+                                        className={`shrink-0 px-3 py-1 rounded-full text-xs transition-colors ${showEmptyBeans
+                                            ? 'bg-neutral-800 text-white dark:bg-white dark:text-neutral-800'
+                                            : 'bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400'
+                                            }`}
+                                    >
+                                        已用完
+                                    </motion.button>
+
                                     {availableVarieties.map(variety => (
                                         <motion.button
                                             key={variety}
@@ -797,7 +824,10 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                     delay: Math.min(index * 0.05, 0.3),
                                                     ease: "easeOut"
                                                 }}
-                                                className={`group space-y-3 hover:bg-neutral-50 dark:hover:bg-neutral-900/70 transition-colors border-l border-neutral-200/50 pl-6 dark:border-neutral-800`}
+                                                className={`group space-y-3 hover:bg-neutral-50 dark:hover:bg-neutral-900/70 transition-colors border-l ${isBeanEmpty(bean)
+                                                    ? 'border-red-300/50 dark:border-red-800/50 bg-red-50/30 dark:bg-red-900/10'
+                                                    : 'border-neutral-200/50 dark:border-neutral-800'
+                                                    } pl-6`}
                                             >
                                                 <div className="flex flex-col space-y-3">
                                                     {/* 图片和基本信息区域 */}
@@ -822,6 +852,11 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                                     <div className="text-[11px] font-normal truncate text-neutral-800 dark:text-white">
                                                                         {bean.name}
                                                                     </div>
+                                                                    {isBeanEmpty(bean) && (
+                                                                        <div className="text-[10px] font-normal px-1.5 py-0.5 rounded-full bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 shrink-0">
+                                                                            已用完
+                                                                        </div>
+                                                                    )}
                                                                 </div>
                                                                 <div className="flex items-baseline ml-2 shrink-0">
                                                                     <AnimatePresence mode="wait">
