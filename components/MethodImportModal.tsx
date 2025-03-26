@@ -154,7 +154,7 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
                         style={{
                             willChange: "transform"
                         }}
-                        className="absolute inset-x-0 bottom-0 max-h-[75vh] overflow-hidden rounded-t-2xl bg-neutral-50 dark:bg-neutral-900 shadow-xl"
+                        className="absolute inset-x-0 bottom-0 max-h-[90vh] overflow-hidden rounded-t-2xl bg-neutral-50 dark:bg-neutral-900 shadow-xl"
                     >
                         {/* 拖动条 */}
                         <div className="sticky top-0 z-10 flex justify-center py-2 bg-neutral-50 dark:bg-neutral-900">
@@ -174,7 +174,7 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
                             style={{
                                 willChange: "opacity, transform"
                             }}
-                            className="px-6 px-safe pb-6 pb-safe overflow-auto max-h-[calc(75vh-40px)]"
+                            className="px-6 px-safe pb-6 pb-safe overflow-auto max-h-[calc(90vh-40px)]"
                         >
                             <div className="flex flex-col">
                                 {/* 顶部标题 */}
@@ -226,7 +226,7 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
                                             {error}
                                         </div>
                                     )}
-                                    <div className="flex justify-end space-x-3 mt-4">
+                                    <div className="flex justify-end space-x-3 my-4">
                                         <button
                                             onClick={handleClose}
                                             className="px-4 py-2 border border-neutral-300 dark:border-neutral-700 text-neutral-800 dark:text-neutral-200 rounded-md text-sm"

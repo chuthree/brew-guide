@@ -239,8 +239,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
 
                 // 提取所有唯一的豆种(品种)
                 const varieties = sortedBeans
-                    .filter(bean => bean.variety && (showEmptyBeans || !isBeanEmpty(bean))) // 过滤掉没有品种的豆子和已用完的豆子(如果不显示已用完)
-                    .map(bean => bean.variety as string)
+                    .filter(bean => (showEmptyBeans || !isBeanEmpty(bean))) // 只根据是否显示已用完的豆子来过滤
+                    .map(bean => bean.variety || '未分类') // 如果没有豆种，标记为"未分类"
                     .filter((value, index, self) => self.indexOf(value) === index) // 去重
                     .sort() // 按字母排序
 
@@ -249,7 +249,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                 // 根据当前选中的品种过滤咖啡豆
                 if (selectedVariety) {
                     setFilteredBeans(sortedBeans.filter(bean =>
-                        bean.variety === selectedVariety &&
+                        (bean.variety || '未分类') === selectedVariety &&
                         // 根据showEmptyBeans状态决定是否显示用完的咖啡豆
                         (showEmptyBeans || !isBeanEmpty(bean))
                     ))
@@ -807,7 +807,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                 animate={{ opacity: 1, x: 0 }}
                                 exit={{ opacity: 0, x: -20 }}
                                 transition={{ duration: 0.3 }}
-                                className="w-full"
+                                className="w-full space-y-5 scroll-with-bottom-bar"
                             >
                                 {/* 咖啡豆列表 */}
                                 {filteredBeans.length === 0 ? (
@@ -954,15 +954,21 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                                         <span>{bean.origin}</span>
                                                                     </>
                                                                 )}
-                                                                {bean.process && (
+                                                                {bean.variety && (
                                                                     <>
                                                                         {(bean.roastLevel || bean.origin) && <span className="opacity-50 mx-1">·</span>}
+                                                                        <span>{bean.variety}</span>
+                                                                    </>
+                                                                )}
+                                                                {bean.process && (
+                                                                    <>
+                                                                        {(bean.roastLevel || bean.origin || bean.variety) && <span className="opacity-50 mx-1">·</span>}
                                                                         <span>{bean.process}处理</span>
                                                                     </>
                                                                 )}
                                                                 {bean.type === '拼配' && bean.blendComponents && bean.blendComponents.length > 0 && (
                                                                     <>
-                                                                        {(bean.roastLevel || bean.origin || bean.process) && <span className="opacity-50 mx-1">·</span>}
+                                                                        {(bean.roastLevel || bean.origin || bean.variety || bean.process) && <span className="opacity-50 mx-1">·</span>}
                                                                         {bean.blendComponents.map((component, idx) => (
                                                                             <React.Fragment key={idx}>
                                                                                 {idx > 0 && <span className="opacity-50 mx-1">·</span>}

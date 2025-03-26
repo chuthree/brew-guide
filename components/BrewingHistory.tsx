@@ -50,6 +50,18 @@ const formatDate = (timestamp: number) => {
     })
 }
 
+// 添加计算天数差的辅助函数
+const calculateDaysAfterRoast = (roastDate: string, brewDate: number): string => {
+    const roast = new Date(roastDate);
+    const brew = new Date(brewDate);
+    const diffTime = Math.abs(brew.getTime() - roast.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return '烘焙当天';
+    if (diffDays === 1) return '烘焙1天后';
+    return `烘焙${diffDays}天后`;
+}
+
 const formatRating = (rating: number) => {
     return `[ ${rating}/5 ]`
 }
@@ -380,7 +392,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.2, ease: "easeOut" }}
-                    className="space-y-6"
+                    className="space-y-5 scroll-with-bottom-bar"
                     id="brewing-history-component"
                 >
                     <div className="p-6 space-y-6">
@@ -563,7 +575,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                                     {note.coffeeBeanInfo?.roastDate && (
                                                         <>
                                                             <span>·</span>
-                                                            <span>{note.coffeeBeanInfo.roastDate}</span>
+                                                            <span>{calculateDaysAfterRoast(note.coffeeBeanInfo.roastDate, note.timestamp)}</span>
                                                         </>
                                                     )}
                                                     {note.params && (

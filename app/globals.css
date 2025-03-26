@@ -83,8 +83,14 @@ body {
   -webkit-overflow-scrolling: touch;
   overflow-y: auto;
   height: 100%;
+}
+
+/* 需要底部操作栏间距的滚动容器 */
+.scroll-with-bottom-bar {
+  -webkit-overflow-scrolling: touch;
+  overflow-y: auto;
+  height: 100%;
   padding-bottom: calc(max(env(safe-area-inset-bottom), 28px) + 100px);
-  /* 增加底部内边距 */
 }
 
 /* 确保内容区域不会被底部操作栏遮挡 */

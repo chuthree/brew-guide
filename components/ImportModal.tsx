@@ -368,18 +368,19 @@ const ImportBeanModal: React.FC<ImportBeanModalProps> = ({
 
     // 渲染上传部分
     const renderUploadSection = () => (
-        <div className="p-3 border border-neutral-200 dark:border-neutral-700 rounded-md bg-neutral-50 dark:bg-neutral-800/50">
+        <div className="p-3 border relative border-neutral-200 dark:border-neutral-700 rounded-md bg-neutral-50 dark:bg-neutral-800/50">
+            <button
+                onClick={toggleManualMode}
+                className="text-xs px-2 py-1 absolute right-0 top-0 rounded-bl bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300"
+            >
+                {manualMode ? '切换识图' : '切换手动'}
+            </button>
             <div className="flex flex-col space-y-3">
                 <div className="flex justify-between items-center">
                     <p className="text-xs text-neutral-600 dark:text-neutral-400">
                         {manualMode ? '手动填写咖啡豆信息' : '上传咖啡豆包装图片，自动识别信息'}
                     </p>
-                    <button
-                        onClick={toggleManualMode}
-                        className="text-xs px-2 py-1 rounded bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300"
-                    >
-                        {manualMode ? '切换到图片识别' : '切换到手动模式'}
-                    </button>
+
                 </div>
 
                 {manualMode ? (
@@ -512,7 +513,7 @@ const ImportBeanModal: React.FC<ImportBeanModalProps> = ({
                         style={{
                             willChange: "transform"
                         }}
-                        className="absolute inset-x-0 bottom-0 max-h-[75vh] overflow-hidden rounded-t-2xl bg-neutral-50 dark:bg-neutral-900 shadow-xl"
+                        className="absolute inset-x-0 bottom-0 max-h-[90vh] overflow-hidden rounded-t-2xl bg-neutral-50 dark:bg-neutral-900 shadow-xl"
                     >
                         {/* 拖动条 */}
                         <div className="sticky top-0 z-10 flex justify-center py-2 bg-neutral-50 dark:bg-neutral-900">
@@ -532,7 +533,7 @@ const ImportBeanModal: React.FC<ImportBeanModalProps> = ({
                             style={{
                                 willChange: "opacity, transform"
                             }}
-                            className="px-6 px-safe pb-6 pb-safe overflow-auto max-h-[calc(75vh-40px)]"
+                            className="px-6 px-safe pb-6 pb-safe overflow-auto max-h-[calc(90vh-40px)]"
                         >
                             <div className="flex flex-col">
                                 {/* 顶部标题 */}
@@ -587,7 +588,7 @@ const ImportBeanModal: React.FC<ImportBeanModalProps> = ({
                                             {success}
                                         </div>
                                     )}
-                                    <div className="flex justify-end space-x-3 mt-4">
+                                    <div className="flex justify-end space-x-3 my-4">
                                         <button
                                             onClick={handleClose}
                                             className="px-4 py-2 border border-neutral-300 dark:border-neutral-700 text-neutral-800 dark:text-neutral-200 rounded-md text-sm"
