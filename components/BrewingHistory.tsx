@@ -7,6 +7,7 @@ import type { BrewingNoteData, CoffeeBean } from '@/app/types'
 import BrewingNoteForm from './BrewingNoteForm'
 import BrewingNoteFormModalNew from './BrewingNoteFormModalNew'
 import { Storage } from '@/lib/storage'
+import { equipmentList } from '@/lib/config'
 import {
     Select,
     SelectContent,
@@ -52,6 +53,12 @@ const formatDate = (timestamp: number) => {
 const formatRating = (rating: number) => {
     return `[ ${rating}/5 ]`
 }
+
+// 获取设备名称的辅助函数
+const getEquipmentName = (equipmentId: string): string => {
+    const equipment = equipmentList.find(e => e.id === equipmentId);
+    return equipment ? equipment.name : equipmentId; // 如果找不到匹配的设备，则返回原始ID
+};
 
 const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingChange, onNavigateToBrewing }) => {
     const [notes, setNotes] = useState<BrewingNote[]>([])
@@ -444,7 +451,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                                 <div className="flex items-baseline justify-between">
                                                     <div className="flex items-baseline space-x-2 min-w-0 overflow-hidden">
                                                         <div className="text-[10px] truncate">
-                                                            {note.equipment}
+                                                            {getEquipmentName(note.equipment)}
                                                         </div>
                                                         {note.method && (
                                                             <>

@@ -493,12 +493,11 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     };
 
     // 修改方法选择的包装函数
-    const handleMethodSelectWrapper = async (index: number) => {
+    const handleMethodSelectWrapper = useCallback(async (index: number) => {
         setTransitionState({ isTransitioning: true, source: 'content-click' });
 
         // 检查是否在冲煮完成状态选择了新的方案
         if (isCoffeeBrewed) {
-
             // 确保isCoffeeBrewed状态被重置，允许正常的步骤导航
             setIsCoffeeBrewed(false);
         }
@@ -506,7 +505,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         await handleMethodSelect(index);
         // 使用setTimeout重置状态，延长到350ms确保动画完成
         setTimeout(() => setTransitionState({ isTransitioning: false, source: '' }), 350);
-    };
+    }, [handleMethodSelect, isCoffeeBrewed, setIsCoffeeBrewed, setTransitionState]);
 
     // 处理冲煮完成后自动切换到笔记页面
     useEffect(() => {
@@ -818,7 +817,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     };
 
     // 处理选择器具但从参数传入设备名称的情况
-    const handleEquipmentSelectWithName = (equipmentName: string) => {
+    const handleEquipmentSelectWithName = useCallback((equipmentName: string) => {
         setTransitionState({ isTransitioning: true, source: 'content-click' });
         const equipment = equipmentList.find(e => e.name === equipmentName)?.id || equipmentName;
 
@@ -832,7 +831,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         handleEquipmentSelect(equipment);
         // 使用setTimeout重置状态，延长到350ms确保动画完成
         setTimeout(() => setTransitionState({ isTransitioning: false, source: '' }), 350);
-    };
+    }, [handleEquipmentSelect, setParameterInfo, setTransitionState]);
 
     // 当前页面相关初始化
     useEffect(() => {
@@ -1038,7 +1037,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         selectedEquipment,
         customMethods,
         handleMethodSelectWrapper,
-        setActiveMainTab
+        setActiveMainTab,
+        setActiveTab
     ]);
 
     // 处理从历史记录直接跳转到注水步骤的情况
@@ -1164,7 +1164,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                         const method = localStorage.getItem('forceNavigationMethod');
                         // 获取方案类型（默认为common）
                         const forceMethodType = localStorage.getItem('forceNavigationMethodType') || 'common';
-                        
+
                         console.log("方案选择过程:", {
                             method,
                             forceMethodType,
@@ -1197,7 +1197,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                                         } else {
                                             console.log("未找到匹配的自定义方案，尝试回退到通用方案");
                                             console.log("可用自定义方案:", customMethods[selectedEquipment].map(m => m.name));
-                                            
+
                                             // 未找到自定义方案时，回退到通用方案
                                             fallbackToCommonMethod();
                                         }
@@ -1206,7 +1206,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                                         fallbackToCommonMethod();
                                     }
                                 }, 100);
-                                
+
                                 // 阻止代码继续执行，确保在setTimeout回调中完成后续操作
                                 break;
                             }
@@ -1224,7 +1224,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                                     // 如果找到通用方案，切换回通用方案模式
                                     setMethodType('common');
                                     console.log("找到通用方案，索引:", methodIndex, "名称:", allMethods[methodIndex].name);
-                                    
+
                                     // 确保类型切换生效后再选择方案
                                     setTimeout(() => {
                                         handleMethodSelectWrapper(methodIndex);
@@ -1299,7 +1299,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         setActiveMainTab,
         setActiveTab,
         customMethods,
-        setMethodType
+        setMethodType,
+        methodType
     ]);
 
     return (
