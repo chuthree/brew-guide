@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import ReactCrop, { Crop } from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
@@ -45,6 +45,74 @@ const ImportBeanModal: React.FC<ImportBeanModalProps> = ({
     // 添加手动模式状态
     const [manualMode, setManualMode] = useState(false);
 
+    // Function to handle crop complete - 移到前面并使用useCallback
+    const handleCropComplete = useCallback(async (crop: Crop) => {
+        if (!selectedImage || !imgRef.current) return;
+
+        const image = new Image();
+        image.src = selectedImage;
+
+        // 等待图片加载完成
+        await new Promise((resolve) => {
+            if (image.complete) {
+                resolve(true);
+            } else {
+                image.onload = () => resolve(true);
+            }
+        });
+
+        const canvas = document.createElement('canvas');
+        // 获取显示的图片元素
+        const displayedImage = imgRef.current;
+
+        // 计算实际比例
+        const scaleX = image.naturalWidth / displayedImage.width;
+        const scaleY = image.naturalHeight / displayedImage.height;
+
+        // 根据单位计算裁剪区域的实际尺寸
+        let cropWidth, cropHeight, cropX, cropY;
+        if (crop.unit === '%') {
+            cropWidth = (crop.width! / 100) * displayedImage.width;
+            cropHeight = (crop.height! / 100) * displayedImage.height;
+            cropX = (crop.x! / 100) * displayedImage.width;
+            cropY = (crop.y! / 100) * displayedImage.height;
+        } else {
+            cropWidth = crop.width!;
+            cropHeight = crop.height!;
+            cropX = crop.x!;
+            cropY = crop.y!;
+        }
+
+        // 设置画布尺寸为裁剪区域的实际大小
+        canvas.width = cropWidth * scaleX;
+        canvas.height = cropHeight * scaleY;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        ctx.drawImage(
+            image,
+            cropX * scaleX,
+            cropY * scaleY,
+            cropWidth * scaleX,
+            cropHeight * scaleY,
+            0,
+            0,
+            canvas.width,
+            canvas.height
+        );
+
+        const croppedDataUrl = canvas.toDataURL('image/jpeg', 1.0);
+        console.log('crop success', {
+            naturalSize: { width: image.naturalWidth, height: image.naturalHeight },
+            displaySize: { width: displayedImage.width, height: displayedImage.height },
+            scale: { x: scaleX, y: scaleY },
+            crop: { ...crop },
+            canvasSize: { width: canvas.width, height: canvas.height }
+        });
+        setCroppedImage(croppedDataUrl);
+    }, [selectedImage]); // 只依赖selectedImage
+
     // Automatically trigger crop complete when cropper is shown
     useEffect(() => {
         if (showCropper && selectedImage && crop.width && crop.height) {
@@ -55,7 +123,7 @@ const ImportBeanModal: React.FC<ImportBeanModalProps> = ({
                 imageElement.onload = () => handleCropComplete(crop);
             }
         }
-    }, [showCropper, selectedImage, crop]);
+    }, [showCropper, selectedImage, crop, handleCropComplete]);
 
     // 清除所有状态消息
     const clearMessages = () => {
@@ -250,74 +318,6 @@ const ImportBeanModal: React.FC<ImportBeanModalProps> = ({
         input.click();
     };
 
-    // Function to handle crop complete
-    const handleCropComplete = async (crop: Crop) => {
-        if (!selectedImage || !imgRef.current) return;
-
-        const image = new Image();
-        image.src = selectedImage;
-
-        // 等待图片加载完成
-        await new Promise((resolve) => {
-            if (image.complete) {
-                resolve(true);
-            } else {
-                image.onload = () => resolve(true);
-            }
-        });
-
-        const canvas = document.createElement('canvas');
-        // 获取显示的图片元素
-        const displayedImage = imgRef.current;
-
-        // 计算实际比例
-        const scaleX = image.naturalWidth / displayedImage.width;
-        const scaleY = image.naturalHeight / displayedImage.height;
-
-        // 根据单位计算裁剪区域的实际尺寸
-        let cropWidth, cropHeight, cropX, cropY;
-        if (crop.unit === '%') {
-            cropWidth = (crop.width! / 100) * displayedImage.width;
-            cropHeight = (crop.height! / 100) * displayedImage.height;
-            cropX = (crop.x! / 100) * displayedImage.width;
-            cropY = (crop.y! / 100) * displayedImage.height;
-        } else {
-            cropWidth = crop.width!;
-            cropHeight = crop.height!;
-            cropX = crop.x!;
-            cropY = crop.y!;
-        }
-
-        // 设置画布尺寸为裁剪区域的实际大小
-        canvas.width = cropWidth * scaleX;
-        canvas.height = cropHeight * scaleY;
-
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-
-        ctx.drawImage(
-            image,
-            cropX * scaleX,
-            cropY * scaleY,
-            cropWidth * scaleX,
-            cropHeight * scaleY,
-            0,
-            0,
-            canvas.width,
-            canvas.height
-        );
-
-        const croppedDataUrl = canvas.toDataURL('image/jpeg', 1.0);
-        console.log('crop success', {
-            naturalSize: { width: image.naturalWidth, height: image.naturalHeight },
-            displaySize: { width: displayedImage.width, height: displayedImage.height },
-            scale: { x: scaleX, y: scaleY },
-            crop: { ...crop },
-            canvasSize: { width: canvas.width, height: canvas.height }
-        });
-        setCroppedImage(croppedDataUrl);
-    };
-
     // Function to handle image recognition process
     const handleImageRecognition = async () => {
         if (!croppedImage) return;
@@ -411,6 +411,7 @@ const ImportBeanModal: React.FC<ImportBeanModalProps> = ({
                             onChange={c => setCrop(c)}
                             onComplete={handleCropComplete}
                         >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                                 ref={imgRef}
                                 src={selectedImage}

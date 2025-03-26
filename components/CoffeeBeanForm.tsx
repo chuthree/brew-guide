@@ -6,6 +6,7 @@ import { ArrowLeft, ArrowRight, Check } from 'lucide-react'
 import { CoffeeBean } from '@/app/types'
 import AutoResizeTextarea from './AutoResizeTextarea'
 import AutocompleteInput from './AutocompleteInput'
+import Image from 'next/image'
 // 移除Capacitor导入
 
 // 添加拼配成分接口定义
@@ -791,7 +792,7 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                                                         // 检查图片大小是否需要压缩
                                                         if (imageData.length > 1024 * 1024) { // 如果大于1MB
                                                             // 压缩图片
-                                                            const img = new Image();
+                                                            const img = new globalThis.Image();
                                                             img.onload = () => {
                                                                 const canvas = document.createElement('canvas');
                                                                 let width = img.width;
@@ -842,10 +843,12 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                                 >
                                     {bean.image ? (
                                         <div className="relative w-full h-full">
-                                            <img
+                                            <Image
                                                 src={bean.image}
                                                 alt="咖啡豆图片"
-                                                className="w-full h-full object-cover"
+                                                className="object-cover"
+                                                fill
+                                                sizes="(max-width: 768px) 100vw, 300px"
                                             />
                                             <div className="absolute inset-0 bg-black bg-opacity-30 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
                                                 <span className="text-white text-xs font-medium">点击更换</span>

@@ -42,6 +42,179 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
     const [imagesPreloaded, setImagesPreloaded] = useState(false)
     const [displayedIceIndices, setDisplayedIceIndices] = useState<number[]>([])
 
+    // 定义可用的动画图片及其最大索引 - 移到组件顶部
+    const availableAnimations = useMemo<Record<string, AnimationConfig>>(() => ({
+        center: { maxIndex: 3 },  // center 只有3张图片
+        circle: { maxIndex: 4 },   // circle 有4张图片
+        ice: { maxIndex: 4, isStacking: true }  // 冰块动画，有4张图片，需要叠加显示
+    }), [])
+
+    // 需要预加载的图片列表 - 移到组件顶部
+    const imagesToPreload = useMemo(() => [
+        '/images/v60-base.svg',
+        '/images/valve-open.svg',
+        '/images/valve-closed.svg',
+        // center 动画图片
+        '/images/pour-center-motion-1.svg',
+        '/images/pour-center-motion-2.svg',
+        '/images/pour-center-motion-3.svg',
+        // circle 动画图片
+        '/images/pour-circle-motion-1.svg',
+        '/images/pour-circle-motion-2.svg',
+        '/images/pour-circle-motion-3.svg',
+        '/images/pour-circle-motion-4.svg',
+        // ice 动画图片
+        '/images/pour-ice-motion-1.svg',
+        '/images/pour-ice-motion-2.svg',
+        '/images/pour-ice-motion-3.svg',
+        '/images/pour-ice-motion-4.svg'
+    ], [])
+
+    // 预加载所有图像 - 移到组件顶部
+    useEffect(() => {
+        // 如果没有图像需要预加载，直接设置为完成
+        if (imagesToPreload.length === 0) {
+            setImagesPreloaded(true)
+            return
+        }
+
+        let loadedCount = 0
+        const errors: Record<string, boolean> = {}
+
+        imagesToPreload.forEach(src => {
+            const img = new globalThis.Image()
+            img.onload = () => {
+                loadedCount++
+                if (loadedCount === imagesToPreload.length) {
+                    setImagesPreloaded(true)
+                }
+            }
+            img.onerror = () => {
+                errors[src] = true
+                loadedCount++
+                if (loadedCount === imagesToPreload.length) {
+                    setImagesPreloaded(true)
+                }
+            }
+            img.src = src
+        })
+
+        return () => {
+            // 清理加载中的图像
+            imagesToPreload.forEach(() => {
+                const img = new globalThis.Image()
+                img.src = ''
+            })
+        }
+    }, [imagesToPreload])
+
+    // 跟踪当前阶段的经过时间，用于确定是否在注水时间内 - 移到组件顶部
+    useEffect(() => {
+        // 如果在倒计时状态，立即停止所有动画
+        if (countdownTime !== null) {
+            setIsPouring(false);
+            setDisplayedIceIndices([]);
+            setCurrentMotionIndex(1);
+            return;
+        }
+
+        // 其他非活动状态的检查
+        if (!isRunning || currentStage < 0) {
+            setIsPouring(false);
+            setDisplayedIceIndices([]);
+            setCurrentMotionIndex(1); // 重置动画帧到初始状态
+            return;
+        }
+
+        const currentStageData = stages[currentStage];
+        if (!currentStageData) {
+            setIsPouring(false);
+            setDisplayedIceIndices([]);
+            setCurrentMotionIndex(1);
+            return;
+        }
+
+        // 检查当前阶段是否为等待阶段
+        const currentStageType = (currentStageData as ExtendedStage)?.type || 'pour';
+        const currentPourTime = currentStageData.pourTime;
+
+        // 如果是等待阶段、isWaiting为true、或pourTime明确设为0，不显示注水动画
+        if (currentStageType === 'wait' || isWaiting || currentPourTime === 0) {
+            setIsPouring(false);
+            setDisplayedIceIndices([]);
+            setCurrentMotionIndex(1);
+            return;
+        }
+
+        // 立即开始注水动画
+        setIsPouring(true);
+
+        // 设置定时器来控制动画时长
+        const timer = setInterval(() => {
+            // 再次检查倒计时状态，确保在倒计时期间不会更新动画
+            if (countdownTime !== null) {
+                setIsPouring(false);
+                setDisplayedIceIndices([]);
+                setCurrentMotionIndex(1);
+                clearInterval(timer);
+                return;
+            }
+
+            const pourType = currentStageData.pourType || 'center';
+            const animationConfig = availableAnimations[pourType as keyof typeof availableAnimations];
+
+            if (animationConfig?.isStacking) {
+                setDisplayedIceIndices(prev => {
+                    if (prev.length >= animationConfig.maxIndex) return prev;
+                    return [...prev, prev.length + 1];
+                });
+            } else {
+                setCurrentMotionIndex(prev => {
+                    const maxIndex = animationConfig?.maxIndex || 3;
+                    return prev >= maxIndex ? 1 : prev + 1;
+                });
+            }
+        }, 1000);
+
+        return () => {
+            clearInterval(timer);
+            if (!isRunning || countdownTime !== null) {
+                setDisplayedIceIndices([]);
+                setCurrentMotionIndex(1);
+            }
+        };
+    }, [isRunning, currentStage, countdownTime, stages, isWaiting, availableAnimations]);
+
+    // 更新阀门状态 - 针对聪明杯 - 移到组件顶部
+    useEffect(() => {
+        if (equipmentId !== 'CleverDripper' || currentStage < 0) {
+            return
+        }
+
+        // 使用阶段中的valveStatus字段
+        const currentValveStatus = stages[currentStage]?.valveStatus
+        if (currentValveStatus) {
+            setValveStatus(prev => {
+                if (prev !== currentValveStatus) return currentValveStatus;
+                return prev;
+            })
+        } else {
+            // 如果没有明确设置，则从标签中判断（向后兼容）
+            const currentLabel = stages[currentStage]?.label || ''
+            if (currentLabel.includes('[开阀]')) {
+                setValveStatus(prev => {
+                    if (prev !== 'open') return 'open';
+                    return prev;
+                })
+            } else if (currentLabel.includes('[关阀]')) {
+                setValveStatus(prev => {
+                    if (prev !== 'closed') return 'closed';
+                    return prev;
+                })
+            }
+        }
+    }, [equipmentId, currentStage, stages])
+
     // 如果在倒计时期间，立即返回静态视图
     if (countdownTime !== null) {
         return (
@@ -135,179 +308,6 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
             </div>
         );
     }
-
-    // 定义可用的动画图片及其最大索引
-    const availableAnimations = useMemo<Record<string, AnimationConfig>>(() => ({
-        center: { maxIndex: 3 },  // center 只有3张图片
-        circle: { maxIndex: 4 },   // circle 有4张图片
-        ice: { maxIndex: 4, isStacking: true }  // 冰块动画，有4张图片，需要叠加显示
-    }), [])
-
-    // 需要预加载的图片列表
-    const imagesToPreload = useMemo(() => [
-        '/images/v60-base.svg',
-        '/images/valve-open.svg',
-        '/images/valve-closed.svg',
-        // center 动画图片
-        '/images/pour-center-motion-1.svg',
-        '/images/pour-center-motion-2.svg',
-        '/images/pour-center-motion-3.svg',
-        // circle 动画图片
-        '/images/pour-circle-motion-1.svg',
-        '/images/pour-circle-motion-2.svg',
-        '/images/pour-circle-motion-3.svg',
-        '/images/pour-circle-motion-4.svg',
-        // ice 动画图片
-        '/images/pour-ice-motion-1.svg',
-        '/images/pour-ice-motion-2.svg',
-        '/images/pour-ice-motion-3.svg',
-        '/images/pour-ice-motion-4.svg'
-    ], [])
-
-    // 预加载所有图像
-    useEffect(() => {
-        // 如果没有图像需要预加载，直接设置为完成
-        if (imagesToPreload.length === 0) {
-            setImagesPreloaded(true)
-            return
-        }
-
-        let loadedCount = 0
-        const errors: Record<string, boolean> = {}
-
-        imagesToPreload.forEach(src => {
-            const img = new globalThis.Image()
-            img.onload = () => {
-                loadedCount++
-                if (loadedCount === imagesToPreload.length) {
-                    setImagesPreloaded(true)
-                }
-            }
-            img.onerror = () => {
-                errors[src] = true
-                loadedCount++
-                if (loadedCount === imagesToPreload.length) {
-                    setImagesPreloaded(true)
-                }
-            }
-            img.src = src
-        })
-
-        return () => {
-            // 清理加载中的图像
-            imagesToPreload.forEach(() => {
-                const img = new globalThis.Image()
-                img.src = ''
-            })
-        }
-    }, [imagesToPreload])
-
-    // 跟踪当前阶段的经过时间，用于确定是否在注水时间内
-    useEffect(() => {
-        // 立即检查 countdownTime 状态，如果在倒计时，立即停止所有动画
-        if (countdownTime !== null) {
-            setIsPouring(false);
-            setDisplayedIceIndices([]);
-            setCurrentMotionIndex(1);
-            return;
-        }
-
-        // 其他非活动状态的检查
-        if (!isRunning || currentStage < 0) {
-            setIsPouring(false);
-            setDisplayedIceIndices([]);
-            setCurrentMotionIndex(1); // 重置动画帧到初始状态
-            return;
-        }
-
-        const currentStageData = stages[currentStage];
-        if (!currentStageData) {
-            setIsPouring(false);
-            setDisplayedIceIndices([]);
-            setCurrentMotionIndex(1);
-            return;
-        }
-
-        // 检查当前阶段是否为等待阶段
-        const currentStageType = (currentStageData as ExtendedStage)?.type || 'pour';
-        const currentPourTime = currentStageData.pourTime;
-
-        // 如果是等待阶段、isWaiting为true、或pourTime明确设为0，不显示注水动画
-        if (currentStageType === 'wait' || isWaiting || currentPourTime === 0) {
-            setIsPouring(false);
-            setDisplayedIceIndices([]);
-            setCurrentMotionIndex(1);
-            return;
-        }
-
-        // 立即开始注水动画
-        setIsPouring(true);
-
-        // 设置定时器来控制动画时长
-        const timer = setInterval(() => {
-            // 再次检查倒计时状态，确保在倒计时期间不会更新动画
-            if (countdownTime !== null) {
-                setIsPouring(false);
-                setDisplayedIceIndices([]);
-                setCurrentMotionIndex(1);
-                clearInterval(timer);
-                return;
-            }
-
-            const pourType = currentStageData.pourType || 'center';
-            const animationConfig = availableAnimations[pourType as keyof typeof availableAnimations];
-
-            if (animationConfig?.isStacking) {
-                setDisplayedIceIndices(prev => {
-                    if (prev.length >= animationConfig.maxIndex) return prev;
-                    return [...prev, prev.length + 1];
-                });
-            } else {
-                setCurrentMotionIndex(prev => {
-                    const maxIndex = animationConfig?.maxIndex || 3;
-                    return prev >= maxIndex ? 1 : prev + 1;
-                });
-            }
-        }, 1000);
-
-        return () => {
-            clearInterval(timer);
-            if (!isRunning || countdownTime !== null) {
-                setDisplayedIceIndices([]);
-                setCurrentMotionIndex(1);
-            }
-        };
-    }, [isRunning, currentStage, countdownTime, stages, isWaiting, availableAnimations]);
-
-    // 更新阀门状态 - 针对聪明杯
-    useEffect(() => {
-        if (equipmentId !== 'CleverDripper' || currentStage < 0) {
-            return
-        }
-
-        // 使用阶段中的valveStatus字段
-        const currentValveStatus = stages[currentStage]?.valveStatus
-        if (currentValveStatus) {
-            setValveStatus(prev => {
-                if (prev !== currentValveStatus) return currentValveStatus;
-                return prev;
-            })
-        } else {
-            // 如果没有明确设置，则从标签中判断（向后兼容）
-            const currentLabel = stages[currentStage]?.label || ''
-            if (currentLabel.includes('[开阀]')) {
-                setValveStatus(prev => {
-                    if (prev !== 'open') return 'open';
-                    return prev;
-                })
-            } else if (currentLabel.includes('[关阀]')) {
-                setValveStatus(prev => {
-                    if (prev !== 'closed') return 'closed';
-                    return prev;
-                })
-            }
-        }
-    }, [equipmentId, currentStage, stages])
 
     // 获取设备图片路径
     const getEquipmentImageSrc = () => {

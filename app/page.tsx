@@ -169,7 +169,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         isNoteSaved, setIsNoteSaved,
         prevMainTabRef,
         resetBrewingState,
-        jumpToImport,
         autoNavigateToBrewingAfterImport,
         handleEquipmentSelect,
         handleCoffeeBeanSelect,
