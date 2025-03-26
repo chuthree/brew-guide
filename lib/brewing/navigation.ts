@@ -22,12 +22,24 @@ export const navigateFromHistoryToBrewing = (
 	const exactMethodName = localStorage.getItem("clickedMethodName") || method;
 
 	// 获取方案类型（如果是从方案名称点击进来的）
-	const methodType = localStorage.getItem("methodType") || "common";
+	// 确保优先使用forceNavigationMethodType存储的类型
+	const forceMethodType = localStorage.getItem("forceNavigationMethodType");
+	const methodType =
+		forceMethodType || localStorage.getItem("methodType") || "common";
+
+	console.log("方案类型检查:", {
+		forceMethodType,
+		methodType: localStorage.getItem("methodType"),
+		finalMethodType: methodType,
+	});
 
 	// 清除标记
 	localStorage.removeItem("clickedFromMethod");
 	localStorage.removeItem("clickedMethodName");
-	localStorage.removeItem("methodType");
+	// 不清除forceNavigationMethodType，它会在导航过程结束时被清除
+	if (!forceMethodType) {
+		localStorage.removeItem("methodType");
+	}
 
 	// 为了调试，记录当前导航信息
 	console.log("开始从历史记录导航到冲煮页面", {
@@ -47,6 +59,13 @@ export const navigateFromHistoryToBrewing = (
 	localStorage.setItem("forceNavigationMethod", exactMethodName || "");
 	// 保存方案类型，方便页面判断是通用方案还是自定义方案
 	localStorage.setItem("forceNavigationMethodType", methodType);
+
+	console.log("设置导航参数:", {
+		equipment: localStorage.getItem("forceNavigationEquipment"),
+		method: localStorage.getItem("forceNavigationMethod"),
+		methodType: localStorage.getItem("forceNavigationMethodType"),
+	});
+
 	if (params) {
 		localStorage.setItem("forceNavigationParams", JSON.stringify(params));
 	}

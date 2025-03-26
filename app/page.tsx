@@ -1164,6 +1164,14 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                         const method = localStorage.getItem('forceNavigationMethod');
                         // 获取方案类型（默认为common）
                         const forceMethodType = localStorage.getItem('forceNavigationMethodType') || 'common';
+                        
+                        console.log("方案选择过程:", {
+                            method,
+                            forceMethodType,
+                            currentMethodType: methodType,
+                            hasCustomMethods: customMethods[selectedEquipment]?.length > 0,
+                            customMethodsCount: customMethods[selectedEquipment]?.length || 0
+                        });
 
                         if (method) {
                             // 根据方案类型选择不同的方案列表
@@ -1172,68 +1180,63 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                             if (forceMethodType === 'custom') {
                                 // 如果是自定义方案，先切换到自定义方案模式
                                 setMethodType('custom');
+                                console.log("已切换到自定义方案模式");
 
-                                // 查找匹配的自定义方案
-                                if (customMethods[selectedEquipment]) {
-                                    const customMethodIndex = customMethods[selectedEquipment].findIndex(m =>
-                                        m.name === method
-                                    );
+                                // 确保方案类型应用后再执行方案选择
+                                setTimeout(() => {
+                                    // 查找匹配的自定义方案
+                                    if (customMethods[selectedEquipment] && customMethods[selectedEquipment].length > 0) {
+                                        const customMethodIndex = customMethods[selectedEquipment].findIndex(m =>
+                                            m.name === method
+                                        );
 
-                                    if (customMethodIndex !== -1) {
-                                        console.log("找到自定义方案，索引:", customMethodIndex);
-                                        handleMethodSelectWrapper(customMethodIndex);
-                                        localStorage.setItem('navigationStep', 'navigateToBrewing');
-                                        break;
+                                        if (customMethodIndex !== -1) {
+                                            console.log("找到自定义方案，索引:", customMethodIndex, "名称:", customMethods[selectedEquipment][customMethodIndex].name);
+                                            handleMethodSelectWrapper(customMethodIndex);
+                                            localStorage.setItem('navigationStep', 'navigateToBrewing');
+                                        } else {
+                                            console.log("未找到匹配的自定义方案，尝试回退到通用方案");
+                                            console.log("可用自定义方案:", customMethods[selectedEquipment].map(m => m.name));
+                                            
+                                            // 未找到自定义方案时，回退到通用方案
+                                            fallbackToCommonMethod();
+                                        }
                                     } else {
-                                        console.log("未找到匹配的自定义方案，尝试回退到通用方案");
+                                        console.log("该设备下没有自定义方案，尝试回退到通用方案");
+                                        fallbackToCommonMethod();
                                     }
-                                } else {
-                                    console.log("该设备下没有自定义方案，尝试回退到通用方案");
-                                }
+                                }, 100);
+                                
+                                // 阻止代码继续执行，确保在setTimeout回调中完成后续操作
+                                break;
                             }
 
-                            // 如果是通用方案，或者自定义方案未找到，尝试在通用方案中查找
-                            const allMethods = commonMethods[selectedEquipment] || [];
-                            console.log("可用通用方案:", allMethods.map(m => m.name));
+                            // 定义回退到通用方案的函数
+                            const fallbackToCommonMethod = () => {
+                                // 如果是通用方案，或者自定义方案未找到，尝试在通用方案中查找
+                                const allMethods = commonMethods[selectedEquipment] || [];
+                                console.log("可用通用方案:", allMethods.map(m => m.name));
 
-                            // 查找精确匹配的方案
-                            const methodIndex = allMethods.findIndex(m => m.name === method);
+                                // 查找精确匹配的方案
+                                const methodIndex = allMethods.findIndex(m => m.name === method);
 
-                            if (methodIndex !== -1) {
-                                // 如果找到通用方案，切换回通用方案模式
-                                setMethodType('common');
-                                console.log("找到通用方案，索引:", methodIndex);
-                                handleMethodSelectWrapper(methodIndex);
-                                localStorage.setItem('navigationStep', 'navigateToBrewing');
-                            } else {
-                                console.log("未找到精确匹配的通用方案，尝试模糊匹配");
-                                // 尝试模糊匹配
-                                const fuzzyIndex = allMethods.findIndex(m =>
-                                    m.name.includes(method) || method.includes(m.name)
-                                );
-
-                                if (fuzzyIndex !== -1) {
+                                if (methodIndex !== -1) {
                                     // 如果找到通用方案，切换回通用方案模式
                                     setMethodType('common');
-                                    console.log("找到模糊匹配的通用方案，索引:", fuzzyIndex);
-                                    handleMethodSelectWrapper(fuzzyIndex);
-                                    localStorage.setItem('navigationStep', 'navigateToBrewing');
-                                } else {
-                                    console.log("未找到任何匹配的方案，选择第一个可用方案");
-                                    // 如果没有找到匹配的方案，选择第一个可用方案
-                                    if (allMethods.length > 0) {
-                                        handleMethodSelectWrapper(0);
-                                    }
-                                    localStorage.setItem('navigationStep', 'navigateToBrewing');
+                                    console.log("找到通用方案，索引:", methodIndex, "名称:", allMethods[methodIndex].name);
+                                    
+                                    // 确保类型切换生效后再选择方案
+                                    setTimeout(() => {
+                                        handleMethodSelectWrapper(methodIndex);
+                                        localStorage.setItem('navigationStep', 'navigateToBrewing');
+                                    }, 100);
                                 }
+                            };
+
+                            // 仅在是通用方案时才直接检查通用方案
+                            if (forceMethodType === 'common') {
+                                fallbackToCommonMethod();
                             }
-                        } else {
-                            // 如果没有方案信息，尝试选择默认方案
-                            const allMethods = commonMethods[selectedEquipment] || [];
-                            if (allMethods.length > 0) {
-                                handleMethodSelectWrapper(0);
-                            }
-                            localStorage.setItem('navigationStep', 'navigateToBrewing');
                         }
                     } else {
                         console.log("设备未选择，无法选择方案");

@@ -241,41 +241,50 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
 
     // 处理点击方案名称跳转到冲煮页面
     const handleMethodClick = (note: BrewingNote, e: React.MouseEvent) => {
-        e.stopPropagation();
-        console.log("点击方案名称", note.method);
+        e.stopPropagation(); // 防止冒泡
 
-        // 设置特殊标记，表示用户点击了方案名称
+        // 添加标记，表明是从方法点击
         localStorage.setItem("clickedFromMethod", "true");
 
-        // 保存完整的笔记方案名称，以便精确匹配
-        localStorage.setItem("clickedMethodName", note.method);
+        // 记录点击的方法名
+        localStorage.setItem("clickedMethodName", note.method || "");
 
-        // 检查是否为自定义方案 - 通常自定义方案名称比较独特或有特定前缀
-        // 先尝试加载所有自定义方案
+        // 从localStorage获取自定义方案数据
         const customMethodsStr = localStorage.getItem("customMethods");
+        console.log("当前笔记方案信息:", {
+            method: note.method,
+            equipment: note.equipment
+        });
+
         if (customMethodsStr) {
             try {
                 const customMethods = JSON.parse(customMethodsStr);
+                console.log("当前设备自定义方案:", note.equipment ? customMethods[note.equipment] : "无");
 
                 // 检查note.equipment是否存在，并且其对应的设备下是否有此方案
                 if (note.equipment && customMethods[note.equipment]) {
                     // 检查设备对应的自定义方案列表中是否有匹配项
+                    const methodName = note.method || "";
                     const isCustomMethod = customMethods[note.equipment].some(
-                        (method: { name: string; id?: string; params: Record<string, string> }) => method.name === note.method
+                        (method: { name: string; id?: string; params: Record<string, string> }) =>
+                            method.name === methodName
                     );
 
-                    // 存储方案类型
-                    localStorage.setItem("methodType", isCustomMethod ? "custom" : "common");
-
-                    console.log("方案类型判断:", isCustomMethod ? "自定义方案" : "通用方案");
+                    // 存储方案类型 - 直接设置为forceNavigationMethodType
+                    const methodType = isCustomMethod ? "custom" : "common";
+                    localStorage.setItem("forceNavigationMethodType", methodType);
+                    console.log("方案类型判断:", methodType, "- 直接设置为forceNavigationMethodType");
+                } else {
+                    console.log("无法在自定义方案中找到匹配设备:", note.equipment);
+                    localStorage.setItem("forceNavigationMethodType", "common");
                 }
             } catch (error) {
                 console.error("解析自定义方案出错:", error);
-                localStorage.setItem("methodType", "common"); // 出错时默认为通用方案
+                localStorage.setItem("forceNavigationMethodType", "common"); // 出错时默认为通用方案
             }
         } else {
-            // 没有自定义方案记录，默认为通用方案
-            localStorage.setItem("methodType", "common");
+            console.log("没有自定义方案记录，默认为通用方案");
+            localStorage.setItem("forceNavigationMethodType", "common");
         }
 
         // 清除以前的导航步骤，确保从头开始
