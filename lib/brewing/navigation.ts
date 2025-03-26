@@ -21,15 +21,20 @@ export const navigateFromHistoryToBrewing = (
 	// 获取保存的精确方案名称（如果有）
 	const exactMethodName = localStorage.getItem("clickedMethodName") || method;
 
+	// 获取方案类型（如果是从方案名称点击进来的）
+	const methodType = localStorage.getItem("methodType") || "common";
+
 	// 清除标记
 	localStorage.removeItem("clickedFromMethod");
 	localStorage.removeItem("clickedMethodName");
+	localStorage.removeItem("methodType");
 
 	// 为了调试，记录当前导航信息
 	console.log("开始从历史记录导航到冲煮页面", {
 		isFromNotesTab,
 		isFromMethodClick,
 		exactMethodName,
+		methodType,
 		coffeeBeanInfo,
 		equipment,
 		method,
@@ -40,6 +45,8 @@ export const navigateFromHistoryToBrewing = (
 	localStorage.setItem("forceNavigateToBrewing", "true");
 	localStorage.setItem("forceNavigationEquipment", equipment || "");
 	localStorage.setItem("forceNavigationMethod", exactMethodName || "");
+	// 保存方案类型，方便页面判断是通用方案还是自定义方案
+	localStorage.setItem("forceNavigationMethodType", methodType);
 	if (params) {
 		localStorage.setItem("forceNavigationParams", JSON.stringify(params));
 	}

@@ -650,18 +650,29 @@ export function methodToReadableText(method: Method): string {
 			const timeText = `${Math.floor(stage.time / 60)}分${
 				stage.time % 60
 			}秒`;
-			const pourTimeText = stage.pourTime
-				? ` (注水${stage.pourTime}秒)`
-				: "";
-			const pourTypeText = stage.pourType
-				? ` [${getPourTypeText(stage.pourType)}]`
-				: "";
+
+			// 分别生成注水时间和注水方式文本
+			let pourTimeText = "";
+			if (stage.pourTime) {
+				pourTimeText = ` (注水${stage.pourTime}秒)`;
+			}
+
+			let pourTypeText = "";
+			if (stage.pourType) {
+				pourTypeText = ` [${getPourTypeText(stage.pourType)}]`;
+			}
+
+			// 确保标签和详情是分开的
 			text += `${
 				index + 1
 			}. [${timeText}]${pourTimeText}${pourTypeText} ${stage.label} - ${
 				stage.water
 			}\n`;
-			if (stage.detail) text += `   ${stage.detail}\n`;
+
+			if (stage.detail) {
+				text += `   ${stage.detail}\n`;
+			}
+
 			text += "\n"; // 每个步骤后添加空行
 		});
 	}
@@ -926,18 +937,36 @@ function parseMethodText(text: string): Method | null {
 			const line = stageLines[i];
 			// 如果是主步骤行
 			if (line.match(/^\d+\.\s*\[.*?\]/)) {
+				// 修改正则表达式以正确提取各部分
 				const stageMatch = line.match(
-					/\d+\.\s*\[(\d+)分(\d+)秒\]\s*(.*?)\s*-\s*(.*?)(?:\n|$)/
+					/\d+\.\s*\[(\d+)分(\d+)秒\](?:\s*\(注水(\d+)秒\))?(?:\s*\[(.*?)\])?\s*(.*?)\s*-\s*(.*?)(?:\n|$)/
 				);
 				if (stageMatch) {
 					const minutes = parseInt(stageMatch[1]);
 					const seconds = parseInt(stageMatch[2]);
 					const time = minutes * 60 + seconds;
-					const label = stageMatch[3].trim();
-					const water = stageMatch[4].trim();
+					const pourTime = stageMatch[3]
+						? parseInt(stageMatch[3])
+						: Math.min(20, Math.ceil(time * 0.25));
+					const pourTypeText = stageMatch[4] || "";
+					const label = stageMatch[5].trim();
+					const water = stageMatch[6].trim();
 
-					// 从详情中尝试推断pourType
+					// 从注水方式文本推断pourType
 					let pourType = "circle"; // 默认为绕圈注水
+					if (pourTypeText) {
+						if (pourTypeText.includes("中心")) {
+							pourType = "center";
+						} else if (
+							pourTypeText.includes("冰块") ||
+							pourTypeText.includes("冰")
+						) {
+							pourType = "ice";
+						} else if (pourTypeText.includes("其他")) {
+							pourType = "other";
+						}
+					}
+
 					let detail = "";
 
 					// 检查下一行是否是详细信息
@@ -946,38 +975,12 @@ function parseMethodText(text: string): Method | null {
 						stageLines[i + 1].trim().startsWith(" ")
 					) {
 						detail = stageLines[i + 1].trim();
-
-						// 根据详情推断pourType
-						if (
-							detail.includes("中心") ||
-							detail.includes("中央")
-						) {
-							pourType = "center";
-						} else if (
-							detail.includes("冰块") ||
-							detail.includes("冰")
-						) {
-							pourType = "ice";
-						}
-
 						i++; // 跳过详细信息行
-					}
-
-					// 根据标签推断pourType（如果详情没有提供足够信息）
-					if (pourType === "circle") {
-						if (label.includes("中心")) {
-							pourType = "center";
-						} else if (
-							label.includes("冰块") ||
-							label.includes("冰")
-						) {
-							pourType = "ice";
-						}
 					}
 
 					const stage: ParsedStage = {
 						time,
-						pourTime: Math.min(20, Math.ceil(time * 0.25)), // 默认倒水时间约为总时间的1/4，但不超过20秒
+						pourTime,
 						label,
 						water,
 						detail,

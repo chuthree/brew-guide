@@ -80,20 +80,32 @@ const BrewingNoteFormModalNew: React.FC<BrewingNoteFormModalNewProps> = ({
                 const customMethodsStr = await Storage.get('customMethods');
                 if (customMethodsStr) {
                     const parsedData = JSON.parse(customMethodsStr);
-                    // 确保解析的数据是数组
-                    const methods = Array.isArray(parsedData) ? parsedData : [];
 
-                    // 过滤出与当前选择设备相关的方案
-                    const filteredMethods = methods.filter(
-                        method => {
-                            // 检查是否有适用于当前设备的方法
-                            if (method && method.id && typeof method.params === 'object') {
-                                return method.params.coffee && method.name;
-                            }
-                            return false;
+                    // 检查是否是按设备分组的对象格式
+                    if (typeof parsedData === 'object' && !Array.isArray(parsedData)) {
+                        // 如果有选择的设备，则获取对应设备的方案
+                        if (selectedEquipment && parsedData[selectedEquipment]) {
+                            setCustomMethods(parsedData[selectedEquipment]);
+                        } else {
+                            // 如果没有选择设备或没有对应设备的方案，设置为空数组
+                            setCustomMethods([]);
                         }
-                    );
-                    setCustomMethods(filteredMethods);
+                    } else {
+                        // 处理旧版扁平数组格式
+                        const methods = Array.isArray(parsedData) ? parsedData : [];
+
+                        // 过滤出与当前选择设备相关的方案
+                        const filteredMethods = methods.filter(
+                            method => {
+                                // 检查是否有适用于当前设备的方法
+                                if (method && method.id && typeof method.params === 'object') {
+                                    return method.params.coffee && method.name;
+                                }
+                                return false;
+                            }
+                        );
+                        setCustomMethods(filteredMethods);
+                    }
                 }
             } catch (error) {
                 console.error('加载自定义方案失败:', error);
@@ -103,7 +115,7 @@ const BrewingNoteFormModalNew: React.FC<BrewingNoteFormModalNewProps> = ({
         };
 
         fetchCustomMethods();
-    }, []);
+    }, [selectedEquipment]);
 
     // 当表单打开状态变化时初始化值
     useEffect(() => {
@@ -115,33 +127,78 @@ const BrewingNoteFormModalNew: React.FC<BrewingNoteFormModalNewProps> = ({
             // 打开表单时，初始化值
             const equipment = initialNote?.equipment || '';
             setSelectedEquipment(equipment);
-            setSelectedMethod(initialNote?.method || '');
 
-            // 判断初始方案是通用方案还是自定义方案
-            if (equipment && initialNote?.method) {
-                // 检查是否在通用方案中
-                const isCommonMethod = brewingMethods[equipment]?.some(
-                    m => m.name === initialNote.method
-                );
+            // 如果有设备，加载该设备的自定义方案
+            if (equipment) {
+                const loadCustomMethods = async () => {
+                    try {
+                        const customMethodsStr = await Storage.get('customMethods');
+                        if (customMethodsStr) {
+                            const parsedData = JSON.parse(customMethodsStr);
+                            if (typeof parsedData === 'object' && !Array.isArray(parsedData) && parsedData[equipment]) {
+                                setCustomMethods(parsedData[equipment]);
+                            } else {
+                                setCustomMethods([]);
+                            }
+                        }
+                    } catch (error) {
+                        console.error('初始化自定义方案失败:', error);
+                        setCustomMethods([]);
+                    }
+                };
 
-                // 检查是否在自定义方案中
-                const isCustomMethod = customMethods.some(
-                    m => m.id === initialNote.method || m.name === initialNote.method
-                );
+                loadCustomMethods().then(() => {
+                    setSelectedMethod(initialNote?.method || '');
 
-                if (isCustomMethod) {
-                    setMethodType('custom');
-                } else if (isCommonMethod) {
-                    setMethodType('common');
-                } else {
-                    setMethodType('common'); // 默认为通用方案
-                }
+                    // 判断初始方案是通用方案还是自定义方案
+                    if (equipment && initialNote?.method) {
+                        // 检查是否在通用方案中
+                        const isCommonMethod = brewingMethods[equipment]?.some(
+                            m => m.name === initialNote.method
+                        );
+
+                        // 检查当前loadCustomMethods加载的自定义方案中是否包含初始方案
+                        // 避免使用外部的customMethods状态，而是使用函数内部的方案列表
+                        const isCustomMethod = (loadedMethods: Method[]) => {
+                            return loadedMethods.some(
+                                m => m.id === initialNote.method || m.name === initialNote.method
+                            );
+                        };
+
+                        // 获取加载的自定义方案并判断
+                        const checkCustomMethods = async () => {
+                            const customMethodsStr = await Storage.get('customMethods');
+                            let methodsToCheck: Method[] = [];
+
+                            if (customMethodsStr) {
+                                const parsedData = JSON.parse(customMethodsStr);
+                                if (typeof parsedData === 'object' && !Array.isArray(parsedData) && parsedData[equipment]) {
+                                    methodsToCheck = parsedData[equipment];
+                                }
+                            }
+
+                            if (methodsToCheck.length > 0 && isCustomMethod(methodsToCheck)) {
+                                setMethodType('custom');
+                            } else if (isCommonMethod) {
+                                setMethodType('common');
+                            } else {
+                                setMethodType('common'); // 默认为通用方案
+                            }
+                        };
+
+                        // 执行检查
+                        checkCustomMethods();
+                    } else {
+                        setMethodType('common'); // 默认为通用方案
+                    }
+                });
             } else {
+                setSelectedMethod(initialNote?.method || '');
                 setMethodType('common'); // 默认为通用方案
             }
         }
         // 从依赖数组中移除brewingMethods，因为它是一个常量
-    }, [showForm, initialNote, customMethods]);
+    }, [showForm, initialNote]);
 
     // 根据选中的方案获取默认参数
     const getMethodParams = () => {
@@ -176,37 +233,56 @@ const BrewingNoteFormModalNew: React.FC<BrewingNoteFormModalNewProps> = ({
 
         // 检查通用方案是否可用
         const commonMethodsAvailable = brewingMethods[equipmentId]?.length > 0;
-        // 检查自定义方案是否可用
-        const customMethodsAvailable = customMethods.length > 0;
 
-        // 保持当前的方案类型，只在必要时切换
-        if (methodType === 'common') {
-            // 如果当前是通用方案模式
-            if (commonMethodsAvailable) {
-                // 选择第一个通用方案
-                setSelectedMethod(brewingMethods[equipmentId][0].name);
-            } else if (customMethodsAvailable) {
-                // 如果没有通用方案但有自定义方案，切换到自定义方案
-                setMethodType('custom');
-                setSelectedMethod(customMethods[0].id || '');
-            } else {
-                // 如果都没有，清空选择
-                setSelectedMethod('');
+        // 加载该设备的自定义方案
+        const loadCustomMethods = async () => {
+            try {
+                const customMethodsStr = await Storage.get('customMethods');
+                if (customMethodsStr) {
+                    const parsedData = JSON.parse(customMethodsStr);
+                    if (typeof parsedData === 'object' && !Array.isArray(parsedData) && parsedData[equipmentId]) {
+                        setCustomMethods(parsedData[equipmentId]);
+                        return parsedData[equipmentId].length > 0;
+                    }
+                }
+                return false;
+            } catch (error) {
+                console.error('加载设备自定义方案失败:', error);
+                return false;
             }
-        } else {
-            // 当前是自定义方案模式
-            if (customMethodsAvailable) {
-                // 选择第一个自定义方案
-                setSelectedMethod(customMethods[0].id || '');
-            } else if (commonMethodsAvailable) {
-                // 如果没有自定义方案但有通用方案，切换到通用方案
-                setMethodType('common');
-                setSelectedMethod(brewingMethods[equipmentId][0].name);
+        };
+
+        // 异步加载自定义方案并更新UI
+        loadCustomMethods().then(customMethodsAvailable => {
+            // 保持当前的方案类型，只在必要时切换
+            if (methodType === 'common') {
+                // 如果当前是通用方案模式
+                if (commonMethodsAvailable) {
+                    // 选择第一个通用方案
+                    setSelectedMethod(brewingMethods[equipmentId][0].name);
+                } else if (customMethodsAvailable) {
+                    // 如果没有通用方案但有自定义方案，切换到自定义方案
+                    setMethodType('custom');
+                    setSelectedMethod(customMethods[0].id || customMethods[0].name);
+                } else {
+                    // 如果都没有，清空选择
+                    setSelectedMethod('');
+                }
             } else {
-                // 如果都没有，清空选择
-                setSelectedMethod('');
+                // 当前是自定义方案模式
+                if (customMethodsAvailable) {
+                    // 选择第一个自定义方案
+                    setSelectedMethod(customMethods[0].id || customMethods[0].name);
+                } else if (commonMethodsAvailable) {
+                    // 如果没有自定义方案但有通用方案，切换到通用方案
+                    setMethodType('common');
+                    setSelectedMethod(brewingMethods[equipmentId][0].name);
+                } else {
+                    // 如果都没有，清空选择
+                    setSelectedMethod('');
+                }
             }
-        }
+        });
     };
 
     // 切换方案类型
@@ -229,7 +305,7 @@ const BrewingNoteFormModalNew: React.FC<BrewingNoteFormModalNewProps> = ({
             } else {
                 // 切换到自定义方案
                 if (customMethods.length > 0) {
-                    setSelectedMethod(customMethods[0].id || '');
+                    setSelectedMethod(customMethods[0].id || customMethods[0].name);
                 } else {
                     setSelectedMethod(''); // 没有自定义方案，清空选择
                 }
@@ -296,11 +372,23 @@ const BrewingNoteFormModalNew: React.FC<BrewingNoteFormModalNewProps> = ({
 
     // 处理保存笔记，减少咖啡豆剩余量
     const handleSaveNote = (note: BrewingNoteData) => {
+        // 获取方案名称而非ID
+        let methodName = selectedMethod;
+        if (methodType === 'custom' && selectedMethod) {
+            // 查找自定义方案获取其名称
+            const methodObj = availableMethods.find(m =>
+                m.id === selectedMethod || m.name === selectedMethod
+            );
+            if (methodObj) {
+                methodName = methodObj.name;
+            }
+        }
+
         // 创建要保存的完整笔记
         const completeNote: BrewingNoteData = {
             ...note,
             equipment: selectedEquipment,
-            method: selectedMethod
+            method: methodName
         };
 
         // 只有当选择了咖啡豆时才减少剩余量和记录详细信息

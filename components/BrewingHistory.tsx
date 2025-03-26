@@ -250,6 +250,34 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
         // 保存完整的笔记方案名称，以便精确匹配
         localStorage.setItem("clickedMethodName", note.method);
 
+        // 检查是否为自定义方案 - 通常自定义方案名称比较独特或有特定前缀
+        // 先尝试加载所有自定义方案
+        const customMethodsStr = localStorage.getItem("customMethods");
+        if (customMethodsStr) {
+            try {
+                const customMethods = JSON.parse(customMethodsStr);
+
+                // 检查note.equipment是否存在，并且其对应的设备下是否有此方案
+                if (note.equipment && customMethods[note.equipment]) {
+                    // 检查设备对应的自定义方案列表中是否有匹配项
+                    const isCustomMethod = customMethods[note.equipment].some(
+                        (method: { name: string; id?: string; params: Record<string, string> }) => method.name === note.method
+                    );
+
+                    // 存储方案类型
+                    localStorage.setItem("methodType", isCustomMethod ? "custom" : "common");
+
+                    console.log("方案类型判断:", isCustomMethod ? "自定义方案" : "通用方案");
+                }
+            } catch (error) {
+                console.error("解析自定义方案出错:", error);
+                localStorage.setItem("methodType", "common"); // 出错时默认为通用方案
+            }
+        } else {
+            // 没有自定义方案记录，默认为通用方案
+            localStorage.setItem("methodType", "common");
+        }
+
         // 清除以前的导航步骤，确保从头开始
         localStorage.removeItem("navigationStep");
 

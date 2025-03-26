@@ -1036,9 +1036,9 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         handleEquipmentSelectWithName,
         methodType,
         selectedEquipment,
-        commonMethods,
         customMethods,
-        handleMethodSelectWrapper
+        handleMethodSelectWrapper,
+        setActiveMainTab
     ]);
 
     // 处理从历史记录直接跳转到注水步骤的情况
@@ -1162,28 +1162,60 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                     // 第三步：选择方案（只有当设备已选择）
                     if (selectedEquipment) {
                         const method = localStorage.getItem('forceNavigationMethod');
+                        // 获取方案类型（默认为common）
+                        const forceMethodType = localStorage.getItem('forceNavigationMethodType') || 'common';
+
                         if (method) {
-                            // 查找方案并选择
-                            console.log("尝试选择方案:", method);
+                            // 根据方案类型选择不同的方案列表
+                            console.log("尝试选择方案:", method, "类型:", forceMethodType);
+
+                            if (forceMethodType === 'custom') {
+                                // 如果是自定义方案，先切换到自定义方案模式
+                                setMethodType('custom');
+
+                                // 查找匹配的自定义方案
+                                if (customMethods[selectedEquipment]) {
+                                    const customMethodIndex = customMethods[selectedEquipment].findIndex(m =>
+                                        m.name === method
+                                    );
+
+                                    if (customMethodIndex !== -1) {
+                                        console.log("找到自定义方案，索引:", customMethodIndex);
+                                        handleMethodSelectWrapper(customMethodIndex);
+                                        localStorage.setItem('navigationStep', 'navigateToBrewing');
+                                        break;
+                                    } else {
+                                        console.log("未找到匹配的自定义方案，尝试回退到通用方案");
+                                    }
+                                } else {
+                                    console.log("该设备下没有自定义方案，尝试回退到通用方案");
+                                }
+                            }
+
+                            // 如果是通用方案，或者自定义方案未找到，尝试在通用方案中查找
                             const allMethods = commonMethods[selectedEquipment] || [];
-                            console.log("可用方案:", allMethods.map(m => m.name));
+                            console.log("可用通用方案:", allMethods.map(m => m.name));
 
                             // 查找精确匹配的方案
                             const methodIndex = allMethods.findIndex(m => m.name === method);
 
                             if (methodIndex !== -1) {
-                                console.log("找到方案，索引:", methodIndex);
+                                // 如果找到通用方案，切换回通用方案模式
+                                setMethodType('common');
+                                console.log("找到通用方案，索引:", methodIndex);
                                 handleMethodSelectWrapper(methodIndex);
                                 localStorage.setItem('navigationStep', 'navigateToBrewing');
                             } else {
-                                console.log("未找到精确匹配的方案，尝试模糊匹配");
+                                console.log("未找到精确匹配的通用方案，尝试模糊匹配");
                                 // 尝试模糊匹配
                                 const fuzzyIndex = allMethods.findIndex(m =>
                                     m.name.includes(method) || method.includes(m.name)
                                 );
 
                                 if (fuzzyIndex !== -1) {
-                                    console.log("找到模糊匹配的方案，索引:", fuzzyIndex);
+                                    // 如果找到通用方案，切换回通用方案模式
+                                    setMethodType('common');
+                                    console.log("找到模糊匹配的通用方案，索引:", fuzzyIndex);
                                     handleMethodSelectWrapper(fuzzyIndex);
                                     localStorage.setItem('navigationStep', 'navigateToBrewing');
                                 } else {
@@ -1263,7 +1295,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         navigateToStep,
         setActiveMainTab,
         setActiveTab,
-        commonMethods
+        customMethods,
+        setMethodType
     ]);
 
     return (
