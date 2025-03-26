@@ -44,6 +44,9 @@ importers:
       '@capacitor/text-zoom':
         specifier: ^7.0.0
         version: 7.0.0(@capacitor/core@7.1.0)
+      '@eslint/eslintrc':
+        specifier: ^3.3.1
+        version: 3.3.1
       '@headlessui/react':
         specifier: ^2.2.0
         version: 2.2.0(react-dom@19.0.0(react@19.0.0))(react@19.0.0)

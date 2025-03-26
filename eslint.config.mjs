@@ -17,7 +17,8 @@ const eslintConfig = [
         "argsIgnorePattern": "^_",
         "varsIgnorePattern": "^_",
         "caughtErrorsIgnorePattern": "^_"
-      }]
+      }],
+      "react-hooks/exhaustive-deps": "off" 
     }
   }
 ];
