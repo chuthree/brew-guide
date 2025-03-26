@@ -281,21 +281,28 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                     const methodType = isCustomMethod ? "custom" : "common";
                     localStorage.setItem("forceNavigationMethodType", methodType);
                     console.log("方案类型判断:", methodType, "- 直接设置为forceNavigationMethodType");
+
+                    // 关键修复：确保自定义方案导航有正确的步骤标识
+                    if (isCustomMethod) {
+                        // 设置完成后直接进入导航流程，使用 start 作为初始步骤
+                        localStorage.setItem("navigationStep", "start");
+                    }
                 } else {
                     console.log("无法在自定义方案中找到匹配设备:", note.equipment);
                     localStorage.setItem("forceNavigationMethodType", "common");
+                    // 确保设置了导航步骤
+                    localStorage.setItem("navigationStep", "start");
                 }
             } catch (error) {
                 console.error("解析自定义方案出错:", error);
                 localStorage.setItem("forceNavigationMethodType", "common"); // 出错时默认为通用方案
+                localStorage.setItem("navigationStep", "start");
             }
         } else {
             console.log("没有自定义方案记录，默认为通用方案");
             localStorage.setItem("forceNavigationMethodType", "common");
+            localStorage.setItem("navigationStep", "start");
         }
-
-        // 清除以前的导航步骤，确保从头开始
-        localStorage.removeItem("navigationStep");
 
         if (onNavigateToBrewing) {
             onNavigateToBrewing(note);

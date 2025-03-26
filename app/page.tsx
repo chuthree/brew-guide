@@ -1177,6 +1177,32 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                             // 根据方案类型选择不同的方案列表
                             console.log("尝试选择方案:", method, "类型:", forceMethodType);
 
+                            // 定义回退到通用方案的函数
+                            const fallbackToCommonMethod = () => {
+                                // 如果是通用方案，或者自定义方案未找到，尝试在通用方案中查找
+                                const allMethods = commonMethods[selectedEquipment] || [];
+                                console.log("可用通用方案:", allMethods.map(m => m.name));
+
+                                // 查找精确匹配的方案
+                                const methodIndex = allMethods.findIndex(m => m.name === method);
+
+                                if (methodIndex !== -1) {
+                                    // 如果找到通用方案，切换回通用方案模式
+                                    setMethodType('common');
+                                    console.log("找到通用方案，索引:", methodIndex, "名称:", allMethods[methodIndex].name);
+
+                                    // 确保类型切换生效后再选择方案
+                                    setTimeout(() => {
+                                        handleMethodSelectWrapper(methodIndex);
+                                        localStorage.setItem('navigationStep', 'navigateToBrewing');
+                                    }, 100);
+                                } else {
+                                    // 如果通用方案中也没找到，直接进入注水步骤
+                                    console.log("通用方案中也没找到匹配项，直接进入注水步骤");
+                                    localStorage.setItem('navigationStep', 'navigateToBrewing');
+                                }
+                            };
+
                             if (forceMethodType === 'custom') {
                                 // 如果是自定义方案，先切换到自定义方案模式
                                 setMethodType('custom');
@@ -1206,35 +1232,9 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                                         fallbackToCommonMethod();
                                     }
                                 }, 100);
-
-                                // 阻止代码继续执行，确保在setTimeout回调中完成后续操作
-                                break;
                             }
-
-                            // 定义回退到通用方案的函数
-                            const fallbackToCommonMethod = () => {
-                                // 如果是通用方案，或者自定义方案未找到，尝试在通用方案中查找
-                                const allMethods = commonMethods[selectedEquipment] || [];
-                                console.log("可用通用方案:", allMethods.map(m => m.name));
-
-                                // 查找精确匹配的方案
-                                const methodIndex = allMethods.findIndex(m => m.name === method);
-
-                                if (methodIndex !== -1) {
-                                    // 如果找到通用方案，切换回通用方案模式
-                                    setMethodType('common');
-                                    console.log("找到通用方案，索引:", methodIndex, "名称:", allMethods[methodIndex].name);
-
-                                    // 确保类型切换生效后再选择方案
-                                    setTimeout(() => {
-                                        handleMethodSelectWrapper(methodIndex);
-                                        localStorage.setItem('navigationStep', 'navigateToBrewing');
-                                    }, 100);
-                                }
-                            };
-
                             // 仅在是通用方案时才直接检查通用方案
-                            if (forceMethodType === 'common') {
+                            else if (forceMethodType === 'common') {
                                 fallbackToCommonMethod();
                             }
                         }
