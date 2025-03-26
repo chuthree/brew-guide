@@ -62,6 +62,13 @@ export const BREWING_EVENTS = {
 	PARAMS_UPDATED: "brewing:paramsUpdated",
 	METHOD_SELECTED: "brewing:methodSelected",
 	NOTES_FORM_CLOSE: "brewing:notesFormClose",
+	// 添加新的导航相关事件
+	NAVIGATE_TO_MAIN_TAB: "brewing:navigateToMainTab",
+	NAVIGATE_TO_STEP: "brewing:navigateToStep",
+	SELECT_COFFEE_BEAN: "brewing:selectCoffeeBean",
+	SELECT_EQUIPMENT: "brewing:selectEquipment",
+	SELECT_METHOD: "brewing:selectMethod",
+	UPDATE_BREWING_PARAMS: "brewing:updateBrewingParams",
 };
 
 // 步骤导航选项接口

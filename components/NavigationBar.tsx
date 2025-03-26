@@ -57,6 +57,7 @@ const TabButton = ({
     onClick,
     hasSecondaryLine,
     className = '',
+    dataTab,
 }: {
     tab: string
     isActive: boolean
@@ -65,6 +66,7 @@ const TabButton = ({
     onClick?: () => void
     hasSecondaryLine?: boolean
     className?: string
+    dataTab?: string
 }) => {
     // 处理点击事件
     const handleClick = () => {
@@ -85,6 +87,7 @@ const TabButton = ({
                         ? 'text-neutral-300 dark:text-neutral-600'
                         : 'cursor-pointer text-neutral-500 dark:text-neutral-400'
                 }`}
+            data-tab={dataTab}
         >
             <span className="relative">
                 {tab}
@@ -206,6 +209,7 @@ const StepIndicator = ({
                             isCompleted={isCompleted}
                             onClick={() => handleStepClick(step.value)}
                             className="text-[10px] sm:text-xs"
+                            dataTab={step.value}
                         />
                         {index < steps.length - 1 && (
                             <motion.div
@@ -717,18 +721,21 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                             isActive={activeMainTab === '冲煮'}
                             onClick={() => handleMainTabClick('冲煮')}
                             className="text-[10px] sm:text-xs"
+                            dataTab="冲煮"
                         />
                         <TabButton
                             tab="咖啡豆"
                             isActive={activeMainTab === '咖啡豆'}
                             onClick={() => handleMainTabClick('咖啡豆')}
                             className="text-[10px] sm:text-xs"
+                            dataTab="咖啡豆"
                         />
                         <TabButton
                             tab="笔记"
                             isActive={activeMainTab === '笔记'}
                             onClick={() => handleMainTabClick('笔记')}
                             className="text-[10px] sm:text-xs"
+                            dataTab="笔记"
                         />
                     </div>
                 </div>

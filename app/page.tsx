@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { motion as m, AnimatePresence } from 'framer-motion'
 import dynamic from 'next/dynamic'
-import { equipmentList, APP_VERSION } from '@/lib/config'
+import { equipmentList, APP_VERSION, commonMethods } from '@/lib/config'
 import { Storage } from '@/lib/storage'
 import { initCapacitor } from './capacitor'
 // 只导入需要的类型
@@ -24,6 +24,9 @@ import ImportModal from '@/components/ImportModal'
 import { CoffeeBeanManager } from '@/lib/coffeeBeanManager'
 import AIRecipeModal from '@/components/AIRecipeModal'
 import textZoomUtils from '@/lib/textZoom'
+import { navigateFromHistoryToBrewing } from '@/lib/brewing/navigation'
+import type { BrewingNote } from '@/lib/config'
+import { BREWING_EVENTS } from '@/lib/brewing/constants'
 
 // 添加内容转换状态类型
 interface TransitionState {
@@ -930,6 +933,339 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         alert('数据已更新，应用将重新加载数据');
     };
 
+    // 监听从历史记录直接导航的事件
+    useEffect(() => {
+        // 注册事件监听
+        const handleMainTabNavigation = (e: CustomEvent) => {
+            const { tab } = e.detail;
+            if (tab) {
+                setActiveMainTab(tab);
+            }
+        };
+
+        const handleStepNavigation = (e: CustomEvent) => {
+            const { step, fromHistory = false, directToBrewing = false } = e.detail;
+            if (step) {
+                navigateToStep(step, {
+                    force: fromHistory || directToBrewing,
+                    resetParams: false,
+                    preserveStates: [],
+                });
+
+                // 如果是直接跳转到注水步骤，设置一个标记
+                if (directToBrewing && step === 'brewing') {
+                    // 设置一个localStorage标记，指示这是从历史记录直接跳转到注水步骤
+                    localStorage.setItem('directToBrewing', 'true');
+
+                    // 添加延迟确保UI已更新
+                    setTimeout(() => {
+                        // 强制聚焦到注水步骤，确保正确显示内容
+                        navigateToStep('brewing', {
+                            force: true,
+                            resetParams: false,
+                            preserveStates: ["all"],
+                        });
+                    }, 300);
+                }
+            }
+        };
+
+        const handleCoffeeBeanSelection = (e: CustomEvent) => {
+            const { beanName } = e.detail;
+            if (beanName) {
+                // 查找匹配的咖啡豆并选择它
+                CoffeeBeanManager.getBeanByName(beanName).then(bean => {
+                    if (bean) {
+                        handleCoffeeBeanSelect(bean.id, bean);
+                    }
+                });
+            }
+        };
+
+        const handleEquipmentSelection = (e: CustomEvent) => {
+            const { equipmentName } = e.detail;
+            if (equipmentName) {
+                handleEquipmentSelectWithName(equipmentName);
+            }
+        };
+
+        const handleMethodSelection = (e: CustomEvent) => {
+            const { methodName } = e.detail;
+            if (methodName) {
+                // 查找匹配的方法并选择它
+                const allMethods = methodType === 'common'
+                    ? commonMethods[selectedEquipment || ''] || []
+                    : customMethods[selectedEquipment || ''] || [];
+
+                const methodIndex = allMethods.findIndex(m => m.name === methodName);
+                if (methodIndex !== -1) {
+                    handleMethodSelectWrapper(methodIndex);
+                }
+            }
+        };
+
+        const handleParamsUpdate = (e: CustomEvent) => {
+            // 注意: 暂未实现参数更新逻辑，保留此函数以匹配事件监听需要
+            const { params } = e.detail;
+            if (params) {
+                // 将在未来实现
+                console.log("参数更新请求", params);
+            }
+        };
+
+        // 添加事件监听
+        document.addEventListener(BREWING_EVENTS.NAVIGATE_TO_MAIN_TAB, handleMainTabNavigation as EventListener);
+        document.addEventListener(BREWING_EVENTS.NAVIGATE_TO_STEP, handleStepNavigation as EventListener);
+        document.addEventListener(BREWING_EVENTS.SELECT_COFFEE_BEAN, handleCoffeeBeanSelection as EventListener);
+        document.addEventListener(BREWING_EVENTS.SELECT_EQUIPMENT, handleEquipmentSelection as EventListener);
+        document.addEventListener(BREWING_EVENTS.SELECT_METHOD, handleMethodSelection as EventListener);
+        document.addEventListener(BREWING_EVENTS.UPDATE_BREWING_PARAMS, handleParamsUpdate as EventListener);
+
+        return () => {
+            // 移除事件监听
+            document.removeEventListener(BREWING_EVENTS.NAVIGATE_TO_MAIN_TAB, handleMainTabNavigation as EventListener);
+            document.removeEventListener(BREWING_EVENTS.NAVIGATE_TO_STEP, handleStepNavigation as EventListener);
+            document.removeEventListener(BREWING_EVENTS.SELECT_COFFEE_BEAN, handleCoffeeBeanSelection as EventListener);
+            document.removeEventListener(BREWING_EVENTS.SELECT_EQUIPMENT, handleEquipmentSelection as EventListener);
+            document.removeEventListener(BREWING_EVENTS.SELECT_METHOD, handleMethodSelection as EventListener);
+            document.removeEventListener(BREWING_EVENTS.UPDATE_BREWING_PARAMS, handleParamsUpdate as EventListener);
+        };
+    }, [
+        navigateToStep,
+        handleCoffeeBeanSelect,
+        handleEquipmentSelectWithName,
+        methodType,
+        selectedEquipment,
+        commonMethods,
+        customMethods,
+        handleMethodSelectWrapper
+    ]);
+
+    // 处理从历史记录直接跳转到注水步骤的情况
+    useEffect(() => {
+        // 检查是否有直接跳转到注水的标记
+        const directToBrewing = localStorage.getItem('directToBrewing');
+        // 移除未使用的变量
+        // const lastNavigationTime = localStorage.getItem('lastNavigationTime');
+        const lastNavigatedMethod = localStorage.getItem('lastNavigatedMethod');
+
+        if (directToBrewing === 'true' && activeMainTab === '冲煮') {
+            // 清除标记
+            localStorage.removeItem('directToBrewing');
+            localStorage.removeItem('lastNavigatedMethod');
+
+            console.log("检测到从历史记录跳转的标记", {
+                activeMainTab,
+                activeBrewingStep,
+                selectedEquipment,
+                selectedMethod,
+                currentBrewingMethod,
+                lastNavigatedMethod
+            });
+
+            // 确保已经加载了所有必要的数据后，再次导航到注水步骤
+            if (selectedEquipment && (selectedMethod || currentBrewingMethod)) {
+                // 延迟一点时间确保UI和数据都已准备好
+                setTimeout(() => {
+                    // 确保是在注水步骤
+                    if (activeBrewingStep !== 'brewing') {
+                        console.log("强制导航到注水步骤");
+                        navigateToStep('brewing', {
+                            force: true,
+                            resetParams: false,
+                            preserveStates: ["all"],
+                        });
+                    }
+
+                    // 确保处于注水标签
+                    if (activeTab !== '注水') {
+                        console.log("强制切换到注水标签");
+                        setActiveTab('注水');
+                    }
+
+                    // 双重保险：再次检查并强制状态
+                    setTimeout(() => {
+                        if (activeBrewingStep !== 'brewing' || activeTab !== '注水') {
+                            console.log("第二次强制导航到注水步骤");
+                            navigateToStep('brewing', {
+                                force: true,
+                                resetParams: false,
+                                preserveStates: ["all"],
+                            });
+                            setActiveTab('注水');
+                        }
+                    }, 500);
+                }, 800);
+            } else {
+                console.log("无法导航到注水步骤，缺少必要数据", {
+                    selectedEquipment,
+                    selectedMethod,
+                    currentBrewingMethod
+                });
+            }
+        }
+    }, [
+        activeMainTab,
+        selectedEquipment,
+        selectedMethod,
+        currentBrewingMethod,
+        activeBrewingStep,
+        activeTab,
+        navigateToStep,
+        setActiveTab
+    ]);
+
+    // 添加从历史记录跳转到冲煮的处理函数
+    const handleNavigateFromHistory = useCallback((note: BrewingNote) => {
+        // 传递当前是否在笔记标签页
+        navigateFromHistoryToBrewing(note, activeMainTab === '笔记');
+    }, [activeMainTab]);
+
+    // 添加检查强制导航标记的逻辑
+    useEffect(() => {
+        // 检查是否有强制导航到冲煮页面的标记
+        const forceNavigate = localStorage.getItem('forceNavigateToBrewing');
+        const navigationStep = localStorage.getItem('navigationStep') || 'start';
+
+        if (forceNavigate === 'true') {
+            console.log("检测到强制导航标记，当前步骤:", navigationStep, {
+                activeMainTab,
+                activeBrewingStep,
+                selectedEquipment,
+                selectedMethod,
+                currentBrewingMethod
+            });
+
+            switch (navigationStep) {
+                case 'start':
+                    // 第一步：切换到冲煮标签页
+                    setActiveMainTab('冲煮');
+                    localStorage.setItem('navigationStep', 'selectEquipment');
+                    break;
+
+                case 'selectEquipment':
+                    // 第二步：选择设备（只有当成功切换到冲煮标签页后）
+                    if (activeMainTab === '冲煮') {
+                        const equipment = localStorage.getItem('forceNavigationEquipment');
+                        if (equipment) {
+                            console.log("选择设备:", equipment);
+                            handleEquipmentSelectWithName(equipment);
+                            localStorage.setItem('navigationStep', 'selectMethod');
+                        } else {
+                            // 如果没有设备信息，跳过这一步
+                            localStorage.setItem('navigationStep', 'selectMethod');
+                        }
+                    }
+                    break;
+
+                case 'selectMethod':
+                    // 第三步：选择方案（只有当设备已选择）
+                    if (selectedEquipment) {
+                        const method = localStorage.getItem('forceNavigationMethod');
+                        if (method) {
+                            // 查找方案并选择
+                            console.log("尝试选择方案:", method);
+                            const allMethods = commonMethods[selectedEquipment] || [];
+                            console.log("可用方案:", allMethods.map(m => m.name));
+
+                            // 查找精确匹配的方案
+                            const methodIndex = allMethods.findIndex(m => m.name === method);
+
+                            if (methodIndex !== -1) {
+                                console.log("找到方案，索引:", methodIndex);
+                                handleMethodSelectWrapper(methodIndex);
+                                localStorage.setItem('navigationStep', 'navigateToBrewing');
+                            } else {
+                                console.log("未找到精确匹配的方案，尝试模糊匹配");
+                                // 尝试模糊匹配
+                                const fuzzyIndex = allMethods.findIndex(m =>
+                                    m.name.includes(method) || method.includes(m.name)
+                                );
+
+                                if (fuzzyIndex !== -1) {
+                                    console.log("找到模糊匹配的方案，索引:", fuzzyIndex);
+                                    handleMethodSelectWrapper(fuzzyIndex);
+                                    localStorage.setItem('navigationStep', 'navigateToBrewing');
+                                } else {
+                                    console.log("未找到任何匹配的方案，选择第一个可用方案");
+                                    // 如果没有找到匹配的方案，选择第一个可用方案
+                                    if (allMethods.length > 0) {
+                                        handleMethodSelectWrapper(0);
+                                    }
+                                    localStorage.setItem('navigationStep', 'navigateToBrewing');
+                                }
+                            }
+                        } else {
+                            // 如果没有方案信息，尝试选择默认方案
+                            const allMethods = commonMethods[selectedEquipment] || [];
+                            if (allMethods.length > 0) {
+                                handleMethodSelectWrapper(0);
+                            }
+                            localStorage.setItem('navigationStep', 'navigateToBrewing');
+                        }
+                    } else {
+                        console.log("设备未选择，无法选择方案");
+                        localStorage.setItem('navigationStep', 'navigateToBrewing');
+                    }
+                    break;
+
+                case 'navigateToBrewing':
+                    // 第四步：导航到注水步骤（只有当方案已选择）
+                    if (selectedEquipment && (selectedMethod || currentBrewingMethod)) {
+                        console.log("准备导航到注水步骤");
+                        // 导航到注水步骤
+                        navigateToStep('brewing', {
+                            force: true,
+                            resetParams: false,
+                            preserveStates: ["all"],
+                        });
+
+                        // 确保处于注水标签
+                        setActiveTab('注水');
+
+                        // 导航完成，清除标记
+                        localStorage.removeItem('forceNavigateToBrewing');
+                        localStorage.removeItem('navigationStep');
+                        localStorage.removeItem('forceNavigationEquipment');
+                        localStorage.removeItem('forceNavigationMethod');
+                        localStorage.removeItem('forceNavigationParams');
+
+                        console.log("导航完成");
+                    } else {
+                        console.log("方案未正确加载，无法导航到注水步骤");
+                        // 清除标记，避免循环
+                        localStorage.removeItem('forceNavigateToBrewing');
+                        localStorage.removeItem('navigationStep');
+                        localStorage.removeItem('forceNavigationEquipment');
+                        localStorage.removeItem('forceNavigationMethod');
+                        localStorage.removeItem('forceNavigationParams');
+                    }
+                    break;
+
+                default:
+                    // 未知状态，清除标记
+                    localStorage.removeItem('forceNavigateToBrewing');
+                    localStorage.removeItem('navigationStep');
+                    localStorage.removeItem('forceNavigationEquipment');
+                    localStorage.removeItem('forceNavigationMethod');
+                    localStorage.removeItem('forceNavigationParams');
+                    break;
+            }
+        }
+    }, [
+        activeMainTab,
+        activeBrewingStep,
+        selectedEquipment,
+        selectedMethod,
+        currentBrewingMethod,
+        handleEquipmentSelectWithName,
+        handleMethodSelectWrapper,
+        navigateToStep,
+        setActiveMainTab,
+        setActiveTab,
+        commonMethods
+    ]);
+
     return (
         <div className="flex h-full flex-col overflow-hidden mx-auto max-w-[500px] font-mono text-neutral-800 dark:text-neutral-100">
             {/* 使用 NavigationBar 组件替换原有的导航栏 */}
@@ -1020,6 +1356,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                                 setShowHistory(false);
                             }}
                             onOptimizingChange={setIsOptimizing}
+                            onNavigateToBrewing={handleNavigateFromHistory}
                         />
                     </m.div>
                 )}

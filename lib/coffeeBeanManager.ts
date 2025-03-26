@@ -233,4 +233,18 @@ export const CoffeeBeanManager = {
 			return [];
 		}
 	},
+
+	/**
+	 * 根据名称获取咖啡豆
+	 * @param name 咖啡豆名称
+	 * @returns 匹配的咖啡豆对象，如果不存在则返回null
+	 */
+	async getBeanByName(name: string): Promise<CoffeeBean | null> {
+		try {
+			const beans = await this.getAllBeans();
+			return beans.find((bean) => bean.name === name) || null;
+		} catch {
+			return null;
+		}
+	},
 };

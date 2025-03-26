@@ -37,6 +37,7 @@ interface BrewingHistoryProps {
     isOpen: boolean
     onClose: () => void
     onOptimizingChange?: (isOptimizing: boolean) => void
+    onNavigateToBrewing?: (note: BrewingNote) => void
 }
 
 const formatDate = (timestamp: number) => {
@@ -52,7 +53,7 @@ const formatRating = (rating: number) => {
     return `[ ${rating}/5 ]`
 }
 
-const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingChange }) => {
+const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingChange, onNavigateToBrewing }) => {
     const [notes, setNotes] = useState<BrewingNote[]>([])
     const [sortOption, setSortOption] = useState<SortOption>(SORT_OPTIONS.TIME_DESC)
     const [optimizingNote, setOptimizingNote] = useState<(Partial<BrewingNoteData> & { coffeeBean?: CoffeeBean | null }) | null>(null)
@@ -238,6 +239,33 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
         setShowNoteFormModal(true);
     }
 
+    // 处理点击参数区域跳转到冲煮页面
+    const handleParamsClick = (note: BrewingNote, e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (onNavigateToBrewing) {
+            onNavigateToBrewing(note);
+        }
+    }
+
+    // 处理点击方案名称跳转到冲煮页面
+    const handleMethodClick = (note: BrewingNote, e: React.MouseEvent) => {
+        e.stopPropagation();
+        console.log("点击方案名称", note.method);
+
+        // 设置特殊标记，表示用户点击了方案名称
+        localStorage.setItem("clickedFromMethod", "true");
+
+        // 保存完整的笔记方案名称，以便精确匹配
+        localStorage.setItem("clickedMethodName", note.method);
+
+        // 清除以前的导航步骤，确保从头开始
+        localStorage.removeItem("navigationStep");
+
+        if (onNavigateToBrewing) {
+            onNavigateToBrewing(note);
+        }
+    }
+
     if (!isOpen) return null
 
     return (
@@ -394,8 +422,25 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                                                 <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400 shrink-0">
                                                                     ·
                                                                 </div>
-                                                                <div className="text-[10px] font-light tracking-wide truncate">
-                                                                    {note.method}
+                                                                <div
+                                                                    className="text-[10px] font-light tracking-wide truncate cursor-pointer hover:text-emerald-600 dark:hover:text-emerald-500 transition-colors group flex items-center"
+                                                                    onClick={(e) => handleMethodClick(note, e)}
+                                                                    title="点击跳转到注水步骤"
+                                                                >
+                                                                    <span className="border-b border-dashed border-neutral-400 dark:border-neutral-600 group-hover:border-emerald-500 dark:group-hover:border-emerald-500">
+                                                                        {note.method}
+                                                                    </span>
+                                                                    <svg
+                                                                        className="ml-1 w-3 h-3 opacity-50 group-hover:opacity-100 group-hover:text-emerald-500 transition-all"
+                                                                        viewBox="0 0 24 24"
+                                                                        fill="none"
+                                                                        stroke="currentColor"
+                                                                        strokeWidth="2"
+                                                                        strokeLinecap="round"
+                                                                        strokeLinejoin="round"
+                                                                    >
+                                                                        <path d="M5 12h14M12 5l7 7-7 7" />
+                                                                    </svg>
                                                                 </div>
                                                             </>
                                                         )}
