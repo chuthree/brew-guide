@@ -105,3 +105,27 @@ body {
   box-shadow: 0 -1px 0 0 var(--background);
   /* 添加顶部阴影，确保渐变效果 */
 }
+
+/* 冲煮页面滚动容器样式 */
+.brew-content-scroll {
+  -webkit-overflow-scrolling: touch;
+  overflow-y: auto;
+  height: 100%;
+  padding-bottom: calc(env(safe-area-inset-bottom) + 100px);
+}
+
+/* 自定义表单滚动容器样式 */
+.custom-form-scroll {
+  -webkit-overflow-scrolling: touch;
+  overflow-y: auto;
+  height: 100%;
+  padding-bottom: 0 !important;
+}
+
+/* 可视化方案滚动容器样式 */
+.visualization-scroll {
+  -webkit-overflow-scrolling: touch;
+  overflow-y: auto;
+  height: 100%;
+  padding-bottom: 0 !important;
+}

@@ -1339,7 +1339,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 5 }}
                         transition={{ duration: 0.3, ease: "easeOut" }}
-                        className="h-full overflow-y-auto"
+                        className="h-full overflow-y-auto visualization-scroll"
                     >
                         <TabContent
                             activeMainTab={activeMainTab}

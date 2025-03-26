@@ -1153,7 +1153,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
             </div>
 
             {/* 步骤内容 */}
-            <div className="flex-1 overflow-y-auto pr-2">
+            <div className="flex-1 overflow-y-auto custom-form-scroll pr-2">
                 <AnimatePresence mode="wait">
                     {renderStepContent()}
                 </AnimatePresence>
