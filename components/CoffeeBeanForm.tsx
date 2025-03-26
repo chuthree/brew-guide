@@ -211,21 +211,21 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
 
                 if (beanData.roastLevel.includes('浅')) {
                     startDay = 7;
-                    endDay = 14;
-                    maxDay = 28;
+                    endDay = 30;
+                    maxDay = 60;
                 } else if (beanData.roastLevel.includes('深')) {
                     startDay = 14;
-                    endDay = 28;
-                    maxDay = 42;
+                    endDay = 60;
+                    maxDay = 90;
                 } else {
                     // 默认为中烘焙
                     startDay = 10;
-                    endDay = 21;
-                    maxDay = 35;
+                    endDay = 30;
+                    maxDay = 60;
                 }
 
                 // 为初始数据添加赏味期参数
-                beanData.startDay = startDay;
+                beanData.startDay;
                 beanData.endDay = endDay;
                 beanData.maxDay = maxDay;
             }
@@ -653,17 +653,17 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
 
             if (bean.roastLevel?.includes('浅')) {
                 startDay = 7;
-                endDay = 14;
-                maxDay = 28;
+                endDay = 30;
+                maxDay = 60;
             } else if (bean.roastLevel?.includes('深')) {
                 startDay = 14;
-                endDay = 28;
-                maxDay = 42;
+                endDay = 60;
+                maxDay = 90;
             } else {
                 // 默认为中烘焙
                 startDay = 10;
-                endDay = 21;
-                maxDay = 35;
+                endDay = 30;
+                maxDay = 60;
             }
 
             setBean(prev => ({
@@ -731,12 +731,12 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
 
         if (bean.roastLevel?.includes('浅')) {
             startDay = 7;
-            endDay = 14;
-            maxDay = 28;
+            endDay = 30;
+            maxDay = 60;
         } else if (bean.roastLevel?.includes('深')) {
             startDay = 14;
-            endDay = 28;
-            maxDay = 42;
+            endDay = 60;
+            maxDay = 90;
         } else {
             // 默认为中烘焙
             startDay = 10;
@@ -1356,7 +1356,7 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                                 <div className="flex flex-col py-2 border-b border-neutral-200 dark:border-neutral-700">
                                     <div className="flex justify-between mb-2">
                                         <span className="text-sm text-neutral-500 dark:text-neutral-400">拼配成分</span>
-                                        <span className="text-xs text-neutral-400 dark:text-neutral-500">比例</span>
+                                        <span className="text-xs text-neutral-500 dark:text-neutral-400">比例</span>
                                     </div>
                                     <div className="space-y-3">
                                         {blendComponents.map((comp, index) => (

@@ -38,7 +38,7 @@ const MethodTypeSelector: React.FC<MethodTypeSelectorProps> = ({
                     onClick={() => handleMethodTypeChange('common')}
                     className={`text-[12px] tracking-wider transition-colors ${methodType === 'common'
                         ? 'text-neutral-800 dark:text-neutral-100'
-                        : 'text-neutral-400 dark:text-neutral-500'
+                        : 'text-neutral-500 dark:text-neutral-400'
                         }`}
                 >
                     通用方案
@@ -48,7 +48,7 @@ const MethodTypeSelector: React.FC<MethodTypeSelectorProps> = ({
                     onClick={() => handleMethodTypeChange('custom')}
                     className={`text-[12px] tracking-wider transition-colors ${methodType === 'custom'
                         ? 'text-neutral-800 dark:text-neutral-100'
-                        : 'text-neutral-400 dark:text-neutral-500'
+                        : 'text-neutral-500 dark:text-neutral-400'
                         }`}
                 >
                     自定义方案

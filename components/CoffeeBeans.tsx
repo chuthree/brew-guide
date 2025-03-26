@@ -112,17 +112,17 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
         if (startDay === 0 && endDay === 0 && maxDay === 0) {
             if (bean.roastLevel?.includes('浅')) {
                 startDay = 7;
-                endDay = 14;
-                maxDay = 28;
+                endDay = 30;
+                maxDay = 60;
             } else if (bean.roastLevel?.includes('深')) {
                 startDay = 14;
-                endDay = 28;
-                maxDay = 42;
+                endDay = 60;
+                maxDay = 90;
             } else {
                 // 默认为中烘焙
                 startDay = 10;
-                endDay = 21;
-                maxDay = 35;
+                endDay = 30;
+                maxDay = 60;
             }
         }
 
@@ -598,44 +598,10 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                 >
                     {/* 视图切换和操作按钮 */}
                     <div className="px-6 pt-6 space-y-6">
-                        {/* 添加和导入按钮 - 仅在仓库视图显示 */}
-                        {viewMode === VIEW_OPTIONS.INVENTORY && (
-                            <motion.div
-                                initial={{ opacity: 0, y: 5 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -5 }}
-                                transition={{ duration: 0.3, ease: "easeOut" }}
-                                className="flex space-x-2 mb-4"
-                            >
-                                <motion.button
-                                    onClick={() => {
-                                        if (showBeanForm) {
-                                            showBeanForm(null);
-                                        } else {
-                                            setShowAddForm(true);
-                                        }
-                                    }}
-                                    whileHover={{ scale: 1.02 }}
-                                    whileTap={{ scale: 0.98 }}
-                                    className="flex-1 flex items-center justify-center py-3 border border-dashed border-neutral-300 rounded-md text-xs text-neutral-500 dark:border-neutral-800 dark:text-neutral-400 transition-colors"
-                                >
-                                    <span className="mr-1">+</span> 添加咖啡豆
-                                </motion.button>
-                                <motion.button
-                                    onClick={onShowImport}
-                                    whileHover={{ scale: 1.02 }}
-                                    whileTap={{ scale: 0.98 }}
-                                    className="flex-1 flex items-center justify-center py-3 border border-dashed border-neutral-300 rounded-md text-xs text-neutral-500 dark:border-neutral-800 dark:text-neutral-400 transition-colors"
-                                >
-                                    <span className="mr-1">↓</span> 导入咖啡豆
-                                </motion.button>
-                            </motion.div>
-                        )}
-
                         {/* 视图切换与筛选栏 - 统一布局 */}
                         <div className="flex justify-between items-center mb-6">
                             <div className="flex items-center space-x-3">
-                                <div className="text-xs tracking-wide text-neutral-400 dark:text-neutral-500">
+                                <div className="text-xs tracking-wide text-neutral-500 dark:text-neutral-400">
                                     {viewMode === VIEW_OPTIONS.INVENTORY ?
                                         `${selectedVariety ? `${filteredBeans.length}/${beans.length}` : beans.length} 款咖啡豆` :
                                         `${ratedBeans?.length || 0} 款已评分咖啡豆`}
@@ -650,7 +616,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                 >
                                     <SelectTrigger
                                         variant="minimal"
-                                        className="w-auto min-w-[90px] tracking-wide text-neutral-400 dark:text-neutral-500 hover:text-neutral-600 dark:hover:text-neutral-400 transition-colors"
+                                        className="w-auto min-w-[90px] tracking-wide text-neutral-500 dark:text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-400 transition-colors"
                                     >
                                         <div className="flex items-center">
                                             <SelectValue />
@@ -674,7 +640,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                             <SelectItem
                                                 key={value}
                                                 value={value}
-                                                className="tracking-wide text-neutral-400 dark:text-neutral-500 data-[highlighted]:text-neutral-600 dark:data-[highlighted]:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800/70 transition-colors"
+                                                className="tracking-wide text-neutral-500 dark:text-neutral-400 data-[highlighted]:text-neutral-600 dark:data-[highlighted]:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800/70 transition-colors"
                                             >
                                                 {label}
                                             </SelectItem>
@@ -690,7 +656,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                     >
                                         <SelectTrigger
                                             variant="minimal"
-                                            className="w-auto min-w-[90px] tracking-wide text-neutral-400 dark:text-neutral-500 hover:text-neutral-600 dark:hover:text-neutral-400 transition-colors group"
+                                            className="w-auto min-w-[90px] tracking-wide text-neutral-500 dark:text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-400 transition-colors group"
                                         >
                                             <div className="flex items-center">
                                                 <SelectValue />
@@ -716,28 +682,28 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                     <SelectItem
                                                         key={SORT_OPTIONS.REMAINING_DAYS_ASC}
                                                         value={SORT_OPTIONS.REMAINING_DAYS_ASC}
-                                                        className="tracking-wide text-neutral-400 dark:text-neutral-500 data-[highlighted]:text-neutral-600 dark:data-[highlighted]:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800/70 transition-colors"
+                                                        className="tracking-wide text-neutral-500 dark:text-neutral-400 data-[highlighted]:text-neutral-600 dark:data-[highlighted]:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800/70 transition-colors"
                                                     >
                                                         评分 (高→低)
                                                     </SelectItem>
                                                     <SelectItem
                                                         key={SORT_OPTIONS.REMAINING_DAYS_DESC}
                                                         value={SORT_OPTIONS.REMAINING_DAYS_DESC}
-                                                        className="tracking-wide text-neutral-400 dark:text-neutral-500 data-[highlighted]:text-neutral-600 dark:data-[highlighted]:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800/70 transition-colors"
+                                                        className="tracking-wide text-neutral-500 dark:text-neutral-400 data-[highlighted]:text-neutral-600 dark:data-[highlighted]:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800/70 transition-colors"
                                                     >
                                                         评分 (低→高)
                                                     </SelectItem>
                                                     <SelectItem
                                                         key={SORT_OPTIONS.NAME_ASC}
                                                         value={SORT_OPTIONS.NAME_ASC}
-                                                        className="tracking-wide text-neutral-400 dark:text-neutral-500 data-[highlighted]:text-neutral-600 dark:data-[highlighted]:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800/70 transition-colors"
+                                                        className="tracking-wide text-neutral-500 dark:text-neutral-400 data-[highlighted]:text-neutral-600 dark:data-[highlighted]:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800/70 transition-colors"
                                                     >
                                                         名称 (A→Z)
                                                     </SelectItem>
                                                     <SelectItem
                                                         key={SORT_OPTIONS.NAME_DESC}
                                                         value={SORT_OPTIONS.NAME_DESC}
-                                                        className="tracking-wide text-neutral-400 dark:text-neutral-500 data-[highlighted]:text-neutral-600 dark:data-[highlighted]:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800/70 transition-colors"
+                                                        className="tracking-wide text-neutral-500 dark:text-neutral-400 data-[highlighted]:text-neutral-600 dark:data-[highlighted]:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800/70 transition-colors"
                                                     >
                                                         名称 (Z→A)
                                                     </SelectItem>
@@ -748,7 +714,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                     <SelectItem
                                                         key={value}
                                                         value={value}
-                                                        className="tracking-wide text-neutral-400 dark:text-neutral-500 data-[highlighted]:text-neutral-600 dark:data-[highlighted]:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800/70 transition-colors"
+                                                        className="tracking-wide text-neutral-500 dark:text-neutral-400 data-[highlighted]:text-neutral-600 dark:data-[highlighted]:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800/70 transition-colors"
                                                     >
                                                         {SORT_LABELS[value]}
                                                     </SelectItem>
@@ -762,13 +728,13 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
 
                         {/* 品种标签筛选 - 仅在仓库视图显示 */}
                         {viewMode === VIEW_OPTIONS.INVENTORY && availableVarieties.length > 0 && (
-                            <div className="mb-4">
-                                <div className="flex flex-wrap gap-2">
+                            <div className="mb-4 relative">
+                                <div className="flex overflow-x-auto no-scrollbar items-center space-x-2 pb-1">
                                     <motion.button
                                         onClick={() => handleVarietyClick(null)}
                                         whileHover={{ scale: 1.05 }}
                                         whileTap={{ scale: 0.95 }}
-                                        className={`px-3 py-1 rounded-full text-xs transition-colors ${selectedVariety === null
+                                        className={`shrink-0 px-3 py-1 rounded-full text-xs transition-colors ${selectedVariety === null
                                             ? 'bg-neutral-800 text-white dark:bg-white dark:text-neutral-800'
                                             : 'bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400'
                                             }`}
@@ -782,7 +748,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                             onClick={() => handleVarietyClick(variety)}
                                             whileHover={{ scale: 1.05 }}
                                             whileTap={{ scale: 0.95 }}
-                                            className={`px-3 py-1 rounded-full text-xs transition-colors ${selectedVariety === variety
+                                            className={`shrink-0 px-3 py-1 rounded-full text-xs transition-colors ${selectedVariety === variety
                                                 ? 'bg-neutral-800 text-white dark:bg-white dark:text-neutral-800'
                                                 : 'bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400'
                                                 }`}
@@ -791,6 +757,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                         </motion.button>
                                     ))}
                                 </div>
+                                <div className="absolute right-0 top-0 bottom-1 w-8 bg-gradient-to-l from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none"></div>
                             </div>
                         )}
                     </div>
@@ -813,7 +780,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                         initial={{ opacity: 0 }}
                                         animate={{ opacity: 1 }}
                                         transition={{ duration: 0.2, ease: "easeOut" }}
-                                        className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500"
+                                        className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400"
                                     >
                                         {beans.length === 0 ? '[ 暂无咖啡豆数据 ]' : '[ 没有符合当前筛选条件的咖啡豆 ]'}
                                     </motion.div>
@@ -852,7 +819,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                         <div className="flex-1 min-w-0">
                                                             <div className="flex items-baseline justify-between pb-0.5">
                                                                 <div className="flex items-baseline space-x-2 min-w-0 overflow-hidden">
-                                                                    <div className="text-[11px] font-normal truncate">
+                                                                    <div className="text-[11px] font-normal truncate text-neutral-800 dark:text-white">
                                                                         {bean.name}
                                                                     </div>
                                                                 </div>
@@ -869,7 +836,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                                             >
                                                                                 <button
                                                                                     onClick={() => handleEdit(bean)}
-                                                                                    className="px-2 text-xs text-neutral-400 dark:text-neutral-500"
+                                                                                    className="px-2 text-xs text-neutral-500 dark:text-neutral-400"
                                                                                 >
                                                                                     编辑
                                                                                 </button>
@@ -927,7 +894,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                                                         [bean.id]: true
                                                                                     }))
                                                                                 }}
-                                                                                className="w-7 h-7 flex items-center justify-center text-xs text-neutral-400 dark:text-neutral-500"
+                                                                                className="w-7 h-7 flex items-center justify-center text-xs text-neutral-500 dark:text-neutral-400"
                                                                             >
                                                                                 ···
                                                                             </motion.button>
@@ -936,7 +903,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                                 </div>
                                                             </div>
 
-                                                            <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500 break-words">
+                                                            <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400 break-words">
                                                                 {bean.roastLevel && <span>{bean.roastLevel}</span>}
                                                                 {bean.origin && (
                                                                     <>
@@ -970,10 +937,10 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                         {bean.capacity && bean.remaining && (
                                                             <div className="space-y-1">
                                                                 <div className="flex items-center justify-between">
-                                                                    <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
+                                                                    <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
                                                                         剩余量
                                                                     </div>
-                                                                    <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
+                                                                    <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
                                                                         {bean.remaining}g / {bean.capacity}g
                                                                     </div>
                                                                 </div>
@@ -998,7 +965,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                         {bean.roastDate && (
                                                             <div className="space-y-1">
                                                                 <div className="flex items-center justify-between">
-                                                                    <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
+                                                                    <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
                                                                         赏味期
                                                                     </div>
                                                                     {(() => {
@@ -1022,17 +989,17 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                                         if (startDay === 0 && endDay === 0 && maxDay === 0) {
                                                                             if (bean.roastLevel?.includes('浅')) {
                                                                                 startDay = 7;
-                                                                                endDay = 14;
-                                                                                maxDay = 28;
+                                                                                endDay = 30;
+                                                                                maxDay = 60;
                                                                             } else if (bean.roastLevel?.includes('深')) {
                                                                                 startDay = 14;
-                                                                                endDay = 28;
-                                                                                maxDay = 42;
+                                                                                endDay = 60;
+                                                                                maxDay = 90;
                                                                             } else {
                                                                                 // 默认为中烘焙
                                                                                 startDay = 10;
-                                                                                endDay = 21;
-                                                                                maxDay = 35;
+                                                                                endDay = 30;
+                                                                                maxDay = 60;
                                                                             }
                                                                         }
 
@@ -1048,7 +1015,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                                         }
 
                                                                         return (
-                                                                            <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
+                                                                            <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
                                                                                 {status}
                                                                             </div>
                                                                         );
@@ -1076,17 +1043,17 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                                         if (startDay === 0 && endDay === 0 && maxDay === 0) {
                                                                             if (bean.roastLevel?.includes('浅')) {
                                                                                 startDay = 7;
-                                                                                endDay = 14;
-                                                                                maxDay = 28;
+                                                                                endDay = 30;
+                                                                                maxDay = 60;
                                                                             } else if (bean.roastLevel?.includes('深')) {
                                                                                 startDay = 14;
-                                                                                endDay = 28;
-                                                                                maxDay = 42;
+                                                                                endDay = 60;
+                                                                                maxDay = 90;
                                                                             } else {
                                                                                 // 默认为中烘焙
                                                                                 startDay = 10;
-                                                                                endDay = 21;
-                                                                                maxDay = 35;
+                                                                                endDay = 30;
+                                                                                maxDay = 60;
                                                                             }
                                                                         }
 
@@ -1175,7 +1142,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                     )}
 
                                                     {/* 底部信息布局优化 */}
-                                                    <div className="flex items-baseline justify-between mt-1.5 text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
+                                                    <div className="flex items-baseline justify-between mt-1.5 text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400 ">
                                                         <div>
                                                             {bean.roastDate && <span>烘焙于 {bean.roastDate}</span>}
                                                         </div>
@@ -1184,7 +1151,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                                 <span>
                                                                     {bean.price}元
                                                                     {bean.capacity && (
-                                                                        <span className="ml-1 opacity-80">
+                                                                        <span className="ml-1">
                                                                             [{(parseFloat(bean.price) / parseFloat(bean.capacity.replace('g', ''))).toFixed(2)}元/克]
                                                                         </span>
                                                                     )}
@@ -1195,7 +1162,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
 
                                                     {/* 备注信息 */}
                                                     {bean.notes && (
-                                                        <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500 mt-1.5 pt-1 border-t border-neutral-100 dark:border-neutral-800/50">
+                                                        <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400  pt-1.5 border-t border-neutral-200/50 dark:border-neutral-800/50">
                                                             {bean.notes}
                                                         </div>
                                                     )}
@@ -1224,6 +1191,48 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                             </motion.div>
                         )}
                     </AnimatePresence>
+
+                    {/* 添加和导入按钮 - 仅在仓库视图显示 */}
+                    {viewMode === VIEW_OPTIONS.INVENTORY && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 5 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -5 }}
+                            transition={{ duration: 0.3, ease: "easeOut" }}
+                            className="sticky bottom-0 z-10"
+                        >
+                            <div className="sticky bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none"></div>
+                            <div className="relative flex items-center bg-neutral-50 dark:bg-neutral-900  py-4 ">
+                                <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
+                                <div className="flex items-center space-x-3 mx-3">
+                                    <motion.button
+                                        onClick={() => {
+                                            if (showBeanForm) {
+                                                showBeanForm(null);
+                                            } else {
+                                                setShowAddForm(true);
+                                            }
+                                        }}
+                                        whileHover={{ scale: 1.02 }}
+                                        whileTap={{ scale: 0.98 }}
+                                        className="flex items-center justify-center text-[11px] text-neutral-500 dark:text-neutral-400"
+                                    >
+                                        <span className="mr-1">+</span> 添加咖啡豆
+                                    </motion.button>
+                                    <div className="flex-grow w-4 border-t border-neutral-200 dark:border-neutral-800"></div>
+                                    <motion.button
+                                        onClick={onShowImport}
+                                        whileHover={{ scale: 1.02 }}
+                                        whileTap={{ scale: 0.98 }}
+                                        className="flex items-center justify-center text-[11px] text-neutral-500 dark:text-neutral-400"
+                                    >
+                                        <span className="mr-1">↓</span> 导入咖啡豆
+                                    </motion.button>
+                                </div>
+                                <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
+                            </div>
+                        </motion.div>
+                    )}
                 </motion.div>
             </AnimatePresence>
         </>

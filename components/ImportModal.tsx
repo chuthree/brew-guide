@@ -178,39 +178,45 @@ const ImportBeanModal: React.FC<ImportBeanModalProps> = ({
 
     // 兼容性更好的复制文本方法
     const _copyTextToClipboard = async (text: string) => {
-        // 首先尝试使用现代API
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            return navigator.clipboard.writeText(text);
-        }
-
-        // 回退方法：创建临时textarea元素
-        const textArea = document.createElement('textarea');
-        textArea.value = text;
-
-        // 设置样式使其不可见
-        textArea.style.position = 'fixed';
-        textArea.style.left = '-999999px';
-        textArea.style.top = '-999999px';
-        document.body.appendChild(textArea);
-
-        // 选择文本并复制
-        textArea.focus();
-        textArea.select();
-
-        return new Promise<void>((resolve, reject) => {
-            try {
-                const successful = document.execCommand('copy');
-                if (successful) {
-                    resolve();
-                } else {
-                    reject(new Error('复制命令执行失败'));
-                }
-            } catch (_err) {
-                reject(_err);
-            } finally {
-                document.body.removeChild(textArea);
+        try {
+            // 首先尝试使用现代API
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(text);
+                setSuccess('复制成功');
+                setTimeout(() => setSuccess(null), 2000);
+                return;
             }
-        });
+
+            // 回退方法：创建临时textarea元素
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+
+            // 设置样式使其不可见
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            textArea.style.top = '-999999px';
+            document.body.appendChild(textArea);
+
+            // 选择文本并复制
+            textArea.focus();
+            textArea.select();
+
+            const successful = document.execCommand('copy');
+            if (successful) {
+                setSuccess('复制成功');
+                setTimeout(() => setSuccess(null), 2000);
+            } else {
+                setError('复制失败');
+                setTimeout(() => setError(null), 2000);
+            }
+        } catch (_err) {
+            setError('复制失败');
+            setTimeout(() => setError(null), 2000);
+        } finally {
+            if (document.querySelector('textarea[style*="-999999px"]')) {
+                document.body.removeChild(document.querySelector('textarea[style*="-999999px"]')!);
+            }
+        }
     }
 
     // 处理导入数据，添加时间戳
@@ -377,23 +383,23 @@ const ImportBeanModal: React.FC<ImportBeanModalProps> = ({
                 </div>
 
                 {manualMode ? (
-                    <div className="space-y-3 pt-2 pb-1">
+                    <div className="space-y-3 py-1">
                         <div className="bg-neutral-100 dark:bg-neutral-800 p-3 rounded-md text-xs text-neutral-600 dark:text-neutral-400">
-                            <p className="mb-2">使用《豆包》AI获取JSON数据的步骤：</p>
-                            <ol className="list-decimal pl-4 space-y-1">
-                                <li>复制下方的提示词</li>
-                                <li>准备好咖啡豆包装或商品页的图片</li>
-                                <li>打开《豆包》AI应用</li>
-                                <li>将提示词和图片一起发送给AI</li>
-                                <li>复制AI返回的JSON</li>
-                                <li>粘贴到下方输入框</li>
+                            <p className="mb-2">使用《豆包》AI获取JSON数据：</p>
+                            <ol className="list-decimal pl-6 space-y-1">
+                                <li>准备好咖啡豆商品页截图</li>
+                                <li>打开《豆包》将提示词与截图一并发送</li>
+                                <li>将返回的 json 数据复制进来</li>
                             </ol>
                         </div>
                         <div className="bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 p-3 rounded-md text-xs">
                             <div className="flex justify-between mb-1">
                                 <span className="text-neutral-500 dark:text-neutral-400">提示词：</span>
                                 <button
-                                    onClick={() => _copyTextToClipboard(_templatePrompt)}
+                                    onClick={() => {
+                                        clearMessages();
+                                        _copyTextToClipboard(_templatePrompt);
+                                    }}
                                     className="text-neutral-500 dark:text-neutral-400 px-1.5 py-0.5 rounded text-[10px] border border-neutral-300 dark:border-neutral-700"
                                 >
                                     复制

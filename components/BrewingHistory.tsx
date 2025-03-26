@@ -313,80 +313,62 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                     id="brewing-history-component"
                 >
                     <div className="p-6 space-y-6">
-                        {/* 添加按钮 */}
-                        <motion.div
-                            initial={{ opacity: 0, y: 5 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -5 }}
-                            transition={{ duration: 0.3, ease: "easeOut" }}
-                            className="mb-4"
-                        >
-                            <motion.button
-                                onClick={handleAddNote}
-                                whileHover={{ scale: 1.02 }}
-                                whileTap={{ scale: 0.98 }}
-                                className="w-full flex items-center justify-center py-3 border border-dashed border-neutral-300 rounded-md text-xs text-neutral-500 dark:border-neutral-800 dark:text-neutral-400 transition-colors"
+                        {/* 排序控件和数量显示 */}
+                        <div className="flex justify-between items-center mb-6">
+                            <div className="text-xs tracking-wide text-neutral-500 dark:text-neutral-400">
+                                共 {notes.length} 条记录
+                            </div>
+                            <Select
+                                value={sortOption}
+                                onValueChange={(value) => setSortOption(value as SortOption)}
                             >
-                                <span className="mr-1">+</span> 添加笔记
-                            </motion.button>
-                        </motion.div>
+                                <SelectTrigger
+                                    variant="minimal"
+                                    className="w-auto min-w-[90px] tracking-wide text-neutral-500 dark:text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-400 transition-colors group"
+                                >
+                                    <div className="flex items-center">
+                                        <SelectValue />
+                                        <svg
+                                            className="mr-1 w-3 h-3 opacity-90 transition-opacity"
+                                            viewBox="0 0 15 15"
+                                            fill="none"
+                                            xmlns="http://www.w3.org/2000/svg"
+                                        >
+                                            <path d="M4.5 6.5L7.5 3.5L10.5 6.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+                                            <path d="M4.5 8.5L7.5 11.5L10.5 8.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+                                        </svg>
+                                    </div>
+                                </SelectTrigger>
+                                <SelectContent
+                                    position="popper"
+                                    sideOffset={5}
+                                    className="border-neutral-200/70 dark:border-neutral-800/70 shadow-lg backdrop-blur-sm bg-white/95 dark:bg-neutral-900/95 rounded-lg overflow-hidden"
+                                >
+                                    {Object.values(SORT_OPTIONS).map((value) => (
+                                        <SelectItem
+                                            key={value}
+                                            value={value}
+                                            className="tracking-wide text-neutral-500 dark:text-neutral-400 data-[highlighted]:text-neutral-600 dark:data-[highlighted]:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800/70 transition-colors"
+                                        >
+                                            {SORT_LABELS[value]}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
 
+                        {/* 笔记列表 */}
                         {notes.length === 0 ? (
                             <motion.div
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 transition={{ duration: 0.2, ease: "easeOut" }}
-                                className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500"
+                                className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400"
                             >
                                 [ 暂无冲煮记录 ]
                             </motion.div>
                         ) : (
                             <div className="space-y-6">
-                                {/* 排序控件和数量显示 */}
-                                <div className="flex justify-between items-center mb-6">
-                                    <div className="text-xs tracking-wide text-neutral-400 dark:text-neutral-500">
-                                        共 {notes.length} 条记录
-                                    </div>
-                                    <Select
-                                        value={sortOption}
-                                        onValueChange={(value) => setSortOption(value as SortOption)}
-                                    >
-                                        <SelectTrigger
-                                            variant="minimal"
-                                            className="w-auto min-w-[90px] tracking-wide text-neutral-400 dark:text-neutral-500 hover:text-neutral-600 dark:hover:text-neutral-400 transition-colors group"
-                                        >
-                                            <div className="flex items-center">
-                                                <SelectValue />
-                                                <svg
-                                                    className="mr-1 w-3 h-3 opacity-90 transition-opacity"
-                                                    viewBox="0 0 15 15"
-                                                    fill="none"
-                                                    xmlns="http://www.w3.org/2000/svg"
-                                                >
-                                                    <path d="M4.5 6.5L7.5 3.5L10.5 6.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
-                                                    <path d="M4.5 8.5L7.5 11.5L10.5 8.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
-                                                </svg>
-                                            </div>
-                                        </SelectTrigger>
-                                        <SelectContent
-                                            position="popper"
-                                            sideOffset={5}
-                                            className="border-neutral-200/70 dark:border-neutral-800/70 shadow-lg backdrop-blur-sm bg-white/95 dark:bg-neutral-900/95 rounded-lg overflow-hidden"
-                                        >
-                                            {Object.values(SORT_OPTIONS).map((value) => (
-                                                <SelectItem
-                                                    key={value}
-                                                    value={value}
-                                                    className="tracking-wide text-neutral-400 dark:text-neutral-500 data-[highlighted]:text-neutral-600 dark:data-[highlighted]:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800/70 transition-colors"
-                                                >
-                                                    {SORT_LABELS[value]}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-
-                                {/* 笔记列表 */}
                                 {notes.map((note, index) => (
                                     <motion.div
                                         key={note.id}
@@ -409,7 +391,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                                         </div>
                                                         {note.method && (
                                                             <>
-                                                                <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500 shrink-0">
+                                                                <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400 shrink-0">
                                                                     ·
                                                                 </div>
                                                                 <div className="text-[10px] font-light tracking-wide truncate">
@@ -432,7 +414,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                                                 >
                                                                     <button
                                                                         onClick={() => handleEdit(note)}
-                                                                        className="px-2 text-xs text-neutral-400 dark:text-neutral-500"
+                                                                        className="px-2 text-xs text-neutral-500 dark:text-neutral-400"
                                                                     >
                                                                         编辑
                                                                     </button>
@@ -473,7 +455,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                                                             [note.id]: true
                                                                         }))
                                                                     }}
-                                                                    className="w-7 h-7 flex items-center justify-center text-xs text-neutral-400 dark:text-neutral-500"
+                                                                    className="w-7 h-7 flex items-center justify-center text-xs text-neutral-500 dark:text-neutral-400"
                                                                 >
                                                                     ···
                                                                 </motion.button>
@@ -482,7 +464,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                                     </div>
                                                 </div>
 
-                                                <div className="flex flex-wrap gap-2 text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
+                                                <div className="flex flex-wrap gap-2 text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
                                                     {note.coffeeBeanInfo?.name && (
                                                         <>
                                                             <span>{note.coffeeBeanInfo.name}</span>
@@ -519,7 +501,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                                         className="space-y-1"
                                                     >
                                                         <div className="flex items-center justify-between">
-                                                            <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
+                                                            <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
                                                                 {
                                                                     {
                                                                         acidity: '酸度',
@@ -529,7 +511,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                                                     }[key]
                                                                 }
                                                             </div>
-                                                            <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
+                                                            <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
                                                                 [ {value} ]
                                                             </div>
                                                         </div>
@@ -552,16 +534,16 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                             </div>
 
                                             <div className="flex items-baseline justify-between">
-                                                <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
+                                                <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
                                                     {formatDate(note.timestamp)}
                                                 </div>
-                                                <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
+                                                <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
                                                     {formatRating(note.rating)}
                                                 </div>
                                             </div>
 
                                             {note.notes && (
-                                                <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
+                                                <div className="text-[10px] tracking-widest  text-neutral-500 dark:text-neutral-400">
                                                     {note.notes}
                                                 </div>
                                             )}
@@ -571,6 +553,29 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                             </div>
                         )}
                     </div>
+
+                    {/* 添加笔记按钮 */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -5 }}
+                        transition={{ duration: 0.3, ease: "easeOut" }}
+                        className="sticky bottom-0 z-10"
+                    >
+                        <div className="sticky bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none"></div>
+                        <div className="relative flex items-center bg-neutral-50 dark:bg-neutral-900 py-4">
+                            <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
+                            <motion.button
+                                onClick={handleAddNote}
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                className="flex items-center justify-center text-[11px] text-neutral-500 dark:text-neutral-400 mx-3"
+                            >
+                                <span className="mr-1">+</span> 添加笔记
+                            </motion.button>
+                            <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
+                        </div>
+                    </motion.div>
                 </motion.div>
             )}
 

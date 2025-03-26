@@ -217,7 +217,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
 
             {/* 已评分咖啡豆区域 */}
             {ratedBeans.length === 0 ? (
-                <div className="flex h-28 items-center justify-center text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
+                <div className="flex h-28 items-center justify-center text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
                     暂无咖啡豆评分数据
                 </div>
             ) : (
@@ -237,7 +237,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                             <div className="flex justify-between items-start px-6 py-2.5">
                                 <div className="flex items-start">
                                     {/* 序号 - 极简风格 */}
-                                    <div className="text-[11px] text-neutral-400 dark:text-neutral-500 w-4 mr-2 pt-0.5">
+                                    <div className="text-[11px] text-neutral-500 dark:text-neutral-400 w-4 mr-2 pt-0.5">
                                         {index + 1}
                                     </div>
 
@@ -284,7 +284,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                 unratedBeans.length > 0 && (
                     <div className="mt-4">
                         <div
-                            className="relative flex items-center mx-6 mb-4 cursor-pointer"
+                            className="relative flex items-center mb-4 cursor-pointer"
                             onClick={toggleShowUnrated}
                         >
                             <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800/50"></div>

@@ -421,7 +421,7 @@ const BrewingNoteFormModalNew: React.FC<BrewingNoteFormModalNewProps> = ({
                     onClick={() => handleMethodTypeChange('common')}
                     className={`text-[13px] transition-colors ${methodType === 'common'
                         ? 'text-neutral-800 dark:text-neutral-100 font-medium'
-                        : 'text-neutral-400 dark:text-neutral-500'
+                        : 'text-neutral-500 dark:text-neutral-400'
                         }`}
                 >
                     通用方案
@@ -431,7 +431,7 @@ const BrewingNoteFormModalNew: React.FC<BrewingNoteFormModalNewProps> = ({
                     onClick={() => handleMethodTypeChange('custom')}
                     className={`text-[13px] transition-colors ${methodType === 'custom'
                         ? 'text-neutral-800 dark:text-neutral-100 font-medium'
-                        : 'text-neutral-400 dark:text-neutral-500'
+                        : 'text-neutral-500 dark:text-neutral-400'
                         }`}
                 >
                     自定义方案

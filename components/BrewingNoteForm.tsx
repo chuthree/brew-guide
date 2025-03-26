@@ -389,7 +389,7 @@ stages数组中的每个阶段必须包含以下字段：
 
                 {/* Header with timestamp */}
                 <div className="flex items-baseline justify-between">
-                    <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
+                    <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
                         {showOptimization
                             ? '优化冲煮方案'
                             : `${initialData?.id ? '编辑记录' : '新建记录'} · ${new Date().toLocaleString('zh-CN', {
@@ -436,7 +436,7 @@ stages数组中的每个阶段必须包含以下字段：
                     <div className="flex-1 space-y-8 overflow-auto pb-8">
                         {/* 咖啡豆信息 */}
                         <div className="space-y-4">
-                            <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
+                            <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
                                 咖啡豆信息
                             </div>
                             <div className="grid gap-6">
@@ -485,14 +485,14 @@ stages数组中的每个阶段必须包含以下字段：
 
                         {/* 风味评分 */}
                         <div className="space-y-4">
-                            <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
+                            <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
                                 风味评分
                             </div>
                             <div className="grid grid-cols-2 gap-8">
                                 {Object.entries(formData.taste).map(([key, value]) => (
                                     <div key={key} className="space-y-2">
                                         <div className="flex items-center justify-between">
-                                            <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
+                                            <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
                                                 {
                                                     {
                                                         acidity: '酸度',
@@ -534,7 +534,7 @@ stages数组中的每个阶段必须包含以下字段：
 
                         {/* 总体评分 */}
                         <div className="space-y-4">
-                            <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
+                            <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
                                 总体评分
                             </div>
                             <div className="flex items-center space-x-6">
@@ -550,7 +550,7 @@ stages数组中的每个阶段必须包含以下字段：
                                         }
                                         className={`text-[10px] tracking-widest transition-colors ${star <= formData.rating
                                             ? 'text-neutral-600 dark:text-neutral-300'
-                                            : 'text-neutral-400 dark:text-neutral-500'
+                                            : 'text-neutral-500 dark:text-neutral-400'
                                             }`}
                                     >
                                         [ {star} ]
@@ -562,7 +562,7 @@ stages数组中的每个阶段必须包含以下字段：
 
                         {/* 笔记 */}
                         <div className="space-y-4">
-                            <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
+                            <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
                                 笔记
                             </div>
                             <AutoResizeTextarea
@@ -582,14 +582,14 @@ stages数组中的每个阶段必须包含以下字段：
                     <div className="flex-1 space-y-8 overflow-auto pb-8">
                         {/* 理想风味设置 */}
                         <div className="space-y-4">
-                            <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
+                            <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
                                 理想风味设置
                             </div>
                             <div className="grid grid-cols-2 gap-8">
                                 {Object.entries(idealTaste).map(([key, value]) => (
                                     <div key={key} className="space-y-2">
                                         <div className="flex items-center justify-between">
-                                            <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
+                                            <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
                                                 {
                                                     {
                                                         acidity: '理想酸度',
@@ -603,7 +603,7 @@ stages数组中的每个阶段必须包含以下字段：
                                                 <span className="text-neutral-500 dark:text-neutral-500">
                                                     [ {formData.taste[key as keyof TasteRatings]} ]
                                                 </span>
-                                                <span className="mx-1 text-neutral-400 dark:text-neutral-500">→</span>
+                                                <span className="mx-1 text-neutral-500 dark:text-neutral-400">→</span>
                                                 <span className="text-neutral-600 dark:text-neutral-400">
                                                     [ {value} ]
                                                 </span>
@@ -634,7 +634,7 @@ stages数组中的每个阶段必须包含以下字段：
 
                         {/* 优化目标 */}
                         <div className="space-y-4">
-                            <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
+                            <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
                                 优化目标
                             </div>
                             <AutoResizeTextarea
@@ -648,7 +648,7 @@ stages数组中的每个阶段必须包含以下字段：
                         {/* 生成优化提示词 */}
                         <div className="space-y-4">
                             <div className="flex justify-between items-center">
-                                <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
+                                <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
                                     优化提示词
                                 </div>
                                 <button
@@ -663,7 +663,7 @@ stages数组中的每个阶段必须包含以下字段：
                             {optimizationPrompt && (
                                 <div className="space-y-4 mt-2 p-4 border border-neutral-200 dark:border-neutral-700 rounded-md bg-neutral-50 dark:bg-neutral-800/50">
                                     <div className="flex justify-between items-center">
-                                        <div className="text-[10px] tracking-widest text-neutral-400 dark:text-neutral-500">
+                                        <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
                                             将提示词复制给 AI(推荐 DeepSeek)
                                         </div>
                                         <div className="flex space-x-4">

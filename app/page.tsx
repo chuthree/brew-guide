@@ -1007,9 +1007,9 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 {activeMainTab === '笔记' && (
                     <m.div
                         key="notes-tab"
-                        initial={{ opacity: 0, y: 20 }}
+                        initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 20 }}
+                        exit={{ opacity: 0, y: 10 }}
                         transition={{ duration: 0.3 }}
                         className="flex-1 overflow-auto"
                     >
@@ -1026,9 +1026,9 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 {activeMainTab === '咖啡豆' && (
                     <m.div
                         key="coffee-beans-tab"
-                        initial={{ opacity: 0, y: 20 }}
+                        initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 20 }}
+                        exit={{ opacity: 0, y: 10 }}
                         transition={{ duration: 0.3 }}
                         className="flex-1 overflow-auto"
                     >

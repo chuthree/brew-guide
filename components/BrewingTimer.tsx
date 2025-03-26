@@ -976,7 +976,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                         className="flex items-baseline justify-between border-l-2 border-neutral-800 pl-3 dark:border-neutral-100"
                     >
                         <div>
-                            <div className="text-xs text-neutral-400 dark:text-neutral-500">
+                            <div className="text-xs text-neutral-500 dark:text-neutral-400">
                                 当前阶段
                             </div>
                             <motion.div
@@ -995,7 +995,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                         </div>
                         <div className="flex items-baseline text-right">
                             <div>
-                                <div className="text-xs text-neutral-400 dark:text-neutral-500">
+                                <div className="text-xs text-neutral-500 dark:text-neutral-400">
                                     目标时间
                                 </div>
                                 <motion.div
@@ -1011,7 +1011,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                                 </motion.div>
                             </div>
                             <div className='min-w-24'>
-                                <div className="text-xs text-neutral-400 dark:text-neutral-500">
+                                <div className="text-xs text-neutral-500 dark:text-neutral-400">
                                     目标水量
                                 </div>
                                 <motion.div
@@ -1046,7 +1046,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                                 className="flex items-baseline justify-between border-l border-neutral-300 pl-3 dark:border-neutral-700"
                             >
                                 <div>
-                                    <div className="flex items-center gap-2 text-xs text-neutral-400 dark:text-neutral-500">
+                                    <div className="flex items-center gap-2 text-xs text-neutral-500 dark:text-neutral-400">
                                         <span>下一步</span>
                                     </div>
                                     <motion.div
@@ -1069,7 +1069,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                                     className="flex items-baseline text-right"
                                 >
                                     <div>
-                                        <div className="text-xs text-neutral-400 dark:text-neutral-500">
+                                        <div className="text-xs text-neutral-500 dark:text-neutral-400">
                                             目标时间
                                         </div>
                                         <div className="mt-1 text-sm font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
@@ -1077,7 +1077,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                                         </div>
                                     </div>
                                     <div className='min-w-24'>
-                                        <div className="text-xs text-neutral-400 dark:text-neutral-500">
+                                        <div className="text-xs text-neutral-500 dark:text-neutral-400">
                                             目标水量
                                         </div>
                                         <div className="mt-1 text-sm font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
@@ -1147,7 +1147,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                             return (
                                 <div
                                     key={stage.endTime}
-                                    className="absolute top-0 text-[8px] text-neutral-400 dark:text-neutral-500"
+                                    className="absolute top-0 text-[8px] text-neutral-500 dark:text-neutral-400"
                                     style={{
                                         left: `${percentage}%`,
                                         transform: 'translateX(-100%)',
@@ -1163,7 +1163,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                 <div className="flex items-center justify-between mt-3">
                     <div className="flex items-start space-x-8 sm:space-x-12">
                         <div className="flex flex-col items-start">
-                            <span className="text-xs text-neutral-400 dark:text-neutral-500 mb-1">时间</span>
+                            <span className="text-xs text-neutral-500 dark:text-neutral-400 mb-1">时间</span>
                             <div className="relative text-2xl font-light tracking-widest text-neutral-800 sm:text-3xl dark:text-neutral-100">
                                 <AnimatePresence mode="wait">
                                     {countdownTime !== null ? (
@@ -1194,11 +1194,11 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                         </div>
 
                         <div className="flex flex-col items-start">
-                            <span className="text-xs text-neutral-400 dark:text-neutral-500 mb-1">水量</span>
+                            <span className="text-xs text-neutral-500 dark:text-neutral-400 mb-1">水量</span>
                             <div className="text-2xl font-light tracking-widest text-neutral-800 sm:text-3xl dark:text-neutral-100">
                                 <div className="min-w-[5ch] text-left">
                                     <span>{currentWaterAmount}</span>
-                                    <span className="text-sm text-neutral-400 dark:text-neutral-500 ml-1">g</span>
+                                    <span className="text-sm text-neutral-500 dark:text-neutral-400 ml-1">g</span>
                                 </div>
                             </div>
                         </div>

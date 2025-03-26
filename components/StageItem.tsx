@@ -126,7 +126,7 @@ const StageItem: React.FC<StageItemProps> = ({
             className={`group relative border-l ${isWaitingStage ? 'border-dashed' : ''} border-neutral-200 pl-6 dark:border-neutral-800 ${activeTab === '注水' && index === currentStage
                 ? 'text-neutral-800 dark:text-neutral-100'
                 : activeTab === '注水' && index < currentStage
-                    ? 'text-neutral-400 dark:text-neutral-500'
+                    ? 'text-neutral-500 dark:text-neutral-400'
                     : 'text-neutral-500 dark:text-neutral-400'
                 }`}
         >
@@ -145,7 +145,7 @@ const StageItem: React.FC<StageItemProps> = ({
                             {step.title}
                         </h3>
                         {activeTab === '注水' && selectedMethod && step.originalIndex !== undefined && (
-                            <div className="flex items-baseline gap-2 text-[10px] text-neutral-400 dark:text-neutral-500 shrink-0">
+                            <div className="flex items-baseline gap-2 text-[10px] text-neutral-500 dark:text-neutral-400 shrink-0">
                                 <span>{step.endTime ? formatTime(step.endTime, true) : formatTime(parseInt(step.note), true)}</span>
                                 <span>·</span>
                                 <span>{step.items[0]}</span>
@@ -227,7 +227,7 @@ const StageItem: React.FC<StageItemProps> = ({
                                                 [cardId]: true
                                             }))
                                         }}
-                                        className="w-7 h-7 flex items-center justify-center text-xs text-neutral-400 dark:text-neutral-500"
+                                        className="w-7 h-7 flex items-center justify-center text-xs text-neutral-500 dark:text-neutral-400"
                                     >
                                         ···
                                     </motion.button>

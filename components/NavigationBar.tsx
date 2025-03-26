@@ -83,7 +83,7 @@ const TabButton = ({
                     ? 'cursor-pointer text-neutral-600 dark:text-neutral-400'
                     : isDisabled
                         ? 'text-neutral-300 dark:text-neutral-600'
-                        : 'cursor-pointer text-neutral-400 dark:text-neutral-500'
+                        : 'cursor-pointer text-neutral-500 dark:text-neutral-400'
                 }`}
         >
             <span className="relative">
@@ -427,7 +427,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
             }
         }
 
-        
+
 
         return disabledSteps;
     };
@@ -539,7 +539,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
             preserveCoffeeBean?: boolean;
         }) => {
             // 记录步骤变化
-            
+
 
             // 确保更新参数栏，使用统一的标准化函数
             if (selectedMethod) {
@@ -588,7 +588,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                 temp?: string | null;
             } | null;
         }) => {
-            
+
             // 直接更新参数信息
             setParameterInfo(detail);
         };

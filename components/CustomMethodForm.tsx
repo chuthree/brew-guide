@@ -783,7 +783,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                                                 <select
                                                     value={stage.pourType}
                                                     onChange={(e) => handlePourTypeChange(index, e.target.value)}
-                                                    className={`w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400 appearance-none ${!stage.pourType ? 'text-neutral-400 dark:text-neutral-500' : ''}`}
+                                                    className={`w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400 appearance-none ${!stage.pourType ? 'text-neutral-500 dark:text-neutral-400' : ''}`}
                                                 >
                                                     <option value="" disabled>请选择注水方式</option>
                                                     <option value="center">中心注水</option>

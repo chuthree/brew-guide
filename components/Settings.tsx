@@ -129,7 +129,7 @@ const Settings: React.FC<SettingsProps> = ({
                 <div className="space-y-5">
                     {/* 通知设置 */}
                     <div className="space-y-3">
-                        <h3 className="text-xs font-medium uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
+                        <h3 className="text-xs font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
                             通知
                         </h3>
                         <div className="space-y-3">
@@ -176,7 +176,7 @@ const Settings: React.FC<SettingsProps> = ({
                     {/* 文本缩放设置 - 只在原生应用中显示 */}
                     {isTextZoomEnabled && (
                         <div className="space-y-3">
-                            <h3 className="text-xs font-medium uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
+                            <h3 className="text-xs font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
                                 显示
                             </h3>
                             <div className="space-y-2">
@@ -228,7 +228,7 @@ const Settings: React.FC<SettingsProps> = ({
 
                     {/* 研磨度设置 */}
                     <div className="space-y-3">
-                        <h3 className="text-xs font-medium uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
+                        <h3 className="text-xs font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
                             研磨度设置
                         </h3>
                         <div className="space-y-2">
@@ -291,7 +291,7 @@ const Settings: React.FC<SettingsProps> = ({
 
                     {/* 数据管理 */}
                     <div className="space-y-3">
-                        <h3 className="text-xs font-medium uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
+                        <h3 className="text-xs font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
                             数据管理
                         </h3>
                         <div className="space-y-3">
@@ -308,7 +308,7 @@ const Settings: React.FC<SettingsProps> = ({
                     </div>
                 </div>
 
-                <div className="mt-5 text-center text-xs text-neutral-400 dark:text-neutral-500">
+                <div className="mt-5 text-center text-xs text-neutral-500 dark:text-neutral-400">
                     v{APP_VERSION}
                 </div>
             </div>
