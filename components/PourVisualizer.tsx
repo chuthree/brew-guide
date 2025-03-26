@@ -42,6 +42,100 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
     const [imagesPreloaded, setImagesPreloaded] = useState(false)
     const [displayedIceIndices, setDisplayedIceIndices] = useState<number[]>([])
 
+    // 如果在倒计时期间，立即返回静态视图
+    if (countdownTime !== null) {
+        return (
+            <div className="relative w-full aspect-square max-w-[300px] mx-auto px-safe">
+                <Image
+                    src={'/images/v60-base.svg'} // 直接使用静态路径，避免可能的路径错误
+                    alt={equipmentId}
+                    fill
+                    className="object-contain invert-0 dark:invert opacity-50 transition-opacity duration-300"
+                    priority
+                    sizes="(max-width: 768px) 100vw, 300px"
+                    quality={85}
+                    onError={() => { }}
+                />
+                {equipmentId === 'CleverDripper' && (
+                    <div className="absolute inset-0">
+                        <Image
+                            src={`/images/valve-${valveStatus}.svg`}
+                            alt={`Valve ${valveStatus}`}
+                            fill
+                            className="object-contain invert-0 dark:invert opacity-50 transition-opacity duration-300"
+                            sizes="(max-width: 768px) 100vw, 300px"
+                            quality={85}
+                            onError={() => { }}
+                        />
+                    </div>
+                )}
+            </div>
+        );
+    }
+
+    // 如果不在运行中或阶段无效，也返回静态视图
+    if (!isRunning || currentStage < 0) {
+        return (
+            <div className="relative w-full aspect-square max-w-[300px] mx-auto px-safe">
+                <Image
+                    src={'/images/v60-base.svg'} // 始终使用相同的杯体图片
+                    alt={equipmentId}
+                    fill
+                    className="object-contain invert-0 dark:invert opacity-50 transition-opacity duration-300"
+                    priority
+                    sizes="(max-width: 768px) 100vw, 300px"
+                    quality={85}
+                    onError={() => { }}
+                />
+                {equipmentId === 'CleverDripper' && (
+                    <div className="absolute inset-0">
+                        <Image
+                            src={'/images/valve-closed.svg'}
+                            alt={`Valve closed`}
+                            fill
+                            className="object-contain invert-0 dark:invert opacity-50 transition-opacity duration-300"
+                            sizes="(max-width: 768px) 100vw, 300px"
+                            quality={85}
+                            onError={() => { }}
+                        />
+                    </div>
+                )}
+            </div>
+        );
+    }
+
+    // 检查当前阶段是否存在
+    const currentStageData = stages[currentStage];
+    if (!currentStageData) {
+        return (
+            <div className="relative w-full aspect-square max-w-[300px] mx-auto px-safe">
+                <Image
+                    src={'/images/v60-base.svg'} // 始终使用相同的杯体图片
+                    alt={equipmentId}
+                    fill
+                    className="object-contain invert-0 dark:invert opacity-50 transition-opacity duration-300"
+                    priority
+                    sizes="(max-width: 768px) 100vw, 300px"
+                    quality={85}
+                    onError={() => { }}
+                />
+                {equipmentId === 'CleverDripper' && (
+                    <div className="absolute inset-0">
+                        <Image
+                            src={'/images/valve-closed.svg'}
+                            alt={`Valve closed`}
+                            fill
+                            className="object-contain invert-0 dark:invert opacity-50 transition-opacity duration-300"
+                            sizes="(max-width: 768px) 100vw, 300px"
+                            quality={85}
+                            onError={() => { }}
+                        />
+                    </div>
+                )}
+            </div>
+        );
+    }
+
     // 定义可用的动画图片及其最大索引
     const availableAnimations = useMemo<Record<string, AnimationConfig>>(() => ({
         center: { maxIndex: 3 },  // center 只有3张图片
@@ -110,104 +204,80 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
 
     // 跟踪当前阶段的经过时间，用于确定是否在注水时间内
     useEffect(() => {
-        if (!isRunning || currentStage < 0 || countdownTime !== null) {
-            setIsPouring(false)
-            return
+        // 立即检查 countdownTime 状态，如果在倒计时，立即停止所有动画
+        if (countdownTime !== null) {
+            setIsPouring(false);
+            setDisplayedIceIndices([]);
+            setCurrentMotionIndex(1);
+            return;
+        }
+
+        // 其他非活动状态的检查
+        if (!isRunning || currentStage < 0) {
+            setIsPouring(false);
+            setDisplayedIceIndices([]);
+            setCurrentMotionIndex(1); // 重置动画帧到初始状态
+            return;
+        }
+
+        const currentStageData = stages[currentStage];
+        if (!currentStageData) {
+            setIsPouring(false);
+            setDisplayedIceIndices([]);
+            setCurrentMotionIndex(1);
+            return;
         }
 
         // 检查当前阶段是否为等待阶段
-        const currentStageType = (stages[currentStage] as ExtendedStage)?.type || 'pour'
+        const currentStageType = (currentStageData as ExtendedStage)?.type || 'pour';
+        const currentPourTime = currentStageData.pourTime;
 
         // 如果是等待阶段、isWaiting为true、或pourTime明确设为0，不显示注水动画
-        if (currentStageType === 'wait' || isWaiting || stages[currentStage]?.pourTime === 0) {
-            setIsPouring(false)
-            return
+        if (currentStageType === 'wait' || isWaiting || currentPourTime === 0) {
+            setIsPouring(false);
+            setDisplayedIceIndices([]);
+            setCurrentMotionIndex(1);
+            return;
         }
 
-        // 立即检查当前阶段是否有注水时间
-        const currentPourTime = stages[currentStage]?.pourTime
+        // 立即开始注水动画
+        setIsPouring(true);
 
-        // 如果 pourTime 明确设置为 0，则不显示注水动画
-        if (currentPourTime === 0) {
-            setIsPouring(false)
-            return
-        }
-
-        // 使用函数形式的setState，避免闭包陷阱
-        // 只有当前状态与期望状态不同时才更新
-        if (currentPourTime && currentPourTime > 0) {
-            setIsPouring(current => {
-                if (!current) return true;
-                return current;
-            });
-        } else {
-            setIsPouring(current => {
-                if (current) return false;
-                return current;
-            });
-            return
-        }
-
-        let secondsElapsed = 0
-
+        // 设置定时器来控制动画时长
         const timer = setInterval(() => {
-            secondsElapsed += 1
+            // 再次检查倒计时状态，确保在倒计时期间不会更新动画
+            if (countdownTime !== null) {
+                setIsPouring(false);
+                setDisplayedIceIndices([]);
+                setCurrentMotionIndex(1);
+                clearInterval(timer);
+                return;
+            }
 
-            // 判断是否在注水时间内
-            const shouldPour = secondsElapsed <= currentPourTime;
-            setIsPouring(current => {
-                if (current !== shouldPour) return shouldPour;
-                return current;
-            });
-        }, 1000)
+            const pourType = currentStageData.pourType || 'center';
+            const animationConfig = availableAnimations[pourType as keyof typeof availableAnimations];
 
-        return () => clearInterval(timer)
-    }, [isRunning, currentStage, countdownTime, stages, isWaiting])
-
-    // 只有在注水时间内才切换动画图片
-    useEffect(() => {
-        if (!isRunning || !isPouring || currentStage < 0 || countdownTime !== null) return
-
-        // 获取当前注水类型
-        const pourType = stages[currentStage]?.pourType || 'center'
-        // 获取该类型的动画配置
-        const animationConfig = availableAnimations[pourType as keyof typeof availableAnimations]
-
-        // 如果是叠加显示的动画类型（如冰块）
-        if (animationConfig?.isStacking) {
-            // 如果是冰块动画，每隔一段时间添加一个新的冰块
-            const interval = setInterval(() => {
+            if (animationConfig?.isStacking) {
                 setDisplayedIceIndices(prev => {
-                    // 如果已经显示了所有冰块，不再添加
-                    if (prev.length >= animationConfig.maxIndex) return prev
-                    // 添加下一个冰块索引
-                    return [...prev, prev.length + 1]
-                })
-            }, 1000) // 每1秒添加一个冰块，从1.5秒改为1秒
-
-            return () => clearInterval(interval)
-        } else {
-            // 对于普通动画（center, circle），使用原有的切换逻辑
-            const interval = setInterval(() => {
+                    if (prev.length >= animationConfig.maxIndex) return prev;
+                    return [...prev, prev.length + 1];
+                });
+            } else {
                 setCurrentMotionIndex(prev => {
-                    // 获取该类型的最大索引
-                    const maxIndex = animationConfig?.maxIndex || 3
-                    return prev >= maxIndex ? 1 : prev + 1
-                })
-            }, 1000)
+                    const maxIndex = animationConfig?.maxIndex || 3;
+                    return prev >= maxIndex ? 1 : prev + 1;
+                });
+            }
+        }, 1000);
 
-            return () => clearInterval(interval)
-        }
-    }, [isRunning, isPouring, currentStage, countdownTime, stages, availableAnimations])
-
-    // 当阶段变化时重置冰块显示
-    useEffect(() => {
-        // 只有当前阶段真的改变时才重置
-        setDisplayedIceIndices(prev => {
-            if (prev.length > 0) return [];
-            return prev;
-        });
-    }, [currentStage])
+        return () => {
+            clearInterval(timer);
+            if (!isRunning || countdownTime !== null) {
+                setDisplayedIceIndices([]);
+                setCurrentMotionIndex(1);
+            }
+        };
+    }, [isRunning, currentStage, countdownTime, stages, isWaiting, availableAnimations]);
 
     // 更新阀门状态 - 针对聪明杯
     useEffect(() => {
@@ -252,37 +322,6 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
             : '/images/valve-closed.svg'
     }
 
-    // 如果没有运行或者在倒计时，不显示动画
-    if (!isRunning || currentStage < 0 || countdownTime !== null) {
-        return (
-            <div className="relative w-full aspect-square max-w-[300px] mx-auto px-safe">
-                <Image
-                    src={getEquipmentImageSrc()}
-                    alt={equipmentId}
-                    fill
-                    className="object-contain invert-0 dark:invert opacity-50 transition-opacity duration-300"
-                    priority
-                    sizes="(max-width: 768px) 100vw, 300px"
-                    quality={85}
-                    onError={() => { }}
-                />
-                {equipmentId === 'CleverDripper' && (
-                    <div className="absolute inset-0">
-                        <Image
-                            src={getValveImageSrc() || ''}
-                            alt={`Valve ${valveStatus}`}
-                            fill
-                            className="object-contain invert-0 dark:invert opacity-50 transition-opacity duration-300"
-                            sizes="(max-width: 768px) 100vw, 300px"
-                            quality={85}
-                            onError={() => { }}
-                        />
-                    </div>
-                )}
-            </div>
-        )
-    }
-
     // 当 pourType 未设置或 pourTime 为 0 时，默认使用 center 类型，但不会显示注水动画
     const currentPourType = stages[currentStage]?.pourType || 'center'
     const motionSrc = `/images/pour-${currentPourType}-motion-${currentMotionIndex}.svg`
@@ -292,6 +331,9 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
 
     // 计算杯体透明度 - 在注水时为完全不透明，否则为半透明
     const equipmentOpacity = isPouring ? 'opacity-100' : 'opacity-50'
+
+    // 再次检查倒计时状态，双重保险
+    const shouldShowAnimation = isPouring && imagesPreloaded && isValidAnimation && countdownTime === null;
 
     return (
         <div className="relative w-full aspect-square max-w-[300px] mx-auto px-safe">
@@ -322,9 +364,9 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                 </div>
             )}
 
-            {/* 注水动画 - 只在注水时间内显示，且动画类型有效时 */}
+            {/* 注水动画 - 只在注水时间内显示，且动画类型有效时，且不在倒计时阶段 */}
             <AnimatePresence>
-                {isPouring && imagesPreloaded && isValidAnimation && (
+                {shouldShowAnimation && (
                     <>
                         {/* 对于普通动画类型（center, circle），显示单个动画 */}
                         {!availableAnimations[currentPourType as keyof typeof availableAnimations]?.isStacking && (

@@ -268,12 +268,15 @@ const TabContent: React.FC<TabContentProps> = ({
                         <div className="flex items-center justify-center w-full h-full">
                             <div className="w-full max-w-[300px]">
                                 <PourVisualizer
-                                    isRunning={isTimerRunning}
-                                    currentStage={currentStage}
-                                    stages={expandedStages && expandedStages.length > 0 ? expandedStages : currentBrewingMethod?.params?.stages || []}
+                                    isRunning={isTimerRunning && countdownTime === null}
+                                    currentStage={countdownTime !== null ? -1 : currentStage}
+                                    stages={expandedStages || []}
                                     countdownTime={countdownTime}
                                     equipmentId={selectedEquipment || 'V60'}
-                                    isWaiting={isWaiting}
+                                    isWaiting={countdownTime !== null ? true : isWaiting}
+                                    key={countdownTime !== null ?
+                                        'countdown' : // 倒计时阶段
+                                        `pour-${currentStage}-${isTimerRunning}`} // 注水阶段
                                 />
                             </div>
                         </div>

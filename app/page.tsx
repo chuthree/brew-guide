@@ -379,13 +379,13 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         };
 
         const handleTimerStatusChange = (e: CustomEvent) => {
-            // 检查e.detail中的isRunning或status属性
             if (typeof e.detail?.isRunning === 'boolean') {
                 setIsTimerRunning(e.detail.isRunning);
-            } else if (e.detail?.status === 'running') {
-                setIsTimerRunning(true);
-            } else if (e.detail?.status === 'stopped') {
-                setIsTimerRunning(false);
+
+                // 当计时器状态变为非运行时，确保清除倒计时状态
+                if (!e.detail.isRunning) {
+                    setCountdownTime(null);
+                }
             }
         };
 
@@ -404,8 +404,17 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         };
 
         const handleCountdownChange = (e: CustomEvent) => {
-            if (typeof e.detail?.remainingTime === 'number') {
-                setCountdownTime(e.detail.remainingTime);
+            if ('remainingTime' in e.detail) {
+                // 使用 setTimeout 包装状态更新，避免在渲染期间更新状态
+                setTimeout(() => {
+                    // 直接设置倒计时状态，无需复杂逻辑
+                    setCountdownTime(e.detail.remainingTime);
+
+                    // 倒计时期间将 currentStage 设为 -1
+                    if (e.detail.remainingTime !== null) {
+                        setCurrentStage(-1);
+                    }
+                }, 0);
             }
         };
 
@@ -1096,11 +1105,13 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                                 window.dispatchEvent(event);
                             }}
                             onCountdownChange={(time) => {
-                                // 使用事件而不是直接更新状态
-                                const event = new CustomEvent('brewing:countdownChange', {
-                                    detail: { time }
-                                });
-                                window.dispatchEvent(event);
+                                // 避免直接调用事件分发，改用 setTimeout
+                                setTimeout(() => {
+                                    const event = new CustomEvent('brewing:countdownChange', {
+                                        detail: { remainingTime: time }
+                                    });
+                                    window.dispatchEvent(event);
+                                }, 0);
                             }}
                             onComplete={(isComplete) => {
                                 if (isComplete) {
