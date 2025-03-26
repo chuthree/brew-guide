@@ -239,14 +239,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
         setShowNoteFormModal(true);
     }
 
-    // 处理点击参数区域跳转到冲煮页面
-    const handleParamsClick = (note: BrewingNote, e: React.MouseEvent) => {
-        e.stopPropagation();
-        if (onNavigateToBrewing) {
-            onNavigateToBrewing(note);
-        }
-    }
-
     // 处理点击方案名称跳转到冲煮页面
     const handleMethodClick = (note: BrewingNote, e: React.MouseEvent) => {
         e.stopPropagation();

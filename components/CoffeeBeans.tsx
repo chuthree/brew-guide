@@ -80,6 +80,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
     const [filteredBeans, setFilteredBeans] = useState<CoffeeBean[]>([])
     // 咖啡豆显示控制
     const [showEmptyBeans, setShowEmptyBeans] = useState<boolean>(false)
+    const [hasEmptyBeans, setHasEmptyBeans] = useState<boolean>(false)
 
     // 获取阶段数值用于排序
     const getPhaseValue = (phase: string): number => {
@@ -232,6 +233,10 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                 const sortedBeans = sortBeans(parsedBeans, sortOption)
                 setBeans(sortedBeans)
 
+                // 检查是否有已用完的咖啡豆
+                const hasEmpty = sortedBeans.some(bean => isBeanEmpty(bean))
+                setHasEmptyBeans(hasEmpty)
+
                 // 提取所有唯一的豆种(品种)
                 const varieties = sortedBeans
                     .filter(bean => bean.variety && (showEmptyBeans || !isBeanEmpty(bean))) // 过滤掉没有品种的豆子和已用完的豆子(如果不显示已用完)
@@ -258,6 +263,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                 // 获取失败设置为空数组
                 setBeans([])
                 setFilteredBeans([])
+                setHasEmptyBeans(false)
             }
         }
 
@@ -756,18 +762,20 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                         全部
                                     </motion.button>
 
-                                    {/* 添加显示/隐藏已用完的咖啡豆标签 */}
-                                    <motion.button
-                                        onClick={() => setShowEmptyBeans(!showEmptyBeans)}
-                                        whileHover={{ scale: 1.05 }}
-                                        whileTap={{ scale: 0.95 }}
-                                        className={`shrink-0 px-3 py-1 rounded-full text-xs transition-colors ${showEmptyBeans
-                                            ? 'bg-neutral-800 text-white dark:bg-white dark:text-neutral-800'
-                                            : 'bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400'
-                                            }`}
-                                    >
-                                        已用完
-                                    </motion.button>
+                                    {/* 添加显示/隐藏已用完的咖啡豆标签 - 只在有已用完的咖啡豆时显示 */}
+                                    {hasEmptyBeans && (
+                                        <motion.button
+                                            onClick={() => setShowEmptyBeans(!showEmptyBeans)}
+                                            whileHover={{ scale: 1.05 }}
+                                            whileTap={{ scale: 0.95 }}
+                                            className={`shrink-0 px-3 py-1 rounded-full text-xs transition-colors ${showEmptyBeans
+                                                ? 'bg-neutral-800 text-white dark:bg-white dark:text-neutral-800'
+                                                : 'bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400'
+                                                }`}
+                                        >
+                                            已用完
+                                        </motion.button>
+                                    )}
 
                                     {availableVarieties.map(variety => (
                                         <motion.button
