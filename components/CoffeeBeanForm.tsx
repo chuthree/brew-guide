@@ -225,7 +225,7 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                 }
 
                 // 为初始数据添加赏味期参数
-                beanData.startDay;
+                beanData.startDay = startDay;
                 beanData.endDay = endDay;
                 beanData.maxDay = maxDay;
             }
