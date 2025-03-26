@@ -782,10 +782,10 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                         transition={{ duration: 0.2, ease: "easeOut" }}
                                         className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400"
                                     >
-                                        {beans.length === 0 ? '[ 暂无咖啡豆数据 ]' : '[ 没有符合当前筛选条件的咖啡豆 ]'}
+                                        {selectedVariety ? `[ 没有${selectedVariety}品种的咖啡豆 ]` : '[ 暂无咖啡豆 ]'}
                                     </motion.div>
                                 ) : (
-                                    <div className="space-y-6 px-6">
+                                    <div className="space-y-6 pb-24 px-6">
                                         {filteredBeans.map((bean, index) => (
                                             <motion.div
                                                 key={bean.id}
@@ -1199,10 +1199,10 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -5 }}
                             transition={{ duration: 0.3, ease: "easeOut" }}
-                            className="sticky bottom-0 z-10"
+                            className="bottom-action-bar"
                         >
-                            <div className="sticky bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none"></div>
-                            <div className="relative flex items-center bg-neutral-50 dark:bg-neutral-900  py-4 ">
+                            <div className="absolute bottom-full left-0 right-0 h-12 bg-gradient-to-t from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none"></div>
+                            <div className="relative flex items-center bg-neutral-50 dark:bg-neutral-900 py-4">
                                 <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
                                 <div className="flex items-center space-x-3 mx-3">
                                     <motion.button

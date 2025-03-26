@@ -368,7 +368,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                 [ 暂无冲煮记录 ]
                             </motion.div>
                         ) : (
-                            <div className="space-y-6">
+                            <div className="space-y-6 pb-24">
                                 {notes.map((note, index) => (
                                     <motion.div
                                         key={note.id}
@@ -560,9 +560,9 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -5 }}
                         transition={{ duration: 0.3, ease: "easeOut" }}
-                        className="sticky bottom-0 z-10"
+                        className="bottom-action-bar"
                     >
-                        <div className="sticky bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none"></div>
+                        <div className="absolute bottom-full left-0 right-0 h-12 bg-gradient-to-t from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none"></div>
                         <div className="relative flex items-center bg-neutral-50 dark:bg-neutral-900 py-4">
                             <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
                             <motion.button

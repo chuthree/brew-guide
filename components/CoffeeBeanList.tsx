@@ -155,7 +155,7 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
     }
 
     return (
-        <div className="space-y-5">
+        <div className="space-y-5 pb-12">
             {/* 添加"不选择咖啡豆"选项 */}
             <motion.div
                 initial={{ opacity: 0, y: 10 }}
