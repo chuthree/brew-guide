@@ -80,7 +80,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
     const [filteredBeans, setFilteredBeans] = useState<CoffeeBean[]>([])
     // 咖啡豆显示控制
     const [showEmptyBeans, setShowEmptyBeans] = useState<boolean>(false)
-    const [hasEmptyBeans, setHasEmptyBeans] = useState<boolean>(false)
+    // 未使用的状态，但保留以避免修改太多相关代码
+    const [_, setHasEmptyBeans] = useState<boolean>(false)
     // 榜单视图的筛选状态
     const [rankingBeanType, setRankingBeanType] = useState<'all' | 'espresso' | 'filter'>('all')
     const [rankingEditMode, setRankingEditMode] = useState<boolean>(false)
@@ -239,13 +240,12 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                 const sortedBeans = sortBeans(parsedBeans, sortOption)
                 setBeans(sortedBeans)
 
-                // 检查是否有已用完的咖啡豆
+                // 检查是否有已用完的咖啡豆或者总共有咖啡豆
                 const hasEmpty = sortedBeans.some(bean => isBeanEmpty(bean))
-                setHasEmptyBeans(hasEmpty)
+                setHasEmptyBeans(hasEmpty || sortedBeans.length > 0)
 
-                // 提取所有唯一的豆种(品种)
+                // 提取所有唯一的豆种(品种) - 不过滤已用完的咖啡豆，确保标签始终显示
                 const varieties = sortedBeans
-                    .filter(bean => (showEmptyBeans || !isBeanEmpty(bean))) // 只根据是否显示已用完的豆子来过滤
                     .map(bean => {
                         // 如果是拼配豆，优先标记为"拼配豆"
                         if (bean.type === '拼配') {
@@ -828,7 +828,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
 
                         {/* 品种标签筛选 - 仅在仓库视图显示 */}
                         {viewMode === VIEW_OPTIONS.INVENTORY && availableVarieties.length > 0 && (
-                            <div className="mb-6 relative">
+                            <div className="relative">
                                 {/* 使用与CoffeeBeanRanking相同的样式，但添加可滑动功能 */}
                                 <div className="border-b border-neutral-200 dark:border-neutral-800/50 px-6">
                                     <div className="flex overflow-x-auto no-scrollbar pr-6 relative">
@@ -855,7 +855,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                         ))}
 
                                         {/* 显示/隐藏已用完的咖啡豆 - 固定在右侧 */}
-                                        {hasEmptyBeans && (
+                                        {beans.length > 0 && (
                                             <button
                                                 onClick={() => setShowEmptyBeans(!showEmptyBeans)}
                                                 className={`pb-1.5 mx-3 text-[11px] whitespace-nowrap relative ${showEmptyBeans ? 'text-neutral-800 dark:text-white' : 'text-neutral-500 dark:text-neutral-400'}`}
@@ -942,10 +942,15 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                         transition={{ duration: 0.2, ease: "easeOut" }}
                                         className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400"
                                     >
-                                        {selectedVariety ? `[ 没有${selectedVariety}品种的咖啡豆 ]` : '[ 暂无咖啡豆 ]'}
+                                        {selectedVariety ?
+                                            `[ 没有${selectedVariety}品种的咖啡豆 ]` :
+                                            beans.length > 0 ?
+                                                (showEmptyBeans ? '[ 暂无咖啡豆 ]' : '[ 所有咖啡豆已用完，点击"已用完"查看 ]') :
+                                                '[ 暂无咖啡豆 ]'
+                                        }
                                     </motion.div>
                                 ) : (
-                                    <div className="space-y-6">
+                                    <div className="space-y-3">
                                         {filteredBeans.map((bean, index) => (
                                             <motion.div
                                                 key={bean.id}
@@ -957,7 +962,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                     delay: Math.min(index * 0.05, 0.3),
                                                     ease: "easeOut"
                                                 }}
-                                                className={`group space-y-3 px-6 pb-6 hover:bg-neutral-50 dark:hover:bg-neutral-900/70 transition-colors ${index === filteredBeans.length - 1 ? '' : 'border-b border-neutral-200 dark:border-neutral-800/50'} ${isBeanEmpty(bean)
+                                                className={`group mt-3 space-y-3 px-6 pb-3 hover:bg-neutral-50 dark:hover:bg-neutral-900/70 transition-colors ${index === filteredBeans.length - 1 ? '' : 'border-b border-neutral-200 dark:border-neutral-800/50'} ${isBeanEmpty(bean)
                                                     ? 'bg-neutral-100/60 dark:bg-neutral-800/30'
                                                     : ''
                                                     }`}
@@ -1336,7 +1341,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
 
                                                     {/* 备注信息 */}
                                                     {bean.notes && (
-                                                        <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400 pt-1.5 border-t border-neutral-200/50 dark:border-neutral-800/50">
+                                                        <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400 pt-1.5">
                                                             {bean.notes}
                                                         </div>
                                                     )}

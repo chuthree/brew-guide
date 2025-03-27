@@ -524,9 +524,15 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     }, [showComplete, activeMainTab, activeBrewingStep, navigateToStep, hasAutoNavigatedToNotes]);
 
     // 处理主标签切换 - 增加过渡动画效果
-    const handleMainTabClick = (tab: MainTabType) => {
+    const handleMainTabClick = (tab: MainTabType, skipTransition = false) => {
         // 如果点击的是当前激活的主标签，不执行任何操作
         if (tab === activeMainTab) {
+            return;
+        }
+
+        if (skipTransition) {
+            // 直接切换标签，跳过过渡动画
+            setActiveMainTab(tab);
             return;
         }
 
@@ -586,6 +592,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             const beansToImport = Array.isArray(extractedData) ? extractedData : [extractedData];
 
             let importCount = 0;
+            let lastImportedBean = null;
             for (const bean of beansToImport) {
                 // 验证必要的字段
                 if (!bean.name) {
@@ -605,7 +612,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
                 // 处理拼配成分，确保百分比是数字类型
                 if (bean.blendComponents && Array.isArray(bean.blendComponents)) {
-                    bean.blendComponents = bean.blendComponents.map((comp: any) => ({
+                    bean.blendComponents = bean.blendComponents.map((comp: { percentage: string | number }) => ({
                         ...comp,
                         percentage: typeof comp.percentage === 'string' ?
                             parseInt(comp.percentage, 10) : comp.percentage
@@ -613,7 +620,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 }
 
                 // 添加到数据库
-                await CoffeeBeanManager.addBean(bean);
+                const newBean = await CoffeeBeanManager.addBean(bean);
+                lastImportedBean = newBean;
                 importCount++;
             }
 
@@ -627,7 +635,17 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             // 更新咖啡豆状态
             handleBeanListChange();
 
-            alert(`成功导入 ${importCount} 款咖啡豆`);
+            // 切换到咖啡豆标签页，跳过过渡动画
+            handleMainTabClick('咖啡豆', true);
+
+            // 如果只导入了一个咖啡豆，直接打开编辑表单
+            if (importCount === 1 && lastImportedBean) {
+                // 短暂延迟以确保UI更新
+                setTimeout(() => {
+                    setEditingBean(lastImportedBean);
+                    setShowBeanForm(true);
+                }, 300);
+            }
         } catch (error) {
             console.error('导入失败:', error);
             alert('导入失败: ' + (error instanceof Error ? error.message : '请检查数据格式'));

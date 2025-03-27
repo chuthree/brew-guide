@@ -266,24 +266,26 @@ const ImportBeanModal: React.FC<ImportBeanModalProps> = ({
                     timestamp: Date.now()
                 };
 
-                onImport(JSON.stringify(dataWithTimestamp))
-                    .then(() => {
-                        // 导入成功后清空输入框
-                        setImportData('');
-                        setError(null);
-                        setSuccess('导入成功');
-                        setTimeout(() => setSuccess(null), 2000);
-                    })
-                    .catch(() => {
-                        setError('导入失败，请重试');
-                    });
-            }).catch((err) => {
-                console.error('导入失败:', err);
-                setError('数据格式错误，请检查导入的数据');
+                try {
+                    // 显示处理中的消息
+                    setSuccess('正在导入咖啡豆数据...');
+
+                    // 调用上层组件的导入回调
+                    await onImport(JSON.stringify(dataWithTimestamp));
+
+                    // 导入成功后关闭模态框（上层组件会处理跳转和编辑）
+                    handleClose();
+                } catch (error) {
+                    setError('导入失败: ' + (error instanceof Error ? error.message : '未知错误'));
+                    setSuccess(null);
+                }
+            }).catch(err => {
+                setError('数据处理失败: ' + (err instanceof Error ? err.message : '未知错误'));
+                setSuccess(null);
             });
-        } catch (error) {
-            console.error('数据处理错误:', error);
-            setError('数据格式错误，请检查导入的数据');
+        } catch (err) {
+            setError('处理数据时出错: ' + (err instanceof Error ? err.message : '未知错误'));
+            setSuccess(null);
         }
     };
 

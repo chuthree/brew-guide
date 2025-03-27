@@ -314,7 +314,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                     {/* 未评分咖啡豆列表 */}
                     {showUnrated && (
                         <div className="opacity-60">
-                            {unratedBeans.map((bean, index) => (
+                            {unratedBeans.map((bean, _index) => (
                                 <div
                                     key={bean.id}
                                     className="border-b border-neutral-200/60 dark:border-neutral-800/40 last:border-none"

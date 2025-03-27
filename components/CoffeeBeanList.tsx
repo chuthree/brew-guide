@@ -16,6 +16,11 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
     const [beans, setBeans] = useState<CoffeeBean[]>([])
     const [loading, setLoading] = useState(true)
 
+    // 检查咖啡豆是否用完
+    const isBeanEmpty = (bean: CoffeeBean): boolean => {
+        return (bean.remaining === "0" || bean.remaining === "0g") && bean.capacity !== undefined;
+    }
+
     // 获取阶段数值用于排序
     const getPhaseValue = (phase: string): number => {
         switch (phase) {
@@ -89,8 +94,12 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
             try {
                 setLoading(true)
                 const loadedBeans = await CoffeeBeanManager.getAllBeans()
+
+                // 过滤掉已经喝完的咖啡豆
+                const availableBeans = loadedBeans.filter(bean => !isBeanEmpty(bean));
+
                 // 按照赏味期排序（少到多）
-                const sortedBeans = [...loadedBeans].sort((a, b) => {
+                const sortedBeans = [...availableBeans].sort((a, b) => {
                     const { phase: phaseA, remainingDays: daysA } = getFlavorInfo(a);
                     const { phase: phaseB, remainingDays: daysB } = getFlavorInfo(b);
 
