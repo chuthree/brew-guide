@@ -451,7 +451,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                 [ 暂无冲煮记录 ]
                             </motion.div>
                         ) : (
-                            <div className="space-y-6 pb-24">
+                            <div className="space-y-6">
                                 {notes.map((note, index) => (
                                     <motion.div
                                         key={note.id}
