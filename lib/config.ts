@@ -275,7 +275,7 @@ export const brewingMethods: BrewingMethods = {
 	],
 	CleverDripper: [
 		{
-			name: "万能冲煮方案",
+			name: "万能冲煮方案(兼容性强)",
 			params: {
 				coffee: "20g",
 				water: "300g",
@@ -333,7 +333,47 @@ export const brewingMethods: BrewingMethods = {
 				],
 			},
 		},
-
+		{
+			name: "冠军冲煮方案(简单好用)",
+			params: {
+				coffee: "20g",
+				water: "300g",
+				ratio: "1:15",
+				grindSize: "中细偏粗",
+				temp: "97°C",
+				videoUrl: "",
+				roastLevel: "中浅烘焙",
+				stages: [
+					{
+						time: 110,
+						pourTime: 20,
+						label: "绕圈注水[关阀]",
+						water: "240g",
+						detail: "关闭阀门，绕圈注水",
+						pourType: "circle",
+						valveStatus: "closed",
+					},
+					{
+						time: 125,
+						pourTime: 0,
+						label: "绕圈注水[开阀]",
+						water: "240g",
+						detail: "打开阀门，等待滴滤完成",
+						pourType: "circle",
+						valveStatus: "open",
+					},
+					{
+						time: 215,
+						pourTime: 10,
+						label: "绕圈注水[开阀]",
+						water: "300g",
+						detail: "保持开阀，由外向内边缘绕圈注水(冲掉边缘咖啡粉)",
+						pourType: "circle",
+						valveStatus: "open",
+					},
+				],
+			},
+		},
 		{
 			name: "夏季八冲(全宇宙最多人使用的咖啡冲煮手法)",
 			params: {
