@@ -140,7 +140,7 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
             if (isNaN(price) || isNaN(capacity) || capacity === 0) return "未知";
 
             const unitPrice = price / capacity;
-            return `¥${unitPrice.toFixed(2)}/g`;
+            return unitPrice.toFixed(2);
         } catch {
             return "未知";
         }
@@ -252,16 +252,17 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
                     items.push(`烘焙度 ${bean.roastLevel}`);
                 }
 
-                // 添加单克价信息
+                // 添加单价信息
                 const unitPrice = calculateUnitPrice(bean);
                 if (unitPrice !== "未知") {
-                    items.push(`单克价 ${unitPrice.replace('¥', '').replace('/g', '')} 元`);
+                    items.push(`价格 ${unitPrice} 元/g`);
                 }
 
-                // 添加剩余容量信息
+                // 添加容量信息
                 const remaining = typeof bean.remaining === 'string' ? parseFloat(bean.remaining) : bean.remaining;
-                if (!isNaN(remaining) && remaining > 0) {
-                    items.push(`剩容量 ${remaining} 克`);
+                const capacity = typeof bean.capacity === 'string' ? parseFloat(bean.capacity) : bean.capacity;
+                if (!isNaN(remaining) && !isNaN(capacity) && remaining > 0) {
+                    items.push(`容量 ${remaining}/${capacity} g`);
                 }
 
                 return (

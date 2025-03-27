@@ -11,7 +11,6 @@ import Image from 'next/image'
 
 // 添加拼配成分接口定义
 interface BlendComponent {
-    name: string;        // 成分豆名称
     percentage: number;  // 百分比 (1-100)
     origin?: string;     // 产地
     process?: string;    // 处理法
@@ -182,7 +181,6 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
         }
         // 默认添加一个空成分
         return [{
-            name: '',
             percentage: 100,
             origin: '',
             process: '',
@@ -506,7 +504,6 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
         setBlendComponents([
             ...blendComponents,
             {
-                name: '',  // 保留空字符串，而不是undefined
                 percentage: Math.max(0, 100 - currentSum),
                 origin: '',
                 process: '',
@@ -586,13 +583,6 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                 const lastIndex = components.length - 1;
                 components[lastIndex].percentage += (100 - totalPercentage);
             }
-
-            // 确保每个成分都有name属性
-            components.forEach(comp => {
-                if (!comp.name) {
-                    comp.name = '未命名成分';
-                }
-            });
 
             onSave({
                 ...bean,
@@ -1028,7 +1018,6 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                                                 // 当类型从拼配变为单品时，清空拼配成分
                                                 if (bean.type === '拼配' && type.value === '单品') {
                                                     setBlendComponents([{
-                                                        name: '未命名成分',
                                                         percentage: 100,
                                                         origin: '',
                                                         process: '',

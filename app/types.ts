@@ -28,7 +28,6 @@ export interface CoffeeBean {
 	endDay?: number; // 最佳赏味期结束天数
 	maxDay?: number; // 赏味期结束天数
 	blendComponents?: Array<{
-		name: string; // 成分豆名称
 		percentage: number; // 百分比 (1-100)
 		origin?: string; // 产地
 		process?: string; // 处理法

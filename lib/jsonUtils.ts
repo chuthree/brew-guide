@@ -69,7 +69,6 @@ interface BlendComponent {
 	origin?: string;
 	process?: string;
 	variety?: string;
-	name?: string;
 }
 
 // 定义ParsedStage接口
@@ -606,17 +605,20 @@ export function beanToReadableText(bean: CoffeeBean): string {
 
 	// 构建可读文本
 	let text = `【咖啡豆】${name}\n`;
-	text += `容量: ${capacity}g${
-		remaining !== capacity ? ` (剩余${remaining}g)` : ""
-	}\n`;
+	text += `容量: ${remaining}/${capacity}g\n`;
 	text += `烘焙度: ${roastLevel || "未知"}\n`;
 
 	if (roastDate) text += `烘焙日期: ${roastDate}\n`;
-	if (origin) text += `产地: ${origin}\n`;
-	if (process) text += `处理法: ${process}\n`;
-	if (variety) text += `品种: ${variety}\n`;
+
+	// 如果是拼配豆，不输出顶级的产地、处理法、品种信息
+	if (type !== "拼配") {
+		if (origin) text += `产地: ${origin}\n`;
+		if (process) text += `处理法: ${process}\n`;
+		if (variety) text += `品种: ${variety}\n`;
+	}
+
 	if (type) text += `类型: ${type}\n`;
-	if (price) text += `价格: ${price}元\n`;
+	if (price) text += `价格: ${price}元/g\n`;
 
 	if (flavor && flavor.length > 0) {
 		text += `风味标签: ${flavor.join(", ")}\n`;
@@ -791,18 +793,25 @@ function parseCoffeeBeanText(text: string): CoffeeBean | null {
 		bean.name = nameMatch[1].trim();
 	}
 
-	// 提取容量
-	const capacityMatch = text.match(/容量:\s*(\d+)g/);
-	if (capacityMatch && capacityMatch[1]) {
-		bean.capacity = capacityMatch[1];
-	}
+	// 提取容量和剩余容量
+	const capacityMatch = text.match(/容量:\s*(\d+)\/(\d+)g/);
+	if (capacityMatch && capacityMatch[1] && capacityMatch[2]) {
+		bean.remaining = capacityMatch[1];
+		bean.capacity = capacityMatch[2];
+	} else {
+		// 兼容旧格式
+		const oldCapacityMatch = text.match(/容量:\s*(\d+)g/);
+		if (oldCapacityMatch && oldCapacityMatch[1]) {
+			bean.capacity = oldCapacityMatch[1];
 
-	// 提取剩余容量
-	const remainingMatch = text.match(/剩余(\d+)g/);
-	if (remainingMatch && remainingMatch[1]) {
-		bean.remaining = remainingMatch[1];
-	} else if (bean.capacity) {
-		bean.remaining = bean.capacity;
+			// 尝试提取旧格式的剩余容量
+			const oldRemainingMatch = text.match(/剩余(\d+)g/);
+			if (oldRemainingMatch && oldRemainingMatch[1]) {
+				bean.remaining = oldRemainingMatch[1];
+			} else {
+				bean.remaining = bean.capacity;
+			}
+		}
 	}
 
 	// 提取烘焙度
@@ -842,9 +851,15 @@ function parseCoffeeBeanText(text: string): CoffeeBean | null {
 	}
 
 	// 提取价格
-	const priceMatch = text.match(/价格:\s*(\d+)元/);
+	const priceMatch = text.match(/价格:\s*(\d+)元\/g/);
 	if (priceMatch && priceMatch[1]) {
 		bean.price = priceMatch[1];
+	} else {
+		// 兼容旧格式
+		const oldPriceMatch = text.match(/价格:\s*(\d+)元/);
+		if (oldPriceMatch && oldPriceMatch[1]) {
+			bean.price = oldPriceMatch[1];
+		}
 	}
 
 	// 提取风味
@@ -863,23 +878,37 @@ function parseCoffeeBeanText(text: string): CoffeeBean | null {
 	if (text.includes("拼配成分:")) {
 		bean.blendComponents = [];
 		const blendSection = text.split("拼配成分:")[1].split("\n---")[0];
-		const components = blendSection.match(/\d+\.\s*(.*?)\s*\((\d+)%\)/g);
+		const componentLines = blendSection
+			.split("\n")
+			.map((line) => line.trim())
+			.filter((line) => line.length > 0);
 
-		if (components) {
-			components.forEach((comp: string) => {
-				// 先确保blendComponents不是undefined
-				if (!bean.blendComponents) {
-					bean.blendComponents = [];
-				}
+		for (const line of componentLines) {
+			// 匹配形如 "1. 50% 哥伦比亚 | 水洗 | 卡杜拉" 的行
+			const match = line.match(/\d+\.\s*(\d+)%\s*(.*)/);
+			if (match) {
+				const percentage = match[1];
+				const detailsText = match[2].trim();
 
-				const compMatch = comp.match(/\d+\.\s*(.*?)\s*\((\d+)%\)/);
-				if (compMatch && compMatch[1] && compMatch[2]) {
-					bean.blendComponents.push({
-						name: compMatch[1].trim(),
-						percentage: String(parseInt(compMatch[2])), // 转为字符串类型
-					});
-				}
-			});
+				// 分割详情字段（以 | 分隔）
+				const details = detailsText
+					.split("|")
+					.map((part) => part.trim());
+
+				const component: BlendComponent = {
+					percentage: parseInt(percentage, 10).toString(),
+				};
+
+				// 根据分割的详情字段数量分配到相应属性
+				if (details.length >= 1 && details[0])
+					component.origin = details[0];
+				if (details.length >= 2 && details[1])
+					component.process = details[1];
+				if (details.length >= 3 && details[2])
+					component.variety = details[2];
+
+				bean.blendComponents.push(component);
+			}
 		}
 	}
 
