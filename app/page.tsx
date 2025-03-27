@@ -603,6 +603,15 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                     bean.roastLevel = '浅度烘焙';
                 }
 
+                // 处理拼配成分，确保百分比是数字类型
+                if (bean.blendComponents && Array.isArray(bean.blendComponents)) {
+                    bean.blendComponents = bean.blendComponents.map((comp: any) => ({
+                        ...comp,
+                        percentage: typeof comp.percentage === 'string' ?
+                            parseInt(comp.percentage, 10) : comp.percentage
+                    }));
+                }
+
                 // 添加到数据库
                 await CoffeeBeanManager.addBean(bean);
                 importCount++;
