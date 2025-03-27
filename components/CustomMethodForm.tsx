@@ -246,7 +246,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         // 所有新添加的步骤都使用空值，不预设注水方式
         const newStage: Stage = {
             time: 0,
-            pourTime: 0,
+            // pourTime默认为undefined而不是0
             label: '',
             water: '',
             detail: '',
@@ -872,9 +872,9 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                                                         const previousTime = index > 0 ? method.params.stages[index - 1].time || 0 : 0;
                                                         const stageTime = time - previousTime;
 
-                                                        // 只有当注水时间未设置或大于阶段时间时才自动设置
-                                                        if (!stage.pourTime || stageTime < stage.pourTime) {
-                                                            handleStageChange(index, 'pourTime', stageTime > 0 ? stageTime : 0);
+                                                        // 如果时长有效且注水时长未设置或超出合理范围，则自动设置注水时长
+                                                        if (stageTime > 0 && (!stage.pourTime || stage.pourTime > stageTime)) {
+                                                            handleStageChange(index, 'pourTime', stageTime);
                                                         }
                                                     }}
                                                     onFocus={(e) => e.target.select()}
@@ -889,11 +889,73 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                                                     type="number"
                                                     min="0"
                                                     step="1"
-                                                    value={stage.pourTime || ''}
+                                                    value={stage.pourTime !== undefined && stage.pourTime !== null ? stage.pourTime : ''}
                                                     onChange={(e) => {
                                                         const value = e.target.value
-                                                        handleStageChange(index, 'pourTime', value ? parseInt(value) : 0)
+                                                        // 允许为真正的空值
+                                                        if (value === '') {
+                                                            // 删除pourTime属性而不是设置为null
+                                                            const newStage = { ...stage };
+                                                            delete newStage.pourTime;
+
+                                                            const newStages = [...method.params.stages];
+                                                            newStages[index] = newStage;
+
+                                                            setMethod({
+                                                                ...method,
+                                                                params: {
+                                                                    ...method.params,
+                                                                    stages: newStages,
+                                                                },
+                                                            });
+                                                        } else {
+                                                            // 获取用户输入的值
+                                                            const pourTime = parseInt(value);
+
+                                                            // 计算当前阶段的实际可用时长
+                                                            const previousTime = index > 0 ? method.params.stages[index - 1].time || 0 : 0;
+                                                            const stageTime = stage.time - previousTime;
+
+                                                            // 如果注水时长超过阶段时长，则修正为阶段时长
+                                                            if (pourTime > stageTime && stageTime > 0) {
+                                                                handleStageChange(index, 'pourTime', stageTime);
+                                                            } else {
+                                                                handleStageChange(index, 'pourTime', pourTime);
+                                                            }
+                                                        }
                                                     }}
+                                                    onBlur={(e) => {
+                                                        // 在失去焦点时再次验证和调整
+                                                        const value = e.target.value;
+
+                                                        // 如果输入为空，则删除pourTime属性
+                                                        if (!value.trim()) {
+                                                            const newStage = { ...stage };
+                                                            delete newStage.pourTime;
+
+                                                            const newStages = [...method.params.stages];
+                                                            newStages[index] = newStage;
+
+                                                            setMethod({
+                                                                ...method,
+                                                                params: {
+                                                                    ...method.params,
+                                                                    stages: newStages,
+                                                                },
+                                                            });
+                                                            return;
+                                                        }
+
+                                                        // 如果有值，确保不超过阶段时长
+                                                        const pourTime = parseInt(value);
+                                                        const previousTime = index > 0 ? method.params.stages[index - 1].time || 0 : 0;
+                                                        const stageTime = stage.time - previousTime;
+
+                                                        if (pourTime > stageTime && stageTime > 0) {
+                                                            handleStageChange(index, 'pourTime', stageTime);
+                                                        }
+                                                    }}
+                                                    placeholder="可选"
                                                     className="w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
                                                 />
                                             </div>
@@ -926,7 +988,14 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
 
                                                             // 直接使用用户输入的值
                                                             const water = parseInt(e.target.value);
-                                                            handleStageChange(index, 'water', `${water}`);
+
+                                                            // 确保累计水量不超过总水量
+                                                            const totalWater = parseInt(method.params.water || '0');
+                                                            if (water > totalWater) {
+                                                                handleStageChange(index, 'water', `${totalWater}`);
+                                                            } else {
+                                                                handleStageChange(index, 'water', `${water}`);
+                                                            }
                                                         }}
                                                         onBlur={(e) => {
                                                             // 清除编辑状态
@@ -1060,6 +1129,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                                 !!stage.water.trim() &&
                                 !!stage.detail.trim() &&
                                 !!stage.pourType;
+                            // 注水时长可以为空或0，不再作为必填项
 
                             // 如果是聪明杯，验证阀门状态
                             if (selectedEquipment === 'CleverDripper') {
