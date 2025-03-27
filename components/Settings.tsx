@@ -51,6 +51,67 @@ const Settings: React.FC<SettingsProps> = ({
     // 获取主题相关方法
     const { theme, setTheme } = useTheme()
 
+    // 添加主题颜色更新的 Effect
+    useEffect(() => {
+        const updateThemeColor = () => {
+            const themeColorMeta = document.querySelectorAll('meta[name="theme-color"]');
+
+            // 如果没有找到 meta 标签，创建它们
+            if (themeColorMeta.length === 0) {
+                const lightMeta = document.createElement('meta');
+                lightMeta.name = 'theme-color';
+                lightMeta.content = '#fafafa';
+                lightMeta.media = '(prefers-color-scheme: light)';
+                document.head.appendChild(lightMeta);
+
+                const darkMeta = document.createElement('meta');
+                darkMeta.name = 'theme-color';
+                darkMeta.content = '#171717';
+                darkMeta.media = '(prefers-color-scheme: dark)';
+                document.head.appendChild(darkMeta);
+            }
+
+            if (theme === 'system') {
+                // 对于系统模式，重新创建两个 meta 标签
+                themeColorMeta.forEach(meta => meta.remove());
+
+                const lightMeta = document.createElement('meta');
+                lightMeta.name = 'theme-color';
+                lightMeta.content = '#fafafa';
+                lightMeta.media = '(prefers-color-scheme: light)';
+                document.head.appendChild(lightMeta);
+
+                const darkMeta = document.createElement('meta');
+                darkMeta.name = 'theme-color';
+                darkMeta.content = '#171717';
+                darkMeta.media = '(prefers-color-scheme: dark)';
+                document.head.appendChild(darkMeta);
+            } else {
+                // 对于明确的主题选择，使用单个 meta 标签
+                themeColorMeta.forEach(meta => meta.remove());
+                const meta = document.createElement('meta');
+                meta.name = 'theme-color';
+                meta.content = theme === 'light' ? '#fafafa' : '#171717';
+                document.head.appendChild(meta);
+            }
+        };
+
+        updateThemeColor();
+
+        // 如果是系统模式，添加系统主题变化的监听
+        let mediaQuery: MediaQueryList | null = null;
+        if (theme === 'system') {
+            mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+            const handleChange = () => {
+                updateThemeColor();
+            };
+            mediaQuery.addEventListener('change', handleChange);
+            return () => {
+                mediaQuery?.removeEventListener('change', handleChange);
+            };
+        }
+    }, [theme]);
+
     // 初始化时检查TextZoom功能是否可用并加载当前缩放级别
     useEffect(() => {
         // 检查TextZoom功能是否可用
