@@ -20,6 +20,11 @@ const config: CapacitorConfig = {
 			splashFullScreen: true,
 			splashImmersive: true,
 		},
+		Keyboard: {
+			resize: "body",
+			style: "default",
+			resizeOnFullScreen: true,
+		},
 	},
 };
 
