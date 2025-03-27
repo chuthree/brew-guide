@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* 添加自定义暗黑模式变体，允许手动切换暗黑模式 */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --foreground: #000;
   --background: #FAFAFA;
@@ -14,12 +17,20 @@
   --font-mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
 }
 
+/* 当系统偏好为暗黑模式时的样式，仅当使用系统主题时生效 */
 @media (prefers-color-scheme: dark) {
   :root {
-    --foreground: #fff;
-    --background: #171717;
-    --rsbs-backdrop-bg: rgba(0, 0, 0, 0.5);
+    --foreground: #000;
+    --background: #FAFAFA;
+    --rsbs-backdrop-bg: rgba(0, 0, 0, 0.3);
   }
+}
+
+/* 当手动设置为暗黑模式时的样式 */
+.dark {
+  --foreground: #fff;
+  --background: #171717;
+  --rsbs-backdrop-bg: rgba(0, 0, 0, 0.5);
 }
 
 @layer base {

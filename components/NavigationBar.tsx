@@ -148,36 +148,6 @@ const StepIndicator = ({
 
     const currentIndex = getStepIndex(currentStep);
 
-    // 使用状态来存储当前主题模式
-    const [isDarkMode, setIsDarkMode] = useState(false);
-
-    // 初始化时检测主题并设置监听
-    useEffect(() => {
-        // 检查当前主题
-        const checkDarkMode = () => {
-            const isDark = document.documentElement.classList.contains('dark');
-            setIsDarkMode(isDark);
-        };
-
-        // 初始检查
-        checkDarkMode();
-
-        // 创建MutationObserver来监听class变化
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                if (mutation.attributeName === 'class') {
-                    checkDarkMode();
-                }
-            });
-        });
-
-        // 开始监听
-        observer.observe(document.documentElement, { attributes: true });
-
-        // 清理
-        return () => observer.disconnect();
-    }, []);
-
     // 处理步骤点击
     const handleStepClick = (step: BrewingStep) => {
         if (!disabledSteps.includes(step) && onStepClick) {
@@ -213,16 +183,10 @@ const StepIndicator = ({
                         />
                         {index < steps.length - 1 && (
                             <motion.div
-                                className="h-px w-full max-w-[20px] sm:max-w-[30px]"
-                                style={{
-                                    backgroundColor: stepIndex < currentIndex
-                                        ? isDarkMode
-                                            ? 'rgb(107, 114, 128)' // dark:neutral-500
-                                            : 'rgb(156, 163, 175)' // neutral-400
-                                        : isDarkMode
-                                            ? 'rgb(64, 64, 64)' // dark:neutral-700
-                                            : 'rgb(229, 231, 235)' // neutral-200
-                                }}
+                                className={`h-px w-full max-w-[20px] sm:max-w-[30px] ${stepIndex < currentIndex
+                                    ? 'bg-neutral-400 dark:bg-neutral-500'
+                                    : 'bg-neutral-200 dark:bg-neutral-700'
+                                    }`}
                                 transition={{ duration: 0.26 }}
                             />
                         )}

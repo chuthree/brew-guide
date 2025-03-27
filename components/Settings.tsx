@@ -6,6 +6,7 @@ import { Storage } from '@/lib/storage'
 import DataManager from './DataManager'
 import hapticsUtils from '@/lib/haptics'
 import textZoomUtils from '@/lib/textZoom'
+import { useTheme } from 'next-themes'
 
 // 定义设置选项接口
 export interface SettingsOptions {
@@ -46,6 +47,9 @@ const Settings: React.FC<SettingsProps> = ({
 
     // 添加检查TextZoom是否可用的状态
     const [isTextZoomEnabled, setIsTextZoomEnabled] = useState(false)
+
+    // 获取主题相关方法
+    const { theme, setTheme } = useTheme()
 
     // 初始化时检查TextZoom功能是否可用并加载当前缩放级别
     useEffect(() => {
@@ -173,13 +177,69 @@ const Settings: React.FC<SettingsProps> = ({
                         </div>
                     </div>
 
-                    {/* 文本缩放设置 - 只在原生应用中显示 */}
-                    {isTextZoomEnabled && (
-                        <div className="space-y-3">
-                            <h3 className="text-xs font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
-                                显示
-                            </h3>
-                            <div className="space-y-2">
+                    {/* 显示设置 */}
+                    <div className="space-y-3">
+                        <h3 className="text-xs font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+                            显示
+                        </h3>
+
+                        {/* 外观模式切换 */}
+                        <div className="space-y-2">
+                            <div className="text-sm text-neutral-600 dark:text-neutral-400">
+                                外观模式
+                            </div>
+                            <div className="flex rounded-md bg-neutral-100 dark:bg-neutral-700">
+                                <button
+                                    className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${theme === 'light'
+                                        ? 'bg-neutral-800 text-white dark:bg-neutral-200 dark:text-neutral-800'
+                                        : 'text-neutral-500 hover:bg-neutral-200 dark:text-neutral-400 dark:hover:bg-neutral-600'
+                                        }`}
+                                    onClick={() => {
+                                        setTheme('light')
+                                        // 触发震动反馈
+                                        if (settings.hapticFeedback) {
+                                            hapticsUtils.light();
+                                        }
+                                    }}
+                                >
+                                    浅色
+                                </button>
+                                <button
+                                    className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${theme === 'dark'
+                                        ? 'bg-neutral-800 text-white dark:bg-neutral-200 dark:text-neutral-800'
+                                        : 'text-neutral-500 hover:bg-neutral-200 dark:text-neutral-400 dark:hover:bg-neutral-600'
+                                        }`}
+                                    onClick={() => {
+                                        setTheme('dark')
+                                        // 触发震动反馈
+                                        if (settings.hapticFeedback) {
+                                            hapticsUtils.light();
+                                        }
+                                    }}
+                                >
+                                    深色
+                                </button>
+                                <button
+                                    className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${theme === 'system'
+                                        ? 'bg-neutral-800 text-white dark:bg-neutral-200 dark:text-neutral-800'
+                                        : 'text-neutral-500 hover:bg-neutral-200 dark:text-neutral-400 dark:hover:bg-neutral-600'
+                                        }`}
+                                    onClick={() => {
+                                        setTheme('system')
+                                        // 触发震动反馈
+                                        if (settings.hapticFeedback) {
+                                            hapticsUtils.light();
+                                        }
+                                    }}
+                                >
+                                    跟随系统
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* 文本缩放设置 - 只在原生应用中显示 */}
+                        {isTextZoomEnabled && (
+                            <div className="space-y-2 mt-3">
                                 <div className="text-sm text-neutral-600 dark:text-neutral-400">
                                     文本大小
                                 </div>
@@ -223,8 +283,8 @@ const Settings: React.FC<SettingsProps> = ({
                                     />
                                 </div>
                             </div>
-                        </div>
-                    )}
+                        )}
+                    </div>
 
                     {/* 研磨度设置 */}
                     <div className="space-y-3">
