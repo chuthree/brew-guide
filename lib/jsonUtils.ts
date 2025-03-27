@@ -200,7 +200,27 @@ export function extractJsonFromText(
 	text: string
 ): Method | CoffeeBean | BrewingNote | null {
 	try {
-		// 清理输入的JSON字符串
+		// 首先检查是否为自然语言格式的文本，避免【】符号导致JSON解析错误
+		// 直接检查文本是否包含特定标识，而不是先尝试JSON解析
+		const originalText = text.trim();
+
+		// 检查是否是自然语言文本格式
+		if (originalText.startsWith("【冲煮方案】")) {
+			console.log("检测到冲煮方案文本格式");
+			return parseMethodText(originalText);
+		}
+
+		if (originalText.startsWith("【咖啡豆】")) {
+			console.log("检测到咖啡豆文本格式");
+			return parseCoffeeBeanText(originalText);
+		}
+
+		if (originalText.startsWith("【冲煮记录】")) {
+			console.log("检测到冲煮记录文本格式");
+			return parseBrewingNoteText(originalText);
+		}
+
+		// 如果不是明确的文本格式，尝试按JSON处理
 		const cleanedText = cleanJsonString(text);
 
 		// 检查是否是普通JSON
@@ -262,8 +282,7 @@ export function extractJsonFromText(
 			// 不是有效JSON，继续尝试从文本中提取
 		}
 
-		// 增强自然语言格式检测 - 放宽检测条件
-
+		// 增强自然语言格式检测 - 当JSON解析失败后进行
 		// 尝试解析为冲煮记录格式
 		if (
 			cleanedText.includes("冲煮记录") ||
@@ -969,10 +988,10 @@ function parseMethodText(text: string): Method | null {
 
 					let detail = "";
 
-					// 检查下一行是否是详细信息
+					// 检查下一行是否是详细信息 - 通过检查是否有缩进（以空格开头）
 					if (
 						i + 1 < stageLines.length &&
-						stageLines[i + 1].trim().startsWith(" ")
+						stageLines[i + 1].startsWith(" ")
 					) {
 						detail = stageLines[i + 1].trim();
 						i++; // 跳过详细信息行
