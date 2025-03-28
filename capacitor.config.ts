@@ -1,4 +1,5 @@
 import type { CapacitorConfig } from "@capacitor/cli";
+import { KeyboardResize, KeyboardStyle } from "@capacitor/keyboard";
 
 const config: CapacitorConfig = {
 	appId: "com.brewguide.app",
@@ -21,8 +22,8 @@ const config: CapacitorConfig = {
 			splashImmersive: true,
 		},
 		Keyboard: {
-			resize: "body",
-			style: "default",
+			resize: KeyboardResize.Native,
+			style: KeyboardStyle.Default,
 			resizeOnFullScreen: true,
 		},
 	},

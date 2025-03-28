@@ -15,6 +15,7 @@
   --rsbs-overlay-rounded: 16px;
   --font-sans: 'Geist Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
   --font-mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  --keyboard-height: 0px;
 }
 
 /* 当系统偏好为暗黑模式时的样式，仅当使用系统主题时生效 */
@@ -145,4 +146,65 @@ body {
   overflow-y: auto;
   height: 100%;
   padding-bottom: 0 !important;
+}
+
+/* 键盘相关样式 */
+.keyboard-is-open {
+  /* 当键盘打开时应用的样式 */
+  padding-bottom: var(--keyboard-height);
+}
+
+/* iOS 键盘打开时，确保内容不会被键盘遮挡 */
+.keyboard-is-open .overflow-y-auto,
+.keyboard-is-open .scroll-with-bottom-bar,
+.keyboard-is-open .brew-content-scroll,
+.keyboard-is-open .custom-form-scroll,
+.keyboard-is-open .visualization-scroll {
+  padding-bottom: calc(var(--keyboard-height) + 20px);
+  margin-bottom: var(--keyboard-height);
+}
+
+/* 输入框获取焦点时的样式 */
+input:focus, textarea:focus, [contenteditable]:focus {
+  position: relative;
+  z-index: 10;
+}
+
+.input-with-keyboard-adjustment {
+  transition: padding-bottom 0.25s ease;
+}
+
+.keyboard-is-open .input-with-keyboard-adjustment {
+  padding-bottom: var(--keyboard-height);
+}
+
+/* 确保iOS中固定定位元素不受键盘影响 */
+.ios-fixed-bottom {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+}
+
+.keyboard-is-open .ios-fixed-bottom {
+  bottom: var(--keyboard-height);
+  transition: bottom 0.25s ease;
+}
+
+/* 防止 iOS 上键盘弹出时页面抖动 */
+html, body {
+  height: 100%;
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 当键盘显示时，防止 iOS 上的滚动容器被推上去 */
+@supports (-webkit-touch-callout: none) {
+  .keyboard-is-open .bottom-action-bar {
+    transform: translateY(calc(-1 * var(--keyboard-height)));
+    transition: transform 0.25s ease;
+  }
 }
