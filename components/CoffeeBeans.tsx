@@ -31,10 +31,58 @@ type SortOption = typeof SORT_OPTIONS[keyof typeof SORT_OPTIONS];
 
 // 排序选项的显示名称
 const SORT_LABELS: Record<SortOption, string> = {
-    [SORT_OPTIONS.REMAINING_DAYS_ASC]: '赏味期 (近→远)',
-    [SORT_OPTIONS.REMAINING_DAYS_DESC]: '赏味期 (远→近)',
-    [SORT_OPTIONS.NAME_ASC]: '名称 (A→Z)',
-    [SORT_OPTIONS.NAME_DESC]: '名称 (Z→A)',
+    [SORT_OPTIONS.REMAINING_DAYS_ASC]: '赏味期',
+    [SORT_OPTIONS.REMAINING_DAYS_DESC]: '赏味期',
+    [SORT_OPTIONS.NAME_ASC]: '名称',
+    [SORT_OPTIONS.NAME_DESC]: '名称',
+};
+
+// 排序方向图标
+const SORT_ICONS: Record<SortOption, React.ReactNode> = {
+    [SORT_OPTIONS.REMAINING_DAYS_ASC]: (
+        <svg className="w-3 h-3 ml-1.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="4" y1="6" x2="11" y2="6" />
+            <line x1="4" y1="12" x2="11" y2="12" />
+            <line x1="4" y1="18" x2="13" y2="18" />
+            <polyline points="15 9 18 6 21 9" />
+            <line x1="18" y1="6" x2="18" y2="18" />
+        </svg>
+    ),
+    [SORT_OPTIONS.REMAINING_DAYS_DESC]: (
+        <svg className="w-3 h-3 ml-1.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="4" y1="6" x2="11" y2="6" />
+            <line x1="4" y1="12" x2="11" y2="12" />
+            <line x1="4" y1="18" x2="13" y2="18" />
+            <polyline points="15 15 18 18 21 15" />
+            <line x1="18" y1="6" x2="18" y2="18" />
+        </svg>
+    ),
+    [SORT_OPTIONS.NAME_ASC]: (
+        <svg className="w-3 h-3 ml-1.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="4" y1="6" x2="11" y2="6" />
+            <line x1="4" y1="12" x2="11" y2="12" />
+            <line x1="4" y1="18" x2="13" y2="18" />
+            <polyline points="15 9 18 6 21 9" />
+            <line x1="18" y1="6" x2="18" y2="18" />
+        </svg>
+    ),
+    [SORT_OPTIONS.NAME_DESC]: (
+        <svg className="w-3 h-3 ml-1.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="4" y1="6" x2="11" y2="6" />
+            <line x1="4" y1="12" x2="11" y2="12" />
+            <line x1="4" y1="18" x2="13" y2="18" />
+            <polyline points="15 15 18 18 21 15" />
+            <line x1="18" y1="6" x2="18" y2="18" />
+        </svg>
+    ),
+};
+
+// 榜单排序选项的显示标签
+const RANKING_VIEW_LABELS: Record<SortOption, string> = {
+    [SORT_OPTIONS.REMAINING_DAYS_ASC]: '评分',
+    [SORT_OPTIONS.REMAINING_DAYS_DESC]: '评分',
+    [SORT_OPTIONS.NAME_ASC]: '名称',
+    [SORT_OPTIONS.NAME_DESC]: '名称',
 };
 
 // 视图模式定义
@@ -706,12 +754,12 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                 >
                                     <SelectTrigger
                                         variant="minimal"
-                                        className="w-auto min-w-[90px] tracking-wide text-neutral-600 dark:text-neutral-300 transition-colors hover:text-neutral-800 dark:hover:text-neutral-200"
+                                        className="w-auto min-w-[82px] tracking-wide text-neutral-600 dark:text-neutral-300 transition-colors hover:text-neutral-800 dark:hover:text-neutral-200 text-right"
                                     >
-                                        <div className="flex items-center">
+                                        <div className="flex items-center justify-end w-full">
                                             <SelectValue />
                                             <svg
-                                                className="ml-1.5 w-3.5 h-3.5 opacity-80"
+                                                className="w-3 h-3 ml-1.5"
                                                 viewBox="0 0 24 24"
                                                 fill="none"
                                                 stroke="currentColor"
@@ -719,7 +767,12 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                 strokeLinecap="round"
                                                 strokeLinejoin="round"
                                             >
-                                                <path d="M6 9l6 6 6-6" />
+                                                <line x1="4" y1="6" x2="11" y2="6" />
+                                                <line x1="4" y1="12" x2="11" y2="12" />
+                                                <line x1="4" y1="18" x2="13" y2="18" />
+                                                <line x1="15" y1="6" x2="20" y2="6" />
+                                                <line x1="15" y1="12" x2="20" y2="12" />
+                                                <line x1="15" y1="18" x2="20" y2="18" />
                                             </svg>
                                         </div>
                                     </SelectTrigger>
@@ -748,69 +801,47 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                     >
                                         <SelectTrigger
                                             variant="minimal"
-                                            className="w-auto min-w-[100px] tracking-wide text-neutral-600 dark:text-neutral-300 transition-colors hover:text-neutral-800 dark:hover:text-neutral-200"
+                                            className="w-auto min-w-[65px] tracking-wide text-neutral-600 dark:text-neutral-300 transition-colors hover:text-neutral-800 dark:hover:text-neutral-200 text-right"
                                         >
-                                            <div className="flex items-center">
-                                                <SelectValue />
-                                                <svg
-                                                    className="ml-1.5 w-3.5 h-3.5 opacity-80"
-                                                    viewBox="0 0 24 24"
-                                                    fill="none"
-                                                    stroke="currentColor"
-                                                    strokeWidth="2"
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                >
-                                                    <path d="M6 9l6 6 6-6" />
-                                                </svg>
+                                            <div className="flex items-center justify-end w-full">
+                                                {viewMode === VIEW_OPTIONS.RANKING 
+                                                    ? RANKING_VIEW_LABELS[sortOption] 
+                                                    : SORT_LABELS[sortOption]
+                                                }
+                                                {SORT_ICONS[sortOption]}
                                             </div>
                                         </SelectTrigger>
                                         <SelectContent
                                             position="popper"
                                             sideOffset={5}
-                                            className="border-neutral-200/70 dark:border-neutral-800/70 shadow-lg backdrop-blur-sm bg-white/95 dark:bg-neutral-900/95 rounded-lg overflow-hidden"
+                                            className="border-neutral-200/70 dark:border-neutral-800/70 shadow-lg backdrop-blur-sm bg-white/95 dark:bg-neutral-900/95 rounded-lg overflow-hidden min-w-[110px]"
                                         >
                                             {viewMode === VIEW_OPTIONS.RANKING ? (
-                                                // 榜单视图的排序选项
-                                                <>
-                                                    <SelectItem
-                                                        key={SORT_OPTIONS.REMAINING_DAYS_ASC}
-                                                        value={SORT_OPTIONS.REMAINING_DAYS_ASC}
-                                                        className="tracking-wide text-neutral-600 dark:text-neutral-300 data-[highlighted]:text-neutral-800 dark:data-[highlighted]:text-neutral-100 transition-colors font-medium"
-                                                    >
-                                                        评分 (高→低)
-                                                    </SelectItem>
-                                                    <SelectItem
-                                                        key={SORT_OPTIONS.REMAINING_DAYS_DESC}
-                                                        value={SORT_OPTIONS.REMAINING_DAYS_DESC}
-                                                        className="tracking-wide text-neutral-600 dark:text-neutral-300 data-[highlighted]:text-neutral-800 dark:data-[highlighted]:text-neutral-100 transition-colors font-medium"
-                                                    >
-                                                        评分 (低→高)
-                                                    </SelectItem>
-                                                    <SelectItem
-                                                        key={SORT_OPTIONS.NAME_ASC}
-                                                        value={SORT_OPTIONS.NAME_ASC}
-                                                        className="tracking-wide text-neutral-600 dark:text-neutral-300 data-[highlighted]:text-neutral-800 dark:data-[highlighted]:text-neutral-100 transition-colors font-medium"
-                                                    >
-                                                        名称 (A→Z)
-                                                    </SelectItem>
-                                                    <SelectItem
-                                                        key={SORT_OPTIONS.NAME_DESC}
-                                                        value={SORT_OPTIONS.NAME_DESC}
-                                                        className="tracking-wide text-neutral-600 dark:text-neutral-300 data-[highlighted]:text-neutral-800 dark:data-[highlighted]:text-neutral-100 transition-colors font-medium"
-                                                    >
-                                                        名称 (Z→A)
-                                                    </SelectItem>
-                                                </>
-                                            ) : (
-                                                // 仓库视图的排序选项
+                                                // 榜单视图的排序选项 - 也使用图标
                                                 Object.values(SORT_OPTIONS).map((value) => (
                                                     <SelectItem
                                                         key={value}
                                                         value={value}
                                                         className="tracking-wide text-neutral-600 dark:text-neutral-300 data-[highlighted]:text-neutral-800 dark:data-[highlighted]:text-neutral-100 transition-colors font-medium"
                                                     >
-                                                        {SORT_LABELS[value]}
+                                                        <div className="flex items-center justify-between w-full">
+                                                            <span>{RANKING_VIEW_LABELS[value]}</span>
+                                                            {SORT_ICONS[value]}
+                                                        </div>
+                                                    </SelectItem>
+                                                ))
+                                            ) : (
+                                                // 仓库视图的排序选项 - 使用图标
+                                                Object.values(SORT_OPTIONS).map((value) => (
+                                                    <SelectItem
+                                                        key={value}
+                                                        value={value}
+                                                        className="tracking-wide text-neutral-600 dark:text-neutral-300 data-[highlighted]:text-neutral-800 dark:data-[highlighted]:text-neutral-100 transition-colors font-medium"
+                                                    >
+                                                        <div className="flex items-center justify-between w-full">
+                                                            <span>{SORT_LABELS[value]}</span>
+                                                            {SORT_ICONS[value]}
+                                                        </div>
                                                     </SelectItem>
                                                 ))
                                             )}
