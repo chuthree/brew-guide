@@ -167,8 +167,7 @@ const ImportBeanModal: React.FC<ImportBeanModalProps> = ({
 - type: 类型，必须为"单品"或"拼配"
 - notes: 备注信息
 - startDay: 养豆期天数，纯数字
-- endDay: 最佳赏味期天数，纯数字
-- maxDay: 赏味期结束天数，纯数字
+- endDay: 赏味期天数，纯数字
 - blendComponents: 拼配成分，格式[{"percentage":比例(纯数字),"origin":"产地","process":"处理法","variety":"品种"}]
 
 要求：

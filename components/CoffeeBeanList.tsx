@@ -24,11 +24,10 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
     // 获取阶段数值用于排序
     const getPhaseValue = (phase: string): number => {
         switch (phase) {
-            case '最佳赏味期': return 0;
-            case '赏味期': return 1;
-            case '养豆期': return 2;
+            case '赏味期': return 0;
+            case '养豆期': return 1;
             case '衰退期':
-            default: return 3;
+            default: return 2;
         }
     }
 
@@ -48,23 +47,19 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
         // 优先使用自定义赏味期参数，如果没有则根据烘焙度计算
         let startDay = bean.startDay || 0;
         let endDay = bean.endDay || 0;
-        let maxDay = bean.maxDay || 0;
 
         // 如果没有自定义值，则根据烘焙度设置默认值
-        if (startDay === 0 && endDay === 0 && maxDay === 0) {
+        if (startDay === 0 && endDay === 0) {
             if (bean.roastLevel?.includes('浅')) {
                 startDay = 7;
                 endDay = 30;
-                maxDay = 60;
             } else if (bean.roastLevel?.includes('深')) {
                 startDay = 14;
                 endDay = 60;
-                maxDay = 90;
             } else {
                 // 默认为中烘焙
                 startDay = 10;
                 endDay = 30;
-                maxDay = 60;
             }
         }
 
@@ -75,11 +70,8 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
             phase = '养豆期';
             remainingDays = startDay - daysSinceRoast;
         } else if (daysSinceRoast <= endDay) {
-            phase = '最佳赏味期';
-            remainingDays = endDay - daysSinceRoast;
-        } else if (daysSinceRoast <= maxDay) {
             phase = '赏味期';
-            remainingDays = maxDay - daysSinceRoast;
+            remainingDays = endDay - daysSinceRoast;
         } else {
             phase = '衰退期';
             remainingDays = 0;
@@ -211,23 +203,19 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
                         // 优先使用自定义赏味期参数，如果没有则根据烘焙度计算
                         let startDay = bean.startDay || 0;
                         let endDay = bean.endDay || 0;
-                        let maxDay = bean.maxDay || 0;
 
                         // 如果没有自定义值，则根据烘焙度设置默认值
-                        if (startDay === 0 && endDay === 0 && maxDay === 0) {
+                        if (startDay === 0 && endDay === 0) {
                             if (bean.roastLevel?.includes('浅')) {
                                 startDay = 7;
                                 endDay = 30;
-                                maxDay = 60;
                             } else if (bean.roastLevel?.includes('深')) {
                                 startDay = 14;
                                 endDay = 60;
-                                maxDay = 90;
                             } else {
                                 // 默认为中烘焙
                                 startDay = 10;
                                 endDay = 30;
-                                maxDay = 60;
                             }
                         }
 
@@ -236,16 +224,12 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
                             freshStatus = `(养豆期)`;
                             statusClass = "text-neutral-500 dark:text-neutral-400";
                         } else if (daysSinceRoast <= endDay) {
-                            // 处于最佳赏味期
-                            freshStatus = `(最佳赏味期)`;
-                            statusClass = "text-emerald-500 dark:text-emerald-400";
-                        } else if (daysSinceRoast <= maxDay) {
-                            // 已过最佳赏味期但仍可饮用
+                            // 处于赏味期
                             freshStatus = `(赏味期)`;
-                            statusClass = "text-neutral-500 dark:text-neutral-400";
+                            statusClass = "text-emerald-500 dark:text-emerald-400";
                         } else {
                             // 已超过推荐饮用期限
-                            freshStatus = "(赏味衰退期)";
+                            freshStatus = "(衰退期)";
                             statusClass = "text-neutral-500 dark:text-neutral-400";
                         }
                     } catch {

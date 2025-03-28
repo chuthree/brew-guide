@@ -92,11 +92,10 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
     // 获取阶段数值用于排序
     const getPhaseValue = (phase: string): number => {
         switch (phase) {
-            case '最佳赏味期': return 0;
-            case '赏味期': return 1;
-            case '养豆期': return 2;
+            case '赏味期': return 0;
+            case '养豆期': return 1;
             case '衰退期':
-            default: return 3;
+            default: return 2;
         }
     }
 
@@ -116,23 +115,19 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
         // 优先使用自定义赏味期参数，如果没有则根据烘焙度计算
         let startDay = bean.startDay || 0;
         let endDay = bean.endDay || 0;
-        let maxDay = bean.maxDay || 0;
 
         // 如果没有自定义值，则根据烘焙度设置默认值
-        if (startDay === 0 && endDay === 0 && maxDay === 0) {
+        if (startDay === 0 && endDay === 0) {
             if (bean.roastLevel?.includes('浅')) {
                 startDay = 7;
                 endDay = 30;
-                maxDay = 60;
             } else if (bean.roastLevel?.includes('深')) {
                 startDay = 14;
                 endDay = 60;
-                maxDay = 90;
             } else {
                 // 默认为中烘焙
                 startDay = 10;
                 endDay = 30;
-                maxDay = 60;
             }
         }
 
@@ -143,11 +138,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
             phase = '养豆期';
             remainingDays = startDay - daysSinceRoast;
         } else if (daysSinceRoast <= endDay) {
-            phase = '最佳赏味期';
-            remainingDays = endDay - daysSinceRoast;
-        } else if (daysSinceRoast <= maxDay) {
             phase = '赏味期';
-            remainingDays = maxDay - daysSinceRoast;
+            remainingDays = endDay - daysSinceRoast;
         } else {
             phase = '衰退期';
             remainingDays = 0;
@@ -443,7 +435,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                 variety: bean.variety,
                 price: bean.price,
                 type: bean.type,
-                notes: bean.notes
+                notes: bean.notes,
+                startDay: bean.startDay,
+                endDay: bean.endDay
             };
 
             // 如果是拼配豆，添加拼配成分信息
@@ -1162,23 +1156,19 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                                         // 优先使用自定义赏味期参数，如果没有则根据烘焙度计算
                                                                         let startDay = bean.startDay || 0;
                                                                         let endDay = bean.endDay || 0;
-                                                                        let maxDay = bean.maxDay || 0;
 
                                                                         // 如果没有自定义值，则根据烘焙度设置默认值
-                                                                        if (startDay === 0 && endDay === 0 && maxDay === 0) {
+                                                                        if (startDay === 0 && endDay === 0) {
                                                                             if (bean.roastLevel?.includes('浅')) {
                                                                                 startDay = 7;
                                                                                 endDay = 30;
-                                                                                maxDay = 60;
                                                                             } else if (bean.roastLevel?.includes('深')) {
                                                                                 startDay = 14;
                                                                                 endDay = 60;
-                                                                                maxDay = 90;
                                                                             } else {
                                                                                 // 默认为中烘焙
                                                                                 startDay = 10;
                                                                                 endDay = 30;
-                                                                                maxDay = 60;
                                                                             }
                                                                         }
 
@@ -1186,9 +1176,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                                         if (daysSinceRoast < startDay) {
                                                                             status = `养豆期剩余 ${startDay - daysSinceRoast}天`;
                                                                         } else if (daysSinceRoast <= endDay) {
-                                                                            status = `最佳期剩余 ${endDay - daysSinceRoast}天`;
-                                                                        } else if (daysSinceRoast <= maxDay) {
-                                                                            status = `赏味期剩余 ${maxDay - daysSinceRoast}天`;
+                                                                            status = `赏味期剩余 ${endDay - daysSinceRoast}天`;
                                                                         } else {
                                                                             status = '已衰退';
                                                                         }
@@ -1216,31 +1204,26 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                                         // 优先使用自定义赏味期参数，如果没有则根据烘焙度计算
                                                                         let startDay = bean.startDay || 0;
                                                                         let endDay = bean.endDay || 0;
-                                                                        let maxDay = bean.maxDay || 0;
 
                                                                         // 如果没有自定义值，则根据烘焙度设置默认值
-                                                                        if (startDay === 0 && endDay === 0 && maxDay === 0) {
+                                                                        if (startDay === 0 && endDay === 0) {
                                                                             if (bean.roastLevel?.includes('浅')) {
                                                                                 startDay = 7;
                                                                                 endDay = 30;
-                                                                                maxDay = 60;
                                                                             } else if (bean.roastLevel?.includes('深')) {
                                                                                 startDay = 14;
                                                                                 endDay = 60;
-                                                                                maxDay = 90;
                                                                             } else {
                                                                                 // 默认为中烘焙
                                                                                 startDay = 10;
                                                                                 endDay = 30;
-                                                                                maxDay = 60;
                                                                             }
                                                                         }
 
                                                                         // 计算各区间宽度百分比
-                                                                        const preFlavorPercent = (startDay / maxDay) * 100;
-                                                                        const flavorPercent = ((endDay - startDay) / maxDay) * 100;
-                                                                        const postFlavorPercent = ((maxDay - endDay) / maxDay) * 100;
-                                                                        const progressPercent = Math.min((daysSinceRoast / maxDay) * 100, 100);
+                                                                        const preFlavorPercent = (startDay / endDay) * 100;
+                                                                        const flavorPercent = ((endDay - startDay) / endDay) * 100;
+                                                                        const progressPercent = Math.min((daysSinceRoast / endDay) * 100, 100);
 
                                                                         // 判断当前阶段
                                                                         let fillColor = 'bg-neutral-600 dark:bg-neutral-400';
@@ -1254,7 +1237,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
 
                                                                         return (
                                                                             <>
-                                                                                {/* 赏味期前区间 */}
+                                                                                {/* 养豆期区间 */}
                                                                                 <motion.div
                                                                                     initial={{ width: 0, opacity: 0 }}
                                                                                     animate={{ width: `${preFlavorPercent}%`, opacity: 1 }}
@@ -1265,7 +1248,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                                                     }}
                                                                                 ></motion.div>
 
-                                                                                {/* 最佳赏味期区间（带纹理） */}
+                                                                                {/* 赏味期区间（带纹理） */}
                                                                                 <motion.div
                                                                                     initial={{ width: 0, opacity: 0 }}
                                                                                     animate={{ width: `${flavorPercent}%`, opacity: 1 }}
@@ -1274,17 +1257,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                                                     style={{
                                                                                         left: `${preFlavorPercent}%`,
                                                                                         backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(0, 0, 0, 0.1) 2px, rgba(0, 0, 0, 0.1) 4px)'
-                                                                                    }}
-                                                                                ></motion.div>
-
-                                                                                {/* 赏味期后区间 */}
-                                                                                <motion.div
-                                                                                    initial={{ width: 0, opacity: 0 }}
-                                                                                    animate={{ width: `${postFlavorPercent}%`, opacity: 1 }}
-                                                                                    transition={{ delay: 0.3, duration: 0.6, ease: "easeInOut" }}
-                                                                                    className="absolute h-full bg-neutral-400/10 dark:bg-neutral-400/10"
-                                                                                    style={{
-                                                                                        left: `${preFlavorPercent + flavorPercent}%`
                                                                                     }}
                                                                                 ></motion.div>
 

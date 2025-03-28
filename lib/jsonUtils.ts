@@ -30,6 +30,8 @@ interface CoffeeBean {
 	price?: string;
 	type?: string;
 	blendComponents?: BlendComponent[] | undefined;
+	startDay?: number;
+	endDay?: number;
 }
 
 interface BrewingNote {
@@ -601,6 +603,8 @@ export function beanToReadableText(bean: CoffeeBean): string {
 		type,
 		notes,
 		blendComponents,
+		startDay,
+		endDay,
 	} = bean;
 
 	// 构建可读文本
@@ -618,7 +622,11 @@ export function beanToReadableText(bean: CoffeeBean): string {
 	}
 
 	if (type) text += `类型: ${type}\n`;
-	if (price) text += `价格: ${price}元/g\n`;
+	if (price) text += `价格: ${price}元\n`;
+	
+	// 添加赏味期信息
+	if (startDay) text += `养豆期: ${startDay}天\n`;
+	if (endDay) text += `赏味期: ${endDay}天\n`;
 
 	if (flavor && flavor.length > 0) {
 		text += `风味标签: ${flavor.join(", ")}\n`;
@@ -640,11 +648,8 @@ export function beanToReadableText(bean: CoffeeBean): string {
 
 	if (notes) text += `\n备注: ${notes}\n`;
 
-	// 添加导入提示
-	text += "\n--- 复制以上内容可分享和导入 ---";
-
 	// 添加隐藏的序列化标识
-	text += `\n\n@DATA_TYPE:COFFEE_BEAN@`;
+	text += `\n@DATA_TYPE:COFFEE_BEAN@`;
 
 	return text;
 }
@@ -698,11 +703,8 @@ export function methodToReadableText(method: Method): string {
 		});
 	}
 
-	// 添加导入提示
-	text += "--- 复制以上内容可分享和导入 ---";
-
 	// 添加隐藏的序列化标识
-	text += `\n\n@DATA_TYPE:BREWING_METHOD@`;
+	text += `@DATA_TYPE:BREWING_METHOD@`;
 
 	return text;
 }
@@ -764,11 +766,8 @@ export function brewingNoteToReadableText(note: BrewingNote): string {
 		text += `\n笔记:\n${notes}\n`;
 	}
 
-	// 添加导入提示
-	text += "\n--- 复制全部内容可分享和导入 ---";
-
 	// 添加隐藏的序列化标识（不再包含JSON）
-	text += `\n\n@DATA_TYPE:BREWING_NOTE@`;
+	text += `@DATA_TYPE:BREWING_NOTE@`;
 
 	return text;
 }
@@ -855,11 +854,23 @@ function parseCoffeeBeanText(text: string): CoffeeBean | null {
 	if (priceMatch && priceMatch[1]) {
 		bean.price = priceMatch[1];
 	} else {
-		// 兼容旧格式
-		const oldPriceMatch = text.match(/价格:\s*(\d+)元/);
-		if (oldPriceMatch && oldPriceMatch[1]) {
-			bean.price = oldPriceMatch[1];
+		// 兼容新格式
+		const newPriceMatch = text.match(/价格:\s*(\d+)元/);
+		if (newPriceMatch && newPriceMatch[1]) {
+			bean.price = newPriceMatch[1];
 		}
+	}
+
+	// 提取养豆期
+	const startDayMatch = text.match(/养豆期:\s*(\d+)天/);
+	if (startDayMatch && startDayMatch[1]) {
+		bean.startDay = parseInt(startDayMatch[1]);
+	}
+	
+	// 提取赏味期
+	const endDayMatch = text.match(/赏味期:\s*(\d+)天/);
+	if (endDayMatch && endDayMatch[1]) {
+		bean.endDay = parseInt(endDayMatch[1]);
 	}
 
 	// 提取风味

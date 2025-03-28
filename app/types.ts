@@ -25,8 +25,7 @@ export interface CoffeeBean {
 	notes?: string; // 备注
 	timestamp: number; // 创建/添加时间
 	startDay?: number; // 养豆期结束天数
-	endDay?: number; // 最佳赏味期结束天数
-	maxDay?: number; // 赏味期结束天数
+	endDay?: number; // 赏味期结束天数（原为最佳赏味期结束天数）
 	blendComponents?: Array<{
 		percentage: number; // 百分比 (1-100)
 		origin?: string; // 产地
