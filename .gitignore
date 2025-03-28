@@ -70,5 +70,7 @@ android/app/release/
 *.swp
 *.swo
 
+# Cursor
+.cursor/
 
 logs/
