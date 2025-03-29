@@ -312,7 +312,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                     const baseLabel = stage.label.replace(/\s*\[开阀\]|\s*\[关阀\]/g, '').trim();
                     return {
                         ...stage,
-                        label: `${baseLabel} ${valveStatusText}`.trim()
+                        label: `${valveStatusText}${baseLabel}`.trim()
                     };
                 }
                 return stage;
@@ -486,7 +486,6 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         const newStatus = stage.valveStatus === 'open' ? 'closed' : 'open'
         stage.valveStatus = newStatus
 
-        // 我们不再修改标签内容，只更新阀门状态
         // 保留原始的标签内容，移除可能已存在的阀门状态标记
         const baseLabel = stage.label.replace(/\s*\[开阀\]|\s*\[关阀\]/g, '')
         stage.label = baseLabel.trim()
@@ -796,18 +795,11 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                                                     步骤名称
                                                 </label>
                                                 <div className="relative">
-                                                    <input
-                                                        type="text"
-                                                        value={stage.label}
-                                                        onChange={(e) => handleStageChange(index, 'label', e.target.value)}
-                                                        placeholder="请输入步骤名称"
-                                                        className="w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
-                                                    />
                                                     {selectedEquipment === 'CleverDripper' && (
                                                         <button
                                                             type="button"
                                                             onClick={() => toggleValveStatus(index)}
-                                                            className={`absolute right-0 bottom-2 px-2 py-1 text-xs rounded ${stage.valveStatus === 'open'
+                                                            className={`absolute left-0 bottom-2 px-2 py-1 text-xs rounded ${stage.valveStatus === 'open'
                                                                 ? 'text-green-600 dark:text-green-400'
                                                                 : 'text-red-600 dark:text-red-400'
                                                                 }`}
@@ -815,6 +807,13 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                                                             {stage.valveStatus === 'open' ? '[开阀]' : '[关阀]'}
                                                         </button>
                                                     )}
+                                                    <input
+                                                        type="text"
+                                                        value={stage.label}
+                                                        onChange={(e) => handleStageChange(index, 'label', e.target.value)}
+                                                        placeholder="请输入步骤名称"
+                                                        className={`w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400 ${selectedEquipment === 'CleverDripper' ? 'pl-12' : ''}`}
+                                                    />
                                                 </div>
                                             </div>
                                         </div>
