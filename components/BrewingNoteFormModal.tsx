@@ -200,18 +200,19 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
     return (
         <AnimatePresence>
             {showForm && (
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.265 }}
-                    className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
-                    onClick={(e) => {
-                        if (e.target === e.currentTarget) {
-                            onClose()
-                        }
-                    }}
-                >
+                <div className="fixed inset-0 z-[100]">
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.265 }}
+                        className="fixed inset-0 bg-black/30 backdrop-blur-sm"
+                        onClick={(e) => {
+                            if (e.target === e.currentTarget) {
+                                onClose()
+                            }
+                        }}
+                    />
                     <motion.div
                         initial={{ y: '100%' }}
                         animate={{ y: 0 }}
@@ -224,7 +225,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
                         style={{
                             willChange: "transform"
                         }}
-                        className="absolute inset-x-0 bottom-0 max-h-[85vh] overflow-hidden rounded-t-2xl bg-neutral-50 dark:bg-neutral-900 shadow-xl"
+                        className="fixed inset-x-0 bottom-0 max-h-[85vh] overflow-hidden rounded-t-2xl bg-neutral-50 dark:bg-neutral-900 shadow-xl"
                     >
                         {/* 拖动条 */}
                         <div className="sticky top-0 z-10 flex justify-center py-2 bg-neutral-50 dark:bg-neutral-900">
@@ -465,7 +466,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
                             </AnimatePresence>
                         </motion.div>
                     </motion.div>
-                </motion.div>
+                </div>
             )}
         </AnimatePresence>
     )

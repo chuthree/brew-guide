@@ -26,7 +26,9 @@ import AIRecipeModal from '@/components/AIRecipeModal'
 import textZoomUtils from '@/lib/textZoom'
 import { navigateFromHistoryToBrewing } from '@/lib/brewing/navigation'
 import type { BrewingNote } from '@/lib/config'
+import type { BrewingNoteData } from '@/app/types'
 import { BREWING_EVENTS } from '@/lib/brewing/constants'
+import BrewingNoteFormModalNew from '@/components/BrewingNoteFormModalNew'
 
 // 添加内容转换状态类型
 interface TransitionState {
@@ -1330,6 +1332,63 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         methodType
     ]);
 
+    // 添加冲煮笔记表单状态
+    const [showNoteFormModal, setShowNoteFormModal] = useState(false)
+    const [currentEditingNote, setCurrentEditingNote] = useState<Partial<BrewingNoteData>>({})
+
+    // 添加处理函数
+    const handleAddNote = () => {
+        setCurrentEditingNote({
+            coffeeBeanInfo: {
+                name: '',
+                roastLevel: '中度烘焙',
+                roastDate: ''
+            },
+            taste: {
+                acidity: 3,
+                sweetness: 3,
+                bitterness: 3,
+                body: 3
+            },
+            rating: 3,
+            notes: ''
+        });
+        setShowNoteFormModal(true);
+    };
+
+    // 处理保存冲煮笔记
+    const handleSaveBrewingNote = async (note: BrewingNoteData) => {
+        try {
+            // 获取现有笔记
+            const existingNotesStr = await Storage.get('brewingNotes');
+            const existingNotes = existingNotesStr ? JSON.parse(existingNotesStr) : [];
+
+            if (note.id) {
+                // 更新现有笔记
+                const updatedNotes = existingNotes.map((n: BrewingNoteData) =>
+                    n.id === note.id ? note : n
+                );
+                await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
+            } else {
+                // 添加新笔记
+                const newNote = {
+                    ...note,
+                    id: Date.now().toString(),
+                    timestamp: Date.now()
+                };
+                const updatedNotes = [newNote, ...existingNotes];
+                await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
+            }
+
+            // 关闭表单
+            setShowNoteFormModal(false);
+            setCurrentEditingNote({});
+        } catch (error) {
+            console.error('保存冲煮笔记失败:', error);
+            alert('保存失败，请重试');
+        }
+    };
+
     return (
         <div className="flex h-full flex-col overflow-hidden mx-auto max-w-[500px] font-mono text-neutral-800 dark:text-neutral-100">
             {/* 使用 NavigationBar 组件替换原有的导航栏 */}
@@ -1421,6 +1480,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                             }}
                             onOptimizingChange={setIsOptimizing}
                             onNavigateToBrewing={handleNavigateFromHistory}
+                            onAddNote={handleAddNote}
                         />
                     </m.div>
                 )}
@@ -1602,6 +1662,18 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 showModal={showAIRecipeModal}
                 onClose={() => setShowAIRecipeModal(false)}
                 coffeeBean={selectedBeanForAI}
+            />
+
+            {/* 冲煮笔记表单模态框组件 */}
+            <BrewingNoteFormModalNew
+                key="note-form-modal"
+                showForm={showNoteFormModal}
+                initialNote={currentEditingNote}
+                onSave={handleSaveBrewingNote}
+                onClose={() => {
+                    setShowNoteFormModal(false);
+                    setCurrentEditingNote({});
+                }}
             />
 
             {/* 设置组件 - 放在页面级别确保正确覆盖整个内容 */}

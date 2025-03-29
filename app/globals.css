@@ -159,15 +159,69 @@ body {
 .keyboard-is-open .scroll-with-bottom-bar,
 .keyboard-is-open .brew-content-scroll,
 .keyboard-is-open .custom-form-scroll,
-.keyboard-is-open .visualization-scroll {
-  padding-bottom: calc(var(--keyboard-height) + 20px);
+.keyboard-is-open .visualization-scroll,
+.keyboard-is-open #brewing-history-component,
+.keyboard-is-open .h-full.w-full.overflow-auto {
+  padding-bottom: calc(var(--keyboard-height) + 50px);
   margin-bottom: var(--keyboard-height);
+}
+
+/* 解决嵌套滚动容器键盘问题 */
+.keyboard-is-open .overflow-y-auto .overflow-y-auto,
+.keyboard-is-open .overflow-auto .overflow-auto,
+.keyboard-is-open .scroll-with-bottom-bar .overflow-y-auto,
+.keyboard-is-open .brew-content-scroll .overflow-y-auto {
+  overflow: visible !important;
+  height: auto !important;
+  padding-bottom: calc(var(--keyboard-height) + 100px) !important;
+}
+
+/* 专门针对编辑表单的键盘适应样式 */
+.keyboard-is-open .brewing-note-form form {
+  padding-bottom: calc(var(--keyboard-height) + 80px);
+}
+
+/* 确保表单容器在键盘弹出时有足够的滚动空间 */
+.brewing-note-form {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 针对 brewing-history-component 的特殊处理 */
+#brewing-history-component {
+  transition: padding-bottom 0.3s ease;
+}
+.keyboard-is-open #brewing-history-component {
+  padding-bottom: calc(var(--keyboard-height) + 150px) !important;
+}
+
+/* 键盘空间调整器 */
+.keyboard-spacer {
+  transition: height 0.3s ease;
+  height: 40px;
+}
+.keyboard-is-open .keyboard-spacer {
+  height: calc(var(--keyboard-height) + 120px) !important;
+}
+
+/* 可调整内容 */
+.keyboard-adjustable-content {
+  transition: padding-bottom 0.3s ease;
+}
+.keyboard-is-open .keyboard-adjustable-content {
+  padding-bottom: calc(var(--keyboard-height) + 100px) !important;
 }
 
 /* 输入框获取焦点时的样式 */
 input:focus, textarea:focus, [contenteditable]:focus {
   position: relative;
   z-index: 10;
+}
+
+/* 解决键盘弹出时表单被推到最上方的问题 */
+.keyboard-is-open form {
+  margin-bottom: calc(var(--keyboard-height) + 100px);
 }
 
 .input-with-keyboard-adjustment {
@@ -206,5 +260,47 @@ html, body {
   .keyboard-is-open .bottom-action-bar {
     transform: translateY(calc(-1 * var(--keyboard-height)));
     transition: transform 0.25s ease;
+  }
+  
+  /* 增强聚焦表单可见性 */
+  .keyboard-is-open .brewing-note-form:has(input:focus),
+  .keyboard-is-open .brewing-note-form:has(textarea:focus) {
+    padding-bottom: calc(var(--keyboard-height) + 120px) !important;
+  }
+}
+
+/* 增强键盘适配样式 - 专门处理brewing-history-component嵌套表单 */
+#brewing-history-component .brewing-note-form {
+  padding-bottom: 40px;
+}
+
+.keyboard-is-open #brewing-history-component .brewing-note-form {
+  padding-bottom: calc(var(--keyboard-height) + 150px) !important;
+}
+
+/* 确保键盘空间调整器在不同场景下都有效 */
+.keyboard-is-open .keyboard-spacer {
+  display: block !important;
+  height: calc(var(--keyboard-height) + 100px) !important;
+}
+
+/* 解决Android表单聚焦问题 */
+@media (max-width: 768px) {
+  /* 移除所有可能导致字体变化的规则 */
+  input, select, textarea {
+    /* 不设置任何字体大小属性 */
+  }
+  
+  .keyboard-is-open .brewing-note-form form {
+    padding-bottom: calc(var(--keyboard-height) + 120px) !important;
+  }
+  
+  /* 确保表单元素不会被自动缩放，但不改变其显示大小 */
+  /* 此方法仅影响缩放行为，不影响实际显示大小 */
+  @supports (-webkit-touch-callout: none) {
+    input, textarea, select {
+      /* 阻止iOS缩放但不改变字体大小 */
+      touch-action: manipulation;
+    }
   }
 }

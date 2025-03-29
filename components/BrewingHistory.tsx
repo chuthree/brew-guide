@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import type { BrewingNote } from '@/lib/config'
 import type { BrewingNoteData, CoffeeBean } from '@/app/types'
 import BrewingNoteForm from './BrewingNoteForm'
-import BrewingNoteFormModalNew from './BrewingNoteFormModalNew'
 import { Storage } from '@/lib/storage'
 import { equipmentList } from '@/lib/config'
 import {
@@ -39,6 +38,7 @@ interface BrewingHistoryProps {
     onClose: () => void
     onOptimizingChange?: (isOptimizing: boolean) => void
     onNavigateToBrewing?: (note: BrewingNote) => void
+    onAddNote?: () => void
 }
 
 const formatDate = (timestamp: number) => {
@@ -72,14 +72,12 @@ const getEquipmentName = (equipmentId: string): string => {
     return equipment ? equipment.name : equipmentId; // 如果找不到匹配的设备，则返回原始ID
 };
 
-const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingChange, onNavigateToBrewing }) => {
+const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingChange, onNavigateToBrewing, onAddNote }) => {
     const [notes, setNotes] = useState<BrewingNote[]>([])
     const [sortOption, setSortOption] = useState<SortOption>(SORT_OPTIONS.TIME_DESC)
     const [optimizingNote, setOptimizingNote] = useState<(Partial<BrewingNoteData> & { coffeeBean?: CoffeeBean | null }) | null>(null)
     const [editingNote, setEditingNote] = useState<(Partial<BrewingNoteData> & { coffeeBean?: CoffeeBean | null }) | null>(null)
     const [actionMenuStates, setActionMenuStates] = useState<Record<string, boolean>>({})
-    const [showNoteFormModal, setShowNoteFormModal] = useState(false)
-    const [currentEditingNote, setCurrentEditingNote] = useState<Partial<BrewingNoteData>>({})
 
     // 排序笔记的函数，用useCallback包装以避免无限渲染
     const sortNotes = useCallback((notesToSort: BrewingNote[]): BrewingNote[] => {
@@ -240,22 +238,9 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
 
     // 修改新建笔记处理函数
     const handleAddNote = () => {
-        setCurrentEditingNote({
-            coffeeBeanInfo: {
-                name: '',
-                roastLevel: '中度烘焙',
-                roastDate: ''
-            },
-            taste: {
-                acidity: 3,
-                sweetness: 3,
-                bitterness: 3,
-                body: 3
-            },
-            rating: 3,
-            notes: ''
-        });
-        setShowNoteFormModal(true);
+        if (onAddNote) {
+            onAddNote();
+        }
     }
 
     // 处理点击方案名称跳转到冲煮页面
@@ -678,18 +663,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                     </motion.div>
                 </motion.div>
             )}
-
-            {/* 添加笔记表单模态框 */}
-            <BrewingNoteFormModalNew
-                key="note-form-modal"
-                showForm={showNoteFormModal}
-                initialNote={currentEditingNote}
-                onSave={handleSaveEdit}
-                onClose={() => {
-                    setShowNoteFormModal(false);
-                    setCurrentEditingNote({});
-                }}
-            />
         </AnimatePresence>
     )
 }

@@ -436,7 +436,7 @@ stages数组中的每个阶段必须包含以下字段：
     if (!isOpen) return null
 
     return (
-        <div className="h-full w-full overflow-auto overscroll-none bg-neutral-50 dark:bg-neutral-900">
+        <div className="h-full w-full overflow-auto overscroll-none bg-neutral-50 dark:bg-neutral-900 brewing-note-form">
             <form id={id} onSubmit={handleSubmit} className="relative flex h-full flex-col space-y-8">
                 {/* 隐藏的返回按钮，仅用于导航栏返回按钮查找 */}
                 <button
@@ -492,7 +492,7 @@ stages数组中的每个阶段必须包含以下字段：
 
                 {/* Form content */}
                 {!showOptimization ? (
-                    <div className="flex-1 space-y-8 overflow-auto pb-8">
+                    <div className="flex-1 space-y-8 overflow-auto pb-8 keyboard-adjustable-content">
                         {/* 咖啡豆信息 */}
                         <div className="space-y-4">
                             <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
@@ -692,9 +692,12 @@ stages数组中的每个阶段必须包含以下字段：
                                 placeholder="记录一下这次冲煮的感受、改进点等..."
                             />
                         </div>
+
+                        {/* 添加额外的底部空间，防止键盘遮挡 */}
+                        <div className="h-40 md:h-0 keyboard-spacer"></div>
                     </div>
                 ) : (
-                    <div className="flex-1 space-y-8 overflow-auto pb-8">
+                    <div className="flex-1 space-y-8 overflow-auto pb-8 keyboard-adjustable-content">
                         {/* 添加方案参数编辑到优化界面 */}
                         <div className="space-y-4">
                             <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
@@ -877,6 +880,9 @@ stages数组中的每个阶段必须包含以下字段：
                                 </div>
                             )}
                         </div>
+
+                        {/* 添加额外的底部空间，防止键盘遮挡 */}
+                        <div className="h-40 md:h-0 keyboard-spacer"></div>
                     </div>
                 )}
             </form>
