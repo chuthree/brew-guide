@@ -288,7 +288,7 @@ export const brewingMethods: BrewingMethods = {
 					{
 						time: 40,
 						pourTime: 20,
-						label: "绕圈注水[关阀]",
+						label: "[关阀]绕圈注水",
 						water: "50g",
 						detail: "关闭阀门，绕圈注水",
 						pourType: "circle",
@@ -297,7 +297,7 @@ export const brewingMethods: BrewingMethods = {
 					{
 						time: 90,
 						pourTime: 15,
-						label: "绕圈注水[开阀]",
+						label: "[开阀]绕圈注水",
 						water: "120g",
 						detail: "打开阀门，绕圈注水",
 						pourType: "circle",
@@ -306,7 +306,7 @@ export const brewingMethods: BrewingMethods = {
 					{
 						time: 130,
 						pourTime: 15,
-						label: "绕圈注水[开阀]",
+						label: "[开阀]绕圈注水",
 						water: "200g",
 						detail: "保持开阀，绕圈注水",
 						pourType: "circle",
@@ -315,7 +315,7 @@ export const brewingMethods: BrewingMethods = {
 					{
 						time: 165,
 						pourTime: 15,
-						label: "降温绕圈注水[关阀]",
+						label: "[关阀]降温绕圈注水",
 						water: "300g",
 						detail: "关闭阀门，倒入冷水，降温至70-80°C注水",
 						pourType: "circle",
@@ -324,7 +324,7 @@ export const brewingMethods: BrewingMethods = {
 					{
 						time: 210,
 						pourTime: 0,
-						label: "等待滴滤完成[开阀]",
+						label: "[开阀]等待滴滤完成",
 						water: "300g",
 						detail: "打开阀门等等滴滤完成",
 						pourType: "center",
@@ -347,7 +347,7 @@ export const brewingMethods: BrewingMethods = {
 					{
 						time: 110,
 						pourTime: 20,
-						label: "绕圈注水[关阀]",
+						label: "[关阀]绕圈注水",
 						water: "240g",
 						detail: "关闭阀门，绕圈注水",
 						pourType: "circle",
@@ -356,16 +356,16 @@ export const brewingMethods: BrewingMethods = {
 					{
 						time: 125,
 						pourTime: 0,
-						label: "绕圈注水[开阀]",
+						label: "[开阀]等咖啡液流完",
 						water: "240g",
-						detail: "打开阀门，等待滴滤完成",
+						detail: "打开阀门，等待咖啡液流完",
 						pourType: "circle",
 						valveStatus: "open",
 					},
 					{
 						time: 215,
 						pourTime: 10,
-						label: "绕圈注水[开阀]",
+						label: "[开阀]绕圈注水",
 						water: "300g",
 						detail: "保持开阀，由外向内边缘绕圈注水(冲掉边缘咖啡粉)",
 						pourType: "circle",
