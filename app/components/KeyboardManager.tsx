@@ -108,6 +108,19 @@ export function KeyboardManager() {
     const handleDocumentClick = (event: MouseEvent) => {
       if (platform === 'ios') {
         const target = event.target as HTMLElement
+        
+        // 检查是否点击的是下拉选择器或其子元素
+        const isSelectElement = 
+          target.closest('[role="combobox"]') || 
+          target.closest('[data-radix-select-trigger]') ||
+          target.closest('[data-state="open"]') ||
+          target.closest('[role="listbox"]');
+        
+        // 如果是选择器相关元素，不要隐藏键盘
+        if (isSelectElement) {
+          return;
+        }
+        
         if (
           target.tagName !== 'INPUT' && 
           target.tagName !== 'TEXTAREA' && 
