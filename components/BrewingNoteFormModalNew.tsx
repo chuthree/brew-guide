@@ -39,6 +39,11 @@ const BrewingNoteFormModalNew: React.FC<BrewingNoteFormModalNewProps> = ({
     const [methodType, setMethodType] = useState<'common' | 'custom'>('common');
     const [customMethods, setCustomMethods] = useState<Method[]>([]);
 
+    // 添加本地状态以管理输入值
+    const [coffeeAmount, setCoffeeAmount] = useState<string>('15');
+    const [ratioAmount, setRatioAmount] = useState<string>('15');
+    const [waterAmount, setWaterAmount] = useState<string>('225g');
+
     // 处理关闭，确保重置所有状态
     const handleClose = () => {
         // 重置所有状态
@@ -413,6 +418,88 @@ const BrewingNoteFormModalNew: React.FC<BrewingNoteFormModalNewProps> = ({
         onSave(completeNote);
     };
 
+    // 处理咖啡粉量变化
+    const handleCoffeeAmountChange = (value: string, method: Method) => {
+        if (value === '' || !isNaN(Number(value))) {
+            setCoffeeAmount(value);
+            
+            // 更新方法参数
+            method.params.coffee = `${value}g`;
+            
+            // 计算并更新水量
+            if (value && ratioAmount) {
+                const coffeeValue = parseFloat(value);
+                const ratioValue = parseFloat(ratioAmount);
+                
+                if (!isNaN(coffeeValue) && !isNaN(ratioValue) && coffeeValue > 0) {
+                    const waterValue = coffeeValue * ratioValue;
+                    // 四舍五入到整数
+                    const roundedWaterValue = Math.round(waterValue);
+                    method.params.water = `${roundedWaterValue}g`;
+                    setWaterAmount(`${roundedWaterValue}g`);
+                }
+            }
+            
+            // 强制重新渲染
+            setSelectedMethod(methodType === 'common' ? method.name : (method.id || method.name));
+        }
+    };
+
+    // 处理水粉比变化
+    const handleRatioAmountChange = (value: string, method: Method) => {
+        if (value === '' || !isNaN(Number(value))) {
+            setRatioAmount(value);
+            
+            // 更新方法参数
+            method.params.ratio = `1:${value}`;
+            
+            // 计算并更新水量
+            if (coffeeAmount && value) {
+                const coffeeValue = parseFloat(coffeeAmount);
+                const ratioValue = parseFloat(value);
+                
+                if (!isNaN(coffeeValue) && !isNaN(ratioValue) && coffeeValue > 0) {
+                    const waterValue = coffeeValue * ratioValue;
+                    // 四舍五入到整数
+                    const roundedWaterValue = Math.round(waterValue);
+                    method.params.water = `${roundedWaterValue}g`;
+                    setWaterAmount(`${roundedWaterValue}g`);
+                }
+            }
+            
+            // 强制重新渲染
+            setSelectedMethod(methodType === 'common' ? method.name : (method.id || method.name));
+        }
+    };
+
+    // 初始化一个方法的参数到本地状态
+    const initMethodParams = (method: Method) => {
+        const coffeeValue = extractNumber(method.params.coffee);
+        const ratioValue = extractRatioNumber(method.params.ratio);
+        
+        setCoffeeAmount(coffeeValue);
+        setRatioAmount(ratioValue);
+        setWaterAmount(method.params.water);
+    };
+    
+    // 当选择方法发生变化时，初始化参数
+    useEffect(() => {
+        if (selectedMethod && selectedEquipment) {
+            let method;
+            
+            if (methodType === 'common') {
+                const methods = brewingMethods[selectedEquipment] || [];
+                method = methods.find(m => m.name === selectedMethod);
+            } else {
+                method = customMethods.find(m => m.id === selectedMethod || m.name === selectedMethod);
+            }
+            
+            if (method) {
+                initMethodParams(method);
+            }
+        }
+    }, [selectedMethod, selectedEquipment, methodType]);
+
     // 步骤1: 选择咖啡豆内容
     const coffeeBeanStepContent = (
         <div className="space-y-6 py-4">
@@ -537,12 +624,16 @@ const BrewingNoteFormModalNew: React.FC<BrewingNoteFormModalNewProps> = ({
                                 <button
                                     key={methodType === 'common' ? method.name : (method.id || method.name)}
                                     type="button"
-                                    onClick={() => setSelectedMethod(methodType === 'common' ? method.name : (method.id || method.name))}
-                                    className={`w-full p-3 rounded-md text-sm text-left transition ${(methodType === 'common' && selectedMethod === method.name) ||
-                                        (methodType === 'custom' && (selectedMethod === method.id || selectedMethod === method.name))
-                                        ? 'bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-800'
-                                        : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300'
-                                        }`}
+                                    className={`w-full p-3 rounded-md text-sm text-left transition ${
+                                        ((methodType === 'common' && selectedMethod === method.name) ||
+                                         (methodType === 'custom' && (selectedMethod === method.id || selectedMethod === method.name)))
+                                            ? 'bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-800'
+                                            : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300'
+                                    }`}
+                                    onClick={() => {
+                                        setSelectedMethod(methodType === 'common' ? method.name : (method.id || method.name));
+                                        initMethodParams(method);
+                                    }}
                                 >
                                     <div className="font-medium">{method.name}</div>
                                     <div className="text-xs mt-1 opacity-80 flex flex-wrap gap-1">
@@ -554,6 +645,49 @@ const BrewingNoteFormModalNew: React.FC<BrewingNoteFormModalNewProps> = ({
                                         <span>·</span>
                                         <span>{method.params.grindSize}</span>
                                     </div>
+                                    
+                                    {/* 在选中的方案中直接显示参数调整功能 */}
+                                    {((methodType === 'common' && selectedMethod === method.name) ||
+                                        (methodType === 'custom' && (selectedMethod === method.id || selectedMethod === method.name))) && (
+                                        <div 
+                                            className="mt-3 pt-3 border-t border-neutral-300 dark:border-neutral-600"
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
+                                            <div className="text-xs font-medium mb-2 text-white dark:text-neutral-800">
+                                                调整参数
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-3 mt-1">
+                                                <div>
+                                                    <label className="block text-[10px] tracking-widest text-white dark:text-neutral-800 mb-1 opacity-80">
+                                                        咖啡粉量 (g)
+                                                    </label>
+                                                    <input
+                                                        type="number"
+                                                        value={coffeeAmount}
+                                                        onChange={(e) => handleCoffeeAmountChange(e.target.value, method)}
+                                                        className="w-full border border-neutral-300 dark:border-neutral-700 bg-neutral-700/50 dark:bg-white/50 p-1.5 text-[11px] rounded-md outline-none text-white dark:text-neutral-800"
+                                                        placeholder="15"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[10px] tracking-widest text-white dark:text-neutral-800 mb-1 opacity-80">
+                                                        水粉比 (1:X)
+                                                    </label>
+                                                    <input
+                                                        type="number"
+                                                        value={ratioAmount}
+                                                        onChange={(e) => handleRatioAmountChange(e.target.value, method)}
+                                                        className="w-full border border-neutral-300 dark:border-neutral-700 bg-neutral-700/50 dark:bg-white/50 p-1.5 text-[11px] rounded-md outline-none text-white dark:text-neutral-800"
+                                                        placeholder="15"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="mt-2 flex items-center gap-1 text-[10px] text-white dark:text-neutral-800 opacity-80">
+                                                <span>计算出的水量:</span>
+                                                <span className="font-medium">{waterAmount}</span>
+                                            </div>
+                                        </div>
+                                    )}
                                 </button>
                             ))
                         ) : (
@@ -584,6 +718,18 @@ const BrewingNoteFormModalNew: React.FC<BrewingNoteFormModalNewProps> = ({
             />
         </div>
     );
+
+    // 辅助函数：提取数字部分
+    function extractNumber(str: string): string {
+        const match = str.match(/(\d+(\.\d+)?)/);
+        return match ? match[0] : '';
+    }
+    
+    // 辅助函数：从水粉比中提取数字部分
+    function extractRatioNumber(ratio: string): string {
+        const match = ratio.match(/1:(\d+(\.\d+)?)/);
+        return match ? match[1] : '';
+    }
 
     // 定义步骤
     const steps: Step[] = [

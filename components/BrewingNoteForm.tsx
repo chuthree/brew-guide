@@ -91,6 +91,15 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     const [optimizationNotes, setOptimizationNotes] = useState('')
     const [optimizationPrompt, setOptimizationPrompt] = useState('')
 
+    // 添加方案参数状态
+    const [methodParams, setMethodParams] = useState({
+        coffee: initialData?.params?.coffee || '15g',
+        water: initialData?.params?.water || '225g',
+        ratio: initialData?.params?.ratio || '1:15',
+        grindSize: initialData?.params?.grindSize || '中细',
+        temp: initialData?.params?.temp || '92°C',
+    });
+
     // Update form data when initialData changes
     useEffect(() => {
         if (initialData) {
@@ -118,6 +127,17 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                 },
                 notes: initialData.notes || '',
             })
+
+            // 更新方案参数
+            if (initialData.params) {
+                setMethodParams({
+                    coffee: initialData.params.coffee || '15g',
+                    water: initialData.params.water || '225g',
+                    ratio: initialData.params.ratio || '1:15',
+                    grindSize: initialData.params.grindSize || '中细',
+                    temp: initialData.params.temp || '92°C',
+                });
+            }
         }
     }, [initialData])
 
@@ -135,7 +155,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
             ...formData,
             equipment: initialData.equipment,
             method: initialData.method,
-            params: initialData.params,
+            params: methodParams, // 使用修改后的方案参数
             totalTime: initialData.totalTime,
         }
 
@@ -267,13 +287,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                 roastLevel: formData.coffeeBeanInfo.roastLevel || '中度烘焙',
                 roastDate: formData.coffeeBeanInfo.roastDate || '',
             },
-            initialData.params || {
-                coffee: '',
-                water: '',
-                ratio: '',
-                grindSize: '',
-                temp: '',
-            },
+            methodParams, // 使用当前编辑的方案参数
             stages, // 使用获取到的stages
             formData.taste,
             idealTaste,
@@ -373,6 +387,51 @@ stages数组中的每个阶段必须包含以下字段：
             document.removeEventListener('touchend', handleTouchEnd)
         }
     }, [isDragging])
+
+    // 更新咖啡粉量和水量时同步更新水粉比
+    const updateRatio = (coffee: string, water: string) => {
+        // 提取数字部分
+        const coffeeMatch = coffee.match(/(\d+(\.\d+)?)/);
+        const waterMatch = water.match(/(\d+(\.\d+)?)/);
+        
+        if (coffeeMatch && waterMatch) {
+            const coffeeValue = parseFloat(coffeeMatch[0]);
+            const waterValue = parseFloat(waterMatch[0]);
+            
+            if (!isNaN(coffeeValue) && !isNaN(waterValue) && coffeeValue > 0) {
+                const ratio = (waterValue / coffeeValue).toFixed(1);
+                return `1:${ratio}`;
+            }
+        }
+        
+        return methodParams.ratio;
+    };
+
+    // 处理咖啡粉量变化
+    const handleCoffeeChange = (value: string) => {
+        const newMethodParams = {
+            ...methodParams,
+            coffee: value,
+        };
+        
+        // 自动更新水粉比
+        newMethodParams.ratio = updateRatio(value, methodParams.water);
+        
+        setMethodParams(newMethodParams);
+    };
+    
+    // 处理水量变化
+    const handleWaterChange = (value: string) => {
+        const newMethodParams = {
+            ...methodParams,
+            water: value,
+        };
+        
+        // 自动更新水粉比
+        newMethodParams.ratio = updateRatio(methodParams.coffee, value);
+        
+        setMethodParams(newMethodParams);
+    };
 
     if (!isOpen) return null
 
@@ -483,6 +542,63 @@ stages数组中的每个阶段必须包含以下字段：
                             </div>
                         </div>
 
+                        {/* 添加方案参数编辑 */}
+                        <div className="space-y-4">
+                            <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
+                                方案参数
+                            </div>
+                            <div className="grid grid-cols-2 gap-6">
+                                <div>
+                                    <input
+                                        type="text"
+                                        value={methodParams.coffee}
+                                        onChange={(e) => handleCoffeeChange(e.target.value)}
+                                        className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
+                                        placeholder="咖啡粉量 (如: 15g)"
+                                    />
+                                </div>
+                                <div>
+                                    <input
+                                        type="text"
+                                        value={methodParams.water}
+                                        onChange={(e) => handleWaterChange(e.target.value)}
+                                        className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
+                                        placeholder="水量 (如: 225g)"
+                                    />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-3 gap-6">
+                                <div>
+                                    <input
+                                        type="text"
+                                        value={methodParams.ratio}
+                                        onChange={(e) => setMethodParams({...methodParams, ratio: e.target.value})}
+                                        className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
+                                        placeholder="水粉比 (如: 1:15)"
+                                        readOnly
+                                    />
+                                </div>
+                                <div>
+                                    <input
+                                        type="text"
+                                        value={methodParams.grindSize}
+                                        onChange={(e) => setMethodParams({...methodParams, grindSize: e.target.value})}
+                                        className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
+                                        placeholder="研磨度 (如: 中细)"
+                                    />
+                                </div>
+                                <div>
+                                    <input
+                                        type="text"
+                                        value={methodParams.temp}
+                                        onChange={(e) => setMethodParams({...methodParams, temp: e.target.value})}
+                                        className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
+                                        placeholder="水温 (如: 92°C)"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
                         {/* 风味评分 */}
                         <div className="space-y-4">
                             <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
@@ -559,7 +675,6 @@ stages数组中的每个阶段必须包含以下字段：
                             </div>
                         </div>
 
-
                         {/* 笔记 */}
                         <div className="space-y-4">
                             <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
@@ -580,6 +695,63 @@ stages数组中的每个阶段必须包含以下字段：
                     </div>
                 ) : (
                     <div className="flex-1 space-y-8 overflow-auto pb-8">
+                        {/* 添加方案参数编辑到优化界面 */}
+                        <div className="space-y-4">
+                            <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
+                                方案参数调整
+                            </div>
+                            <div className="grid grid-cols-2 gap-6">
+                                <div>
+                                    <input
+                                        type="text"
+                                        value={methodParams.coffee}
+                                        onChange={(e) => handleCoffeeChange(e.target.value)}
+                                        className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
+                                        placeholder="咖啡粉量 (如: 15g)"
+                                    />
+                                </div>
+                                <div>
+                                    <input
+                                        type="text"
+                                        value={methodParams.water}
+                                        onChange={(e) => handleWaterChange(e.target.value)}
+                                        className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
+                                        placeholder="水量 (如: 225g)"
+                                    />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-3 gap-6">
+                                <div>
+                                    <input
+                                        type="text"
+                                        value={methodParams.ratio}
+                                        onChange={(e) => setMethodParams({...methodParams, ratio: e.target.value})}
+                                        className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
+                                        placeholder="水粉比 (如: 1:15)"
+                                        readOnly
+                                    />
+                                </div>
+                                <div>
+                                    <input
+                                        type="text"
+                                        value={methodParams.grindSize}
+                                        onChange={(e) => setMethodParams({...methodParams, grindSize: e.target.value})}
+                                        className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
+                                        placeholder="研磨度 (如: 中细)"
+                                    />
+                                </div>
+                                <div>
+                                    <input
+                                        type="text"
+                                        value={methodParams.temp}
+                                        onChange={(e) => setMethodParams({...methodParams, temp: e.target.value})}
+                                        className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
+                                        placeholder="水温 (如: 92°C)"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
                         {/* 理想风味设置 */}
                         <div className="space-y-4">
                             <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
@@ -681,7 +853,7 @@ stages数组中的每个阶段必须包含以下字段：
                                                                 ...formData,
                                                                 equipment: initialData.equipment,
                                                                 method: initialData.method,
-                                                                params: initialData.params,
+                                                                params: methodParams, // 使用当前编辑的方案参数
                                                                 totalTime: initialData.totalTime,
                                                             };
                                                             // 调用onSave保存当前数据
