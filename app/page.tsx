@@ -30,6 +30,13 @@ import type { BrewingNoteData } from '@/app/types'
 import { BREWING_EVENTS } from '@/lib/brewing/constants'
 import BrewingNoteFormModalNew from '@/components/BrewingNoteFormModalNew'
 
+// 为Window对象声明类型扩展
+declare global {
+    interface Window {
+        refreshBrewingNotes?: () => void;
+    }
+}
+
 // 添加内容转换状态类型
 interface TransitionState {
     isTransitioning: boolean;
@@ -1363,26 +1370,49 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             const existingNotesStr = await Storage.get('brewingNotes');
             const existingNotes = existingNotesStr ? JSON.parse(existingNotesStr) : [];
 
-            if (note.id) {
+            let updatedNotes;
+            const newNoteId = note.id || Date.now().toString();
+            
+            // 检查是否是真正的现有笔记（有ID并且在现有笔记中能找到）
+            const isExistingNote = note.id && existingNotes.some((n: BrewingNoteData) => n.id === note.id);
+            
+            if (isExistingNote) {
                 // 更新现有笔记
-                const updatedNotes = existingNotes.map((n: BrewingNoteData) =>
+                updatedNotes = existingNotes.map((n: BrewingNoteData) =>
                     n.id === note.id ? note : n
                 );
-                await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
             } else {
-                // 添加新笔记
+                // 添加新笔记 - 使用笔记自带的ID或生成新ID
                 const newNote = {
                     ...note,
-                    id: Date.now().toString(),
-                    timestamp: Date.now()
+                    id: newNoteId,
+                    timestamp: note.timestamp || Date.now()
                 };
-                const updatedNotes = [newNote, ...existingNotes];
-                await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
+                
+                updatedNotes = [newNote, ...existingNotes];
+            }
+            
+            // 使用localStorage和Storage API保存
+            localStorage.setItem('brewingNotes', JSON.stringify(updatedNotes));
+            await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
+            
+            // 触发自定义事件通知
+            const dataChangeEvent = new CustomEvent('storage:changed', { 
+                detail: { key: 'brewingNotes', id: newNoteId } 
+            });
+            window.dispatchEvent(dataChangeEvent);
+            
+            // 如果window上有刷新方法，调用它
+            if (window.refreshBrewingNotes) {
+                setTimeout(() => window.refreshBrewingNotes?.(), 50);
             }
 
             // 关闭表单
             setShowNoteFormModal(false);
             setCurrentEditingNote({});
+            
+            // 切换到笔记选项卡
+            setActiveMainTab('笔记');
         } catch (error) {
             console.error('保存冲煮笔记失败:', error);
             alert('保存失败，请重试');

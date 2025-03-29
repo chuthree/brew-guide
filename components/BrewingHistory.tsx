@@ -15,6 +15,13 @@ import {
     SelectValue,
 } from './ui/select'
 
+// 为Window对象声明类型扩展
+declare global {
+    interface Window {
+        refreshBrewingNotes?: () => void;
+    }
+}
+
 // 排序类型定义
 const SORT_OPTIONS = {
     TIME_DESC: 'time_desc',
@@ -78,6 +85,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
     const [optimizingNote, setOptimizingNote] = useState<(Partial<BrewingNoteData> & { coffeeBean?: CoffeeBean | null }) | null>(null)
     const [editingNote, setEditingNote] = useState<(Partial<BrewingNoteData> & { coffeeBean?: CoffeeBean | null }) | null>(null)
     const [actionMenuStates, setActionMenuStates] = useState<Record<string, boolean>>({})
+    const [forceRefreshKey, setForceRefreshKey] = useState(0); // 添加一个强制刷新的key
 
     // 排序笔记的函数，用useCallback包装以避免无限渲染
     const sortNotes = useCallback((notesToSort: BrewingNote[]): BrewingNote[] => {
@@ -98,30 +106,67 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
     // 加载笔记的函数 - 使用useCallback包装
     const loadNotes = useCallback(async () => {
         try {
-            const savedNotes = await Storage.get('brewingNotes')
-            const parsedNotes = savedNotes ? JSON.parse(savedNotes) : []
-            setNotes(sortNotes(parsedNotes))
-        } catch {
+            const savedNotes = await Storage.get('brewingNotes');
+            const parsedNotes = savedNotes ? JSON.parse(savedNotes) : [];
+            setNotes(sortNotes(parsedNotes));
+        } catch (_error) {
             // 加载失败时设置空数组
-            setNotes([])
+            setNotes([]);
         }
-    }, [sortNotes])
+    }, [sortOption, sortNotes]);
+
+    // 当isOpen状态变化时重新加载数据
+    useEffect(() => {
+        if (isOpen) {
+            loadNotes();
+        }
+    }, [isOpen, loadNotes]);
+
+    // 强制刷新的效果
+    useEffect(() => {
+        loadNotes();
+    }, [forceRefreshKey, loadNotes]);
 
     // 添加本地存储变化监听
     useEffect(() => {
         // 立即加载，不管是否显示
-        loadNotes()
+        loadNotes();
 
         // 监听其他标签页的存储变化（仅在 Web 平台有效）
         const handleStorageChange = (e: StorageEvent) => {
             if (e.key === 'brewingNotes') {
-                loadNotes()
+                loadNotes();
             }
-        }
+        };
 
-        window.addEventListener('storage', handleStorageChange)
-        return () => window.removeEventListener('storage', handleStorageChange)
-    }, [sortOption, loadNotes])
+        // 监听自定义的storage:changed事件，用于同一页面内的通信
+        const handleCustomStorageChange = (e: CustomEvent) => {
+            if (e.detail && e.detail.key === 'brewingNotes') {
+                loadNotes();
+                // 强制刷新
+                setForceRefreshKey(prev => prev + 1);
+            }
+        };
+
+        // 创建更通用的刷新函数以便外部可以调用
+        const refreshList = () => {
+            loadNotes();
+            setForceRefreshKey(prev => prev + 1);
+        };
+
+        // 挂载到window对象上，使其可以从任何位置调用
+        window.refreshBrewingNotes = refreshList;
+
+        window.addEventListener('storage', handleStorageChange);
+        window.addEventListener('storage:changed', handleCustomStorageChange as EventListener);
+        
+        return () => {
+            window.removeEventListener('storage', handleStorageChange);
+            window.removeEventListener('storage:changed', handleCustomStorageChange as EventListener);
+            // 清理window上的引用
+            delete window.refreshBrewingNotes;
+        };
+    }, [loadNotes]);
 
     useEffect(() => {
         // 当排序选项变化时，重新排序笔记

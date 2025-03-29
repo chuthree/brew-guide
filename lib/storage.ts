@@ -12,14 +12,28 @@ export const Storage = {
 	 */
 	async get(key: string): Promise<string | null> {
 		try {
+			let result: string | null = null;
+			
 			if (Capacitor.isNativePlatform()) {
 				// 在原生平台上使用 Capacitor Preferences API
 				const { value } = await Preferences.get({ key });
-				return value;
+				result = value;
 			} else {
 				// 在 Web 平台上使用 localStorage
-				return localStorage.getItem(key);
+				result = localStorage.getItem(key);
+				
+				// 对于特殊键brewingNotes，如果获取到的数据不是有效的JSON，重新初始化为空数组
+				if (key === 'brewingNotes' && result !== null) {
+					try {
+						JSON.parse(result);
+					} catch (_err) {
+						result = '[]';
+						localStorage.setItem(key, result);
+					}
+				}
 			}
+			
+			return result;
 		} catch (_error) {
 			return null;
 		}
@@ -38,9 +52,22 @@ export const Storage = {
 			} else {
 				// 在 Web 平台上使用 localStorage
 				localStorage.setItem(key, value);
+				
+				// 验证保存是否成功
+				const saved = localStorage.getItem(key);
+				if (saved !== value) {
+					// 重试一次
+					localStorage.setItem(key, value);
+				}
+
+				// 手动触发自定义存储变更事件
+				const event = new CustomEvent('storage:changed', {
+					detail: { key, source: 'internal' }
+				});
+				window.dispatchEvent(event);
 			}
 		} catch (_error) {
-			// 错误处理
+			throw _error; // 重新抛出错误，让调用者知道存储失败
 		}
 	},
 

@@ -149,21 +149,23 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        const noteData = {
-            id: id || Date.now().toString(),
+        
+        // 创建完整的笔记数据，确保包含ID（使用现有ID或生成新ID）
+        const noteData: BrewingNoteData = {
+            id: id || Date.now().toString(), // 始终包含ID，如果没有现有ID，则生成新ID
             timestamp: Date.now(),
             ...formData,
             equipment: initialData.equipment,
             method: initialData.method,
             params: methodParams, // 使用修改后的方案参数
             totalTime: initialData.totalTime,
-        }
+        };
 
         // 不再直接保存到Storage，只传递数据给onSave回调
         try {
             // 让外层组件处理存储和导航逻辑
             onSave(noteData);
-        } catch {
+        } catch (_error) {
             alert('保存笔记时出错，请重试');
         }
     }

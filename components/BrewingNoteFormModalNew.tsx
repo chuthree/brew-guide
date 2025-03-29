@@ -340,6 +340,9 @@ const BrewingNoteFormModalNew: React.FC<BrewingNoteFormModalNewProps> = ({
     // 设置默认值，确保initialNote有必要的字段
     const getDefaultNote = (): Partial<BrewingNoteData> => {
         const params = getMethodParams();
+        // 检查是否是新建笔记还是编辑现有笔记
+        const isNewNote = !initialNote?.id;
+        
         return {
             equipment: selectedEquipment,
             method: selectedMethod,
@@ -362,7 +365,8 @@ const BrewingNoteFormModalNew: React.FC<BrewingNoteFormModalNewProps> = ({
                 body: 3
             },
             notes: initialNote?.notes || '',
-            id: initialNote?.id
+            // 只在编辑现有笔记时传递ID
+            ...(isNewNote ? {} : { id: initialNote?.id })
         };
     };
 
@@ -410,12 +414,11 @@ const BrewingNoteFormModalNew: React.FC<BrewingNoteFormModalNewProps> = ({
             }
         }
 
-        // 关闭表单后调用onSave回调函数
-        // 关闭表单很重要，防止重复提交
-        handleClose();
-
-        // 保存笔记
+        // 先保存笔记
         onSave(completeNote);
+        
+        // 保存完成后关闭表单
+        handleClose();
     };
 
     // 处理咖啡粉量变化
