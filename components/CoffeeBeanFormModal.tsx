@@ -5,10 +5,22 @@ import { motion, AnimatePresence } from 'framer-motion'
 import CoffeeBeanForm from '@/components/CoffeeBeanForm'
 import { CoffeeBean } from '@/app/types'
 
+// 导入ExtendedCoffeeBean类型
+interface BlendComponent {
+    percentage: number;  // 百分比 (1-100)
+    origin?: string;     // 产地
+    process?: string;    // 处理法
+    variety?: string;    // 品种
+}
+
+interface ExtendedCoffeeBean extends CoffeeBean {
+    blendComponents?: BlendComponent[];
+}
+
 interface CoffeeBeanFormModalProps {
     showForm: boolean
-    initialBean?: CoffeeBean | null
-    onSave: (bean: Omit<CoffeeBean, 'id' | 'timestamp'>) => void
+    initialBean?: ExtendedCoffeeBean | null
+    onSave: (bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>) => void
     onClose: () => void
 }
 

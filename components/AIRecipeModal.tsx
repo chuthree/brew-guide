@@ -6,10 +6,22 @@ import { CoffeeBean } from '@/app/types'
 import { equipmentList } from '@/lib/config'
 import { useToast } from './GlobalToast'
 
+// 添加ExtendedCoffeeBean类型
+interface BlendComponent {
+    percentage: number;  // 百分比 (1-100)
+    origin?: string;     // 产地
+    process?: string;    // 处理法
+    variety?: string;    // 品种
+}
+
+interface ExtendedCoffeeBean extends CoffeeBean {
+    blendComponents?: BlendComponent[];
+}
+
 interface AIRecipeModalProps {
     showModal: boolean
     onClose: () => void
-    coffeeBean: CoffeeBean | null
+    coffeeBean: ExtendedCoffeeBean | null
 }
 
 const AIRecipeModal: React.FC<AIRecipeModalProps> = ({

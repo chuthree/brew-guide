@@ -45,6 +45,18 @@ interface TransitionState {
     source: string;
 }
 
+// 添加ExtendedCoffeeBean类型
+interface BlendComponent {
+    percentage: number;  // 百分比 (1-100)
+    origin?: string;     // 产地
+    process?: string;    // 处理法
+    variety?: string;    // 品种
+}
+
+interface ExtendedCoffeeBean extends CoffeeBean {
+    blendComponents?: BlendComponent[];
+}
+
 // 动态导入客户端组件
 const BrewingTimer = dynamic(() => import('@/components/BrewingTimer'), { ssr: false, loading: () => null })
 const BrewingHistory = dynamic(() => import('@/components/BrewingHistory'), { ssr: false, loading: () => null })
@@ -128,7 +140,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
     // 咖啡豆表单状态
     const [showBeanForm, setShowBeanForm] = useState(false);
-    const [editingBean, setEditingBean] = useState<CoffeeBean | null>(null);
+    const [editingBean, setEditingBean] = useState<ExtendedCoffeeBean | null>(null);
     // 添加一个用于强制重新渲染咖啡豆列表的key
     const [beanListKey, setBeanListKey] = useState(0);
     // 导入咖啡豆状态
@@ -615,7 +627,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             const beansToImport = Array.isArray(extractedData) ? extractedData : [extractedData];
 
             let importCount = 0;
-            let lastImportedBean = null;
+            let lastImportedBean: ExtendedCoffeeBean | null = null;
             for (const bean of beansToImport) {
                 // 验证必要的字段
                 if (!bean.name) {
@@ -706,13 +718,13 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     };
 
     // 处理咖啡豆表单
-    const handleBeanForm = (bean: CoffeeBean | null = null) => {
+    const handleBeanForm = (bean: ExtendedCoffeeBean | null = null) => {
         setEditingBean(bean);
         setShowBeanForm(true);
     };
 
     // 处理AI方案生成
-    const handleGenerateAIRecipe = (bean: CoffeeBean) => {
+    const handleGenerateAIRecipe = (bean: ExtendedCoffeeBean) => {
         setSelectedBeanForAI(bean);
         setShowAIRecipeModal(true);
     };
@@ -848,7 +860,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     }, [activeMainTab, hasCoffeeBeans, setActiveBrewingStep, setActiveTab]);
 
     // 简化处理保存咖啡豆
-    const handleSaveBean = async (bean: Omit<CoffeeBean, 'id' | 'timestamp'>) => {
+    const handleSaveBean = async (bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>) => {
         try {
             const isFirstBean = !(await CoffeeBeanManager.getAllBeans()).length;
 

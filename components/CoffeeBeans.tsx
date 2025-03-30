@@ -20,6 +20,18 @@ import { Storage } from '@/lib/storage'
 import { SORT_OPTIONS as RANKING_SORT_OPTIONS, RankingSortOption } from './CoffeeBeanRanking'
 import { useToast } from './GlobalToast'
 
+// 添加ExtendedCoffeeBean类型
+interface BlendComponent {
+    percentage: number;  // 百分比 (1-100)
+    origin?: string;     // 产地
+    process?: string;    // 处理法
+    variety?: string;    // 品种
+}
+
+interface ExtendedCoffeeBean extends CoffeeBean {
+    blendComponents?: BlendComponent[];
+}
+
 // 排序类型定义
 const SORT_OPTIONS = {
     REMAINING_DAYS_ASC: 'remaining_days_asc', // 按照剩余天数排序（少→多）
@@ -102,13 +114,13 @@ const VIEW_LABELS: Record<ViewOption, string> = {
 
 interface CoffeeBeansProps {
     isOpen: boolean
-    showBeanForm?: (bean: CoffeeBean | null) => void  // 可选属性，用于在页面级显示咖啡豆表单
-    onShowImport?: () => void // 新增属性，用于显示导入表单
-    onGenerateAIRecipe?: (bean: CoffeeBean) => void // 新增属性，用于生成AI方案
+    showBeanForm?: (bean: ExtendedCoffeeBean | null) => void  // 修改为ExtendedCoffeeBean
+    onShowImport?: () => void
+    onGenerateAIRecipe?: (bean: ExtendedCoffeeBean) => void // 修改为ExtendedCoffeeBean
 }
 
-// 在组件外部定义工具函数
-const generateBeanTitle = (bean: CoffeeBean): string => {
+// 修改函数参数类型
+const generateBeanTitle = (bean: ExtendedCoffeeBean): string => {
     // 安全检查：确保bean是有效对象且有名称
     if (!bean || typeof bean !== 'object' || !bean.name) {
         return bean?.name || '未命名咖啡豆';
@@ -160,24 +172,24 @@ const generateBeanTitle = (bean: CoffeeBean): string => {
 
 const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowImport, onGenerateAIRecipe }) => {
     const { showToast } = useToast()
-    const [beans, setBeans] = useState<CoffeeBean[]>([])
-    const [ratedBeans, setRatedBeans] = useState<CoffeeBean[]>([])
+    const [beans, setBeans] = useState<ExtendedCoffeeBean[]>([])
+    const [ratedBeans, setRatedBeans] = useState<ExtendedCoffeeBean[]>([])
     const [showAddForm, setShowAddForm] = useState(false)
-    const [editingBean, setEditingBean] = useState<CoffeeBean | null>(null)
+    const [editingBean, setEditingBean] = useState<ExtendedCoffeeBean | null>(null)
     const [actionMenuStates, setActionMenuStates] = useState<Record<string, boolean>>({})
     const [sortOption, setSortOption] = useState<SortOption>(SORT_OPTIONS.REMAINING_DAYS_ASC)
     const [showAIRecipeModal, setShowAIRecipeModal] = useState(false)
-    const [selectedBeanForAI, setSelectedBeanForAI] = useState<CoffeeBean | null>(null)
+    const [selectedBeanForAI, setSelectedBeanForAI] = useState<ExtendedCoffeeBean | null>(null)
     // 新增状态
     const [viewMode, setViewMode] = useState<ViewOption>(VIEW_OPTIONS.INVENTORY)
     const [showRatingModal, setShowRatingModal] = useState(false)
-    const [selectedBeanForRating, setSelectedBeanForRating] = useState<CoffeeBean | null>(null)
+    const [selectedBeanForRating, setSelectedBeanForRating] = useState<ExtendedCoffeeBean | null>(null)
     const [lastRatedBeanId, setLastRatedBeanId] = useState<string | null>(null) // 新增，追踪最近评分的咖啡豆ID
     const [ratingSavedCallback, setRatingSavedCallback] = useState<(() => void) | null>(null) // 新增，存储评分保存后的回调
     // 豆种筛选相关状态
     const [availableVarieties, setAvailableVarieties] = useState<string[]>([])
     const [selectedVariety, setSelectedVariety] = useState<string | null>(null)
-    const [filteredBeans, setFilteredBeans] = useState<CoffeeBean[]>([])
+    const [filteredBeans, setFilteredBeans] = useState<ExtendedCoffeeBean[]>([])
     // 咖啡豆显示控制
     const [showEmptyBeans, setShowEmptyBeans] = useState<boolean>(false)
     // 未使用的状态，但保留以避免修改太多相关代码
@@ -219,7 +231,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
     }
 
     // 获取咖啡豆的赏味期信息
-    const getFlavorInfo = (bean: CoffeeBean): { phase: string, remainingDays: number } => {
+    const getFlavorInfo = (bean: ExtendedCoffeeBean): { phase: string, remainingDays: number } => {
         if (!bean.roastDate) {
             return { phase: '衰退期', remainingDays: 0 };
         }
@@ -268,12 +280,12 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
     }
 
     // 检查咖啡豆是否用完
-    const isBeanEmpty = (bean: CoffeeBean): boolean => {
+    const isBeanEmpty = (bean: ExtendedCoffeeBean): boolean => {
         return (bean.remaining === "0" || bean.remaining === "0g") && bean.capacity !== undefined;
     }
 
     // 排序咖啡豆的函数 - 使用useCallback缓存函数以避免无限循环
-    const sortBeans = useCallback((beansToSort: CoffeeBean[], option: SortOption): CoffeeBean[] => {
+    const sortBeans = useCallback((beansToSort: ExtendedCoffeeBean[], option: SortOption): ExtendedCoffeeBean[] => {
         switch (option) {
             case SORT_OPTIONS.NAME_ASC:
                 return [...beansToSort].sort((a, b) => a.name.localeCompare(b.name))
@@ -413,7 +425,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
     }, [isOpen, sortOption, selectedVariety, sortBeans, showEmptyBeans])
 
     // 处理添加咖啡豆
-    const handleSaveBean = async (bean: Omit<CoffeeBean, 'id' | 'timestamp'>) => {
+    const handleSaveBean = async (bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>) => {
         try {
             if (editingBean) {
                 // 更新现有咖啡豆
@@ -456,7 +468,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
     }
 
     // 处理咖啡豆删除
-    const handleDelete = async (bean: CoffeeBean) => {
+    const handleDelete = async (bean: ExtendedCoffeeBean) => {
         if (window.confirm(`确认要删除咖啡豆"${bean.name}"吗？`)) {
             try {
                 // 使用 CoffeeBeanManager 删除咖啡豆
@@ -487,7 +499,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
     }
 
     // 处理编辑咖啡豆
-    const handleEdit = (bean: CoffeeBean) => {
+    const handleEdit = (bean: ExtendedCoffeeBean) => {
         try {
             if (showBeanForm) {
                 showBeanForm(bean)
@@ -539,10 +551,10 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
     };
 
     // 处理分享咖啡豆信息
-    const handleShare = (bean: CoffeeBean) => {
+    const handleShare = (bean: ExtendedCoffeeBean) => {
         try {
             // 创建可共享的咖啡豆对象
-            const shareableBean: Omit<CoffeeBean, 'id' | 'timestamp'> = {
+            const shareableBean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'> = {
                 name: bean.name,
                 capacity: bean.capacity,
                 remaining: bean.remaining,
@@ -607,7 +619,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
     };
 
     // 添加方法处理AI方案生成
-    const handleGenerateAIRecipe = (bean: CoffeeBean) => {
+    const handleGenerateAIRecipe = (bean: ExtendedCoffeeBean) => {
         if (onGenerateAIRecipe) {
             onGenerateAIRecipe(bean);
         } else {
@@ -622,7 +634,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
     }
 
     // 处理咖啡豆评分
-    const handleShowRatingForm = (bean: CoffeeBean, onRatingSaved?: () => void) => {
+    const handleShowRatingForm = (bean: ExtendedCoffeeBean, onRatingSaved?: () => void) => {
         setSelectedBeanForRating(bean);
         setShowRatingModal(true);
 
@@ -635,7 +647,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
     };
 
     // 保存咖啡豆评分
-    const handleSaveRating = async (id: string, ratings: Partial<CoffeeBean>) => {
+    const handleSaveRating = async (id: string, ratings: Partial<ExtendedCoffeeBean>) => {
         try {
             const updatedBean = await CoffeeBeanManager.updateBeanRatings(id, ratings);
             if (updatedBean) {

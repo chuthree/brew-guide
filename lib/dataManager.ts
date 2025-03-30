@@ -476,8 +476,7 @@ export const DataManager = {
 						const validComponents = bean.blendComponents
 							.filter(comp => 
 								comp && typeof comp === "object" && 
-								comp.percentage !== undefined && comp.percentage !== null && 
-								comp.percentage !== ""
+								comp.percentage !== undefined && comp.percentage !== null
 							)
 							.map(comp => {
 								// 确保percentage是数字
