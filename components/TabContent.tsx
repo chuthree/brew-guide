@@ -226,7 +226,7 @@ const TabContent: React.FC<TabContentProps> = ({
                         duration: 0.3,
                         ease: "easeOut"
                     }}
-                    className="relative h-full p-6 "
+                    className="relative h-full"
                 >
                     {/* 添加咖啡豆步骤 */}
                     {activeTab === ('咖啡豆' as TabType) ? (
