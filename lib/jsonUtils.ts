@@ -589,6 +589,15 @@ export function generateBeanTemplateJson() {
  * @returns 格式化的可读文本
  */
 export function beanToReadableText(bean: CoffeeBean): string {
+	// 在报错问题解决前，临时改为JSON字符串格式
+	// 创建对象的副本并直接返回JSON
+	// 不处理percentage字段，直接保持其原始类型
+	
+	// 返回格式化的JSON字符串
+	return JSON.stringify(bean, null, 2);
+
+	// 原自然语言格式代码（暂时注释，待问题解决后可恢复）
+	/*
 	const {
 		name,
 		capacity,
@@ -652,6 +661,7 @@ export function beanToReadableText(bean: CoffeeBean): string {
 	text += `\n@DATA_TYPE:COFFEE_BEAN@`;
 
 	return text;
+	*/
 }
 
 /**

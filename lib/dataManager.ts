@@ -400,4 +400,192 @@ export const DataManager = {
 			};
 		}
 	},
+
+	/**
+	 * 修复拼配豆数据问题
+	 * 处理无效百分比和不合规的拼配成分数据
+	 * @returns {Promise<{success: boolean, message: string, fixedCount: number}>} 修复结果
+	 */
+	async fixBlendBeansData(): Promise<{ success: boolean; message: string; fixedCount: number }> {
+		try {
+			// 获取所有咖啡豆数据
+			const beansData = await Storage.get("coffeeBeans");
+			if (!beansData) {
+				return {
+					success: true,
+					message: "没有发现咖啡豆数据",
+					fixedCount: 0
+				};
+			}
+
+			let beans: CoffeeBean[] = [];
+			try {
+				beans = JSON.parse(beansData);
+			} catch (_error) {
+				return {
+					success: false,
+					message: "解析咖啡豆数据失败",
+					fixedCount: 0
+				};
+			}
+
+			let fixedCount = 0;
+			let hasChanges = false;
+
+			// 遍历所有咖啡豆，查找并修复问题
+			const fixedBeans = beans.map(bean => {
+				// 检查是否是拼配豆且有拼配成分
+				if (bean.type === "拼配" && bean.blendComponents) {
+					// 确保blendComponents是数组
+					if (!Array.isArray(bean.blendComponents) || bean.blendComponents.length === 0) {
+						// 创建默认拼配成分
+						fixedCount++;
+						hasChanges = true;
+						return {
+							...bean,
+							blendComponents: [{
+								percentage: 100,
+								origin: bean.origin || "",
+								process: bean.process || "",
+								variety: bean.variety || ""
+							}]
+						};
+					}
+					
+					// 检查是否有空百分比或非法数据的问题
+					const hasInvalidData = bean.blendComponents.some(
+						comp => {
+							// 检查组件是否是有效对象
+							if (!comp || typeof comp !== 'object') return true;
+							
+							// 处理字符串类型的百分比
+							if (typeof comp.percentage === 'string') {
+								return comp.percentage === "";
+							}
+							// 处理其他类型
+							return comp.percentage === undefined || comp.percentage === null;
+						}
+					);
+
+					if (hasInvalidData) {
+						// 需要修复
+						fixedCount++;
+						hasChanges = true;
+
+						// 过滤出有效成分，必须有percentage字段
+						const validComponents = bean.blendComponents
+							.filter(comp => 
+								comp && typeof comp === "object" && 
+								comp.percentage !== undefined && comp.percentage !== null && 
+								comp.percentage !== ""
+							)
+							.map(comp => {
+								// 确保percentage是数字
+								return {
+									...comp,
+									percentage: typeof comp.percentage === 'string' 
+										? parseFloat(comp.percentage) || 0 
+										: comp.percentage
+								};
+							});
+
+						if (validComponents.length > 0) {
+							// 重新分配百分比，确保总和为100%
+							const totalPercentage = validComponents.reduce(
+								(sum, comp) => sum + (typeof comp.percentage === 'number' ? comp.percentage : 0), 
+								0
+							);
+							
+							// 如果总和不是100%，按比例调整
+							if (Math.abs(totalPercentage - 100) > 0.1) { // 允许0.1%的误差
+								const fixedComponents = validComponents.map((comp, index) => {
+									if (totalPercentage > 0) {
+										// 按比例调整
+										const adjustedPercentage = Math.round((comp.percentage / totalPercentage) * 100 * 10) / 10;
+										return {
+											...comp,
+											percentage: index === validComponents.length - 1 
+												? 100 - validComponents.slice(0, -1).reduce((sum, c) => sum + c.percentage, 0) 
+												: adjustedPercentage
+										};
+									} else {
+										// 如果总和为0，平均分配
+										const perComponent = Math.floor(100 / validComponents.length);
+										const remainder = 100 - (perComponent * validComponents.length);
+										
+										return {
+											...comp,
+											percentage: index === validComponents.length - 1 
+												? perComponent + remainder 
+												: perComponent
+										};
+									}
+								});
+								
+								return {
+									...bean,
+									blendComponents: fixedComponents
+								};
+							}
+							
+							// 总和接近100%，使用有效组件
+							return {
+								...bean,
+								blendComponents: validComponents
+							};
+						} else if (bean.origin) {
+							// 如果没有有效成分但有产地信息，创建一个默认成分
+							return {
+								...bean,
+								blendComponents: [{
+									percentage: 100,
+									origin: bean.origin || "",
+									process: bean.process || "",
+									variety: bean.variety || ""
+								}]
+							};
+						} else {
+							// 无法修复的情况，移除blendComponents
+							const { blendComponents: _unusedBlendComponents, ...restBean } = bean;
+							return {
+								...restBean,
+								type: "单品" // 改为单品
+							};
+						}
+					}
+				} else if (bean.type !== "拼配" && bean.blendComponents) {
+					// 非拼配豆不应该有blendComponents，移除它
+					fixedCount++;
+					hasChanges = true;
+					const { blendComponents: _unusedBlendComponents, ...restBean } = bean;
+					return restBean;
+				}
+				
+				// 没有问题或不是拼配豆，返回原样
+				return bean;
+			});
+
+			// 如果有变更，保存修复后的数据
+			if (hasChanges) {
+				await Storage.set("coffeeBeans", JSON.stringify(fixedBeans));
+				return {
+					success: true,
+					message: `成功修复了${fixedCount}个拼配豆数据`,
+					fixedCount
+				};
+			}
+
+			return {
+				success: true,
+				message: "未发现需要修复的拼配豆数据",
+				fixedCount: 0
+			};
+		} catch (error) {
+			return {
+				success: false,
+				message: `修复拼配豆数据失败: ${(error as Error).message}`,
+				fixedCount: 0
+			};
+		}
+	},
 };

@@ -29,6 +29,8 @@ import type { BrewingNote } from '@/lib/config'
 import type { BrewingNoteData } from '@/app/types'
 import { BREWING_EVENTS } from '@/lib/brewing/constants'
 import BrewingNoteFormModalNew from '@/components/BrewingNoteFormModalNew'
+import ErrorBoundary from '@/components/ErrorBoundary'
+import CoffeeBeans from '@/components/CoffeeBeans'
 
 // 为Window对象声明类型扩展
 declare global {
@@ -46,8 +48,6 @@ interface TransitionState {
 // 动态导入客户端组件
 const BrewingTimer = dynamic(() => import('@/components/BrewingTimer'), { ssr: false, loading: () => null })
 const BrewingHistory = dynamic(() => import('@/components/BrewingHistory'), { ssr: false, loading: () => null })
-// BrewingNoteForm在计时器组件内部使用，在页面级别不直接使用
-const CoffeeBeansComponent = dynamic(() => import('@/components/CoffeeBeans'), { ssr: false, loading: () => null })
 
 // 添加一个静态加载器组件，处理初始化过程
 const AppLoader = ({ onInitialized }: { onInitialized: (params: { hasBeans: boolean }) => void }) => {
@@ -232,6 +232,20 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         // 简化的初始化函数
         const initializeApp = async () => {
             try {
+                // 0. 自动修复可能存在的数据问题
+                try {
+                    // 导入数据管理工具
+                    const { DataManager } = await import('@/lib/dataManager');
+                    // 自动修复拼配豆数据
+                    const fixResult = await DataManager.fixBlendBeansData();
+                    if (fixResult.fixedCount > 0) {
+                        console.log(`自动修复了${fixResult.fixedCount}个存在问题的拼配豆数据`);
+                    }
+                } catch (error) {
+                    console.error('自动修复数据时出错:', error);
+                    // 继续初始化，不阻止应用启动
+                }
+
                 // 1. 加载设置
                 try {
                     const savedSettings = await Storage.get('brewGuideSettings');
@@ -621,11 +635,41 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
                 // 处理拼配成分，确保百分比是数字类型
                 if (bean.blendComponents && Array.isArray(bean.blendComponents)) {
-                    bean.blendComponents = bean.blendComponents.map((comp: { percentage: string | number }) => ({
-                        ...comp,
-                        percentage: typeof comp.percentage === 'string' ?
-                            parseInt(comp.percentage, 10) : comp.percentage
-                    }));
+                    // 定义拼配成分接口
+                    interface BlendComponentInput {
+                        percentage?: string | number;
+                        origin?: string;
+                        process?: string;
+                        variety?: string;
+                        [key: string]: unknown;
+                    }
+                    
+                    // 先验证拼配成分的格式是否正确
+                    const validComponents = bean.blendComponents.filter((comp: BlendComponentInput) => 
+                        comp && (typeof comp === 'object') && 
+                        (comp.percentage !== undefined) &&
+                        (comp.origin !== undefined || comp.process !== undefined || comp.variety !== undefined)
+                    );
+                    
+                    if (validComponents.length > 0) {
+                        bean.blendComponents = validComponents.map((comp: { percentage: string | number }) => ({
+                            ...comp,
+                            percentage: typeof comp.percentage === 'string' ?
+                                parseInt(comp.percentage, 10) : comp.percentage
+                        }));
+                    } else if (bean.type === '拼配') {
+                        console.warn('拼配豆数据格式不正确，重置拼配成分');
+                        // 如果是拼配豆但没有有效的拼配成分，创建一个默认成分
+                        bean.blendComponents = [{
+                            percentage: 100,
+                            origin: bean.origin || '',
+                            process: bean.process || '',
+                            variety: bean.variety || ''
+                        }];
+                    } else {
+                        // 非拼配豆，移除无效的拼配成分
+                        delete bean.blendComponents;
+                    }
                 }
 
                 // 添加到数据库
@@ -1515,22 +1559,15 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                     </m.div>
                 )}
                 {activeMainTab === '咖啡豆' && (
-                    <m.div
-                        key="coffee-beans-tab"
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 10 }}
-                        transition={{ duration: 0.3 }}
-                        className="flex-1 overflow-auto"
-                    >
-                        <CoffeeBeansComponent
+                    <ErrorBoundary>
+                        <CoffeeBeans
                             key={beanListKey}
                             isOpen={activeMainTab === '咖啡豆'}
                             showBeanForm={handleBeanForm}
                             onShowImport={() => setShowImportBeanForm(true)}
                             onGenerateAIRecipe={handleGenerateAIRecipe}
                         />
-                    </m.div>
+                    </ErrorBoundary>
                 )}
             </AnimatePresence>
 

@@ -47,9 +47,8 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
             // 尝试从文本中提取数据
             import('@/lib/jsonUtils').then(async ({ extractJsonFromText }) => {
                 setError(null);
-                console.log('正在解析导入数据...');
+                // 解析导入数据
                 const method = extractJsonFromText(importData) as Method;
-                console.log('解析结果:', method);
 
                 if (!method) {
                     setError('无法从输入中提取有效数据');
@@ -58,7 +57,6 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
 
                 // 验证方法对象是否有必要的字段
                 if (!method.name) {
-                    console.log('缺少name字段');
                     // 尝试获取method字段，使用接口扩展
                     interface ExtendedMethod extends Method {
                         method?: string;
@@ -67,7 +65,6 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
                     if (typeof extendedMethod.method === 'string') {
                         // 如果有method字段，使用它作为name
                         method.name = extendedMethod.method;
-                        console.log('使用method字段作为name:', method.name);
                     } else {
                         setError('冲煮方案缺少名称');
                         return;
@@ -76,14 +73,12 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
 
                 // 验证params
                 if (!method.params) {
-                    console.log('缺少params字段');
                     setError('冲煮方案格式不完整，缺少参数字段');
                     return;
                 }
 
                 // 验证stages
                 if (!method.params.stages || method.params.stages.length === 0) {
-                    console.log('缺少stages字段或为空数组');
                     setError('冲煮方案格式不完整，缺少冲煮步骤');
                     return;
                 }
@@ -110,20 +105,18 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
                     }
                 };
 
-                console.log('最终导入的方案:', validMethod);
-
                 // 导入方案
                 onImport(validMethod);
                 // 导入成功后清空输入框和错误信息
                 setImportData('');
                 setError(null);
-            }).catch((err) => {
-                console.error('导入失败:', err);
-                setError('数据格式错误，请检查导入的数据');
+                // 关闭模态框
+                handleClose();
+            }).catch(err => {
+                setError('解析数据失败: ' + (err instanceof Error ? err.message : '未知错误'));
             });
         } catch (err) {
-            console.error('导入失败:', err);
-            setError('数据格式错误，请检查导入的数据');
+            setError('导入失败: ' + (err instanceof Error ? err.message : '未知错误'));
         }
     };
 

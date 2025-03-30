@@ -109,12 +109,18 @@ interface CoffeeBeansProps {
 
 // 在组件外部定义工具函数
 const generateBeanTitle = (bean: CoffeeBean): string => {
+    // 安全检查：确保bean是有效对象且有名称
+    if (!bean || typeof bean !== 'object' || !bean.name) {
+        return bean?.name || '未命名咖啡豆';
+    }
+    
     // 将豆子名称转换为小写以便比较
     const nameLower = bean.name.toLowerCase();
     
     // 创建一个函数来检查参数是否已包含在名称中
-    const isIncluded = (param?: string): boolean => {
-        if (!param) return true; // 如果参数为空，视为已包含
+    const isIncluded = (param?: string | null): boolean => {
+        // 如果参数为空或不是字符串类型，视为已包含
+        if (!param || typeof param !== 'string') return true;
         
         // 将参数转换为小写并分割成单词
         const paramWords = param.toLowerCase().split(/\s+/);
@@ -186,7 +192,18 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
     // 为所有豆子预计算标题并缓存
     const beanTitles = useMemo(() => {
         return filteredBeans.reduce((acc, bean) => {
-            acc[bean.id] = generateBeanTitle(bean);
+            try {
+                // 确保bean有name属性，否则使用默认名称
+                if (bean && typeof bean === 'object' && typeof bean.name === 'string') {
+                    acc[bean.id] = generateBeanTitle(bean);
+                } else {
+                    // 如果bean或bean.name不符合预期，使用安全的默认值
+                    acc[bean.id] = bean.name || '未命名咖啡豆';
+                }
+            } catch (_error) {
+                // 捕获生成标题过程中可能发生的错误，但不输出日志
+                acc[bean.id] = bean.name || '未命名咖啡豆';
+            }
             return acc;
         }, {} as Record<string, string>);
     }, [filteredBeans]);
@@ -383,8 +400,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
             try {
                 const beans = await CoffeeBeanManager.getRatedBeans();
                 setRatedBeans(beans);
-            } catch (error) {
-                console.error("加载评分咖啡豆失败:", error);
+            } catch (_error) {
+                // 静默处理错误
                 setRatedBeans([]);
             }
         };
@@ -646,7 +663,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
             }
             return null;
         } catch (error) {
-            console.error("保存咖啡豆评分失败:", error);
+            // 静默处理错误
             alert("保存评分失败，请重试");
             throw error; // 抛出错误以便上层处理
         }
@@ -759,7 +776,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                         const result = await handleSaveRating(id, ratings);
                         return result;
                     } catch (error) {
-                        console.error("评分保存失败:", error);
+                        // 静默处理错误
                         throw error;
                     }
                 }}
@@ -769,8 +786,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                         try {
                             const beans = await CoffeeBeanManager.getRatedBeans();
                             setRatedBeans(beans);
-                        } catch (error) {
-                            console.error("加载评分咖啡豆失败:", error);
+                        } catch (_error) {
+                            // 静默处理错误
                         }
                     };
                     loadRatedBeans();
@@ -794,6 +811,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.15 }}
                     ref={containerRef}
+                    className="h-full flex flex-col"
                 >
                     {/* 视图切换和操作按钮 - 固定在页面顶部 */}
                     <div className="pt-6 space-y-6 sticky top-0 bg-neutral-50 dark:bg-neutral-900 z-20">
@@ -1009,421 +1027,439 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                     </div>
 
                     {/* 内容区域：根据视图模式显示不同内容 */}
-                    <AnimatePresence mode="wait">
-                        {viewMode === VIEW_OPTIONS.INVENTORY ? (
-                            // 库存视图
-                            <motion.div
-                                key="inventory-view"
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                transition={{ duration: 0.15 }}
-                                className="w-full scroll-with-bottom-bar"
-                            >
-                                {/* 咖啡豆列表 */}
-                                {filteredBeans.length === 0 ? (
-                                    <motion.div
-                                        initial={{ opacity: 0 }}
-                                        animate={{ opacity: 1 }}
-                                        transition={{ duration: 0.2, ease: "easeOut" }}
-                                        className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400"
-                                    >
-                                        {selectedVariety ?
-                                            `[ 没有${selectedVariety}品种的咖啡豆 ]` :
-                                            beans.length > 0 ?
-                                                (showEmptyBeans ? '[ 暂无咖啡豆 ]' : '[ 所有咖啡豆已用完，点击"已用完"查看 ]') :
-                                                '[ 暂无咖啡豆 ]'
-                                        }
-                                    </motion.div>
-                                ) : (
-                                    <div className="space-y-3">
-                                        {filteredBeans.map((bean, index) => {
-                                            return (
-                                                <motion.div
-                                                    key={bean.id}
-                                                    initial={{ opacity: 0, y: 15 }}
-                                                    animate={{ opacity: 1, y: 0 }}
-                                                    exit={{ opacity: 0 }}
-                                                    transition={{
-                                                        duration: 0.2,
-                                                        delay: Math.min(index * 0.05, 0.3),
-                                                        ease: "easeOut"
-                                                    }}
-                                                    className={`group mt-3 space-y-3 px-6 pb-3 hover:bg-neutral-50 dark:hover:bg-neutral-900/70 transition-colors ${index === filteredBeans.length - 1 ? '' : 'border-b border-neutral-200 dark:border-neutral-800/50'} ${isBeanEmpty(bean)
-                                                        ? 'bg-neutral-100/60 dark:bg-neutral-800/30'
-                                                        : ''
-                                                        }`}
-                                                >
-                                                    <div className="flex flex-col space-y-3">
-                                                        {/* 图片和基本信息区域 */}
-                                                        <div className="flex gap-4">
-                                                            {/* 咖啡豆图片 - 只在有图片时显示 */}
-                                                            {bean.image && (
-                                                                <div className="w-14 h-14 rounded-md overflow-hidden bg-neutral-100 dark:bg-neutral-800 flex-shrink-0 border border-neutral-200/50 dark:border-neutral-700/50 relative">
-                                                                    <Image
-                                                                        src={bean.image}
-                                                                        alt={bean.name}
-                                                                        fill
-                                                                        className="object-cover"
-                                                                        sizes="50px"
-                                                                    />
+                    <div className="flex-1 overflow-hidden">
+                        <AnimatePresence mode="wait">
+                            {viewMode === VIEW_OPTIONS.INVENTORY ? (
+                                // 库存视图
+                                <motion.div
+                                    key="inventory-view"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    transition={{ duration: 0.15 }}
+                                    className="w-full h-full overflow-y-auto scroll-with-bottom-bar"
+                                >
+                                    {/* 咖啡豆列表 */}
+                                    {filteredBeans.length === 0 ? (
+                                        <motion.div
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            transition={{ duration: 0.2, ease: "easeOut" }}
+                                            className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400"
+                                        >
+                                            {selectedVariety ?
+                                                `[ 没有${selectedVariety}品种的咖啡豆 ]` :
+                                                beans.length > 0 ?
+                                                    (showEmptyBeans ? '[ 暂无咖啡豆 ]' : '[ 所有咖啡豆已用完，点击"已用完"查看 ]') :
+                                                    '[ 暂无咖啡豆 ]'
+                                            }
+                                        </motion.div>
+                                    ) : (
+                                        <div className="space-y-3 pb-20">
+                                            {filteredBeans.map((bean, index) => {
+                                                return (
+                                                    <motion.div
+                                                        key={bean.id}
+                                                        initial={{ opacity: 0, y: 15 }}
+                                                        animate={{ opacity: 1, y: 0 }}
+                                                        exit={{ opacity: 0 }}
+                                                        transition={{
+                                                            duration: 0.2,
+                                                            delay: Math.min(index * 0.05, 0.3),
+                                                            ease: "easeOut"
+                                                        }}
+                                                        className={`group mt-3 space-y-3 px-6 pb-3 hover:bg-neutral-50 dark:hover:bg-neutral-900/70 transition-colors ${index === filteredBeans.length - 1 ? '' : 'border-b border-neutral-200 dark:border-neutral-800/50'} ${isBeanEmpty(bean)
+                                                            ? 'bg-neutral-100/60 dark:bg-neutral-800/30'
+                                                            : ''
+                                                            }`}
+                                                    >
+                                                        <div className="flex flex-col space-y-3">
+                                                            {/* 图片和基本信息区域 */}
+                                                            <div className="flex gap-4">
+                                                                {/* 咖啡豆图片 - 只在有图片时显示 */}
+                                                                {bean.image && (
+                                                                    <div className="w-14 h-14 rounded-md overflow-hidden bg-neutral-100 dark:bg-neutral-800 flex-shrink-0 border border-neutral-200/50 dark:border-neutral-700/50 relative">
+                                                                        <Image
+                                                                            src={bean.image}
+                                                                            alt={bean.name}
+                                                                            fill
+                                                                            className="object-cover"
+                                                                            sizes="50px"
+                                                                        />
+                                                                    </div>
+                                                                )}
+
+                                                                {/* 名称和标签区域 */}
+                                                                <div className="flex-1 min-w-0">
+                                                                    <div className="flex justify-between items-start pb-0.5">
+                                                                        <div className="flex-1 min-w-0 overflow-hidden">
+                                                                            <div className="text-[11px] font-normal break-words text-neutral-800 dark:text-white pr-2">
+                                                                                {beanTitles[bean.id]}
+                                                                            </div>
+                                                                            {isBeanEmpty(bean) && (
+                                                                                <div className="text-[10px] font-normal px-1.5 py-0.5 mt-1 inline-block rounded-full bg-neutral-200 text-neutral-600 dark:bg-neutral-700 dark:text-neutral-300 shrink-0">
+                                                                                    已用完
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                        <div className="flex-shrink-0 ml-1 relative">
+                                                                            <button
+                                                                                onClick={() => {
+                                                                                    setActionMenuStates(prev => {
+                                                                                        const newStates = { ...prev };
+                                                                                        // 关闭所有其他菜单
+                                                                                        Object.keys(newStates).forEach(id => {
+                                                                                            newStates[id] = false;
+                                                                                        });
+                                                                                        // 切换当前菜单
+                                                                                        newStates[bean.id] = !prev[bean.id];
+                                                                                        return newStates;
+                                                                                    });
+                                                                                }}
+                                                                                className="w-8 h-[16.5] flex items-center justify-center text-xs text-neutral-500 dark:text-neutral-400"
+                                                                            >
+                                                                                ···
+                                                                            </button>
+                                                                            
+                                                                            <AnimatePresence mode="wait">
+                                                                                {actionMenuStates[bean.id] && (
+                                                                                    <motion.div
+                                                                                        key="dropdown-menu"
+                                                                                        initial={{ opacity: 0, y: -5 }}
+                                                                                        animate={{ opacity: 1, y: 0 }}
+                                                                                        exit={{ opacity: 0, y: -5 }}
+                                                                                        transition={{ duration: 0.15, ease: "easeOut" }}
+                                                                                        className="absolute top-6 right-0 z-50 border border-neutral-200/70 dark:border-neutral-800/70 shadow-lg backdrop-blur-sm bg-white/95 dark:bg-neutral-900/95 rounded-lg overflow-hidden min-w-[100px]"
+                                                                                    >
+                                                                                        <div className="py-1">
+                                                                                            <button
+                                                                                                onClick={() => {
+                                                                                                    handleEdit(bean);
+                                                                                                    setActionMenuStates(prev => ({
+                                                                                                        ...prev,
+                                                                                                        [bean.id]: false
+                                                                                                    }));
+                                                                                                }}
+                                                                                                className="w-full px-3 py-1.5 text-left text-xs text-neutral-600 dark:text-neutral-300"
+                                                                                            >
+                                                                                                编辑
+                                                                                            </button>
+                                                                                            <button
+                                                                                                onClick={() => {
+                                                                                                    handleShare(bean);
+                                                                                                    setActionMenuStates(prev => ({
+                                                                                                        ...prev,
+                                                                                                        [bean.id]: false
+                                                                                                    }));
+                                                                                                }}
+                                                                                                className="w-full px-3 py-1.5 text-left text-xs text-neutral-600 dark:text-neutral-300"
+                                                                                            >
+                                                                                                分享
+                                                                                            </button>
+                                                                                            <button
+                                                                                                onClick={() => {
+                                                                                                    handleDelete(bean);
+                                                                                                    setActionMenuStates(prev => ({
+                                                                                                        ...prev,
+                                                                                                        [bean.id]: false
+                                                                                                    }));
+                                                                                                }}
+                                                                                                className="w-full px-3 py-1.5 text-left text-xs text-red-500 dark:text-red-400"
+                                                                                            >
+                                                                                                删除
+                                                                                            </button>
+                                                                                            <button
+                                                                                                onClick={() => {
+                                                                                                    handleGenerateAIRecipe(bean);
+                                                                                                    setActionMenuStates(prev => ({
+                                                                                                        ...prev,
+                                                                                                        [bean.id]: false
+                                                                                                    }));
+                                                                                                }}
+                                                                                                className="w-full px-3 py-1.5 text-left text-xs text-emerald-600 dark:text-emerald-500"
+                                                                                            >
+                                                                                                AI方案
+                                                                                            </button>
+                                                                                        </div>
+                                                                                    </motion.div>
+                                                                                )}
+                                                                            </AnimatePresence>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400 break-words">
+                                                                        {bean.type === '拼配' && bean.blendComponents && Array.isArray(bean.blendComponents) && bean.blendComponents.length > 0 && (
+                                                                            <>
+                                                                                {bean.blendComponents.map((component, idx) => {
+                                                                                    // 确保component是有效对象
+                                                                                    if (!component || typeof component !== 'object') {
+                                                                                        return null;
+                                                                                    }
+                                                                                    
+                                                                                    // 安全处理percentage字段
+                                                                                    const safePercentage = (() => {
+                                                                                        if (component.percentage === undefined || component.percentage === null) return "0";
+                                                                                        if (typeof component.percentage === 'string' && component.percentage === "") return "0";
+                                                                                        return typeof component.percentage === 'number' 
+                                                                                            ? component.percentage.toString() 
+                                                                                            : component.percentage;
+                                                                                    })();
+                                                                                    
+                                                                                    return (
+                                                                                        <React.Fragment key={idx}>
+                                                                                            {idx > 0 && <span className="opacity-50 mx-1">·</span>}
+                                                                                            <span>{`${component.origin || ''}${component.process ? `${component.process}` : ''}${component.variety ? `${component.variety}` : ''}(${safePercentage}%)`}</span>
+                                                                                        </React.Fragment>
+                                                                                    );
+                                                                                })}
+                                                                            </>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="grid grid-cols-2 gap-x-4">
+                                                                {/* 剩余量进度条 - 仅当capacity和remaining都存在时显示 */}
+                                                                {bean.capacity && bean.remaining && (
+                                                                    <div className="space-y-1">
+                                                                        <div className="flex items-center justify-between">
+                                                                            <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
+                                                                                剩余量
+                                                                            </div>
+                                                                            <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
+                                                                                {bean.remaining}g / {bean.capacity}g
+                                                                            </div>
+                                                                        </div>
+                                                                        <motion.div
+                                                                            className="h-px w-full overflow-hidden bg-neutral-200/50 dark:bg-neutral-800"
+                                                                        >
+                                                                            <motion.div
+                                                                                initial={{ width: 0 }}
+                                                                                animate={{ width: `${(parseFloat(bean.remaining.replace('g', '')) / parseFloat(bean.capacity.replace('g', ''))) * 100}%` }}
+                                                                                transition={{
+                                                                                    delay: 0.1,
+                                                                                    duration: 0.8,
+                                                                                    ease: "easeInOut"
+                                                                                }}
+                                                                                className="h-full bg-neutral-800 dark:bg-neutral-100"
+                                                                            />
+                                                                        </motion.div>
+                                                                    </div>
+                                                                )}
+
+                                                                {/* 赏味期进度条 - 仅当roastDate存在时显示 */}
+                                                                {bean.roastDate && (
+                                                                    <div className="space-y-1">
+                                                                        <div className="flex items-center justify-between">
+                                                                            <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
+                                                                                赏味期
+                                                                            </div>
+                                                                            {(() => {
+                                                                                // 计算天数差，向上取整确保当天也会显示进度
+                                                                                const today = new Date();
+                                                                                const roastDate = new Date(bean.roastDate);
+
+                                                                                // 消除时区和时间差异，只比较日期部分
+                                                                                const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                                                                                const roastDateOnly = new Date(roastDate.getFullYear(), roastDate.getMonth(), roastDate.getDate());
+
+                                                                                // 计算天数差，向上取整确保当天也会显示进度
+                                                                                const daysSinceRoast = Math.ceil((todayDate.getTime() - roastDateOnly.getTime()) / (1000 * 60 * 60 * 24));
+
+                                                                                // 优先使用自定义赏味期参数，如果没有则根据烘焙度计算
+                                                                                let startDay = bean.startDay || 0;
+                                                                                let endDay = bean.endDay || 0;
+
+                                                                                // 如果没有自定义值，则根据烘焙度设置默认值
+                                                                                if (startDay === 0 && endDay === 0) {
+                                                                                    if (bean.roastLevel?.includes('浅')) {
+                                                                                        startDay = 7;
+                                                                                        endDay = 30;
+                                                                                    } else if (bean.roastLevel?.includes('深')) {
+                                                                                        startDay = 14;
+                                                                                        endDay = 60;
+                                                                                    } else {
+                                                                                        // 默认为中烘焙
+                                                                                        startDay = 10;
+                                                                                        endDay = 30;
+                                                                                    }
+                                                                                }
+
+                                                                                let status = '';
+                                                                                if (daysSinceRoast < startDay) {
+                                                                                    status = `养豆期剩余 ${startDay - daysSinceRoast}天`;
+                                                                                } else if (daysSinceRoast <= endDay) {
+                                                                                    status = `赏味期剩余 ${endDay - daysSinceRoast}天`;
+                                                                                } else {
+                                                                                    status = '已衰退';
+                                                                                }
+
+                                                                                return (
+                                                                                    <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
+                                                                                        {status}
+                                                                                    </div>
+                                                                                );
+                                                                            })()}
+                                                                        </div>
+                                                                        <motion.div className="h-px w-full overflow-hidden bg-neutral-200/50 dark:bg-neutral-800 relative">
+                                                                            {(() => {
+                                                                                // 计算天数差，向上取整确保当天也会显示进度
+                                                                                const today = new Date();
+                                                                                const roastDate = new Date(bean.roastDate);
+
+                                                                                // 消除时区和时间差异，只比较日期部分
+                                                                                const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                                                                                const roastDateOnly = new Date(roastDate.getFullYear(), roastDate.getMonth(), roastDate.getDate());
+
+                                                                                // 计算天数差，向上取整确保当天也会显示进度
+                                                                                const daysSinceRoast = Math.ceil((todayDate.getTime() - roastDateOnly.getTime()) / (1000 * 60 * 60 * 24));
+
+                                                                                // 优先使用自定义赏味期参数，如果没有则根据烘焙度计算
+                                                                                let startDay = bean.startDay || 0;
+                                                                                let endDay = bean.endDay || 0;
+
+                                                                                // 如果没有自定义值，则根据烘焙度设置默认值
+                                                                                if (startDay === 0 && endDay === 0) {
+                                                                                    if (bean.roastLevel?.includes('浅')) {
+                                                                                        startDay = 7;
+                                                                                        endDay = 30;
+                                                                                    } else if (bean.roastLevel?.includes('深')) {
+                                                                                        startDay = 14;
+                                                                                        endDay = 60;
+                                                                                    } else {
+                                                                                        // 默认为中烘焙
+                                                                                        startDay = 10;
+                                                                                        endDay = 30;
+                                                                                    }
+                                                                                }
+
+                                                                                // 计算各区间宽度百分比
+                                                                                const preFlavorPercent = (startDay / endDay) * 100;
+                                                                                const flavorPercent = ((endDay - startDay) / endDay) * 100;
+                                                                                const progressPercent = Math.min((daysSinceRoast / endDay) * 100, 100);
+
+                                                                                // 判断当前阶段
+                                                                                let fillColor = 'bg-neutral-600 dark:bg-neutral-400';
+                                                                                if (daysSinceRoast > endDay) {
+                                                                                    fillColor = 'bg-neutral-500 dark:bg-neutral-500';
+                                                                                } else if (daysSinceRoast >= startDay) {
+                                                                                    fillColor = 'bg-green-500 dark:bg-green-600';
+                                                                                } else {
+                                                                                    fillColor = 'bg-neutral-600 dark:bg-neutral-400';
+                                                                                }
+
+                                                                                return (
+                                                                                    <>
+                                                                                        {/* 养豆期区间 */}
+                                                                                        <motion.div
+                                                                                            initial={{ width: 0, opacity: 0 }}
+                                                                                            animate={{ width: `${preFlavorPercent}%`, opacity: 1 }}
+                                                                                            transition={{ delay: 0.1, duration: 0.6, ease: "easeInOut" }}
+                                                                                            className="absolute h-full bg-neutral-400/10 dark:bg-neutral-400/10"
+                                                                                            style={{
+                                                                                                left: '0%'
+                                                                                            }}
+                                                                                        ></motion.div>
+
+                                                                                        {/* 赏味期区间（带纹理） */}
+                                                                                        <motion.div
+                                                                                            initial={{ width: 0, opacity: 0 }}
+                                                                                            animate={{ width: `${flavorPercent}%`, opacity: 1 }}
+                                                                                            transition={{ delay: 0.2, duration: 0.6, ease: "easeInOut" }}
+                                                                                            className="absolute h-full bg-green-500/20 dark:bg-green-600/30"
+                                                                                            style={{
+                                                                                                left: `${preFlavorPercent}%`,
+                                                                                                backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(0, 0, 0, 0.1) 2px, rgba(0, 0, 0, 0.1) 4px)'
+                                                                                            }}
+                                                                                        ></motion.div>
+
+                                                                                        {/* 进度指示 */}
+                                                                                        <motion.div
+                                                                                            initial={{ width: 0 }}
+                                                                                            animate={{ width: `${progressPercent}%` }}
+                                                                                            transition={{ delay: 0.4, duration: 0.9, ease: "easeInOut" }}
+                                                                                            className={`absolute h-full ${fillColor}`}
+                                                                                            style={{
+                                                                                                zIndex: 10
+                                                                                            }}
+                                                                                        ></motion.div>
+                                                                                    </>
+                                                                                );
+                                                                            })()}
+                                                                        </motion.div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+
+                                                            {/* 风味标签 - 改进显示 */}
+                                                            {bean.flavor && bean.flavor.length > 0 && (
+                                                                <div className="flex flex-wrap gap-1 mt-1.5">
+                                                                    {bean.flavor.map((flavor, idx) => (
+                                                                        <div
+                                                                            key={idx}
+                                                                            className="text-[10px] bg-neutral-100 dark:bg-neutral-800 rounded-full px-2 py-0.5"
+                                                                        >
+                                                                            {flavor}
+                                                                        </div>
+                                                                    ))}
                                                                 </div>
                                                             )}
 
-                                                            {/* 名称和标签区域 */}
-                                                            <div className="flex-1 min-w-0">
-                                                                <div className="flex justify-between items-start pb-0.5">
-                                                                    <div className="flex-1 min-w-0 overflow-hidden">
-                                                                        <div className="text-[11px] font-normal break-words text-neutral-800 dark:text-white pr-2">
-                                                                            {beanTitles[bean.id]}
-                                                                        </div>
-                                                                        {isBeanEmpty(bean) && (
-                                                                            <div className="text-[10px] font-normal px-1.5 py-0.5 mt-1 inline-block rounded-full bg-neutral-200 text-neutral-600 dark:bg-neutral-700 dark:text-neutral-300 shrink-0">
-                                                                                已用完
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                    <div className="flex-shrink-0 ml-1 relative">
-                                                                        <button
-                                                                            onClick={() => {
-                                                                                setActionMenuStates(prev => {
-                                                                                    const newStates = { ...prev };
-                                                                                    // 关闭所有其他菜单
-                                                                                    Object.keys(newStates).forEach(id => {
-                                                                                        newStates[id] = false;
-                                                                                    });
-                                                                                    // 切换当前菜单
-                                                                                    newStates[bean.id] = !prev[bean.id];
-                                                                                    return newStates;
-                                                                                });
-                                                                            }}
-                                                                            className="w-8 h-[16.5] flex items-center justify-center text-xs text-neutral-500 dark:text-neutral-400"
-                                                                        >
-                                                                            ···
-                                                                        </button>
-                                                                        
-                                                                        <AnimatePresence mode="wait">
-                                                                            {actionMenuStates[bean.id] && (
-                                                                                <motion.div
-                                                                                    key="dropdown-menu"
-                                                                                    initial={{ opacity: 0, y: -5 }}
-                                                                                    animate={{ opacity: 1, y: 0 }}
-                                                                                    exit={{ opacity: 0, y: -5 }}
-                                                                                    transition={{ duration: 0.15, ease: "easeOut" }}
-                                                                                    className="absolute top-6 right-0 z-50 border border-neutral-200/70 dark:border-neutral-800/70 shadow-lg backdrop-blur-sm bg-white/95 dark:bg-neutral-900/95 rounded-lg overflow-hidden min-w-[100px]"
-                                                                                >
-                                                                                    <div className="py-1">
-                                                                                        <button
-                                                                                            onClick={() => {
-                                                                                                handleEdit(bean);
-                                                                                                setActionMenuStates(prev => ({
-                                                                                                    ...prev,
-                                                                                                    [bean.id]: false
-                                                                                                }));
-                                                                                            }}
-                                                                                            className="w-full px-3 py-1.5 text-left text-xs text-neutral-600 dark:text-neutral-300"
-                                                                                        >
-                                                                                            编辑
-                                                                                        </button>
-                                                                                        <button
-                                                                                            onClick={() => {
-                                                                                                handleShare(bean);
-                                                                                                setActionMenuStates(prev => ({
-                                                                                                    ...prev,
-                                                                                                    [bean.id]: false
-                                                                                                }));
-                                                                                            }}
-                                                                                            className="w-full px-3 py-1.5 text-left text-xs text-neutral-600 dark:text-neutral-300"
-                                                                                        >
-                                                                                            分享
-                                                                                        </button>
-                                                                                        <button
-                                                                                            onClick={() => {
-                                                                                                handleDelete(bean);
-                                                                                                setActionMenuStates(prev => ({
-                                                                                                    ...prev,
-                                                                                                    [bean.id]: false
-                                                                                                }));
-                                                                                            }}
-                                                                                            className="w-full px-3 py-1.5 text-left text-xs text-red-500 dark:text-red-400"
-                                                                                        >
-                                                                                            删除
-                                                                                        </button>
-                                                                                        <button
-                                                                                            onClick={() => {
-                                                                                                handleGenerateAIRecipe(bean);
-                                                                                                setActionMenuStates(prev => ({
-                                                                                                    ...prev,
-                                                                                                    [bean.id]: false
-                                                                                                }));
-                                                                                            }}
-                                                                                            className="w-full px-3 py-1.5 text-left text-xs text-emerald-600 dark:text-emerald-500"
-                                                                                        >
-                                                                                            AI方案
-                                                                                        </button>
-                                                                                    </div>
-                                                                                </motion.div>
-                                                                            )}
-                                                                        </AnimatePresence>
-                                                                    </div>
+                                                            {/* 底部信息布局优化 */}
+                                                            <div className="flex items-baseline justify-between mt-1.5 text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400 ">
+                                                                <div>
+                                                                    {bean.roastDate && <span>烘焙于 {bean.roastDate}</span>}
                                                                 </div>
-
-                                                                <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400 break-words">
-                                                                    {bean.type === '拼配' && bean.blendComponents && bean.blendComponents.length > 0 && (
-                                                                        <>
-                                                                            {bean.blendComponents.map((component, idx) => (
-                                                                                <React.Fragment key={idx}>
-                                                                                    {idx > 0 && <span className="opacity-50 mx-1">·</span>}
-                                                                                    <span>{`${component.origin || ''}${component.process ? `${component.process}` : ''}${component.variety ? `${component.variety}` : ''}(${component.percentage}%)`}</span>
-                                                                                </React.Fragment>
-                                                                            ))}
-                                                                        </>
+                                                                <div>
+                                                                    {bean.price && (
+                                                                        <span>
+                                                                            {bean.price}元
+                                                                            {bean.capacity && (
+                                                                                <span className="ml-1">
+                                                                                    [{(parseFloat(bean.price) / parseFloat(bean.capacity.replace('g', ''))).toFixed(2)}元/克]
+                                                                                </span>
+                                                                            )}
+                                                                        </span>
                                                                     )}
                                                                 </div>
                                                             </div>
-                                                        </div>
 
-                                                        <div className="grid grid-cols-2 gap-x-4">
-                                                            {/* 剩余量进度条 - 仅当capacity和remaining都存在时显示 */}
-                                                            {bean.capacity && bean.remaining && (
-                                                                <div className="space-y-1">
-                                                                    <div className="flex items-center justify-between">
-                                                                        <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
-                                                                            剩余量
-                                                                        </div>
-                                                                        <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
-                                                                            {bean.remaining}g / {bean.capacity}g
-                                                                        </div>
-                                                                    </div>
-                                                                    <motion.div
-                                                                        className="h-px w-full overflow-hidden bg-neutral-200/50 dark:bg-neutral-800"
-                                                                    >
-                                                                        <motion.div
-                                                                            initial={{ width: 0 }}
-                                                                            animate={{ width: `${(parseFloat(bean.remaining.replace('g', '')) / parseFloat(bean.capacity.replace('g', ''))) * 100}%` }}
-                                                                            transition={{
-                                                                                delay: 0.1,
-                                                                                duration: 0.8,
-                                                                                ease: "easeInOut"
-                                                                            }}
-                                                                            className="h-full bg-neutral-800 dark:bg-neutral-100"
-                                                                        />
-                                                                    </motion.div>
-                                                                </div>
-                                                            )}
-
-                                                            {/* 赏味期进度条 - 仅当roastDate存在时显示 */}
-                                                            {bean.roastDate && (
-                                                                <div className="space-y-1">
-                                                                    <div className="flex items-center justify-between">
-                                                                        <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
-                                                                            赏味期
-                                                                        </div>
-                                                                        {(() => {
-                                                                            // 计算天数差，向上取整确保当天也会显示进度
-                                                                            const today = new Date();
-                                                                            const roastDate = new Date(bean.roastDate);
-
-                                                                            // 消除时区和时间差异，只比较日期部分
-                                                                            const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-                                                                            const roastDateOnly = new Date(roastDate.getFullYear(), roastDate.getMonth(), roastDate.getDate());
-
-                                                                            // 计算天数差，向上取整确保当天也会显示进度
-                                                                            const daysSinceRoast = Math.ceil((todayDate.getTime() - roastDateOnly.getTime()) / (1000 * 60 * 60 * 24));
-
-                                                                            // 优先使用自定义赏味期参数，如果没有则根据烘焙度计算
-                                                                            let startDay = bean.startDay || 0;
-                                                                            let endDay = bean.endDay || 0;
-
-                                                                            // 如果没有自定义值，则根据烘焙度设置默认值
-                                                                            if (startDay === 0 && endDay === 0) {
-                                                                                if (bean.roastLevel?.includes('浅')) {
-                                                                                    startDay = 7;
-                                                                                    endDay = 30;
-                                                                                } else if (bean.roastLevel?.includes('深')) {
-                                                                                    startDay = 14;
-                                                                                    endDay = 60;
-                                                                                } else {
-                                                                                    // 默认为中烘焙
-                                                                                    startDay = 10;
-                                                                                    endDay = 30;
-                                                                                }
-                                                                            }
-
-                                                                            let status = '';
-                                                                            if (daysSinceRoast < startDay) {
-                                                                                status = `养豆期剩余 ${startDay - daysSinceRoast}天`;
-                                                                            } else if (daysSinceRoast <= endDay) {
-                                                                                status = `赏味期剩余 ${endDay - daysSinceRoast}天`;
-                                                                            } else {
-                                                                                status = '已衰退';
-                                                                            }
-
-                                                                            return (
-                                                                                <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
-                                                                                    {status}
-                                                                                </div>
-                                                                            );
-                                                                        })()}
-                                                                    </div>
-                                                                    <motion.div className="h-px w-full overflow-hidden bg-neutral-200/50 dark:bg-neutral-800 relative">
-                                                                        {(() => {
-                                                                            // 计算天数差，向上取整确保当天也会显示进度
-                                                                            const today = new Date();
-                                                                            const roastDate = new Date(bean.roastDate);
-
-                                                                            // 消除时区和时间差异，只比较日期部分
-                                                                            const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-                                                                            const roastDateOnly = new Date(roastDate.getFullYear(), roastDate.getMonth(), roastDate.getDate());
-
-                                                                            // 计算天数差，向上取整确保当天也会显示进度
-                                                                            const daysSinceRoast = Math.ceil((todayDate.getTime() - roastDateOnly.getTime()) / (1000 * 60 * 60 * 24));
-
-                                                                            // 优先使用自定义赏味期参数，如果没有则根据烘焙度计算
-                                                                            let startDay = bean.startDay || 0;
-                                                                            let endDay = bean.endDay || 0;
-
-                                                                            // 如果没有自定义值，则根据烘焙度设置默认值
-                                                                            if (startDay === 0 && endDay === 0) {
-                                                                                if (bean.roastLevel?.includes('浅')) {
-                                                                                    startDay = 7;
-                                                                                    endDay = 30;
-                                                                                } else if (bean.roastLevel?.includes('深')) {
-                                                                                    startDay = 14;
-                                                                                    endDay = 60;
-                                                                                } else {
-                                                                                    // 默认为中烘焙
-                                                                                    startDay = 10;
-                                                                                    endDay = 30;
-                                                                                }
-                                                                            }
-
-                                                                            // 计算各区间宽度百分比
-                                                                            const preFlavorPercent = (startDay / endDay) * 100;
-                                                                            const flavorPercent = ((endDay - startDay) / endDay) * 100;
-                                                                            const progressPercent = Math.min((daysSinceRoast / endDay) * 100, 100);
-
-                                                                            // 判断当前阶段
-                                                                            let fillColor = 'bg-neutral-600 dark:bg-neutral-400';
-                                                                            if (daysSinceRoast > endDay) {
-                                                                                fillColor = 'bg-neutral-500 dark:bg-neutral-500';
-                                                                            } else if (daysSinceRoast >= startDay) {
-                                                                                fillColor = 'bg-green-500 dark:bg-green-600';
-                                                                            } else {
-                                                                                fillColor = 'bg-neutral-600 dark:bg-neutral-400';
-                                                                            }
-
-                                                                            return (
-                                                                                <>
-                                                                                    {/* 养豆期区间 */}
-                                                                                    <motion.div
-                                                                                        initial={{ width: 0, opacity: 0 }}
-                                                                                        animate={{ width: `${preFlavorPercent}%`, opacity: 1 }}
-                                                                                        transition={{ delay: 0.1, duration: 0.6, ease: "easeInOut" }}
-                                                                                        className="absolute h-full bg-neutral-400/10 dark:bg-neutral-400/10"
-                                                                                        style={{
-                                                                                            left: '0%'
-                                                                                        }}
-                                                                                    ></motion.div>
-
-                                                                                    {/* 赏味期区间（带纹理） */}
-                                                                                    <motion.div
-                                                                                        initial={{ width: 0, opacity: 0 }}
-                                                                                        animate={{ width: `${flavorPercent}%`, opacity: 1 }}
-                                                                                        transition={{ delay: 0.2, duration: 0.6, ease: "easeInOut" }}
-                                                                                        className="absolute h-full bg-green-500/20 dark:bg-green-600/30"
-                                                                                        style={{
-                                                                                            left: `${preFlavorPercent}%`,
-                                                                                            backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(0, 0, 0, 0.1) 2px, rgba(0, 0, 0, 0.1) 4px)'
-                                                                                        }}
-                                                                                    ></motion.div>
-
-                                                                                    {/* 进度指示 */}
-                                                                                    <motion.div
-                                                                                        initial={{ width: 0 }}
-                                                                                        animate={{ width: `${progressPercent}%` }}
-                                                                                        transition={{ delay: 0.4, duration: 0.9, ease: "easeInOut" }}
-                                                                                        className={`absolute h-full ${fillColor}`}
-                                                                                        style={{
-                                                                                            zIndex: 10
-                                                                                        }}
-                                                                                    ></motion.div>
-                                                                                </>
-                                                                            );
-                                                                        })()}
-                                                                    </motion.div>
+                                                            {/* 备注信息 */}
+                                                            {bean.notes && (
+                                                                <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400 pt-1.5">
+                                                                    {bean.notes}
                                                                 </div>
                                                             )}
                                                         </div>
-
-                                                        {/* 风味标签 - 改进显示 */}
-                                                        {bean.flavor && bean.flavor.length > 0 && (
-                                                            <div className="flex flex-wrap gap-1 mt-1.5">
-                                                                {bean.flavor.map((flavor, idx) => (
-                                                                    <div
-                                                                        key={idx}
-                                                                        className="text-[10px] bg-neutral-100 dark:bg-neutral-800 rounded-full px-2 py-0.5"
-                                                                    >
-                                                                        {flavor}
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        )}
-
-                                                        {/* 底部信息布局优化 */}
-                                                        <div className="flex items-baseline justify-between mt-1.5 text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400 ">
-                                                            <div>
-                                                                {bean.roastDate && <span>烘焙于 {bean.roastDate}</span>}
-                                                            </div>
-                                                            <div>
-                                                                {bean.price && (
-                                                                    <span>
-                                                                        {bean.price}元
-                                                                        {bean.capacity && (
-                                                                            <span className="ml-1">
-                                                                                [{(parseFloat(bean.price) / parseFloat(bean.capacity.replace('g', ''))).toFixed(2)}元/克]
-                                                                            </span>
-                                                                        )}
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        </div>
-
-                                                        {/* 备注信息 */}
-                                                        {bean.notes && (
-                                                            <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400 pt-1.5">
-                                                                {bean.notes}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </motion.div>
-                                            );
-                                        })}
-                                    </div>
-                                )}
-                            </motion.div>
-                        ) : (
-                            // 榜单视图
-                            <motion.div
-                                key="ranking-view"
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                transition={{ duration: 0.15 }}
-                                className="w-full"
-                            >
-                                <CoffeeBeanRanking
-                                    isOpen={viewMode === VIEW_OPTIONS.RANKING}
-                                    onShowRatingForm={handleShowRatingForm}
-                                    sortOption={convertToRankingSortOption(sortOption)}
-                                    updatedBeanId={lastRatedBeanId}
-                                    hideFilters={true}
-                                    beanType={rankingBeanType}
-                                    editMode={rankingEditMode}
-                                />
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
+                                                    </motion.div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </motion.div>
+                            ) : (
+                                // 榜单视图
+                                <motion.div
+                                    key="ranking-view"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    transition={{ duration: 0.15 }}
+                                    className="w-full h-full overflow-y-auto"
+                                >
+                                    <CoffeeBeanRanking
+                                        isOpen={viewMode === VIEW_OPTIONS.RANKING}
+                                        onShowRatingForm={handleShowRatingForm}
+                                        sortOption={convertToRankingSortOption(sortOption)}
+                                        updatedBeanId={lastRatedBeanId}
+                                        hideFilters={true}
+                                        beanType={rankingBeanType}
+                                        editMode={rankingEditMode}
+                                    />
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
 
                     {/* 添加和导入按钮 - 仅在仓库视图显示 */}
                     {viewMode === VIEW_OPTIONS.INVENTORY && (

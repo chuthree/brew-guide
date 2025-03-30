@@ -21,6 +21,7 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
     const [isExporting, setIsExporting] = useState(false)
     const [isImporting, setIsImporting] = useState(false)
     const [isResetting, setIsResetting] = useState(false)
+    const [isFixingBlendBeans, setIsFixingBlendBeans] = useState(false)
     const [showConfirmReset, setShowConfirmReset] = useState(false)
     const [importMode, setImportMode] = useState<'replace' | 'merge'>('merge')
     const fileInputRef = useRef<HTMLInputElement>(null)
@@ -159,6 +160,36 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
         }
     }
 
+    const handleFixBlendBeans = async () => {
+        try {
+            setIsFixingBlendBeans(true);
+            setStatus({ type: 'info', message: '正在修复拼配豆数据...' });
+
+            const result = await DataManagerUtil.fixBlendBeansData();
+
+            if (result.success) {
+                setStatus({ 
+                    type: 'success', 
+                    message: result.fixedCount > 0 
+                        ? `${result.message}，请重启应用确保正常运行` 
+                        : result.message 
+                });
+                
+                if (result.fixedCount > 0 && onDataChange) {
+                    setTimeout(() => {
+                        onDataChange();
+                    }, 1500);
+                }
+            } else {
+                setStatus({ type: 'error', message: result.message });
+            }
+        } catch (_error) {
+            setStatus({ type: 'error', message: `修复失败: ${(_error as Error).message}` });
+        } finally {
+            setIsFixingBlendBeans(false);
+        }
+    };
+
     if (!isOpen) return null
 
     return (
@@ -293,6 +324,19 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
                                 {importMode === 'merge'
                                     ? '将导入的数据与现有数据合并'
                                     : '用导入的数据替换所有现有数据'}
+                            </p>
+                        </div>
+
+                        <div>
+                            <button
+                                onClick={handleFixBlendBeans}
+                                disabled={isFixingBlendBeans}
+                                className="w-full rounded-md bg-amber-50 px-4 py-2 text-sm font-medium text-amber-800 transition-colors hover:bg-amber-100 disabled:opacity-50 dark:bg-amber-900/20 dark:text-amber-400 dark:hover:bg-amber-900/30"
+                            >
+                                {isFixingBlendBeans ? '修复中...' : '修复拼配豆数据'}
+                            </button>
+                            <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                                修复可能导致应用崩溃的拼配豆数据问题
                             </p>
                         </div>
 
