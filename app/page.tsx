@@ -1475,6 +1475,94 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         }
     };
 
+    const [isFormFocused, setIsFormFocused] = useState(false);
+    
+    // 添加表单焦点监听
+    useEffect(() => {
+        // 检测输入框获取焦点
+        const handleInputFocus = (e: FocusEvent) => {
+            const target = e.target as HTMLElement;
+            // 检查是否是brewing-note-form内的输入元素
+            if (target.closest('.brewing-note-form') && 
+                (target.tagName === 'INPUT' || 
+                 target.tagName === 'TEXTAREA' || 
+                 target.getAttribute('contenteditable') === 'true')) {
+                setIsFormFocused(true);
+            }
+        };
+        
+        // 检测键盘状态变化
+        const observer = new MutationObserver((mutations) => {
+            for (const mutation of mutations) {
+                if (mutation.type === 'attributes' && 
+                    mutation.attributeName === 'class') {
+                    // 当body类变化时检查键盘状态
+                    const hasKeyboardClass = document.body.classList.contains('keyboard-is-open');
+                    
+                    // 如果键盘关闭，重置表单焦点状态
+                    if (!hasKeyboardClass && isFormFocused) {
+                        setIsFormFocused(false);
+                    }
+                }
+            }
+        });
+        
+        // 监听body的class变化
+        observer.observe(document.body, { attributes: true });
+        
+        // 直接处理点击事件，不依赖focusin
+        const handleTouchStart = (e: TouchEvent) => {
+            const target = e.target as HTMLElement;
+            // 检查是否点击了表单内的输入元素
+            if (target.closest('.brewing-note-form') && 
+                (target.tagName === 'INPUT' || 
+                 target.tagName === 'TEXTAREA' || 
+                 target.getAttribute('contenteditable') === 'true')) {
+                setIsFormFocused(true);
+            } else if (!target.closest('.brewing-note-form')) {
+                // 点击了表单外的元素，取消焦点状态
+                setIsFormFocused(false);
+            }
+        };
+        
+        // 点击文档时检查是否应该取消焦点状态
+        const handleDocumentClick = (e: MouseEvent) => {
+            const target = e.target as HTMLElement;
+            // 检查是否点击了表单内的输入元素
+            if (target.closest('.brewing-note-form') && 
+                (target.tagName === 'INPUT' || 
+                 target.tagName === 'TEXTAREA' || 
+                 target.getAttribute('contenteditable') === 'true')) {
+                setIsFormFocused(true);
+            } else if (!target.closest('.brewing-note-form')) {
+                // 点击了表单外的元素，取消焦点状态
+                setIsFormFocused(false);
+            }
+        };
+        
+        document.addEventListener('focusin', handleInputFocus);
+        document.addEventListener('click', handleDocumentClick);
+        document.addEventListener('touchstart', handleTouchStart);
+        
+        // 监听键盘相关自定义事件
+        const handleKeyboardHide = () => {
+            // 键盘隐藏时重置焦点状态
+            setIsFormFocused(false);
+        };
+        
+        window.addEventListener('keyboardWillHide', handleKeyboardHide as EventListener);
+        window.addEventListener('keyboardDidHide', handleKeyboardHide as EventListener);
+        
+        return () => {
+            document.removeEventListener('focusin', handleInputFocus);
+            document.removeEventListener('click', handleDocumentClick);
+            document.removeEventListener('touchstart', handleTouchStart);
+            window.removeEventListener('keyboardWillHide', handleKeyboardHide as EventListener);
+            window.removeEventListener('keyboardDidHide', handleKeyboardHide as EventListener);
+            observer.disconnect();
+        };
+    }, [isFormFocused]);
+
     return (
         <div className="flex h-full flex-col overflow-hidden mx-auto max-w-[500px] font-mono text-neutral-800 dark:text-neutral-100">
             {/* 使用 NavigationBar 组件替换原有的导航栏 */}
@@ -1505,14 +1593,14 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             {/* 内容区域 */}
             <AnimatePresence mode="wait">
                 {activeMainTab === '冲煮' && (
-                    // <m.div
-                    //     key="brew-content"
-                    //     initial={{ opacity: 0, y: 10 }}
-                    //     animate={{ opacity: 1, y: 0 }}
-                    //     exit={{ opacity: 0, y: 5 }}
-                    //     transition={{ duration: 0.3, ease: "easeOut" }}
-                    //     className="h-full scroll-with-bottom-bar visualization-scroll"
-                    // >
+                    <m.div
+                        key="brew-content"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 5 }}
+                        transition={{ duration: 0.3, ease: "easeOut" }}
+                        className={`h-full ${isFormFocused ? '' : 'scroll-with-bottom-bar visualization-scroll'}`}
+                    >
                         <TabContent
                             activeMainTab={activeMainTab}
                             activeTab={activeTab}
@@ -1547,7 +1635,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                             resetBrewingState={resetBrewingState}
                             expandedStages={expandedStagesRef.current}
                         />
-                    // </m.div>
+                    </m.div>
                 )}
                 {activeMainTab === '笔记' && (
                     <div className="flex-1 overflow-auto">

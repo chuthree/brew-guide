@@ -544,7 +544,8 @@ stages数组中的每个阶段必须包含以下字段：
                         </div>
                     </div>
 
-                    {/* 添加方案参数编辑 */}
+                    {/* 添加方案参数编辑 - 只在编辑记录时显示 */}
+                    {initialData?.id && (
                     <div className="space-y-4">
                         <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
                             方案参数
@@ -600,6 +601,7 @@ stages数组中的每个阶段必须包含以下字段：
                             </div>
                         </div>
                     </div>
+                    )}
 
                     {/* 风味评分 */}
                     <div className="space-y-4">
@@ -668,7 +670,7 @@ stages数组中的每个阶段必须包含以下字段：
                                     }
                                     className={`text-[10px] tracking-widest transition-colors ${star <= formData.rating
                                         ? 'text-neutral-600 dark:text-neutral-300'
-                                        : 'text-neutral-500 dark:text-neutral-400'
+                                        : 'text-neutral-300 dark:text-neutral-600'
                                         }`}
                                 >
                                     [ {star} ]
@@ -697,7 +699,8 @@ stages数组中的每个阶段必须包含以下字段：
                 </div>
             ) : (
                 <div className="flex-1 space-y-8 overflow-auto pb-8 keyboard-adjustable-content">
-                    {/* 添加方案参数编辑到优化界面 */}
+                    {/* 添加方案参数编辑到优化界面 - 只在编辑记录时显示 */}
+                    {initialData?.id && (
                     <div className="space-y-4">
                         <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
                             方案参数调整
@@ -753,6 +756,7 @@ stages数组中的每个阶段必须包含以下字段：
                             </div>
                         </div>
                     </div>
+                    )}
 
                     {/* 理想风味设置 */}
                     <div className="space-y-4">
