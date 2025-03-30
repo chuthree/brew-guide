@@ -160,7 +160,7 @@ body {
 .keyboard-is-open .brew-content-scroll,
 .keyboard-is-open .custom-form-scroll,
 .keyboard-is-open .visualization-scroll,
-.keyboard-is-open #brewing-history-component,
+.keyboard-is-open .brewing-form,
 .keyboard-is-open .h-full.w-full.overflow-auto {
   padding-bottom: calc(var(--keyboard-height) + 50px);
   margin-bottom: var(--keyboard-height);
@@ -188,11 +188,20 @@ body {
   flex-direction: column;
 }
 
-/* 针对 brewing-history-component 的特殊处理 */
-#brewing-history-component {
+/* 针对所有brewing-note-form的通用处理 */
+.brewing-note-form {
+  padding-bottom: 40px;
+}
+
+.keyboard-is-open .brewing-note-form {
+  padding-bottom: calc(var(--keyboard-height) + 150px) !important;
+}
+
+/* 针对 brewing-form 的特殊处理 */
+.brewing-form {
   transition: padding-bottom 0.3s ease;
 }
-.keyboard-is-open #brewing-history-component {
+.keyboard-is-open .brewing-form {
   padding-bottom: calc(var(--keyboard-height) + 150px) !important;
 }
 
@@ -270,11 +279,11 @@ html, body {
 }
 
 /* 增强键盘适配样式 - 专门处理brewing-history-component嵌套表单 */
-#brewing-history-component .brewing-note-form {
+.brewing-form .brewing-note-form {
   padding-bottom: 40px;
 }
 
-.keyboard-is-open #brewing-history-component .brewing-note-form {
+.keyboard-is-open .brewing-form .brewing-note-form {
   padding-bottom: calc(var(--keyboard-height) + 150px) !important;
 }
 

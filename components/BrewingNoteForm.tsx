@@ -439,48 +439,31 @@ stages数组中的每个阶段必须包含以下字段：
 
     return (
         <div className="h-full w-full overflow-auto overscroll-none bg-neutral-50 dark:bg-neutral-900 brewing-note-form">
-            <form id={id} onSubmit={handleSubmit} className="relative flex h-full flex-col space-y-8">
-                {/* 隐藏的返回按钮，仅用于导航栏返回按钮查找 */}
-                <button
-                    type="button"
-                    onClick={onClose}
-                    data-action="back"
-                    className="hidden"
-                />
+        <form id={id} onSubmit={handleSubmit} className="relative flex h-full flex-col space-y-8">
+            {/* 隐藏的返回按钮，仅用于导航栏返回按钮查找 */}
+            <button
+                type="button"
+                onClick={onClose}
+                data-action="back"
+                className="hidden"
+            />
 
-                {/* Header with timestamp */}
-                <div className="flex items-baseline justify-between">
-                    <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
-                        {showOptimization
-                            ? '优化冲煮方案'
-                            : `${initialData?.id ? '编辑记录' : '新建记录'} · ${new Date().toLocaleString('zh-CN', {
-                                month: 'numeric',
-                                day: 'numeric',
-                                hour: 'numeric',
-                                minute: 'numeric',
-                            })}`
-                        }
-                    </div>
-                    {!showOptimization ? (
-                        <div className="flex items-center space-x-4">
-                            {initialData?.id && (
-                                <button
-                                    type="button"
-                                    onClick={onClose}
-                                    className="text-[10px] tracking-widest text-neutral-500 transition-colors dark:text-neutral-500"
-                                >
-                                    [ 返回 ]
-                                </button>
-                            )}
-                            <button
-                                type="submit"
-                                className="text-[10px] tracking-widest text-emerald-600 transition-colors dark:text-emerald-500 font-medium"
-                            >
-                                [ 保存 ]
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="flex items-center space-x-4">
+            {/* Header with timestamp */}
+            <div className="flex items-baseline justify-between">
+                <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
+                    {showOptimization
+                        ? '优化冲煮方案'
+                        : `${initialData?.id ? '编辑记录' : '新建记录'} · ${new Date().toLocaleString('zh-CN', {
+                            month: 'numeric',
+                            day: 'numeric',
+                            hour: 'numeric',
+                            minute: 'numeric',
+                        })}`
+                    }
+                </div>
+                {!showOptimization ? (
+                    <div className="flex items-center space-x-4">
+                        {initialData?.id && (
                             <button
                                 type="button"
                                 onClick={onClose}
@@ -488,406 +471,417 @@ stages数组中的每个阶段必须包含以下字段：
                             >
                                 [ 返回 ]
                             </button>
-                        </div>
-                    )}
-                </div>
-
-                {/* Form content */}
-                {!showOptimization ? (
-                    <div className="flex-1 space-y-8 overflow-auto pb-8 keyboard-adjustable-content">
-                        {/* 咖啡豆信息 */}
-                        <div className="space-y-4">
-                            <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
-                                咖啡豆信息
-                            </div>
-                            <div className="grid gap-6">
-                                <div className="grid grid-cols-2 gap-6">
-                                    <div>
-                                        <input
-                                            type="text"
-                                            value={formData.coffeeBeanInfo.name}
-                                            onChange={(e) =>
-                                                setFormData({
-                                                    ...formData,
-                                                    coffeeBeanInfo: {
-                                                        ...formData.coffeeBeanInfo,
-                                                        name: e.target.value,
-                                                    },
-                                                })
-                                            }
-                                            className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
-                                            placeholder="咖啡豆名称"
-                                        />
-                                    </div>
-                                    <div>
-                                        <select
-                                            value={formData.coffeeBeanInfo.roastLevel}
-                                            onChange={(e) =>
-                                                setFormData({
-                                                    ...formData,
-                                                    coffeeBeanInfo: {
-                                                        ...formData.coffeeBeanInfo,
-                                                        roastLevel: e.target.value,
-                                                    },
-                                                })
-                                            }
-                                            className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 text-neutral-800 dark:text-neutral-300"
-                                        >
-                                            <option>浅度烘焙</option>
-                                            <option>中浅烘焙</option>
-                                            <option>中度烘焙</option>
-                                            <option>中深烘焙</option>
-                                            <option>深度烘焙</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* 添加方案参数编辑 */}
-                        <div className="space-y-4">
-                            <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
-                                方案参数
-                            </div>
-                            <div className="grid grid-cols-2 gap-6">
-                                <div>
-                                    <input
-                                        type="text"
-                                        value={methodParams.coffee}
-                                        onChange={(e) => handleCoffeeChange(e.target.value)}
-                                        className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
-                                        placeholder="咖啡粉量 (如: 15g)"
-                                    />
-                                </div>
-                                <div>
-                                    <input
-                                        type="text"
-                                        value={methodParams.water}
-                                        onChange={(e) => handleWaterChange(e.target.value)}
-                                        className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
-                                        placeholder="水量 (如: 225g)"
-                                    />
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-3 gap-6">
-                                <div>
-                                    <input
-                                        type="text"
-                                        value={methodParams.ratio}
-                                        onChange={(e) => setMethodParams({...methodParams, ratio: e.target.value})}
-                                        className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
-                                        placeholder="水粉比 (如: 1:15)"
-                                        readOnly
-                                    />
-                                </div>
-                                <div>
-                                    <input
-                                        type="text"
-                                        value={methodParams.grindSize}
-                                        onChange={(e) => setMethodParams({...methodParams, grindSize: e.target.value})}
-                                        className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
-                                        placeholder="研磨度 (如: 中细)"
-                                    />
-                                </div>
-                                <div>
-                                    <input
-                                        type="text"
-                                        value={methodParams.temp}
-                                        onChange={(e) => setMethodParams({...methodParams, temp: e.target.value})}
-                                        className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
-                                        placeholder="水温 (如: 92°C)"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* 风味评分 */}
-                        <div className="space-y-4">
-                            <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
-                                风味评分
-                            </div>
-                            <div className="grid grid-cols-2 gap-8">
-                                {Object.entries(formData.taste).map(([key, value]) => (
-                                    <div key={key} className="space-y-2">
-                                        <div className="flex items-center justify-between">
-                                            <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
-                                                {
-                                                    {
-                                                        acidity: '酸度',
-                                                        sweetness: '甜度',
-                                                        bitterness: '苦度',
-                                                        body: '醇度',
-                                                    }[key]
-                                                }
-                                            </div>
-                                            <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
-                                                [ {value} ]
-                                            </div>
-                                        </div>
-                                        <div className="relative py-4 -my-4">
-                                            <input
-                                                type="range"
-                                                min="1"
-                                                max="5"
-                                                value={value}
-                                                onChange={(e) =>
-                                                    setFormData({
-                                                        ...formData,
-                                                        taste: {
-                                                            ...formData.taste,
-                                                            [key]: parseInt(e.target.value),
-                                                        },
-                                                    })
-                                                }
-                                                onTouchStart={handleTouchStart(key, value)}
-                                                onTouchMove={handleTouchMove(key)}
-                                                onTouchEnd={handleTouchEnd}
-                                                className="relative h-[1px] w-full appearance-none bg-neutral-300 dark:bg-neutral-600 cursor-pointer touch-none [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-0 [&::-webkit-slider-thumb]:bg-neutral-800 dark:[&::-webkit-slider-thumb]:bg-white [&::-moz-range-thumb]:h-3 [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-neutral-800 dark:[&::-moz-range-thumb]:bg-white"
-                                            />
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* 总体评分 */}
-                        <div className="space-y-4">
-                            <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
-                                总体评分
-                            </div>
-                            <div className="flex items-center space-x-6">
-                                {[1, 2, 3, 4, 5].map((star) => (
-                                    <button
-                                        key={star}
-                                        type="button"
-                                        onClick={() =>
-                                            setFormData({
-                                                ...formData,
-                                                rating: star,
-                                            })
-                                        }
-                                        className={`text-[10px] tracking-widest transition-colors ${star <= formData.rating
-                                            ? 'text-neutral-600 dark:text-neutral-300'
-                                            : 'text-neutral-500 dark:text-neutral-400'
-                                            }`}
-                                    >
-                                        [ {star} ]
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* 笔记 */}
-                        <div className="space-y-4">
-                            <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
-                                笔记
-                            </div>
-                            <AutoResizeTextarea
-                                value={formData.notes}
-                                onChange={(e) =>
-                                    setFormData({
-                                        ...formData,
-                                        notes: e.target.value,
-                                    })
-                                }
-                                className="text-xs border-b border-neutral-200 focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 pb-4"
-                                placeholder="记录一下这次冲煮的感受、改进点等..."
-                            />
-                        </div>
-
-                        {/* 添加额外的底部空间，防止键盘遮挡 */}
-                        <div className="h-40 md:h-0 keyboard-spacer"></div>
+                        )}
+                        <button
+                            type="submit"
+                            className="text-[10px] tracking-widest text-emerald-600 transition-colors dark:text-emerald-500 font-medium"
+                        >
+                            [ 保存 ]
+                        </button>
                     </div>
                 ) : (
-                    <div className="flex-1 space-y-8 overflow-auto pb-8 keyboard-adjustable-content">
-                        {/* 添加方案参数编辑到优化界面 */}
-                        <div className="space-y-4">
-                            <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
-                                方案参数调整
-                            </div>
+                    <div className="flex items-center space-x-4">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="text-[10px] tracking-widest text-neutral-500 transition-colors dark:text-neutral-500"
+                        >
+                            [ 返回 ]
+                        </button>
+                    </div>
+                )}
+            </div>
+
+            {/* Form content */}
+            {!showOptimization ? (
+                <div className="flex-1 space-y-8 overflow-auto pb-8 keyboard-adjustable-content">
+                    {/* 咖啡豆信息 */}
+                    <div className="space-y-4">
+                        <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
+                            咖啡豆信息
+                        </div>
+                        <div className="grid gap-6">
                             <div className="grid grid-cols-2 gap-6">
                                 <div>
                                     <input
                                         type="text"
-                                        value={methodParams.coffee}
-                                        onChange={(e) => handleCoffeeChange(e.target.value)}
+                                        value={formData.coffeeBeanInfo.name}
+                                        onChange={(e) =>
+                                            setFormData({
+                                                ...formData,
+                                                coffeeBeanInfo: {
+                                                    ...formData.coffeeBeanInfo,
+                                                    name: e.target.value,
+                                                },
+                                            })
+                                        }
                                         className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
-                                        placeholder="咖啡粉量 (如: 15g)"
+                                        placeholder="咖啡豆名称"
                                     />
                                 </div>
                                 <div>
-                                    <input
-                                        type="text"
-                                        value={methodParams.water}
-                                        onChange={(e) => handleWaterChange(e.target.value)}
-                                        className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
-                                        placeholder="水量 (如: 225g)"
-                                    />
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-3 gap-6">
-                                <div>
-                                    <input
-                                        type="text"
-                                        value={methodParams.ratio}
-                                        onChange={(e) => setMethodParams({...methodParams, ratio: e.target.value})}
-                                        className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
-                                        placeholder="水粉比 (如: 1:15)"
-                                        readOnly
-                                    />
-                                </div>
-                                <div>
-                                    <input
-                                        type="text"
-                                        value={methodParams.grindSize}
-                                        onChange={(e) => setMethodParams({...methodParams, grindSize: e.target.value})}
-                                        className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
-                                        placeholder="研磨度 (如: 中细)"
-                                    />
-                                </div>
-                                <div>
-                                    <input
-                                        type="text"
-                                        value={methodParams.temp}
-                                        onChange={(e) => setMethodParams({...methodParams, temp: e.target.value})}
-                                        className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
-                                        placeholder="水温 (如: 92°C)"
-                                    />
+                                    <select
+                                        value={formData.coffeeBeanInfo.roastLevel}
+                                        onChange={(e) =>
+                                            setFormData({
+                                                ...formData,
+                                                coffeeBeanInfo: {
+                                                    ...formData.coffeeBeanInfo,
+                                                    roastLevel: e.target.value,
+                                                },
+                                            })
+                                        }
+                                        className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 text-neutral-800 dark:text-neutral-300"
+                                    >
+                                        <option>浅度烘焙</option>
+                                        <option>中浅烘焙</option>
+                                        <option>中度烘焙</option>
+                                        <option>中深烘焙</option>
+                                        <option>深度烘焙</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>
-
-                        {/* 理想风味设置 */}
-                        <div className="space-y-4">
-                            <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
-                                理想风味设置
-                            </div>
-                            <div className="grid grid-cols-2 gap-8">
-                                {Object.entries(idealTaste).map(([key, value]) => (
-                                    <div key={key} className="space-y-2">
-                                        <div className="flex items-center justify-between">
-                                            <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
-                                                {
-                                                    {
-                                                        acidity: '理想酸度',
-                                                        sweetness: '理想甜度',
-                                                        bitterness: '理想苦度',
-                                                        body: '理想醇度',
-                                                    }[key]
-                                                }
-                                            </div>
-                                            <div className="flex items-center text-[10px] tracking-widest">
-                                                <span className="text-neutral-500 dark:text-neutral-500">
-                                                    [ {formData.taste[key as keyof TasteRatings]} ]
-                                                </span>
-                                                <span className="mx-1 text-neutral-500 dark:text-neutral-400">→</span>
-                                                <span className="text-neutral-600 dark:text-neutral-400">
-                                                    [ {value} ]
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <div className="relative py-4 -my-4">
-                                            <input
-                                                type="range"
-                                                min="1"
-                                                max="5"
-                                                value={value}
-                                                onChange={(e) =>
-                                                    setIdealTaste({
-                                                        ...idealTaste,
-                                                        [key]: parseInt(e.target.value),
-                                                    })
-                                                }
-                                                onTouchStart={handleOptimizationTouchStart(key, value)}
-                                                onTouchMove={handleOptimizationTouchMove(key)}
-                                                onTouchEnd={handleTouchEnd}
-                                                className="relative h-[1px] w-full appearance-none bg-neutral-300 dark:bg-neutral-600 cursor-pointer touch-none [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-0 [&::-webkit-slider-thumb]:bg-neutral-800 dark:[&::-webkit-slider-thumb]:bg-white [&::-moz-range-thumb]:h-3 [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-neutral-800 dark:[&::-moz-range-thumb]:bg-white"
-                                            />
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* 优化目标 */}
-                        <div className="space-y-4">
-                            <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
-                                优化目标
-                            </div>
-                            <AutoResizeTextarea
-                                value={optimizationNotes}
-                                onChange={(e) => setOptimizationNotes(e.target.value)}
-                                className="text-xs border-b border-neutral-200 pb-4 focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300"
-                                placeholder="还有其他优化目标？例如：提升层次感、增加果香、改善口感..."
-                            />
-                        </div>
-
-                        {/* 生成优化提示词 */}
-                        <div className="space-y-4">
-                            <div className="flex justify-between items-center">
-                                <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
-                                    优化提示词
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={generateOptimizationPrompt}
-                                    className="text-[10px] tracking-widest text-emerald-600 transition-colors dark:text-emerald-500 font-medium"
-                                >
-                                    [ 生成优化提示词 ]
-                                </button>
-                            </div>
-
-                            {optimizationPrompt && (
-                                <div className="space-y-4 mt-2 p-4 border border-neutral-200 dark:border-neutral-700 rounded-md bg-neutral-50 dark:bg-neutral-800/50">
-                                    <div className="flex justify-between items-center">
-                                        <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
-                                            将提示词复制给 AI(推荐 DeepSeek)
-                                        </div>
-                                        <div className="flex space-x-4">
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    copyTextToClipboard(optimizationPrompt)
-                                                        .then(() => {
-                                                            // 成功复制后显示提示
-                                                            alert('提示词已复制到剪贴板');
-                                                            // 保存当前数据
-                                                            const noteData = {
-                                                                id: id || Date.now().toString(),
-                                                                timestamp: Date.now(),
-                                                                ...formData,
-                                                                equipment: initialData.equipment,
-                                                                method: initialData.method,
-                                                                params: methodParams, // 使用当前编辑的方案参数
-                                                                totalTime: initialData.totalTime,
-                                                            };
-                                                            // 调用onSave保存当前数据
-                                                            onSave(noteData);
-                                                        })
-                                                        .catch(() => {
-                                                            alert('复制失败，请手动复制');
-                                                        })
-                                                }}
-                                                className="text-[10px] tracking-widest text-emerald-600 font-medium transition-colors dark:text-emerald-500 hover:text-emerald-700 dark:hover:text-emerald-400"
-                                            >
-                                                [ 复制提示词 ]
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <AutoResizeTextarea
-                                        value={optimizationPrompt}
-                                        readOnly
-                                        className="text-xs border border-neutral-200 rounded-md bg-neutral-50 dark:bg-neutral-800 dark:border-neutral-700 p-4 text-neutral-800 dark:text-neutral-300"
-                                    />
-                                </div>
-                            )}
-                        </div>
-
-                        {/* 添加额外的底部空间，防止键盘遮挡 */}
-                        <div className="h-40 md:h-0 keyboard-spacer"></div>
                     </div>
-                )}
-            </form>
+
+                    {/* 添加方案参数编辑 */}
+                    <div className="space-y-4">
+                        <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
+                            方案参数
+                        </div>
+                        <div className="grid grid-cols-2 gap-6">
+                            <div>
+                                <input
+                                    type="text"
+                                    value={methodParams.coffee}
+                                    onChange={(e) => handleCoffeeChange(e.target.value)}
+                                    className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
+                                    placeholder="咖啡粉量 (如: 15g)"
+                                />
+                            </div>
+                            <div>
+                                <input
+                                    type="text"
+                                    value={methodParams.water}
+                                    onChange={(e) => handleWaterChange(e.target.value)}
+                                    className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
+                                    placeholder="水量 (如: 225g)"
+                                />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-6">
+                            <div>
+                                <input
+                                    type="text"
+                                    value={methodParams.ratio}
+                                    onChange={(e) => setMethodParams({...methodParams, ratio: e.target.value})}
+                                    className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
+                                    placeholder="水粉比 (如: 1:15)"
+                                    readOnly
+                                />
+                            </div>
+                            <div>
+                                <input
+                                    type="text"
+                                    value={methodParams.grindSize}
+                                    onChange={(e) => setMethodParams({...methodParams, grindSize: e.target.value})}
+                                    className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
+                                    placeholder="研磨度 (如: 中细)"
+                                />
+                            </div>
+                            <div>
+                                <input
+                                    type="text"
+                                    value={methodParams.temp}
+                                    onChange={(e) => setMethodParams({...methodParams, temp: e.target.value})}
+                                    className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
+                                    placeholder="水温 (如: 92°C)"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 风味评分 */}
+                    <div className="space-y-4">
+                        <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
+                            风味评分
+                        </div>
+                        <div className="grid grid-cols-2 gap-8">
+                            {Object.entries(formData.taste).map(([key, value]) => (
+                                <div key={key} className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
+                                            {
+                                                {
+                                                    acidity: '酸度',
+                                                    sweetness: '甜度',
+                                                    bitterness: '苦度',
+                                                    body: '醇度',
+                                                }[key]
+                                            }
+                                        </div>
+                                        <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
+                                            [ {value} ]
+                                        </div>
+                                    </div>
+                                    <div className="relative py-4 -my-4">
+                                        <input
+                                            type="range"
+                                            min="1"
+                                            max="5"
+                                            value={value}
+                                            onChange={(e) =>
+                                                setFormData({
+                                                    ...formData,
+                                                    taste: {
+                                                        ...formData.taste,
+                                                        [key]: parseInt(e.target.value),
+                                                    },
+                                                })
+                                            }
+                                            onTouchStart={handleTouchStart(key, value)}
+                                            onTouchMove={handleTouchMove(key)}
+                                            onTouchEnd={handleTouchEnd}
+                                            className="relative h-[1px] w-full appearance-none bg-neutral-300 dark:bg-neutral-600 cursor-pointer touch-none [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-0 [&::-webkit-slider-thumb]:bg-neutral-800 dark:[&::-webkit-slider-thumb]:bg-white [&::-moz-range-thumb]:h-3 [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-neutral-800 dark:[&::-moz-range-thumb]:bg-white"
+                                        />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* 总体评分 */}
+                    <div className="space-y-4">
+                        <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
+                            总体评分
+                        </div>
+                        <div className="flex items-center space-x-6">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                                <button
+                                    key={star}
+                                    type="button"
+                                    onClick={() =>
+                                        setFormData({
+                                            ...formData,
+                                            rating: star,
+                                        })
+                                    }
+                                    className={`text-[10px] tracking-widest transition-colors ${star <= formData.rating
+                                        ? 'text-neutral-600 dark:text-neutral-300'
+                                        : 'text-neutral-500 dark:text-neutral-400'
+                                        }`}
+                                >
+                                    [ {star} ]
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* 笔记 */}
+                    <div className="space-y-4">
+                        <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
+                            笔记
+                        </div>
+                        <AutoResizeTextarea
+                            value={formData.notes}
+                            onChange={(e) =>
+                                setFormData({
+                                    ...formData,
+                                    notes: e.target.value,
+                                })
+                            }
+                            className="text-xs border-b border-neutral-200 focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 pb-4"
+                            placeholder="记录一下这次冲煮的感受、改进点等..."
+                        />
+                    </div>
+                </div>
+            ) : (
+                <div className="flex-1 space-y-8 overflow-auto pb-8 keyboard-adjustable-content">
+                    {/* 添加方案参数编辑到优化界面 */}
+                    <div className="space-y-4">
+                        <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
+                            方案参数调整
+                        </div>
+                        <div className="grid grid-cols-2 gap-6">
+                            <div>
+                                <input
+                                    type="text"
+                                    value={methodParams.coffee}
+                                    onChange={(e) => handleCoffeeChange(e.target.value)}
+                                    className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
+                                    placeholder="咖啡粉量 (如: 15g)"
+                                />
+                            </div>
+                            <div>
+                                <input
+                                    type="text"
+                                    value={methodParams.water}
+                                    onChange={(e) => handleWaterChange(e.target.value)}
+                                    className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
+                                    placeholder="水量 (如: 225g)"
+                                />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-6">
+                            <div>
+                                <input
+                                    type="text"
+                                    value={methodParams.ratio}
+                                    onChange={(e) => setMethodParams({...methodParams, ratio: e.target.value})}
+                                    className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
+                                    placeholder="水粉比 (如: 1:15)"
+                                    readOnly
+                                />
+                            </div>
+                            <div>
+                                <input
+                                    type="text"
+                                    value={methodParams.grindSize}
+                                    onChange={(e) => setMethodParams({...methodParams, grindSize: e.target.value})}
+                                    className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
+                                    placeholder="研磨度 (如: 中细)"
+                                />
+                            </div>
+                            <div>
+                                <input
+                                    type="text"
+                                    value={methodParams.temp}
+                                    onChange={(e) => setMethodParams({...methodParams, temp: e.target.value})}
+                                    className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
+                                    placeholder="水温 (如: 92°C)"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 理想风味设置 */}
+                    <div className="space-y-4">
+                        <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
+                            理想风味设置
+                        </div>
+                        <div className="grid grid-cols-2 gap-8">
+                            {Object.entries(idealTaste).map(([key, value]) => (
+                                <div key={key} className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
+                                            {
+                                                {
+                                                    acidity: '理想酸度',
+                                                    sweetness: '理想甜度',
+                                                    bitterness: '理想苦度',
+                                                    body: '理想醇度',
+                                                }[key]
+                                            }
+                                        </div>
+                                        <div className="flex items-center text-[10px] tracking-widest">
+                                            <span className="text-neutral-500 dark:text-neutral-500">
+                                                [ {formData.taste[key as keyof TasteRatings]} ]
+                                            </span>
+                                            <span className="mx-1 text-neutral-500 dark:text-neutral-400">→</span>
+                                            <span className="text-neutral-600 dark:text-neutral-400">
+                                                [ {value} ]
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="relative py-4 -my-4">
+                                        <input
+                                            type="range"
+                                            min="1"
+                                            max="5"
+                                            value={value}
+                                            onChange={(e) =>
+                                                setIdealTaste({
+                                                    ...idealTaste,
+                                                    [key]: parseInt(e.target.value),
+                                                })
+                                            }
+                                            onTouchStart={handleOptimizationTouchStart(key, value)}
+                                            onTouchMove={handleOptimizationTouchMove(key)}
+                                            onTouchEnd={handleTouchEnd}
+                                            className="relative h-[1px] w-full appearance-none bg-neutral-300 dark:bg-neutral-600 cursor-pointer touch-none [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-0 [&::-webkit-slider-thumb]:bg-neutral-800 dark:[&::-webkit-slider-thumb]:bg-white [&::-moz-range-thumb]:h-3 [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-neutral-800 dark:[&::-moz-range-thumb]:bg-white"
+                                        />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* 优化目标 */}
+                    <div className="space-y-4">
+                        <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
+                            优化目标
+                        </div>
+                        <AutoResizeTextarea
+                            value={optimizationNotes}
+                            onChange={(e) => setOptimizationNotes(e.target.value)}
+                            className="text-xs border-b border-neutral-200 pb-4 focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300"
+                            placeholder="还有其他优化目标？例如：提升层次感、增加果香、改善口感..."
+                        />
+                    </div>
+
+                    {/* 生成优化提示词 */}
+                    <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                            <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
+                                优化提示词
+                            </div>
+                            <button
+                                type="button"
+                                onClick={generateOptimizationPrompt}
+                                className="text-[10px] tracking-widest text-emerald-600 transition-colors dark:text-emerald-500 font-medium"
+                            >
+                                [ 生成优化提示词 ]
+                            </button>
+                        </div>
+
+                        {optimizationPrompt && (
+                            <div className="space-y-4 mt-2 p-4 border border-neutral-200 dark:border-neutral-700 rounded-md bg-neutral-50 dark:bg-neutral-800/50">
+                                <div className="flex justify-between items-center">
+                                    <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
+                                        将提示词复制给 AI(推荐 DeepSeek)
+                                    </div>
+                                    <div className="flex space-x-4">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                copyTextToClipboard(optimizationPrompt)
+                                                    .then(() => {
+                                                        // 成功复制后显示提示
+                                                        alert('提示词已复制到剪贴板');
+                                                        // 保存当前数据
+                                                        const noteData = {
+                                                            id: id || Date.now().toString(),
+                                                            timestamp: Date.now(),
+                                                            ...formData,
+                                                            equipment: initialData.equipment,
+                                                            method: initialData.method,
+                                                            params: methodParams, // 使用当前编辑的方案参数
+                                                            totalTime: initialData.totalTime,
+                                                        };
+                                                        // 调用onSave保存当前数据
+                                                        onSave(noteData);
+                                                    })
+                                                    .catch(() => {
+                                                        alert('复制失败，请手动复制');
+                                                    })
+                                            }}
+                                            className="text-[10px] tracking-widest text-emerald-600 font-medium transition-colors dark:text-emerald-500 hover:text-emerald-700 dark:hover:text-emerald-400"
+                                        >
+                                            [ 复制提示词 ]
+                                        </button>
+                                    </div>
+                                </div>
+                                <AutoResizeTextarea
+                                    value={optimizationPrompt}
+                                    readOnly
+                                    className="text-xs border border-neutral-200 rounded-md bg-neutral-50 dark:bg-neutral-800 dark:border-neutral-700 p-4 text-neutral-800 dark:text-neutral-300"
+                                />
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+        </form>
         </div>
     )
 }

@@ -362,8 +362,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.2, ease: "easeOut" }}
-                    className="h-full p-6"
-                    id="brewing-history-component"
+                    className="h-full p-6 brewing-form"
                 >
                     <BrewingNoteForm
                         id={editingNote.id}
@@ -380,8 +379,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.2, ease: "easeOut" }}
-                    className="h-full p-6"
-                    id="brewing-history-component"
+                    className="h-full p-6 brewing-form"
                 >
                     <button
                         data-action="back"
@@ -422,8 +420,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.2, ease: "easeOut" }}
-                    className="space-y-5 scroll-with-bottom-bar"
-                    id="brewing-history-component"
+                    className="space-y-5 scroll-with-bottom-bar brewing-form"
                 >
                     <div className="p-6 space-y-6">
                         {/* 排序控件和数量显示 */}

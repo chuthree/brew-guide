@@ -1505,14 +1505,14 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             {/* 内容区域 */}
             <AnimatePresence mode="wait">
                 {activeMainTab === '冲煮' && (
-                    <m.div
-                        key="brew-content"
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 5 }}
-                        transition={{ duration: 0.3, ease: "easeOut" }}
-                        className="h-full scroll-with-bottom-bar visualization-scroll"
-                    >
+                    // <m.div
+                    //     key="brew-content"
+                    //     initial={{ opacity: 0, y: 10 }}
+                    //     animate={{ opacity: 1, y: 0 }}
+                    //     exit={{ opacity: 0, y: 5 }}
+                    //     transition={{ duration: 0.3, ease: "easeOut" }}
+                    //     className="h-full scroll-with-bottom-bar visualization-scroll"
+                    // >
                         <TabContent
                             activeMainTab={activeMainTab}
                             activeTab={activeTab}
@@ -1547,17 +1547,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                             resetBrewingState={resetBrewingState}
                             expandedStages={expandedStagesRef.current}
                         />
-                    </m.div>
+                    // </m.div>
                 )}
                 {activeMainTab === '笔记' && (
-                    <m.div
-                        key="notes-tab"
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 10 }}
-                        transition={{ duration: 0.3 }}
-                        className="flex-1 overflow-auto"
-                    >
+                    <div className="flex-1 overflow-auto">
                         <BrewingHistory
                             isOpen={true}
                             onClose={() => {
@@ -1568,7 +1561,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                             onNavigateToBrewing={handleNavigateFromHistory}
                             onAddNote={handleAddNote}
                         />
-                    </m.div>
+                    </div>
                 )}
                 {activeMainTab === '咖啡豆' && (
                     <ErrorBoundary>

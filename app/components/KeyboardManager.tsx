@@ -50,7 +50,7 @@ export function KeyboardManager() {
         // 标记键盘已打开
         document.body.classList.add('keyboard-is-open');
         
-        // 对 brewing-history-component 应用特殊处理
+        // 对 brewing-form应用特殊处理
         const brewingHistoryComponent = document.getElementById('brewing-history-component');
         if (brewingHistoryComponent) {
           brewingHistoryComponent.style.paddingBottom = `${info.keyboardHeight + 150}px`;
@@ -126,7 +126,7 @@ export function KeyboardManager() {
         // 清除样式
         keyboardStyle.innerHTML = '';
         
-        // 重置 brewing-history-component 样式
+        // 重置 brewing-form样式
         const brewingHistoryComponent = document.getElementById('brewing-history-component');
         if (brewingHistoryComponent) {
           brewingHistoryComponent.style.paddingBottom = '';

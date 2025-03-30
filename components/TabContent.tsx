@@ -226,29 +226,22 @@ const TabContent: React.FC<TabContentProps> = ({
                         duration: 0.3,
                         ease: "easeOut"
                     }}
-                    className="relative h-full"
+                    className="relative h-full p-6 "
                 >
                     {/* 添加咖啡豆步骤 */}
                     {activeTab === ('咖啡豆' as TabType) ? (
-                        <motion.div
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: 5 }}
-                            transition={{ duration: 0.3, ease: "easeOut" }}
-                        >
-                            <CoffeeBeanList
-                                onSelect={(beanId: string | null, bean: CoffeeBean | null) => {
-                                    if (onCoffeeBeanSelect) onCoffeeBeanSelect(beanId!, bean!);
-                                }}
-                            />
-                        </motion.div>
+                        <CoffeeBeanList
+                            onSelect={(beanId: string | null, bean: CoffeeBean | null) => {
+                                if (onCoffeeBeanSelect) onCoffeeBeanSelect(beanId!, bean!);
+                            }}
+                        />
                     ) : activeTab === ('记录' as TabType) && currentBrewingMethod ? (
                         <motion.div
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: 5 }}
                             transition={{ duration: 0.3, ease: "easeOut" }}
-                            className="absolute inset-0 bg-neutral-50 dark:bg-neutral-900"
+                            className='brewing-form h-full'
                         >
                             <BrewingNoteForm
                                 id="brewingNoteForm"
