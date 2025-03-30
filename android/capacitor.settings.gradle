@@ -20,6 +20,9 @@ project(':capacitor-keyboard').projectDir = new File('../node_modules/@capacitor
 include ':capacitor-preferences'
 project(':capacitor-preferences').projectDir = new File('../node_modules/@capacitor/preferences/android')
 
+include ':capacitor-share'
+project(':capacitor-share').projectDir = new File('../node_modules/@capacitor/share/android')
+
 include ':capacitor-splash-screen'
 project(':capacitor-splash-screen').projectDir = new File('../node_modules/@capacitor/splash-screen/android')
 
@@ -28,3 +31,6 @@ project(':capacitor-status-bar').projectDir = new File('../node_modules/@capacit
 
 include ':capacitor-text-zoom'
 project(':capacitor-text-zoom').projectDir = new File('../node_modules/@capacitor/text-zoom/android')
+
+include ':capawesome-capacitor-file-picker'
+project(':capawesome-capacitor-file-picker').projectDir = new File('../node_modules/@capawesome/capacitor-file-picker/android')

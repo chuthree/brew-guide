@@ -14,11 +14,15 @@ PODS:
     - Capacitor
   - CapacitorPreferences (7.0.0):
     - Capacitor
+  - CapacitorShare (7.0.0):
+    - Capacitor
   - CapacitorSplashScreen (7.0.0):
     - Capacitor
   - CapacitorStatusBar (7.0.0):
     - Capacitor
   - CapacitorTextZoom (7.0.0):
+    - Capacitor
+  - CapawesomeCapacitorFilePicker (7.0.1):
     - Capacitor
 
 DEPENDENCIES:
@@ -30,9 +34,11 @@ DEPENDENCIES:
   - "CapacitorHaptics (from `../../node_modules/@capacitor/haptics`)"
   - "CapacitorKeyboard (from `../../node_modules/@capacitor/keyboard`)"
   - "CapacitorPreferences (from `../../node_modules/@capacitor/preferences`)"
+  - "CapacitorShare (from `../../node_modules/@capacitor/share`)"
   - "CapacitorSplashScreen (from `../../node_modules/@capacitor/splash-screen`)"
   - "CapacitorStatusBar (from `../../node_modules/@capacitor/status-bar`)"
   - "CapacitorTextZoom (from `../../node_modules/@capacitor/text-zoom`)"
+  - "CapawesomeCapacitorFilePicker (from `../../node_modules/@capawesome/capacitor-file-picker`)"
 
 EXTERNAL SOURCES:
   Capacitor:
@@ -51,12 +57,16 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/@capacitor/keyboard"
   CapacitorPreferences:
     :path: "../../node_modules/@capacitor/preferences"
+  CapacitorShare:
+    :path: "../../node_modules/@capacitor/share"
   CapacitorSplashScreen:
     :path: "../../node_modules/@capacitor/splash-screen"
   CapacitorStatusBar:
     :path: "../../node_modules/@capacitor/status-bar"
   CapacitorTextZoom:
     :path: "../../node_modules/@capacitor/text-zoom"
+  CapawesomeCapacitorFilePicker:
+    :path: "../../node_modules/@capawesome/capacitor-file-picker"
 
 SPEC CHECKSUMS:
   Capacitor: bceb785fb78f5e81e4a9e37843bc1c24bd9c7194
@@ -67,10 +77,12 @@ SPEC CHECKSUMS:
   CapacitorHaptics: 7be406a91e4eb87287f321c6c68e1709d6837b3a
   CapacitorKeyboard: 4db71e694e7afb5d7c0be09b05495c19f7d6c914
   CapacitorPreferences: 8e4bef1f937fc991a19d7ea99330c36a62edd24b
+  CapacitorShare: d94c53d7656f1ce8f6712ae8d19ab0c18a69259f
   CapacitorSplashScreen: 7e7a0a1113833032f196b3af6fa437baccacf5bc
   CapacitorStatusBar: a8c4c83ed2e973bdafb979e80e4b00d027832cb7
   CapacitorTextZoom: 254c75dffb54d34d582a4f14cc7ba432fcfb5cad
+  CapawesomeCapacitorFilePicker: 640114d8fd427375fe0e826ffc1ca54d91c2d611
 
-PODFILE CHECKSUM: 759437ef6fa9402ebfb7d355d3d814ad4403e636
+PODFILE CHECKSUM: 9348a0acf71c5a47c4f6e147016db6be6ecb5e28
 
 COCOAPODS: 1.16.2

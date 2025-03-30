@@ -6,6 +6,7 @@ import { DataManager as DataManagerUtil } from '@/lib/dataManager'
 import { APP_VERSION } from '@/lib/config'
 import { Capacitor } from '@capacitor/core'
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem'
+import { Share } from '@capacitor/share'
 
 interface DataManagerProps {
     isOpen: boolean
@@ -34,30 +35,52 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
             setStatus({ type: 'info', message: '正在导出数据...' })
 
             const jsonData = await DataManagerUtil.exportAllData()
+            const fileName = `brew-guide-data-${new Date().toISOString().slice(0, 10)}.json`
 
             if (isNative) {
-                // 在原生平台上使用 Filesystem API
-                const fileName = `brew-guide-data-${new Date().toISOString().slice(0, 10)}.json`
+                try {
+                    // 先将文件写入临时目录
+                    await Filesystem.writeFile({
+                        path: fileName,
+                        data: jsonData,
+                        directory: Directory.Cache,
+                        encoding: Encoding.UTF8
+                    })
 
-                // 写入文件到下载目录
-                await Filesystem.writeFile({
-                    path: fileName,
-                    data: jsonData,
-                    directory: Directory.Documents,
-                    encoding: Encoding.UTF8
-                })
+                    // 获取临时文件的URI
+                    const uriResult = await Filesystem.getUri({
+                        path: fileName,
+                        directory: Directory.Cache
+                    })
 
-                setStatus({
-                    type: 'success',
-                    message: `数据已导出到文档目录: ${fileName}`
-                })
+                    // 使用分享功能让用户选择保存位置
+                    await Share.share({
+                        title: '导出数据',
+                        text: '请选择保存位置',
+                        url: uriResult.uri,
+                        dialogTitle: '导出数据'
+                    })
+
+                    // 清理临时文件
+                    await Filesystem.deleteFile({
+                        path: fileName,
+                        directory: Directory.Cache
+                    })
+
+                    setStatus({
+                        type: 'success',
+                        message: '数据已成功导出'
+                    })
+                } catch (error) {
+                    throw new Error(`保存文件失败: ${(error as Error).message}`)
+                }
             } else {
-                // 在 Web 平台上使用 Blob 和 URL.createObjectURL
+                // Web平台的处理保持不变
                 const blob = new Blob([jsonData], { type: 'application/json' })
                 const url = URL.createObjectURL(blob)
                 const a = document.createElement('a')
                 a.href = url
-                a.download = `brew-guide-data-${new Date().toISOString().slice(0, 10)}.json`
+                a.download = fileName
                 document.body.appendChild(a)
                 a.click()
 
@@ -70,7 +93,6 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
                 setStatus({ type: 'success', message: '数据导出成功，文件已下载' })
             }
         } catch (_error) {
-
             setStatus({ type: 'error', message: `导出失败: ${(_error as Error).message}` })
         } finally {
             setIsExporting(false)
