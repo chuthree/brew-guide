@@ -38,6 +38,9 @@ importers:
       '@capacitor/preferences':
         specifier: ^7.0.0
         version: 7.0.0(@capacitor/core@7.1.0)
+      '@capacitor/share':
+        specifier: ^7.0.0
+        version: 7.0.0(@capacitor/core@7.1.0)
       '@capacitor/splash-screen':
         specifier: ^7.0.0
         version: 7.0.0(@capacitor/core@7.1.0)
@@ -47,6 +50,9 @@ importers:
       '@capacitor/text-zoom':
         specifier: ^7.0.0
         version: 7.0.0(@capacitor/core@7.1.0)
+      '@capawesome/capacitor-file-picker':
+        specifier: ^7.0.1
+        version: 7.0.1(@capacitor/core@7.1.0)
       '@eslint/eslintrc':
         specifier: ^3.3.1
         version: 3.3.1
@@ -737,6 +743,11 @@ packages:
     peerDependencies:
       '@capacitor/core': '>=7.0.0'
 
+  '@capacitor/share@7.0.0':
+    resolution: {integrity: sha512-UL/czyt0nr4/O88pFfBK0wP0VNxaQvAmOAtD95Q0srgtJJAdkS0bIvCuhIeVxEeyWG2TyylzzQ2rI/4nexwCyQ==}
+    peerDependencies:
+      '@capacitor/core': '>=7.0.0'
+
   '@capacitor/splash-screen@7.0.0':
     resolution: {integrity: sha512-y25WNRcl+MY/ltb3OZPZPpNmhVFW9270QneJY8tjY7FJc78zWEszj1cX84LJS4LeTHfHi4NcNW4y0/oewWG88A==}
     peerDependencies:
@@ -749,6 +760,11 @@ packages:
 
   '@capacitor/text-zoom@7.0.0':
     resolution: {integrity: sha512-hLpqVqS4KeuJT/NtSSbKPPEI292CtrbuD46uvSdz9wIsrBs+aZBI1ui5KPpCadzID71CvMPQiwJWDZ1/xdo3sw==}
+    peerDependencies:
+      '@capacitor/core': '>=7.0.0'
+
+  '@capawesome/capacitor-file-picker@7.0.1':
+    resolution: {integrity: sha512-b+EBAWul2I0RRp+eQoHiP/ykgc8PNRP9wIMrvnqDZEg7iIl8rAd/AJsZMYzoo/ACcYJofn4bD0CXQDC2fcKw4g==}
     peerDependencies:
       '@capacitor/core': '>=7.0.0'
 
@@ -5838,6 +5854,10 @@ snapshots:
     dependencies:
       '@capacitor/core': 7.1.0
 
+  '@capacitor/share@7.0.0(@capacitor/core@7.1.0)':
+    dependencies:
+      '@capacitor/core': 7.1.0
+
   '@capacitor/splash-screen@7.0.0(@capacitor/core@7.1.0)':
     dependencies:
       '@capacitor/core': 7.1.0
@@ -5847,6 +5867,10 @@ snapshots:
       '@capacitor/core': 7.1.0
 
   '@capacitor/text-zoom@7.0.0(@capacitor/core@7.1.0)':
+    dependencies:
+      '@capacitor/core': 7.1.0
+
+  '@capawesome/capacitor-file-picker@7.0.1(@capacitor/core@7.1.0)':
     dependencies:
       '@capacitor/core': 7.1.0
 
