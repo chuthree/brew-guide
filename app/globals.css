@@ -132,14 +132,6 @@ body {
   padding-bottom: calc(max(env(safe-area-inset-bottom), 28px) + 100px);
 }
 
-/* 自定义表单滚动容器样式 */
-.custom-form-scroll {
-  -webkit-overflow-scrolling: touch;
-  overflow-y: auto;
-  height: 100%;
-  padding-bottom: 0 !important;
-}
-
 /* 可视化方案滚动容器样式 */
 .visualization-scroll {
   -webkit-overflow-scrolling: touch;
@@ -158,7 +150,6 @@ body {
 .keyboard-is-open .overflow-y-auto,
 .keyboard-is-open .scroll-with-bottom-bar,
 .keyboard-is-open .brew-content-scroll,
-.keyboard-is-open .custom-form-scroll,
 .keyboard-is-open .visualization-scroll,
 .keyboard-is-open .brewing-form,
 .keyboard-is-open .h-full.w-full.overflow-auto {

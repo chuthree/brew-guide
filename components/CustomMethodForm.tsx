@@ -569,7 +569,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                         exit="out"
                         variants={pageVariants}
                         transition={pageTransition}
-                        className="flex flex-col items-center justify-center h-full"
+                        className="flex flex-col items-center pt-10 pb-20"
                     >
                         <div className="text-center space-y-8 max-w-sm">
                             <h2 className="text-xl font-medium text-neutral-800 dark:text-neutral-200">
@@ -604,7 +604,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                         exit="out"
                         variants={pageVariants}
                         transition={pageTransition}
-                        className="space-y-10 max-w-md mx-auto flex flex-col items-center justify-center h-full"
+                        className="space-y-10 max-w-md mx-auto pt-10 pb-20"
                     >
                         <div className="grid grid-cols-2 gap-6">
                             <div className="space-y-2">
@@ -1222,7 +1222,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
             </div>
 
             {/* 步骤内容 */}
-            <div className="flex-1 overflow-y-auto custom-form-scroll pr-2">
+            <div className="flex-1 overflow-y-auto pr-2">
                 <AnimatePresence mode="wait">
                     {renderStepContent()}
                 </AnimatePresence>
