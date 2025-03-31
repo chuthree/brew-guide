@@ -1662,6 +1662,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                             settings={settings}
                             selectedEquipment={selectedEquipment}
                             isCoffeeBrewed={isCoffeeBrewed}
+                            layoutSettings={settings.layoutSettings}
                         />
                     </m.div>
                 )}
