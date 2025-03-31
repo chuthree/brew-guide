@@ -1457,7 +1457,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                     animate={{ opacity: 1 }}
                                     exit={{ opacity: 0 }}
                                     transition={{ duration: 0.15 }}
-                                    className="w-full h-full overflow-y-auto"
+                                    className="w-full h-full overflow-y-auto scroll-with-bottom-bar"
                                 >
                                     <CoffeeBeanRanking
                                         isOpen={viewMode === VIEW_OPTIONS.RANKING}
