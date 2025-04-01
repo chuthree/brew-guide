@@ -251,7 +251,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                             <div className="flex justify-between items-start px-6 py-2.5">
                                 <div className="flex items-start">
                                     {/* 序号 - 极简风格 */}
-                                    <div className="text-[11px] text-neutral-500 dark:text-neutral-400 w-4 mr-2 pt-0.5">
+                                    <div className="text-[11px] text-neutral-500 dark:text-neutral-400 w-4 mr-2">
                                         {index + 1}
                                     </div>
 
