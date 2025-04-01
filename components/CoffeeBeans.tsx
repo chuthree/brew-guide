@@ -174,8 +174,33 @@ const globalCache = {
     ratedBeans: [] as ExtendedCoffeeBean[],
     filteredBeans: [] as ExtendedCoffeeBean[],
     varieties: [] as string[],
+    selectedVariety: null as string | null, // 添加选中的品种到全局缓存
+    showEmptyBeans: false, // 添加显示已用完豆子的状态到全局缓存
     initialized: false
 };
+
+// 从localStorage读取已用完状态的函数
+const getShowEmptyBeansPreference = (): boolean => {
+    try {
+        const value = localStorage.getItem('brew-guide:showEmptyBeans');
+        return value === 'true';
+    } catch (_e) {
+        return false;
+    }
+};
+
+// 保存已用完状态到localStorage的函数
+const saveShowEmptyBeansPreference = (value: boolean): void => {
+    try {
+        localStorage.setItem('brew-guide:showEmptyBeans', value.toString());
+    } catch (_e) {
+        // 忽略错误，仅在控制台记录
+        console.error('无法保存显示已用完豆子的偏好设置', _e);
+    }
+};
+
+// 初始化全局缓存的已用完状态
+globalCache.showEmptyBeans = getShowEmptyBeansPreference();
 
 const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowImport, onGenerateAIRecipe }) => {
     const { showToast } = useToast()
@@ -194,12 +219,12 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
     const [selectedBeanForRating, setSelectedBeanForRating] = useState<ExtendedCoffeeBean | null>(null)
     const [lastRatedBeanId, setLastRatedBeanId] = useState<string | null>(null) // 新增，追踪最近评分的咖啡豆ID
     const [ratingSavedCallback, setRatingSavedCallback] = useState<(() => void) | null>(null) // 新增，存储评分保存后的回调
-    // 豆种筛选相关状态
+    // 豆种筛选相关状态 - 从全局缓存初始化
     const [availableVarieties, setAvailableVarieties] = useState<string[]>(globalCache.varieties)
-    const [selectedVariety, setSelectedVariety] = useState<string | null>(null)
+    const [selectedVariety, setSelectedVariety] = useState<string | null>(globalCache.selectedVariety)
     const [filteredBeans, setFilteredBeans] = useState<ExtendedCoffeeBean[]>(globalCache.filteredBeans)
-    // 咖啡豆显示控制
-    const [showEmptyBeans, setShowEmptyBeans] = useState<boolean>(false)
+    // 咖啡豆显示控制 - 从全局缓存初始化
+    const [showEmptyBeans, setShowEmptyBeans] = useState<boolean>(globalCache.showEmptyBeans)
     // 未使用的状态，但保留以避免修改太多相关代码
     const [_, setHasEmptyBeans] = useState<boolean>(false)
     // 榜单视图的筛选状态
@@ -485,9 +510,13 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
         }
     }, [isOpen, sortOption, selectedVariety, loadBeans, loadRatedBeans]);
 
-    // 当显示空豆子设置改变时，更新过滤
+    // 当显示空豆子设置改变时，更新过滤和全局缓存
     useEffect(() => {
         if (globalCache.initialized) {
+            // 更新全局缓存
+            globalCache.showEmptyBeans = showEmptyBeans;
+            // 持久化到localStorage
+            saveShowEmptyBeansPreference(showEmptyBeans);
             updateFilteredBeansAndCategories(globalCache.beans);
         }
     }, [showEmptyBeans, selectedVariety, updateFilteredBeansAndCategories]);
@@ -827,6 +856,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
     // 处理品种标签点击
     const handleVarietyClick = (variety: string | null) => {
         setSelectedVariety(variety);
+        // 更新全局缓存
+        globalCache.selectedVariety = variety;
         
         // 立即更新过滤后的咖啡豆列表，不等待下一个渲染周期
         if (variety) {
@@ -1080,8 +1111,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                     {viewMode === VIEW_OPTIONS.INVENTORY && availableVarieties.length > 0 && (
                         <div className="relative">
                             {/* 使用与CoffeeBeanRanking相同的样式，但添加可滑动功能 */}
-                            <div className="border-b border-neutral-200 dark:border-neutral-800/50 px-6">
-                                <div className="flex overflow-x-auto no-scrollbar pr-6 relative">
+                            <div className="border-b border-neutral-200 dark:border-neutral-800/50 px-6 relative">
+                                <div className="flex overflow-x-auto no-scrollbar pr-14">
                                     <button
                                         onClick={() => handleVarietyClick(null)}
                                         className={`pb-1.5 mr-3 text-[11px] whitespace-nowrap relative ${selectedVariety === null ? 'text-neutral-800 dark:text-white' : 'text-neutral-600 dark:text-neutral-400'}`}
@@ -1103,22 +1134,23 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                             )}
                                         </button>
                                     ))}
+                                </div>
 
-                                    {/* 显示/隐藏已用完的咖啡豆 - 固定在右侧 */}
-                                    {beans.length > 0 && (
+                                {/* 显示/隐藏已用完的咖啡豆 - 固定在右侧 */}
+                                {beans.length > 0 && (
+                                    <div className="absolute right-6 top-0 bottom-0 flex items-center bg-gradient-to-l from-neutral-50 via-neutral-50 to-transparent dark:from-neutral-900 dark:via-neutral-900 pl-6">
                                         <button
                                             onClick={() => setShowEmptyBeans(!showEmptyBeans)}
-                                            className={`pb-1.5 mx-3 text-[11px] whitespace-nowrap relative ${showEmptyBeans ? 'text-neutral-800 dark:text-white' : 'text-neutral-600 dark:text-neutral-400'}`}
+                                            className={`pb-1.5 text-[11px] whitespace-nowrap relative ${showEmptyBeans ? 'text-neutral-800 dark:text-white font-normal' : 'text-neutral-600 dark:text-neutral-400'}`}
                                         >
                                             <span className="relative">已用完</span>
                                             {showEmptyBeans && (
                                                 <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
                                             )}
                                         </button>
-                                    )}
-                                </div>
+                                    </div>
+                                )}
                             </div>
-
                         </div>
                     )}
 
