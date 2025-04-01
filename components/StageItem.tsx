@@ -119,10 +119,7 @@ const StageItem: React.FC<StageItemProps> = ({
     }, [onEdit, activeTab, index, selectedEquipment, customMethods])
 
     return (
-        <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.26, ease: "easeOut" }}
+        <div
             className={`group relative border-l ${isWaitingStage ? 'border-dashed' : ''} border-neutral-200 pl-6 dark:border-neutral-800 ${activeTab === '注水' && index === currentStage
                 ? 'text-neutral-800 dark:text-neutral-100'
                 : activeTab === '注水' && index < currentStage
@@ -250,7 +247,7 @@ const StageItem: React.FC<StageItemProps> = ({
                     )}
                 </div>
             </div>
-        </motion.div>
+        </div>
     )
 }
 

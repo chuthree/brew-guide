@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
 import { CoffeeBean } from '@/app/types'
 import { CoffeeBeanManager } from '@/lib/coffeeBeanManager'
 
@@ -158,32 +157,25 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
     return (
         <div className="space-y-5 pb-12">
             {/* 添加"不选择咖啡豆"选项 */}
-            <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 5 }}
-                transition={{ duration: 0.3, ease: "easeOut" }}
+            <div
+                className={`group relative border-l border-neutral-200 dark:border-neutral-800 pl-6 cursor-pointer text-neutral-500 dark:text-neutral-400`}
+                onClick={() => onSelect(null, null)}
             >
-                <div
-                    className={`group relative border-l border-neutral-200 dark:border-neutral-800 pl-6 cursor-pointer text-neutral-500 dark:text-neutral-400`}
-                    onClick={() => onSelect(null, null)}
-                >
-                    <div className="cursor-pointer">
-                        <div className="flex items-baseline justify-between">
-                            <div className="flex items-baseline gap-3 min-w-0 overflow-hidden">
-                                <h3 className="text-xs font-normal tracking-wider truncate">
-                                    不使用咖啡豆
-                                </h3>
-                            </div>
-                        </div>
-                        <div className="mt-2">
-                            <p className="text-xs font-light">跳过咖啡豆选择</p>
+                <div className="cursor-pointer">
+                    <div className="flex items-baseline justify-between">
+                        <div className="flex items-baseline gap-3 min-w-0 overflow-hidden">
+                            <h3 className="text-xs font-normal tracking-wider truncate">
+                                不使用咖啡豆
+                            </h3>
                         </div>
                     </div>
+                    <div className="mt-2">
+                        <p className="text-xs font-light">跳过咖啡豆选择</p>
+                    </div>
                 </div>
-            </motion.div>
+            </div>
 
-            {beans.map((bean, index) => {
+            {beans.map((bean) => {
                 // 获取赏味期状态（添加到咖啡豆名称后面）
                 let freshStatus = "";
                 let statusClass = "text-rose-500 dark:text-rose-400";
@@ -259,41 +251,30 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
                 }
 
                 return (
-                    <motion.div
+                    <div
                         key={bean.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 5 }}
-                        transition={{
-                            duration: 0.3,
-                            delay: index * 0.03,
-                            ease: "easeOut"
-                        }}
+                        className={`group relative border-l border-neutral-200 dark:border-neutral-800 pl-6 cursor-pointer text-neutral-500 dark:text-neutral-400`}
+                        onClick={() => onSelect(bean.id, bean)}
                     >
-                        <div
-                            className={`group relative border-l border-neutral-200 dark:border-neutral-800 pl-6 cursor-pointer text-neutral-500 dark:text-neutral-400`}
-                            onClick={() => onSelect(bean.id, bean)}
-                        >
-                            <div className="cursor-pointer">
-                                <div className="flex items-baseline justify-between">
-                                    <div className="flex items-baseline gap-3 min-w-0 overflow-hidden">
-                                        <h3 className="text-xs font-normal tracking-wider truncate">
-                                            {bean.name} <span className={statusClass}>{freshStatus}</span>
-                                        </h3>
-                                    </div>
-                                </div>
-                                <div className="mt-2">
-                                    <ul className="space-y-1">
-                                        {items.map((item, i) => (
-                                            <li key={i} className="text-xs font-light">
-                                                {item}
-                                            </li>
-                                        ))}
-                                    </ul>
+                        <div className="cursor-pointer">
+                            <div className="flex items-baseline justify-between">
+                                <div className="flex items-baseline gap-3 min-w-0 overflow-hidden">
+                                    <h3 className="text-xs font-normal tracking-wider truncate">
+                                        {bean.name} <span className={statusClass}>{freshStatus}</span>
+                                    </h3>
                                 </div>
                             </div>
+                            <div className="mt-2">
+                                <ul className="space-y-1">
+                                    {items.map((item, i) => (
+                                        <li key={i} className="text-xs font-light">
+                                            {item}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
                         </div>
-                    </motion.div>
+                    </div>
                 );
             })}
         </div>

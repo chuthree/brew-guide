@@ -1,15 +1,6 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-// import { motion } from 'framer-motion'
-// import { motion } from 'framer-motion'
-
-// Helper function to format time
-// const formatTime = (seconds: number) => {
-//     const mins = Math.floor(seconds / 60)
-//     const secs = seconds % 60
-//     return `${mins}:${secs.toString().padStart(2, '0')}`
-// }
 
 // 从 types.ts 导入 BrewingNoteData 类型
 import type { BrewingNoteData, CoffeeBean } from '@/app/types'

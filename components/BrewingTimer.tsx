@@ -967,14 +967,9 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
 
     return (
         <>
-            <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.28, ease: "easeOut" }}
+            <div
                 className="px-6 sticky bottom-0 border-t border-neutral-200 bg-neutral-50 pt-6 dark:border-neutral-800 dark:bg-neutral-900 pb-safe"
                 style={{
-                    willChange: "transform, opacity",
                     paddingBottom: 'max(env(safe-area-inset-bottom), 28px)'
                 }}
             >
@@ -1251,7 +1246,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                         </button>
                     </div>
                 </div>
-            </motion.div>
+            </div>
             <AnimatePresence mode="wait">
                 {showNoteForm && currentBrewingMethod && (
                     <motion.div

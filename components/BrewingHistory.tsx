@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import type { BrewingNote } from '@/lib/config'
 import type { BrewingNoteData, CoffeeBean } from '@/app/types'
 import BrewingNoteForm from './BrewingNoteForm'
@@ -354,16 +353,9 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
     if (!isOpen) return null
 
     return (
-        <AnimatePresence mode="wait">
+        <div>
             {editingNote ? (
-                <motion.div
-                    key="edit-form"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.2, ease: "easeOut" }}
-                    className="h-full p-6 brewing-form"
-                >
+                <div className="h-full p-6 brewing-form">
                     <BrewingNoteForm
                         id={editingNote.id}
                         isOpen={true}
@@ -371,16 +363,9 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                         onSave={handleSaveEdit}
                         initialData={editingNote}
                     />
-                </motion.div>
+                </div>
             ) : optimizingNote ? (
-                <motion.div
-                    key="optimize-form"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.2, ease: "easeOut" }}
-                    className="h-full p-6 brewing-form"
-                >
+                <div className="h-full p-6 brewing-form">
                     <button
                         data-action="back"
                         onClick={() => {
@@ -412,16 +397,9 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                         initialData={optimizingNote}
                         showOptimizationByDefault={true}
                     />
-                </motion.div>
+                </div>
             ) : (
-                <motion.div
-                    key="notes-list"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.2, ease: "easeOut" }}
-                    className="space-y-5 scroll-with-bottom-bar brewing-form"
-                >
+                <div className="space-y-5 scroll-with-bottom-bar brewing-form">
                     <div className="p-6 space-y-6">
                         {/* 排序控件和数量显示 */}
                         <div className="flex justify-between items-center mb-6">
@@ -469,27 +447,14 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
 
                         {/* 笔记列表 */}
                         {notes.length === 0 ? (
-                            <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{ duration: 0.2, ease: "easeOut" }}
-                                className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400"
-                            >
+                            <div className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
                                 [ 暂无冲煮记录 ]
-                            </motion.div>
+                            </div>
                         ) : (
                             <div className="space-y-6">
-                                {notes.map((note, index) => (
-                                    <motion.div
+                                {notes.map((note, _index) => (
+                                    <div
                                         key={note.id}
-                                        initial={{ opacity: 0, y: 15 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0 }}
-                                        transition={{
-                                            duration: 0.2,
-                                            delay: Math.min(index * 0.05, 0.3),
-                                            ease: "easeOut"
-                                        }}
                                         className="group space-y-4 border-l border-neutral-200/50 pl-6 dark:border-neutral-800"
                                     >
                                         <div className="flex flex-col space-y-4">
@@ -529,65 +494,51 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                                     </div>
 
                                                     <div className="flex items-baseline ml-2 shrink-0">
-                                                        <AnimatePresence mode="wait">
-                                                            {actionMenuStates[note.id] ? (
-                                                                <motion.div
-                                                                    key="action-buttons"
-                                                                    initial={{ opacity: 0, scale: 0.98 }}
-                                                                    animate={{ opacity: 1, scale: 1 }}
-                                                                    exit={{ opacity: 0 }}
-                                                                    transition={{ duration: 0.15, ease: "easeOut" }}
-                                                                    className="flex items-baseline space-x-3"
+                                                        {actionMenuStates[note.id] ? (
+                                                            <div className="flex items-baseline space-x-3">
+                                                                <button
+                                                                    onClick={() => handleEdit(note)}
+                                                                    className="px-2 text-xs text-neutral-500 dark:text-neutral-400"
                                                                 >
-                                                                    <button
-                                                                        onClick={() => handleEdit(note)}
-                                                                        className="px-2 text-xs text-neutral-500 dark:text-neutral-400"
-                                                                    >
-                                                                        编辑
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={() => handleOptimize(note)}
-                                                                        className="px-2 text-xs text-emerald-600 dark:text-emerald-500 font-medium"
-                                                                    >
-                                                                        优化
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={() => handleDelete(note.id)}
-                                                                        className="px-2 text-xs text-red-400"
-                                                                    >
-                                                                        删除
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={() => {
-                                                                            setActionMenuStates(prev => ({
-                                                                                ...prev,
-                                                                                [note.id]: false
-                                                                            }))
-                                                                        }}
-                                                                        className="w-7 h-7 flex items-center justify-center rounded-full text-sm text-neutral-400"
-                                                                    >
-                                                                        ×
-                                                                    </button>
-                                                                </motion.div>
-                                                            ) : (
-                                                                <motion.button
-                                                                    key="more-button"
-                                                                    initial={{ opacity: 0, scale: 0.98 }}
-                                                                    animate={{ opacity: 1, scale: 1 }}
-                                                                    exit={{ opacity: 0 }}
-                                                                    transition={{ duration: 0.15, ease: "easeOut" }}
+                                                                    编辑
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleOptimize(note)}
+                                                                    className="px-2 text-xs text-emerald-600 dark:text-emerald-500 font-medium"
+                                                                >
+                                                                    优化
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleDelete(note.id)}
+                                                                    className="px-2 text-xs text-red-400"
+                                                                >
+                                                                    删除
+                                                                </button>
+                                                                <button
                                                                     onClick={() => {
                                                                         setActionMenuStates(prev => ({
                                                                             ...prev,
-                                                                            [note.id]: true
+                                                                            [note.id]: false
                                                                         }))
                                                                     }}
-                                                                    className="w-7 h-7 flex items-center justify-center text-xs text-neutral-500 dark:text-neutral-400"
+                                                                    className="w-7 h-7 flex items-center justify-center rounded-full text-sm text-neutral-400"
                                                                 >
-                                                                    ···
-                                                                </motion.button>
-                                                            )}
-                                                        </AnimatePresence>
+                                                                    ×
+                                                                </button>
+                                                            </div>
+                                                        ) : (
+                                                            <button
+                                                                onClick={() => {
+                                                                    setActionMenuStates(prev => ({
+                                                                        ...prev,
+                                                                        [note.id]: true
+                                                                    }))
+                                                                }}
+                                                                className="w-7 h-7 flex items-center justify-center text-xs text-neutral-500 dark:text-neutral-400"
+                                                            >
+                                                                ···
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </div>
 
@@ -619,12 +570,9 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                             </div>
 
                                             <div className="grid grid-cols-2 gap-4">
-                                                {Object.entries(note.taste).map(([key, value], i) => (
-                                                    <motion.div
+                                                {Object.entries(note.taste).map(([key, value], _i) => (
+                                                    <div
                                                         key={key}
-                                                        initial={{ opacity: 0, x: -10 }}
-                                                        animate={{ opacity: 1, x: 0 }}
-                                                        transition={{ delay: 0.1 + i * 0.05, duration: 0.3 }}
                                                         className="space-y-1"
                                                     >
                                                         <div className="flex items-center justify-between">
@@ -642,21 +590,13 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                                                 [ {value} ]
                                                             </div>
                                                         </div>
-                                                        <motion.div
-                                                            className="h-px w-full overflow-hidden bg-neutral-200/50 dark:bg-neutral-800"
-                                                        >
-                                                            <motion.div
-                                                                initial={{ width: 0 }}
-                                                                animate={{ width: `${(value / 5) * 100}%` }}
-                                                                transition={{
-                                                                    delay: 0.15 + i * 0.05,
-                                                                    duration: 0.5,
-                                                                    ease: "easeOut"
-                                                                }}
+                                                        <div className="h-px w-full overflow-hidden bg-neutral-200/50 dark:bg-neutral-800">
+                                                            <div
+                                                                style={{ width: `${(value / 5) * 100}%` }}
                                                                 className="h-full bg-neutral-800 dark:bg-neutral-100"
                                                             />
-                                                        </motion.div>
-                                                    </motion.div>
+                                                        </div>
+                                                    </div>
                                                 ))}
                                             </div>
 
@@ -675,37 +615,29 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                                 </div>
                                             )}
                                         </div>
-                                    </motion.div>
+                                    </div>
                                 ))}
                             </div>
                         )}
                     </div>
 
                     {/* 添加笔记按钮 */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 5 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -5 }}
-                        transition={{ duration: 0.3, ease: "easeOut" }}
-                        className="bottom-action-bar"
-                    >
+                    <div className="bottom-action-bar">
                         <div className="absolute bottom-full left-0 right-0 h-12 bg-gradient-to-t from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none"></div>
                         <div className="relative flex items-center bg-neutral-50 dark:bg-neutral-900 py-4">
                             <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
-                            <motion.button
+                            <button
                                 onClick={handleAddNote}
-                                whileHover={{ scale: 1.02 }}
-                                whileTap={{ scale: 0.98 }}
                                 className="flex items-center justify-center text-[11px] text-neutral-500 dark:text-neutral-400 mx-3"
                             >
                                 <span className="mr-1">+</span> 添加笔记
-                            </motion.button>
+                            </button>
                             <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
                         </div>
-                    </motion.div>
-                </motion.div>
+                    </div>
+                </div>
             )}
-        </AnimatePresence>
+        </div>
     )
 }
 
