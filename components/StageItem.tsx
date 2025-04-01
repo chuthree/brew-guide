@@ -146,16 +146,16 @@ const StageItem: React.FC<StageItemProps> = ({
 
     return (
         <div
-            className={`group relative border-l ${isWaitingStage ? 'border-dashed' : ''} border-neutral-200 pl-6 dark:border-neutral-800 ${activeTab === '注水' && index === currentStage
-                ? 'text-neutral-800 dark:text-neutral-100'
+            className={`group relative border-l ${isWaitingStage ? 'border-dashed' : ''} border-neutral-200 pl-6 dark:border-neutral-800/50 ${activeTab === '注水' && index === currentStage
+                ? 'text-neutral-800 dark:text-white'
                 : activeTab === '注水' && index < currentStage
-                    ? 'text-neutral-500 dark:text-neutral-400'
-                    : 'text-neutral-500 dark:text-neutral-400'
+                    ? 'text-neutral-600 dark:text-neutral-400'
+                    : 'text-neutral-600 dark:text-neutral-400'
                 }`}
         >
             {activeTab === '注水' && index === currentStage && (
                 <motion.div
-                    className={`absolute -left-px top-0 h-full w-px ${isWaitingStage ? 'bg-neutral-500 dark:bg-neutral-400' : 'bg-neutral-800 dark:bg-neutral-100'}`}
+                    className={`absolute -left-px top-0 h-full w-px ${isWaitingStage ? 'bg-neutral-600 dark:bg-neutral-400' : 'bg-neutral-800 dark:bg-white'}`}
                     initial={{ scaleY: 0, transformOrigin: "top" }}
                     animate={{ scaleY: 1 }}
                     transition={{ duration: 0.26, ease: 'linear' }}
@@ -164,11 +164,11 @@ const StageItem: React.FC<StageItemProps> = ({
             <div className={activeTab !== '注水' ? 'cursor-pointer' : ''} onClick={onClick}>
                 <div className="flex items-baseline justify-between">
                     <div className="flex items-baseline gap-3 min-w-0 overflow-hidden">
-                        <h3 className={`text-xs font-normal tracking-wider truncate`}>
+                        <h3 className={`text-xs font-normal tracking-wider truncate ${activeTab === '注水' && index === currentStage ? 'text-neutral-800 dark:text-white' : ''}`}>
                             {step.title}
                         </h3>
                         {activeTab === '注水' && selectedMethod && step.originalIndex !== undefined && (
-                            <div className="flex items-baseline gap-2 text-[10px] text-neutral-500 dark:text-neutral-400 shrink-0">
+                            <div className="flex items-baseline gap-2 text-[10px] text-neutral-600 dark:text-neutral-400 shrink-0">
                                 <span>{step.endTime ? formatTime(step.endTime, true) : formatTime(parseInt(step.note), true)}</span>
                                 <span>·</span>
                                 <span>{step.items[0]}</span>
@@ -209,11 +209,11 @@ const StageItem: React.FC<StageItemProps> = ({
                 </div>
                 <div className="mt-2">
                     {activeTab === '注水' ? (
-                        <p className={`text-xs font-light`}>{step.items[1]}</p>
+                        <p className={`text-xs font-light ${activeTab === '注水' && index === currentStage ? 'text-neutral-800 dark:text-white' : 'text-neutral-600 dark:text-neutral-400'}`}>{step.items[1]}</p>
                     ) : (
                         <ul className="space-y-1">
                             {step.items.map((item: string, i: number) => (
-                                <li key={i} className="text-xs font-light">
+                                <li key={i} className="text-xs font-light text-neutral-600 dark:text-neutral-400">
                                     {item}
                                 </li>
                             ))}

@@ -15,6 +15,13 @@ import {
     SelectValue,
 } from './ui/select'
 
+// 消息提示状态接口
+interface ToastState {
+    visible: boolean;
+    message: string;
+    type: 'success' | 'error' | 'info';
+}
+
 // 为Window对象声明类型扩展
 declare global {
     interface Window {
@@ -85,6 +92,15 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
     const [optimizingNote, setOptimizingNote] = useState<(Partial<BrewingNoteData> & { coffeeBean?: CoffeeBean | null }) | null>(null)
     const [editingNote, setEditingNote] = useState<(Partial<BrewingNoteData> & { coffeeBean?: CoffeeBean | null }) | null>(null)
     const [forceRefreshKey, setForceRefreshKey] = useState(0); // 添加一个强制刷新的key
+    const [toast, setToast] = useState<ToastState>({ visible: false, message: '', type: 'info' });
+
+    // 显示消息提示
+    const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+        setToast({ visible: true, message, type });
+        setTimeout(() => {
+            setToast(prev => ({ ...prev, visible: false }));
+        }, 3000);
+    };
 
     // 排序笔记的函数，用useCallback包装以避免无限渲染
     const sortNotes = useCallback((notesToSort: BrewingNote[]): BrewingNote[] => {
@@ -180,7 +196,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                 setNotes(sortNotes(updatedNotes))
             } catch {
                 // 删除失败时提示用户
-                alert('删除笔记时出错，请重试')
+                showToast('删除笔记时出错，请重试', 'error');
             }
         }
     }
@@ -262,6 +278,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                 await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
                 setNotes(sortNotes(updatedNotes));
                 setEditingNote(null);
+                showToast('笔记已更新', 'success');
             }
             else {
                 const newNote = {
@@ -273,10 +290,12 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                 const updatedNotes = [newNote, ...existingNotes];
                 await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
                 setNotes(sortNotes(updatedNotes));
+                showToast('笔记已保存', 'success');
             }
         } catch (error) {
             console.error('保存笔记失败:', error);
-            alert('保存笔记时出错，请重试');
+            // 保存失败时提示用户
+            showToast('保存笔记时出错，请重试', 'error');
         }
     };
 
@@ -403,7 +422,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                     <div className="p-6 space-y-6">
                         {/* 排序控件和数量显示 */}
                         <div className="flex justify-between items-center mb-6">
-                            <div className="text-xs tracking-wide text-neutral-500 dark:text-neutral-400">
+                            <div className="text-xs tracking-wide text-neutral-800 dark:text-white">
                                 共 {notes.length} 条记录
                             </div>
                             <Select
@@ -412,7 +431,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                             >
                                 <SelectTrigger
                                     variant="minimal"
-                                    className="w-auto min-w-[90px] tracking-wide text-neutral-500 dark:text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-400 transition-colors group"
+                                    className="w-auto min-w-[90px] tracking-wide text-neutral-800 dark:text-white transition-colors hover:opacity-80 text-right"
                                 >
                                     <div className="flex items-center">
                                         <SelectValue />
@@ -436,7 +455,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                         <SelectItem
                                             key={value}
                                             value={value}
-                                            className="tracking-wide text-neutral-500 dark:text-neutral-400 data-[highlighted]:text-neutral-600 dark:data-[highlighted]:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800/70 transition-colors"
+                                            className="tracking-wide text-neutral-800 dark:text-white data-[highlighted]:opacity-80 transition-colors"
                                         >
                                             {SORT_LABELS[value]}
                                         </SelectItem>
@@ -447,7 +466,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
 
                         {/* 笔记列表 */}
                         {notes.length === 0 ? (
-                            <div className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
+                            <div className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
                                 [ 暂无冲煮记录 ]
                             </div>
                         ) : (
@@ -455,30 +474,30 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                 {notes.map((note, _index) => (
                                     <div
                                         key={note.id}
-                                        className="group space-y-4 border-l border-neutral-200/50 pl-6 dark:border-neutral-800"
+                                        className="group space-y-4 border-l border-neutral-200 dark:border-neutral-800/50 pl-6"
                                     >
                                         <div className="flex flex-col space-y-4">
                                             <div className="space-y-2">
                                                 <div className="flex items-baseline justify-between">
                                                     <div className="flex items-baseline space-x-2 min-w-0 overflow-hidden">
-                                                        <div className="text-[10px] truncate">
+                                                        <div className="text-[10px] truncate text-neutral-800 dark:text-white">
                                                             {getEquipmentName(note.equipment)}
                                                         </div>
                                                         {note.method && (
                                                             <>
-                                                                <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400 shrink-0">
+                                                                <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400 shrink-0">
                                                                     ·
                                                                 </div>
                                                                 <div
-                                                                    className="text-[10px] font-light tracking-wide truncate cursor-pointer hover:text-emerald-600 dark:hover:text-emerald-500 transition-colors group flex items-center"
+                                                                    className="text-[10px] font-light tracking-wide truncate cursor-pointer hover:opacity-80 transition-colors group flex items-center text-neutral-800 dark:text-white"
                                                                     onClick={(e) => handleMethodClick(note, e)}
                                                                     title="点击跳转到注水步骤"
                                                                 >
-                                                                    <span className="border-b border-dashed border-neutral-400 dark:border-neutral-600 group-hover:border-emerald-500 dark:group-hover:border-emerald-500">
+                                                                    <span className="border-b border-dashed border-neutral-400 dark:border-neutral-600 group-hover:border-neutral-800 dark:group-hover:border-white">
                                                                         {note.method}
                                                                     </span>
                                                                     <svg
-                                                                        className="ml-1 w-3 h-3 opacity-50 group-hover:opacity-100 group-hover:text-emerald-500 transition-all"
+                                                                        className="ml-1 w-3 h-3 opacity-50 group-hover:opacity-100 transition-all"
                                                                         viewBox="0 0 24 24"
                                                                         fill="none"
                                                                         stroke="currentColor"
@@ -519,7 +538,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                                     </div>
                                                 </div>
 
-                                                <div className="flex flex-wrap gap-2 text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
+                                                <div className="flex flex-wrap gap-2 text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
                                                     {note.coffeeBeanInfo?.name && (
                                                         <>
                                                             <span>{note.coffeeBeanInfo.name}</span>
@@ -553,7 +572,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                                         className="space-y-1"
                                                     >
                                                         <div className="flex items-center justify-between">
-                                                            <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
+                                                            <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
                                                                 {
                                                                     {
                                                                         acidity: '酸度',
@@ -563,7 +582,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                                                     }[key]
                                                                 }
                                                             </div>
-                                                            <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
+                                                            <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
                                                                 [ {value} ]
                                                             </div>
                                                         </div>
@@ -578,16 +597,16 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                             </div>
 
                                             <div className="flex items-baseline justify-between">
-                                                <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
+                                                <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
                                                     {formatDate(note.timestamp)}
                                                 </div>
-                                                <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
+                                                <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
                                                     {formatRating(note.rating)}
                                                 </div>
                                             </div>
 
                                             {note.notes && (
-                                                <div className="text-[10px] tracking-widest  text-neutral-500 dark:text-neutral-400">
+                                                <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
                                                     {note.notes}
                                                 </div>
                                             )}
@@ -602,15 +621,24 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                     <div className="bottom-action-bar">
                         <div className="absolute bottom-full left-0 right-0 h-12 bg-gradient-to-t from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none"></div>
                         <div className="relative flex items-center bg-neutral-50 dark:bg-neutral-900 py-4">
-                            <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
+                            <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800/50"></div>
                             <button
                                 onClick={handleAddNote}
-                                className="flex items-center justify-center text-[11px] text-neutral-500 dark:text-neutral-400 mx-3"
+                                className="flex items-center justify-center text-[11px] text-neutral-800 dark:text-white hover:opacity-80 mx-3"
                             >
                                 <span className="mr-1">+</span> 添加笔记
                             </button>
-                            <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
+                            <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800/50"></div>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Toast消息组件 */}
+            {toast.visible && (
+                <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-50 px-4 py-2 rounded-md shadow-lg text-sm transition-opacity duration-300 ease-in-out bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700">
+                    <div className={`text-center ${toast.type === 'error' ? 'text-red-500 dark:text-red-400' : toast.type === 'success' ? 'text-emerald-600 dark:text-emerald-500' : 'text-neutral-800 dark:text-white'}`}>
+                        {toast.message}
                     </div>
                 </div>
             )}

@@ -964,7 +964,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                     {/* 视图切换与筛选栏 - 统一布局 */}
                     <div className="flex justify-between items-center mb-6 px-6">
                         <div className="flex items-center space-x-3">
-                            <div className="text-xs tracking-wide text-neutral-600 dark:text-neutral-300">
+                            <div className="text-xs tracking-wide text-neutral-800 dark:text-white">
                                 {viewMode === VIEW_OPTIONS.INVENTORY ?
                                     `${selectedVariety ? `${filteredBeans.length}/${beans.length}` : beans.length} 款咖啡豆` :
                                     `${ratedBeans?.length || 0} 款已评分咖啡豆`}
@@ -979,7 +979,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                             >
                                 <SelectTrigger
                                     variant="minimal"
-                                    className="w-auto min-w-[82px] tracking-wide text-neutral-600 dark:text-neutral-300 transition-colors hover:text-neutral-800 dark:hover:text-neutral-200 text-right"
+                                    className="w-auto min-w-[82px] tracking-wide text-neutral-800 dark:text-white transition-colors hover:opacity-80 text-right"
                                 >
                                     <div className="flex items-center justify-end w-full">
                                         <SelectValue />
@@ -1010,7 +1010,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                         <SelectItem
                                             key={value}
                                             value={value}
-                                            className="tracking-wide text-neutral-600 dark:text-neutral-300 data-[highlighted]:text-neutral-800 dark:data-[highlighted]:text-neutral-100 transition-colors font-medium"
+                                            className="tracking-wide text-neutral-800 dark:text-white data-[highlighted]:opacity-80 transition-colors font-medium"
                                         >
                                             {label}
                                         </SelectItem>
@@ -1026,7 +1026,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                 >
                                     <SelectTrigger
                                         variant="minimal"
-                                        className="w-auto min-w-[65px] tracking-wide text-neutral-600 dark:text-neutral-300 transition-colors hover:text-neutral-800 dark:hover:text-neutral-200 text-right"
+                                        className="w-auto min-w-[65px] tracking-wide text-neutral-800 dark:text-white transition-colors hover:opacity-80 text-right"
                                     >
                                         <div className="flex items-center justify-end w-full">
                                             {viewMode === VIEW_OPTIONS.RANKING 
@@ -1047,7 +1047,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                 <SelectItem
                                                     key={value}
                                                     value={value}
-                                                    className="tracking-wide text-neutral-600 dark:text-neutral-300 data-[highlighted]:text-neutral-800 dark:data-[highlighted]:text-neutral-100 transition-colors font-medium"
+                                                    className="tracking-wide text-neutral-800 dark:text-white data-[highlighted]:opacity-80 transition-colors font-medium"
                                                 >
                                                     <div className="flex items-center justify-between w-full">
                                                         <span>{RANKING_VIEW_LABELS[value]}</span>
@@ -1061,7 +1061,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                 <SelectItem
                                                     key={value}
                                                     value={value}
-                                                    className="tracking-wide text-neutral-600 dark:text-neutral-300 data-[highlighted]:text-neutral-800 dark:data-[highlighted]:text-neutral-100 transition-colors font-medium"
+                                                    className="tracking-wide text-neutral-800 dark:text-white data-[highlighted]:opacity-80 transition-colors font-medium"
                                                 >
                                                     <div className="flex items-center justify-between w-full">
                                                         <span>{SORT_LABELS[value]}</span>
@@ -1084,22 +1084,22 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                 <div className="flex overflow-x-auto no-scrollbar pr-6 relative">
                                     <button
                                         onClick={() => handleVarietyClick(null)}
-                                        className={`pb-1.5 mr-3 text-[11px] whitespace-nowrap relative ${selectedVariety === null ? 'text-neutral-800 dark:text-white' : 'text-neutral-500 dark:text-neutral-400'}`}
+                                        className={`pb-1.5 mr-3 text-[11px] whitespace-nowrap relative ${selectedVariety === null ? 'text-neutral-800 dark:text-white' : 'text-neutral-600 dark:text-neutral-400'}`}
                                     >
                                         <span className="relative">全部豆子</span>
                                         {selectedVariety === null && (
-                                            <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-600 dark:bg-neutral-300"></span>
+                                            <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
                                         )}
                                     </button>
                                     {availableVarieties.map(variety => (
                                         <button
                                             key={variety}
                                             onClick={() => handleVarietyClick(variety)}
-                                            className={`pb-1.5 mx-3 text-[11px] whitespace-nowrap relative ${selectedVariety === variety ? 'text-neutral-800 dark:text-white' : 'text-neutral-500 dark:text-neutral-400'}`}
+                                            className={`pb-1.5 mx-3 text-[11px] whitespace-nowrap relative ${selectedVariety === variety ? 'text-neutral-800 dark:text-white' : 'text-neutral-600 dark:text-neutral-400'}`}
                                         >
                                             <span className="relative">{variety}</span>
                                             {selectedVariety === variety && (
-                                                <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-600 dark:bg-neutral-300"></span>
+                                                <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
                                             )}
                                         </button>
                                     ))}
@@ -1108,11 +1108,11 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                     {beans.length > 0 && (
                                         <button
                                             onClick={() => setShowEmptyBeans(!showEmptyBeans)}
-                                            className={`pb-1.5 mx-3 text-[11px] whitespace-nowrap relative ${showEmptyBeans ? 'text-neutral-800 dark:text-white' : 'text-neutral-500 dark:text-neutral-400'}`}
+                                            className={`pb-1.5 mx-3 text-[11px] whitespace-nowrap relative ${showEmptyBeans ? 'text-neutral-800 dark:text-white' : 'text-neutral-600 dark:text-neutral-400'}`}
                                         >
                                             <span className="relative">已用完</span>
                                             {showEmptyBeans && (
-                                                <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-600 dark:bg-neutral-300"></span>
+                                                <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
                                             )}
                                         </button>
                                     )}
@@ -1129,30 +1129,30 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                             <div className="flex justify-between border-b mx-6 border-neutral-200 dark:border-neutral-800/50">
                                 <div className="flex">
                                     <button
-                                        className={`pb-1.5 mr-3 text-[11px] relative ${rankingBeanType === 'all' ? 'text-neutral-800 dark:text-white' : 'text-neutral-500 dark:text-neutral-400'}`}
+                                        className={`pb-1.5 mr-3 text-[11px] relative ${rankingBeanType === 'all' ? 'text-neutral-800 dark:text-white' : 'text-neutral-600 dark:text-neutral-400'}`}
                                         onClick={() => setRankingBeanType('all')}
                                     >
                                         <span className="relative">全部豆子</span>
                                         {rankingBeanType === 'all' && (
-                                            <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-600 dark:bg-neutral-300"></span>
+                                            <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
                                         )}
                                     </button>
                                     <button
-                                        className={`pb-1.5 mx-3 text-[11px] relative ${rankingBeanType === 'espresso' ? 'text-neutral-800 dark:text-white' : 'text-neutral-500 dark:text-neutral-400'}`}
+                                        className={`pb-1.5 mx-3 text-[11px] relative ${rankingBeanType === 'espresso' ? 'text-neutral-800 dark:text-white' : 'text-neutral-600 dark:text-neutral-400'}`}
                                         onClick={() => setRankingBeanType('espresso')}
                                     >
                                         <span className="relative">意式豆</span>
                                         {rankingBeanType === 'espresso' && (
-                                            <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-600 dark:bg-neutral-300"></span>
+                                            <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
                                         )}
                                     </button>
                                     <button
-                                        className={`pb-1.5 mx-3 text-[11px] relative ${rankingBeanType === 'filter' ? 'text-neutral-800 dark:text-white' : 'text-neutral-500 dark:text-neutral-400'}`}
+                                        className={`pb-1.5 mx-3 text-[11px] relative ${rankingBeanType === 'filter' ? 'text-neutral-800 dark:text-white' : 'text-neutral-600 dark:text-neutral-400'}`}
                                         onClick={() => setRankingBeanType('filter')}
                                     >
                                         <span className="relative">手冲豆</span>
                                         {rankingBeanType === 'filter' && (
-                                            <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-600 dark:bg-neutral-300"></span>
+                                            <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
                                         )}
                                     </button>
                                 </div>
@@ -1160,11 +1160,11 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                 {/* 编辑按钮 */}
                                 <button
                                     onClick={() => setRankingEditMode(!rankingEditMode)}
-                                    className={`pb-1.5 text-[11px] relative ${rankingEditMode ? 'text-neutral-800 dark:text-white' : 'text-neutral-500 dark:text-neutral-400'}`}
+                                    className={`pb-1.5 text-[11px] relative ${rankingEditMode ? 'text-neutral-800 dark:text-white' : 'text-neutral-600 dark:text-neutral-400'}`}
                                 >
                                     <span className="relative">{rankingEditMode ? '完成' : '编辑'}</span>
                                     {rankingEditMode && (
-                                        <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-600 dark:bg-neutral-300"></span>
+                                        <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
                                     )}
                                 </button>
                             </div>
@@ -1245,7 +1245,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                                                 return newStates;
                                                                             });
                                                                         }}
-                                                                        className="w-8 h-[16.5] flex items-center justify-center text-xs text-neutral-500 dark:text-neutral-400"
+                                                                        className="w-8 h-[16.5] flex items-center justify-center text-xs text-neutral-600 dark:text-neutral-400"
                                                                     >
                                                                         ···
                                                                     </button>
@@ -1263,7 +1263,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                                                             [bean.id]: false
                                                                                         }));
                                                                                     }}
-                                                                                    className="w-full px-3 py-1.5 text-left text-xs text-neutral-600 dark:text-neutral-300"
+                                                                                    className="w-full px-3 py-1.5 text-left text-xs text-neutral-800 dark:text-white"
                                                                                 >
                                                                                     编辑
                                                                                 </button>
@@ -1275,7 +1275,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                                                             [bean.id]: false
                                                                                         }));
                                                                                     }}
-                                                                                    className="w-full px-3 py-1.5 text-left text-xs text-neutral-600 dark:text-neutral-300"
+                                                                                    className="w-full px-3 py-1.5 text-left text-xs text-neutral-800 dark:text-white"
                                                                                 >
                                                                                     分享
                                                                                 </button>
@@ -1309,7 +1309,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                                 </div>
                                                             </div>
 
-                                                            <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400 break-words">
+                                                            <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400 break-words">
                                                                 {bean.type === '拼配' && bean.blendComponents && Array.isArray(bean.blendComponents) && bean.blendComponents.length > 0 && (
                                                                     <>
                                                                         {bean.blendComponents.map((component, idx) => {
@@ -1345,10 +1345,10 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                         {bean.capacity && bean.remaining && (
                                                             <div className="space-y-1">
                                                                 <div className="flex items-center justify-between">
-                                                                    <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
+                                                                    <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
                                                                         剩余量
                                                                     </div>
-                                                                    <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
+                                                                    <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
                                                                         {bean.remaining}g / {bean.capacity}g
                                                                     </div>
                                                                 </div>
@@ -1369,7 +1369,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                         {bean.roastDate && (
                                                             <div className="space-y-1">
                                                                 <div className="flex items-center justify-between">
-                                                                    <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
+                                                                    <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
                                                                         赏味期
                                                                     </div>
                                                                     {(() => {
@@ -1413,7 +1413,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                                         }
 
                                                                         return (
-                                                                            <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
+                                                                            <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
                                                                                 {status}
                                                                             </div>
                                                                         );
@@ -1518,7 +1518,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                     )}
 
                                                     {/* 底部信息布局优化 */}
-                                                    <div className="flex items-baseline justify-between mt-1.5 text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400 ">
+                                                    <div className="flex items-baseline justify-between mt-1.5 text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400 ">
                                                         <div>
                                                             {bean.roastDate && <span>烘焙于 {bean.roastDate}</span>}
                                                         </div>
@@ -1538,7 +1538,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
 
                                                     {/* 备注信息 */}
                                                     {bean.notes && (
-                                                        <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400 pt-1.5">
+                                                        <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400 pt-1.5">
                                                             {bean.notes}
                                                         </div>
                                                     )}

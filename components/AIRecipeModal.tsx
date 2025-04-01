@@ -338,7 +338,7 @@ stages数组中的每个阶段必须包含以下字段：
                                             {coffeeBean?.name || '未选择咖啡豆'}
                                         </p>
                                         {coffeeBean && (
-                                            <div className="mt-1 text-xs text-neutral-500 dark:text-neutral-500">
+                                            <div className="mt-1 text-xs text-neutral-600 dark:text-neutral-400">
                                                 {coffeeBean.roastLevel && (
                                                     <span className="inline-block mr-2">烘焙度: {coffeeBean.roastLevel}</span>
                                                 )}
@@ -356,7 +356,7 @@ stages数组中的每个阶段必须包含以下字段：
 
                                     {/* 选择滤杯 - 简化设计 */}
                                     <div className="space-y-2">
-                                        <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                                        <label className="block text-sm font-medium text-neutral-800 dark:text-white">
                                             选择滤杯
                                         </label>
                                         <div className="flex">
@@ -366,7 +366,7 @@ stages数组中的每个阶段必须包含以下字段：
                                                     onClick={() => setSelectedEquipment(item.id)}
                                                     className={`mr-2 px-3 py-1.5 rounded text-xs transition-colors ${selectedEquipment === item.id
                                                         ? 'bg-neutral-800 dark:bg-white text-white dark:text-neutral-900'
-                                                        : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'
+                                                        : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-400 hover:opacity-80'
                                                         }`}
                                                 >
                                                     {item.name}
@@ -377,14 +377,14 @@ stages数组中的每个阶段必须包含以下字段：
 
                                     {/* 用户补充建议 */}
                                     <div className="space-y-2">
-                                        <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                                        <label className="block text-sm font-medium text-neutral-800 dark:text-white">
                                             补充建议（可选）
                                         </label>
                                         <textarea
                                             value={userSuggestion}
                                             onChange={(e) => setUserSuggestion(e.target.value)}
                                             placeholder="例如：我希望萃取时间在2分30秒左右，偏酸的风味，或者其他特殊要求..."
-                                            className="w-full px-3 py-2 text-xs rounded-lg bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 placeholder-neutral-500 dark:placeholder-neutral-500 focus:outline-none focus:ring-1 focus:ring-neutral-400 dark:focus:ring-neutral-600"
+                                            className="w-full px-3 py-2 text-xs rounded-lg bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-800/50 text-neutral-800 dark:text-white placeholder-neutral-600 dark:placeholder-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-400 dark:focus:ring-neutral-600"
                                             rows={3}
                                         />
                                     </div>
@@ -394,21 +394,21 @@ stages数组中的每个阶段必须包含以下字段：
                                         <p>根据咖啡豆信息和你的补充建议生成个性化冲煮方案：</p>
                                         <div className="flex items-center space-x-2">
                                             <div className="flex-1 flex items-center">
-                                                <span className="w-5 h-5 flex items-center justify-center rounded-full bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 mr-1.5">1</span>
+                                                <span className="w-5 h-5 flex items-center justify-center rounded-full bg-neutral-200 dark:bg-neutral-800 text-neutral-800 dark:text-white mr-1.5">1</span>
                                                 <span>复制提示词</span>
                                             </div>
-                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-neutral-400">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-neutral-600 dark:text-neutral-400">
                                                 <path d="M9 6L15 12L9 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                             </svg>
                                             <div className="flex-1 flex items-center">
-                                                <span className="w-5 h-5 flex items-center justify-center rounded-full bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 mr-1.5">2</span>
+                                                <span className="w-5 h-5 flex items-center justify-center rounded-full bg-neutral-200 dark:bg-neutral-800 text-neutral-800 dark:text-white mr-1.5">2</span>
                                                 <span>发送给DeepSeek</span>
                                             </div>
-                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-neutral-400">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-neutral-600 dark:text-neutral-400">
                                                 <path d="M9 6L15 12L9 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                             </svg>
                                             <div className="flex-1 flex items-center">
-                                                <span className="w-5 h-5 flex items-center justify-center rounded-full bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 mr-1.5">3</span>
+                                                <span className="w-5 h-5 flex items-center justify-center rounded-full bg-neutral-200 dark:bg-neutral-800 text-neutral-800 dark:text-white mr-1.5">3</span>
                                                 <span>复制返回的代码到导入页面</span>
                                             </div>
                                         </div>
@@ -416,11 +416,11 @@ stages数组中的每个阶段必须包含以下字段：
 
                                     {/* 提示词预览 - 缩短高度 */}
                                     {coffeeBean && (
-                                        <div className="p-3 rounded-lg bg-neutral-100/80 dark:bg-neutral-800/60 border border-neutral-200/80 dark:border-neutral-700/60 max-h-[100px] overflow-auto text-xs font-mono">
-                                            <div className="text-[10px] text-neutral-500 dark:text-neutral-400 mb-1">
+                                        <div className="p-3 rounded-lg bg-neutral-100/80 dark:bg-neutral-800/60 border border-neutral-200 dark:border-neutral-800/50 max-h-[100px] overflow-auto text-xs font-mono">
+                                            <div className="text-[10px] text-neutral-600 dark:text-neutral-400 mb-1">
                                                 预览（点击下方按钮复制完整提示词）：
                                             </div>
-                                            <pre className="whitespace-pre-wrap break-words text-neutral-700 dark:text-neutral-300">
+                                            <pre className="whitespace-pre-wrap break-words text-neutral-800 dark:text-white">
                                                 {generatePrompt().substring(0, 300)}...
                                             </pre>
                                         </div>
@@ -431,7 +431,7 @@ stages数组中的每个阶段必须包含以下字段：
                                         <button
                                             onClick={copyPromptToClipboard}
                                             disabled={!coffeeBean}
-                                            className={`py-2 px-3.5 bg-neutral-800 hover:bg-neutral-700 dark:bg-neutral-200 dark:hover:bg-neutral-300 text-white dark:text-neutral-800 rounded text-xs font-medium transition-colors
+                                            className={`py-2 px-3.5 bg-neutral-800 hover:opacity-80 dark:bg-white dark:hover:opacity-80 text-white dark:text-neutral-800 rounded text-xs font-medium transition-colors
                                                 ${!coffeeBean ? 'opacity-50 cursor-not-allowed' : ''}`}
                                         >
                                             {showLocalCopySuccess ? '已复制' : '复制提示词'}

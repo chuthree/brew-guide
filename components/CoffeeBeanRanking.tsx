@@ -206,31 +206,43 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                     <div className="flex justify-between border-b border-neutral-200 dark:border-neutral-800/50 px-3">
                         <div className="flex">
                             <button
-                                className={`pb-1.5 px-3 text-[11px] ${beanType === 'all' ? 'text-neutral-800 dark:text-white border-b border-neutral-300 dark:border-white/30' : 'text-neutral-500 dark:text-neutral-400'}`}
+                                className={`pb-1.5 px-3 text-[11px] relative ${beanType === 'all' ? 'text-neutral-800 dark:text-white' : 'text-neutral-600 dark:text-neutral-400'}`}
                                 onClick={() => setBeanType('all')}
                             >
-                                全部豆子
+                                <span className="relative">全部豆子</span>
+                                {beanType === 'all' && (
+                                    <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
+                                )}
                             </button>
                             <button
-                                className={`pb-1.5 px-3 text-[11px] ${beanType === 'espresso' ? 'text-neutral-800 dark:text-white border-b border-neutral-300 dark:border-white/30' : 'text-neutral-500 dark:text-neutral-400'}`}
+                                className={`pb-1.5 px-3 text-[11px] relative ${beanType === 'espresso' ? 'text-neutral-800 dark:text-white' : 'text-neutral-600 dark:text-neutral-400'}`}
                                 onClick={() => setBeanType('espresso')}
                             >
-                                意式豆
+                                <span className="relative">意式豆</span>
+                                {beanType === 'espresso' && (
+                                    <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
+                                )}
                             </button>
                             <button
-                                className={`pb-1.5 px-3 text-[11px] ${beanType === 'filter' ? 'text-neutral-800 dark:text-white border-b border-neutral-300 dark:border-white/30' : 'text-neutral-500 dark:text-neutral-400'}`}
+                                className={`pb-1.5 px-3 text-[11px] relative ${beanType === 'filter' ? 'text-neutral-800 dark:text-white' : 'text-neutral-600 dark:text-neutral-400'}`}
                                 onClick={() => setBeanType('filter')}
                             >
-                                手冲豆
+                                <span className="relative">手冲豆</span>
+                                {beanType === 'filter' && (
+                                    <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
+                                )}
                             </button>
                         </div>
 
                         {/* 新增：编辑按钮放在导航栏右侧 */}
                         <button
                             onClick={toggleEditMode}
-                            className={`pb-1.5 px-3 text-[11px] ${editMode ? 'text-blue-500 dark:text-blue-400' : 'text-neutral-500 dark:text-neutral-400'}`}
+                            className={`pb-1.5 px-3 text-[11px] relative ${editMode ? 'text-neutral-800 dark:text-white' : 'text-neutral-600 dark:text-neutral-400'}`}
                         >
-                            {editMode ? '完成' : '编辑'}
+                            <span className="relative">{editMode ? '完成' : '编辑'}</span>
+                            {editMode && (
+                                <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
+                            )}
                         </button>
                     </div>
                 </div>
@@ -251,7 +263,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                             <div className="flex justify-between items-start px-6 py-2.5">
                                 <div className="flex items-start">
                                     {/* 序号 - 极简风格 */}
-                                    <div className="text-[11px] text-neutral-500 dark:text-neutral-400 w-4 mr-2">
+                                    <div className="text-[11px] text-neutral-600 dark:text-neutral-400 w-4 mr-2">
                                         {index + 1}
                                     </div>
 
@@ -263,7 +275,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                                                 +{bean.overallRating}
                                             </div>
                                         </div>
-                                        <div className="text-[10px] text-neutral-500 dark:text-neutral-400 mt-1">
+                                        <div className="text-[10px] text-neutral-600 dark:text-neutral-400 mt-1">
                                             {[
                                                 bean.beanType === 'espresso' ? '意式豆' : '手冲豆',
                                                 bean.roastLevel || '未知',
@@ -278,7 +290,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                                 {editMode && (
                                     <button
                                         onClick={() => handleRateBeanClick(bean)}
-                                        className="text-[10px] text-neutral-500 hover:text-neutral-700 dark:text-neutral-500 dark:hover:text-neutral-300"
+                                        className="text-[10px] text-neutral-600 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-white"
                                     >
                                         编辑
                                     </button>
@@ -297,7 +309,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                         onClick={toggleShowUnrated}
                     >
                         <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800/50"></div>
-                        <button className="flex items-center justify-center mx-3 text-[10px] text-neutral-500 dark:text-neutral-400">
+                        <button className="flex items-center justify-center mx-3 text-[10px] text-neutral-600 dark:text-neutral-400">
                             {unratedBeans.length}款未评分咖啡豆
                             <svg
                                 className={`ml-1 w-3 h-3 transition-transform duration-200 ${showUnrated ? 'rotate-180' : ''}`}
@@ -326,7 +338,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                                                 <div className="flex items-center">
                                                     <div className="text-[11px] text-neutral-800 dark:text-white">{bean.name}</div>
                                                 </div>
-                                                <div className="text-[10px] text-neutral-500 dark:text-neutral-400 mt-0.5">
+                                                <div className="text-[10px] text-neutral-600 dark:text-neutral-400 mt-0.5">
                                                     {[
                                                         bean.beanType === 'espresso' ? '意式豆' : '手冲豆',
                                                         bean.roastLevel || '未知',
@@ -339,7 +351,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                                         {/* 添加评分按钮 */}
                                         <button
                                             onClick={() => handleRateBeanClick(bean)}
-                                            className="text-[10px] text-neutral-800 dark:text-white"
+                                            className="text-[10px] text-neutral-800 dark:text-white hover:opacity-80"
                                         >
                                             添加评分
                                         </button>
