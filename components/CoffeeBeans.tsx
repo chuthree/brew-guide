@@ -17,6 +17,7 @@ import {
 } from './ui/select'
 import { SORT_OPTIONS as RANKING_SORT_OPTIONS, RankingSortOption } from './CoffeeBeanRanking'
 import { useToast } from './GlobalToast'
+import { getBloggerBeans } from '@/lib/csvUtils' // 导入博主榜单豆子函数
 
 // 添加ExtendedCoffeeBean类型
 interface BlendComponent {
@@ -36,6 +37,7 @@ const SORT_OPTIONS = {
     REMAINING_DAYS_DESC: 'remaining_days_desc', // 按照剩余天数排序（多→少）
     NAME_ASC: 'name_asc',
     NAME_DESC: 'name_desc',
+    RATING_ASC: 'rating_asc', // 新增评分从低到高排序
 } as const;
 
 type SortOption = typeof SORT_OPTIONS[keyof typeof SORT_OPTIONS];
@@ -46,6 +48,7 @@ const SORT_LABELS: Record<SortOption, string> = {
     [SORT_OPTIONS.REMAINING_DAYS_DESC]: '赏味期',
     [SORT_OPTIONS.NAME_ASC]: '名称',
     [SORT_OPTIONS.NAME_DESC]: '名称',
+    [SORT_OPTIONS.RATING_ASC]: '评分', // 新增评分从低到高排序
 };
 
 // 排序方向图标
@@ -86,6 +89,15 @@ const SORT_ICONS: Record<SortOption, React.ReactNode> = {
             <line x1="18" y1="6" x2="18" y2="18" />
         </svg>
     ),
+    [SORT_OPTIONS.RATING_ASC]: (
+        <svg className="w-3 h-3 ml-1.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="4" y1="6" x2="11" y2="6" />
+            <line x1="4" y1="12" x2="11" y2="12" />
+            <line x1="4" y1="18" x2="13" y2="18" />
+            <polyline points="15 15 18 18 21 15" />
+            <line x1="18" y1="6" x2="18" y2="18" />
+        </svg>
+    ),
 };
 
 // 榜单排序选项的显示标签
@@ -94,12 +106,23 @@ const RANKING_VIEW_LABELS: Record<SortOption, string> = {
     [SORT_OPTIONS.REMAINING_DAYS_DESC]: '评分',
     [SORT_OPTIONS.NAME_ASC]: '名称',
     [SORT_OPTIONS.NAME_DESC]: '名称',
+    [SORT_OPTIONS.RATING_ASC]: '评分', // 新增评分从低到高排序
+};
+
+// 博主榜单排序选项的显示标签
+const BLOGGER_VIEW_LABELS: Record<SortOption, string> = {
+    [SORT_OPTIONS.REMAINING_DAYS_ASC]: '原始',
+    [SORT_OPTIONS.REMAINING_DAYS_DESC]: '评分 (高→低)',
+    [SORT_OPTIONS.RATING_ASC]: '评分 (低→高)',
+    [SORT_OPTIONS.NAME_ASC]: '名称 (A→Z)',
+    [SORT_OPTIONS.NAME_DESC]: '名称 (Z→A)',
 };
 
 // 视图模式定义
 const VIEW_OPTIONS = {
     INVENTORY: 'inventory',
     RANKING: 'ranking',
+    BLOGGER: 'blogger', // 新增博主榜单视图
 } as const;
 
 type ViewOption = typeof VIEW_OPTIONS[keyof typeof VIEW_OPTIONS];
@@ -107,7 +130,8 @@ type ViewOption = typeof VIEW_OPTIONS[keyof typeof VIEW_OPTIONS];
 // 视图选项的显示名称
 const VIEW_LABELS: Record<ViewOption, string> = {
     [VIEW_OPTIONS.INVENTORY]: '咖啡豆仓库',
-    [VIEW_OPTIONS.RANKING]: '咖啡豆榜单',
+    [VIEW_OPTIONS.RANKING]: '个人榜单',
+    [VIEW_OPTIONS.BLOGGER]: '博主榜单',
 };
 
 interface CoffeeBeansProps {
@@ -169,13 +193,23 @@ const generateBeanTitle = (bean: ExtendedCoffeeBean): string => {
 };
 
 // 修改全局缓存对象，确保跨组件实例保持数据
-const globalCache = {
-    beans: [] as ExtendedCoffeeBean[],
-    ratedBeans: [] as ExtendedCoffeeBean[],
-    filteredBeans: [] as ExtendedCoffeeBean[],
-    varieties: [] as string[],
-    selectedVariety: null as string | null, // 添加选中的品种到全局缓存
-    showEmptyBeans: false, // 添加显示已用完豆子的状态到全局缓存
+const globalCache: {
+    beans: ExtendedCoffeeBean[];
+    ratedBeans: ExtendedCoffeeBean[];
+    filteredBeans: ExtendedCoffeeBean[];
+    bloggerBeans: ExtendedCoffeeBean[]; // 添加博主榜单豆子
+    varieties: string[];
+    selectedVariety: string | null;
+    showEmptyBeans: boolean;
+    initialized: boolean;
+} = {
+    beans: [],
+    ratedBeans: [],
+    filteredBeans: [],
+    bloggerBeans: [], // 初始化博主榜单豆子
+    varieties: [],
+    selectedVariety: null,
+    showEmptyBeans: false,
     initialized: false
 };
 
@@ -489,6 +523,24 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
         }
     }, [viewMode, rankingBeanType]);
 
+    // 加载博主榜单的咖啡豆
+    const loadBloggerBeans = useCallback(async () => {
+        if (viewMode !== VIEW_OPTIONS.BLOGGER) return;
+        
+        try {
+            // 直接调用 csvUtils 中的函数，而不是通过 CoffeeBeanManager
+            const bloggerBeansData = getBloggerBeans(rankingBeanType);
+            
+            // 更新全局缓存
+            globalCache.bloggerBeans = bloggerBeansData;
+            
+            // 触发更新
+            setForceRefreshKey(prev => prev + 1);
+        } catch (error) {
+            console.error("加载博主榜单咖啡豆失败:", error);
+        }
+    }, [viewMode, rankingBeanType]);
+
     // 根据isOpen状态和排序选项加载数据
     useEffect(() => {
         if (isOpen) {
@@ -500,6 +552,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
             
             loadBeans();
             loadRatedBeans();
+            loadBloggerBeans(); // 添加加载博主榜单的调用
         } else {
             // 组件关闭时，不立即清空状态，而是延迟重置
             // 这样在切换页面时数据会保留一段时间，避免闪烁
@@ -508,7 +561,16 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                 // 仍然使用全局缓存的数据
             }, 5000); // 5秒后再考虑重置，通常用户已经看不到了
         }
-    }, [isOpen, sortOption, selectedVariety, loadBeans, loadRatedBeans]);
+    }, [isOpen, sortOption, selectedVariety, loadBeans, loadRatedBeans, loadBloggerBeans, rankingBeanType]); // 添加rankingBeanType依赖
+
+    // 在视图切换时更新数据
+    useEffect(() => {
+        if (viewMode === VIEW_OPTIONS.BLOGGER) {
+            loadBloggerBeans();
+        } else if (viewMode === VIEW_OPTIONS.RANKING) {
+            loadRatedBeans();
+        }
+    }, [viewMode, loadBloggerBeans, loadRatedBeans]);
 
     // 当显示空豆子设置改变时，更新过滤和全局缓存
     useEffect(() => {
@@ -829,29 +891,64 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
     };
 
     // 转换仓库排序选项到榜单排序选项
-    const convertToRankingSortOption = (option: SortOption): RankingSortOption => {
-        switch (option) {
-            case SORT_OPTIONS.NAME_ASC:
-                return RANKING_SORT_OPTIONS.NAME_ASC;
-            case SORT_OPTIONS.NAME_DESC:
-                return RANKING_SORT_OPTIONS.NAME_DESC;
-            case SORT_OPTIONS.REMAINING_DAYS_ASC:
-                return RANKING_SORT_OPTIONS.RATING_DESC;
-            case SORT_OPTIONS.REMAINING_DAYS_DESC:
-                return RANKING_SORT_OPTIONS.RATING_ASC;
-            default:
-                return RANKING_SORT_OPTIONS.RATING_DESC;
+    const convertToRankingSortOption = useCallback((option: SortOption, viewMode: ViewOption): RankingSortOption => {
+        if (viewMode === VIEW_OPTIONS.BLOGGER) {
+            // 博主榜单视图的特殊处理
+            switch (option) {
+                case SORT_OPTIONS.REMAINING_DAYS_ASC:
+                    return RANKING_SORT_OPTIONS.ORIGINAL; // 在博主榜单视图中，第一个选项是原始排序
+                case SORT_OPTIONS.REMAINING_DAYS_DESC:
+                    return RANKING_SORT_OPTIONS.RATING_DESC; // 评分降序
+                case SORT_OPTIONS.RATING_ASC:
+                    return RANKING_SORT_OPTIONS.RATING_ASC; // 评分升序
+                case SORT_OPTIONS.NAME_ASC:
+                    return RANKING_SORT_OPTIONS.NAME_ASC;
+                case SORT_OPTIONS.NAME_DESC:
+                    return RANKING_SORT_OPTIONS.NAME_DESC;
+                default:
+                    return RANKING_SORT_OPTIONS.ORIGINAL;
+            }
+        } else {
+            // 个人榜单视图
+            switch (option) {
+                case SORT_OPTIONS.NAME_ASC:
+                    return RANKING_SORT_OPTIONS.NAME_ASC;
+                case SORT_OPTIONS.NAME_DESC:
+                    return RANKING_SORT_OPTIONS.NAME_DESC;
+                case SORT_OPTIONS.REMAINING_DAYS_ASC:
+                    return RANKING_SORT_OPTIONS.RATING_DESC; // 评分从高到低
+                case SORT_OPTIONS.REMAINING_DAYS_DESC:
+                    return RANKING_SORT_OPTIONS.RATING_ASC; // 评分从低到高
+                case SORT_OPTIONS.RATING_ASC:
+                    return RANKING_SORT_OPTIONS.RATING_ASC; // 这行可能不需要，因为仓库视图中不会显示这个选项
+                default:
+                    return RANKING_SORT_OPTIONS.RATING_DESC;
+            }
         }
-    };
+    }, []);
 
     // 视图切换时更新排序标签
     useEffect(() => {
-        if (viewMode === VIEW_OPTIONS.RANKING) {
-            // 当切换到榜单视图时，保持现有的排序类型，但更改其语义
+        if (viewMode === VIEW_OPTIONS.RANKING || viewMode === VIEW_OPTIONS.BLOGGER) {
+            // 当切换到榜单或博主榜单视图时，保持现有的排序类型，但更改其语义
             // 例如：REMAINING_DAYS_ASC -> RATING_DESC, REMAINING_DAYS_DESC -> RATING_ASC
             // 无需更改 NAME_ASC 和 NAME_DESC
         }
-    }, [viewMode]);
+        
+        // 切换到博主榜单视图时，加载博主榜单数据
+        if (viewMode === VIEW_OPTIONS.BLOGGER) {
+            loadBloggerBeans();
+        }
+    }, [viewMode, loadBloggerBeans]);
+
+    // 监听rankingBeanType变化，重新加载数据
+    useEffect(() => {
+        if (viewMode === VIEW_OPTIONS.BLOGGER) {
+            loadBloggerBeans();
+        } else if (viewMode === VIEW_OPTIONS.RANKING) {
+            loadRatedBeans();
+        }
+    }, [rankingBeanType, viewMode, loadBloggerBeans, loadRatedBeans]);
 
     // 处理品种标签点击
     const handleVarietyClick = (variety: string | null) => {
@@ -996,9 +1093,25 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                     <div className="flex justify-between items-center mb-6 px-6">
                         <div className="flex items-center space-x-3">
                             <div className="text-xs tracking-wide text-neutral-800 dark:text-white">
-                                {viewMode === VIEW_OPTIONS.INVENTORY ?
-                                    `${selectedVariety ? `${filteredBeans.length}/${beans.length}` : beans.length} 款咖啡豆` :
-                                    `${ratedBeans?.length || 0} 款已评分咖啡豆`}
+                                {(() => {
+                                    if (viewMode === VIEW_OPTIONS.INVENTORY) {
+                                        return `${selectedVariety ? `${filteredBeans.length}/${beans.length}` : beans.length} 款咖啡豆`;
+                                    } else if (viewMode === VIEW_OPTIONS.BLOGGER) {
+                                        // 博主榜单视图
+                                        const filteredCount = rankingBeanType === 'all' 
+                                            ? globalCache.bloggerBeans.length 
+                                            : globalCache.bloggerBeans.filter(bean => bean.beanType === rankingBeanType).length;
+                                        
+                                        return `${filteredCount} 款咖啡豆`;
+                                    } else {
+                                        // 榜单视图
+                                        const filteredCount = rankingBeanType === 'all' 
+                                            ? ratedBeans.length 
+                                            : ratedBeans.filter(bean => bean.beanType === rankingBeanType).length;
+                                        
+                                        return `${filteredCount} 款已评分咖啡豆`;
+                                    }
+                                })()}
                             </div>
                         </div>
 
@@ -1060,9 +1173,11 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                         className="w-auto min-w-[65px] tracking-wide text-neutral-800 dark:text-white transition-colors hover:opacity-80 text-right"
                                     >
                                         <div className="flex items-center justify-end w-full">
-                                            {viewMode === VIEW_OPTIONS.RANKING 
-                                                ? RANKING_VIEW_LABELS[sortOption] 
-                                                : SORT_LABELS[sortOption]
+                                            {viewMode === VIEW_OPTIONS.INVENTORY 
+                                                ? SORT_LABELS[sortOption] 
+                                                : viewMode === VIEW_OPTIONS.BLOGGER
+                                                    ? BLOGGER_VIEW_LABELS[sortOption]
+                                                    : RANKING_VIEW_LABELS[sortOption]
                                             }
                                             {SORT_ICONS[sortOption]}
                                         </div>
@@ -1072,30 +1187,80 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                         sideOffset={5}
                                         className="border-neutral-200/70 dark:border-neutral-800/70 shadow-lg backdrop-blur-sm bg-white/95 dark:bg-neutral-900/95 rounded-lg overflow-hidden min-w-[110px]"
                                     >
-                                        {viewMode === VIEW_OPTIONS.RANKING ? (
-                                            // 榜单视图的排序选项 - 也使用图标
-                                            Object.values(SORT_OPTIONS).map((value) => (
+                                        {viewMode === VIEW_OPTIONS.BLOGGER ? (
+                                            // 博主榜单视图的固定排序选项 - 显示所有五个选项
+                                            <>
                                                 <SelectItem
-                                                    key={value}
-                                                    value={value}
+                                                    key="original"
+                                                    value={SORT_OPTIONS.REMAINING_DAYS_ASC}
                                                     className="tracking-wide text-neutral-800 dark:text-white data-[highlighted]:opacity-80 transition-colors font-medium"
                                                 >
                                                     <div className="flex items-center justify-between w-full">
-                                                        <span>{RANKING_VIEW_LABELS[value]}</span>
-                                                        {SORT_ICONS[value]}
+                                                        <span>原始</span>
+                                                        {SORT_ICONS[SORT_OPTIONS.REMAINING_DAYS_ASC]}
                                                     </div>
                                                 </SelectItem>
-                                            ))
+                                                <SelectItem
+                                                    key="rating_high_to_low"
+                                                    value={SORT_OPTIONS.REMAINING_DAYS_DESC}
+                                                    className="tracking-wide text-neutral-800 dark:text-white data-[highlighted]:opacity-80 transition-colors font-medium"
+                                                >
+                                                    <div className="flex items-center justify-between w-full">
+                                                        <span>评分</span>
+                                                        {SORT_ICONS[SORT_OPTIONS.REMAINING_DAYS_DESC]}
+                                                    </div>
+                                                </SelectItem>
+                                                <SelectItem
+                                                    key="rating_low_to_high"
+                                                    value={SORT_OPTIONS.RATING_ASC}
+                                                    className="tracking-wide text-neutral-800 dark:text-white data-[highlighted]:opacity-80 transition-colors font-medium"
+                                                >
+                                                    <div className="flex items-center justify-between w-full">
+                                                        <span>评分</span>
+                                                        {SORT_ICONS[SORT_OPTIONS.RATING_ASC]}
+                                                    </div>
+                                                </SelectItem>
+                                                <SelectItem
+                                                    key="name_asc"
+                                                    value={SORT_OPTIONS.NAME_ASC}
+                                                    className="tracking-wide text-neutral-800 dark:text-white data-[highlighted]:opacity-80 transition-colors font-medium"
+                                                >
+                                                    <div className="flex items-center justify-between w-full">
+                                                        <span>名称</span>
+                                                        {SORT_ICONS[SORT_OPTIONS.NAME_ASC]}
+                                                    </div>
+                                                </SelectItem>
+                                                <SelectItem
+                                                    key="name_desc"
+                                                    value={SORT_OPTIONS.NAME_DESC}
+                                                    className="tracking-wide text-neutral-800 dark:text-white data-[highlighted]:opacity-80 transition-colors font-medium"
+                                                >
+                                                    <div className="flex items-center justify-between w-full">
+                                                        <span>名称</span>
+                                                        {SORT_ICONS[SORT_OPTIONS.NAME_DESC]}
+                                                    </div>
+                                                </SelectItem>
+                                            </>
                                         ) : (
-                                            // 仓库视图的排序选项 - 使用图标
-                                            Object.values(SORT_OPTIONS).map((value) => (
+                                            // 仓库和个人榜单视图的排序选项 - 只显示原有的四个选项
+                                            [
+                                                SORT_OPTIONS.REMAINING_DAYS_ASC,
+                                                SORT_OPTIONS.REMAINING_DAYS_DESC,
+                                                SORT_OPTIONS.NAME_ASC,
+                                                SORT_OPTIONS.NAME_DESC
+                                            ].map((value) => (
                                                 <SelectItem
                                                     key={value}
                                                     value={value}
                                                     className="tracking-wide text-neutral-800 dark:text-white data-[highlighted]:opacity-80 transition-colors font-medium"
                                                 >
                                                     <div className="flex items-center justify-between w-full">
-                                                        <span>{SORT_LABELS[value]}</span>
+                                                        <span>
+                                                            {viewMode === VIEW_OPTIONS.INVENTORY 
+                                                                ? SORT_LABELS[value] 
+                                                                : RANKING_VIEW_LABELS[value]
+                                                            }
+                                                        </span>
                                                         {SORT_ICONS[value]}
                                                     </div>
                                                 </SelectItem>
@@ -1154,8 +1319,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                         </div>
                     )}
 
-                    {/* 榜单标签筛选 - 仅在榜单视图显示 */}
-                    {viewMode === VIEW_OPTIONS.RANKING && (
+                    {/* 榜单标签筛选 - 在榜单和博主榜单视图中显示 */}
+                    {(viewMode === VIEW_OPTIONS.RANKING || viewMode === VIEW_OPTIONS.BLOGGER) && (
                         <div className="mb-1">
                             {/* 豆子筛选选项卡 */}
                             <div className="flex justify-between border-b mx-6 border-neutral-200 dark:border-neutral-800/50">
@@ -1189,16 +1354,18 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                     </button>
                                 </div>
 
-                                {/* 编辑按钮 */}
-                                <button
-                                    onClick={() => setRankingEditMode(!rankingEditMode)}
-                                    className={`pb-1.5 text-[11px] relative ${rankingEditMode ? 'text-neutral-800 dark:text-white' : 'text-neutral-600 dark:text-neutral-400'}`}
-                                >
-                                    <span className="relative">{rankingEditMode ? '完成' : '编辑'}</span>
-                                    {rankingEditMode && (
-                                        <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
-                                    )}
-                                </button>
+                                {/* 编辑按钮 - 仅在个人榜单视图下显示 */}
+                                {viewMode === VIEW_OPTIONS.RANKING && (
+                                    <button
+                                        onClick={() => setRankingEditMode(!rankingEditMode)}
+                                        className={`pb-1.5 text-[11px] relative ${rankingEditMode ? 'text-neutral-800 dark:text-white' : 'text-neutral-600 dark:text-neutral-400'}`}
+                                    >
+                                        <span className="relative">{rankingEditMode ? '完成' : '编辑'}</span>
+                                        {rankingEditMode && (
+                                            <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
+                                        )}
+                                    </button>
+                                )}
                             </div>
                         </div>
                     )}
@@ -1582,18 +1749,19 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                             )}
                         </div>
                     ) : (
-                        // 榜单视图
+                        // 榜单和博主榜单视图
                         <div
                             className="w-full h-full overflow-y-auto scroll-with-bottom-bar"
                         >
                             <CoffeeBeanRanking
-                                isOpen={viewMode === VIEW_OPTIONS.RANKING}
+                                isOpen={viewMode === VIEW_OPTIONS.RANKING || viewMode === VIEW_OPTIONS.BLOGGER}
                                 onShowRatingForm={handleShowRatingForm}
-                                sortOption={convertToRankingSortOption(sortOption)}
+                                sortOption={convertToRankingSortOption(sortOption, viewMode)}
                                 updatedBeanId={lastRatedBeanId}
                                 hideFilters={true}
                                 beanType={rankingBeanType}
                                 editMode={rankingEditMode}
+                                viewMode={viewMode === VIEW_OPTIONS.BLOGGER ? 'blogger' : 'personal'}
                             />
                         </div>
                     )}
