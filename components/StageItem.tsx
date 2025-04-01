@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { Method } from '@/lib/config'
+import ActionMenu from './ui/action-menu'
 
 interface StageItemProps {
     step: {
@@ -118,6 +119,31 @@ const StageItem: React.FC<StageItemProps> = ({
         }
     }, [onEdit, activeTab, index, selectedEquipment, customMethods])
 
+    // 处理菜单开关变更
+    const handleOpenChange = (open: boolean) => {
+        setActionMenuStates(prev => ({
+            ...prev,
+            [cardId]: open
+        }))
+    }
+
+    // 自定义渲染分享按钮内容
+    const renderShareContent = () => (
+        <div className="relative">
+            {copySuccess ? '已复制' : '分享'}
+            {copySuccess && (
+                <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-neutral-800 dark:bg-neutral-700 text-white px-2 py-1 rounded text-[10px] whitespace-nowrap"
+                >
+                    已复制到剪贴板
+                </motion.div>
+            )}
+        </div>
+    )
+
     return (
         <div
             className={`group relative border-l ${isWaitingStage ? 'border-dashed' : ''} border-neutral-200 pl-6 dark:border-neutral-800 ${activeTab === '注水' && index === currentStage
@@ -151,85 +177,33 @@ const StageItem: React.FC<StageItemProps> = ({
                     </div>
                     {onEdit && onDelete && (
                         <div className="flex items-baseline ml-2 shrink-0">
-                            <AnimatePresence mode="wait">
-                                {showActions ? (
-                                    <motion.div
-                                        key="action-buttons"
-                                        initial={{ opacity: 0, scale: 0.9, x: 10 }}
-                                        animate={{ opacity: 1, scale: 1, x: 0 }}
-                                        exit={{ opacity: 0 }}
-                                        transition={{ duration: 0.26, ease: "easeOut" }}
-                                        className="flex items-baseline space-x-3"
-                                    >
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation()
-                                                onEdit()
-                                            }}
-                                            className="px-2  text-xs text-neutral-400  dark:text-neutral-500"
-                                        >
-                                            编辑
-                                        </button>
-                                        <button
-                                            onClick={handleShare}
-                                            className="px-2  text-xs text-blue-400 dark:text-blue-500 relative"
-                                        >
-                                            {copySuccess ? '已复制' : '分享'}
-                                            {copySuccess && (
-                                                <motion.div
-                                                    initial={{ opacity: 0, y: 10 }}
-                                                    animate={{ opacity: 1, y: 0 }}
-                                                    exit={{ opacity: 0, y: -10 }}
-                                                    className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-neutral-800 dark:bg-neutral-700 text-white px-2 py-1 rounded text-[10px] whitespace-nowrap"
-                                                >
-                                                    已复制到剪贴板
-                                                </motion.div>
-                                            )}
-                                        </button>
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation()
-                                                onDelete()
-                                            }}
-                                            className="px-2 text-xs text-red-400"
-                                        >
-                                            删除
-                                        </button>
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation()
-                                                // 更新全局状态对象，关闭当前卡片的菜单
-                                                setActionMenuStates(prev => ({
-                                                    ...prev,
-                                                    [cardId]: false
-                                                }))
-                                            }}
-                                            className="w-7 h-7 flex items-center justify-center rounded-full text-sm text-neutral-400"
-                                        >
-                                            ×
-                                        </button>
-                                    </motion.div>
-                                ) : (
-                                    <motion.button
-                                        key="more-button"
-                                        initial={{ opacity: 0, scale: 0.9 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        exit={{ opacity: 0 }}
-                                        transition={{ duration: 0.26, ease: "easeOut" }}
-                                        onClick={(e) => {
-                                            e.stopPropagation()
-                                            // 更新全局状态对象，打开当前卡片的菜单
-                                            setActionMenuStates(prev => ({
-                                                ...prev,
-                                                [cardId]: true
-                                            }))
-                                        }}
-                                        className="w-7 h-7 flex items-center justify-center text-xs text-neutral-500 dark:text-neutral-400"
-                                    >
-                                        ···
-                                    </motion.button>
-                                )}
-                            </AnimatePresence>
+                            <ActionMenu
+                                items={[
+                                    {
+                                        id: 'edit',
+                                        label: '编辑',
+                                        onClick: () => onEdit(),
+                                        color: 'default'
+                                    },
+                                    {
+                                        id: 'share',
+                                        label: '分享',
+                                        onClick: () => handleShare(new MouseEvent('click') as unknown as React.MouseEvent),
+                                        color: 'info',
+                                        renderContent: renderShareContent()
+                                    },
+                                    {
+                                        id: 'delete',
+                                        label: '删除',
+                                        onClick: () => onDelete(),
+                                        color: 'danger'
+                                    }
+                                ]}
+                                showAnimation={false}
+                                isOpen={showActions}
+                                onOpenChange={handleOpenChange}
+                                onStop={(e) => e.stopPropagation()}
+                            />
                         </div>
                     )}
                 </div>

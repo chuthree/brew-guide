@@ -6,6 +6,7 @@ import type { BrewingNoteData, CoffeeBean } from '@/app/types'
 import BrewingNoteForm from './BrewingNoteForm'
 import { Storage } from '@/lib/storage'
 import { equipmentList } from '@/lib/config'
+import ActionMenu from './ui/action-menu'
 import {
     Select,
     SelectContent,
@@ -83,7 +84,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
     const [sortOption, setSortOption] = useState<SortOption>(SORT_OPTIONS.TIME_DESC)
     const [optimizingNote, setOptimizingNote] = useState<(Partial<BrewingNoteData> & { coffeeBean?: CoffeeBean | null }) | null>(null)
     const [editingNote, setEditingNote] = useState<(Partial<BrewingNoteData> & { coffeeBean?: CoffeeBean | null }) | null>(null)
-    const [actionMenuStates, setActionMenuStates] = useState<Record<string, boolean>>({})
     const [forceRefreshKey, setForceRefreshKey] = useState(0); // 添加一个强制刷新的key
 
     // 排序笔记的函数，用useCallback包装以避免无限渲染
@@ -494,51 +494,28 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                                     </div>
 
                                                     <div className="flex items-baseline ml-2 shrink-0">
-                                                        {actionMenuStates[note.id] ? (
-                                                            <div className="flex items-baseline space-x-3">
-                                                                <button
-                                                                    onClick={() => handleEdit(note)}
-                                                                    className="px-2 text-xs text-neutral-500 dark:text-neutral-400"
-                                                                >
-                                                                    编辑
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => handleOptimize(note)}
-                                                                    className="px-2 text-xs text-emerald-600 dark:text-emerald-500 font-medium"
-                                                                >
-                                                                    优化
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => handleDelete(note.id)}
-                                                                    className="px-2 text-xs text-red-400"
-                                                                >
-                                                                    删除
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => {
-                                                                        setActionMenuStates(prev => ({
-                                                                            ...prev,
-                                                                            [note.id]: false
-                                                                        }))
-                                                                    }}
-                                                                    className="w-7 h-7 flex items-center justify-center rounded-full text-sm text-neutral-400"
-                                                                >
-                                                                    ×
-                                                                </button>
-                                                            </div>
-                                                        ) : (
-                                                            <button
-                                                                onClick={() => {
-                                                                    setActionMenuStates(prev => ({
-                                                                        ...prev,
-                                                                        [note.id]: true
-                                                                    }))
-                                                                }}
-                                                                className="w-7 h-7 flex items-center justify-center text-xs text-neutral-500 dark:text-neutral-400"
-                                                            >
-                                                                ···
-                                                            </button>
-                                                        )}
+                                                        <ActionMenu
+                                                            items={[
+                                                                {
+                                                                    id: 'edit',
+                                                                    label: '编辑',
+                                                                    onClick: () => handleEdit(note),
+                                                                    color: 'default'
+                                                                },
+                                                                {
+                                                                    id: 'optimize',
+                                                                    label: '优化',
+                                                                    onClick: () => handleOptimize(note),
+                                                                    color: 'success'
+                                                                },
+                                                                {
+                                                                    id: 'delete',
+                                                                    label: '删除',
+                                                                    onClick: () => handleDelete(note.id),
+                                                                    color: 'danger'
+                                                                }
+                                                            ]}
+                                                        />
                                                     </div>
                                                 </div>
 
