@@ -20,6 +20,7 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
     const [beans, setBeans] = useState<CoffeeBean[]>(cachedBeans || [])
     const [_isPending, startTransition] = useTransition()
     const [isFirstLoad, setIsFirstLoad] = useState(!cachedBeans)
+    const [forceRefreshKey, setForceRefreshKey] = useState(0) // 添加强制刷新的key
 
     // 检查咖啡豆是否用完
     const isBeanEmpty = (bean: CoffeeBean): boolean => {
@@ -156,6 +157,30 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
     useEffect(() => {
         // 即使未设置isOpen，也尝试加载一次数据
         loadBeans();
+    }, [loadBeans]);
+
+    // 强制刷新时重新加载数据
+    useEffect(() => {
+        loadBeans();
+    }, [forceRefreshKey, loadBeans]);
+
+    // 监听咖啡豆更新事件
+    useEffect(() => {
+        // 处理自定义coffeeBeansUpdated事件
+        const handleBeansUpdated = () => {
+            // 清除缓存以确保获取最新数据
+            cachedBeans = null;
+            // 强制刷新
+            setForceRefreshKey(prev => prev + 1);
+        };
+
+        // 添加事件监听
+        window.addEventListener('coffeeBeansUpdated', handleBeansUpdated);
+        
+        // 清理函数
+        return () => {
+            window.removeEventListener('coffeeBeansUpdated', handleBeansUpdated);
+        };
     }, [loadBeans]);
 
     // 计算单价

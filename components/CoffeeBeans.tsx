@@ -15,7 +15,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from './ui/select'
-import { Storage } from '@/lib/storage'
 import { SORT_OPTIONS as RANKING_SORT_OPTIONS, RankingSortOption } from './CoffeeBeanRanking'
 import { useToast } from './GlobalToast'
 
@@ -210,6 +209,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
     const [_isFirstLoad, setIsFirstLoad] = useState<boolean>(!globalCache.initialized)
     const unmountTimeoutRef = useRef<NodeJS.Timeout | null>(null)
     const isLoadingRef = useRef<boolean>(false)
+    // 添加强制刷新的key
+    const [forceRefreshKey, setForceRefreshKey] = useState(0)
 
     // 添加引用，用于点击外部关闭操作菜单
     const containerRef = React.useRef<HTMLDivElement>(null);
@@ -380,17 +381,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
         try {
             isLoadingRef.current = true;
             
-            // 如果是已初始化的全局缓存，直接使用缓存数据
-            if (globalCache.initialized) {
-                setBeans(globalCache.beans);
-                setFilteredBeans(globalCache.filteredBeans);
-                setAvailableVarieties(globalCache.varieties);
-                setIsFirstLoad(false);
-                isLoadingRef.current = false;
-                return;
-            }
-            
-            // 第一次加载或缓存无效时才从存储加载
+            // 直接从存储加载新数据
             const loadedBeans = await CoffeeBeanManager.getAllBeans() as ExtendedCoffeeBean[];
             const sortedBeans = sortBeans(loadedBeans, sortOption);
             
@@ -414,6 +405,45 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
         }
     }, [sortOption, sortBeans, updateFilteredBeansAndCategories, isBeanEmpty]);
 
+    // 强制刷新时重新加载数据
+    useEffect(() => {
+        if (isOpen) {
+            loadBeans();
+        }
+    }, [forceRefreshKey, loadBeans, isOpen]);
+
+    // 监听咖啡豆更新事件
+    useEffect(() => {
+        // 处理自定义coffeeBeansUpdated事件
+        const handleBeansUpdated = () => {
+            // 强制刷新组件状态
+            setForceRefreshKey(prev => prev + 1);
+        };
+
+        // 添加事件监听
+        window.addEventListener('coffeeBeansUpdated', handleBeansUpdated);
+        
+        // 自己也是事件的发出者，监听自己的事件可以确保内部其他组件也能收到更新
+        window.addEventListener('coffeeBeanListChanged', handleBeansUpdated);
+        
+        // 清理函数
+        return () => {
+            window.removeEventListener('coffeeBeansUpdated', handleBeansUpdated);
+            window.removeEventListener('coffeeBeanListChanged', handleBeansUpdated);
+        };
+    }, []);
+
+    // 清理unmountTimeout，避免内存泄漏
+    useEffect(() => {
+        // 在组件卸载时清除timeout
+        return () => {
+            if (unmountTimeoutRef.current) {
+                clearTimeout(unmountTimeoutRef.current);
+                unmountTimeoutRef.current = null;
+            }
+        };
+    }, []);
+
     // 加载已评分的咖啡豆
     const loadRatedBeans = useCallback(async () => {
         if (viewMode !== VIEW_OPTIONS.RANKING) return;
@@ -433,17 +463,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
             console.error("加载评分咖啡豆失败:", error);
         }
     }, [viewMode, rankingBeanType]);
-
-    // 清理unmountTimeout，避免内存泄漏
-    useEffect(() => {
-        // 在组件卸载时清除timeout
-        return () => {
-            if (unmountTimeoutRef.current) {
-                clearTimeout(unmountTimeoutRef.current);
-                unmountTimeoutRef.current = null;
-            }
-        };
-    }, []);
 
     // 根据isOpen状态和排序选项加载数据
     useEffect(() => {
@@ -492,18 +511,15 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                     return globalCache.beans;
                 });
                 
+                // 立即更新过滤后的豆子列表
+                updateFilteredBeansAndCategories(globalCache.beans);
+                
                 // 异步更新本地存储
-                const updatedBean = await CoffeeBeanManager.updateBean(editingBean.id, bean);
-                if (updatedBean) {
-                    // 再次更新状态确保数据一致性
-                    setBeans(prevBeans => {
-                        const finalBeans = prevBeans.map(b =>
-                            b.id === updatedBean.id ? updatedBean : b
-                        );
-                        globalCache.beans = sortBeans(finalBeans, sortOption);
-                        return globalCache.beans;
-                    });
-                }
+                await CoffeeBeanManager.updateBean(editingBean.id, bean);
+                
+                // 强制刷新数据
+                setForceRefreshKey(prev => prev + 1);
+                
                 setEditingBean(null);
             } else {
                 // 添加新咖啡豆 - 创建临时ID以便乐观更新UI
@@ -522,23 +538,18 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                     return sorted;
                 });
                 
-                // 异步保存到存储
-                const newBean = await CoffeeBeanManager.addBean(bean);
+                // 立即更新过滤后的豆子列表
+                updateFilteredBeansAndCategories(globalCache.beans);
                 
-                // 更新真实数据
-                setBeans(prevBeans => {
-                    // 移除临时项，添加真实项
-                    const finalBeans = prevBeans
-                        .filter(b => b.id !== tempId)
-                        .concat(newBean);
-                    const sorted = sortBeans(finalBeans, sortOption);
-                    globalCache.beans = sorted;
-                    return sorted;
-                });
+                // 异步保存到存储
+                await CoffeeBeanManager.addBean(bean);
+                
+                // 强制刷新数据
+                setForceRefreshKey(prev => prev + 1);
                 
                 setShowAddForm(false);
 
-                // 检查是否是首次添加咖啡豆
+                // 检查是否是首次添加咖啡豆并触发事件
                 const allBeans = await CoffeeBeanManager.getAllBeans();
                 if (allBeans.length === 1) {
                     // 触发全局事件，通知应用程序现在有咖啡豆了
@@ -554,7 +565,12 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                     window.dispatchEvent(event);
                 }
             }
-        } catch (_error) {
+            
+            // 触发自定义事件以通知CoffeeBeanList组件更新
+            window.dispatchEvent(new CustomEvent('coffeeBeansUpdated'));
+            
+        } catch (error) {
+            console.error('保存咖啡豆失败:', error);
             // 保存失败时提示用户
             alert('保存失败，请重试');
         }
@@ -573,25 +589,28 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                 
                 // 同步更新过滤后的列表
                 setFilteredBeans(prevBeans => prevBeans.filter(b => b.id !== bean.id));
+                updateFilteredBeansAndCategories(globalCache.beans);
 
                 // 异步执行删除操作
                 const success = await CoffeeBeanManager.deleteBean(bean.id);
                 
                 if (!success) {
-                    // 如果删除失败，恢复原始数据
-                    const savedBeans = await Storage.get('coffeeBeans');
-                    const parsedBeans = savedBeans ? JSON.parse(savedBeans) : [];
-                    setBeans(sortBeans(parsedBeans, sortOption));
+                    // 如果删除失败，重新加载数据
+                    setForceRefreshKey(prev => prev + 1);
                     alert('删除咖啡豆失败，请重试');
                 } else {
-                    // 检查是否还有已用完的咖啡豆
-                    const allBeans = await CoffeeBeanManager.getAllBeans();
-                    const hasEmpty = allBeans.some(b => isBeanEmpty(b));
-                    setHasEmptyBeans(hasEmpty);
+                    // 强制刷新数据
+                    setForceRefreshKey(prev => prev + 1);
+                    
+                    // 触发自定义事件以通知CoffeeBeanList组件更新
+                    window.dispatchEvent(new CustomEvent('coffeeBeansUpdated'));
                 }
-            } catch (_error) {
+            } catch (error) {
+                console.error('删除咖啡豆失败:', error);
                 // 删除失败时提示用户
                 alert('删除咖啡豆时出错，请重试');
+                // 重新加载数据恢复状态
+                setForceRefreshKey(prev => prev + 1);
             }
         }
     };
