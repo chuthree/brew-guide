@@ -169,7 +169,7 @@ const generateBeanTitle = (bean: ExtendedCoffeeBean): string => {
         : bean.name;
 };
 
-// 创建全局缓存对象，确保跨组件实例保持数据
+// 修改全局缓存对象，确保跨组件实例保持数据
 const globalCache = {
     beans: [] as ExtendedCoffeeBean[],
     ratedBeans: [] as ExtendedCoffeeBean[],
@@ -206,12 +206,10 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
     // 榜单视图的筛选状态
     const [rankingBeanType, setRankingBeanType] = useState<'all' | 'espresso' | 'filter'>('all')
     const [rankingEditMode, setRankingEditMode] = useState<boolean>(false)
-    // 缓存状态
-    const cachedBeansRef = useRef<ExtendedCoffeeBean[]>(globalCache.beans)
-    const cachedRatedBeansRef = useRef<ExtendedCoffeeBean[]>(globalCache.ratedBeans)
-    const isInitialLoadRef = useRef<boolean>(!globalCache.initialized)
-    const isLoadingRef = useRef<boolean>(false)
+    // 使用useRef避免不必要的重新渲染
+    const [_isFirstLoad, setIsFirstLoad] = useState<boolean>(!globalCache.initialized)
     const unmountTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+    const isLoadingRef = useRef<boolean>(false)
 
     // 添加引用，用于点击外部关闭操作菜单
     const containerRef = React.useRef<HTMLDivElement>(null);
@@ -236,17 +234,17 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
     }, [filteredBeans]);
 
     // 获取阶段数值用于排序
-    const getPhaseValue = (phase: string): number => {
+    const getPhaseValue = useCallback((phase: string): number => {
         switch (phase) {
             case '赏味期': return 0;
             case '养豆期': return 1;
             case '衰退期':
             default: return 2;
         }
-    }
+    }, []);
 
     // 获取咖啡豆的赏味期信息
-    const getFlavorInfo = (bean: ExtendedCoffeeBean): { phase: string, remainingDays: number } => {
+    const getFlavorInfo = useCallback((bean: ExtendedCoffeeBean): { phase: string, remainingDays: number } => {
         if (!bean.roastDate) {
             return { phase: '衰退期', remainingDays: 0 };
         }
@@ -279,7 +277,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
 
         let phase = '';
         let remainingDays = 0;
-
+        
         if (daysSinceRoast < startDay) {
             phase = '养豆期';
             remainingDays = startDay - daysSinceRoast;
@@ -292,84 +290,151 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
         }
 
         return { phase, remainingDays };
-    }
+    }, []);
 
     // 检查咖啡豆是否用完
-    const isBeanEmpty = (bean: ExtendedCoffeeBean): boolean => {
+    const isBeanEmpty = useCallback((bean: ExtendedCoffeeBean): boolean => {
         return (bean.remaining === "0" || bean.remaining === "0g") && bean.capacity !== undefined;
-    }
+    }, []);
 
-    // 排序咖啡豆的函数 - 使用useCallback缓存函数以避免无限循环
+    // 排序咖啡豆的函数，使用useCallback包装
     const sortBeans = useCallback((beansToSort: ExtendedCoffeeBean[], option: SortOption): ExtendedCoffeeBean[] => {
         switch (option) {
-            case SORT_OPTIONS.NAME_ASC:
-                return [...beansToSort].sort((a, b) => a.name.localeCompare(b.name))
-            case SORT_OPTIONS.NAME_DESC:
-                return [...beansToSort].sort((a, b) => b.name.localeCompare(a.name))
             case SORT_OPTIONS.REMAINING_DAYS_ASC:
                 return [...beansToSort].sort((a, b) => {
                     const { phase: phaseA, remainingDays: daysA } = getFlavorInfo(a);
                     const { phase: phaseB, remainingDays: daysB } = getFlavorInfo(b);
-
-                    // 首先按照阶段排序：最佳期 > 赏味期 > 养豆期 > 衰退期
+                    
+                    // 首先按照阶段排序
                     if (phaseA !== phaseB) {
-                        // 将阶段转换为数字进行比较
-                        const phaseValueA = getPhaseValue(phaseA);
-                        const phaseValueB = getPhaseValue(phaseB);
-                        return phaseValueA - phaseValueB;
+                        return getPhaseValue(phaseA) - getPhaseValue(phaseB);
                     }
-
-                    // 如果阶段相同，根据不同阶段有不同的排序逻辑
-                    if (phaseA === '最佳赏味期') {
-                        // 最佳赏味期内，剩余天数少的排在前面
-                        return daysA - daysB;
-                    } else if (phaseA === '赏味期') {
-                        // 赏味期内，剩余天数少的排在前面
-                        return daysA - daysB;
-                    } else if (phaseA === '养豆期') {
-                        // 养豆期内，剩余天数少的排在前面（离最佳期近的优先）
-                        return daysA - daysB;
-                    } else {
-                        // 衰退期按烘焙日期新的在前
-                        if (!a.roastDate || !b.roastDate) return 0;
-                        return new Date(b.roastDate).getTime() - new Date(a.roastDate).getTime();
-                    }
+                    
+                    // 然后按照剩余天数排序
+                    return daysA - daysB;
                 });
             case SORT_OPTIONS.REMAINING_DAYS_DESC:
                 return [...beansToSort].sort((a, b) => {
                     const { phase: phaseA, remainingDays: daysA } = getFlavorInfo(a);
                     const { phase: phaseB, remainingDays: daysB } = getFlavorInfo(b);
-
-                    // 首先按照阶段排序：最佳期 > 赏味期 > 养豆期 > 衰退期
+                    
+                    // 首先按照阶段排序（相反的顺序）
                     if (phaseA !== phaseB) {
-                        // 将阶段转换为数字进行比较
-                        const phaseValueA = getPhaseValue(phaseA);
-                        const phaseValueB = getPhaseValue(phaseB);
-                        return phaseValueA - phaseValueB;
+                        return getPhaseValue(phaseB) - getPhaseValue(phaseA);
                     }
-
-                    // 如果阶段相同，根据不同阶段有不同的排序逻辑
-                    if (phaseA === '最佳赏味期') {
-                        // 最佳赏味期内，剩余天数多的排在前面
-                        return daysB - daysA;
-                    } else if (phaseA === '赏味期') {
-                        // 赏味期内，剩余天数多的排在前面
-                        return daysB - daysA;
-                    } else if (phaseA === '养豆期') {
-                        // 养豆期内，剩余天数多的排在前面
-                        return daysB - daysA;
-                    } else {
-                        // 衰退期按烘焙日期新的在前
-                        if (!a.roastDate || !b.roastDate) return 0;
-                        return new Date(b.roastDate).getTime() - new Date(a.roastDate).getTime();
-                    }
+                    
+                    // 然后按照剩余天数排序（相反的顺序）
+                    return daysB - daysA;
+                });
+            case SORT_OPTIONS.NAME_ASC:
+                return [...beansToSort].sort((a, b) => {
+                    // 安全地进行字符串比较
+                    const nameA = a.name || '';
+                    const nameB = b.name || '';
+                    return nameA.localeCompare(nameB);
+                });
+            case SORT_OPTIONS.NAME_DESC:
+                return [...beansToSort].sort((a, b) => {
+                    // 安全地进行字符串比较（相反的顺序）
+                    const nameA = a.name || '';
+                    const nameB = b.name || '';
+                    return nameB.localeCompare(nameA);
                 });
             default:
-                return beansToSort
+                return beansToSort;
         }
-    }, [])  // 由于getPhaseValue和getFlavorInfo是组件内定义的函数，不会改变，可以省略依赖
+    }, [getFlavorInfo, getPhaseValue]);
 
-    // 加载咖啡豆数据 - 优化异步加载，避免闪烁
+    // 更新过滤后的豆子和分类
+    const updateFilteredBeansAndCategories = useCallback((sortedBeans: ExtendedCoffeeBean[]) => {
+        // 提取可用的品种列表
+        const varieties = sortedBeans.reduce((acc, bean) => {
+            if (bean.variety && !acc.includes(bean.variety)) {
+                acc.push(bean.variety);
+            }
+            return acc;
+        }, [] as string[]);
+        
+        // 根据选择的品种过滤豆子
+        let filtered = sortedBeans;
+        if (selectedVariety) {
+            filtered = sortedBeans.filter(bean => bean.variety === selectedVariety);
+        }
+        
+        // 根据"显示已用完"设置过滤
+        if (!showEmptyBeans) {
+            filtered = filtered.filter(bean => !isBeanEmpty(bean));
+        }
+        
+        // 更新状态和全局缓存
+        setAvailableVarieties(varieties);
+        setFilteredBeans(filtered);
+        globalCache.varieties = varieties;
+        globalCache.filteredBeans = filtered;
+    }, [selectedVariety, showEmptyBeans, isBeanEmpty]);
+
+    // 加载咖啡豆数据
+    const loadBeans = useCallback(async () => {
+        if (isLoadingRef.current) return; // 防止重复加载
+        
+        try {
+            isLoadingRef.current = true;
+            
+            // 如果是已初始化的全局缓存，直接使用缓存数据
+            if (globalCache.initialized) {
+                setBeans(globalCache.beans);
+                setFilteredBeans(globalCache.filteredBeans);
+                setAvailableVarieties(globalCache.varieties);
+                setIsFirstLoad(false);
+                isLoadingRef.current = false;
+                return;
+            }
+            
+            // 第一次加载或缓存无效时才从存储加载
+            const loadedBeans = await CoffeeBeanManager.getAllBeans() as ExtendedCoffeeBean[];
+            const sortedBeans = sortBeans(loadedBeans, sortOption);
+            
+            // 更新状态和全局缓存
+            setBeans(sortedBeans);
+            globalCache.beans = sortedBeans;
+            globalCache.initialized = true;
+            
+            // 更新过滤后的豆子和分类
+            updateFilteredBeansAndCategories(sortedBeans);
+            
+            // 检查是否有已用完的咖啡豆
+            const hasEmpty = loadedBeans.some(bean => isBeanEmpty(bean));
+            setHasEmptyBeans(hasEmpty);
+            setIsFirstLoad(false);
+        } catch (error) {
+            console.error("加载咖啡豆数据失败:", error);
+            setIsFirstLoad(false);
+        } finally {
+            isLoadingRef.current = false;
+        }
+    }, [sortOption, sortBeans, updateFilteredBeansAndCategories, isBeanEmpty]);
+
+    // 加载已评分的咖啡豆
+    const loadRatedBeans = useCallback(async () => {
+        if (viewMode !== VIEW_OPTIONS.RANKING) return;
+        
+        try {
+            const ratedBeansData = await CoffeeBeanManager.getRatedBeans() as ExtendedCoffeeBean[];
+            
+            // 根据类型筛选
+            let filteredRatedBeans = ratedBeansData;
+            if (rankingBeanType !== 'all') {
+                filteredRatedBeans = ratedBeansData.filter(bean => bean.beanType === rankingBeanType);
+            }
+            
+            setRatedBeans(filteredRatedBeans);
+            globalCache.ratedBeans = filteredRatedBeans;
+        } catch (error) {
+            console.error("加载评分咖啡豆失败:", error);
+        }
+    }, [viewMode, rankingBeanType]);
+
+    // 清理unmountTimeout，避免内存泄漏
     useEffect(() => {
         // 在组件卸载时清除timeout
         return () => {
@@ -380,168 +445,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
         };
     }, []);
 
+    // 根据isOpen状态和排序选项加载数据
     useEffect(() => {
-        const loadBeans = async () => {
-            if (isLoadingRef.current) return; // 防止重复加载
-            
-            try {
-                isLoadingRef.current = true;
-                
-                // 如果是已初始化的全局缓存，直接使用缓存数据
-                if (globalCache.initialized) {
-                    setBeans(globalCache.beans);
-                    setRatedBeans(globalCache.ratedBeans);
-                    setFilteredBeans(globalCache.filteredBeans);
-                    setAvailableVarieties(globalCache.varieties);
-                    
-                    // 异步更新数据不阻塞渲染
-                    setTimeout(async () => {
-                        try {
-                            // 异步获取新数据更新视图
-                            const savedBeans = await Storage.get('coffeeBeans');
-                            const parsedBeans = savedBeans ? JSON.parse(savedBeans) : [];
-                            const sortedBeans = sortBeans(parsedBeans, sortOption);
-                            
-                            // 更新全局缓存
-                            globalCache.beans = sortedBeans;
-                            cachedBeansRef.current = sortedBeans;
-                            globalCache.initialized = true;
-                            
-                            // 更新状态
-                            setBeans(sortedBeans);
-                            
-                            // 处理过滤和分类等次要操作
-                            updateFilteredBeansAndCategories(sortedBeans);
-                        } catch (_error) {
-                            // 静默处理异步错误
-                        } finally {
-                            isLoadingRef.current = false;
-                        }
-                    }, 0);
-                    
-                    return;
-                }
-                
-                // 一开始使用缓存数据渲染
-                if (cachedBeansRef.current.length > 0 && !isInitialLoadRef.current) {
-                    // 使用已缓存的豆子进行初始渲染
-                    setBeans(cachedBeansRef.current);
-                    setFilteredBeans(
-                        selectedVariety 
-                            ? cachedBeansRef.current.filter(bean => {
-                                if (selectedVariety === '拼配豆') {
-                                    return bean.type === '拼配' && (showEmptyBeans || !isBeanEmpty(bean));
-                                }
-                                return bean.type !== '拼配' && (bean.variety || '未分类') === selectedVariety &&
-                                    (showEmptyBeans || !isBeanEmpty(bean));
-                              })
-                            : cachedBeansRef.current.filter(bean => (showEmptyBeans || !isBeanEmpty(bean)))
-                    );
-                }
-
-                // 异步获取新数据更新视图
-                const savedBeans = await Storage.get('coffeeBeans');
-                const parsedBeans = savedBeans ? JSON.parse(savedBeans) : [];
-                const sortedBeans = sortBeans(parsedBeans, sortOption);
-                
-                // 更新缓存
-                globalCache.beans = sortedBeans;
-                cachedBeansRef.current = sortedBeans;
-                isInitialLoadRef.current = false;
-                globalCache.initialized = true;
-                
-                // 更新状态
-                setBeans(sortedBeans);
-
-                // 更新其他状态和过滤
-                updateFilteredBeansAndCategories(sortedBeans);
-            } catch (_error) {
-                // 获取失败使用缓存数据或设置为空数组
-                if (cachedBeansRef.current.length > 0) {
-                    setBeans(cachedBeansRef.current);
-                } else {
-                    setBeans([]);
-                    setFilteredBeans([]);
-                    setHasEmptyBeans(false);
-                }
-            } finally {
-                isLoadingRef.current = false;
-            }
-        };
-
-        // 提取过滤和分类逻辑到单独函数
-        const updateFilteredBeansAndCategories = (sortedBeans: ExtendedCoffeeBean[]) => {
-            // 检查是否有已用完的咖啡豆或者总共有咖啡豆
-            const hasEmpty = sortedBeans.some(bean => isBeanEmpty(bean));
-            setHasEmptyBeans(hasEmpty || sortedBeans.length > 0);
-
-            // 提取所有唯一的豆种(品种) - 不过滤已用完的咖啡豆，确保标签始终显示
-            const varieties = sortedBeans
-                .map(bean => {
-                    // 如果是拼配豆，优先标记为"拼配豆"
-                    if (bean.type === '拼配') {
-                        return '拼配豆';
-                    }
-                    // 否则使用品种，如果没有则为"未分类"
-                    return bean.variety || '未分类';
-                })
-                .filter((value, index, self) => self.indexOf(value) === index) // 去重
-                .sort(); // 按字母排序
-
-            // 更新全局缓存
-            globalCache.varieties = varieties;
-            
-            setAvailableVarieties(varieties);
-
-            // 过滤咖啡豆
-            let filtered;
-            if (selectedVariety) {
-                filtered = sortedBeans.filter(bean => {
-                    // 如果选择的是"拼配豆"分类
-                    if (selectedVariety === '拼配豆') {
-                        return bean.type === '拼配' && (showEmptyBeans || !isBeanEmpty(bean));
-                    }
-                    // 否则按照常规品种筛选，但排除拼配豆
-                    return bean.type !== '拼配' && (bean.variety || '未分类') === selectedVariety &&
-                        (showEmptyBeans || !isBeanEmpty(bean));
-                });
-            } else {
-                filtered = sortedBeans.filter(bean =>
-                    // 根据showEmptyBeans状态决定是否显示用完的咖啡豆
-                    (showEmptyBeans || !isBeanEmpty(bean))
-                );
-            }
-            
-            // 更新全局缓存
-            globalCache.filteredBeans = filtered;
-            
-            setFilteredBeans(filtered);
-        };
-
-        // 加载已评分的咖啡豆 - 同样优化
-        const loadRatedBeans = async () => {
-            try {
-                // 先使用缓存数据渲染
-                if (cachedRatedBeansRef.current.length > 0) {
-                    setRatedBeans(cachedRatedBeansRef.current);
-                }
-                
-                // 异步获取最新数据
-                const beans = await CoffeeBeanManager.getRatedBeans();
-                
-                // 更新缓存
-                globalCache.ratedBeans = beans;
-                cachedRatedBeansRef.current = beans;
-                
-                setRatedBeans(beans);
-            } catch (_error) {
-                // 静默处理错误，保持使用缓存数据
-                if (cachedRatedBeansRef.current.length === 0) {
-                    setRatedBeans([]);
-                }
-            }
-        };
-
         if (isOpen) {
             // 取消任何可能的超时重置
             if (unmountTimeoutRef.current) {
@@ -559,7 +464,14 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                 // 仍然使用全局缓存的数据
             }, 5000); // 5秒后再考虑重置，通常用户已经看不到了
         }
-    }, [isOpen, sortOption, selectedVariety, sortBeans, showEmptyBeans]);
+    }, [isOpen, sortOption, selectedVariety, loadBeans, loadRatedBeans]);
+
+    // 当显示空豆子设置改变时，更新过滤
+    useEffect(() => {
+        if (globalCache.initialized) {
+            updateFilteredBeansAndCategories(globalCache.beans);
+        }
+    }, [showEmptyBeans, selectedVariety, updateFilteredBeansAndCategories]);
 
     // 处理添加咖啡豆 - 优化为立即更新UI和全局缓存
     const handleSaveBean = async (bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>) => {
@@ -577,7 +489,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                     );
                     // 更新缓存
                     globalCache.beans = sortBeans(newBeans, sortOption);
-                    cachedBeansRef.current = globalCache.beans;
                     return globalCache.beans;
                 });
                 
@@ -590,7 +501,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                             b.id === updatedBean.id ? updatedBean : b
                         );
                         globalCache.beans = sortBeans(finalBeans, sortOption);
-                        cachedBeansRef.current = globalCache.beans;
                         return globalCache.beans;
                     });
                 }
@@ -623,7 +533,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                         .concat(newBean);
                     const sorted = sortBeans(finalBeans, sortOption);
                     globalCache.beans = sorted;
-                    cachedBeansRef.current = sorted;
                     return sorted;
                 });
                 
@@ -659,7 +568,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                 setBeans(prevBeans => {
                     const updatedBeans = prevBeans.filter(b => b.id !== bean.id);
                     globalCache.beans = sortBeans(updatedBeans, sortOption);
-                    cachedBeansRef.current = globalCache.beans;
                     return globalCache.beans;
                 });
                 
@@ -751,7 +659,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                         b.id === updatedBean.id ? updatedBean : b
                     );
                     globalCache.beans = sortBeans(newBeans, sortOption);
-                    cachedBeansRef.current = globalCache.beans;
                     return globalCache.beans;
                 });
 
@@ -1011,7 +918,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                         try {
                             const beans = await CoffeeBeanManager.getRatedBeans();
                             globalCache.ratedBeans = beans;
-                            cachedRatedBeansRef.current = beans;
                             setRatedBeans(beans);
                         } catch (_error) {
                             // 静默处理错误

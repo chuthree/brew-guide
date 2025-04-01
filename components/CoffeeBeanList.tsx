@@ -1,19 +1,25 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useTransition, useCallback } from 'react'
 import { CoffeeBean } from '@/app/types'
 import { CoffeeBeanManager } from '@/lib/coffeeBeanManager'
 
 // 定义组件属性接口
 interface CoffeeBeanListProps {
     onSelect: (beanId: string | null, bean: CoffeeBean | null) => void
+    isOpen?: boolean
 }
+
+// 用于缓存咖啡豆数据
+let cachedBeans: CoffeeBean[] | null = null;
 
 const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
     onSelect,
+    isOpen = true
 }) => {
-    const [beans, setBeans] = useState<CoffeeBean[]>([])
-    const [loading, setLoading] = useState(true)
+    const [beans, setBeans] = useState<CoffeeBean[]>(cachedBeans || [])
+    const [_isPending, startTransition] = useTransition()
+    const [isFirstLoad, setIsFirstLoad] = useState(!cachedBeans)
 
     // 检查咖啡豆是否用完
     const isBeanEmpty = (bean: CoffeeBean): boolean => {
@@ -21,17 +27,17 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
     }
 
     // 获取阶段数值用于排序
-    const getPhaseValue = (phase: string): number => {
+    const getPhaseValue = useCallback((phase: string): number => {
         switch (phase) {
             case '赏味期': return 0;
             case '养豆期': return 1;
             case '衰退期':
             default: return 2;
         }
-    }
+    }, []);
 
     // 获取咖啡豆的赏味期信息
-    const getFlavorInfo = (bean: CoffeeBean): { phase: string, remainingDays: number } => {
+    const getFlavorInfo = useCallback((bean: CoffeeBean): { phase: string, remainingDays: number } => {
         if (!bean.roastDate) {
             return { phase: '衰退期', remainingDays: 0 };
         }
@@ -77,57 +83,80 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
         }
 
         return { phase, remainingDays };
-    }
+    }, []);
+
+    // 排序咖啡豆
+    const sortBeans = useCallback((beansToSort: CoffeeBean[]): CoffeeBean[] => {
+        return [...beansToSort].sort((a, b) => {
+            const { phase: phaseA, remainingDays: daysA } = getFlavorInfo(a);
+            const { phase: phaseB, remainingDays: daysB } = getFlavorInfo(b);
+
+            // 首先按照阶段排序：最佳期 > 赏味期 > 养豆期 > 衰退期
+            if (phaseA !== phaseB) {
+                // 将阶段转换为数字进行比较
+                const phaseValueA = getPhaseValue(phaseA);
+                const phaseValueB = getPhaseValue(phaseB);
+                return phaseValueA - phaseValueB;
+            }
+
+            // 如果阶段相同，根据不同阶段有不同的排序逻辑
+            if (phaseA === '最佳赏味期') {
+                // 最佳赏味期内，剩余天数少的排在前面
+                return daysA - daysB;
+            } else if (phaseA === '赏味期') {
+                // 赏味期内，剩余天数少的排在前面
+                return daysA - daysB;
+            } else if (phaseA === '养豆期') {
+                // 养豆期内，剩余天数少的排在前面（离最佳期近的优先）
+                return daysA - daysB;
+            } else {
+                // 衰退期按烘焙日期新的在前
+                if (!a.roastDate || !b.roastDate) return 0;
+                return new Date(b.roastDate).getTime() - new Date(a.roastDate).getTime();
+            }
+        });
+    }, [getFlavorInfo, getPhaseValue]);
 
     // 加载咖啡豆数据
-    useEffect(() => {
-        const loadBeans = async () => {
-            try {
-                setLoading(true)
-                const loadedBeans = await CoffeeBeanManager.getAllBeans()
-
-                // 过滤掉已经喝完的咖啡豆
-                const availableBeans = loadedBeans.filter(bean => !isBeanEmpty(bean));
-
-                // 按照赏味期排序（少到多）
-                const sortedBeans = [...availableBeans].sort((a, b) => {
-                    const { phase: phaseA, remainingDays: daysA } = getFlavorInfo(a);
-                    const { phase: phaseB, remainingDays: daysB } = getFlavorInfo(b);
-
-                    // 首先按照阶段排序：最佳期 > 赏味期 > 养豆期 > 衰退期
-                    if (phaseA !== phaseB) {
-                        // 将阶段转换为数字进行比较
-                        const phaseValueA = getPhaseValue(phaseA);
-                        const phaseValueB = getPhaseValue(phaseB);
-                        return phaseValueA - phaseValueB;
-                    }
-
-                    // 如果阶段相同，根据不同阶段有不同的排序逻辑
-                    if (phaseA === '最佳赏味期') {
-                        // 最佳赏味期内，剩余天数少的排在前面
-                        return daysA - daysB;
-                    } else if (phaseA === '赏味期') {
-                        // 赏味期内，剩余天数少的排在前面
-                        return daysA - daysB;
-                    } else if (phaseA === '养豆期') {
-                        // 养豆期内，剩余天数少的排在前面（离最佳期近的优先）
-                        return daysA - daysB;
-                    } else {
-                        // 衰退期按烘焙日期新的在前
-                        if (!a.roastDate || !b.roastDate) return 0;
-                        return new Date(b.roastDate).getTime() - new Date(a.roastDate).getTime();
-                    }
-                });
-                setBeans(sortedBeans)
-            } catch {
-
-            } finally {
-                setLoading(false)
+    const loadBeans = useCallback(async () => {
+        try {
+            // 如果已有缓存数据，则不显示加载状态
+            if (!cachedBeans) {
+                setIsFirstLoad(true);
             }
-        }
+                
+            const loadedBeans = await CoffeeBeanManager.getAllBeans();
 
-        loadBeans()
-    }, [])
+            // 过滤掉已经喝完的咖啡豆
+            const availableBeans = loadedBeans.filter(bean => !isBeanEmpty(bean));
+
+            // 按照赏味期排序
+            const sortedBeans = sortBeans(availableBeans);
+
+            // 使用 useTransition 包裹状态更新，避免界面闪烁
+            startTransition(() => {
+                setBeans(sortedBeans);
+                cachedBeans = sortedBeans; // 更新缓存
+                setIsFirstLoad(false);
+            });
+        } catch (error) {
+            console.error("加载咖啡豆数据失败:", error);
+            setIsFirstLoad(false);
+        }
+    }, [sortBeans]);
+
+    // 当isOpen状态变化时重新加载数据
+    useEffect(() => {
+        if (isOpen) {
+            loadBeans();
+        }
+    }, [isOpen, loadBeans]);
+
+    // 初始化加载
+    useEffect(() => {
+        // 即使未设置isOpen，也尝试加载一次数据
+        loadBeans();
+    }, [loadBeans]);
 
     // 计算单价
     const calculateUnitPrice = (bean: CoffeeBean): string => {
@@ -146,7 +175,8 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
         }
     }
 
-    if (loading) {
+    // 使用isFirstLoad替代原来的loading状态
+    if (isFirstLoad) {
         return (
             <div className="flex flex-col items-center justify-center h-64">
                 <div className="w-8 h-8 border-t-2 border-neutral-800 dark:border-neutral-200 rounded-full animate-spin"></div>
