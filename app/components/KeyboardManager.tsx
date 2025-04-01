@@ -53,7 +53,7 @@ export function KeyboardManager() {
         // 对 brewing-form应用特殊处理
         const brewingHistoryComponent = document.getElementById('brewing-history-component');
         if (brewingHistoryComponent) {
-          brewingHistoryComponent.style.paddingBottom = `${info.keyboardHeight + 150}px`;
+          brewingHistoryComponent.style.paddingBottom = `${info.keyboardHeight + 80}px`;
         }
         
         // 防止嵌套滚动问题
@@ -62,7 +62,7 @@ export function KeyboardManager() {
         // 使用 CSS 设置全局样式 - 移除可能导致文字放大的设置
         keyboardStyle.innerHTML = `
           .brewing-note-form {
-            padding-bottom: ${info.keyboardHeight + 100}px !important;
+            padding-bottom: ${info.keyboardHeight + 60}px !important;
           }
           
           /* 禁用所有嵌套容器的滚动 */
@@ -78,17 +78,42 @@ export function KeyboardManager() {
           
           /* 在表单上添加足够的空间 */
           form {
-            margin-bottom: ${info.keyboardHeight}px;
+            margin-bottom: ${info.keyboardHeight + 40}px;
           }
           
           /* 设置键盘空间调整器高度 */
           .keyboard-spacer {
-            height: ${info.keyboardHeight + 120}px !important;
+            height: ${info.keyboardHeight + 40}px !important;
           }
           
           /* 设置可调整内容的底部内边距 */
           .keyboard-adjustable-content {
-            padding-bottom: ${info.keyboardHeight + 100}px !important;
+            padding-bottom: ${info.keyboardHeight + 40}px !important;
+          }
+          
+          /* 处理拟态框内的表单 */
+          .fixed.inset-0.z-50 {
+            padding-bottom: 0 !important;
+          }
+          
+          /* 处理拟态框内的滚动容器 */
+          .max-h-\\[85vh\\].overflow-auto {
+            max-height: calc(85vh - ${info.keyboardHeight}px) !important;
+            transform: translateY(-${info.keyboardHeight * 0.6}px);
+            transition: transform 0.3s ease;
+          }
+          
+          /* 处理拟态框内的表单内容容器 */
+          .max-h-\\[calc\\(85vh-40px\\)\\] {
+            max-height: calc(85vh - ${info.keyboardHeight}px - 40px) !important;
+            padding-bottom: ${info.keyboardHeight + 20}px !important;
+          }
+          
+          /* 确保拟态框中的输入区域可见 */
+          .max-h-\\[85vh\\] .overflow-auto:has(input:focus),
+          .max-h-\\[85vh\\] .overflow-auto:has(textarea:focus),
+          .max-h-\\[85vh\\] .overflow-auto:has(select:focus) {
+            padding-bottom: ${info.keyboardHeight + 40}px !important;
           }
         `;
         
@@ -101,11 +126,30 @@ export function KeyboardManager() {
         )) {
           // 等待UI更新
           setTimeout(() => {
-            // 确保输入元素可见
+            // 确保输入元素可见，但不要将其滚动到中央位置，而是仅确保在视口中
             (activeElement as HTMLElement).scrollIntoView({ 
               behavior: 'smooth',
-              block: 'center'
+              block: 'nearest'
             });
+            
+            // 检查是否在拟态框内
+            const isInModal = Boolean(activeElement.closest('.max-h-\\[85vh\\]'));
+            if (isInModal) {
+              // 为拟态框应用特殊处理
+              const modalElement = activeElement.closest('.max-h-\\[85vh\\]');
+              if (modalElement) {
+                // 确保内容不会被推到视口外
+                (modalElement as HTMLElement).scrollTop = 0;
+                
+                // 延迟再次滚动到聚焦元素
+                setTimeout(() => {
+                  (activeElement as HTMLElement).scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center'
+                  });
+                }, 100);
+              }
+            }
           }, 150);
         }
 

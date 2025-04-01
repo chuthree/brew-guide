@@ -153,7 +153,7 @@ body {
 .keyboard-is-open .visualization-scroll,
 .keyboard-is-open .brewing-form,
 .keyboard-is-open .h-full.w-full.overflow-auto {
-  padding-bottom: calc(var(--keyboard-height) + 50px);
+  padding-bottom: calc(var(--keyboard-height) + 30px);
   margin-bottom: var(--keyboard-height);
 }
 
@@ -164,12 +164,12 @@ body {
 .keyboard-is-open .brew-content-scroll .overflow-y-auto {
   overflow: visible !important;
   height: auto !important;
-  padding-bottom: calc(var(--keyboard-height) + 100px) !important;
+  padding-bottom: calc(var(--keyboard-height) + 50px) !important;
 }
 
 /* 专门针对编辑表单的键盘适应样式 */
 .keyboard-is-open .brewing-note-form form {
-  padding-bottom: calc(var(--keyboard-height) + 80px);
+  padding-bottom: calc(var(--keyboard-height) + 40px);
 }
 
 /* 确保表单容器在键盘弹出时有足够的滚动空间 */
@@ -185,7 +185,7 @@ body {
 }
 
 .keyboard-is-open .brewing-note-form {
-  padding-bottom: calc(var(--keyboard-height) + 150px) !important;
+  padding-bottom: calc(var(--keyboard-height) + 80px) !important;
 }
 
 /* 针对 brewing-form 的特殊处理 */
@@ -193,7 +193,23 @@ body {
   transition: padding-bottom 0.3s ease;
 }
 .keyboard-is-open .brewing-form {
-  padding-bottom: calc(var(--keyboard-height) + 150px) !important;
+  padding-bottom: calc(var(--keyboard-height) + 80px) !important;
+}
+
+/* 拟态框(Modal)键盘适配 */
+.keyboard-is-open .fixed.inset-0.z-50 {
+  padding-bottom: 0 !important;
+}
+
+.keyboard-is-open .max-h-\[85vh\].overflow-auto {
+  max-height: calc(85vh - var(--keyboard-height)) !important;
+  transform: translateY(calc(-1 * var(--keyboard-height) * 0.6));
+  transition: transform 0.3s ease;
+}
+
+.keyboard-is-open .max-h-\[calc\(85vh-40px\)\] {
+  max-height: calc(85vh - var(--keyboard-height) - 40px) !important;
+  padding-bottom: calc(var(--keyboard-height) + 20px) !important;
 }
 
 /* 键盘空间调整器 */
@@ -202,7 +218,7 @@ body {
   height: 40px;
 }
 .keyboard-is-open .keyboard-spacer {
-  height: calc(var(--keyboard-height) + 120px) !important;
+  height: calc(var(--keyboard-height) + 60px) !important;
 }
 
 /* 可调整内容 */
@@ -213,6 +229,18 @@ body {
   padding-bottom: calc(var(--keyboard-height) + 100px) !important;
 }
 
+/* 拟态框特殊键盘处理 */
+.keyboard-modal-active {
+  transform: translateY(calc(-1 * var(--keyboard-height) * 0.5)) !important;
+  transition: transform 0.3s ease;
+  max-height: calc(85vh - var(--keyboard-height) * 0.8) !important;
+}
+
+.keyboard-modal-active .modal-form-container {
+  max-height: calc(85vh - var(--keyboard-height) * 0.8 - 40px) !important;
+  padding-bottom: calc(var(--keyboard-height) * 0.5 + 40px) !important;
+}
+
 /* 输入框获取焦点时的样式 */
 input:focus, textarea:focus, [contenteditable]:focus {
   position: relative;
@@ -221,7 +249,7 @@ input:focus, textarea:focus, [contenteditable]:focus {
 
 /* 解决键盘弹出时表单被推到最上方的问题 */
 .keyboard-is-open form {
-  margin-bottom: calc(var(--keyboard-height) + 100px);
+  margin-bottom: calc(var(--keyboard-height) + 50px);
 }
 
 .input-with-keyboard-adjustment {
@@ -275,13 +303,20 @@ html, body {
 }
 
 .keyboard-is-open .brewing-form .brewing-note-form {
-  padding-bottom: calc(var(--keyboard-height) + 150px) !important;
+  padding-bottom: calc(var(--keyboard-height) + 80px) !important;
+}
+
+/* 增强键盘适配样式 - 专门处理modal嵌套表单 */
+.keyboard-is-open .max-h-\[85vh\] .overflow-auto:has(input:focus),
+.keyboard-is-open .max-h-\[85vh\] .overflow-auto:has(textarea:focus),
+.keyboard-is-open .max-h-\[85vh\] .overflow-auto:has(select:focus) {
+  padding-bottom: calc(var(--keyboard-height) + 40px) !important;
 }
 
 /* 确保键盘空间调整器在不同场景下都有效 */
 .keyboard-is-open .keyboard-spacer {
   display: block !important;
-  height: calc(var(--keyboard-height) + 100px) !important;
+  height: calc(var(--keyboard-height) + 50px) !important;
 }
 
 /* 解决Android表单聚焦问题 */
@@ -292,7 +327,7 @@ html, body {
   }
   
   .keyboard-is-open .brewing-note-form form {
-    padding-bottom: calc(var(--keyboard-height) + 120px) !important;
+    padding-bottom: calc(var(--keyboard-height) + 60px) !important;
   }
   
   /* 确保表单元素不会被自动缩放，但不改变其显示大小 */
