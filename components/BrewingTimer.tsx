@@ -1001,7 +1001,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                                     '完成冲煮'}
                             </motion.div>
                         </div>
-                        <div className={`flex items-baseline ${layoutSettings.stageInfoReversed ? 'text-left flex-row-reverse' : 'text-right flex-row'}`}>
+                        <div className={`flex items-baseline flex-row ${layoutSettings.stageInfoReversed ? 'text-left' : 'text-right'}`}>
                             <div className={layoutSettings.stageInfoReversed ? 'mr-4' : 'mr-0'}>
                                 <div className="text-xs text-neutral-500 dark:text-neutral-400">
                                     目标时间
@@ -1078,7 +1078,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                                     initial={{ opacity: 0, x: layoutSettings.stageInfoReversed ? -10 : 10 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ duration: 0.26, delay: 0.2 }}
-                                    className={`flex items-baseline ${layoutSettings.stageInfoReversed ? 'text-left flex-row-reverse' : 'text-right flex-row'}`}
+                                    className={`flex items-baseline flex-row ${layoutSettings.stageInfoReversed ? 'text-left' : 'text-right '}`}
                                 >
                                     <div className={layoutSettings.stageInfoReversed ? 'mr-4' : 'mr-0'}>
                                         <div className="text-xs text-neutral-500 dark:text-neutral-400">
