@@ -140,198 +140,35 @@ body {
   padding-bottom: 0 !important;
 }
 
-/* 键盘相关样式 */
-.keyboard-is-open {
-  /* 当键盘打开时应用的样式 */
-  padding-bottom: var(--keyboard-height);
-}
-
-/* iOS 键盘打开时，确保内容不会被键盘遮挡 */
-.keyboard-is-open .overflow-y-auto,
-.keyboard-is-open .scroll-with-bottom-bar,
-.keyboard-is-open .brew-content-scroll,
-.keyboard-is-open .visualization-scroll,
-.keyboard-is-open .brewing-form,
-.keyboard-is-open .h-full.w-full.overflow-auto {
-  padding-bottom: calc(var(--keyboard-height) + 30px);
-  margin-bottom: var(--keyboard-height);
-}
-
-/* 解决嵌套滚动容器键盘问题 */
-.keyboard-is-open .overflow-y-auto .overflow-y-auto,
-.keyboard-is-open .overflow-auto .overflow-auto,
-.keyboard-is-open .scroll-with-bottom-bar .overflow-y-auto,
-.keyboard-is-open .brew-content-scroll .overflow-y-auto {
-  overflow: visible !important;
-  height: auto !important;
-  padding-bottom: calc(var(--keyboard-height) + 50px) !important;
-}
-
-/* 专门针对编辑表单的键盘适应样式 */
-.keyboard-is-open .brewing-note-form form {
-  padding-bottom: calc(var(--keyboard-height) + 40px);
-}
-
-/* 确保表单容器在键盘弹出时有足够的滚动空间 */
-.brewing-note-form {
-  min-height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-/* 针对所有brewing-note-form的通用处理 */
-.brewing-note-form {
-  padding-bottom: 40px;
-}
-
-.keyboard-is-open .brewing-note-form {
-  padding-bottom: calc(var(--keyboard-height) + 80px) !important;
-}
-
-/* 针对 brewing-form 的特殊处理 */
-.brewing-form {
-  transition: padding-bottom 0.3s ease;
-}
-.keyboard-is-open .brewing-form {
-  padding-bottom: calc(var(--keyboard-height) + 80px) !important;
-}
-
-/* 拟态框(Modal)键盘适配 */
-.keyboard-is-open .fixed.inset-0.z-50 {
-  padding-bottom: 0 !important;
-}
-
-.keyboard-is-open .max-h-\[85vh\].overflow-auto {
-  max-height: calc(85vh - var(--keyboard-height)) !important;
-  transform: translateY(calc(-1 * var(--keyboard-height) * 0.6));
-  transition: transform 0.3s ease;
-}
-
-.keyboard-is-open .max-h-\[calc\(85vh-40px\)\] {
-  max-height: calc(85vh - var(--keyboard-height) - 40px) !important;
-  padding-bottom: calc(var(--keyboard-height) + 20px) !important;
-}
-
-/* 键盘空间调整器 */
-.keyboard-spacer {
-  transition: height 0.3s ease;
-  height: 40px;
-}
-.keyboard-is-open .keyboard-spacer {
-  height: calc(var(--keyboard-height) + 60px) !important;
-}
-
-/* 可调整内容 */
-.keyboard-adjustable-content {
-  transition: padding-bottom 0.3s ease;
-}
-.keyboard-is-open .keyboard-adjustable-content {
-  padding-bottom: calc(var(--keyboard-height) + 100px) !important;
-}
-
-/* 拟态框特殊键盘处理 */
-.keyboard-modal-active {
-  transform: translateY(calc(-1 * var(--keyboard-height) * 0.5)) !important;
-  transition: transform 0.3s ease;
-  max-height: calc(85vh - var(--keyboard-height) * 0.8) !important;
-}
-
-.keyboard-modal-active .modal-form-container {
-  max-height: calc(85vh - var(--keyboard-height) * 0.8 - 40px) !important;
-  padding-bottom: calc(var(--keyboard-height) * 0.5 + 40px) !important;
-}
-
-/* 输入框获取焦点时的样式 */
-input:focus, textarea:focus, [contenteditable]:focus {
+/* 键盘相关样式 - 只保留核心样式 */
+input:focus, textarea:focus, select:focus, [contenteditable]:focus {
   position: relative;
   z-index: 10;
+  /* 添加边距，确保滚动时有足够的空间 */
+  scroll-margin-top: 100px;
+  scroll-margin-bottom: 100px;
 }
 
-/* 解决键盘弹出时表单被推到最上方的问题 */
-.keyboard-is-open form {
-  margin-bottom: calc(var(--keyboard-height) + 50px);
+/* 针对iOS的聚焦处理 */
+.ios-device input:focus,
+.ios-device textarea:focus,
+.ios-device select:focus {
+  transform: translateZ(0); /* 触发iOS的硬件加速 */
 }
 
-.input-with-keyboard-adjustment {
-  transition: padding-bottom 0.25s ease;
+/* 确保模态框的内容在键盘弹出时仍然可见 */
+.ios-device .modal-form-container,
+.android-device .modal-form-container {
+  padding-bottom: 100px !important; /* 确保模态框内容有足够的底部空间 */
 }
 
-.keyboard-is-open .input-with-keyboard-adjustment {
-  padding-bottom: var(--keyboard-height);
-}
-
-/* 确保iOS中固定定位元素不受键盘影响 */
-.ios-fixed-bottom {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 50;
-}
-
-.keyboard-is-open .ios-fixed-bottom {
-  bottom: var(--keyboard-height);
-  transition: bottom 0.25s ease;
-}
-
-/* 防止 iOS 上键盘弹出时页面抖动 */
-html, body {
-  height: 100%;
-  overflow: hidden;
-  position: fixed;
-  width: 100%;
-  -webkit-overflow-scrolling: touch;
-}
-
-/* 当键盘显示时，防止 iOS 上的滚动容器被推上去 */
-@supports (-webkit-touch-callout: none) {
-  .keyboard-is-open .bottom-action-bar {
-    transform: translateY(calc(-1 * var(--keyboard-height)));
-    transition: transform 0.25s ease;
-  }
-  
-  /* 增强聚焦表单可见性 */
-  .keyboard-is-open .brewing-note-form:has(input:focus),
-  .keyboard-is-open .brewing-note-form:has(textarea:focus) {
-    padding-bottom: calc(var(--keyboard-height) + 120px) !important;
-  }
-}
-
-/* 增强键盘适配样式 - 专门处理brewing-history-component嵌套表单 */
-.brewing-form .brewing-note-form {
-  padding-bottom: 40px;
-}
-
-.keyboard-is-open .brewing-form .brewing-note-form {
-  padding-bottom: calc(var(--keyboard-height) + 80px) !important;
-}
-
-/* 增强键盘适配样式 - 专门处理modal嵌套表单 */
-.keyboard-is-open .max-h-\[85vh\] .overflow-auto:has(input:focus),
-.keyboard-is-open .max-h-\[85vh\] .overflow-auto:has(textarea:focus),
-.keyboard-is-open .max-h-\[85vh\] .overflow-auto:has(select:focus) {
-  padding-bottom: calc(var(--keyboard-height) + 40px) !important;
-}
-
-/* 确保键盘空间调整器在不同场景下都有效 */
-.keyboard-is-open .keyboard-spacer {
-  display: block !important;
-  height: calc(var(--keyboard-height) + 50px) !important;
+/* 针对表单内容在iOS上的处理 */
+.ios-form {
+  padding-bottom: 60px !important;
 }
 
 /* 解决Android表单聚焦问题 */
 @media (max-width: 768px) {
-  /* 移除所有可能导致字体变化的规则 */
-  input, select, textarea {
-    /* 不设置任何字体大小属性 */
-  }
-  
-  .keyboard-is-open .brewing-note-form form {
-    padding-bottom: calc(var(--keyboard-height) + 60px) !important;
-  }
-  
-  /* 确保表单元素不会被自动缩放，但不改变其显示大小 */
-  /* 此方法仅影响缩放行为，不影响实际显示大小 */
   @supports (-webkit-touch-callout: none) {
     input, textarea, select {
       /* 阻止iOS缩放但不改变字体大小 */

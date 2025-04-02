@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 
 // 从 types.ts 导入 BrewingNoteData 类型
 import type { BrewingNoteData, CoffeeBean } from '@/app/types'
@@ -8,6 +8,7 @@ import { generateOptimizationJson } from '@/lib/jsonUtils'
 import { brewingMethods, type Method, type Stage } from '@/lib/config'
 // import { Storage } from '@/lib/storage'
 import AutoResizeTextarea from './AutoResizeTextarea'
+import { Capacitor } from '@capacitor/core'
 
 interface TasteRatings {
     acidity: number;
@@ -90,6 +91,57 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         grindSize: initialData?.params?.grindSize || '中细',
         temp: initialData?.params?.temp || '92°C',
     });
+
+    // 添加平台检测状态
+    const [isAndroid, setIsAndroid] = useState(false)
+    const [isIOS, setIsIOS] = useState(false)
+    
+    // 添加表单ref
+    const formRef = useRef<HTMLFormElement>(null)
+    
+    // 检测平台
+    useEffect(() => {
+        if (Capacitor.isNativePlatform()) {
+            const platform = Capacitor.getPlatform()
+            setIsAndroid(platform === 'android')
+            setIsIOS(platform === 'ios')
+        }
+    }, [])
+    
+    // 监听输入框聚焦，确保滚动到可见区域
+    useEffect(() => {
+        if (!isOpen) return
+        
+        const form = formRef.current
+        if (!form) return
+        
+        const handleInputFocus = (e: Event) => {
+            const target = e.target as HTMLElement
+            
+            // 确定是否为输入元素
+            if (
+                target && 
+                (target.tagName === 'INPUT' || 
+                 target.tagName === 'TEXTAREA' || 
+                 target.tagName === 'SELECT')
+            ) {
+                // 为所有平台添加自动滚动
+                setTimeout(() => {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center'
+                    })
+                }, 300)
+            }
+        }
+        
+        // 监听表单内的聚焦事件
+        form.addEventListener('focusin', handleInputFocus)
+        
+        return () => {
+            form.removeEventListener('focusin', handleInputFocus)
+        }
+    }, [isOpen])
 
     // Update form data when initialData changes
     useEffect(() => {
@@ -428,9 +480,17 @@ stages数组中的每个阶段必须包含以下字段：
 
     if (!isOpen) return null
 
+    // 为平台添加特定类名
+    const platformClass = isAndroid ? 'android-form' : isIOS ? 'ios-form' : ''
+
     return (
-        <div className="h-full w-full overflow-auto overscroll-none bg-neutral-50 dark:bg-neutral-900 brewing-note-form">
-        <form id={id} onSubmit={handleSubmit} className="relative flex h-full flex-col space-y-8">
+        <div className={`h-full w-full overflow-auto overscroll-none bg-neutral-50 dark:bg-neutral-900 brewing-note-form ${platformClass}`}>
+        <form 
+            id={id} 
+            ref={formRef}
+            onSubmit={handleSubmit} 
+            className="relative flex h-full flex-col space-y-8"
+        >
             {/* 隐藏的返回按钮，仅用于导航栏返回按钮查找 */}
             <button
                 type="button"
@@ -485,7 +545,7 @@ stages数组中的每个阶段必须包含以下字段：
 
             {/* Form content */}
             {!showOptimization ? (
-                <div className="flex-1 space-y-8 overflow-auto pb-8 keyboard-adjustable-content">
+                <div className="flex-1 space-y-8 overflow-auto pb-8">
                     {/* 咖啡豆信息 */}
                     <div className="space-y-4">
                         <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
@@ -689,7 +749,7 @@ stages数组中的每个阶段必须包含以下字段：
                     </div>
                 </div>
             ) : (
-                <div className="flex-1 space-y-8 overflow-auto pb-8 keyboard-adjustable-content">
+                <div className="flex-1 space-y-8 overflow-auto pb-8">
                     {/* 添加方案参数编辑到优化界面 - 只在编辑记录时显示 */}
                     {initialData?.id && (
                     <div className="space-y-4">

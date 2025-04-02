@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import CoffeeBeanForm from '@/components/CoffeeBeanForm'
 import { CoffeeBean } from '@/app/types'
@@ -31,38 +31,59 @@ const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
     onSave,
     onClose
 }) => {
-    // 跟踪键盘状态
-    const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+    // 添加平台检测
+    const [isAndroid, setIsAndroid] = useState(false)
+    const [isIOS, setIsIOS] = useState(false)
     
-    // 监听键盘事件
+    // 添加对模态框的引用
+    const modalRef = useRef<HTMLDivElement>(null)
+    
+    // 检测平台
     useEffect(() => {
-        // 仅在原生平台上处理
-        if (!Capacitor.isNativePlatform() || !showForm) return;
+        if (Capacitor.isNativePlatform()) {
+            const platform = Capacitor.getPlatform()
+            setIsAndroid(platform === 'android')
+            setIsIOS(platform === 'ios')
+        }
+    }, [])
+    
+    // 监听输入框聚焦，确保在iOS上输入框可见
+    useEffect(() => {
+        if (!showForm) return
         
-        // 处理键盘显示
-        const handleKeyboardShow = () => {
-            setIsKeyboardOpen(true);
-        };
+        const modalElement = modalRef.current
+        if (!modalElement) return
         
-        // 处理键盘隐藏
-        const handleKeyboardHide = () => {
-            setIsKeyboardOpen(false);
-        };
+        const handleInputFocus = (e: Event) => {
+            const target = e.target as HTMLElement
+            
+            // 确定是否为输入元素
+            if (
+                target && 
+                (target.tagName === 'INPUT' || 
+                 target.tagName === 'TEXTAREA' || 
+                 target.tagName === 'SELECT')
+            ) {
+                // 对于iOS，需要特殊处理
+                if (isIOS) {
+                    // 延迟一点以确保键盘完全弹出
+                    setTimeout(() => {
+                        target.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'center'
+                        })
+                    }, 300)
+                }
+            }
+        }
         
-        // 添加事件监听器
-        window.addEventListener('keyboardWillShow', handleKeyboardShow);
-        window.addEventListener('keyboardDidShow', handleKeyboardShow);
-        window.addEventListener('keyboardWillHide', handleKeyboardHide);
-        window.addEventListener('keyboardDidHide', handleKeyboardHide);
+        // 只在模态框内监听聚焦事件
+        modalElement.addEventListener('focusin', handleInputFocus)
         
-        // 清理函数
         return () => {
-            window.removeEventListener('keyboardWillShow', handleKeyboardShow);
-            window.removeEventListener('keyboardDidShow', handleKeyboardShow);
-            window.removeEventListener('keyboardWillHide', handleKeyboardHide);
-            window.removeEventListener('keyboardDidHide', handleKeyboardHide);
-        };
-    }, [showForm]);
+            modalElement.removeEventListener('focusin', handleInputFocus)
+        }
+    }, [showForm, isIOS])
     
     return (
         <AnimatePresence>
@@ -80,6 +101,7 @@ const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
                     }}
                 >
                     <motion.div
+                        ref={modalRef}
                         initial={{ y: '100%' }}
                         animate={{ y: 0 }}
                         exit={{ y: '100%' }}
@@ -91,7 +113,7 @@ const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
                         style={{
                             willChange: "transform"
                         }}
-                        className={`absolute inset-x-0 bottom-0 max-h-[85vh] overflow-auto rounded-t-2xl bg-neutral-50 dark:bg-neutral-900 shadow-xl ${isKeyboardOpen ? 'keyboard-modal-active' : ''}`}
+                        className={`absolute inset-x-0 bottom-0 max-h-[85vh] overflow-auto rounded-t-2xl bg-neutral-50 dark:bg-neutral-900 shadow-xl ${isAndroid ? 'android-modal' : ''} ${isIOS ? 'ios-modal' : ''}`}
                     >
                         {/* 拖动条 */}
                         <div className="sticky top-0 z-10 flex justify-center py-2 bg-neutral-50 dark:bg-neutral-900">
@@ -111,7 +133,7 @@ const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
                             style={{
                                 willChange: "opacity, transform"
                             }}
-                            className="px-6 px-safe pb-6 pb-safe overflow-auto max-h-[calc(85vh-40px)] modal-form-container"
+                            className={`px-6 px-safe pb-6 pb-safe overflow-auto max-h-[calc(85vh-40px)] modal-form-container ${isAndroid ? 'android-modal-container' : ''} ${isIOS ? 'ios-modal-container' : ''}`}
                         >
                             <CoffeeBeanForm
                                 onSave={(bean) => {

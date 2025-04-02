@@ -7,7 +7,9 @@ import { GeistSans } from 'geist/font/sans'
 import { GeistMono } from 'geist/font/mono'
 import { ToastProvider } from '@/components/GlobalToast'
 import './globals.css'
-import { KeyboardManager } from '@/app/components/KeyboardManager'
+import KeyboardManager from '@/components/KeyboardManager'
+import { Suspense } from 'react'
+import CapacitorInit from './CapacitorInit'
 
 // SEO constants
 export const metadata: Metadata = {
@@ -119,7 +121,10 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <ToastProvider>
-            <KeyboardManager />
+            <Suspense>
+              <CapacitorInit />
+              <KeyboardManager />
+            </Suspense>
             <div className="h-full w-full overflow-hidden">
               {children}
             </div>
