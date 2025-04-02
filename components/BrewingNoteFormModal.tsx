@@ -304,7 +304,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
                                                     >
                                                         <div className="font-medium">{equipment.name}</div>
                                                         <div className="text-xs mt-1 line-clamp-1 opacity-80">
-                                                            {equipment.description[0]}
+                                                            {equipment.description}
                                                         </div>
                                                     </motion.button>
                                                 ))}

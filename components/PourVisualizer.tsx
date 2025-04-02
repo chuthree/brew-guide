@@ -52,6 +52,8 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
     // 需要预加载的图片列表 - 移到组件顶部
     const imagesToPreload = useMemo(() => [
         '/images/v60-base.svg',
+        '/images/kalita-base.svg',
+        '/images/origami-base.svg',
         '/images/valve-open.svg',
         '/images/valve-closed.svg',
         // center 动画图片
@@ -220,7 +222,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
         return (
             <div className="relative w-full aspect-square max-w-[300px] mx-auto px-safe">
                 <Image
-                    src={'/images/v60-base.svg'} // 直接使用静态路径，避免可能的路径错误
+                    src={`/images/${equipmentId.toLowerCase()}-base.svg`} // 根据设备ID选择对应的图片
                     alt={equipmentId}
                     fill
                     className="object-contain invert-0 dark:invert opacity-50 transition-opacity duration-300"
@@ -251,7 +253,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
         return (
             <div className="relative w-full aspect-square max-w-[300px] mx-auto px-safe">
                 <Image
-                    src={'/images/v60-base.svg'} // 始终使用相同的杯体图片
+                    src={`/images/${equipmentId.toLowerCase()}-base.svg`} // 根据设备ID选择对应的图片
                     alt={equipmentId}
                     fill
                     className="object-contain invert-0 dark:invert opacity-50 transition-opacity duration-300"
@@ -283,7 +285,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
         return (
             <div className="relative w-full aspect-square max-w-[300px] mx-auto px-safe">
                 <Image
-                    src={'/images/v60-base.svg'} // 始终使用相同的杯体图片
+                    src={`/images/${equipmentId.toLowerCase()}-base.svg`} // 根据设备ID选择对应的图片
                     alt={equipmentId}
                     fill
                     className="object-contain invert-0 dark:invert opacity-50 transition-opacity duration-300"
@@ -311,7 +313,8 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
 
     // 获取设备图片路径
     const getEquipmentImageSrc = () => {
-        return '/images/v60-base.svg' // 始终使用相同的杯体图片
+        // 根据设备ID返回对应的图片路径
+        return `/images/${equipmentId.toLowerCase()}-base.svg`
     }
 
     // 获取阀门图片路径

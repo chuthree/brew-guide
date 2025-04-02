@@ -51,7 +51,7 @@ export function useBrewingContent({
 		器具: {
 			steps: equipmentList.map((equipment) => ({
 				title: equipment.name,
-				items: equipment.description,
+				items: [equipment.description],
 				note: equipment.note || "",
 			})),
 		},

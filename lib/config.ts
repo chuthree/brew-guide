@@ -34,7 +34,7 @@ export interface BrewingMethods {
 export interface Equipment {
 	id: string;
 	name: string;
-	description: string[];
+	description: string;
 	note?: string;
 }
 
@@ -71,18 +71,22 @@ export const equipmentList: Equipment[] = [
 	{
 		id: "V60",
 		name: "V60",
-		description: [
-			"经典六十度锥形设计，流速快，风味层次分明",
-			"螺旋导流纹路均匀萃取，展现明亮酸质与细腻风味",
-		],
+		description: "经典锥形设计，流速快，萃取出层次分明的咖啡风味",
 	},
 	{
 		id: "CleverDripper",
 		name: "聪明杯",
-		description: [
-			"结合浸泡与滤纸过滤的冲煮滤杯，操作简单",
-			"可控制萃取时间，平衡风味，适合各种烘焙度的咖啡",
-		],
+		description: "结合浸泡与过滤，操作简单，适合各种烘焙度咖啡",
+	},
+	{
+		id: "Kalita",
+		name: "蛋糕杯",
+		description: "波浪形底部三孔设计，流速稳定，萃取更均匀",
+	},
+	{
+		id: "Origami",
+		name: "折纸杯",
+		description: "褶皱设计兼具美感与实用性，可使用不同形状滤纸",
 	},
 	// 可以在这里添加更多滤杯
 ];
@@ -443,10 +447,146 @@ export const brewingMethods: BrewingMethods = {
 			},
 		},
 	],
+	Kalita: [
+		{
+			name: "蛋糕滤杯标准冲煮法",
+			params: {
+				coffee: "16g",
+				water: "240g",
+				ratio: "1:15",
+				grindSize: "中等(EK 11#-13#; C40 25#-28#)",
+				temp: "88°C-92°C",
+				videoUrl: "",
+				roastLevel: "中浅烘焙",
+				stages: [
+					{
+						time: 0,
+						pourTime: 15,
+						label: "焖蒸",
+						water: "50g",
+						detail: "绕圈8-10次，充分润湿粉床",
+						pourType: "circle",
+					},
+					{
+						time: 30,
+						pourTime: 20,
+						label: "第一次注水",
+						water: "100g",
+						detail: "均匀绕圈注水",
+						pourType: "circle",
+					},
+					{
+						time: 60,
+						pourTime: 20,
+						label: "第二次注水",
+						water: "180g",
+						detail: "持续绕圈注水，增加萃取",
+						pourType: "circle",
+					},
+					{
+						time: 90,
+						pourTime: 20,
+						label: "最后注水",
+						water: "240g",
+						detail: "中心注水，直至滴滤完成，时间控制在2:25",
+						pourType: "center",
+					},
+				],
+			},
+		},
+	],
+	Origami: [
+		{
+			name: "V60锥形滤纸冲煮法",
+			params: {
+				coffee: "16g",
+				water: "240g",
+				ratio: "1:15",
+				grindSize: "中等(EK 11#-13#; C40 25#-28#)",
+				temp: "88°C-92°C",
+				videoUrl: "",
+				roastLevel: "中浅烘焙",
+				stages: [
+					{
+						time: 0,
+						pourTime: 15,
+						label: "焖蒸",
+						water: "50g",
+						detail: "绕圈8-10次，充分润湿粉床",
+						pourType: "circle",
+					},
+					{
+						time: 30,
+						pourTime: 30,
+						label: "第一次注水",
+						water: "180g",
+						detail: "绕圈15次，均匀搅动粉床",
+						pourType: "circle",
+					},
+					{
+						time: 70,
+						pourTime: 25,
+						label: "最后注水",
+						water: "240g",
+						detail: "中心注水，直至滴滤完成，总时间控制在2:10",
+						pourType: "center",
+					},
+				],
+			},
+		},
+		{
+			name: "平底蛋糕滤纸冲煮法",
+			params: {
+				coffee: "16g",
+				water: "240g",
+				ratio: "1:15",
+				grindSize: "中等(EK 11#-13#; C40 25#-28#)",
+				temp: "88°C-92°C",
+				videoUrl: "",
+				roastLevel: "中浅烘焙",
+				stages: [
+					{
+						time: 0,
+						pourTime: 15,
+						label: "焖蒸",
+						water: "50g",
+						detail: "绕圈8-10次，充分润湿粉床",
+						pourType: "circle",
+					},
+					{
+						time: 30,
+						pourTime: 20,
+						label: "第一次注水",
+						water: "100g",
+						detail: "均匀绕圈注水",
+						pourType: "circle",
+					},
+					{
+						time: 60,
+						pourTime: 20,
+						label: "第二次注水",
+						water: "180g",
+						detail: "持续绕圈注水，增加萃取",
+						pourType: "circle",
+					},
+					{
+						time: 90,
+						pourTime: 20,
+						label: "最后注水",
+						water: "240g",
+						detail: "中心注水，直至滴滤完成，时间控制在2:25",
+						pourType: "center",
+					},
+				],
+			},
+		},
+	],
 };
 
 // 将现有的通用方案重命名为 commonMethods
 export const commonMethods: BrewingMethods = {
 	V60: brewingMethods.V60,
 	CleverDripper: brewingMethods.CleverDripper,
+	Kalita: brewingMethods.Kalita,
+	Origami: brewingMethods.Origami,
 };
