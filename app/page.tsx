@@ -30,6 +30,7 @@ import { BREWING_EVENTS } from '@/lib/brewing/constants'
 import BrewingNoteFormModalNew from '@/components/BrewingNoteFormModalNew'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import CoffeeBeans from '@/components/CoffeeBeans'
+import SwipeBackGesture from '@/components/SwipeBackGesture'
 
 // 为Window对象声明类型扩展
 declare global {
@@ -1564,6 +1565,18 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                         selectedEquipment={selectedEquipment}
                         isCoffeeBrewed={isCoffeeBrewed}
                         layoutSettings={settings.layoutSettings}
+                    />
+                )}
+
+                {/* 添加滑动返回手势组件 */}
+                {activeMainTab === '冲煮' && (
+                    <SwipeBackGesture
+                        activeBrewingStep={activeBrewingStep}
+                        isTimerRunning={isTimerRunning}
+                        showComplete={showComplete}
+                        navigateToStep={navigateToStep}
+                        disabled={false}
+                        hasCoffeeBeans={hasCoffeeBeans}
                     />
                 )}
             </div>
