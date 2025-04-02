@@ -384,7 +384,7 @@ stages数组中的每个阶段必须包含以下字段：
                                             value={userSuggestion}
                                             onChange={(e) => setUserSuggestion(e.target.value)}
                                             placeholder="例如：我希望萃取时间在2分30秒左右，偏酸的风味，或者其他特殊要求..."
-                                            className="w-full px-3 py-2 text-xs rounded-lg bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-800/50 text-neutral-800 dark:text-white placeholder-neutral-600 dark:placeholder-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-400 dark:focus:ring-neutral-600"
+                                            className="w-full px-3 py-2 text-xs rounded-lg bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-800 text-neutral-800 dark:text-white placeholder-neutral-600 dark:placeholder-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-400 dark:focus:ring-neutral-600"
                                             rows={3}
                                         />
                                     </div>
@@ -416,7 +416,7 @@ stages数组中的每个阶段必须包含以下字段：
 
                                     {/* 提示词预览 - 缩短高度 */}
                                     {coffeeBean && (
-                                        <div className="p-3 rounded-lg bg-neutral-100/80 dark:bg-neutral-800/60 border border-neutral-200 dark:border-neutral-800/50 max-h-[100px] overflow-auto text-xs font-mono">
+                                        <div className="p-3 rounded-lg bg-neutral-100/80 dark:bg-neutral-800/60 border border-neutral-200 dark:border-neutral-800 max-h-[100px] overflow-auto text-xs font-mono">
                                             <div className="text-[10px] text-neutral-600 dark:text-neutral-400 mb-1">
                                                 预览（点击下方按钮复制完整提示词）：
                                             </div>

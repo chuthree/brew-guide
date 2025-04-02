@@ -146,7 +146,7 @@ const StageItem: React.FC<StageItemProps> = ({
 
     return (
         <div
-            className={`group relative border-l ${isWaitingStage ? 'border-dashed' : ''} border-neutral-200 pl-6 dark:border-neutral-800/50 ${activeTab === '注水' && index === currentStage
+            className={`group relative border-l ${isWaitingStage ? 'border-dashed' : ''} border-neutral-200 pl-6 dark:border-neutral-800 ${activeTab === '注水' && index === currentStage
                 ? 'text-neutral-800 dark:text-white'
                 : activeTab === '注水' && index < currentStage
                     ? 'text-neutral-600 dark:text-neutral-400'

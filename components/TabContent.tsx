@@ -242,13 +242,13 @@ const TabContent: React.FC<TabContentProps> = ({
                         <div className="flex space-x-2">
                             <button
                                 onClick={() => setShowCustomForm(true)}
-                                className="flex-1 flex items-center justify-center py-3 border border-dashed border-neutral-200 dark:border-neutral-800/50 rounded-md text-xs text-neutral-800 dark:text-white transition-colors hover:opacity-80"
+                                className="flex-1 flex items-center justify-center py-3 border border-dashed border-neutral-200 dark:border-neutral-800 rounded-md text-xs text-neutral-800 dark:text-white transition-colors hover:opacity-80"
                             >
                                 <span className="mr-1">+</span> 新建方案
                             </button>
                             <button
                                 onClick={() => setShowImportForm(true)}
-                                className="flex-1 flex items-center justify-center py-3 border border-dashed border-neutral-200 dark:border-neutral-800/50 rounded-md text-xs text-neutral-800 dark:text-white transition-colors hover:opacity-80"
+                                className="flex-1 flex items-center justify-center py-3 border border-dashed border-neutral-200 dark:border-neutral-800 rounded-md text-xs text-neutral-800 dark:text-white transition-colors hover:opacity-80"
                             >
                                 <span className="mr-1">↓</span> 导入方案
                             </button>

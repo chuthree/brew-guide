@@ -500,7 +500,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                 {notes.map((note, _index) => (
                                     <div
                                         key={note.id}
-                                        className="group space-y-4 border-l border-neutral-200 dark:border-neutral-800/50 pl-6"
+                                        className="group space-y-4 border-l border-neutral-200 dark:border-neutral-800 pl-6"
                                     >
                                         <div className="flex flex-col space-y-4">
                                             <div className="space-y-2">
@@ -663,14 +663,14 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                     <div className="bottom-action-bar">
                         <div className="absolute bottom-full left-0 right-0 h-12 bg-gradient-to-t from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none"></div>
                         <div className="relative flex items-center bg-neutral-50 dark:bg-neutral-900 py-4">
-                            <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800/50"></div>
+                            <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
                             <button
                                 onClick={handleAddNote}
                                 className="flex items-center justify-center text-[11px] text-neutral-800 dark:text-white hover:opacity-80 mx-3"
                             >
                                 <span className="mr-1">+</span> 添加笔记
                             </button>
-                            <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800/50"></div>
+                            <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
                         </div>
                     </div>
                 </div>

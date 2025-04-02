@@ -67,7 +67,7 @@ const SORT_ICONS: Record<SortOption, React.ReactNode> = {
             <line x1="4" y1="6" x2="11" y2="6" />
             <line x1="4" y1="12" x2="11" y2="12" />
             <line x1="4" y1="18" x2="13" y2="18" />
-            <polyline points="15 15 18 18 21 15" />
+            <polyline points="15 9 18 6 21 9" />
             <line x1="18" y1="6" x2="18" y2="18" />
         </svg>
     ),
@@ -106,16 +106,16 @@ const RANKING_VIEW_LABELS: Record<SortOption, string> = {
     [SORT_OPTIONS.REMAINING_DAYS_DESC]: '评分',
     [SORT_OPTIONS.NAME_ASC]: '名称',
     [SORT_OPTIONS.NAME_DESC]: '名称',
-    [SORT_OPTIONS.RATING_ASC]: '评分', // 新增评分从低到高排序
+    [SORT_OPTIONS.RATING_ASC]: '评分',
 };
 
 // 博主榜单排序选项的显示标签
 const BLOGGER_VIEW_LABELS: Record<SortOption, string> = {
     [SORT_OPTIONS.REMAINING_DAYS_ASC]: '原始',
-    [SORT_OPTIONS.REMAINING_DAYS_DESC]: '评分 (高→低)',
-    [SORT_OPTIONS.RATING_ASC]: '评分 (低→高)',
-    [SORT_OPTIONS.NAME_ASC]: '名称 (A→Z)',
-    [SORT_OPTIONS.NAME_DESC]: '名称 (Z→A)',
+    [SORT_OPTIONS.REMAINING_DAYS_DESC]: '评分',
+    [SORT_OPTIONS.RATING_ASC]: '评分',
+    [SORT_OPTIONS.NAME_ASC]: '名称',
+    [SORT_OPTIONS.NAME_DESC]: '名称',
 };
 
 // 视图模式定义
@@ -1276,7 +1276,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                     {viewMode === VIEW_OPTIONS.INVENTORY && availableVarieties.length > 0 && (
                         <div className="relative">
                             {/* 使用与CoffeeBeanRanking相同的样式，但添加可滑动功能 */}
-                            <div className="border-b border-neutral-200 dark:border-neutral-800/50 px-6 relative">
+                            <div className="border-b border-neutral-200 dark:border-neutral-800 px-6 relative">
                                 <div className="flex overflow-x-auto no-scrollbar pr-14">
                                     <button
                                         onClick={() => handleVarietyClick(null)}
@@ -1323,7 +1323,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                     {(viewMode === VIEW_OPTIONS.RANKING || viewMode === VIEW_OPTIONS.BLOGGER) && (
                         <div className="mb-1">
                             {/* 豆子筛选选项卡 */}
-                            <div className="flex justify-between border-b mx-6 border-neutral-200 dark:border-neutral-800/50">
+                            <div className="flex justify-between border-b mx-6 border-neutral-200 dark:border-neutral-800">
                                 <div className="flex">
                                     <button
                                         className={`pb-1.5 mr-3 text-[11px] relative ${rankingBeanType === 'all' ? 'text-neutral-800 dark:text-white' : 'text-neutral-600 dark:text-neutral-400'}`}
@@ -1396,7 +1396,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                         return (
                                             <div
                                                 key={bean.id}
-                                                className={`group mt-3 space-y-3 px-6 pb-3 hover:bg-neutral-50 dark:hover:bg-neutral-900/70 transition-colors ${index === filteredBeans.length - 1 ? '' : 'border-b border-neutral-200 dark:border-neutral-800/50'} ${isBeanEmpty(bean)
+                                                className={`group mt-3 space-y-3 px-6 pb-3 hover:bg-neutral-50 dark:hover:bg-neutral-900/70 ${index === filteredBeans.length - 1 ? '' : 'border-b border-neutral-200 dark:border-neutral-800'} ${isBeanEmpty(bean)
                                                     ? 'bg-neutral-100/60 dark:bg-neutral-800/30'
                                                     : ''
                                                     }`}
