@@ -18,8 +18,8 @@ export interface Method {
 	params: {
 		coffee: string;
 		water: string;
-		ratio: string;
-		grindSize: string;
+		ratio: string; 
+		grindSize: string; 
 		temp: string;
 		videoUrl: string;
 		roastLevel?: string;
