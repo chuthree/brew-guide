@@ -46,6 +46,8 @@ interface EditableParams {
     coffee: string
     water: string
     ratio: string
+    grindSize: string
+    temp: string
 }
 
 // Add TabButton component
@@ -734,15 +736,23 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                                         {parameterInfo.params?.grindSize && (
                                                             <>
                                                                 <span className="flex-shrink-0">·</span>
-                                                                <span className="whitespace-nowrap">
-                                                                    {formatGrindSize(parameterInfo.params.grindSize || "", settings.grindType)}
-                                                                </span>
+                                                                <EditableParameter
+                                                                    value={editableParams.grindSize}
+                                                                    onChange={(v) => handleParamChange('grindSize', v)}
+                                                                    unit=""
+                                                                    className="border-b border-dashed border-neutral-200 dark:border-neutral-700"
+                                                                />
                                                             </>
                                                         )}
                                                         {parameterInfo.params?.temp && (
                                                             <>
                                                                 <span className="flex-shrink-0">·</span>
-                                                                <span className="whitespace-nowrap">{parameterInfo.params.temp}</span>
+                                                                <EditableParameter
+                                                                    value={editableParams.temp.replace('°C', '')}
+                                                                    onChange={(v) => handleParamChange('temp', v)}
+                                                                    unit="°C"
+                                                                    className="border-b border-dashed border-neutral-200 dark:border-neutral-700"
+                                                                />
                                                             </>
                                                         )}
                                                     </div>
@@ -755,6 +765,8 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                                                     coffee: selectedMethod.params.coffee,
                                                                     water: selectedMethod.params.water,
                                                                     ratio: selectedMethod.params.ratio,
+                                                                    grindSize: selectedMethod.params.grindSize,
+                                                                    temp: selectedMethod.params.temp,
                                                                 });
                                                             }
                                                         }}

@@ -389,6 +389,29 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             setIsCoffeeBrewed(false);
         };
 
+        const handleGetParams = () => {
+            if (currentBrewingMethod && currentBrewingMethod.params) {
+                // 发送参数更新事件，包含最新的参数数据
+                const paramsUpdatedEvent = new CustomEvent('brewing:paramsUpdated', {
+                    detail: {
+                        params: {
+                            coffee: currentBrewingMethod.params.coffee,
+                            water: currentBrewingMethod.params.water,
+                            ratio: currentBrewingMethod.params.ratio,
+                            grindSize: currentBrewingMethod.params.grindSize,
+                            temp: currentBrewingMethod.params.temp
+                        },
+                        coffeeBean: selectedCoffeeBeanData ? {
+                            name: selectedCoffeeBeanData.name || '',
+                            roastLevel: selectedCoffeeBeanData.roastLevel || '中度烘焙',
+                            roastDate: selectedCoffeeBeanData.roastDate || ''
+                        } : null
+                    }
+                });
+                window.dispatchEvent(paramsUpdatedEvent);
+            }
+        };
+
         const handleTimerStatusChange = (e: CustomEvent) => {
             if (typeof e.detail?.isRunning === 'boolean') {
                 setIsTimerRunning(e.detail.isRunning);
@@ -433,6 +456,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         window.addEventListener('brewing:complete', handleBrewingComplete);
         window.addEventListener('brewing:reset', handleBrewingReset);
         window.addEventListener('brewing:methodToBrewing', handleMethodToBrewing);
+        window.addEventListener('brewing:getParams', handleGetParams);
         window.addEventListener('brewing:timerStatus', handleTimerStatusChange as EventListener);
         window.addEventListener('brewing:stageChange', handleStageChange as EventListener);
         window.addEventListener('brewing:countdownChange', handleCountdownChange as EventListener);
@@ -442,11 +466,12 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             window.removeEventListener('brewing:complete', handleBrewingComplete);
             window.removeEventListener('brewing:reset', handleBrewingReset);
             window.removeEventListener('brewing:methodToBrewing', handleMethodToBrewing);
+            window.removeEventListener('brewing:getParams', handleGetParams);
             window.removeEventListener('brewing:timerStatus', handleTimerStatusChange as EventListener);
             window.removeEventListener('brewing:stageChange', handleStageChange as EventListener);
             window.removeEventListener('brewing:countdownChange', handleCountdownChange as EventListener);
         };
-    }, [setShowComplete, setIsCoffeeBrewed, setHasAutoNavigatedToNotes, setIsTimerRunning, setCurrentStage, setCountdownTime, setIsStageWaiting]);
+    }, [setShowComplete, setIsCoffeeBrewed, setHasAutoNavigatedToNotes, setIsTimerRunning, setCurrentStage, setCountdownTime, setIsStageWaiting, currentBrewingMethod, selectedCoffeeBeanData]);
 
     // 修改处理步骤点击的包装函数，允许在冲煮完成后切换到记录
     const handleBrewingStepClickWrapper = (step: BrewingStep) => {

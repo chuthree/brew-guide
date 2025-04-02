@@ -463,61 +463,60 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
 
     // 完成冲煮，显示笔记表单
     const handleComplete = useCallback(() => {
-        // 防止重复触发
-        if (isCompleted) {
+        // 获取当前总时间
+        const totalBrewingTime = currentTime;
 
-            return;
-        }
-
-        triggerHaptic('success');
-        clearTimerAndStates();
-        setIsRunning(false);
-        setShowComplete(true);
-        setIsCompleted(true);
-        onComplete?.(true, currentTime);
-        onTimerComplete?.();
-        playSound('correct');
-
-        // 发送一个brewing:complete事件，通知其他组件冲煮已完成
-        const completeEvent = new CustomEvent('brewing:complete');
-        window.dispatchEvent(completeEvent);
-
-
-        // 保存笔记表单的初始数据
-        const initialData: Partial<BrewingNoteData> = {
-            equipment: selectedEquipment ? equipmentList.find(e => e.id === selectedEquipment)?.name || selectedEquipment : '',
-            method: currentBrewingMethod?.name || '',
-            params: {
-                coffee: currentBrewingMethod?.params?.coffee || '',
-                water: currentBrewingMethod?.params?.water || '',
-                ratio: currentBrewingMethod?.params?.ratio || '',
-                grindSize: currentBrewingMethod?.params?.grindSize || '',
-                temp: currentBrewingMethod?.params?.temp || '',
-            },
-            totalTime: currentTime,
-        };
-        setNoteFormInitialData(initialData);
-
-        // 添加延迟，在计时器结束后自动显示笔记表单
+        // 触发触感反馈
         setTimeout(() => {
-            setShowNoteForm(true);
+            triggerHaptic('success');
+        }, 20);
 
-            // 设置笔记状态标记，表示笔记表单已显示但尚未保存
-            localStorage.setItem('brewingNoteInProgress', 'true');
-        }, 1500); // 延迟1.5秒后显示表单，给用户时间感知冲煮完成
+        // 停止计时器
+        clearTimerAndStates();
 
-        const allowSleep = async () => {
-            if (!isKeepAwakeSupported()) {
-                return;
-            }
+        // 设置冲煮完成状态
+        setIsCompleted(true);
+        setShowComplete(true);
 
-            try {
-                await KeepAwake.allowSleep();
-            } catch {
-                // 静默处理错误
-            }
+        // 发送冲煮完成事件
+        window.dispatchEvent(new Event('brewing:complete'));
+
+        // 构造咖啡豆信息
+        const coffeeBeanInfo = {
+            name: '',
+            roastLevel: '中度烘焙',
+            roastDate: ''
         };
-        allowSleep();
+
+        if (currentBrewingMethod) {
+            // 在冲煮完成时请求最新的参数
+            window.dispatchEvent(new CustomEvent('brewing:getParams'));
+
+            // 初始化笔记表单数据
+            const initialData: Partial<BrewingNoteData> = {
+                equipment: selectedEquipment || '',
+                method: currentBrewingMethod.name,
+                totalTime: totalBrewingTime,
+                params: {
+                    coffee: currentBrewingMethod.params.coffee || '',
+                    water: currentBrewingMethod.params.water || '',
+                    ratio: currentBrewingMethod.params.ratio || '',
+                    grindSize: currentBrewingMethod.params.grindSize || '',
+                    temp: currentBrewingMethod.params.temp || ''
+                },
+                coffeeBeanInfo: coffeeBeanInfo,
+                rating: 3, // 默认评分
+                taste: {
+                    acidity: 3,
+                    sweetness: 3,
+                    bitterness: 3,
+                    body: 3
+                },
+                coffeeBean: null
+            };
+
+            setNoteFormInitialData(initialData);
+        }
     }, [clearTimerAndStates, onComplete, onTimerComplete, playSound, currentTime, isCompleted, triggerHaptic, currentBrewingMethod, selectedEquipment]);
 
     // 修改开始计时器函数以使用扩展阶段
@@ -822,6 +821,86 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
             });
         }
     }, [currentTime, getCurrentStage, getStageProgress, onStageChange]);
+
+    // 监听brewing:paramsUpdated事件，更新笔记表单数据
+    useEffect(() => {
+        const handleParamsUpdated = (e: CustomEvent<{
+            params: Partial<{
+                coffee: string;
+                water: string;
+                ratio: string;
+                grindSize: string;
+                temp: string;
+            }>,
+            coffeeBean?: {
+                name: string;
+                roastLevel: string;
+                roastDate: string;
+            } | null
+        }>) => {
+            if (e.detail && noteFormInitialData) {
+                // 标准化烘焙度值，确保与下拉列表选项匹配
+                const normalizeRoastLevel = (roastLevel?: string): string => {
+                    if (!roastLevel) return '中度烘焙';
+                    
+                    // 如果已经是完整格式，直接返回
+                    if (roastLevel.endsWith('烘焙')) return roastLevel;
+                    
+                    // 否则添加"烘焙"后缀
+                    if (roastLevel === '浅度') return '浅度烘焙';
+                    if (roastLevel === '中浅') return '中浅烘焙';
+                    if (roastLevel === '中度') return '中度烘焙';
+                    if (roastLevel === '中深') return '中深烘焙';
+                    if (roastLevel === '深度') return '深度烘焙';
+                    
+                    // 尝试匹配部分字符串
+                    if (roastLevel.includes('浅')) return '浅度烘焙';
+                    if (roastLevel.includes('中浅')) return '中浅烘焙';
+                    if (roastLevel.includes('中深')) return '中深烘焙';
+                    if (roastLevel.includes('深')) return '深度烘焙';
+                    if (roastLevel.includes('中')) return '中度烘焙';
+                    
+                    // 默认返回中度烘焙
+                    return '中度烘焙';
+                };
+                
+                // 更新笔记表单数据
+                const updatedData: Partial<BrewingNoteData> = { ...noteFormInitialData };
+                
+                // 更新参数信息
+                if (e.detail.params) {
+                    updatedData.params = {
+                        coffee: e.detail.params.coffee || (noteFormInitialData.params?.coffee || ''),
+                        water: e.detail.params.water || (noteFormInitialData.params?.water || ''),
+                        ratio: e.detail.params.ratio || (noteFormInitialData.params?.ratio || ''),
+                        grindSize: e.detail.params.grindSize || (noteFormInitialData.params?.grindSize || ''),
+                        temp: e.detail.params.temp || (noteFormInitialData.params?.temp || '')
+                    };
+                }
+                
+                // 更新咖啡豆信息
+                if (e.detail.coffeeBean) {
+                    updatedData.coffeeBean = {
+                        ...e.detail.coffeeBean,
+                        roastLevel: normalizeRoastLevel(e.detail.coffeeBean.roastLevel)
+                    };
+                    updatedData.coffeeBeanInfo = {
+                        name: e.detail.coffeeBean.name || '',
+                        roastLevel: normalizeRoastLevel(e.detail.coffeeBean.roastLevel),
+                        roastDate: e.detail.coffeeBean.roastDate || ''
+                    };
+                }
+                
+                setNoteFormInitialData(updatedData);
+            }
+        };
+
+        window.addEventListener('brewing:paramsUpdated', handleParamsUpdated as EventListener);
+        
+        return () => {
+            window.removeEventListener('brewing:paramsUpdated', handleParamsUpdated as EventListener);
+        };
+    }, [noteFormInitialData]);
 
     // 触感反馈在阶段变化时
     useEffect(() => {

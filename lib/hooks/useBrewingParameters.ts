@@ -19,6 +19,8 @@ export interface EditableParams {
 	coffee: string;
 	water: string;
 	ratio: string;
+	grindSize: string;
+	temp: string;
 }
 
 // 提取数字工具函数
@@ -93,6 +95,8 @@ export function useBrewingParameters() {
 						coffee: detail.coffee,
 						water: detail.water,
 						ratio: detail.ratio,
+						grindSize: detail.grindSize || "",
+						temp: detail.temp || "",
 					});
 				}
 			}
@@ -152,6 +156,8 @@ export function useBrewingParameters() {
 						coffee: `${parsedValue}g`,
 						water: `${calculatedWater}g`,
 						ratio: editableParams.ratio,
+						grindSize: editableParams.grindSize,
+						temp: editableParams.temp,
 					};
 					const waterRatio =
 						calculatedWater /
@@ -183,6 +189,8 @@ export function useBrewingParameters() {
 						coffee: editableParams.coffee,
 						water: `${parsedValue}g`,
 						ratio: `1:${formatRatio(calculatedRatio)}`,
+						grindSize: editableParams.grindSize,
+						temp: editableParams.temp,
 					};
 					const waterRatio =
 						parsedValue /
@@ -216,6 +224,8 @@ export function useBrewingParameters() {
 						coffee: editableParams.coffee,
 						water: `${calculatedWater}g`,
 						ratio: `1:${formatRatio(parsedValue)}`,
+						grindSize: editableParams.grindSize,
+						temp: editableParams.temp,
 					};
 					const waterRatio =
 						calculatedWater /
@@ -236,6 +246,39 @@ export function useBrewingParameters() {
 							water: `${calculatedWater}g`,
 							ratio: `1:${formatRatio(parsedValue)}`,
 							stages: updatedStages,
+						},
+					};
+					setCurrentBrewingMethod(updatedMethod);
+					break;
+				}
+				case "grindSize": {
+					// 研磨度直接更新，不需要计算
+					newParams = {
+						...editableParams,
+						grindSize: value
+					};
+					const updatedMethod = {
+						...currentBrewingMethod,
+						params: {
+							...currentBrewingMethod.params,
+							grindSize: value
+						},
+					};
+					setCurrentBrewingMethod(updatedMethod);
+					break;
+				}
+				case "temp": {
+					// 添加温度单位如果不存在
+					const formattedTemp = value.includes('°C') ? value : `${value}°C`;
+					newParams = {
+						...editableParams,
+						temp: formattedTemp
+					};
+					const updatedMethod = {
+						...currentBrewingMethod,
+						params: {
+							...currentBrewingMethod.params,
+							temp: formattedTemp
 						},
 					};
 					setCurrentBrewingMethod(updatedMethod);

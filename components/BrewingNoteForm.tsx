@@ -146,16 +146,41 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     // Update form data when initialData changes
     useEffect(() => {
         if (initialData) {
+            // 标准化烘焙度值，确保与下拉列表选项匹配
+            const normalizeRoastLevel = (roastLevel?: string): string => {
+                if (!roastLevel) return '中度烘焙';
+                
+                // 如果已经是完整格式，直接返回
+                if (roastLevel.endsWith('烘焙')) return roastLevel;
+                
+                // 否则添加"烘焙"后缀
+                if (roastLevel === '浅度') return '浅度烘焙';
+                if (roastLevel === '中浅') return '中浅烘焙';
+                if (roastLevel === '中度') return '中度烘焙';
+                if (roastLevel === '中深') return '中深烘焙';
+                if (roastLevel === '深度') return '深度烘焙';
+                
+                // 尝试匹配部分字符串
+                if (roastLevel.includes('浅')) return '浅度烘焙';
+                if (roastLevel.includes('中浅')) return '中浅烘焙';
+                if (roastLevel.includes('中深')) return '中深烘焙';
+                if (roastLevel.includes('深')) return '深度烘焙';
+                if (roastLevel.includes('中')) return '中度烘焙';
+                
+                // 默认返回中度烘焙
+                return '中度烘焙';
+            };
+            
             // 重新处理咖啡豆数据
             const coffeeBeanInfo = initialData.coffeeBean
                 ? {
                     name: initialData.coffeeBean.name || '',
-                    roastLevel: initialData.coffeeBean.roastLevel || '中度烘焙',
+                    roastLevel: normalizeRoastLevel(initialData.coffeeBean.roastLevel),
                     roastDate: initialData.coffeeBean.roastDate || ''
                 }
                 : {
                     name: initialData.coffeeBeanInfo?.name || '',
-                    roastLevel: initialData.coffeeBeanInfo?.roastLevel || '中度烘焙',
+                    roastLevel: normalizeRoastLevel(initialData.coffeeBeanInfo?.roastLevel),
                     roastDate: initialData.coffeeBeanInfo?.roastDate || '',
                 };
 
@@ -584,11 +609,11 @@ stages数组中的每个阶段必须包含以下字段：
                                         }
                                         className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 text-neutral-800 dark:text-neutral-300"
                                     >
-                                        <option>浅度烘焙</option>
-                                        <option>中浅烘焙</option>
-                                        <option>中度烘焙</option>
-                                        <option>中深烘焙</option>
-                                        <option>深度烘焙</option>
+                                        <option value="浅度烘焙">浅度烘焙</option>
+                                        <option value="中浅烘焙">中浅烘焙</option>
+                                        <option value="中度烘焙">中度烘焙</option>
+                                        <option value="中深烘焙">中深烘焙</option>
+                                        <option value="深度烘焙">深度烘焙</option>
                                     </select>
                                 </div>
                             </div>

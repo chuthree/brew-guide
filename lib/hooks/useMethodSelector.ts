@@ -85,6 +85,8 @@ export function useMethodSelector({
 						coffee: method.params.coffee,
 						water: method.params.water,
 						ratio: method.params.ratio,
+						grindSize: method.params.grindSize || "",
+						temp: method.params.temp || "",
 					});
 
 					// 更新注水步骤内容

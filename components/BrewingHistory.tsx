@@ -12,7 +12,6 @@ import {
     SelectContent,
     SelectItem,
     SelectTrigger,
-    SelectValue,
 } from './ui/select'
 
 // 消息提示状态接口
@@ -41,10 +40,10 @@ type SortOption = typeof SORT_OPTIONS[keyof typeof SORT_OPTIONS];
 
 // 排序选项的显示名称
 const SORT_LABELS: Record<SortOption, string> = {
-    [SORT_OPTIONS.TIME_DESC]: '时间 (新→旧)',
-    [SORT_OPTIONS.TIME_ASC]: '时间 (旧→新)',
-    [SORT_OPTIONS.RATING_DESC]: '评分 (高→低)',
-    [SORT_OPTIONS.RATING_ASC]: '评分 (低→高)',
+    [SORT_OPTIONS.TIME_DESC]: '时间',
+    [SORT_OPTIONS.TIME_ASC]: '时间',
+    [SORT_OPTIONS.RATING_DESC]: '评分',
+    [SORT_OPTIONS.RATING_ASC]: '评分',
 };
 
 interface BrewingHistoryProps {
@@ -431,19 +430,27 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                             >
                                 <SelectTrigger
                                     variant="minimal"
-                                    className="w-auto min-w-[90px] tracking-wide text-neutral-800 dark:text-white transition-colors hover:opacity-80 text-right"
+                                    className="w-auto min-w-[65px] tracking-wide text-neutral-800 dark:text-white transition-colors hover:opacity-80 text-right"
                                 >
-                                    <div className="flex items-center">
-                                        <SelectValue />
-                                        <svg
-                                            className="mr-1 w-3 h-3 opacity-90 transition-opacity"
-                                            viewBox="0 0 15 15"
-                                            fill="none"
-                                            xmlns="http://www.w3.org/2000/svg"
-                                        >
-                                            <path d="M4.5 6.5L7.5 3.5L10.5 6.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
-                                            <path d="M4.5 8.5L7.5 11.5L10.5 8.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
-                                        </svg>
+                                    <div className="flex items-center justify-end w-full">
+                                        {SORT_LABELS[sortOption]}
+                                        {!sortOption.includes('desc') ? (
+                                            <svg className="w-3 h-3 ml-1.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <line x1="4" y1="6" x2="11" y2="6" />
+                                                <line x1="4" y1="12" x2="11" y2="12" />
+                                                <line x1="4" y1="18" x2="13" y2="18" />
+                                                <polyline points="15 15 18 18 21 15" />
+                                                <line x1="18" y1="6" x2="18" y2="18" />
+                                            </svg>
+                                        ) : (
+                                            <svg className="w-3 h-3 ml-1.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <line x1="4" y1="6" x2="11" y2="6" />
+                                                <line x1="4" y1="12" x2="11" y2="12" />
+                                                <line x1="4" y1="18" x2="13" y2="18" />
+                                                <polyline points="15 9 18 6 21 9" />
+                                                <line x1="18" y1="6" x2="18" y2="18" />
+                                            </svg>
+                                        )}
                                     </div>
                                 </SelectTrigger>
                                 <SelectContent
@@ -457,7 +464,26 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                             value={value}
                                             className="tracking-wide text-neutral-800 dark:text-white data-[highlighted]:opacity-80 transition-colors"
                                         >
-                                            {SORT_LABELS[value]}
+                                            <div className="flex items-center justify-between w-full">
+                                                <span>{SORT_LABELS[value].split(' ')[0]}</span>
+                                                {!value.includes('desc') ? (
+                                                    <svg className="w-3 h-3 ml-1.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <line x1="4" y1="6" x2="11" y2="6" />
+                                                        <line x1="4" y1="12" x2="11" y2="12" />
+                                                        <line x1="4" y1="18" x2="13" y2="18" />
+                                                        <polyline points="15 15 18 18 21 15" />
+                                                        <line x1="18" y1="6" x2="18" y2="18" />
+                                                    </svg>
+                                                ) : (
+                                                    <svg className="w-3 h-3 ml-1.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <line x1="4" y1="6" x2="11" y2="6" />
+                                                        <line x1="4" y1="12" x2="11" y2="12" />
+                                                        <line x1="4" y1="18" x2="13" y2="18" />
+                                                        <polyline points="15 9 18 6 21 9" />
+                                                        <line x1="18" y1="6" x2="18" y2="18" />
+                                                    </svg>
+                                                )}
+                                            </div>
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
@@ -539,27 +565,43 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                                 </div>
 
                                                 <div className="flex flex-wrap gap-2 text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
+                                                    {/* 咖啡豆信息（最重要的信息）*/}
                                                     {note.coffeeBeanInfo?.name && (
-                                                        <>
-                                                            <span>{note.coffeeBeanInfo.name}</span>
-                                                            <span>·</span>
-                                                        </>
+                                                        <span>{note.coffeeBeanInfo.name}</span>
                                                     )}
-                                                    <span>{note.coffeeBeanInfo?.roastLevel}</span>
+                                                    
+                                                    {note.coffeeBeanInfo?.name && note.coffeeBeanInfo?.roastLevel && <span>·</span>}
+                                                    
+                                                    {note.coffeeBeanInfo?.roastLevel && (
+                                                        <span>{note.coffeeBeanInfo.roastLevel}</span>
+                                                    )}
+                                                    
                                                     {note.coffeeBeanInfo?.roastDate && (
                                                         <>
                                                             <span>·</span>
                                                             <span>{calculateDaysAfterRoast(note.coffeeBeanInfo.roastDate, note.timestamp)}</span>
                                                         </>
                                                     )}
+                                                    
+                                                    {/* 基本冲煮参数（次重要信息）*/}
                                                     {note.params && (
                                                         <>
                                                             <span>·</span>
                                                             <span>{note.params.coffee}</span>
                                                             <span>·</span>
-                                                            <span>{note.params.water}</span>
-                                                            <span>·</span>
                                                             <span>{note.params.ratio}</span>
+                                                            
+                                                            {/* 合并显示研磨度和水温 */}
+                                                            {(note.params.grindSize || note.params.temp) && (
+                                                                <>
+                                                                    <span>·</span>
+                                                                    {note.params.grindSize && note.params.temp ? (
+                                                                        <span>{note.params.grindSize} · {note.params.temp}</span>
+                                                                    ) : (
+                                                                        <span>{note.params.grindSize || note.params.temp}</span>
+                                                                    )}
+                                                                </>
+                                                            )}
                                                         </>
                                                     )}
                                                 </div>
