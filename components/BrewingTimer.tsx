@@ -471,6 +471,9 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
             triggerHaptic('success');
         }, 20);
 
+        // 播放完成音效
+        playSound('correct');
+
         // 停止计时器
         clearTimerAndStates();
 
