@@ -166,7 +166,7 @@ const Settings: React.FC<SettingsProps> = ({
         <div className="fixed inset-0 z-50 flex flex-col bg-neutral-50 dark:bg-neutral-900">
             {/* 头部导航栏 */}
             <div 
-                className="relative flex items-center justify-center py-4 pt-safe border-b border-neutral-100 dark:border-neutral-800"
+                className="relative flex items-center justify-center py-4 pt-safe border-b border-neutral-200 dark:border-neutral-800"
                 style={{ paddingTop: 'max(env(safe-area-inset-top), 16px)' }}
             >
                 <button
@@ -198,9 +198,8 @@ const Settings: React.FC<SettingsProps> = ({
                 </div>
 
                 {/* 设置分组 */}
-                <div className="space-y-5">
                     {/* 通知设置 */}
-                    <section className="px-6 py-4 border-b border-neutral-100 dark:border-neutral-800">
+                    <section className="px-6 py-4 border-b border-neutral-200 dark:border-neutral-800">
                         <h3 className="text-xs font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-4">
                             通知
                         </h3>
@@ -245,114 +244,16 @@ const Settings: React.FC<SettingsProps> = ({
                         </div>
                     </section>
 
-                    {/* 计时器布局设置 */}
-                    <section className="px-6 py-4 border-b border-neutral-100 dark:border-neutral-800">
-                        <h3 className="text-xs font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-4">
-                            计时器布局
-                        </h3>
-                        <div className="space-y-5">
-                            <div className="flex items-center justify-between">
-                                <span className="text-sm text-neutral-700 dark:text-neutral-300">
-                                    阶段信息布局反转
-                                </span>
-                                <label className="relative inline-flex cursor-pointer items-center">
-                                    <input
-                                        type="checkbox"
-                                        checked={settings.layoutSettings?.stageInfoReversed || false}
-                                        onChange={(e) => {
-                                            const newLayoutSettings = {
-                                                ...settings.layoutSettings,
-                                                stageInfoReversed: e.target.checked
-                                            };
-                                            handleChange('layoutSettings', newLayoutSettings);
-                                        }}
-                                        className="peer sr-only"
-                                    />
-                                    <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-                                </label>
-                            </div>
-                            
-                            <div className="flex items-center justify-between">
-                                <span className="text-sm text-neutral-700 dark:text-neutral-300">
-                                    控制区布局反转
-                                </span>
-                                <label className="relative inline-flex cursor-pointer items-center">
-                                    <input
-                                        type="checkbox"
-                                        checked={settings.layoutSettings?.controlsReversed || false}
-                                        onChange={(e) => {
-                                            const newLayoutSettings = {
-                                                ...settings.layoutSettings,
-                                                controlsReversed: e.target.checked
-                                            };
-                                            handleChange('layoutSettings', newLayoutSettings);
-                                        }}
-                                        className="peer sr-only"
-                                    />
-                                    <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-                                </label>
-                            </div>
-                        
-                            <div className="flex items-center justify-between">
-                                <span className="text-sm text-neutral-700 dark:text-neutral-300">
-                                    进度条高度：{settings.layoutSettings?.progressBarHeight || 4}px (默认4px)
-                                </span>
-                            </div>
-                            <input
-                                type="range"
-                                min="2"
-                                max="12"
-                                step="1"
-                                value={settings.layoutSettings?.progressBarHeight || 4}
-                                onChange={(e) => {
-                                    const newLayoutSettings = {
-                                        ...settings.layoutSettings,
-                                        progressBarHeight: parseInt(e.target.value)
-                                    };
-                                    handleChange('layoutSettings', newLayoutSettings);
-                                }}
-                                className="w-full h-1.5 bg-neutral-200 rounded-full appearance-none cursor-pointer dark:bg-neutral-700"
-                            />
-                            {/* 简化预览框 */}
-                        <div className="border border-neutral-200 dark:border-neutral-700 rounded-lg p-4">
-                            {/* 阶段信息简化预览 */}
-                            <div className={`flex justify-between ${settings.layoutSettings?.stageInfoReversed ? 'flex-row-reverse' : 'flex-row'}`}>
-                                <div className="text-sm text-neutral-700 dark:text-neutral-300">阶段信息</div>
-                                <div className="text-sm text-neutral-500 dark:text-neutral-400">30s / 60ml</div>
-                            </div>
-                            
-                            {/* 进度条简化预览 */}
-                            <div className="my-3">
-                                <div className="w-full bg-neutral-200 dark:bg-neutral-700 rounded-full" 
-                                     style={{ height: `${settings.layoutSettings?.progressBarHeight || 4}px` }}>
-                                    <div className="bg-neutral-700 dark:bg-neutral-400 h-full rounded-full w-1/2"></div>
-                                </div>
-                            </div>
-                            
-                            {/* 控制区简化预览 */}
-                            <div className={`flex justify-between ${settings.layoutSettings?.controlsReversed ? 'flex-row-reverse' : 'flex-row'}`}>
-                                <div className="text-sm text-neutral-700 dark:text-neutral-300">00:45 / 50ml</div>
-                                <div className="flex space-x-2">
-                                    <div className="w-7 h-7 flex items-center justify-center rounded-full bg-neutral-100 dark:bg-neutral-800">
-                                        <div className="w-3 h-3 bg-neutral-700 dark:bg-neutral-400"></div>
-                                    </div>
-                                    <div className="w-7 h-7 flex items-center justify-center rounded-full bg-neutral-100 dark:bg-neutral-800">
-                                        <div className="w-3 h-3 bg-neutral-700 dark:bg-neutral-400 rotate-45"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        </div>
-                    </section>
+                    
 
                     {/* 显示设置 */}
-                    <section className="px-6 py-4 border-b border-neutral-100 dark:border-neutral-800">
+                    <section className="px-6 py-4 border-b border-neutral-200 dark:border-neutral-800">
                         <h3 className="text-xs font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-4">
                             显示
                         </h3>
 
                         {/* 外观模式切换 */}
-                        <div className="space-y-3 mb-6">
+                        <div className="space-y-3">
                             <div className="text-sm text-neutral-700 dark:text-neutral-300">
                                 外观模式
                             </div>
@@ -456,7 +357,7 @@ const Settings: React.FC<SettingsProps> = ({
                     </section>
 
                     {/* 研磨度设置 */}
-                    <section className="px-6 py-4 border-b border-neutral-100 dark:border-neutral-800">
+                    <section className="px-6 py-4 border-b border-neutral-200 dark:border-neutral-800">
                         <h3 className="text-xs font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-4">
                             研磨度设置
                         </h3>
@@ -520,8 +421,108 @@ const Settings: React.FC<SettingsProps> = ({
                         </div>
                     </section>
 
+                    {/* 计时器布局设置 */}
+                    <section className="px-6 py-4 border-b border-neutral-200 dark:border-neutral-800">
+                        <h3 className="text-xs font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-4">
+                            计时器布局
+                        </h3>
+                        <div className="space-y-5">
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm text-neutral-700 dark:text-neutral-300">
+                                    阶段信息布局反转
+                                </span>
+                                <label className="relative inline-flex cursor-pointer items-center">
+                                    <input
+                                        type="checkbox"
+                                        checked={settings.layoutSettings?.stageInfoReversed || false}
+                                        onChange={(e) => {
+                                            const newLayoutSettings = {
+                                                ...settings.layoutSettings,
+                                                stageInfoReversed: e.target.checked
+                                            };
+                                            handleChange('layoutSettings', newLayoutSettings);
+                                        }}
+                                        className="peer sr-only"
+                                    />
+                                    <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
+                                </label>
+                            </div>
+                            
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm text-neutral-700 dark:text-neutral-300">
+                                    控制区布局反转
+                                </span>
+                                <label className="relative inline-flex cursor-pointer items-center">
+                                    <input
+                                        type="checkbox"
+                                        checked={settings.layoutSettings?.controlsReversed || false}
+                                        onChange={(e) => {
+                                            const newLayoutSettings = {
+                                                ...settings.layoutSettings,
+                                                controlsReversed: e.target.checked
+                                            };
+                                            handleChange('layoutSettings', newLayoutSettings);
+                                        }}
+                                        className="peer sr-only"
+                                    />
+                                    <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
+                                </label>
+                            </div>
+                        
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm text-neutral-700 dark:text-neutral-300">
+                                    进度条高度：{settings.layoutSettings?.progressBarHeight || 4}px (默认4px)
+                                </span>
+                            </div>
+                            <input
+                                type="range"
+                                min="2"
+                                max="12"
+                                step="1"
+                                value={settings.layoutSettings?.progressBarHeight || 4}
+                                onChange={(e) => {
+                                    const newLayoutSettings = {
+                                        ...settings.layoutSettings,
+                                        progressBarHeight: parseInt(e.target.value)
+                                    };
+                                    handleChange('layoutSettings', newLayoutSettings);
+                                }}
+                                className="w-full h-1.5 bg-neutral-200 rounded-full appearance-none cursor-pointer dark:bg-neutral-700"
+                            />
+                            {/* 简化预览框 */}
+                        <div className="border border-neutral-200 dark:border-neutral-700 rounded-lg p-4">
+                            {/* 阶段信息简化预览 */}
+                            <div className={`flex justify-between ${settings.layoutSettings?.stageInfoReversed ? 'flex-row-reverse' : 'flex-row'}`}>
+                                <div className="text-sm text-neutral-700 dark:text-neutral-300">阶段信息</div>
+                                <div className="text-sm text-neutral-500 dark:text-neutral-400">30s / 60ml</div>
+                            </div>
+                            
+                            {/* 进度条简化预览 */}
+                            <div className="my-3">
+                                <div className="w-full bg-neutral-200 dark:bg-neutral-700 rounded-full" 
+                                     style={{ height: `${settings.layoutSettings?.progressBarHeight || 4}px` }}>
+                                    <div className="bg-neutral-700 dark:bg-neutral-400 h-full rounded-full w-1/2"></div>
+                                </div>
+                            </div>
+                            
+                            {/* 控制区简化预览 */}
+                            <div className={`flex justify-between ${settings.layoutSettings?.controlsReversed ? 'flex-row-reverse' : 'flex-row'}`}>
+                                <div className="text-sm text-neutral-700 dark:text-neutral-300">00:45 / 50ml</div>
+                                <div className="flex space-x-2">
+                                    <div className="w-7 h-7 flex items-center justify-center rounded-full bg-neutral-100 dark:bg-neutral-800">
+                                        <div className="w-3 h-3 bg-neutral-700 dark:bg-neutral-400"></div>
+                                    </div>
+                                    <div className="w-7 h-7 flex items-center justify-center rounded-full bg-neutral-100 dark:bg-neutral-800">
+                                        <div className="w-3 h-3 bg-neutral-700 dark:bg-neutral-400 rotate-45"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        </div>
+                    </section>
+
                     {/* 数据管理 */}
-                    <section className="px-6 py-4 border-b border-neutral-100 dark:border-neutral-800">
+                    <section className="px-6 py-4 border-b border-neutral-200 dark:border-neutral-800">
                         <h3 className="text-xs font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-4">
                             数据管理
                         </h3>
@@ -542,7 +543,6 @@ const Settings: React.FC<SettingsProps> = ({
                     <div className="px-6 py-6 text-center text-xs text-neutral-500 dark:text-neutral-400">
                         v{APP_VERSION}
                     </div>
-                </div>
             </div>
 
             {/* 数据管理组件 */}
