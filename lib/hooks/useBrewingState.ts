@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { Method, equipmentList, Stage, commonMethods } from "@/lib/config";
+import { Method, equipmentList, Stage, commonMethods, CustomEquipment } from "@/lib/config";
 import { Storage } from "@/lib/storage";
 import { BrewingNoteData, CoffeeBean } from "@/app/types";
 import {
@@ -7,6 +7,7 @@ import {
 	saveCustomMethod,
 	deleteCustomMethod,
 } from "@/lib/customMethods";
+import { loadCustomEquipments } from "@/lib/customEquipments";
 import { CoffeeBeanManager } from "@/lib/coffeeBeanManager";
 import {
 	BREWING_EVENTS,
@@ -32,9 +33,23 @@ export type BrewingStep =
 
 export interface Step {
 	title: string;
-	items: string[];
-	note: string;
+	description?: string;
 	methodId?: string;
+	isCustom?: boolean;
+	items?: string[];
+	note?: string;
+	time?: number;
+	pourTime?: number;
+	water?: string;
+	detail?: string;
+	pourType?: "center" | "circle" | "ice" | "other";
+	valveStatus?: "open" | "closed";
+	originalIndex?: number;
+	type?: "pour" | "wait";
+	startTime?: number;
+	endTime?: number;
+	isCommonMethod?: boolean;
+	methodIndex?: number;
 }
 
 export interface Content {
@@ -113,6 +128,23 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 
 	// 在PourOverRecipes组件的开头添加前一个标签的引用
 	const prevMainTabRef = useRef<MainTabType | null>(null);
+
+	// 添加自定义器具状态
+	const [customEquipments, setCustomEquipments] = useState<CustomEquipment[]>([]);
+
+	// 加载自定义器具
+	useEffect(() => {
+		const loadEquipments = async () => {
+			try {
+				const equipments = await loadCustomEquipments();
+				setCustomEquipments(equipments);
+			} catch (error) {
+				console.error('加载自定义器具失败:', error);
+			}
+		};
+
+		loadEquipments();
+	}, []);
 
 	// 检查步骤导航前置条件
 	const checkPrerequisites = useCallback(
@@ -846,6 +878,78 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 		[showComplete, resetBrewingState]
 	);
 
+	// 添加 content 状态
+	const [content, setContent] = useState<Content>({
+		咖啡豆: { steps: [] },
+		器具: { steps: [] },
+		方案: { steps: [], type: 'common' },
+		注水: { steps: [] },
+		记录: { steps: [] },
+	});
+
+	// 更新 content 状态的计算
+	useEffect(() => {
+		const newContent: Content = {
+			咖啡豆: {
+				steps: [],
+			},
+			器具: {
+				steps: [
+					...equipmentList.map((equipment) => ({
+						title: equipment.name,
+						description: equipment.description,
+						isCustom: false,
+					})),
+					...customEquipments.map((equipment) => ({
+						title: equipment.name,
+						description: equipment.description,
+						isCustom: true,
+					})),
+				],
+			},
+			方案: {
+				steps:
+					selectedEquipment && methodType === "common"
+						? commonMethods[selectedEquipment]?.map((method) => ({
+							  title: method.name,
+							  methodId: method.id,
+						  })) || []
+						: selectedEquipment && customMethods[selectedEquipment]
+						? customMethods[selectedEquipment].map((method) => ({
+							  title: method.name,
+							  methodId: method.id,
+						  }))
+						: [],
+				type: methodType,
+			},
+			注水: {
+				steps:
+					currentBrewingMethod?.params.stages.map((stage, index) => ({
+						title: stage.label,
+						time: stage.time,
+						pourTime: stage.pourTime,
+						water: stage.water,
+						detail: stage.detail,
+						pourType: stage.pourType,
+						valveStatus: stage.valveStatus,
+						originalIndex: index,
+					})) || [],
+			},
+			记录: {
+				steps: [],
+			},
+		};
+
+		setContent(newContent);
+	}, [
+		selectedEquipment,
+		methodType,
+		commonMethods,
+		customMethods,
+		currentBrewingMethod,
+		customEquipments,
+	]);
+
 	return {
 		activeMainTab,
 		setActiveMainTab,
@@ -903,5 +1007,9 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 		handleEditCustomMethod,
 		handleDeleteCustomMethod,
 		navigateToStep,
+		customEquipments,
+		setCustomEquipments,
+		content,
+		setContent,
 	};
 }

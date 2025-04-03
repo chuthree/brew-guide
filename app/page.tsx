@@ -2,12 +2,12 @@
 // 导入React和必要的hooks
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import dynamic from 'next/dynamic'
-import { equipmentList, APP_VERSION, commonMethods } from '@/lib/config'
+import { equipmentList, APP_VERSION, commonMethods, CustomEquipment } from '@/lib/config'
 import { Storage } from '@/lib/storage'
 import { initCapacitor } from './capacitor'
 // 只导入需要的类型
 import type { CoffeeBean } from '@/app/types'
-import { useBrewingState, MainTabType, BrewingStep } from '@/lib/hooks/useBrewingState'
+import { useBrewingState, MainTabType, BrewingStep, Step } from '@/lib/hooks/useBrewingState'
 import { useBrewingParameters } from '@/lib/hooks/useBrewingParameters'
 import { useBrewingContent } from '@/lib/hooks/useBrewingContent'
 import { useMethodSelector } from '@/lib/hooks/useMethodSelector'
@@ -31,6 +31,8 @@ import BrewingNoteFormModalNew from '@/components/BrewingNoteFormModalNew'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import CoffeeBeans from '@/components/CoffeeBeans'
 import SwipeBackGesture from '@/components/SwipeBackGesture'
+import { loadCustomEquipments, saveCustomEquipment, deleteCustomEquipment } from '@/lib/customEquipments'
+import CustomEquipmentFormModal from '@/components/CustomEquipmentFormModal'
 
 // 为Window对象声明类型扩展
 declare global {
@@ -197,12 +199,34 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         handleParamChange
     } = parameterHooks;
 
+    // 添加自定义器具状态
+    const [customEquipments, setCustomEquipments] = useState<CustomEquipment[]>([]);
+    // 添加显示器具表单的状态
+    const [showEquipmentForm, setShowEquipmentForm] = useState(false);
+    // 添加编辑器具的状态
+    const [editingEquipment, setEditingEquipment] = useState<CustomEquipment | undefined>(undefined);
+
+    // 加载自定义器具
+    useEffect(() => {
+        const loadEquipments = async () => {
+            try {
+                const equipments = await loadCustomEquipments();
+                setCustomEquipments(equipments);
+            } catch (error) {
+                console.error('加载自定义器具失败:', error);
+            }
+        };
+
+        loadEquipments();
+    }, []);
+
     const contentHooks = useBrewingContent({
         selectedEquipment,
         methodType,
         customMethods,
         selectedMethod,
-        settings
+        settings,
+        customEquipments
     });
 
     const { content, updateBrewingSteps } = contentHooks;
@@ -515,14 +539,15 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     };
 
     // 修改方法选择的包装函数
-    const handleMethodSelectWrapper = useCallback(async (index: number) => {
+    const handleMethodSelectWrapper = useCallback(async (index: number, step?: Step) => {
         // 检查是否在冲煮完成状态选择了新的方案
         if (isCoffeeBrewed) {
             // 确保isCoffeeBrewed状态被重置，允许正常的步骤导航
             setIsCoffeeBrewed(false);
         }
 
-        await handleMethodSelect(index);
+        // 将 step 对象传递给 handleMethodSelect
+        await handleMethodSelect(index, step);
     }, [handleMethodSelect, isCoffeeBrewed, setIsCoffeeBrewed]);
 
     // 处理冲煮完成后自动切换到笔记页面
@@ -1433,6 +1458,37 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         }
     };
 
+    // 处理保存自定义器具
+    const handleSaveEquipment = async (equipment: CustomEquipment) => {
+        try {
+            await saveCustomEquipment(equipment);
+            // 刷新器具列表
+            const updatedEquipments = await loadCustomEquipments();
+            setCustomEquipments(updatedEquipments);
+            // 关闭表单
+            setShowEquipmentForm(false);
+            setEditingEquipment(undefined);
+        } catch (error) {
+            console.error('保存器具失败:', error);
+            alert('保存器具失败，请重试');
+        }
+    };
+
+    // 处理删除自定义器具
+    const handleDeleteEquipment = async (equipment: CustomEquipment) => {
+        if (window.confirm('确定要删除这个器具吗？')) {
+            try {
+                await deleteCustomEquipment(equipment.id);
+                // 刷新器具列表
+                const updatedEquipments = await loadCustomEquipments();
+                setCustomEquipments(updatedEquipments);
+            } catch (error) {
+                console.error('删除器具失败:', error);
+                alert('删除器具失败，请重试');
+            }
+        }
+    };
+
     return (
         <div className="flex h-full flex-col overflow-hidden mx-auto max-w-[500px] font-mono text-neutral-800 dark:text-neutral-100">
             {/* 使用 NavigationBar 组件替换原有的导航栏 */}
@@ -1496,7 +1552,13 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                         onDeleteMethod={handleDeleteCustomMethod}
                         setActiveMainTab={setActiveMainTab}
                         resetBrewingState={resetBrewingState}
+                        customEquipments={customEquipments}
+                        setCustomEquipments={setCustomEquipments}
                         expandedStages={expandedStagesRef.current}
+                        setShowEquipmentForm={setShowEquipmentForm}
+                        setEditingEquipment={setEditingEquipment}
+                        handleSaveEquipment={handleSaveEquipment}
+                        handleDeleteEquipment={handleDeleteEquipment}
                     />
                 </div>
             )}
@@ -1691,6 +1753,17 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 settings={settings}
                 setSettings={setSettings}
                 onDataChange={handleDataChange}
+            />
+
+            {/* 自定义器具表单模态框组件 */}
+            <CustomEquipmentFormModal
+                showForm={showEquipmentForm}
+                onClose={() => {
+                    setShowEquipmentForm(false);
+                    setEditingEquipment(undefined);
+                }}
+                onSave={handleSaveEquipment}
+                editingEquipment={editingEquipment}
             />
 
             {/* 引导组件 */}

@@ -25,6 +25,7 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
     const [isFixingBlendBeans, setIsFixingBlendBeans] = useState(false)
     const [showConfirmReset, setShowConfirmReset] = useState(false)
     const [importMode, setImportMode] = useState<'replace' | 'merge'>('merge')
+    const [isCompleteReset, setIsCompleteReset] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
 
     const isNative = Capacitor.isNativePlatform()
@@ -163,7 +164,7 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
             setIsResetting(true)
             setStatus({ type: 'info', message: '正在重置数据...' })
 
-            const result = await DataManagerUtil.resetAllData()
+            const result = await DataManagerUtil.resetAllData(isCompleteReset)
 
             if (result.success) {
                 setStatus({ type: 'success', message: result.message })
@@ -179,6 +180,7 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
         } finally {
             setIsResetting(false)
             setShowConfirmReset(false)
+            setIsCompleteReset(false)
         }
     }
 
@@ -371,24 +373,63 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
                                     重置所有数据
                                 </button>
                             ) : (
-                                <div className="space-y-2">
-                                    <p className="text-sm text-red-600 dark:text-red-400">
-                                        确定要重置所有数据吗？此操作不可撤销。
-                                    </p>
-                                    <div className="flex space-x-2">
-                                        <button
-                                            onClick={() => setShowConfirmReset(false)}
-                                            className="flex-1 rounded-md bg-neutral-100 px-4 py-2 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-600"
-                                        >
-                                            取消
-                                        </button>
-                                        <button
-                                            onClick={handleReset}
-                                            disabled={isResetting}
-                                            className="flex-1 rounded-md bg-red-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-600 disabled:opacity-50 dark:bg-red-600 dark:hover:bg-red-700"
-                                        >
-                                            {isResetting ? '重置中...' : '确认重置'}
-                                        </button>
+                                <div className="mt-4">
+                                    <div className="p-4 rounded-md bg-red-50 dark:bg-red-900/20">
+                                        <div className="flex items-center space-x-2 mb-3">
+                                            <svg
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                className="h-5 w-5 text-red-600 dark:text-red-400"
+                                                viewBox="0 0 20 20"
+                                                fill="currentColor"
+                                            >
+                                                <path
+                                                    fillRule="evenodd"
+                                                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                                                    clipRule="evenodd"
+                                                />
+                                            </svg>
+                                            <h3 className="text-sm font-medium text-red-800 dark:text-red-300">
+                                                确认重置所有数据
+                                            </h3>
+                                        </div>
+                                        <p className="text-xs text-red-600 dark:text-red-400 mb-4">
+                                            此操作无法撤销，所有数据将被删除。建议在重置前先导出备份。
+                                        </p>
+                                        
+                                        <div className="mb-4">
+                                            <label className="flex items-center">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isCompleteReset}
+                                                    onChange={(e) => setIsCompleteReset(e.target.checked)}
+                                                    className="h-4 w-4 text-red-600 rounded border-neutral-300 focus:ring-red-500"
+                                                />
+                                                <span className="ml-2 text-sm text-red-700 dark:text-red-300">
+                                                    完全重置（包括所有设置和缓存）
+                                                </span>
+                                            </label>
+                                            <p className="mt-1 text-xs text-red-500 dark:text-red-400 ml-6">
+                                                将彻底重置所有数据，包括自定义器具、应用设置和导航状态
+                                            </p>
+                                        </div>
+
+                                        <div className="flex space-x-2 justify-end">
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowConfirmReset(false)}
+                                                className="px-3 py-1.5 text-xs rounded-md bg-neutral-100 text-neutral-800 dark:bg-neutral-700 dark:text-white transition-colors hover:bg-neutral-200 dark:hover:bg-neutral-600"
+                                            >
+                                                取消
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={handleReset}
+                                                disabled={isResetting}
+                                                className="px-3 py-1.5 text-xs rounded-md bg-red-600 text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+                                            >
+                                                {isResetting ? '重置中...' : '确认重置'}
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             )}

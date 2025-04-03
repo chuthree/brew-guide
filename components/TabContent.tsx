@@ -1,12 +1,13 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import dynamic from 'next/dynamic';
-import { Method, equipmentList } from '@/lib/config';
+import { Method, equipmentList, CustomEquipment } from '@/lib/config';
 import StageItem from '@/components/StageItem';
 import { SettingsOptions } from './Settings';
 import { TabType, MainTabType, Content, Step } from '@/lib/hooks/useBrewingState';
 import { CoffeeBean } from '@/app/types';
 import type { BrewingNoteData } from '@/app/types';
 import { CoffeeBeanManager } from '@/lib/coffeeBeanManager';
+import { v4 as _uuidv4 } from 'uuid';
 
 // 动态导入客户端组件
 const PourVisualizer = dynamic(() => import('@/components/PourVisualizer'), {
@@ -14,7 +15,7 @@ const PourVisualizer = dynamic(() => import('@/components/PourVisualizer'), {
     loading: () => null
 });
 
-// 使用新的 CoffeeBeanList 组件替换 CoffeeBeanSelector
+// 动态导入CoffeeBeanList组件
 const CoffeeBeanList = dynamic(() => import('@/components/CoffeeBeanList'), {
     ssr: false,
     loading: () => null
@@ -25,6 +26,7 @@ const BrewingNoteForm = dynamic(() => import('@/components/BrewingNoteForm'), {
     ssr: false,
     loading: () => null
 });
+
 
 interface TabContentProps {
     activeMainTab: MainTabType;
@@ -51,7 +53,7 @@ interface TabContentProps {
     setShowImportForm: (show: boolean) => void;
     settings: SettingsOptions;
     onEquipmentSelect: (name: string) => void;
-    onMethodSelect: (index: number) => void;
+    onMethodSelect: (index: number, step?: Step) => void;
     onCoffeeBeanSelect?: (beanId: string, bean: CoffeeBean) => void;
     onEditMethod: (method: Method) => void;
     onDeleteMethod: (method: Method) => void;
@@ -70,6 +72,12 @@ interface TabContentProps {
         valveStatus?: 'open' | 'closed';
         originalIndex: number;
     }[];
+    customEquipments: CustomEquipment[];
+    setCustomEquipments: React.Dispatch<React.SetStateAction<CustomEquipment[]>>;
+    setShowEquipmentForm: (show: boolean) => void;
+    setEditingEquipment: (equipment: CustomEquipment | undefined) => void;
+    handleSaveEquipment: (equipment: CustomEquipment) => Promise<void>;
+    handleDeleteEquipment: (equipment: CustomEquipment) => Promise<void>;
 }
 
 const TabContent: React.FC<TabContentProps> = ({
@@ -103,7 +111,13 @@ const TabContent: React.FC<TabContentProps> = ({
     onDeleteMethod,
     setActiveMainTab,
     resetBrewingState,
-    expandedStages
+    expandedStages,
+    customEquipments,
+    setCustomEquipments: _setCustomEquipments,
+    setShowEquipmentForm,
+    setEditingEquipment,
+    handleSaveEquipment: _handleSaveEquipment,
+    handleDeleteEquipment
 }) => {
     // 笔记表单状态
     const [noteSaved, setNoteSaved] = React.useState(false);
@@ -182,6 +196,26 @@ const TabContent: React.FC<TabContentProps> = ({
         }
     };
 
+    // 获取当前选中的自定义器具
+    const getSelectedCustomEquipment = useCallback(() => {
+        if (!selectedEquipment) return undefined;
+        
+        // 首先尝试通过ID匹配
+        const equipmentById = customEquipments.find(e => e.id === selectedEquipment);
+        if (equipmentById?.animationType) {
+            return equipmentById;
+        }
+        
+        // 如果ID匹配失败，尝试通过名称匹配
+        const equipmentByName = customEquipments.find(e => e.name === selectedEquipment);
+        if (equipmentByName?.animationType) {
+            return equipmentByName;
+        }
+        
+        // 未找到匹配的自定义器具
+        return undefined;
+    }, [selectedEquipment, customEquipments]);
+
     // 使用这些变量以避免"未使用变量"的警告
     React.useEffect(() => {
         if (process.env.NODE_ENV === 'development') {
@@ -230,6 +264,7 @@ const TabContent: React.FC<TabContentProps> = ({
                             countdownTime={countdownTime}
                             equipmentId={selectedEquipment || 'V60'}
                             isWaiting={countdownTime !== null ? true : isWaiting}
+                            customEquipment={getSelectedCustomEquipment()}
                             key={countdownTime !== null ?
                                 'countdown' : // 倒计时阶段
                                 `pour-${currentStage}-${isTimerRunning}`} // 注水阶段
@@ -238,6 +273,18 @@ const TabContent: React.FC<TabContentProps> = ({
                 </div>
             ) : (
                 <>
+                    {/* 添加器具按钮 */}
+                    {activeTab === '器具' && (
+                        <div className="flex space-x-2 mb-4">
+                            <button
+                                onClick={() => setShowEquipmentForm(true)}
+                                className="flex-1 flex items-center justify-center py-3 border border-dashed border-neutral-200 dark:border-neutral-800 rounded-md text-xs text-neutral-800 dark:text-white transition-colors hover:opacity-80"
+                            >
+                                <span className="mr-1">+</span> 添加器具
+                            </button>
+                        </div>
+                    )}
+
                     {activeTab === '方案' && methodType === 'custom' && (
                         <div className="flex space-x-2">
                             <button
@@ -261,28 +308,50 @@ const TabContent: React.FC<TabContentProps> = ({
                             step={step}
                             index={index}
                             onClick={() => {
-                                    if (activeTab === '器具' as TabType) {
-                                        onEquipmentSelect(step.title);
-                                    } else if (activeTab === '方案' as TabType) {
-                                        onMethodSelect(index);
-                                    }
-                                }}
-                                activeTab={activeTab}
-                                selectedMethod={selectedMethod}
-                                currentStage={currentStage}
-                                onEdit={activeTab === '方案' as TabType && methodType === 'custom' && customMethods[selectedEquipment!] ? () => {
-                                    const method = customMethods[selectedEquipment!][index];
-                                    onEditMethod(method);
-                                } : undefined}
-                                onDelete={activeTab === '方案' as TabType && methodType === 'custom' && customMethods[selectedEquipment!] ? () => {
-                                    const method = customMethods[selectedEquipment!][index];
-                                    onDeleteMethod(method);
-                                } : undefined}
-                                actionMenuStates={actionMenuStates}
-                                setActionMenuStates={setActionMenuStates}
-                                selectedEquipment={selectedEquipment}
-                                customMethods={customMethods}
-                            />
+                                if (activeTab === '器具' as TabType) {
+                                    onEquipmentSelect(step.title);
+                                } else if (activeTab === '方案' as TabType) {
+                                    console.log('方案点击:', {
+                                        title: step.title,
+                                        index,
+                                        methodType,
+                                        selectedEquipment,
+                                        isCustom: step.isCustom,
+                                        isCommonMethod: step.isCommonMethod,
+                                        methodIndex: step.methodIndex,
+                                        fullStep: step  // 添加完整的 step 对象
+                                    });
+                                    // 传递完整的 step 对象给 onMethodSelect 方法
+                                    onMethodSelect(index, step);
+                                }
+                            }}
+                            activeTab={activeTab}
+                            selectedMethod={selectedMethod}
+                            currentStage={currentStage}
+                            onEdit={activeTab === '方案' as TabType && methodType === 'custom' && customMethods[selectedEquipment!] ? () => {
+                                const method = customMethods[selectedEquipment!][index];
+                                onEditMethod(method);
+                            } : step.isCustom ? () => {
+                                const equipment = customEquipments.find(e => e.name === step.title);
+                                if (equipment) {
+                                    setEditingEquipment(equipment);
+                                    setShowEquipmentForm(true);
+                                }
+                            } : undefined}
+                            onDelete={activeTab === '方案' as TabType && methodType === 'custom' && customMethods[selectedEquipment!] ? () => {
+                                const method = customMethods[selectedEquipment!][index];
+                                onDeleteMethod(method);
+                            } : step.isCustom ? () => {
+                                const equipment = customEquipments.find(e => e.name === step.title);
+                                if (equipment) {
+                                    handleDeleteEquipment(equipment);
+                                }
+                            } : undefined}
+                            actionMenuStates={actionMenuStates}
+                            setActionMenuStates={setActionMenuStates}
+                            _selectedEquipment={selectedEquipment}
+                            _customMethods={customMethods}
+                        />
                     ))}
                 </>
             )}

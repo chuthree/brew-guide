@@ -41,6 +41,8 @@ export const APP_DATA_KEYS = [
 	"brewGuideSettings", // 应用设置
 	"brewingNotesVersion", // 数据版本
 	"coffeeBeans", // 咖啡豆数据
+	"customEquipments", // 自定义器具
+	"onboardingCompleted", // 引导完成标记
 ];
 
 /**
@@ -128,18 +130,50 @@ export const DataManager = {
 
 	/**
 	 * 重置所有数据
+	 * @param completeReset 是否完全重置（包括所有设置和缓存）
 	 * @returns 重置结果
 	 */
-	async resetAllData(): Promise<{ success: boolean; message: string }> {
+	async resetAllData(
+		completeReset = false
+	): Promise<{ success: boolean; message: string }> {
 		try {
-			// 清除所有数据
+			// 清除列表中的数据
 			for (const key of APP_DATA_KEYS) {
 				await Storage.remove(key);
 			}
 
+			// 如果是完全重置，则清除所有数据
+			if (completeReset) {
+				await Storage.clear();
+			} else {
+				// 额外清除一些可能的导航状态
+				const navigationKeys = [
+					"fromNotesToBrewing",
+					"brewingNoteInProgress",
+					"fromMethodToBrewing",
+					"directToBrewing",
+					"shouldStartFromCoffeeBeanStep",
+					"brew-guide:showEmptyBeans",
+					"clickedFromMethod",
+					"clickedMethodName",
+					"forceNavigationMethodType",
+					"methodType",
+					"forceNavigateToBrewing",
+					"forceNavigationEquipment",
+					"forceNavigationMethod",
+					"forceNavigationParams",
+					"navigationStep",
+					"lastNavigatedMethod",
+				];
+				
+				for (const key of navigationKeys) {
+					await Storage.remove(key);
+				}
+			}
+
 			return {
 				success: true,
-				message: "所有数据已重置",
+				message: completeReset ? "所有数据已彻底重置" : "主要数据已重置",
 			};
 		} catch (_error) {
 			return {
@@ -371,6 +405,40 @@ export const DataManager = {
 							await Storage.set(
 								key,
 								String(importData.data[key])
+							);
+						}
+					} else if (key === "customEquipments") {
+						// 合并自定义器具
+						const existingEquipments = existingData as Record<string, string[]>;
+						const importedEquipments = importData.data[key] as Record<string, string[]>;
+
+						const mergedEquipments = {
+							...existingEquipments,
+						};
+
+						Object.keys(importedEquipments).forEach((equipment) => {
+							if (!mergedEquipments[equipment]) {
+								mergedEquipments[equipment] = [];
+							}
+
+							// 添加不重复的设备
+							const equipmentList = importedEquipments[equipment] as string[];
+							equipmentList.forEach((importedEquipment) => {
+								if (!mergedEquipments[equipment].includes(importedEquipment)) {
+									mergedEquipments[equipment].push(importedEquipment);
+								}
+							});
+						});
+
+						await Storage.set(key, JSON.stringify(mergedEquipments));
+					} else if (key === "onboardingCompleted") {
+						// 保留用户现有设置，不覆盖
+						if (!existingData) {
+							await Storage.set(
+								key,
+								typeof importData.data[key] === "object"
+									? JSON.stringify(importData.data[key])
+									: String(importData.data[key])
 							);
 						}
 					} else {

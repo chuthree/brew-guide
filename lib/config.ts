@@ -18,8 +18,8 @@ export interface Method {
 	params: {
 		coffee: string;
 		water: string;
-		ratio: string; 
-		grindSize: string; 
+		ratio: string;
+		grindSize: string;
 		temp: string;
 		videoUrl: string;
 		roastLevel?: string;
@@ -36,6 +36,12 @@ export interface Equipment {
 	name: string;
 	description: string;
 	note?: string;
+}
+
+export interface CustomEquipment extends Equipment {
+	animationType: "v60" | "kalita" | "origami" | "clever";  // 使用哪种基础器具的动画
+	hasValve?: boolean;  // 是否有阀门（类似聪明杯）
+	isCustom: true;  // 标记为自定义器具
 }
 
 export interface BrewingNote {

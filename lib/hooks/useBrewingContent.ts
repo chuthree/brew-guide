@@ -3,6 +3,7 @@ import {
 	Method,
 	brewingMethods as commonMethods,
 	equipmentList,
+	CustomEquipment,
 } from "@/lib/config";
 import { Content } from "./useBrewingState";
 import { formatGrindSize } from "@/lib/grindUtils";
@@ -29,6 +30,7 @@ export interface UseBrewingContentProps {
 	customMethods: Record<string, Method[]>;
 	selectedMethod: Method | null;
 	settings: SettingsOptions;
+	customEquipments?: CustomEquipment[]; // 添加自定义器具参数
 }
 
 export function useBrewingContent({
@@ -37,6 +39,7 @@ export function useBrewingContent({
 	customMethods,
 	selectedMethod,
 	settings,
+	customEquipments = [], // 设置默认值为空数组
 }: UseBrewingContentProps) {
 	const initialContent: Content = {
 		咖啡豆: {
@@ -49,11 +52,19 @@ export function useBrewingContent({
 			],
 		},
 		器具: {
-			steps: equipmentList.map((equipment) => ({
-				title: equipment.name,
-				items: [equipment.description],
-				note: equipment.note || "",
-			})),
+			steps: [
+				...equipmentList.map((equipment) => ({
+					title: equipment.name,
+					items: [equipment.description],
+					note: equipment.note || "",
+				})),
+				...customEquipments.map((equipment) => ({
+					title: equipment.name,
+					items: [equipment.description || "自定义器具"],
+					note: equipment.note || "",
+					isCustom: true, // 标记为自定义器具
+				})),
+			],
 		},
 		方案: {
 			steps: [],
@@ -69,24 +80,104 @@ export function useBrewingContent({
 
 	const [content, setContent] = useState<Content>(initialContent);
 
+	// 更新器具列表内容
+	useEffect(() => {
+		setContent((prev) => ({
+			...prev,
+			器具: {
+				steps: [
+					...equipmentList.map((equipment) => ({
+						title: equipment.name,
+						items: [equipment.description],
+						note: equipment.note || "",
+					})),
+					...customEquipments.map((equipment) => ({
+						title: equipment.name,
+						items: [equipment.description || "自定义器具"],
+						note: equipment.note || "",
+						isCustom: true, // 标记为自定义器具
+					})),
+				],
+			},
+		}));
+	}, [customEquipments]);
+
 	// 更新方案列表内容
 	useEffect(() => {
 		if (selectedEquipment) {
 			setContent((prev) => {
-				const methodsForEquipment =
-					methodType === "custom"
-						? customMethods[selectedEquipment] || []
-						: commonMethods[
-								selectedEquipment as keyof typeof commonMethods
-						  ] || [];
+				// 检查是否是自定义器具
+				console.log('选中的器具:', selectedEquipment);
+				console.log('自定义器具列表:', customEquipments);
+				console.log('自定义器具的 ID:', customEquipments.map(e => e.id));
+				
+				// 尝试通过 ID 或名称匹配自定义器具
+				const isCustomEquipment = customEquipments?.some(e => 
+					e.id === selectedEquipment || 
+					e.name === selectedEquipment
+				);
+				
+				console.log('是否是自定义器具:', isCustomEquipment);
+				console.log('当前方案类型:', methodType);
+				
+				// 获取对应的方案列表
+				let methodsForEquipment: Method[] = [];
+				if (methodType === 'custom') {
+					methodsForEquipment = customMethods[selectedEquipment] || [];
+					console.log('自定义方案:', methodsForEquipment);
+				} else {
+					// 如果是自定义器具，根据其 animationType 使用对应的通用方案
+					if (isCustomEquipment) {
+						// 尝试通过 ID 或名称查找自定义器具
+						const customEquipment = customEquipments?.find(e => 
+							e.id === selectedEquipment || 
+							e.name === selectedEquipment
+						);
+						console.log('找到的自定义器具:', customEquipment);
+						
+						if (customEquipment) {
+							// 根据 animationType 获取对应的通用方案 ID
+							let baseEquipmentId = '';
+							const animationType = customEquipment.animationType.toLowerCase();
+							console.log('动画类型:', animationType);
+							
+							switch (animationType) {
+								case 'v60':
+									baseEquipmentId = 'V60';
+									break;
+								case 'kalita':
+									baseEquipmentId = 'Kalita';
+									break;
+								case 'origami':
+									baseEquipmentId = 'Origami';
+									break;
+								case 'clever':
+									baseEquipmentId = 'CleverDripper';
+									break;
+								default:
+									console.warn('未知的动画类型:', animationType);
+									baseEquipmentId = 'V60'; // 默认使用 V60 的方案
+							}
+							console.log('基础器具ID:', baseEquipmentId);
+							console.log('可用的通用方案:', Object.keys(commonMethods));
+							// 使用基础器具的通用方案
+							methodsForEquipment = commonMethods[baseEquipmentId] || [];
+							console.log('获取到的通用方案:', methodsForEquipment);
+						}
+					} else {
+						// 对于预定义器具，直接使用其通用方案
+						methodsForEquipment = commonMethods[selectedEquipment as keyof typeof commonMethods] || [];
+						console.log('预定义器具的通用方案:', methodsForEquipment);
+					}
+				}
 
-				return {
+				const result = {
 					...prev,
 					方案: {
 						type: methodType,
 						steps:
 							methodType === "common"
-								? methodsForEquipment.map((method) => {
+								? methodsForEquipment.map((method, methodIndex) => {
 										const totalTime =
 											method.params.stages[
 												method.params.stages.length - 1
@@ -105,6 +196,10 @@ export function useBrewingContent({
 												)}`,
 											],
 											note: "",
+											// 添加方法索引，方便点击事件处理
+											methodIndex: methodIndex,
+											// 只为自定义器具的通用方案添加标识
+											isCommonMethod: isCustomEquipment
 										};
 								  })
 								: methodsForEquipment.map((method) => ({
@@ -128,9 +223,11 @@ export function useBrewingContent({
 								  })),
 					},
 				};
+				console.log('最终返回的内容:', result);
+				return result;
 			});
 		}
-	}, [selectedEquipment, methodType, customMethods, settings.grindType]);
+	}, [selectedEquipment, methodType, customMethods, settings.grindType, customEquipments]);
 
 	// 更新注水步骤内容
 	const updateBrewingSteps = (stages: Stage[]) => {
