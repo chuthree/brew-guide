@@ -42,6 +42,24 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
     const [imagesPreloaded, setImagesPreloaded] = useState(false)
     const [displayedIceIndices, setDisplayedIceIndices] = useState<number[]>([])
 
+    // 获取设备图片路径
+    const getEquipmentImageSrc = () => {
+        // 当设备ID为CleverDripper时，使用v60的图片
+        if (equipmentId === 'CleverDripper') {
+            return '/images/v60-base.svg'
+        }
+        // 根据设备ID返回对应的图片路径
+        return `/images/${equipmentId.toLowerCase()}-base.svg`
+    }
+
+    // 获取阀门图片路径
+    const getValveImageSrc = () => {
+        if (equipmentId !== 'CleverDripper') return null
+        return valveStatus === 'open'
+            ? '/images/valve-open.svg'
+            : '/images/valve-closed.svg'
+    }
+
     // 定义可用的动画图片及其最大索引 - 移到组件顶部
     const availableAnimations = useMemo<Record<string, AnimationConfig>>(() => ({
         center: { maxIndex: 3 },  // center 只有3张图片
@@ -222,7 +240,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
         return (
             <div className="relative w-full aspect-square max-w-[300px] mx-auto px-safe">
                 <Image
-                    src={`/images/${equipmentId.toLowerCase()}-base.svg`} // 根据设备ID选择对应的图片
+                    src={getEquipmentImageSrc()}
                     alt={equipmentId}
                     fill
                     className="object-contain invert-0 dark:invert opacity-50 transition-opacity duration-300"
@@ -253,7 +271,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
         return (
             <div className="relative w-full aspect-square max-w-[300px] mx-auto px-safe">
                 <Image
-                    src={`/images/${equipmentId.toLowerCase()}-base.svg`} // 根据设备ID选择对应的图片
+                    src={getEquipmentImageSrc()}
                     alt={equipmentId}
                     fill
                     className="object-contain invert-0 dark:invert opacity-50 transition-opacity duration-300"
@@ -285,7 +303,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
         return (
             <div className="relative w-full aspect-square max-w-[300px] mx-auto px-safe">
                 <Image
-                    src={`/images/${equipmentId.toLowerCase()}-base.svg`} // 根据设备ID选择对应的图片
+                    src={getEquipmentImageSrc()}
                     alt={equipmentId}
                     fill
                     className="object-contain invert-0 dark:invert opacity-50 transition-opacity duration-300"
@@ -309,20 +327,6 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                 )}
             </div>
         );
-    }
-
-    // 获取设备图片路径
-    const getEquipmentImageSrc = () => {
-        // 根据设备ID返回对应的图片路径
-        return `/images/${equipmentId.toLowerCase()}-base.svg`
-    }
-
-    // 获取阀门图片路径
-    const getValveImageSrc = () => {
-        if (equipmentId !== 'CleverDripper') return null
-        return valveStatus === 'open'
-            ? '/images/valve-open.svg'
-            : '/images/valve-closed.svg'
     }
 
     // 当 pourType 未设置或 pourTime 为 0 时，默认使用 center 类型，但不会显示注水动画
