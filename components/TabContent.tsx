@@ -349,8 +349,6 @@ const TabContent: React.FC<TabContentProps> = ({
                             } : undefined}
                             actionMenuStates={actionMenuStates}
                             setActionMenuStates={setActionMenuStates}
-                            _selectedEquipment={selectedEquipment}
-                            _customMethods={customMethods}
                         />
                     ))}
                 </>
