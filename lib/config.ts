@@ -42,6 +42,7 @@ export interface CustomEquipment extends Equipment {
 	animationType: "v60" | "kalita" | "origami" | "clever";  // 使用哪种基础器具的动画
 	hasValve?: boolean;  // 是否有阀门（类似聪明杯）
 	isCustom: true;  // 标记为自定义器具
+	customShapeSvg?: string; // 自定义杯型的SVG路径数据
 }
 
 export interface BrewingNote {

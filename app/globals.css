@@ -34,6 +34,29 @@
   --rsbs-backdrop-bg: rgba(0, 0, 0, 0.5);
 }
 
+/* 自定义SVG样式，支持深色模式适配 */
+.custom-shape-svg-container svg {
+  color-scheme: light dark;
+}
+
+/* 浅色模式下的自定义SVG路径颜色 */
+.custom-shape-svg-container svg path[stroke="var(--custom-shape-color)"] {
+  stroke: #000000;
+}
+
+/* 深色模式下的自定义SVG路径颜色 */
+.dark .custom-shape-svg-container svg path[stroke="var(--custom-shape-color)"] {
+  stroke: #ffffff;
+}
+
+/* 系统偏好设置为深色模式时的SVG颜色 */
+@media (prefers-color-scheme: dark) {
+  /* 仅当未手动设置.dark类时应用 */
+  :root:not(.dark) .custom-shape-svg-container svg path[stroke="var(--custom-shape-color)"] {
+    stroke: #ffffff;
+  }
+}
+
 @layer base {
 
   html,

@@ -29,6 +29,7 @@ interface PourVisualizerProps {
     customEquipment?: {
         animationType: "v60" | "kalita" | "origami" | "clever";
         hasValve?: boolean;
+        customShapeSvg?: string; // 添加自定义杯型SVG
     };
 }
 
@@ -50,6 +51,15 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
     // 获取设备图片路径
     const getEquipmentImageSrc = () => {
         try {
+            // 如果是自定义器具且有自定义SVG路径，使用自定义SVG
+            if (customEquipment?.customShapeSvg) {
+                console.log('使用自定义杯型SVG:', 
+                    customEquipment.customShapeSvg.substring(0, 30) + '... (长度:' + 
+                    customEquipment.customShapeSvg.length + '字符)');
+                // 自定义杯型的SVG数据直接返回，作为内联SVG使用
+                return null;
+            }
+            
             // 如果是自定义器具，使用对应的基础动画类型
             if (customEquipment && customEquipment.animationType) {
                 const type = customEquipment.animationType.toLowerCase();
@@ -302,20 +312,50 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
         }
     }, [equipmentId, currentStage, stages, customEquipment]);
 
+    // 检查是否使用自定义SVG
+    const hasCustomSvg = Boolean(customEquipment?.customShapeSvg);
+    const equipmentImageSrc = getEquipmentImageSrc();
+
+    // 添加调试日志
+    if (hasCustomSvg) {
+        console.log('检测到自定义SVG:', {
+            hasCustomSvg,
+            svgLength: customEquipment?.customShapeSvg?.length || 0,
+            equipmentId,
+            animationType: customEquipment?.animationType
+        });
+    }
+
+    // 计算杯体透明度 - 在注水时为完全不透明，否则为半透明
+    const equipmentOpacity = isPouring ? 'opacity-100' : 'opacity-50';
+
     // 如果在倒计时期间，立即返回静态视图
     if (countdownTime !== null) {
         return (
             <div className="relative w-full aspect-square max-w-[300px] mx-auto px-safe">
-                <Image
-                    src={getEquipmentImageSrc()}
-                    alt={equipmentId}
-                    fill
-                    className="object-contain invert-0 dark:invert opacity-50 transition-opacity duration-300"
-                    priority
-                    sizes="(max-width: 768px) 100vw, 300px"
-                    quality={85}
-                    onError={() => { }}
-                />
+                {/* 底部杯体 - 使用自定义SVG或图片 */}
+                {hasCustomSvg ? (
+                    <div 
+                        className={`absolute inset-0 ${equipmentOpacity} transition-opacity duration-300 custom-shape-svg-container`}
+                        dangerouslySetInnerHTML={{ 
+                            __html: customEquipment?.customShapeSvg || '' 
+                        }}
+                        data-theme-mode="auto"
+                    />
+                ) : (
+                    <Image
+                        src={equipmentImageSrc || '/images/v60-base.svg'}
+                        alt={equipmentId}
+                        fill
+                        className={`object-contain invert-0 dark:invert ${equipmentOpacity} transition-opacity duration-300`}
+                        priority
+                        sizes="(max-width: 768px) 100vw, 300px"
+                        quality={85}
+                        onError={(e) => { 
+                            console.error('图片加载失败:', e);
+                        }}
+                    />
+                )}
                 {/* 显示阀门（如果器具支持） */}
                 {(equipmentId === 'CleverDripper' || customEquipment?.hasValve) && getValveImageSrc() && (
                     <div className="absolute inset-0">
@@ -338,16 +378,27 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
     if (!isRunning || currentStage < 0) {
         return (
             <div className="relative w-full aspect-square max-w-[300px] mx-auto px-safe">
-                <Image
-                    src={getEquipmentImageSrc()}
-                    alt={equipmentId}
-                    fill
-                    className="object-contain invert-0 dark:invert opacity-50 transition-opacity duration-300"
-                    priority
-                    sizes="(max-width: 768px) 100vw, 300px"
-                    quality={85}
-                    onError={() => { }}
-                />
+                {/* 底部杯体 - 使用自定义SVG或图片 */}
+                {hasCustomSvg ? (
+                    <div 
+                        className={`absolute inset-0 ${equipmentOpacity} transition-opacity duration-300 custom-shape-svg-container`}
+                        dangerouslySetInnerHTML={{ 
+                            __html: customEquipment?.customShapeSvg || '' 
+                        }}
+                        data-theme-mode="auto"
+                    />
+                ) : (
+                    <Image
+                        src={equipmentImageSrc || '/images/v60-base.svg'}
+                        alt={equipmentId}
+                        fill
+                        className={`object-contain invert-0 dark:invert ${equipmentOpacity} transition-opacity duration-300`}
+                        priority
+                        sizes="(max-width: 768px) 100vw, 300px"
+                        quality={85}
+                        onError={() => { }}
+                    />
+                )}
                 {/* 显示阀门（如果器具支持） */}
                 {(equipmentId === 'CleverDripper' || customEquipment?.hasValve) && getValveImageSrc() && (
                     <div className="absolute inset-0">
@@ -371,16 +422,29 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
     if (!currentStageData) {
         return (
             <div className="relative w-full aspect-square max-w-[300px] mx-auto px-safe">
-                <Image
-                    src={getEquipmentImageSrc()}
-                    alt={equipmentId}
-                    fill
-                    className="object-contain invert-0 dark:invert opacity-50 transition-opacity duration-300"
-                    priority
-                    sizes="(max-width: 768px) 100vw, 300px"
-                    quality={85}
-                    onError={() => { }}
-                />
+                {/* 底部杯体 - 使用自定义SVG或图片 */}
+                {hasCustomSvg ? (
+                    <div 
+                        className={`absolute inset-0 ${equipmentOpacity} transition-opacity duration-300 custom-shape-svg-container`}
+                        dangerouslySetInnerHTML={{ 
+                            __html: customEquipment?.customShapeSvg || '' 
+                        }}
+                        data-theme-mode="auto"
+                    />
+                ) : (
+                    <Image
+                        src={equipmentImageSrc || '/images/v60-base.svg'}
+                        alt={equipmentId}
+                        fill
+                        className={`object-contain invert-0 dark:invert ${equipmentOpacity} transition-opacity duration-300`}
+                        priority
+                        sizes="(max-width: 768px) 100vw, 300px"
+                        quality={85}
+                        onError={(e) => { 
+                            console.error('图片加载失败:', e);
+                        }}
+                    />
+                )}
                 {/* 显示阀门（如果器具支持） */}
                 {(equipmentId === 'CleverDripper' || customEquipment?.hasValve) && getValveImageSrc() && (
                     <div className="absolute inset-0">
@@ -406,25 +470,34 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
     // 检查当前动画类型是否有效
     const isValidAnimation = availableAnimations[currentPourType as keyof typeof availableAnimations] !== undefined;
 
-    // 计算杯体透明度 - 在注水时为完全不透明，否则为半透明
-    const equipmentOpacity = isPouring ? 'opacity-100' : 'opacity-50';
-
     // 再次检查倒计时状态，双重保险
     const shouldShowAnimation = isPouring && imagesPreloaded && isValidAnimation && countdownTime === null;
 
     return (
         <div className="relative w-full aspect-square max-w-[300px] mx-auto px-safe">
-            {/* 底部杯体 */}
-            <Image
-                src={getEquipmentImageSrc()}
-                alt={equipmentId}
-                fill
-                className={`object-contain invert-0 dark:invert ${equipmentOpacity} transition-opacity duration-300`}
-                priority
-                sizes="(max-width: 768px) 100vw, 300px"
-                quality={85}
-                onError={() => { }}
-            />
+            {/* 底部杯体 - 使用自定义SVG或图片 */}
+            {hasCustomSvg ? (
+                <div 
+                    className={`absolute inset-0 ${equipmentOpacity} transition-opacity duration-300 custom-shape-svg-container`}
+                    dangerouslySetInnerHTML={{ 
+                        __html: customEquipment?.customShapeSvg || '' 
+                    }}
+                    data-theme-mode="auto"
+                />
+            ) : (
+                <Image
+                    src={equipmentImageSrc || '/images/v60-base.svg'}
+                    alt={equipmentId}
+                    fill
+                    className={`object-contain invert-0 dark:invert ${equipmentOpacity} transition-opacity duration-300`}
+                    priority
+                    sizes="(max-width: 768px) 100vw, 300px"
+                    quality={85}
+                    onError={(e) => { 
+                        console.error('图片加载失败:', e);
+                    }}
+                />
+            )}
 
             {/* 阀门图层 - 适用于聪明杯或自定义带阀门的器具 */}
             {(equipmentId === 'CleverDripper' || customEquipment?.hasValve) && getValveImageSrc() && (
