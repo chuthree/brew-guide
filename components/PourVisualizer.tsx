@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Stage } from '@/lib/config'
+import { AnimationFrame } from './AnimationEditor'
 
 // 定义扩展阶段类型
 interface ExtendedStage extends Partial<Stage> {
@@ -17,6 +18,7 @@ interface ExtendedStage extends Partial<Stage> {
 interface AnimationConfig {
     maxIndex: number;
     isStacking?: boolean;
+    frames?: AnimationFrame[]; // 添加支持自定义帧
 }
 
 interface PourVisualizerProps {
@@ -30,6 +32,12 @@ interface PourVisualizerProps {
         animationType: "v60" | "kalita" | "origami" | "clever";
         hasValve?: boolean;
         customShapeSvg?: string; // 添加自定义杯型SVG
+        customPourAnimations?: {
+            id: string;
+            pourType?: 'center' | 'circle' | 'ice';
+            customAnimationSvg: string;
+            frames?: AnimationFrame[];
+        }[];
     };
 }
 
@@ -111,11 +119,48 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
     }
 
     // 定义可用的动画图片及其最大索引 - 移到组件顶部
-    const availableAnimations = useMemo<Record<string, AnimationConfig>>(() => ({
-        center: { maxIndex: 3 },  // center 只有3张图片
-        circle: { maxIndex: 4 },   // circle 有4张图片
-        ice: { maxIndex: 4, isStacking: true }  // 冰块动画，有4张图片，需要叠加显示
-    }), [])
+    const availableAnimations = useMemo<Record<string, AnimationConfig>>(() => {
+        // 基础动画配置
+        const baseAnimations: Record<string, AnimationConfig> = {
+            center: { maxIndex: 3 },  // center 只有3张图片
+            circle: { maxIndex: 4 },   // circle 有4张图片
+            ice: { maxIndex: 4, isStacking: true }  // 冰块动画，有4张图片，需要叠加显示
+        };
+
+        // 如果有自定义器具，添加自定义动画配置
+        if (customEquipment?.customPourAnimations?.length) {
+            customEquipment.customPourAnimations.forEach(animation => {
+                if (animation.pourType) {
+                    // 如果使用系统默认类型，则继承该类型的基本配置
+                    // 但可能有自定义动画帧
+                    if (animation.frames && animation.frames.length > 0) {
+                        baseAnimations[animation.pourType] = {
+                            ...baseAnimations[animation.pourType],
+                            frames: animation.frames
+                        };
+                    }
+                } else {
+                    // 完全自定义的动画类型
+                    const animationId = animation.id;
+                    if (animation.frames && animation.frames.length > 0) {
+                        // 使用自定义帧
+                        baseAnimations[animationId] = {
+                            maxIndex: animation.frames.length,
+                            frames: animation.frames
+                        };
+                    } else if (animation.customAnimationSvg) {
+                        // 兼容旧版单帧自定义动画
+                        baseAnimations[animationId] = {
+                            maxIndex: 1,
+                            frames: [{ id: 'frame-1', svgData: animation.customAnimationSvg }]
+                        };
+                    }
+                }
+            });
+        }
+        
+        return baseAnimations;
+    }, [customEquipment]);
 
     // 优化预加载图片逻辑
     const imagesToPreload = useMemo(() => {
@@ -329,6 +374,26 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
     // 计算杯体透明度 - 在注水时为完全不透明，否则为半透明
     const equipmentOpacity = isPouring ? 'opacity-100' : 'opacity-50';
 
+    // 获取当前动画图片路径
+    const getMotionSrc = useCallback(() => {
+        try {
+            if (!isRunning) return null;
+            
+            const pourType = getCurrentPourType();
+            
+            // 检查对应的动画类型是否存在
+            if (!pourType || !(pourType in availableAnimations)) return null;
+            
+            // 如果是冰块动画类型(isStacking=true)，使用特殊处理
+            if (availableAnimations[pourType]?.isStacking) return null;
+            
+            return `/images/pour-${pourType}-motion-${currentMotionIndex}.svg`;
+        } catch (error) {
+            console.error('获取动画图片路径出错', error);
+            return null;
+        }
+    }, [isRunning, getCurrentPourType, currentMotionIndex, availableAnimations]);
+
     // 如果在倒计时期间，立即返回静态视图
     if (countdownTime !== null) {
         return (
@@ -465,7 +530,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
 
     // 当 pourType 未设置或 pourTime 为 0 时，默认使用 center 类型
     const currentPourType = getCurrentPourType();
-    const motionSrc = `/images/pour-${currentPourType}-motion-${currentMotionIndex}.svg`;
+    const motionSrc = getMotionSrc();
 
     // 检查当前动画类型是否有效
     const isValidAnimation = availableAnimations[currentPourType as keyof typeof availableAnimations] !== undefined;
@@ -474,51 +539,58 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
     const shouldShowAnimation = isPouring && imagesPreloaded && isValidAnimation && countdownTime === null;
 
     return (
-        <div className="relative w-full aspect-square max-w-[300px] mx-auto px-safe">
-            {/* 底部杯体 - 使用自定义SVG或图片 */}
-            {hasCustomSvg ? (
-                <div 
-                    className={`absolute inset-0 ${equipmentOpacity} transition-opacity duration-300 custom-shape-svg-container`}
-                    dangerouslySetInnerHTML={{ 
-                        __html: customEquipment?.customShapeSvg || '' 
-                    }}
-                    data-theme-mode="auto"
-                />
-            ) : (
-                <Image
-                    src={equipmentImageSrc || '/images/v60-base.svg'}
-                    alt={equipmentId}
-                    fill
-                    className={`object-contain invert-0 dark:invert ${equipmentOpacity} transition-opacity duration-300`}
-                    priority
-                    sizes="(max-width: 768px) 100vw, 300px"
-                    quality={85}
-                    onError={(e) => { 
-                        console.error('图片加载失败:', e);
-                    }}
-                />
-            )}
+        <div className={`relative aspect-square w-full overflow-hidden ${isRunning ? 'bg-transparent' : 'bg-neutral-900'}`}>
+            {/* 基础杯型 */}
+            <AnimatePresence mode='wait'>
+                <motion.div
+                    key={`equipment-${equipmentId}`}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="absolute inset-0"
+                >
+                    {!customEquipment?.customShapeSvg ? (
+                        // 标准SVG图像文件
+                        <Image
+                            src={equipmentImageSrc || '/images/v60-base.svg'}
+                            alt={equipmentId || 'V60'}
+                            fill
+                            className="object-contain invert-0 dark:invert"
+                            sizes="(max-width: 768px) 100vw, 300px"
+                            quality={85}
+                            priority={true}
+                            onError={() => { }}
+                        />
+                    ) : (
+                        // 自定义SVG内联数据
+                        <div className="w-full h-full" dangerouslySetInnerHTML={{ 
+                            __html: customEquipment.customShapeSvg.replace(/<svg/, '<svg width="100%" height="100%" class="invert-0 dark:invert"') 
+                        }} />
+                    )}
+                </motion.div>
+            </AnimatePresence>
 
-            {/* 阀门图层 - 适用于聪明杯或自定义带阀门的器具 */}
-            {(equipmentId === 'CleverDripper' || customEquipment?.hasValve) && getValveImageSrc() && (
-                <div className="absolute inset-0">
+            {/* 阀门（如果适用） */}
+            {valveStatus === 'open' && getValveImageSrc() && (
+                <div className="absolute inset-x-0 bottom-0 h-1/4 flex items-center justify-center">
                     <Image
                         src={getValveImageSrc() || ''}
                         alt={`Valve ${valveStatus}`}
-                        fill
-                        className={`object-contain invert-0 dark:invert ${equipmentOpacity} transition-opacity duration-300`}
-                        sizes="(max-width: 768px) 100vw, 300px"
-                        quality={85}
+                        width={40}
+                        height={8}
+                        className="object-contain invert-0 dark:invert"
+                        quality={90}
                         onError={() => { }}
                     />
                 </div>
             )}
 
-            {/* 注水动画 - 只在注水时间内显示，且动画类型有效时，且不在倒计时阶段 */}
-            <AnimatePresence>
+            {/* 注水动画 */}
+            <AnimatePresence mode="sync">
                 {shouldShowAnimation && (
                     <>
-                        {/* 对于普通动画类型（center, circle），显示单个动画 */}
+                        {/* 对于普通动画类型（center, circle或自定义帧动画） */}
                         {!availableAnimations[currentPourType as keyof typeof availableAnimations]?.isStacking && (
                             <motion.div
                                 key={`${currentStage}-${currentMotionIndex}`}
@@ -528,16 +600,29 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                                 transition={{ duration: 0.26 }}
                                 className="absolute inset-0"
                             >
-                                <Image
-                                    src={motionSrc}
-                                    alt={`Pour ${currentPourType}`}
-                                    fill
-                                    className="object-contain invert-0 dark:invert"
-                                    sizes="(max-width: 768px) 100vw, 300px"
-                                    quality={85}
-                                    loading="eager"
-                                    onError={() => { }}
-                                />
+                                {/* 如果有自定义帧，优先使用帧 */}
+                                {availableAnimations[currentPourType as keyof typeof availableAnimations]?.frames ? (
+                                    // 使用自定义帧
+                                    <div 
+                                        className="w-full h-full flex items-center justify-center"
+                                        dangerouslySetInnerHTML={{ 
+                                            __html: (availableAnimations[currentPourType as keyof typeof availableAnimations]?.frames?.[currentMotionIndex - 1]?.svgData || '')
+                                                .replace(/<svg/, '<svg width="100%" height="100%" class="invert-0 dark:invert"') 
+                                        }}
+                                    />
+                                ) : (
+                                    // 使用标准图片
+                                    <Image
+                                        src={motionSrc || ''}
+                                        alt={`Pour ${currentPourType}`}
+                                        fill
+                                        className="object-contain invert-0 dark:invert"
+                                        sizes="(max-width: 768px) 100vw, 300px"
+                                        quality={85}
+                                        loading="eager"
+                                        onError={() => { }}
+                                    />
+                                )}
                             </motion.div>
                         )}
 

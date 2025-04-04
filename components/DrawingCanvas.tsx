@@ -21,6 +21,8 @@ interface DrawingCanvasProps {
   defaultSvg?: string;
   onDrawingComplete?: (svgString: string) => void;
   referenceSvgUrl?: string;
+  referenceSvg?: string;
+  strokeColor?: string;
 }
 
 // 定义暴露给父组件的API接口
@@ -55,6 +57,8 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
   defaultSvg,
   onDrawingComplete,
   referenceSvgUrl = '/images/v60-base.svg',
+  referenceSvg,
+  strokeColor,
 }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -66,13 +70,17 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
   const [currentLine, setCurrentLine] = useState<Line | null>(null);
   const [strokeWidth, setStrokeWidth] = useState(3);
   // 强制使用纯黑色(#000000)作为默认颜色，以便在暗黑模式下可以正确转换为白色
-  const [_color, _setColor] = useState('#000000');
+  const [_color, _setColor] = useState(strokeColor || '#000000');
   const [isReady, setIsReady] = useState(false);
   const [isDark, setIsDark] = useState(false); // 追踪深色模式状态
   
   // 绘图参考图像是否加载
   const [referenceLoaded, setReferenceLoaded] = useState(false);
   const referenceImageRef = useRef<HTMLImageElement | null>(null);
+  
+  // 添加状态跟踪URL参考图像
+  const [urlReferenceLoaded, setUrlReferenceLoaded] = useState(false);
+  const urlReferenceImageRef = useRef<HTMLImageElement | null>(null);
   
   // 检测并更新当前主题模式
   const updateThemeMode = useCallback(() => {
@@ -139,21 +147,61 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
     }
   }, [defaultSvg]);
 
-  // 加载参考图像
+  // 加载URL参考图像（杯型等）
   useEffect(() => {
-    if (!referenceSvgUrl) return;
+    if (!referenceSvgUrl) {
+      setUrlReferenceLoaded(false);
+      urlReferenceImageRef.current = null;
+      return;
+    }
     
     const img = new Image();
     img.src = referenceSvgUrl;
     img.onload = () => {
-      referenceImageRef.current = img;
-      setReferenceLoaded(true);
+      urlReferenceImageRef.current = img;
+      setUrlReferenceLoaded(true);
     };
     
     return () => {
       img.onload = null;
     };
   }, [referenceSvgUrl]);
+
+  // 加载SVG字符串作为参考图像（前帧）
+  useEffect(() => {
+    // 清理上一个引用
+    setReferenceLoaded(false);
+    referenceImageRef.current = null;
+
+    // 使用referenceSvg（直接的SVG字符串）
+    if (referenceSvg && referenceSvg.trim() !== '') {
+      // 处理SVG颜色 - 在深色模式下将黑色线条转换为白色
+      let processedSvg = referenceSvg;
+      if (isDark) {
+        // 简单替换黑色为白色（对于var(--custom-shape-color)和#000000两种情况）
+        processedSvg = processedSvg
+          .replace(/stroke="var\(--custom-shape-color\)"/g, 'stroke="#FFFFFF"')
+          .replace(/stroke="#000000"/g, 'stroke="#FFFFFF"')
+          .replace(/stroke="black"/g, 'stroke="#FFFFFF"');
+      }
+      
+      const svgBlob = new Blob([processedSvg], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(svgBlob);
+      
+      const img = new Image();
+      img.src = url;
+      img.onload = () => {
+        referenceImageRef.current = img;
+        setReferenceLoaded(true);
+        URL.revokeObjectURL(url); // 释放URL对象
+      };
+      
+      return () => {
+        img.onload = null;
+        URL.revokeObjectURL(url);
+      };
+    }
+  }, [referenceSvg, isDark]);
 
   // 设置画布偏移 - 优化版本，添加更多时机更新位置
   const updateCanvasOffset = useCallback(() => {
@@ -189,9 +237,13 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
 
   // 获取绘图当前颜色 - 根据主题模式调整
   const getCurrentDrawingColor = useCallback(() => {
-    // 在深色模式下使用白色，浅色模式下使用黑色
+    // 如果提供了strokeColor，则使用它
+    if (strokeColor) {
+      return strokeColor;
+    }
+    // 否则，在深色模式下使用白色，浅色模式下使用黑色
     return isDark ? '#ffffff' : '#000000';
-  }, [isDark]);
+  }, [isDark, strokeColor]);
 
   // 重绘画布
   const redrawCanvas = useCallback(() => {
@@ -203,9 +255,8 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
     // 清空画布
     context.clearRect(0, 0, canvas.width, canvas.height);
     
-    // 绘制参考图像（半透明）- 根据深色模式调整
-    if (referenceLoaded && referenceImageRef.current) {
-      // 在深色模式下需要反转参考图像颜色
+    // 绘制URL参考图像（杯型等）
+    if (urlReferenceLoaded && urlReferenceImageRef.current) {
       context.save();
       
       // 设置透明度
@@ -217,6 +268,26 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
       }
       
       context.drawImage(
+        urlReferenceImageRef.current, 
+        0, 
+        0, 
+        canvas.width, 
+        canvas.height
+      );
+      
+      context.restore();
+    }
+    
+    // 绘制SVG参考图像（前帧）
+    if (referenceLoaded && referenceImageRef.current) {
+      context.save();
+      
+      // 设置透明度 - 前帧底图使用较高不透明度
+      context.globalAlpha = 0.4;
+      
+      // 不需要反转色彩，我们已经在加载SVG时处理过了
+      
+      context.drawImage(
         referenceImageRef.current, 
         0, 
         0, 
@@ -224,7 +295,6 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
         canvas.height
       );
       
-      // 恢复上下文状态
       context.restore();
     }
     
@@ -286,12 +356,12 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
       context.font = '14px sans-serif';
       context.fillText('加载中...', canvas.width / 2, canvas.height / 2);
     }
-  }, [lines, currentLine, referenceLoaded, isReady, isDark, getCurrentDrawingColor]);
+  }, [lines, currentLine, referenceLoaded, urlReferenceLoaded, isReady, isDark, getCurrentDrawingColor]);
 
   // 每次状态更新时重绘画布
   useEffect(() => {
     redrawCanvas();
-  }, [lines, currentLine, redrawCanvas, isReady, referenceLoaded, isDark]);
+  }, [lines, currentLine, redrawCanvas, isReady, referenceLoaded, urlReferenceLoaded, isDark]);
 
   // 更新linesRef当lines状态改变时
   useEffect(() => {
@@ -447,19 +517,19 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
     save: saveDrawing,
     setStrokeWidth,
     setColor: _setColor
-  }), [clearCanvas, undoLastLine, saveDrawing]);
+  }), [clearCanvas, undoLastLine, saveDrawing, setStrokeWidth, _setColor]);
 
   return (
     <div 
       ref={containerRef} 
-      className="relative overflow-hidden"
+      className="relative overflow-hidden border border-neutral-200 dark:border-neutral-700 rounded-lg"
       style={{ touchAction: 'none' }} // 防止触摸手势引起的页面滚动
     >
       <canvas
         ref={canvasRef}
         width={width}
         height={height}
-        className="border border-neutral-200 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-900"
+        className=" bg-white dark:bg-neutral-900"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -476,14 +546,14 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
           <button
             type="button"
             onClick={() => setStrokeWidth(prev => Math.max(1, prev - 1))}
-            className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center"
+            className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center hidden"
           >
             <span className="text-lg">-</span>
           </button>
           <button
             type="button"
             onClick={() => setStrokeWidth(prev => Math.min(10, prev + 1))}
-            className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center"
+            className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center hidden"
           >
             <span className="text-lg">+</span>
           </button>
@@ -494,7 +564,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
             type="button"
             onClick={undoLastLine}
             disabled={lines.length === 0}
-            className={`w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center ${
+            className={`w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center hidden ${
               lines.length === 0 ? 'opacity-50' : ''
             }`}
           >
@@ -508,7 +578,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
             type="button"
             onClick={clearCanvas}
             disabled={lines.length === 0}
-            className={`w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center ${
+            className={`w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center hidden ${
               lines.length === 0 ? 'opacity-50' : ''
             }`}
           >
