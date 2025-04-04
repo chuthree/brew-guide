@@ -250,6 +250,15 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
     const calculatePricePerGram = (bean: CoffeeBean) => {
         if (!bean.price || !bean.capacity) return null;
 
+        // 处理博主榜单豆子 - 博主榜单豆子的价格已经是每百克价格
+        if ((bean as BloggerBean).isBloggerRecommended) {
+            const price = parseFloat(bean.price.replace(/[^\d.]/g, ''));
+            if (isNaN(price)) return null;
+            // 直接返回价格的1/100，因为原始数据已经是每百克价格
+            return (price / 100).toFixed(2);
+        }
+
+        // 常规豆子价格计算
         const price = parseFloat(bean.price.replace(/[^\d.]/g, ''));
         const capacity = parseFloat(bean.capacity.replace(/[^\d.]/g, ''));
 
