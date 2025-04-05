@@ -259,21 +259,53 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
     if (urlReferenceLoaded && urlReferenceImageRef.current) {
       context.save();
       
-      // 设置透明度
-      context.globalAlpha = 0.2;
+      // 设置透明度 - 深色模式下进一步提高透明度使图像更清晰
+      context.globalAlpha = isDark ? 0.8 : 0.2;
       
       if (isDark) {
-        // 在深色模式下反转颜色
-        context.filter = 'invert(1)';
+        // 在深色模式下强化反转和对比度
+        context.filter = 'invert(1) contrast(2) brightness(2.5)';
+        
+        // 先绘制一次增强的图像
+        context.drawImage(
+          urlReferenceImageRef.current, 
+          0, 
+          0, 
+          canvas.width, 
+          canvas.height
+        );
+        
+        // 再绘制一次轮廓加强效果
+        context.globalAlpha = 0.7;
+        context.filter = 'invert(1) contrast(3) brightness(3) saturate(0)';
+        context.drawImage(
+          urlReferenceImageRef.current, 
+          0, 
+          0, 
+          canvas.width, 
+          canvas.height
+        );
+        
+        // 添加第三次绘制，专注于轮廓
+        context.globalAlpha = 0.5;
+        context.filter = 'invert(1) brightness(5) contrast(5) saturate(0)';
+        context.drawImage(
+          urlReferenceImageRef.current, 
+          0, 
+          0, 
+          canvas.width, 
+          canvas.height
+        );
+      } else {
+        // 浅色模式正常绘制
+        context.drawImage(
+          urlReferenceImageRef.current, 
+          0, 
+          0, 
+          canvas.width, 
+          canvas.height
+        );
       }
-      
-      context.drawImage(
-        urlReferenceImageRef.current, 
-        0, 
-        0, 
-        canvas.width, 
-        canvas.height
-      );
       
       context.restore();
     }
@@ -282,10 +314,14 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
     if (referenceLoaded && referenceImageRef.current) {
       context.save();
       
-      // 设置透明度 - 前帧底图使用较高不透明度
-      context.globalAlpha = 0.4;
+      // 设置透明度 - 前帧底图在深色模式下使用更高的不透明度以增强可见性
+      context.globalAlpha = isDark ? 0.6 : 0.4;
       
       // 不需要反转色彩，我们已经在加载SVG时处理过了
+      // 但在深色模式下可以增加一些滤镜提高可见性
+      if (isDark) {
+        context.filter = 'brightness(1.2)';
+      }
       
       context.drawImage(
         referenceImageRef.current, 

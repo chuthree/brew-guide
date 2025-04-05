@@ -441,7 +441,7 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(({
   return (
     <div className="flex flex-col space-y-4">
       {/* 主画布区域 */}
-      <div className="relative bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg overflow-hidden">
+      <div className="relative bg-white dark:bg-neutral-900 border-2 border-neutral-300 dark:border-neutral-700 rounded-lg overflow-hidden shadow-md">
         <DrawingCanvas
           ref={canvasRef}
           width={width}

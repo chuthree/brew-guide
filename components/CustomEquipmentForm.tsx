@@ -651,7 +651,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                 
                 <div 
                     ref={canvasContainerRef}
-                    className="w-full bg-black rounded-xl mx-auto overflow-hidden"
+                    className="w-full rounded-xl mx-auto overflow-hidden"
                 >
                     {canvasSize > 0 && (
                         <AnimationEditor
@@ -1002,7 +1002,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                                         </div>
                                     </div>
                                     <div 
-                                        className="w-full h-0 pb-[100%] bg-black relative flex items-center justify-center cursor-default overflow-hidden"
+                                        className="w-full h-0 pb-[100%] bg-neutral-700 dark:bg-neutral-600 relative flex items-center justify-center cursor-default overflow-hidden"
                                     >
                                         {animation.isSystemDefault ? (
                                             // 系统默认类型，显示其动画序列
