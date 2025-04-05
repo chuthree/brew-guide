@@ -6,12 +6,14 @@ interface MethodTypeSelectorProps {
     methodType: 'common' | 'custom';
     settings: SettingsOptions;
     onSelectMethodType: (type: 'common' | 'custom') => void;
+    hideSelector?: boolean;
 }
 
 const MethodTypeSelector: React.FC<MethodTypeSelectorProps> = ({
     methodType,
     settings,
-    onSelectMethodType
+    onSelectMethodType,
+    hideSelector = false
 }) => {
     const handleMethodTypeChange = (type: 'common' | 'custom') => {
         if (settings.hapticFeedback) {
@@ -19,6 +21,10 @@ const MethodTypeSelector: React.FC<MethodTypeSelectorProps> = ({
         }
         onSelectMethodType(type);
     };
+
+    if (hideSelector) {
+        return null;
+    }
 
     return (
         <div

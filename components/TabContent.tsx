@@ -322,7 +322,7 @@ const TabContent: React.FC<TabContentProps> = ({
 
                     {content[activeTab]?.steps.map((step: Step, index: number) => (
                         <StageItem
-                            key={step.methodId || `${step.title}-${index}`}
+                            key={step.methodId ? `${step.methodId}-${index}` : `${step.title}-${index}`}
                             step={step}
                             index={index}
                             onClick={() => {

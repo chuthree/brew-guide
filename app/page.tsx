@@ -383,6 +383,19 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
     // 处理方法类型切换
     const handleMethodTypeChange = (type: 'common' | 'custom') => {
+        // 查找当前选中的自定义器具
+        const customEquipment = customEquipments.find(
+            e => e.id === selectedEquipment || e.name === selectedEquipment
+        );
+
+        // 只有当是自定义预设器具（animationType === 'custom'）时才禁止切换到通用方案
+        if (customEquipment && customEquipment.animationType === 'custom' && type === 'common') {
+            // 对于自定义预设器具，忽略切换到通用方案的操作
+            console.log('自定义预设器具仅支持自定义方案');
+            return;
+        }
+
+        // 正常设置方法类型
         setMethodType(type);
     };
 
@@ -905,8 +918,19 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             params: null
         });
 
+        // 检查是否是自定义预设器具（animationType === 'custom'）
+        const isCustomPresetEquipment = customEquipments.some(
+            e => (e.id === equipment || e.name === equipment) && e.animationType === 'custom'
+        );
+
+        // 如果是自定义预设器具，强制设置方法类型为'custom'
+        if (isCustomPresetEquipment) {
+            setMethodType('custom');
+            console.log('检测到自定义预设器具，已自动切换到自定义方案模式');
+        }
+
         handleEquipmentSelect(equipment);
-    }, [handleEquipmentSelect, setParameterInfo]);
+    }, [handleEquipmentSelect, setParameterInfo, customEquipments, setMethodType]);
 
     // 当前页面相关初始化
     useEffect(() => {
@@ -1489,6 +1513,23 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         }
     };
 
+    // 添加监听器，当设备变化时检查是否为自定义预设器具
+    useEffect(() => {
+        if (selectedEquipment) {
+            // 检查是否是自定义预设器具（animationType === 'custom'）
+            const isCustomPresetEquipment = customEquipments.some(
+                e => (e.id === selectedEquipment || e.name === selectedEquipment) && e.animationType === 'custom'
+            );
+
+            // 如果是自定义预设器具，强制设置方法类型为'custom'
+            if (isCustomPresetEquipment && methodType !== 'custom') {
+                // 切换到自定义方案模式
+                setMethodType('custom');
+                console.log('设备改变：检测到自定义预设器具，已自动切换到自定义方案模式');
+            }
+        }
+    }, [selectedEquipment, customEquipments, methodType, setMethodType]);
+
     return (
         <div className="flex h-full flex-col overflow-hidden mx-auto max-w-[500px] font-mono text-neutral-800 dark:text-neutral-100">
             {/* 使用 NavigationBar 组件替换原有的导航栏 */}
@@ -1596,6 +1637,9 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                         methodType={methodType}
                         settings={settings}
                         onSelectMethodType={handleMethodTypeChange}
+                        hideSelector={customEquipments.some(
+                            e => (e.id === selectedEquipment || e.name === selectedEquipment) && e.animationType === 'custom'
+                        )}
                     />
                 )}
 

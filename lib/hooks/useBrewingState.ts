@@ -4,8 +4,8 @@ import { Storage } from "@/lib/storage";
 import { BrewingNoteData, CoffeeBean } from "@/app/types";
 import {
 	loadCustomMethods,
-	saveCustomMethod,
-	deleteCustomMethod,
+	saveCustomMethod as apiSaveCustomMethod,
+	deleteCustomMethod as apiDeleteCustomMethod,
 } from "@/lib/customMethods";
 import { loadCustomEquipments } from "@/lib/customEquipments";
 import { CoffeeBeanManager } from "@/lib/coffeeBeanManager";
@@ -529,7 +529,7 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 	);
 
 	// 处理从笔记页面跳转到导入方案页面的函数
-	const jumpToImport = useCallback(async () => {
+	const _jumpToImport = useCallback(async () => {
 		try {
 			// 重置优化状态
 			if (isOptimizing) {
@@ -810,21 +810,58 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 	const handleSaveCustomMethod = useCallback(
 		async (method: Method) => {
 			try {
-				const result = await saveCustomMethod(
+				if (!selectedEquipment) {
+					throw new Error("未选择设备");
+				}
+
+				// 注意：我们使用自定义名称避免与导入的函数命名冲突
+				const result = await apiSaveCustomMethod(
 					method,
 					selectedEquipment,
 					customMethods,
 					editingMethod
-				);
+				) as { newCustomMethods: Record<string, Method[]>; methodWithId: Method };
+
+				console.log("[useBrewingState] 方案保存成功，正在更新状态...", {
+					methodId: result.methodWithId.id,
+					methodName: result.methodWithId.name,
+					equipmentId: selectedEquipment,
+				});
+
+				// 更新自定义方法列表
 				setCustomMethods(result.newCustomMethods);
+				
+				// 确保选中新创建/编辑的方法
 				setSelectedMethod(result.methodWithId);
+				
+				// 关闭表单
 				setShowCustomForm(false);
 				setEditingMethod(undefined);
-			} catch (_error) {
+
+				// 这个关键步骤：更新内容状态以触发UI刷新
+				// 生成新的方案列表，确保UI会更新
+				const updatedMethodSteps = result.newCustomMethods[selectedEquipment].map((m) => ({
+					title: m.name,
+					methodId: m.id,
+				}));
+
+				// 确保content状态中的方案列表会更新
+				setContent((prevContent) => ({
+					...prevContent,
+					方案: {
+						...prevContent.方案,
+						steps: updatedMethodSteps,
+						type: methodType,
+					},
+				}));
+
+				console.log("[useBrewingState] 方案列表已更新，共有方案:", updatedMethodSteps.length);
+			} catch (error) {
+				console.error("保存自定义方案时出错:", error);
 				alert("保存自定义方案时出错，请重试");
 			}
 		},
-		[selectedEquipment, customMethods, editingMethod]
+		[selectedEquipment, customMethods, editingMethod, methodType]
 	);
 
 	// 处理自定义方案的编辑
@@ -838,18 +875,21 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 		async (method: Method) => {
 			if (window.confirm(`确定要删除方案"${method.name}"吗？`)) {
 				try {
-					const newCustomMethods = await deleteCustomMethod(
+					// 注意：我们使用自定义名称避免与导入的函数命名冲突
+					const newCustomMethods = await apiDeleteCustomMethod(
 						method,
 						selectedEquipment,
 						customMethods
-					);
+					) as Record<string, Method[]>;
+
 					setCustomMethods(newCustomMethods);
 
 					// 如果删除的是当前选中的方案，重置选中的方案
 					if (selectedMethod && selectedMethod.id === method.id) {
 						setSelectedMethod(null);
 					}
-				} catch (_error) {
+				} catch (error) {
+					console.error("删除自定义方案时出错:", error);
 					alert("删除自定义方案时出错，请重试");
 				}
 			}
@@ -889,6 +929,21 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 
 	// 更新 content 状态的计算
 	useEffect(() => {
+		// 辅助函数：对方法列表进行去重
+		const deduplicateMethods = (methods: { title: string; methodId?: string }[]) => {
+			const seen = new Set<string>();
+			return methods.filter(method => {
+				// 如果methodId未定义，生成一个随机ID（这种情况不应该发生，但为了类型安全）
+				const id = method.methodId || `fallback-${Math.random().toString(36).substring(2, 9)}`;
+				if (seen.has(id)) {
+					console.log(`[useBrewingState] 检测到重复方法ID：${id}, 标题: ${method.title}`);
+					return false;
+				}
+				seen.add(id);
+				return true;
+			});
+		};
+
 		const newContent: Content = {
 			咖啡豆: {
 				steps: [],
@@ -910,15 +965,15 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 			方案: {
 				steps:
 					selectedEquipment && methodType === "common"
-						? commonMethods[selectedEquipment]?.map((method) => ({
+						? deduplicateMethods(commonMethods[selectedEquipment]?.map((method) => ({
 							  title: method.name,
 							  methodId: method.id,
-						  })) || []
+						  })) || [])
 						: selectedEquipment && customMethods[selectedEquipment]
-						? customMethods[selectedEquipment].map((method) => ({
+						? deduplicateMethods(customMethods[selectedEquipment].map((method) => ({
 							  title: method.name,
 							  methodId: method.id,
-						  }))
+						  })))
 						: [],
 				type: methodType,
 			},
@@ -992,12 +1047,14 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 		setActionMenuStates,
 		showImportForm,
 		setShowImportForm,
+		isOptimizing,
 		setIsOptimizing,
 		isNoteSaved,
 		setIsNoteSaved,
 		prevMainTabRef,
+		content,
+		setContent,
 		resetBrewingState,
-		jumpToImport,
 		autoNavigateToBrewingAfterImport,
 		handleBrewingStepClick,
 		handleEquipmentSelect,
@@ -1009,7 +1066,5 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 		navigateToStep,
 		customEquipments,
 		setCustomEquipments,
-		content,
-		setContent,
 	};
 }

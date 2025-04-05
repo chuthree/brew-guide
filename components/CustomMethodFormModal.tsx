@@ -1,11 +1,16 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import CustomMethodForm from '@/components/CustomMethodForm'
 import MethodImportModal from '@/components/MethodImportModal'
-import type { Method } from '@/lib/config'
-import type { SettingsOptions } from '@/components/Settings'
+import { Method, CustomEquipment } from '@/lib/config'
+import { loadCustomEquipments } from '@/lib/customEquipments'
+import { SettingsOptions } from '@/components/Settings'
+import { v4 as uuidv4 } from 'uuid'
+
+// Use SettingsOptions as SettingsType
+type SettingsType = SettingsOptions;
 
 interface CustomMethodFormModalProps {
     showCustomForm: boolean
@@ -16,7 +21,7 @@ interface CustomMethodFormModalProps {
     onSaveCustomMethod: (method: Method) => void
     onCloseCustomForm: () => void
     onCloseImportForm: () => void
-    settings: SettingsOptions
+    settings: SettingsType // Required for interface compatibility with parent components
 }
 
 const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
@@ -28,16 +33,83 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
     onSaveCustomMethod,
     onCloseCustomForm,
     onCloseImportForm,
+    // Not used in this component but required for interface compatibility
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     settings
 }) => {
-    const [, setFormData] = useState<Partial<Method>>({})
-    const [, setValidationError] = useState<string | null>(null)
+    const [_formData, setFormData] = useState<Partial<Method>>({})
+    const [_validationError, setValidationError] = useState<string | null>(null)
+    const [_customEquipments, setCustomEquipments] = useState<CustomEquipment[]>([])
+    const [currentCustomEquipment, setCurrentCustomEquipment] = useState<CustomEquipment | null>(null)
+    const [isLoadingEquipments, setIsLoadingEquipments] = useState<boolean>(false)
+
+    // 加载自定义器具 - 优化为仅在首次挂载和选择新器具时加载
+    useEffect(() => {
+        const fetchCustomEquipments = async () => {
+            if (!showCustomForm) return; // 不显示表单时不加载
+            
+            setIsLoadingEquipments(true);
+            try {
+                console.log("[CustomMethodFormModal] 开始加载自定义器具...");
+                const equipments = await loadCustomEquipments();
+                console.log(`[CustomMethodFormModal] 加载了 ${equipments.length} 个自定义器具`);
+                setCustomEquipments(equipments);
+                
+                // 直接在这里设置currentCustomEquipment，避免依赖另一个useEffect
+                if (selectedEquipment) {
+                    // 首先检查是否是自定义器具
+                    const customEquipment = equipments.find(
+                        e => e.id === selectedEquipment || e.name === selectedEquipment
+                    );
+                    
+                    if (customEquipment) {
+                        console.log(`[CustomMethodFormModal] 找到匹配的自定义器具: ${customEquipment.name}`);
+                        setCurrentCustomEquipment(customEquipment);
+                    } else {
+                        // 如果不是自定义器具，创建一个虚拟的自定义器具对象，基于标准器具
+                        const virtualCustomEquipment: CustomEquipment = {
+                            id: selectedEquipment,
+                            name: selectedEquipment,
+                            description: '标准器具',
+                            isCustom: true,
+                            animationType: getAnimationTypeFromEquipmentId(selectedEquipment),
+                            hasValve: selectedEquipment === 'CleverDripper'
+                        };
+                        console.log(`[CustomMethodFormModal] 创建了虚拟自定义器具: ${virtualCustomEquipment.name}`);
+                        setCurrentCustomEquipment(virtualCustomEquipment);
+                    }
+                }
+            } catch (error) {
+                console.error('[CustomMethodFormModal] 加载自定义器具失败:', error);
+            } finally {
+                setIsLoadingEquipments(false);
+            }
+        };
+
+        fetchCustomEquipments();
+    }, [selectedEquipment, showCustomForm]); // 只在selectedEquipment或showCustomForm变化时重新加载
+
+    // 根据标准器具ID获取动画类型
+    const getAnimationTypeFromEquipmentId = (equipmentId: string | null): "v60" | "kalita" | "origami" | "clever" | "custom" => {
+        if (!equipmentId) return "custom";
+        
+        switch (equipmentId) {
+            case 'V60':
+                return 'v60';
+            case 'Kalita':
+                return 'kalita';
+            case 'Origami':
+                return 'origami';
+            case 'CleverDripper':
+                return 'clever';
+            default:
+                return 'custom';
+        }
+    };
 
     // 根据表单数据保存自定义方法
     const handleSaveMethod = async (method: Method) => {
         try {
-
-
             // 检查必要字段
             if (!method.name) {
                 setValidationError('请输入方案名称');
@@ -57,10 +129,8 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
             // 确保有唯一ID
             const methodWithId: Method = {
                 ...method,
-                id: method.id || `method-${Date.now()}`
+                id: method.id || uuidv4()
             };
-
-
 
             // 直接调用父组件的保存方法并传递完整的方法对象
             onSaveCustomMethod(methodWithId);
@@ -73,8 +143,8 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
             onCloseCustomForm();
 
             return methodWithId.id;
-        } catch {
-
+        } catch (error) {
+            console.error('保存方案失败:', error);
             setValidationError('保存失败，请重试');
             return null;
         }
@@ -82,9 +152,9 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
 
     return (
         <>
-            {/* 自定义方案表单 */}
+            {/* 自定义方案表单 - 只在设备信息加载完成后显示 */}
             <AnimatePresence>
-                {showCustomForm && (
+                {showCustomForm && !isLoadingEquipments && currentCustomEquipment && (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -93,7 +163,7 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
                         className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
                         onClick={(e) => {
                             if (e.target === e.currentTarget) {
-                                onCloseCustomForm()
+                                onCloseCustomForm();
                             }
                         }}
                     >
@@ -135,10 +205,68 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
                                     onSave={handleSaveMethod}
                                     onCancel={onCloseCustomForm}
                                     initialMethod={editingMethod}
-                                    selectedEquipment={selectedEquipment}
-                                    settings={settings}
+                                    customEquipment={currentCustomEquipment}
                                 />
                             </motion.div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* 加载中状态 */}
+            <AnimatePresence>
+                {showCustomForm && isLoadingEquipments && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.265 }}
+                        className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm flex items-center justify-center"
+                    >
+                        <div className="bg-white dark:bg-neutral-800 p-6 rounded-lg max-w-md w-full mx-4 text-center">
+                            <div className="inline-block w-8 h-8 border-4 border-neutral-300 dark:border-neutral-600 border-t-blue-600 dark:border-t-blue-400 rounded-full animate-spin mb-3"></div>
+                            <p className="text-neutral-700 dark:text-neutral-300">
+                                正在加载器具信息...
+                            </p>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* 如果表单打开但没有获取到器具信息，显示错误消息 */}
+            <AnimatePresence>
+                {showCustomForm && !isLoadingEquipments && !currentCustomEquipment && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.265 }}
+                        className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm flex items-center justify-center"
+                        onClick={(e) => {
+                            if (e.target === e.currentTarget) {
+                                onCloseCustomForm();
+                            }
+                        }}
+                    >Ç     
+                        <motion.div
+                            initial={{ scale: 0.95 }}
+                            animate={{ scale: 1 }}
+                            exit={{ scale: 0.95 }}
+                            className="bg-white dark:bg-neutral-800 p-6 rounded-lg max-w-md w-full mx-4"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <h3 className="text-lg font-medium mb-2 text-red-600 dark:text-red-400">
+                                无法创建方案
+                            </h3>
+                            <p className="mb-4 text-neutral-700 dark:text-neutral-300">
+                                未能找到有效的器具信息。请先选择一个器具，然后再尝试创建方案。
+                            </p>
+                            <button
+                                onClick={onCloseCustomForm}
+                                className="w-full py-2 bg-neutral-200 dark:bg-neutral-700 rounded-md text-neutral-800 dark:text-neutral-200"
+                            >
+                                关闭
+                            </button>
                         </motion.div>
                     </motion.div>
                 )}

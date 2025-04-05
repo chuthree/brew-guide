@@ -2,30 +2,50 @@
 
 import React, { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { type Method, type Stage } from '@/lib/config'
+import { type Method, type Stage, CustomEquipment } from '@/lib/config'
 import { ArrowLeft, ArrowRight, Check } from 'lucide-react'
 import AutoResizeTextarea from './AutoResizeTextarea'
 import { formatGrindSize } from '@/lib/grindUtils'
 import { SettingsOptions } from '@/components/Settings'
 import { Storage } from '@/lib/storage'
 
+// 自定义注水动画类型
+interface _CustomPourAnimation {
+    id: string;
+    name: string;
+    customAnimationSvg: string;
+    isSystemDefault?: boolean;
+    pourType?: 'center' | 'circle' | 'ice' | 'other';
+}
+
+// 扩展Stage类型以支持自定义注水动画ID
+type _ExtendedPourType = 'center' | 'circle' | 'ice' | 'other' | string;
+
+// 扩展Stage接口以支持自定义元数据
+interface _CustomStageMeta {
+    customAnimationId?: string; // 存储自定义注水动画ID
+}
+
+// 添加一个辅助接口，用于存储自定义动画ID
+interface StageWithCustomAnimation extends Stage {
+    _customAnimationId?: string;
+}
+
 interface CustomMethodFormProps {
-    onSave: (method: Method) => void
-    onCancel: () => void
-    initialMethod?: Method
-    selectedEquipment?: string | null
-    settings?: SettingsOptions
+    customEquipment: CustomEquipment;
+    onSave: (method: Method) => void;
+    onCancel: () => void;
+    initialMethod?: Method;
 }
 
 // 定义步骤类型
 type Step = 'name' | 'params' | 'stages' | 'complete'
 
 const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
+    customEquipment,
     onSave,
     onCancel,
-    initialMethod,
-    selectedEquipment,
-    settings,
+    initialMethod
 }) => {
     // 当前步骤状态
     const [currentStep, setCurrentStep] = useState<Step>('name')
@@ -43,7 +63,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         // 如果有初始方法，直接使用
         if (initialMethod) {
             // 如果是聪明杯，确保从标签中移除阀门状态标记
-            if (selectedEquipment === 'CleverDripper' && initialMethod.params.stages) {
+            if (customEquipment.hasValve && initialMethod.params.stages) {
                 const cleanedMethod = { ...initialMethod };
                 cleanedMethod.params = { ...initialMethod.params };
                 cleanedMethod.params.stages = initialMethod.params.stages.map(stage => ({
@@ -55,23 +75,74 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
             return initialMethod;
         }
 
-        // 否则创建新方法，并预设第一个步骤和基本参数
+        // 检查是否是自定义预设类型
+        const isCustomPreset = customEquipment.animationType === 'custom';
+        console.log(`[CustomMethodForm] 器具类型: ${customEquipment.animationType}, 是否自定义预设: ${isCustomPreset}`);
+
+        // 对于自定义预设，不设置初始步骤，让用户完全自由创建
+        if (isCustomPreset) {
+            console.log('[CustomMethodForm] 自定义预设器具，不使用预置步骤');
+            return {
+                name: '',
+                params: {
+                    coffee: '15g',
+                    water: '225g', // 15 * 15 = 225
+                    ratio: '1:15',
+                    grindSize: '中细',
+                    temp: '92°C',
+                    videoUrl: '',
+                    stages: [], // 不添加任何初始步骤
+                },
+            };
+        }
+
+        // 确定默认注水类型，基于自定义器具的配置
+        let defaultPourType: 'center' | 'circle' | 'ice' | 'other' = 'circle';
+        
+        // 检查自定义器具是否有自定义注水动画
+        if (customEquipment.customPourAnimations && customEquipment.customPourAnimations.length > 0) {
+            // 查找默认注水动画
+            const defaultAnimation = customEquipment.customPourAnimations.find(
+                anim => anim.isSystemDefault && anim.pourType
+            );
+            
+            if (defaultAnimation && defaultAnimation.pourType) {
+                console.log(`[CustomMethodForm] 使用自定义器具的默认注水类型: ${defaultAnimation.pourType}`);
+                defaultPourType = defaultAnimation.pourType;
+            } else if (customEquipment.customPourAnimations.length > 0) {
+                // 如果没有默认动画，使用第一个动画的注水类型（如果有）
+                const firstAnimation = customEquipment.customPourAnimations[0];
+                if (firstAnimation.pourType) {
+                    console.log(`[CustomMethodForm] 使用自定义器具的第一个注水类型: ${firstAnimation.pourType}`);
+                    defaultPourType = firstAnimation.pourType;
+                }
+            }
+        } else {
+            // 根据器具类型选择默认注水类型
+            console.log(`[CustomMethodForm] 使用基于器具类型的默认注水类型，器具类型: ${customEquipment.animationType}`);
+            switch (customEquipment.animationType) {
+                case 'v60':
+                case 'origami':
+                    defaultPourType = 'circle'; // V60和Origami默认使用绕圈注水
+                    break;
+                case 'kalita':
+                    defaultPourType = 'center'; // Kalita默认使用中心注水
+                    break;
+                default:
+                    defaultPourType = 'circle'; // 默认使用绕圈注水
+            }
+        }
+
+        // 创建初始步骤和基本参数
         const initialStage: Stage = {
             time: 25,
             pourTime: 10,
             label: '焖蒸',
             water: '30g', // 咖啡粉量的2倍
             detail: '使咖啡粉充分吸水并释放气体，提升萃取效果',
-            pourType: 'circle',
-            ...(selectedEquipment === 'CleverDripper' ? { valveStatus: 'closed' as 'closed' | 'open' } : {})
+            pourType: defaultPourType,
+            ...(customEquipment.hasValve ? { valveStatus: 'closed' as 'closed' | 'open' } : {})
         };
-
-        // 不再自动给步骤名称添加阀门状态
-        /* 
-        if (selectedEquipment === 'CleverDripper') {
-            initialStage.label = '焖蒸 [关阀]';
-        }
-        */
 
         return {
             name: '',
@@ -97,8 +168,8 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
 
     // 加载设置
     useEffect(() => {
-        if (settings) {
-            setLocalSettings(settings);
+        if (localSettings) {
+            setLocalSettings(localSettings);
         } else {
             // 尝试从存储中加载设置
             const loadSettings = async () => {
@@ -109,7 +180,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
             };
             loadSettings();
         }
-    }, [settings]);
+    }, [localSettings]);
 
     // 点击外部关闭
     useEffect(() => {
@@ -168,11 +239,42 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     }
 
     const getDefaultStageLabel = (pourType: string) => {
+        // 检查是否是自定义预设
+        const isCustomPreset = customEquipment.animationType === 'custom';
+        
+        // 对于自定义预设的"other"类型，使用空标签
+        if (isCustomPreset && pourType === 'other') {
+            return '';
+        }
+        
+        // 检查是否是自定义注水动画ID
+        if (customEquipment.customPourAnimations) {
+            const customAnimation = customEquipment.customPourAnimations.find(
+                anim => anim.id === pourType
+            );
+            if (customAnimation) {
+                return customAnimation.name;
+            }
+        }
+        
+        // 首先检查自定义器具是否有对应注水类型的自定义标签
+        if (customEquipment.customPourAnimations) {
+            const animation = customEquipment.customPourAnimations.find(
+                anim => anim.pourType === pourType
+            );
+            if (animation && animation.name) {
+                return animation.name;
+            }
+        }
+        
+        // 默认标签
         switch (pourType) {
             case 'circle':
                 return '绕圈注水'
             case 'center':
                 return '中心注水'
+            case 'ice':
+                return '冰块注水'
             case 'other':
                 return ''
             default:
@@ -181,11 +283,32 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     }
 
     const getDefaultStageDetail = (pourType: string) => {
+        // 检查是否是自定义预设
+        const isCustomPreset = customEquipment.animationType === 'custom';
+        
+        // 对于自定义预设的"other"类型，使用空详情
+        if (isCustomPreset && pourType === 'other') {
+            return '';
+        }
+        
+        // 检查是否是自定义注水动画ID
+        if (customEquipment.customPourAnimations) {
+            const customAnimation = customEquipment.customPourAnimations.find(
+                anim => anim.id === pourType
+            );
+            if (customAnimation) {
+                return `使用${customAnimation.name}注水`;
+            }
+        }
+        
+        // 针对不同注水类型的默认详情
         switch (pourType) {
             case 'circle':
                 return '中心向外缓慢画圈注水，均匀萃取咖啡风味'
             case 'center':
                 return '中心定点注水，降低萃取率'
+            case 'ice':
+                return '添加冰块，降低温度进行冷萃'
             case 'other':
                 return ''
             default:
@@ -229,7 +352,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                 stage[field] = value as string
             }
         } else if (field === 'pourType') {
-            stage[field] = value as 'center' | 'circle' | 'other'
+            stage[field] = value as 'center' | 'circle' | 'ice' | 'other'
         }
 
         newStages[index] = stage
@@ -243,15 +366,18 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     }
 
     const addStage = () => {
-        // 所有新添加的步骤都使用空值，不预设注水方式
+        // 检查是否是自定义预设
+        const isCustomPreset = customEquipment.animationType === 'custom';
+        
+        // 所有新添加的步骤都使用空值
         const newStage: Stage = {
             time: 0,
             // pourTime默认为undefined而不是0
             label: '',
             water: '',
             detail: '',
-            pourType: '' as 'center' | 'circle' | 'other', // 不预设注水方式，但保持类型正确
-            ...(selectedEquipment === 'CleverDripper' ? { valveStatus: 'closed' as 'closed' | 'open' } : {}) // 如果是聪明杯，默认设置阀门状态为关闭
+            pourType: isCustomPreset ? undefined : '' as 'center' | 'circle' | 'ice' | 'other', // 不预设注水方式，但保持类型正确
+            ...(customEquipment.hasValve ? { valveStatus: 'closed' as 'closed' | 'open' } : {}) // 如果是聪明杯，默认设置阀门状态为关闭
         };
 
         setMethod({
@@ -304,7 +430,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         const finalMethod = JSON.parse(JSON.stringify(method)) as Method;
 
         // 如果是聪明杯，将阀门状态添加到步骤名称中
-        if (selectedEquipment === 'CleverDripper' && finalMethod.params.stages) {
+        if (customEquipment.hasValve && finalMethod.params.stages) {
             finalMethod.params.stages = finalMethod.params.stages.map(stage => {
                 if (stage.valveStatus) {
                     const valveStatusText = stage.valveStatus === 'open' ? '[开阀]' : '[关阀]';
@@ -431,40 +557,100 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     const handlePourTypeChange = (index: number, value: string) => {
         const newStages = [...method.params.stages]
         const stage = { ...newStages[index] }
+        const isCustomPreset = customEquipment.animationType === 'custom';
 
-        // 更新注水类型
-        stage.pourType = value as 'center' | 'circle' | 'other'
+        // 检查是否选择了自定义注水动画（自定义注水动画的值是ID而不是pourType类型）
+        const isCustomAnimation = value !== 'center' && value !== 'circle' && value !== 'ice' && value !== 'other';
+        
+        if (isCustomAnimation) {
+            // 查找对应的自定义注水动画
+            const customAnimation = customEquipment.customPourAnimations?.find(anim => anim.id === value);
+            
+            if (customAnimation) {
+                console.log(`[CustomMethodForm] 选择了自定义注水动画: ${customAnimation.name}`);
+                
+                // 使用StageWithCustomAnimation接口而不是any类型
+                const newStage: StageWithCustomAnimation = { ...stage };
+                newStage.pourType = 'other'; // 使用other作为pourType
+                newStage._customAnimationId = value; // 存储自定义动画ID
+                
+                // 更新标签和详情（如果为空）
+                if (!newStage.label || newStage.label === getDefaultStageLabel('center') || 
+                    newStage.label === getDefaultStageLabel('circle') || 
+                    newStage.label === getDefaultStageLabel('ice') || 
+                    newStage.label === getDefaultStageLabel('other') ||
+                    newStage.label === '注水') {
+                    newStage.label = customAnimation.name;
+                }
+                
+                // 如果详情为空或是默认详情，使用自定义动画的名称作为详情
+                if (!newStage.detail || 
+                    newStage.detail === getDefaultStageDetail('center') || 
+                    newStage.detail === getDefaultStageDetail('circle') || 
+                    newStage.detail === getDefaultStageDetail('ice') || 
+                    newStage.detail === getDefaultStageDetail('other') ||
+                    newStage.detail === '注水' ||
+                    newStage.detail === '使咖啡粉充分吸水并释放气体，提升萃取效果') {
+                    newStage.detail = `使用${customAnimation.name}注水`;
+                }
+                
+                // 将新的stage对象赋值给当前的stage
+                newStages[index] = newStage;
+                
+                setMethod({
+                    ...method,
+                    params: {
+                        ...method.params,
+                        stages: newStages,
+                    },
+                });
+                
+                // 提前返回，不执行后面的逻辑
+                return;
+            }
+        } else {
+            // 原有的标准注水类型处理逻辑
+            // 更新注水类型
+            stage.pourType = value as 'center' | 'circle' | 'ice' | 'other'
 
-        // 如果选择的是"其他方式"，清空之前自动填写的步骤名称和详细说明
-        if (value === 'other') {
-            stage.label = ''
-            stage.detail = ''
-        }
-        // 如果选择的不是"其他方式"，且标签为空或是默认标签，则更新标签
-        else if (
-            !stage.label ||
-            stage.label === '绕圈注水' ||
-            stage.label === '中心注水' ||
-            stage.label === '自定义注水' ||
-            stage.label === '注水'
-        ) {
-            stage.label = getDefaultStageLabel(value)
-        }
+            // 处理标签和详情
+            // 对于自定义预设，如果选择'other'，不做特殊处理，保留用户输入
+            if (isCustomPreset && value === 'other') {
+                // 保持标签和详情不变
+            }
+            // 如果选择的是"其他方式"，清空之前自动填写的步骤名称和详细说明
+            else if (value === 'other') {
+                stage.label = ''
+                stage.detail = ''
+            }
+            // 如果选择的不是"其他方式"，且标签为空或是默认标签，则更新标签
+            else if (
+                !stage.label ||
+                stage.label === '绕圈注水' ||
+                stage.label === '中心注水' ||
+                stage.label === '冰块注水' ||
+                stage.label === '自定义注水' ||
+                stage.label === '注水'
+            ) {
+                stage.label = getDefaultStageLabel(value)
+            }
 
-        // 如果选择的是"其他方式"，已经在上面清空了详细说明
-        // 如果选择的不是"其他方式"，且详情为空或是默认详情，则更新详情
-        if (
-            value !== 'other' &&
-            (
-                !stage.detail ||
-                stage.detail === '中心向外缓慢画圈注水，均匀萃取咖啡风味' ||
-                stage.detail === '中心定点注水，降低萃取率' ||
-                stage.detail === '自定义注水方式' ||
-                stage.detail === '注水' ||
-                stage.detail === '使咖啡粉充分吸水并释放气体，提升萃取效果'
-            )
-        ) {
-            stage.detail = getDefaultStageDetail(value)
+            // 如果选择的是"其他方式"，已经在上面清空了详细说明
+            // 如果选择的不是"其他方式"，且详情为空或是默认详情，则更新详情
+            if (
+                value !== 'other' &&
+                (
+                    !stage.detail ||
+                    stage.detail === '中心向外缓慢画圈注水，均匀萃取咖啡风味' ||
+                    stage.detail === '中心定点注水，降低萃取率' ||
+                    stage.detail === '添加冰块，降低温度进行冷萃' ||
+                    stage.detail === '自定义注水方式' ||
+                    stage.detail === '注水' ||
+                    stage.detail === '使咖啡粉充分吸水并释放气体，提升萃取效果'
+                )
+            ) {
+                stage.detail = getDefaultStageDetail(value)
+            }
         }
 
         newStages[index] = stage
@@ -785,9 +971,65 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                                                     className={`w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400 appearance-none ${!stage.pourType ? 'text-neutral-500 dark:text-neutral-400' : ''}`}
                                                 >
                                                     <option value="" disabled>请选择注水方式</option>
-                                                    <option value="center">中心注水</option>
-                                                    <option value="circle">绕圈注水</option>
-                                                    <option value="other">其他方式</option>
+                                                    {/* 显示自定义器具的自定义注水动画 */}
+                                                    {customEquipment.customPourAnimations && customEquipment.customPourAnimations.length > 0 ? (
+                                                        <>
+                                                            {/* 用户创建的自定义注水动画 */}
+                                                            {customEquipment.customPourAnimations
+                                                                .filter(anim => !anim.isSystemDefault)
+                                                                .map(animation => (
+                                                                    <option key={animation.id} value={animation.id}>
+                                                                        {animation.name}
+                                                                    </option>
+                                                                ))
+                                                            }
+                                                            {/* 如果不是自定义预设，才显示系统默认注水方式 */}
+                                                            {customEquipment.animationType !== 'custom' && (
+                                                                <>
+                                                                    {/* 系统默认注水方式 */}
+                                                                    {customEquipment.customPourAnimations
+                                                                        .filter(anim => anim.isSystemDefault && anim.pourType)
+                                                                        .map(animation => (
+                                                                            <option key={animation.id} value={animation.pourType || ''}>
+                                                                                {animation.name}
+                                                                            </option>
+                                                                        ))
+                                                                    }
+                                                                    {/* 如果没有中心注水/绕圈注水/冰块注水的系统预设，添加它们 */}
+                                                                    {!customEquipment.customPourAnimations.some(a => a.pourType === 'center') && 
+                                                                        <option value="center">中心注水</option>
+                                                                    }
+                                                                    {!customEquipment.customPourAnimations.some(a => a.pourType === 'circle') && 
+                                                                        <option value="circle">绕圈注水</option>
+                                                                    }
+                                                                    {!customEquipment.customPourAnimations.some(a => a.pourType === 'ice') && 
+                                                                        <option value="ice">冰块注水</option>
+                                                                    }
+                                                                    <option value="other">其他方式</option>
+                                                                </>
+                                                            )}
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            {/* 自定义预设器具显示更简化的选项列表 */}
+                                                            {customEquipment.animationType === 'custom' ? (
+                                                                <>
+                                                                    <option value="other">自定义方式</option>
+                                                                    {/* 添加提示信息 */}
+                                                                    <option value="" disabled style={{ fontStyle: 'italic', color: '#999' }}>
+                                                                        提示：可在器具设置中添加自定义注水动画
+                                                                    </option>
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <option value="center">中心注水</option>
+                                                                    <option value="circle">绕圈注水</option>
+                                                                    <option value="ice">冰块注水</option>
+                                                                    <option value="other">其他方式</option>
+                                                                </>
+                                                            )}
+                                                        </>
+                                                    )}
                                                 </select>
                                             </div>
                                             <div className="col-span-2 space-y-2">
@@ -795,7 +1037,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                                                     步骤名称
                                                 </label>
                                                 <div className="relative">
-                                                    {selectedEquipment === 'CleverDripper' && (
+                                                    {customEquipment.hasValve && (
                                                         <button
                                                             type="button"
                                                             onClick={() => toggleValveStatus(index)}
@@ -812,7 +1054,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                                                         value={stage.label}
                                                         onChange={(e) => handleStageChange(index, 'label', e.target.value)}
                                                         placeholder="请输入步骤名称"
-                                                        className={`w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400 ${selectedEquipment === 'CleverDripper' ? 'pl-12' : ''}`}
+                                                        className={`w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400 ${customEquipment.hasValve ? 'pl-12' : ''}`}
                                                     />
                                                 </div>
                                             </div>
@@ -1106,6 +1348,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     // 渲染下一步按钮
     const renderNextButton = () => {
         const isLastStep = getCurrentStepIndex() === steps.length - 1
+        const isCustomPreset = customEquipment.animationType === 'custom';
 
         // 验证当前步骤是否可以进行下一步
         const isStepValid = () => {
@@ -1121,22 +1364,36 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                 case 'stages':
                     return method.params.stages.length > 0 &&
                         method.params.stages.every(stage => {
-                            // 基本验证
-                            const basicValidation =
-                                stage.time > 0 &&
-                                !!stage.label.trim() &&
-                                !!stage.water.trim() &&
-                                !!stage.detail.trim() &&
-                                !!stage.pourType;
-                            // 注水时长可以为空或0，不再作为必填项
-
-                            // 如果是聪明杯，验证阀门状态
-                            if (selectedEquipment === 'CleverDripper') {
-                                return basicValidation &&
-                                    (stage.valveStatus === 'open' || stage.valveStatus === 'closed');
+                            // 针对自定义预设器具放宽一些验证要求
+                            if (isCustomPreset) {
+                                // 基本验证 - 对自定义预设只验证时间和水量
+                                const basicValidation = stage.time > 0 && !!stage.water.trim();
+                                
+                                // 如果是聪明杯，验证阀门状态
+                                if (customEquipment.hasValve) {
+                                    return basicValidation &&
+                                        (stage.valveStatus === 'open' || stage.valveStatus === 'closed');
+                                }
+                                
+                                return basicValidation;
+                            } else {
+                                // 标准器具的正常验证
+                                const basicValidation =
+                                    stage.time > 0 &&
+                                    !!stage.label.trim() &&
+                                    !!stage.water.trim() &&
+                                    !!stage.detail.trim() &&
+                                    !!stage.pourType;
+                                // 注水时长可以为空或0，不再作为必填项
+                                
+                                // 如果是聪明杯，验证阀门状态
+                                if (customEquipment.hasValve) {
+                                    return basicValidation &&
+                                        (stage.valveStatus === 'open' || stage.valveStatus === 'closed');
+                                }
+                                
+                                return basicValidation;
                             }
-
-                            return basicValidation;
                         });
                 case 'complete':
                     return true;

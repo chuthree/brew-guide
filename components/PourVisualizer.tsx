@@ -29,7 +29,7 @@ interface PourVisualizerProps {
     equipmentId?: string // 添加设备ID属性
     isWaiting?: boolean // 添加是否处于等待阶段的属性
     customEquipment?: {
-        animationType: "v60" | "kalita" | "origami" | "clever";
+        animationType: "v60" | "kalita" | "origami" | "clever" | "custom";
         hasValve?: boolean;
         customShapeSvg?: string; // 添加自定义杯型SVG
         customPourAnimations?: {
@@ -55,6 +55,27 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
     const [valveStatus, setValveStatus] = useState<'open' | 'closed'>('closed') // 添加阀门状态
     const [imagesPreloaded, setImagesPreloaded] = useState(false)
     const [displayedIceIndices, setDisplayedIceIndices] = useState<number[]>([])
+
+    // 添加深色模式CSS样式
+    useEffect(() => {
+        // 动态添加深色模式样式
+        const style = document.createElement('style');
+        style.innerHTML = `
+            @media (prefers-color-scheme: dark) {
+                .dark-mode-svg {
+                    color: white !important;
+                }
+            }
+            .dark .dark-mode-svg {
+                color: white !important;
+            }
+        `;
+        document.head.appendChild(style);
+        
+        return () => {
+            document.head.removeChild(style);
+        };
+    }, []);
 
     // 获取设备图片路径
     const getEquipmentImageSrc = () => {
@@ -401,11 +422,10 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                 {/* 底部杯体 - 使用自定义SVG或图片 */}
                 {hasCustomSvg ? (
                     <div 
-                        className={`absolute inset-0 ${equipmentOpacity} transition-opacity duration-300 custom-shape-svg-container`}
+                        className={`absolute inset-0 ${equipmentOpacity} transition-opacity duration-300 custom-shape-svg-container dark:invert`}
                         dangerouslySetInnerHTML={{ 
-                            __html: customEquipment?.customShapeSvg || '' 
+                            __html: customEquipment?.customShapeSvg?.replace(/<svg/, '<svg width="100%" height="100%"') || '' 
                         }}
-                        data-theme-mode="auto"
                     />
                 ) : (
                     <Image
@@ -446,11 +466,10 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                 {/* 底部杯体 - 使用自定义SVG或图片 */}
                 {hasCustomSvg ? (
                     <div 
-                        className={`absolute inset-0 ${equipmentOpacity} transition-opacity duration-300 custom-shape-svg-container`}
+                        className={`absolute inset-0 ${equipmentOpacity} transition-opacity duration-300 custom-shape-svg-container dark:invert`}
                         dangerouslySetInnerHTML={{ 
-                            __html: customEquipment?.customShapeSvg || '' 
+                            __html: customEquipment?.customShapeSvg?.replace(/<svg/, '<svg width="100%" height="100%"') || '' 
                         }}
-                        data-theme-mode="auto"
                     />
                 ) : (
                     <Image
@@ -490,11 +509,10 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                 {/* 底部杯体 - 使用自定义SVG或图片 */}
                 {hasCustomSvg ? (
                     <div 
-                        className={`absolute inset-0 ${equipmentOpacity} transition-opacity duration-300 custom-shape-svg-container`}
+                        className={`absolute inset-0 ${equipmentOpacity} transition-opacity duration-300 custom-shape-svg-container dark:invert`}
                         dangerouslySetInnerHTML={{ 
-                            __html: customEquipment?.customShapeSvg || '' 
+                            __html: customEquipment?.customShapeSvg?.replace(/<svg/, '<svg width="100%" height="100%"') || '' 
                         }}
-                        data-theme-mode="auto"
                     />
                 ) : (
                     <Image
@@ -538,8 +556,52 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
     // 再次检查倒计时状态，双重保险
     const shouldShowAnimation = isPouring && imagesPreloaded && isValidAnimation && countdownTime === null;
 
+    // 生成注入SVG标签时的共享函数
+    const processCustomSvg = (svgContent: string) => {
+        if (!svgContent) return '';
+        
+        // 如果SVG内容中没有style标签，添加一个
+        const hasStyleTag = svgContent.includes('<style>') || svgContent.includes('<style ');
+        
+        // 添加一个内联样式用于深色模式适配
+        const darkModeStyle = `
+            <style>
+                @media (prefers-color-scheme: dark) {
+                    :root svg * { fill: white !important; stroke: white !important; }
+                }
+                .dark svg * { fill: white !important; stroke: white !important; }
+            </style>
+        `;
+        
+        // 在SVG标签中添加宽高属性
+        let processedSvg = svgContent.replace(/<svg([^>]*)>/, (match, attributes) => {
+            // 添加样式标签
+            if (hasStyleTag) {
+                // 如果已有style标签，修改它
+                return `<svg${attributes} width="100%" height="100%">`;
+            } else {
+                // 如果没有style标签，添加一个
+                return `<svg${attributes} width="100%" height="100%">${darkModeStyle}`;
+            }
+        });
+        
+        // 如果存在style标签，修改它以支持深色模式
+        if (hasStyleTag) {
+            processedSvg = processedSvg.replace(/<style([^>]*)>/, (match, attributes) => {
+                return `<style${attributes}> 
+                    @media (prefers-color-scheme: dark) {
+                        :root svg * { fill: white !important; stroke: white !important; }
+                    }
+                    .dark svg * { fill: white !important; stroke: white !important; }
+                `;
+            });
+        }
+        
+        return processedSvg;
+    };
+
     return (
-        <div className={`relative aspect-square w-full overflow-hidden ${isRunning ? 'bg-transparent' : 'bg-neutral-900'}`}>
+        <div className={`relative aspect-square w-full max-w-[300px] mx-auto px-safe overflow-hidden ${isRunning ? 'bg-transparent' : 'bg-neutral-900'}`}>
             {/* 基础杯型 */}
             <AnimatePresence mode='wait'>
                 <motion.div
@@ -564,13 +626,15 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                         />
                     ) : (
                         // 自定义SVG内联数据
-                        <div className="w-full h-full" dangerouslySetInnerHTML={{ 
-                            __html: customEquipment.customShapeSvg.replace(/<svg/, '<svg width="100%" height="100%" class="invert-0 dark:invert"') 
-                        }} />
+                        <div className="w-full h-full custom-shape-svg-container dark:invert" 
+                            dangerouslySetInnerHTML={{ 
+                                __html: processCustomSvg(customEquipment.customShapeSvg) 
+                            }} 
+                        />
                     )}
                 </motion.div>
             </AnimatePresence>
-
+            
             {/* 阀门（如果适用） */}
             {valveStatus === 'open' && getValveImageSrc() && (
                 <div className="absolute inset-x-0 bottom-0 h-1/4 flex items-center justify-center">
@@ -604,10 +668,9 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                                 {availableAnimations[currentPourType as keyof typeof availableAnimations]?.frames ? (
                                     // 使用自定义帧
                                     <div 
-                                        className="w-full h-full flex items-center justify-center"
+                                        className="w-full h-full flex items-center justify-center dark:invert"
                                         dangerouslySetInnerHTML={{ 
-                                            __html: (availableAnimations[currentPourType as keyof typeof availableAnimations]?.frames?.[currentMotionIndex - 1]?.svgData || '')
-                                                .replace(/<svg/, '<svg width="100%" height="100%" class="invert-0 dark:invert"') 
+                                            __html: processCustomSvg(availableAnimations[currentPourType as keyof typeof availableAnimations]?.frames?.[currentMotionIndex - 1]?.svgData || '')
                                         }}
                                     />
                                 ) : (
