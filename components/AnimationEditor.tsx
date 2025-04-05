@@ -104,8 +104,6 @@ export interface AnimationEditorRef {
   undo: () => void;
   clear: () => void;
   setStrokeWidth: (width: number) => void;
-  moveFrameUp: () => void;   // 添加上移帧功能
-  moveFrameDown: () => void; // 添加下移帧功能
 }
 
 // 定义动画编辑器属性
@@ -373,57 +371,6 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(({
     }
   }, [currentFrameIndex, goToFrame]);
   
-  // 添加帧移动函数
-  const moveFrameUp = useCallback(() => {
-    if (currentFrameIndex <= 0) {
-      // 已经是第一帧，无法上移
-      hapticsUtils.warning();
-      return;
-    }
-    
-    hapticsUtils.light();
-    
-    // 先保存当前帧
-    saveCurrentFrame();
-    
-    // 交换当前帧与上一帧
-    setFrames(prev => {
-      const newFrames = [...prev];
-      // 交换当前帧和上一帧
-      [newFrames[currentFrameIndex], newFrames[currentFrameIndex - 1]] = 
-      [newFrames[currentFrameIndex - 1], newFrames[currentFrameIndex]];
-      return newFrames;
-    });
-    
-    // 将当前帧索引减1，跟随移动的帧
-    setCurrentFrameIndex(currentFrameIndex - 1);
-  }, [currentFrameIndex, saveCurrentFrame]);
-  
-  const moveFrameDown = useCallback(() => {
-    if (currentFrameIndex >= frames.length - 1) {
-      // 已经是最后一帧，无法下移
-      hapticsUtils.warning();
-      return;
-    }
-    
-    hapticsUtils.light();
-    
-    // 先保存当前帧
-    saveCurrentFrame();
-    
-    // 交换当前帧与下一帧
-    setFrames(prev => {
-      const newFrames = [...prev];
-      // 交换当前帧和下一帧
-      [newFrames[currentFrameIndex], newFrames[currentFrameIndex + 1]] = 
-      [newFrames[currentFrameIndex + 1], newFrames[currentFrameIndex]];
-      return newFrames;
-    });
-    
-    // 将当前帧索引加1，跟随移动的帧
-    setCurrentFrameIndex(currentFrameIndex + 1);
-  }, [currentFrameIndex, frames.length, saveCurrentFrame]);
-  
   // 暴露API给父组件
   useImperativeHandle(ref, () => ({
     save: saveAnimation,
@@ -435,10 +382,8 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(({
     togglePlayback,
     undo: () => canvasRef.current?.undo(),
     clear: () => canvasRef.current?.clear(),
-    setStrokeWidth: (width: number) => canvasRef.current?.setStrokeWidth(width),
-    moveFrameUp,
-    moveFrameDown
-  }), [saveAnimation, addFrame, deleteCurrentFrame, duplicateCurrentFrame, nextFrame, prevFrame, togglePlayback, moveFrameUp, moveFrameDown]);
+    setStrokeWidth: (width: number) => canvasRef.current?.setStrokeWidth(width)
+  }), [saveAnimation, addFrame, deleteCurrentFrame, duplicateCurrentFrame, nextFrame, prevFrame, togglePlayback]);
   
   // 处理帧切换时的画布更新
   useEffect(() => {

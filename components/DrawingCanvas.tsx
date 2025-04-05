@@ -23,6 +23,8 @@ interface DrawingCanvasProps {
   referenceSvgUrl?: string;
   referenceSvg?: string;
   strokeColor?: string;
+  showReference?: boolean;
+  customReferenceSvg?: string;
 }
 
 // 定义暴露给父组件的API接口
@@ -59,6 +61,8 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
   referenceSvgUrl = '/images/v60-base.svg',
   referenceSvg,
   strokeColor,
+  showReference = true,
+  customReferenceSvg,
 }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -202,6 +206,35 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
       };
     }
   }, [referenceSvg, isDark]);
+
+  // 加载自定义杯型SVG作为参考图像
+  useEffect(() => {
+    if (!customReferenceSvg) return;
+    
+    // 处理SVG颜色 - 在深色模式下将黑色线条转换为白色
+    let processedSvg = customReferenceSvg;
+    if (isDark) {
+      processedSvg = processedSvg
+        .replace(/stroke="var\(--custom-shape-color\)"/g, 'stroke="#FFFFFF"')
+        .replace(/stroke="#000000"/g, 'stroke="#FFFFFF"')
+        .replace(/stroke="black"/g, 'stroke="#FFFFFF"');
+    }
+    
+    const svgBlob = new Blob([processedSvg], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(svgBlob);
+    
+    const img = new Image();
+    img.src = url;
+    img.onload = () => {
+      urlReferenceImageRef.current = img;
+      setUrlReferenceLoaded(true);
+      URL.revokeObjectURL(url);
+    };
+    
+    return () => {
+      img.onload = null;
+    };
+  }, [customReferenceSvg, isDark]);
 
   // 设置画布偏移 - 优化版本，添加更多时机更新位置
   const updateCanvasOffset = useCallback(() => {
@@ -555,6 +588,104 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
     setColor: _setColor
   }), [clearCanvas, undoLastLine, saveDrawing, setStrokeWidth, _setColor]);
 
+  const draw = useCallback(() => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext('2d');
+    if (!canvas || !ctx) return;
+
+    // 清空画布
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // 如果启用了底图显示，则绘制参考图像
+    if (showReference) {
+      // 优先使用自定义杯型SVG
+      if (customReferenceSvg && urlReferenceImageRef.current) {
+        ctx.save();
+        ctx.globalAlpha = 0.2;
+        ctx.drawImage(
+          urlReferenceImageRef.current,
+          0,
+          0,
+          canvas.width,
+          canvas.height
+        );
+        ctx.restore();
+      }
+      // 如果没有自定义杯型，则使用默认参考图像
+      else if (urlReferenceLoaded && urlReferenceImageRef.current) {
+        ctx.save();
+        ctx.globalAlpha = 0.2;
+        ctx.drawImage(
+          urlReferenceImageRef.current,
+          0,
+          0,
+          canvas.width,
+          canvas.height
+        );
+        ctx.restore();
+      }
+
+      // 绘制SVG参考图像（如果有）
+      if (referenceLoaded && referenceImageRef.current) {
+        ctx.save();
+        ctx.globalAlpha = 0.2;
+        ctx.drawImage(
+          referenceImageRef.current,
+          0,
+          0,
+          canvas.width,
+          canvas.height
+        );
+        ctx.restore();
+      }
+    }
+
+    // 绘制所有已完成的线条
+    lines.forEach(line => {
+      if (line.points.length < 2) return;
+      
+      ctx.beginPath();
+      ctx.strokeStyle = isDark ? '#FFFFFF' : line.color;
+      ctx.lineWidth = line.strokeWidth;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      
+      const [first, ...rest] = line.points;
+      ctx.moveTo(first.x, first.y);
+      
+      rest.forEach(point => {
+        ctx.lineTo(point.x, point.y);
+      });
+      
+      ctx.stroke();
+    });
+    
+    // 绘制当前正在绘制的线条
+    if (currentLine?.points.length) {
+      ctx.beginPath();
+      ctx.strokeStyle = isDark ? '#FFFFFF' : currentLine.color;
+      ctx.lineWidth = currentLine.strokeWidth;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      
+      const [first, ...rest] = currentLine.points;
+      ctx.moveTo(first.x, first.y);
+      
+      rest.forEach(point => {
+        ctx.lineTo(point.x, point.y);
+      });
+      
+      ctx.stroke();
+    }
+  }, [lines, currentLine, isDark, urlReferenceLoaded, referenceLoaded, showReference, customReferenceSvg]);
+
+  // 当任何相关状态改变时重新绘制
+  useEffect(() => {
+    if (isReady) {
+      draw();
+    }
+  }, [draw, isReady]);
+
   return (
     <div 
       ref={containerRef} 
@@ -575,56 +706,6 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
         onMouseLeave={handleMouseUp}
         style={{ touchAction: 'none' }} // 防止触摸手势引起的页面滚动
       />
-      
-      <div className="absolute bottom-4 left-4 right-4 flex justify-between">
-        <div className="flex space-x-2">
-          {/* 线条粗细控制 */}
-          <button
-            type="button"
-            onClick={() => setStrokeWidth(prev => Math.max(1, prev - 1))}
-            className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center hidden"
-          >
-            <span className="text-lg">-</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setStrokeWidth(prev => Math.min(10, prev + 1))}
-            className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center hidden"
-          >
-            <span className="text-lg">+</span>
-          </button>
-        </div>
-        <div className="flex space-x-2">
-          {/* 撤销按钮 */}
-          <button
-            type="button"
-            onClick={undoLastLine}
-            disabled={lines.length === 0}
-            className={`w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center hidden ${
-              lines.length === 0 ? 'opacity-50' : ''
-            }`}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M8 10L4 14M4 14L8 18M4 14H16C18.2091 14 20 12.2091 20 10C20 7.79086 18.2091 6 16 6H12" 
-                stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </button>
-          {/* 清除按钮 */}
-          <button
-            type="button"
-            onClick={clearCanvas}
-            disabled={lines.length === 0}
-            className={`w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center hidden ${
-              lines.length === 0 ? 'opacity-50' : ''
-            }`}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M4 7H20M10 11V17M14 11V17M5 7L6 19C6 20.1 6.9 21 8 21H16C17.1 21 18 20.1 18 19L19 7M9 7V4C9 3.45 9.45 3 10 3H14C14.55 3 15 3.45 15 4V7" 
-                stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </button>
-        </div>
-      </div>
     </div>
   );
 });

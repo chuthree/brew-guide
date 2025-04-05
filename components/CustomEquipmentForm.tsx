@@ -335,12 +335,12 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
 
     // 计算画布尺寸
     useEffect(() => {
-        if (showDrawingCanvas && canvasContainerRef.current && windowSize.width > 0) {
+        if ((showDrawingCanvas || showPourAnimationCanvas) && canvasContainerRef.current && windowSize.width > 0) {
             // 获取容器宽度，不再减去padding
             const containerWidth = canvasContainerRef.current.clientWidth;
             setCanvasSize(containerWidth);
         }
-    }, [showDrawingCanvas, windowSize.width]);
+    }, [showDrawingCanvas, showPourAnimationCanvas, windowSize.width]);
 
     // 处理笔触宽度变化
     const handleStrokeWidthChange = (newWidth: number) => {
@@ -611,27 +611,6 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
         }
     }, []);
     
-    // 添加复制帧函数 - 使用useCallback
-    const handleDuplicateCurrentFrame = useCallback(() => {
-        if (animationEditorRef.current) {
-            animationEditorRef.current.duplicateFrame();
-        }
-    }, []);
-    
-    // 添加帧移动函数
-    const handleMoveFrameUp = useCallback(() => {
-        if (animationEditorRef.current) {
-            animationEditorRef.current.moveFrameUp();
-        }
-    }, []);
-    
-    // 添加帧向下移动函数
-    const handleMoveFrameDown = useCallback(() => {
-        if (animationEditorRef.current) {
-            animationEditorRef.current.moveFrameDown();
-        }
-    }, []);
-    
     // 添加监听键盘事件的效果
     useEffect(() => {
         // 只在显示注水动画画布时添加键盘监听
@@ -646,24 +625,12 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                 // Delete或Backspace键删除当前帧
                 handleDeleteCurrentFrame();
                 e.preventDefault();
-            } else if (e.key === 'd' && (e.ctrlKey || e.metaKey)) {
-                // Ctrl+D或Command+D复制当前帧
-                handleDuplicateCurrentFrame();
-                e.preventDefault();
-            } else if (e.key === 'ArrowUp' && (e.ctrlKey || e.metaKey)) {
-                // Ctrl+↑向上移动当前帧
-                handleMoveFrameUp();
-                e.preventDefault();
-            } else if (e.key === 'ArrowDown' && (e.ctrlKey || e.metaKey)) {
-                // Ctrl+↓向下移动当前帧
-                handleMoveFrameDown();
-                e.preventDefault();
             }
         };
         
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [showPourAnimationCanvas, handleTogglePlayback, handleDeleteCurrentFrame, handleDuplicateCurrentFrame, handleMoveFrameUp, handleMoveFrameDown]);
+    }, [showPourAnimationCanvas, handleTogglePlayback, handleDeleteCurrentFrame]);
     
     // 退出编辑器时重置播放状态
     useEffect(() => {
@@ -804,7 +771,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                         </button>
                     </div>
                     
-                    {/* 右侧：播放/暂停、撤销、删除、复制 */}
+                    {/* 右侧：播放/暂停、撤销、删除 */}
                     <div className="flex items-center space-x-3">
                         <button
                             type="button"
@@ -845,39 +812,6 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                                 <path d="M19 7L18.1327 19.1425C18.0579 20.1891 17.187 21 16.1378 21H7.86224C6.81296 21 5.94208 20.1891 5.86732 19.1425L5 7M10 11V17M14 11V17M15 7V4C15 3.44772 14.5523 3 14 3H10C9.44772 3 9 3.44772 9 4V7M4 7H20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                             </svg>
                         </button>
-                        
-                        <button
-                            type="button"
-                            onClick={handleDuplicateCurrentFrame}
-                            className="w-10 h-10 rounded-full bg-white dark:bg-neutral-800 flex items-center justify-center border border-neutral-200 dark:border-neutral-700"
-                            aria-label="复制帧"
-                        >
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M8 16H6C4.89543 16 4 15.1046 4 14V6C4 4.89543 4.89543 4 6 4H14C15.1046 4 16 4.89543 16 6V8M10 20H18C19.1046 20 20 19.1046 20 18V10C20 8.89543 19.1046 8 18 8H10C8.89543 8 8 8.89543 8 10V18C8 19.1046 8.89543 20 10 20Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                            </svg>
-                        </button>
-                        
-                        <button
-                            type="button"
-                            onClick={handleMoveFrameUp}
-                            className="w-10 h-10 rounded-full bg-white dark:bg-neutral-800 flex items-center justify-center border border-neutral-200 dark:border-neutral-700"
-                            aria-label="上移帧"
-                        >
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M12 19V5M12 5L5 12M12 5L19 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                            </svg>
-                        </button>
-                        
-                        <button
-                            type="button"
-                            onClick={handleMoveFrameDown}
-                            className="w-10 h-10 rounded-full bg-white dark:bg-neutral-800 flex items-center justify-center border border-neutral-200 dark:border-neutral-700"
-                            aria-label="下移帧"
-                        >
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M12 5V19M12 19L5 12M12 19L19 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                            </svg>
-                        </button>
                     </div>
                 </div>
                 
@@ -887,10 +821,9 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                     <ul className="list-disc pl-4 space-y-1">
                         <li>点击上方的缩略图切换帧</li>
                         <li>点击 + 按钮添加新帧</li>
-                        <li>使用上下箭头按钮调整帧的顺序</li>
-                        <li>复制按钮可复制当前帧作为起点</li>
                         <li>使用播放按钮预览动画效果</li>
-                        <li>Ctrl+上/下箭头可快速移动帧位置</li>
+                        <li>左右箭头键可以快速切换帧</li>
+                        <li>可以复制现有帧作为起点</li>
                         <li>绘制完成后点击右上角保存按钮</li>
                     </ul>
                 </div>
