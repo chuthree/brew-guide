@@ -589,10 +589,10 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
     // 处理注水动画名称变更
     const handlePourAnimationNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (currentEditingAnimation) {
-            setCurrentEditingAnimation({
-                ...currentEditingAnimation,
-                name: e.target.value
-            });
+            setCurrentEditingAnimation(prev => ({
+                ...prev!,
+                name: e.target.value // 直接使用输入值，不做trim，让用户可以输入空格
+            }));
         }
     };
 
@@ -610,27 +610,6 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
             animationEditorRef.current.deleteFrame();
         }
     }, []);
-    
-    // 添加监听键盘事件的效果
-    useEffect(() => {
-        // 只在显示注水动画画布时添加键盘监听
-        if (!showPourAnimationCanvas) return;
-        
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === ' ') {
-                // 空格键切换播放状态
-                handleTogglePlayback();
-                e.preventDefault(); // 防止页面滚动
-            } else if (e.key === 'Delete' || e.key === 'Backspace') {
-                // Delete或Backspace键删除当前帧
-                handleDeleteCurrentFrame();
-                e.preventDefault();
-            }
-        };
-        
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [showPourAnimationCanvas, handleTogglePlayback, handleDeleteCurrentFrame]);
     
     // 退出编辑器时重置播放状态
     useEffect(() => {
@@ -684,6 +663,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                             className="mt-1 block w-full rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500 dark:text-white"
                             placeholder="例如：中心注水"
                             readOnly={currentEditingAnimation.isSystemDefault}
+                            maxLength={20} // 添加最大长度限制
                         />
                     </FormField>
                     
