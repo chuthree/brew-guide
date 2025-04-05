@@ -495,8 +495,12 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(({
           {frames.map((frame, index) => (
             <button
               key={frame.id}
-              onClick={() => goToFrame(index)}
-              className={`relative flex-shrink-0 w-16 h-16 rounded-md border-2 overflow-hidden
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                goToFrame(index);
+              }}
+              className={`relative flex-shrink-0 w-16 h-16 bg-neutral-200 dark:bg-neutral-700 rounded-md border-2 overflow-hidden
                 ${index === currentFrameIndex 
                   ? 'border-blue-500 ring-2 ring-blue-300 dark:ring-blue-700' 
                   : 'border-neutral-300 dark:border-neutral-600'}`}
@@ -522,7 +526,12 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(({
           {/* 添加新帧按钮 */}
           {frames.length < maxFrames && (
             <button
-              onClick={addFrame}
+              onClick={(e) => {
+                // 阻止事件冒泡，防止点击导致模态框关闭
+                e.stopPropagation();
+                e.preventDefault();
+                addFrame();
+              }}
               className="flex-shrink-0 w-16 h-16 bg-neutral-200 dark:bg-neutral-700 rounded-md border-2 border-dashed border-neutral-300 dark:border-neutral-600 flex items-center justify-center"
             >
               <svg className="w-6 h-6 text-neutral-500 dark:text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -537,7 +546,11 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(({
           <div className="flex gap-2">
             {/* 播放/暂停按钮 */}
             <button
-              onClick={togglePlayback}
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                togglePlayback();
+              }}
               className="w-10 h-10 bg-neutral-200 dark:bg-neutral-700 rounded-full flex items-center justify-center"
               aria-label={isPlaying ? "暂停" : "播放"}
             >
@@ -554,7 +567,11 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(({
             
             {/* 上一帧按钮 */}
             <button
-              onClick={prevFrame}
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                prevFrame();
+              }}
               disabled={currentFrameIndex <= 0}
               className={`w-10 h-10 bg-neutral-200 dark:bg-neutral-700 rounded-full flex items-center justify-center ${
                 currentFrameIndex <= 0 ? 'opacity-50 cursor-not-allowed' : ''
@@ -568,7 +585,11 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(({
             
             {/* 下一帧按钮 */}
             <button
-              onClick={nextFrame}
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                nextFrame();
+              }}
               disabled={currentFrameIndex >= frames.length - 1}
               className={`w-10 h-10 bg-neutral-200 dark:bg-neutral-700 rounded-full flex items-center justify-center ${
                 currentFrameIndex >= frames.length - 1 ? 'opacity-50 cursor-not-allowed' : ''
@@ -584,7 +605,11 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(({
           <div className="flex gap-2">
             {/* 复制帧按钮 */}
             <button
-              onClick={duplicateCurrentFrame}
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                duplicateCurrentFrame();
+              }}
               disabled={frames.length >= maxFrames}
               className={`w-10 h-10 bg-neutral-200 dark:bg-neutral-700 rounded-full flex items-center justify-center ${
                 frames.length >= maxFrames ? 'opacity-50 cursor-not-allowed' : ''
@@ -598,7 +623,11 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(({
             
             {/* 删除帧按钮 */}
             <button
-              onClick={deleteCurrentFrame}
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                deleteCurrentFrame();
+              }}
               disabled={frames.length <= 1}
               className={`w-10 h-10 bg-neutral-200 dark:bg-neutral-700 rounded-full flex items-center justify-center ${
                 frames.length <= 1 ? 'opacity-50 cursor-not-allowed' : ''
@@ -621,7 +650,11 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(({
             <div className="flex gap-2 overflow-x-auto p-2 bg-neutral-100 dark:bg-neutral-800 rounded-lg">
               {/* 无参考选项 */}
               <button
-                onClick={() => selectReferenceImage(null)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  selectReferenceImage(null);
+                }}
                 className={`relative flex-shrink-0 w-12 h-12 rounded-md border-2 overflow-hidden
                   ${!referenceSrc 
                     ? 'border-blue-500 ring-2 ring-blue-300 dark:ring-blue-700' 
@@ -641,7 +674,11 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(({
               {referenceImages.map((img, index) => (
                 <button
                   key={index}
-                  onClick={() => selectReferenceImage(img.url)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    selectReferenceImage(img.url);
+                  }}
                   className={`relative flex-shrink-0 w-12 h-12 rounded-md border-2 overflow-hidden
                     ${referenceSrc === img.url
                       ? 'border-blue-500 ring-2 ring-blue-300 dark:ring-blue-700' 

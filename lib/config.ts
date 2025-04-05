@@ -43,6 +43,8 @@ export interface CustomEquipment extends Equipment {
 	hasValve?: boolean;  // 是否有阀门（类似聪明杯）
 	isCustom: true;  // 标记为自定义器具
 	customShapeSvg?: string; // 自定义杯型的SVG路径数据
+	customValveSvg?: string; // 自定义阀门关闭状态的SVG路径数据
+	customValveOpenSvg?: string; // 自定义阀门开启状态的SVG路径数据
 }
 
 export interface BrewingNote {

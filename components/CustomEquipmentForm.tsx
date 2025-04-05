@@ -194,12 +194,19 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
         initialEquipment?.customShapeSvg ? 'custom' : 'default'
     );
     
+    // 添加阀门样式选择状态（默认/自定义）
+    const [valveShapeType, setValveShapeType] = useState<'default' | 'custom'>(
+        initialEquipment?.customValveSvg ? 'custom' : 'default'
+    );
+    
     const [equipment, setEquipment] = useState<Partial<CustomEquipment>>({
         name: '',
         description: '',
         animationType: 'v60',
         hasValve: false,
         customShapeSvg: '',
+        customValveSvg: '',
+        customValveOpenSvg: '',
         ...initialEquipment,
     });
 
@@ -209,22 +216,18 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
     const [_hasDrawn, setHasDrawn] = useState(!!equipment.customShapeSvg);
     const [showReference, setShowReference] = useState(true);
     
+    // 添加阀门绘制状态
+    const [showValveDrawingCanvas, setShowValveDrawingCanvas] = useState(false);
+    const [_hasValveDrawn, setHasValveDrawn] = useState(!!equipment.customValveSvg);
+    const [valveEditMode, setValveEditMode] = useState<'closed' | 'open'>('closed');
+    const [valvePreviewState, setValvePreviewState] = useState<'closed' | 'open'>('closed');
+    
     // 添加当前预览帧状态
     const [previewFrameIndexes, setPreviewFrameIndexes] = useState<Record<string, number>>({});
     
     // 初始化注水方式，合并系统默认和用户自定义
     const [customPourAnimations, setCustomPourAnimations] = useState<CustomPourAnimation[]>(() => {
-        // 先获取默认的注水方式
-        const defaults: CustomPourAnimation[] = DEFAULT_POUR_TYPES.map(type => ({
-            id: type.id,
-            name: type.name,
-            customAnimationSvg: '',
-            isSystemDefault: true,
-            pourType: type.pourType,
-            previewFrames: type.previewFrames
-        }));
-        
-        // 如果有用户自定义的注水动画，添加到列表中
+        // 处理用户自定义的注水动画
         const userCustom = initialEquipment?.customPourAnimations || [];
         
         // 为自定义动画计算previewFrames
@@ -239,6 +242,21 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
             // 否则保持原样
             return anim;
         });
+        
+        // 如果是自定义预设，只返回用户自定义的注水动画
+        if (selectedPreset === 'custom') {
+            return processedUserCustom;
+        }
+        
+        // 否则包含系统默认注水方式
+        const defaults: CustomPourAnimation[] = DEFAULT_POUR_TYPES.map(type => ({
+            id: type.id,
+            name: type.name,
+            customAnimationSvg: '',
+            isSystemDefault: true,
+            pourType: type.pourType,
+            previewFrames: type.previewFrames
+        }));
         
         return [...defaults, ...processedUserCustom];
     });
@@ -269,12 +287,9 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
     useEffect(() => {
         // 设置初始预览帧
         const initialPreviewFrames: Record<string, number> = {};
-        DEFAULT_POUR_TYPES.forEach(type => {
-            initialPreviewFrames[type.id] = 1; // 初始显示第一帧
-        });
         
-        // 为初始的自定义动画设置预览帧
-        customPourAnimations.filter(anim => !anim.isSystemDefault).forEach(anim => {
+        // 为所有动画设置预览帧
+        customPourAnimations.forEach(anim => {
             initialPreviewFrames[anim.id] = 1;
         });
         
@@ -309,6 +324,9 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                 
                 return newIndexes;
             });
+            
+            // 切换阀门预览状态
+            setValvePreviewState(prev => prev === 'closed' ? 'open' : 'closed');
         }, 800); // 每800ms更新一次
         
         return () => clearInterval(previewTimer);
@@ -329,18 +347,20 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
             handleChange('animationType', 'custom');
             // 自定义预设强制使用自定义杯型
             setCupShapeType('custom');
+            // 自定义预设时，过滤掉系统默认注水方式
+            setCustomPourAnimations(prev => prev.filter(anim => !anim.isSystemDefault));
             // 自定义预设不自动设置阀门，保持当前值
         }
     }, [selectedPreset]);
 
     // 计算画布尺寸
     useEffect(() => {
-        if ((showDrawingCanvas || showPourAnimationCanvas) && canvasContainerRef.current && windowSize.width > 0) {
+        if ((showDrawingCanvas || showPourAnimationCanvas || showValveDrawingCanvas) && canvasContainerRef.current && windowSize.width > 0) {
             // 获取容器宽度，不再减去padding
             const containerWidth = canvasContainerRef.current.clientWidth;
             setCanvasSize(containerWidth);
         }
-    }, [showDrawingCanvas, showPourAnimationCanvas, windowSize.width]);
+    }, [showDrawingCanvas, showPourAnimationCanvas, showValveDrawingCanvas, windowSize.width]);
 
     // 处理笔触宽度变化
     const handleStrokeWidthChange = (newWidth: number) => {
@@ -385,18 +405,20 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
         try {
             if (await validateForm()) {
                 // 检查自定义注水动画的帧数据
-                const processedAnimations = customPourAnimations.map(animation => {
-                    if (animation.frames && animation.frames.length > 1) {
-                        console.log(`[提交] 注水动画 ${animation.id} (${animation.name}): ${animation.frames.length} 帧, previewFrames: ${animation.previewFrames || 0}`);
-                    }
-                    return animation;
-                });
+                const processedAnimations = customPourAnimations
+                    .filter(animation => !animation.isSystemDefault) // 确保过滤掉系统默认注水方式
+                    .map(animation => {
+                        if (animation.frames && animation.frames.length > 1) {
+                            console.log(`[提交] 注水动画 ${animation.id} (${animation.name}): ${animation.frames.length} 帧, previewFrames: ${animation.previewFrames || 0}`);
+                        }
+                        return animation;
+                    });
                 
                 const equipmentToSave = {
                     ...equipment as CustomEquipment,
                     isCustom: true as const,
                     customPourAnimations: selectedPreset === 'custom' 
-                        ? processedAnimations.filter(anim => !anim.isSystemDefault || anim.customAnimationSvg)
+                        ? processedAnimations
                         : undefined,
                 };
                 
@@ -404,6 +426,18 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                 if (equipmentToSave.customShapeSvg) {
                     console.log('保存设备时包含自定义杯型SVG，长度:', 
                         equipmentToSave.customShapeSvg.length);
+                }
+                
+                // 检查自定义阀门SVG数据是否存在
+                if (equipmentToSave.customValveSvg) {
+                    console.log('保存设备时包含自定义阀门关闭状态SVG，长度:',
+                        equipmentToSave.customValveSvg.length);
+                }
+                
+                // 检查自定义阀门开启状态SVG数据是否存在
+                if (equipmentToSave.customValveOpenSvg) {
+                    console.log('保存设备时包含自定义阀门开启状态SVG，长度:',
+                        equipmentToSave.customValveOpenSvg.length);
                 }
                 
                 // 检查最终传递的自定义注水动画数据
@@ -440,6 +474,36 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
         }
     };
 
+    // 处理阀门绘制完成
+    const handleValveDrawingComplete = (svg: string) => {
+        console.log(`阀门(${valveEditMode}状态)绘制完成，获取到SVG数据，长度:`, svg.length);
+        if (svg && svg.trim() !== '') {
+            // 确保自定义阀门与杯型一起显示
+            setEquipment(prev => {
+                // 创建一个更新后的设备对象
+                const updatedEquipment = {
+                    ...prev,
+                    ...(valveEditMode === 'closed' 
+                        ? { customValveSvg: svg }
+                        : { customValveOpenSvg: svg })
+                };
+                
+                // 确保设备对象有customShapeSvg, hasValve等属性
+                if (!updatedEquipment.hasValve) {
+                    updatedEquipment.hasValve = true;
+                }
+                
+                console.log(`已保存自定义阀门${valveEditMode}状态SVG到设备数据中`);
+                return updatedEquipment;
+            });
+            
+            setHasValveDrawn(true);
+            setValveShapeType('custom');
+        } else {
+            console.error('绘制完成但SVG数据为空');
+        }
+    };
+
     // 保存绘图并返回表单界面
     const handleSaveDrawing = () => {
         hapticsUtils.medium();
@@ -455,15 +519,38 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
         }
     };
 
+    // 保存阀门绘图并返回表单界面
+    const handleSaveValveDrawing = () => {
+        hapticsUtils.medium();
+        
+        if (canvasRef.current) {
+            try {
+                const svgString = canvasRef.current.save();
+                handleValveDrawingComplete(svgString);
+                setShowValveDrawingCanvas(false);
+            } catch (error) {
+                console.error(`无法获取阀门${valveEditMode}状态绘图数据:`, error);
+            }
+        }
+    };
+
     // 返回表单界面
     const handleBackToForm = () => {
         setShowDrawingCanvas(false);
+        setShowValveDrawingCanvas(false);
     };
 
     // 切换到绘图界面
     const handleShowDrawingCanvas = () => {
         hapticsUtils.light();
         setShowDrawingCanvas(true);
+    };
+
+    // 切换到阀门绘图界面
+    const handleShowValveDrawingCanvas = (mode: 'closed' | 'open' = 'closed') => {
+        hapticsUtils.light();
+        setValveEditMode(mode);
+        setShowValveDrawingCanvas(true);
     };
 
     // 注水动画相关函数
@@ -484,16 +571,9 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
         setShowPourAnimationCanvas(true);
     };
 
-    // 添加状态跟踪是否有系统默认注水方式被删除
-    const [hasDeletedDefaults, setHasDeletedDefaults] = useState(false);
-
     // 修改handleDeletePourAnimation函数
     const handleDeletePourAnimation = (id: string) => {
         hapticsUtils.medium();
-        const animation = customPourAnimations.find(a => a.id === id);
-        if (animation?.isSystemDefault) {
-            setHasDeletedDefaults(true);
-        }
         setCustomPourAnimations(prev => prev.filter(a => a.id !== id));
     };
 
@@ -611,6 +691,16 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
         }
     }, []);
     
+    // 添加创建新帧函数 - 使用useCallback
+    const handleAddNewFrame = useCallback((e: React.MouseEvent) => {
+        // 阻止事件冒泡，确保不会关闭模态框
+        e.stopPropagation();
+        e.preventDefault();
+        if (animationEditorRef.current) {
+            animationEditorRef.current.addFrame();
+        }
+    }, []);
+    
     // 退出编辑器时重置播放状态
     useEffect(() => {
         if (!showPourAnimationCanvas) {
@@ -688,8 +778,18 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                     {canvasSize > 0 && (
                         <div className="animation-editor-custom">
                             <style jsx>{`
-                                /* 隐藏AnimationEditor组件原始的帧操作按钮工具栏，但保留缩略图栏 */
+                                /* 隐藏AnimationEditor组件的帧操作按钮工具栏 */
                                 .animation-editor-custom :global(.flex.flex-col.space-y-2 > div.flex.justify-between) {
+                                    display: none;
+                                }
+                                
+                                /* 隐藏参考图像选择区域 */
+                                .animation-editor-custom :global(.flex.flex-col.space-y-2 > div.mt-2) {
+                                    display: none;
+                                }
+                                
+                                /* 隐藏添加帧按钮 */
+                                .animation-editor-custom :global(.flex-shrink-0.w-16.h-16.bg-neutral-200.dark\\:bg-neutral-700.rounded-md.border-2.border-dashed) {
                                     display: none;
                                 }
                             `}</style>
@@ -707,7 +807,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                     )}
                 </div>
                 
-                {/* 工具栏区域 */}
+                {/* 工具栏区域 - 不再需要自定义添加帧按钮，使用AnimationEditor原生的帧管理功能 */}
                 <div className="flex justify-between mt-6">
                     {/* 左侧：画笔大小控制 */}
                     <div className="flex items-center space-x-3">
@@ -753,6 +853,18 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                     
                     {/* 右侧：播放/暂停、撤销、删除 */}
                     <div className="flex items-center space-x-3">
+                        {/* 添加帧按钮 */}
+                        <button
+                            type="button"
+                            onClick={handleAddNewFrame}
+                            className="w-10 h-10 rounded-full bg-white dark:bg-neutral-800 flex items-center justify-center border border-neutral-200 dark:border-neutral-700"
+                            aria-label="添加帧"
+                        >
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 5V19M5 12H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                        </button>
+
                         <button
                             type="button"
                             onClick={handleTogglePlayback}
@@ -919,42 +1031,162 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
         </>
     );
 
-    // 修改handleAddDefaultPourAnimation函数
-    const handleAddDefaultPourAnimation = () => {
-        hapticsUtils.light();
-        
-        // 获取当前已存在的系统默认动画类型
-        const existingDefaultTypes = customPourAnimations
-            .filter(anim => anim.isSystemDefault)
-            .map(anim => anim.pourType);
-        
-        // 获取缺失的系统默认类型
-        const missingDefaultTypes = DEFAULT_POUR_TYPES.filter(
-            type => !existingDefaultTypes.includes(type.pourType)
-        );
-        
-        // 如果所有默认类型都已存在，则不做任何操作
-        if (missingDefaultTypes.length === 0) {
-            return;
-        }
-        
-        // 添加缺失的默认注水方式
-        const newAnimations = [...customPourAnimations];
-        missingDefaultTypes.forEach(type => {
-            const newDefaultAnimation: CustomPourAnimation = {
-                id: type.id,
-                name: type.name,
-                customAnimationSvg: '',
-                isSystemDefault: true,
-                pourType: type.pourType,
-                previewFrames: type.previewFrames
-            };
-            newAnimations.push(newDefaultAnimation);
-        });
-        
-        setCustomPourAnimations(newAnimations);
-        setHasDeletedDefaults(false); // 重置状态
-    };
+    // 渲染阀门绘图界面
+    const renderValveDrawingCanvas = () => (
+        <>
+            <TopNav 
+                title={valveEditMode === 'closed' ? "绘制阀门关闭状态" : "绘制阀门开启状态"} 
+                onBack={handleBackToForm}
+                onSave={handleSaveValveDrawing}
+            />
+                <div 
+                    ref={canvasContainerRef}
+                    className="w-full bg-neutral-50 dark:bg-neutral-800 rounded-xl mx-auto"
+                >
+                    {canvasSize > 0 && (
+                        <DrawingCanvas
+                            ref={canvasRef}
+                            width={canvasSize}
+                            height={canvasSize}
+                            defaultSvg={valveEditMode === 'closed' ? equipment.customValveSvg : equipment.customValveOpenSvg}
+                            onDrawingComplete={(svg) => {
+                                handleValveDrawingComplete(svg);
+                                setHasValveDrawn(true);
+                            }}
+                            showReference={showReference}
+                            // 设置参考图像的优先级：
+                            // 1. customReferenceSvg: 滤杯SVG (作为主背景)
+                            // 2. referenceSvg: 另一状态的阀门SVG (作为参考)
+                            customReferenceSvg={equipment.customShapeSvg || undefined}
+                            // 另一状态的阀门作为参考
+                            referenceSvg={valveEditMode === 'closed' 
+                                ? equipment.customValveOpenSvg  // 如果当前是绘制关闭状态，则显示开启状态作为参考
+                                : equipment.customValveSvg      // 如果当前是绘制开启状态，则显示关闭状态作为参考
+                            }
+                            // 如果没有自定义滤杯，使用默认V60滤杯作为底图
+                            referenceSvgUrl={!equipment.customShapeSvg ? "/images/v60-base.svg" : undefined}
+                        />
+                    )}
+                </div>
+                
+                <div className="flex justify-between mt-6">
+                    {/* 左侧：画笔大小控制 */}
+                    <div className="flex items-center space-x-3">
+                        <button
+                            type="button"
+                            onClick={() => handleStrokeWidthChange(strokeWidth - 1)}
+                            className="w-10 h-10 rounded-full bg-white dark:bg-neutral-800 flex items-center justify-center border border-neutral-200 dark:border-neutral-700"
+                            aria-label="减小线条粗细"
+                        >
+                            <span className="text-lg font-medium">−</span>
+                        </button>
+                        
+                        <div className="flex items-center justify-center h-10 w-10 bg-white dark:bg-neutral-800 rounded-full border border-neutral-200 dark:border-neutral-700">
+                            <div 
+                                className="rounded-full bg-neutral-900 dark:bg-white"
+                                style={{ 
+                                    width: `${strokeWidth}px`, 
+                                    height: `${strokeWidth}px`
+                                }}
+                                aria-label={`笔触大小: ${strokeWidth}`}
+                            />
+                        </div>
+                        
+                        <button
+                            type="button"
+                            onClick={() => handleStrokeWidthChange(strokeWidth + 1)}
+                            className="w-10 h-10 rounded-full bg-white dark:bg-neutral-800 flex items-center justify-center border border-neutral-200 dark:border-neutral-700"
+                            aria-label="增加线条粗细"
+                        >
+                            <span className="text-lg font-medium">+</span>
+                        </button>
+                    </div>
+                    
+                    {/* 右侧：阀门状态切换、撤销、清除和底图切换 */}
+                    <div className="flex items-center space-x-3">
+                        {/* 切换阀门状态按钮 */}
+                        <button
+                            type="button"
+                            onClick={() => {
+                                const newMode = valveEditMode === 'closed' ? 'open' : 'closed';
+                                // 保存当前绘制内容
+                                if (canvasRef.current) {
+                                    try {
+                                        const svgString = canvasRef.current.save();
+                                        handleValveDrawingComplete(svgString);
+                                    } catch (error) {
+                                        console.error(`无法保存当前阀门${valveEditMode}状态绘图数据:`, error);
+                                    }
+                                }
+                                // 切换到另一个状态
+                                setValveEditMode(newMode);
+                            }}
+                            className="w-10 h-10 rounded-full bg-white dark:bg-neutral-800 flex items-center justify-center border border-neutral-200 dark:border-neutral-700"
+                            aria-label={`切换到${valveEditMode === 'closed' ? '开启' : '关闭'}状态`}
+                        >
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M14.6 15.5l4.6-4.6c.4-.4.4-1 0-1.4l-4.6-4.6M9.4 15.5L4.8 10.9c-.4-.4-.4-1 0-1.4l4.6-4.6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                            <span className="absolute top-0 right-0 bg-blue-500 dark:bg-blue-600 text-white text-[8px] w-4 h-4 flex items-center justify-center rounded-full">
+                                {valveEditMode === 'closed' ? 'O' : 'C'}
+                            </span>
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => setShowReference(!showReference)}
+                            className="w-10 h-10 rounded-full bg-white dark:bg-neutral-800 flex items-center justify-center border border-neutral-200 dark:border-neutral-700"
+                            aria-label={showReference ? "隐藏底图" : "显示底图"}
+                        >
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                {showReference ? (
+                                    <path d="M12.5 4.5H18C19.1046 4.5 20 5.39543 20 6.5V12M20 18V16M6 20H12M4 6V12M4 16V18C4 19.1046 4.89543 20 6 20M18 4.5H16M8 4H6C4.89543 4 4 4.89543 4 6" 
+                                        stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                ) : (
+                                    <path d="M4 6V12M4 16V18C4 19.1046 4.89543 20 6 20H12M18 20H20M8 4H6C4.89543 4 4 4.89543 4 6M18 4H16M12 4H8M20 12V6C20 4.89543 19.1046 4 18 4" 
+                                        stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                )}
+                            </svg>
+                        </button>
+                        
+                        <button
+                            type="button"
+                            onClick={() => canvasRef.current?.undo()}
+                            className="w-10 h-10 rounded-full bg-white dark:bg-neutral-800 flex items-center justify-center border border-neutral-200 dark:border-neutral-700"
+                            aria-label="撤销"
+                        >
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M8 10L4 14M4 14L8 18M4 14H16C18.2091 14 20 12.2091 20 10C20 7.79086 18.2091 6 16 6H12" 
+                                    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <button
+                            type="button"
+                            onClick={() => canvasRef.current?.clear()}
+                            className="w-10 h-10 rounded-full bg-white dark:bg-neutral-800 flex items-center justify-center border border-neutral-200 dark:border-neutral-700"
+                            aria-label="清除"
+                        >
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M4 7H20M10 11V17M14 11V17M5 7L6 19C6 20.1 6.9 21 8 21H16C17.1 21 18 20.1 18 19L19 7M9 7V4C9 3.45 9.45 3 10 3H14C14.55 3 15 3.45 15 4V7M4 7H20" 
+                                    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                
+                <div className="mt-4 text-xs text-neutral-500 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-900 p-3 rounded-lg">
+                    <h4 className="font-medium mb-1">阀门绘制提示</h4>
+                    <ul className="list-disc pl-4 space-y-1">
+                        <li>当前绘制：{valveEditMode === 'closed' ? "关闭" : "开启"}状态的阀门</li>
+                        <li>使用<span className="inline-flex items-center justify-center bg-neutral-200 dark:bg-neutral-700 rounded-full w-5 h-5 mx-1"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14.6 15.5l4.6-4.6c.4-.4.4-1 0-1.4l-4.6-4.6M9.4 15.5L4.8 10.9c-.4-.4-.4-1 0-1.4l4.6-4.6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg></span>按钮切换阀门状态</li>
+                        <li>滤杯显示为底图，另一状态的阀门显示为参考</li>
+                        <li>简单明了的形状更易于识别</li>
+                        <li>完成后点击右上角保存</li>
+                    </ul>
+                </div>
+        </>
+    );
 
     // 渲染主要表单内容
     const renderFormContent = () => (
@@ -1150,18 +1382,253 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
 
                             {/* 阀门控制选项 */}
                             {selectedPreset === 'custom' && (
-                                <div className="mt-4 flex items-center">
-                                    <label className="inline-flex items-center cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            checked={equipment.hasValve || false}
-                                            onChange={(e) => handleChange('hasValve', e.target.checked)}
-                                            className="form-checkbox h-4 w-4 text-blue-500 border-neutral-300 dark:border-neutral-600 rounded transition-colors"
-                                        />
-                                        <span className="ml-2 text-sm text-neutral-700 dark:text-neutral-300">
-                                            支持阀门控制（类似聪明杯）
-                                        </span>
-                                    </label>
+                                <div className="mt-4 space-y-4">
+                                    <div className="flex items-center">
+                                        <label className="inline-flex items-center cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={equipment.hasValve || false}
+                                                onChange={(e) => handleChange('hasValve', e.target.checked)}
+                                                className="form-checkbox h-4 w-4 text-blue-500 border-neutral-300 dark:border-neutral-600 rounded transition-colors"
+                                            />
+                                            <span className="ml-2 text-sm text-neutral-700 dark:text-neutral-300">
+                                                支持阀门控制（类似聪明杯）
+                                            </span>
+                                        </label>
+                                    </div>
+                                    
+                                    {equipment.hasValve && (
+                                        <div className="pl-6 border-l-2 border-neutral-200 dark:border-neutral-700">
+                                            <h5 className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">阀门控制样式</h5>
+                                            
+                                            <div className="mb-3">
+                                                {/* 阀门状态提示 - 改为自动切换 */}
+                                                <div className="py-1.5 px-2 text-xs bg-neutral-100 dark:bg-neutral-900 rounded-md text-neutral-600 dark:text-neutral-400">
+                                                    默认阀门样式会自动在开启和关闭状态之间切换
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="grid grid-cols-2 gap-3">
+                                                {/* 默认阀门样式 */}
+                                                <label
+                                                    className="relative flex flex-col p-3 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:border-blue-200 dark:hover:border-blue-800 transition-all cursor-pointer"
+                                                >
+                                                    <div className="flex items-center mb-2">
+                                                        <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">默认阀门样式</span>
+                                                    </div>
+                                                    <div className="w-full aspect-square flex items-center justify-center bg-neutral-50 dark:bg-neutral-900 rounded-md relative">
+                                                        {/* 滤杯底图层 */}
+                                                        <div className="absolute inset-0 flex items-center justify-center">
+                                                            <div className="w-3/4 h-3/4 relative">
+                                                                <Image
+                                                                    src="/images/v60-base.svg"
+                                                                    alt="滤杯背景"
+                                                                    fill
+                                                                    className="object-contain invert-0 dark:invert opacity-60"
+                                                                    sizes="(max-width: 768px) 100vw, 300px"
+                                                                    quality={85}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                        {/* 阀门图层 */}
+                                                        <div className="absolute inset-0 flex items-center justify-center">
+                                                            <div className="w-3/4 h-3/4 relative">
+                                                                <Image
+                                                                    src={valvePreviewState === 'closed' ? "/images/valve-closed.svg" : "/images/valve-open.svg"}
+                                                                    alt={valvePreviewState === 'closed' ? "默认阀门关闭状态" : "默认阀门开启状态"}
+                                                                    fill
+                                                                    className="object-contain invert-0 dark:invert"
+                                                                    sizes="(max-width: 768px) 100vw, 300px"
+                                                                    quality={85}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <input
+                                                        type="radio"
+                                                        name="valveShapeType"
+                                                        value="default"
+                                                        checked={valveShapeType === 'default'}
+                                                        onChange={() => setValveShapeType('default')}
+                                                        className="hidden"
+                                                    />
+                                                </label>
+                                                
+                                                {/* 自定义阀门样式 */}
+                                                <label
+                                                    className={`relative flex flex-col p-3 rounded-lg border ${
+                                                        valveShapeType === 'custom'
+                                                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                                                            : 'border-neutral-200 dark:border-neutral-700 hover:border-blue-200 dark:hover:border-blue-800'
+                                                    } transition-all cursor-pointer`}
+                                                >
+                                                    <input
+                                                        type="radio"
+                                                        name="valveShapeType"
+                                                        value="custom"
+                                                        checked={valveShapeType === 'custom'}
+                                                        onChange={() => setValveShapeType('custom')}
+                                                        className="hidden"
+                                                    />
+                                                    <div className="flex items-center mb-2">
+                                                        <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
+                                                            {equipment.customValveSvg && equipment.customValveOpenSvg ? '自定义阀门' : '添加自定义阀门'}
+                                                        </span>
+                                                        {valveShapeType === 'custom' && (
+                                                            <div className="ml-2 w-3.5 h-3.5 text-blue-500">
+                                                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                                    <path d="M5 13L9 17L19 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                                                </svg>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                        {/* 关闭状态 */}
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.preventDefault();
+                                                                handleShowValveDrawingCanvas('closed');
+                                                            }}
+                                                            className="w-full aspect-square flex items-center justify-center bg-neutral-50 dark:bg-neutral-900 rounded-md overflow-hidden hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                                                        >
+                                                            <div className="w-full h-full relative">
+                                                                {equipment.customValveSvg ? (
+                                                                    <>
+                                                                        <div className="absolute inset-0 flex items-center justify-center opacity-60">
+                                                                            {equipment.customShapeSvg ? (
+                                                                                <div 
+                                                                                    className="w-full h-full flex items-center justify-center"
+                                                                                    dangerouslySetInnerHTML={{
+                                                                                        __html: equipment.customShapeSvg.replace(/<svg/, '<svg width="100%" height="100%" class="invert-0 dark:invert opacity-60"')
+                                                                                    }}
+                                                                                />
+                                                                            ) : (
+                                                                                <Image
+                                                                                    src="/images/v60-base.svg"
+                                                                                    alt="滤杯背景"
+                                                                                    fill
+                                                                                    className="object-contain invert-0 dark:invert opacity-60"
+                                                                                    sizes="(max-width: 768px) 100vw, 300px"
+                                                                                    quality={85}
+                                                                                />
+                                                                            )}
+                                                                        </div>
+                                                                        <div 
+                                                                            className="w-full h-full flex items-center justify-center"
+                                                                            dangerouslySetInnerHTML={{
+                                                                                __html: equipment.customValveSvg?.replace(/<svg/, '<svg width="100%" height="100%"') || ''
+                                                                            }}
+                                                                        />
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <div className="absolute inset-0 flex items-center justify-center opacity-60">
+                                                                            {equipment.customShapeSvg ? (
+                                                                                <div 
+                                                                                    className="w-full h-full flex items-center justify-center"
+                                                                                    dangerouslySetInnerHTML={{
+                                                                                        __html: equipment.customShapeSvg.replace(/<svg/, '<svg width="100%" height="100%" class="invert-0 dark:invert opacity-60"')
+                                                                                    }}
+                                                                                />
+                                                                            ) : (
+                                                                                <Image
+                                                                                    src="/images/v60-base.svg"
+                                                                                    alt="滤杯背景"
+                                                                                    fill
+                                                                                    className="object-contain invert-0 dark:invert opacity-60"
+                                                                                    sizes="(max-width: 768px) 100vw, 300px"
+                                                                                    quality={85}
+                                                                                />
+                                                                            )}
+                                                                        </div>
+                                                                        <div 
+                                                                            className="w-full h-full flex items-center justify-center"
+                                                                            dangerouslySetInnerHTML={{
+                                                                                __html: equipment.customValveSvg?.replace(/<svg/, '<svg width="100%" height="100%"') || ''
+                                                                            }}
+                                                                        />
+                                                                    </>
+                                                                )}
+                                                                <div className="absolute left-0 bottom-0 bg-black/60 text-white text-xs p-1 rounded-tr">关闭</div>
+                                                            </div>
+                                                        </button>
+                                                        
+                                                        {/* 开启状态 */}
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.preventDefault();
+                                                                handleShowValveDrawingCanvas('open');
+                                                            }}
+                                                            className="w-full aspect-square flex items-center justify-center bg-neutral-50 dark:bg-neutral-900 rounded-md overflow-hidden hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                                                        >
+                                                            <div className="w-full h-full relative">
+                                                                {equipment.customValveOpenSvg ? (
+                                                                    <>
+                                                                        <div className="absolute inset-0 flex items-center justify-center opacity-60">
+                                                                            {equipment.customShapeSvg ? (
+                                                                                <div 
+                                                                                    className="w-full h-full flex items-center justify-center"
+                                                                                    dangerouslySetInnerHTML={{
+                                                                                        __html: equipment.customShapeSvg.replace(/<svg/, '<svg width="100%" height="100%" class="invert-0 dark:invert opacity-60"')
+                                                                                    }}
+                                                                                />
+                                                                            ) : (
+                                                                                <Image
+                                                                                    src="/images/v60-base.svg"
+                                                                                    alt="滤杯背景"
+                                                                                    fill
+                                                                                    className="object-contain invert-0 dark:invert opacity-60"
+                                                                                    sizes="(max-width: 768px) 100vw, 300px"
+                                                                                    quality={85}
+                                                                                />
+                                                                            )}
+                                                                        </div>
+                                                                        <div 
+                                                                            className="w-full h-full flex items-center justify-center"
+                                                                            dangerouslySetInnerHTML={{
+                                                                                __html: equipment.customValveOpenSvg?.replace(/<svg/, '<svg width="100%" height="100%"') || ''
+                                                                            }}
+                                                                        />
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <div className="absolute inset-0 flex items-center justify-center opacity-60">
+                                                                            {equipment.customShapeSvg ? (
+                                                                                <div 
+                                                                                    className="w-full h-full flex items-center justify-center"
+                                                                                    dangerouslySetInnerHTML={{
+                                                                                        __html: equipment.customShapeSvg.replace(/<svg/, '<svg width="100%" height="100%" class="invert-0 dark:invert opacity-60"')
+                                                                                    }}
+                                                                                />
+                                                                            ) : (
+                                                                                <Image
+                                                                                    src="/images/v60-base.svg"
+                                                                                    alt="滤杯背景"
+                                                                                    fill
+                                                                                    className="object-contain invert-0 dark:invert opacity-60"
+                                                                                    sizes="(max-width: 768px) 100vw, 300px"
+                                                                                    quality={85}
+                                                                                />
+                                                                            )}
+                                                                        </div>
+                                                                        <div 
+                                                                            className="w-full h-full flex items-center justify-center"
+                                                                            dangerouslySetInnerHTML={{
+                                                                                __html: equipment.customValveOpenSvg?.replace(/<svg/, '<svg width="100%" height="100%"') || ''
+                                                                            }}
+                                                                        />
+                                                                    </>
+                                                                )}
+                                                                <div className="absolute left-0 bottom-0 bg-blue-600/70 text-white text-xs p-1 rounded-tr">开启</div>
+                                                            </div>
+                                                        </button>
+                                                    </div>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -1173,15 +1640,6 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                     <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 overflow-hidden">
                         <div className="px-4 py-2.5 bg-neutral-50 dark:bg-neutral-800/50 border-b border-neutral-200 dark:border-neutral-700 flex justify-between items-center">
                             <h3 className="text-sm font-medium text-neutral-900 dark:text-neutral-100">注水方式</h3>
-                            {hasDeletedDefaults && (
-                                <button
-                                    type="button"
-                                    onClick={handleAddDefaultPourAnimation}
-                                    className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
-                                >
-                                    恢复
-                                </button>
-                            )}
                         </div>
                         <div className="p-4">
                             <div className="grid grid-cols-2 gap-3">
@@ -1226,7 +1684,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                                         </div>
                                         <div className="w-full aspect-square bg-neutral-50 dark:bg-neutral-900 rounded-md overflow-hidden relative">
                                             {/* 底部显示杯型 */}
-                                            <div className="absolute inset-0 flex items-center justify-center opacity-30">
+                                            <div className="absolute inset-0 flex items-center justify-center opacity-60">
                                                 {equipment.customShapeSvg ? (
                                                     <div 
                                                         className="w-full h-full flex items-center justify-center"
@@ -1236,8 +1694,8 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                                                     />
                                                 ) : (
                                                     <>
-                                                        <div className="absolute inset-0 flex items-center justify-center">
-                                                            <div className="w-3/4 h-3/4 relative">
+                                                        <div className="w-full h-full flex items-center justify-center">
+                                                            <div className="w-full h-full relative">
                                                                 <Image
                                                                     src="/images/v60-base.svg"
                                                                     alt="杯型背景"
@@ -1265,7 +1723,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                                             {/* 注水动画 */}
                                             {animation.isSystemDefault ? (
                                                 <div className="absolute inset-0 flex items-center justify-center">
-                                                    <div className="w-3/4 h-3/4 relative">
+                                                    <div className="w-full h-full flex items-center justify-center">
                                                         {animation.pourType && (
                                                             <Image
                                                                 src={`/images/pour-${animation.pourType}-motion-${previewFrameIndexes[animation.id] || 1}.svg`}
@@ -1288,7 +1746,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                                                             const svgData = animation.frames![frameIndex].svgData;
                                                             if (svgData && svgData.trim() !== '') {
                                                                 return (
-                                                                    <div className="w-3/4 h-3/4 relative">
+                                                                    <div className="w-full h-full flex items-center justify-center">
                                                                         <div
                                                                             className="w-full h-full flex items-center justify-center"
                                                                             dangerouslySetInnerHTML={{
@@ -1302,7 +1760,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                                                         
                                                         if (animation.customAnimationSvg && animation.customAnimationSvg.trim() !== '') {
                                                             return (
-                                                                <div className="w-3/4 h-3/4 relative">
+                                                                <div className="w-full h-full flex items-center justify-center">
                                                                     <div
                                                                         className="w-full h-full flex items-center justify-center"
                                                                         dangerouslySetInnerHTML={{
@@ -1338,7 +1796,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                                     <div className="w-full aspect-square bg-neutral-50 dark:bg-neutral-900 rounded-md overflow-hidden relative">
                                         {/* 底部显示杯型 */}
                                         <div className="absolute inset-0 flex items-center justify-center">
-                                            <div className="w-full h-full relative opacity-30">
+                                            <div className="w-full h-full relative opacity-60">
                                                 {equipment.customShapeSvg ? (
                                                     <div 
                                                         className="w-full h-full flex items-center justify-center"
@@ -1413,6 +1871,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
             <AnimatePresence mode="wait">
                 {showPourAnimationCanvas ? renderPourAnimationCanvas() :
                  showDrawingCanvas ? renderDrawingCanvas() : 
+                 showValveDrawingCanvas ? renderValveDrawingCanvas() : 
                  renderFormContent()}
             </AnimatePresence>
         </form>
