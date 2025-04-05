@@ -37,7 +37,7 @@ export interface UseBrewingContentProps {
 export function useBrewingContent({
 	selectedEquipment,
 	methodType,
-	customMethods: _customMethods, // Rename to indicate it's intentionally unused
+	customMethods, // 不再忽略customMethods参数
 	selectedMethod,
 	settings,
 	customEquipments = [], // 设置默认值为空数组
@@ -105,28 +105,54 @@ export function useBrewingContent({
 		}));
 	}, [customEquipments]);
 
-	// 当选择器具改变时，获取自定义方法
+	// 当选择器具改变或customMethods改变时，获取自定义方法
 	useEffect(() => {
-		const loadCustomMethods = async () => {
+		const updateCustomMethods = async () => {
 			if (selectedEquipment) {
-				// 获取当前设备的自定义方法
-				try {
-					const methods = await loadCustomMethodsForEquipment(selectedEquipment);
-					console.log('已加载当前设备的自定义方法:', methods);
-					setCurrentEquipmentCustomMethods(methods);
-				} catch (error) {
-					console.error('加载自定义方法失败:', error);
-					setCurrentEquipmentCustomMethods([]);
+				// 首先检查传入的customMethods中是否有当前器具的方法
+				const methodsFromProps = customMethods[selectedEquipment] || [];
+				
+				console.log('[useBrewingContent] 从props获取的自定义方法:', {
+					equipmentId: selectedEquipment,
+					methodCount: methodsFromProps.length,
+					methodsIds: methodsFromProps.map(m => m.id)
+				});
+				
+				if (methodsFromProps.length > 0) {
+					// 如果传入的customMethods中有数据，优先使用它
+					console.log('[useBrewingContent] 使用从props获取的自定义方法');
+					setCurrentEquipmentCustomMethods(methodsFromProps);
+				} else {
+					// 如果传入的customMethods中没有数据，才从存储中加载
+					try {
+						console.log('[useBrewingContent] 从存储加载自定义方法:', selectedEquipment);
+						const methods = await loadCustomMethodsForEquipment(selectedEquipment);
+						console.log('[useBrewingContent] 已加载当前设备的自定义方法:', {
+							equipmentId: selectedEquipment,
+							methodCount: methods.length,
+							methodsIds: methods.map(m => m.id)
+						});
+						setCurrentEquipmentCustomMethods(methods);
+					} catch (error) {
+						console.error('[useBrewingContent] 加载自定义方法失败:', error);
+						setCurrentEquipmentCustomMethods([]);
+					}
 				}
 			}
 		};
 		
-		loadCustomMethods();
-	}, [selectedEquipment]);
+		updateCustomMethods();
+	}, [selectedEquipment, customMethods]); // 添加customMethods作为依赖
 
 	// 更新方案列表内容
 	useEffect(() => {
 		if (selectedEquipment) {
+			console.log('[useBrewingContent] 更新方案列表内容:', {
+				selectedEquipment,
+				methodType,
+				currentEquipmentCustomMethodsCount: currentEquipmentCustomMethods.length
+			});
+			
 			setContent((prev) => {
 				// 检查是否是自定义器具
 				console.log('选中的器具:', selectedEquipment);
@@ -205,65 +231,72 @@ export function useBrewingContent({
 					}
 				}
 
+				const steps = (isCustomPresetEquipment || methodType === "custom")
+					? methodsForEquipment.map((method) => ({
+							title: method.name,
+							methodId: method.id,
+							items: [
+								`水粉比 ${method.params.ratio}`,
+								`总时长 ${formatTime(
+									method.params.stages[
+										method.params.stages
+											.length - 1
+									].time,
+									true
+								)}`,
+								`研磨度 ${formatGrindSize(
+									method.params.grindSize,
+									settings.grindType
+								)}`,
+							],
+							note: "",
+					  }))
+					: methodsForEquipment.map((method, methodIndex) => {
+							const totalTime =
+								method.params.stages[
+									method.params.stages.length - 1
+								].time;
+							return {
+								title: method.name,
+								methodId: method.id,
+								isCommonMethod: true,
+								methodIndex: methodIndex,
+								items: [
+									`水粉比 ${method.params.ratio}`,
+									`总时长 ${formatTime(
+										totalTime,
+										true
+									)}`,
+									`研磨度 ${formatGrindSize(
+										method.params.grindSize,
+										settings.grindType
+									)}`,
+								],
+								note: "",
+							};
+					  });
+					  
+				console.log('[useBrewingContent] 更新方案列表步骤:', steps.length);
+				
 				const result = {
 					...prev,
 					方案: {
 						// 如果是自定义预设器具，总是显示为自定义方案类型
 						type: isCustomPresetEquipment ? 'custom' : methodType,
-						steps:
-							// 如果是自定义预设器具，总是使用自定义方案的显示逻辑
-							(isCustomPresetEquipment || methodType === "custom")
-								? methodsForEquipment.map((method) => ({
-										title: method.name,
-										methodId: method.id,
-										items: [
-											`水粉比 ${method.params.ratio}`,
-											`总时长 ${formatTime(
-												method.params.stages[
-													method.params.stages
-														.length - 1
-												].time,
-												true
-											)}`,
-											`研磨度 ${formatGrindSize(
-												method.params.grindSize,
-												settings.grindType
-											)}`,
-										],
-										note: "",
-								  }))
-								: methodsForEquipment.map((method, methodIndex) => {
-										const totalTime =
-											method.params.stages[
-												method.params.stages.length - 1
-											].time;
-										return {
-											title: method.name,
-											items: [
-												`水粉比 ${method.params.ratio}`,
-												`总时长 ${formatTime(
-													totalTime,
-													true
-												)}`,
-												`研磨度 ${formatGrindSize(
-													method.params.grindSize,
-													settings.grindType
-												)}`,
-											],
-											note: "",
-											// 添加方法索引，方便点击事件处理
-											methodIndex: methodIndex,
-											// 只为自定义器具的通用方案添加标识
-											isCommonMethod: isCustomEquipment
-										};
-								  }),
+						steps: steps
 					},
 				};
-				console.log('最终返回的内容:', result);
+				
 				return result;
 			});
 		}
-	}, [selectedEquipment, methodType, currentEquipmentCustomMethods, settings.grindType, customEquipments]);
+	}, [
+		selectedEquipment,
+		methodType,
+		settings.grindType,
+		customEquipments,
+		currentEquipmentCustomMethods, // 添加依赖，确保currentEquipmentCustomMethods变化时更新content
+	]);
 
 	// 更新注水步骤内容
 	const updateBrewingSteps = (stages: Stage[]) => {
