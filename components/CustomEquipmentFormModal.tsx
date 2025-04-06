@@ -2,6 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CustomEquipment } from '@/lib/config';
 import CustomEquipmentForm from './CustomEquipmentForm';
+import { exportEquipment, copyToClipboard } from '@/lib/exportUtils'
 
 interface CustomEquipmentFormModalProps {
     showForm: boolean;
@@ -16,6 +17,21 @@ const CustomEquipmentFormModal: React.FC<CustomEquipmentFormModalProps> = ({
     onSave,
     editingEquipment
 }) => {
+    const handleExport = async (equipment: CustomEquipment) => {
+        try {
+            const exportData = exportEquipment(equipment);
+            const success = await copyToClipboard(exportData);
+            if (success) {
+                alert('器具数据已复制到剪贴板');
+            } else {
+                alert('复制失败，请重试');
+            }
+        } catch (error) {
+            console.error('导出器具失败:', error);
+            alert('导出失败，请重试');
+        }
+    };
+
     return (
         <AnimatePresence>
             {showForm && (

@@ -2,22 +2,20 @@
 
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { type Method, type CustomEquipment } from '@/lib/config'
+import { type CustomEquipment } from '@/lib/config'
 
-interface MethodImportModalProps {
+interface EquipmentImportModalProps {
     showForm: boolean
-    onImport: (method: Method) => void
+    onImport: (equipment: CustomEquipment) => void
     onClose: () => void
-    existingMethods?: Method[]
-    customEquipment?: CustomEquipment
+    existingEquipments?: CustomEquipment[]
 }
 
-const MethodImportModal: React.FC<MethodImportModalProps> = ({
+const EquipmentImportModal: React.FC<EquipmentImportModalProps> = ({
     showForm,
     onImport,
     onClose,
-    existingMethods = [],
-    customEquipment
+    existingEquipments = []
 }) => {
     // 导入数据的状态
     const [importData, setImportData] = useState('');
@@ -49,66 +47,49 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
             // 尝试从文本中提取数据
             import('@/lib/jsonUtils').then(async ({ extractJsonFromText }) => {
                 setError(null);
-                // 解析导入数据，传递自定义器具配置
-                const method = extractJsonFromText(importData, customEquipment) as Method;
+                // 解析导入数据
+                const data = extractJsonFromText(importData);
+                const equipment = data as unknown as CustomEquipment;
 
-                if (!method) {
+                if (!equipment) {
                     setError('无法从输入中提取有效数据');
                     return;
                 }
 
-                // 验证方法对象是否有必要的字段
-                if (!method.name) {
-                    // 尝试获取method字段，使用接口扩展
-                    interface ExtendedMethod extends Method {
-                        method?: string;
-                    }
-                    const extendedMethod = method as ExtendedMethod;
-                    if (typeof extendedMethod.method === 'string') {
-                        // 如果有method字段，使用它作为name
-                        method.name = extendedMethod.method;
-                    } else {
-                        setError('冲煮方案缺少名称');
-                        return;
-                    }
-                }
-
-                // 验证params
-                if (!method.params) {
-                    setError('冲煮方案格式不完整，缺少参数字段');
+                // 验证器具对象是否有必要的字段
+                if (!equipment.name) {
+                    setError('器具缺少名称');
                     return;
                 }
 
-                // 验证stages
-                if (!method.params.stages || method.params.stages.length === 0) {
-                    setError('冲煮方案格式不完整，缺少冲煮步骤');
+                // 验证动画类型
+                if (!equipment.animationType || !['v60', 'kalita', 'origami', 'clever', 'custom'].includes(equipment.animationType)) {
+                    setError('器具动画类型无效');
                     return;
                 }
 
-                // 检查是否已存在同名方案
-                const existingMethod = existingMethods.find(m => m.name === method.name);
-                if (existingMethod) {
-                    setError(`已存在同名方案"${method.name}"，请修改后再导入`);
+                // 检查是否已存在同名器具
+                const existingEquipment = existingEquipments.find(e => e.name === equipment.name);
+                if (existingEquipment) {
+                    setError(`已存在同名器具"${equipment.name}"，请修改后再导入`);
                     return;
                 }
 
-                // 确保method对象完全符合Method接口
-                const validMethod: Method = {
-                    id: method.id || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-                    name: method.name,
-                    params: {
-                        coffee: method.params.coffee || '15g',
-                        water: method.params.water || '225g',
-                        ratio: method.params.ratio || '1:15',
-                        grindSize: method.params.grindSize || '中细',
-                        temp: method.params.temp || '92°C',
-                        videoUrl: method.params.videoUrl || '',
-                        stages: method.params.stages,
-                    }
+                // 确保equipment对象完全符合CustomEquipment接口
+                const validEquipment: CustomEquipment = {
+                    id: equipment.id || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                    name: equipment.name,
+                    description: equipment.description || '',
+                    isCustom: true,
+                    animationType: equipment.animationType,
+                    hasValve: equipment.hasValve || false,
+                    customShapeSvg: equipment.customShapeSvg,
+                    customValveSvg: equipment.customValveSvg,
+                    customValveOpenSvg: equipment.customValveOpenSvg,
                 };
 
-                // 导入方案
-                onImport(validMethod);
+                // 导入器具
+                onImport(validEquipment);
                 // 导入成功后清空输入框和错误信息
                 setImportData('');
                 setError(null);
@@ -196,7 +177,7 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
                                             />
                                         </svg>
                                     </button>
-                                    <h3 className="text-base font-medium">导入冲煮方案</h3>
+                                    <h3 className="text-base font-medium">导入器具</h3>
                                     <div className="w-8"></div>
                                 </div>
 
@@ -204,7 +185,7 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
                                 <div className="space-y-4 mt-2">
                                     <div className="flex flex-col space-y-2">
                                         <p className="text-xs text-neutral-500 dark:text-neutral-500">
-                                            粘贴冲煮方案（支持分享的文本格式或JSON格式）：
+                                            粘贴器具数据（支持分享的文本格式或JSON格式）：
                                         </p>
                                         <p className="text-xs text-neutral-500 dark:text-neutral-500">
                                             支持常见复制格式，如Markdown代码块、掐头掐尾的JSON。系统会自动提取有效数据。
@@ -212,7 +193,7 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
                                     </div>
                                     <textarea
                                         className="w-full h-40 p-3 border border-neutral-300 dark:border-neutral-700 rounded-md bg-transparent focus:border-neutral-800 dark:focus:border-neutral-400 focus:outline-none text-neutral-800 dark:text-neutral-200"
-                                        placeholder='支持粘贴分享的文本或各种JSON格式，如{"method":"改良分段式一刀流",...} 或带有代码块的JSON'
+                                        placeholder='支持粘贴分享的文本或各种JSON格式，如{"name":"自定义V60","animationType":"v60",...} 或带有代码块的JSON'
                                         value={importData}
                                         onChange={(e) => setImportData(e.target.value)}
                                     />
@@ -245,4 +226,4 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
     )
 }
 
-export default MethodImportModal 
+export default EquipmentImportModal 

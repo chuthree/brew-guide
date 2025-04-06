@@ -1,4 +1,4 @@
-import { type Method, type Stage } from "@/lib/config";
+import { type Method, type Stage, type CustomEquipment } from "@/lib/config";
 
 // 定义Stage类型的接口，用于解析JSON
 interface StageData {
@@ -80,7 +80,7 @@ interface ParsedStage {
 	label: string;
 	water: string;
 	detail: string;
-	pourType?: "center" | "circle" | "ice" | "other";
+	pourType?: string;
 	valveStatus?: "open" | "closed";
 }
 
@@ -195,134 +195,77 @@ export function cleanJsonString(jsonString: string): string {
 /**
  * 从文本中提取数据
  * @param text 包含数据的文本
+ * @param customEquipment 自定义器具配置（可选）
  * @returns 提取的JSON数据或null
  */
 export function extractJsonFromText(
-	text: string
-): Method | CoffeeBean | BrewingNote | null {
+	text: string,
+	customEquipment?: CustomEquipment
+): Method | CoffeeBean | BrewingNote | CustomEquipment | null {
 	try {
-		// 首先检查是否为自然语言格式的文本，避免【】符号导致JSON解析错误
-		// 直接检查文本是否包含特定标识，而不是先尝试JSON解析
+		// 首先检查是否为自然语言格式的文本
 		const originalText = text.trim();
 
-		// 检查是否是自然语言文本格式
+		// 检查是否是冲煮方案文本格式
 		if (originalText.startsWith("【冲煮方案】")) {
 			console.log("检测到冲煮方案文本格式");
-			return parseMethodText(originalText);
+			return parseMethodText(originalText, customEquipment);
 		}
 
+		// 检查是否是咖啡豆文本格式
 		if (originalText.startsWith("【咖啡豆】")) {
 			console.log("检测到咖啡豆文本格式");
 			return parseCoffeeBeanText(originalText);
 		}
 
+		// 检查是否是冲煮记录文本格式
 		if (originalText.startsWith("【冲煮记录】")) {
 			console.log("检测到冲煮记录文本格式");
 			return parseBrewingNoteText(originalText);
 		}
 
 		// 如果不是明确的文本格式，尝试按JSON处理
-		const cleanedText = cleanJsonString(text);
+		const cleanedJson = cleanJsonString(text);
+		
+		// 尝试解析JSON
+		const data = JSON.parse(cleanedJson);
+		
+		// 如果数据不是对象，返回null
+		if (typeof data !== 'object' || data === null) {
+			return null;
+		}
 
-		// 检查是否是普通JSON
-		try {
-			const jsonData = JSON.parse(cleanedText);
-			console.log("JSON解析成功:", jsonData);
-
-			// 尝试确定JSON类型，更灵活地处理不同的数据结构
-			if (
-				jsonData.params &&
-				jsonData.params.stages &&
-				Array.isArray(jsonData.params.stages)
-			) {
-				console.log("识别为标准Method类型");
-				return jsonData as Method; // 标准Method类型
-			} else if (jsonData.roastLevel || jsonData.processingMethod) {
-				console.log("识别为CoffeeBean类型");
-				return jsonData as CoffeeBean; // 可能是CoffeeBean类型
-			} else if (jsonData.beanId && jsonData.methodId) {
-				console.log("识别为BrewingNote类型");
-				return jsonData as BrewingNote; // 可能是BrewingNote类型
-			} else if (
-				// 处理AI生成的更复杂的优化结构（method字段在最顶层）
-				(jsonData.method || jsonData.coffeeBeanInfo) &&
-				jsonData.params &&
-				jsonData.params.stages &&
-				Array.isArray(jsonData.params.stages)
-			) {
-				console.log("识别为AI生成的复杂方法类型，将转换为Method对象");
-				// 直接构建Method对象
-				const method: Method = {
-					id: `${Date.now()}-${Math.random()
-						.toString(36)
-						.substr(2, 9)}`,
-					name: jsonData.method || `${jsonData.equipment}优化方案`,
-					params: jsonData.params,
-				};
-
-				// 确保返回的对象有名称
-				if (!method.name) {
-					method.name = `冲煮方案-${new Date().toLocaleDateString()}`;
-				}
-
-				console.log("转换后的Method对象:", method);
-				return method;
+		// 检查是否是器具数据
+		if ('animationType' in data && typeof data.animationType === 'string') {
+			// 验证必要的字段
+			if (!data.name) {
+				throw new Error('器具数据缺少名称');
 			}
-
-			// 如果无法识别具体类型，尝试使用parseMethodFromJson
-			console.log("无法直接识别类型，尝试使用parseMethodFromJson");
-			const method = parseMethodFromJson(cleanedText);
-			if (method) {
-				return method;
+			if (!['v60', 'kalita', 'origami', 'clever', 'custom'].includes(data.animationType)) {
+				throw new Error('无效的器具动画类型');
 			}
-
-			console.log("无法识别的JSON结构:", jsonData);
-			return jsonData as Method | CoffeeBean | BrewingNote;
-		} catch (err) {
-			console.error("JSON解析错误:", err);
-			// 不是有效JSON，继续尝试从文本中提取
+			return data as CustomEquipment;
+		}
+		
+		// 检查是否是方案数据
+		if ('params' in data && 'stages' in data.params) {
+			return parseMethodFromJson(cleanedJson);
+		}
+		
+		// 检查是否是咖啡豆数据
+		if ('roastLevel' in data && 'name' in data) {
+			return data as CoffeeBean;
+		}
+		
+		// 检查是否是笔记数据
+		if ('methodName' in data && 'equipment' in data) {
+			return data as BrewingNote;
 		}
 
-		// 增强自然语言格式检测 - 当JSON解析失败后进行
-		// 尝试解析为冲煮记录格式
-		if (
-			cleanedText.includes("冲煮记录") ||
-			cleanedText.includes("设备:") ||
-			cleanedText.includes("方法:") ||
-			cleanedText.includes("咖啡豆:") ||
-			cleanedText.includes("参数设置:") ||
-			cleanedText.includes("风味评分:")
-		) {
-			return parseBrewingNoteText(cleanedText);
-		}
-
-		// 尝试解析为冲煮方案格式
-		if (
-			cleanedText.includes("冲煮方案") ||
-			cleanedText.includes("步骤 1:") ||
-			cleanedText.includes("冲煮步骤") ||
-			cleanedText.includes("分钟") ||
-			(cleanedText.includes("咖啡粉量:") &&
-				cleanedText.includes("水量:") &&
-				cleanedText.includes("水温:"))
-		) {
-			return parseMethodText(cleanedText);
-		}
-
-		// 尝试解析为咖啡豆格式
-		if (
-			cleanedText.includes("咖啡豆") ||
-			cleanedText.includes("烘焙度:") ||
-			(cleanedText.includes("产地:") &&
-				cleanedText.includes("处理法:")) ||
-			cleanedText.includes("风味标签:")
-		) {
-			return parseCoffeeBeanText(cleanedText);
-		}
-
+		console.log('无法识别的JSON结构:', data);
 		return null;
-	} catch (err) {
-		console.error("数据解析错误:", err);
+	} catch (error) {
+		console.error('解析JSON失败:', error);
 		return null;
 	}
 }
@@ -664,12 +607,55 @@ export function beanToReadableText(bean: CoffeeBean): string {
 	*/
 }
 
+// 获取自定义注水方式的名称
+function getCustomPourTypeName(pourType: string, customEquipment?: CustomEquipment): string {
+	// 如果有自定义器具配置
+	if (customEquipment?.customPourAnimations) {
+		// 查找对应的自定义注水动画
+		const customAnimation = customEquipment.customPourAnimations.find(
+			anim => anim.id === pourType
+		);
+		if (customAnimation) {
+			return customAnimation.name;
+		}
+	}
+	return pourType;
+}
+
+/**
+ * 根据注水方式名称查找对应的自定义注水方式ID
+ * @param name 注水方式名称
+ * @param customEquipment 自定义器具配置
+ * @returns 对应的自定义注水方式ID，如果找不到则返回名称本身
+ */
+function findCustomPourTypeIdByName(name: string, customEquipment?: CustomEquipment): string {
+	// 如果没有自定义器具或名称为空，直接返回名称本身
+	if (!customEquipment?.customPourAnimations || !name) {
+		return name;
+	}
+
+	// 查找名称匹配的自定义注水动画
+	const customAnimation = customEquipment.customPourAnimations.find(
+		anim => anim.name === name
+	);
+
+	// 如果找到匹配的动画，返回其ID
+	if (customAnimation) {
+		console.log(`[jsonUtils] 找到自定义注水方式ID: ${customAnimation.id}，名称: ${name}`);
+		return customAnimation.id;
+	}
+
+	// 如果没有找到，返回名称本身
+	return name;
+}
+
 /**
  * 将冲煮方案对象转换为可读文本格式
  * @param method 冲煮方案对象
+ * @param customEquipment 自定义器具配置（可选）
  * @returns 格式化的可读文本
  */
-export function methodToReadableText(method: Method): string {
+export function methodToReadableText(method: Method, customEquipment?: CustomEquipment): string {
 	const { name, params } = method;
 
 	// 构建可读文本
@@ -695,7 +681,13 @@ export function methodToReadableText(method: Method): string {
 
 			let pourTypeText = "";
 			if (stage.pourType) {
-				pourTypeText = ` [${getPourTypeText(stage.pourType)}]`;
+				// 如果是自定义注水方式（ID 以 pour- 开头），尝试获取其名称
+				if (stage.pourType.startsWith('pour-')) {
+					const customName = getCustomPourTypeName(stage.pourType, customEquipment);
+					pourTypeText = ` [${customName}]`;
+				} else {
+					pourTypeText = ` [${stage.pourType}]`;
+				}
 			}
 
 			// 确保标签和详情是分开的
@@ -717,22 +709,6 @@ export function methodToReadableText(method: Method): string {
 	text += `@DATA_TYPE:BREWING_METHOD@`;
 
 	return text;
-}
-
-// 添加一个辅助函数来获取注水方式的文本描述
-function getPourTypeText(pourType: string): string {
-	switch (pourType) {
-		case "center":
-			return "中心注水";
-		case "circle":
-			return "绕圈注水";
-		case "ice":
-			return "冰块注水";
-		case "other":
-			return "其他方式";
-		default:
-			return "绕圈注水";
-	}
 }
 
 /**
@@ -939,9 +915,10 @@ function parseCoffeeBeanText(text: string): CoffeeBean | null {
 /**
  * 从自然语言文本中解析冲煮方案数据
  * @param text 冲煮方案的文本描述
+ * @param customEquipment 自定义器具配置（可选）
  * @returns 结构化的冲煮方案数据
  */
-function parseMethodText(text: string): Method | null {
+function parseMethodText(text: string, customEquipment?: CustomEquipment): Method | null {
 	const method: Method = {
 		id: `method-${Date.now()}`,
 		name: "",
@@ -996,7 +973,7 @@ function parseMethodText(text: string): Method | null {
 
 	// 提取冲煮步骤
 	if (text.includes("冲煮步骤:")) {
-		const stagesSection = text.split("冲煮步骤:")[1].split("\n---")[0];
+		const stagesSection = text.split("冲煮步骤:")[1].split("@DATA_TYPE")[0];
 		const stageLines = stagesSection
 			.split("\n")
 			.filter((line) => line.trim() !== "");
@@ -1021,44 +998,23 @@ function parseMethodText(text: string): Method | null {
 					const label = stageMatch[5].trim();
 					const water = stageMatch[6].trim();
 
-					// 从注水方式文本推断pourType
-					let pourType = "circle"; // 默认为绕圈注水
-					if (pourTypeText) {
-						if (pourTypeText.includes("中心")) {
-							pourType = "center";
-						} else if (
-							pourTypeText.includes("冰块") ||
-							pourTypeText.includes("冰")
-						) {
-							pourType = "ice";
-						} else if (pourTypeText.includes("其他")) {
-							pourType = "other";
-						}
-					}
-
-					let detail = "";
-
-					// 检查下一行是否是详细信息 - 通过检查是否有缩进（以空格开头）
-					if (
-						i + 1 < stageLines.length &&
-						stageLines[i + 1].startsWith(" ")
-					) {
-						detail = stageLines[i + 1].trim();
-						i++; // 跳过详细信息行
-					}
-
+					// 创建步骤对象，并尝试查找自定义注水方式的ID
+					const pourType = pourTypeText ? findCustomPourTypeIdByName(pourTypeText, customEquipment) : "";
+					
 					const stage: ParsedStage = {
 						time,
 						pourTime,
 						label,
 						water,
-						detail,
-						pourType: pourType as
-							| "center"
-							| "circle"
-							| "ice"
-							| "other",
+						detail: "",
+						pourType,
 					};
+
+					// 检查下一行是否是详细信息（以空格开头）
+					if (i + 1 < stageLines.length && stageLines[i + 1].trim().length > 0 && stageLines[i + 1].startsWith(" ")) {
+						stage.detail = stageLines[i + 1].trim();
+						i++; // 跳过详细信息行
+					}
 
 					method.params.stages.push(stage);
 				}

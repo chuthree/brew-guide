@@ -33,6 +33,7 @@ import CoffeeBeans from '@/components/CoffeeBeans'
 import SwipeBackGesture from '@/components/SwipeBackGesture'
 import { loadCustomEquipments, saveCustomEquipment, deleteCustomEquipment } from '@/lib/customEquipments'
 import CustomEquipmentFormModal from '@/components/CustomEquipmentFormModal'
+import EquipmentImportModal from '@/components/EquipmentImportModal'
 
 // 为Window对象声明类型扩展
 declare global {
@@ -205,6 +206,9 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     const [showEquipmentForm, setShowEquipmentForm] = useState(false);
     // 添加编辑器具的状态
     const [editingEquipment, setEditingEquipment] = useState<CustomEquipment | undefined>(undefined);
+
+    // 添加器具导入表单状态
+    const [showEquipmentImportForm, setShowEquipmentImportForm] = useState(false);
 
     // 加载自定义器具
     useEffect(() => {
@@ -1530,6 +1534,16 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         }
     }, [selectedEquipment, customEquipments, methodType, setMethodType]);
 
+    // 处理导入器具
+    const handleImportEquipment = async (equipment: CustomEquipment) => {
+        try {
+            await handleSaveEquipment(equipment);
+            setShowEquipmentImportForm(false);
+        } catch (error) {
+            console.error('导入器具失败:', error);
+        }
+    };
+
     return (
         <div className="flex h-full flex-col overflow-hidden mx-auto max-w-[500px] font-mono text-neutral-800 dark:text-neutral-100">
             {/* 使用 NavigationBar 组件替换原有的导航栏 */}
@@ -1600,6 +1614,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                         setEditingEquipment={setEditingEquipment}
                         handleSaveEquipment={handleSaveEquipment}
                         handleDeleteEquipment={handleDeleteEquipment}
+                        setShowEquipmentImportForm={setShowEquipmentImportForm}
                     />
                 </div>
             )}
@@ -1808,6 +1823,14 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 }}
                 onSave={handleSaveEquipment}
                 editingEquipment={editingEquipment}
+            />
+
+            {/* 添加器具导入模态框 */}
+            <EquipmentImportModal
+                showForm={showEquipmentImportForm}
+                onImport={handleImportEquipment}
+                onClose={() => setShowEquipmentImportForm(false)}
+                existingEquipments={customEquipments}
             />
 
             {/* 引导组件 */}

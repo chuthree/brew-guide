@@ -51,16 +51,21 @@ export async function saveCustomEquipment(equipment: CustomEquipment): Promise<v
         
         // 如果是更新现有器具
         if (equipment.id) {
-            const index = equipments.findIndex(e => e.id === equipment.id);
-            if (index !== -1) {
+            const existingEquipment = equipments.find(e => e.id === equipment.id);
+            if (existingEquipment) {
                 // 更新现有器具
-                updatedEquipments = [
-                    ...equipments.slice(0, index),
-                    { ...equipment, isCustom: true as const },
-                    ...equipments.slice(index + 1)
-                ];
+                updatedEquipments = equipments.map(e => 
+                    e.id === equipment.id ? { ...equipment, isCustom: true as const } : e
+                );
             } else {
-                throw new CustomEquipmentError(`未找到ID为${equipment.id}的器具`);
+                // 如果找不到对应ID的器具，视为新建器具
+                const newId = generateCustomId(equipment.animationType);
+                const newEquipment = {
+                    ...equipment,
+                    id: newId,
+                    isCustom: true as const
+                };
+                updatedEquipments = [...equipments, newEquipment];
             }
         } else {
             // 如果是新建器具，生成新的 ID

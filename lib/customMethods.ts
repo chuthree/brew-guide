@@ -1,4 +1,4 @@
-import { type Method } from "@/lib/config";
+import { type Method, type CustomEquipment } from "@/lib/config";
 import { methodToReadableText } from "@/lib/jsonUtils";
 import { Storage } from "@/lib/storage";
 import { v4 as uuidv4 } from "uuid";
@@ -293,11 +293,12 @@ export async function deleteCustomMethod(
 /**
  * 复制冲煮方案到剪贴板
  * @param method 冲煮方案对象
+ * @param customEquipment 自定义器具配置（可选）
  */
-export async function copyMethodToClipboard(method: Method) {
+export async function copyMethodToClipboard(method: Method, customEquipment?: CustomEquipment) {
 	try {
 		// 使用新的自然语言格式
-		const text = methodToReadableText(method);
+		const text = methodToReadableText(method, customEquipment);
 
 		// 尝试使用现代API
 		if (navigator.clipboard && window.isSecureContext) {

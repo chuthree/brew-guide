@@ -8,7 +8,7 @@ export interface Stage {
 	water: string;
 	detail: string;
 	pourTime?: number;
-	pourType?: "center" | "circle" | "ice" | "other";
+	pourType?: string;  // 改为 string 类型以支持自定义注水方式
 	valveStatus?: "open" | "closed";
 }
 

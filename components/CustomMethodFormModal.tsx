@@ -8,6 +8,7 @@ import { Method, CustomEquipment } from '@/lib/config'
 import { loadCustomEquipments } from '@/lib/customEquipments'
 import { SettingsOptions } from '@/components/Settings'
 import { v4 as uuidv4 } from 'uuid'
+import { exportMethod, copyToClipboard } from '@/lib/exportUtils'
 
 // Use SettingsOptions as SettingsType
 type SettingsType = SettingsOptions;
@@ -21,7 +22,9 @@ interface CustomMethodFormModalProps {
     onSaveCustomMethod: (method: Method) => void
     onCloseCustomForm: () => void
     onCloseImportForm: () => void
-    settings: SettingsType // Required for interface compatibility with parent components
+    onEditMethod: (method: Method) => void
+    onDeleteMethod: (method: Method) => void
+    settings: SettingsType
 }
 
 const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
@@ -33,8 +36,8 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
     onSaveCustomMethod,
     onCloseCustomForm,
     onCloseImportForm,
-    // Not used in this component but required for interface compatibility
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    onEditMethod,
+    onDeleteMethod,
     settings
 }) => {
     const [_formData, setFormData] = useState<Partial<Method>>({})
@@ -149,6 +152,22 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
             return null;
         }
     }
+
+    // 在 CustomMethodFormModal 组件内添加导出功能
+    const handleExport = async (method: Method) => {
+        try {
+            const exportData = exportMethod(method);
+            const success = await copyToClipboard(exportData);
+            if (success) {
+                alert('方案数据已复制到剪贴板');
+            } else {
+                alert('复制失败，请重试');
+            }
+        } catch (error) {
+            console.error('导出方案失败:', error);
+            alert('导出失败，请重试');
+        }
+    };
 
     return (
         <>
@@ -281,6 +300,7 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
                 }}
                 onClose={onCloseImportForm}
                 existingMethods={selectedEquipment && customMethods[selectedEquipment] ? customMethods[selectedEquipment] : []}
+                customEquipment={currentCustomEquipment || undefined}
             />
         </>
     )

@@ -10,6 +10,7 @@ import { CoffeeBeanManager } from '@/lib/coffeeBeanManager';
 import { v4 as _uuidv4 } from 'uuid';
 import { copyMethodToClipboard } from "@/lib/customMethods";
 import { showToast } from "@/components/ui/toast";
+import { exportEquipment, copyToClipboard } from '@/lib/exportUtils';
 
 // 动态导入客户端组件
 const PourVisualizer = dynamic(() => import('@/components/PourVisualizer'), {
@@ -81,6 +82,7 @@ interface TabContentProps {
     handleSaveEquipment: (equipment: CustomEquipment) => Promise<void>;
     handleDeleteEquipment: (equipment: CustomEquipment) => Promise<void>;
     _onShareMethod?: (method: Method) => void;
+    setShowEquipmentImportForm: (show: boolean) => void;
 }
 
 const TabContent: React.FC<TabContentProps> = ({
@@ -122,6 +124,7 @@ const TabContent: React.FC<TabContentProps> = ({
     handleSaveEquipment: _handleSaveEquipment,
     handleDeleteEquipment,
     _onShareMethod,
+    setShowEquipmentImportForm,
 }) => {
     // 笔记表单状态
     const [noteSaved, setNoteSaved] = React.useState(false);
@@ -250,7 +253,9 @@ const TabContent: React.FC<TabContentProps> = ({
     // 处理分享方案
     const handleShareMethod = async (method: Method) => {
         try {
-            await copyMethodToClipboard(method);
+            // 获取当前选中的自定义器具
+            const selectedCustomEquipment = getSelectedCustomEquipment();
+            await copyMethodToClipboard(method, selectedCustomEquipment);
             showToast({
                 type: 'success',
                 title: '已复制到剪贴板',
@@ -260,6 +265,33 @@ const TabContent: React.FC<TabContentProps> = ({
             showToast({
                 type: 'error',
                 title: '复制失败，请重试',
+                duration: 2000
+            });
+        }
+    };
+
+    // 处理分享器具
+    const handleShareEquipment = async (equipment: CustomEquipment) => {
+        try {
+            const exportData = exportEquipment(equipment);
+            const success = await copyToClipboard(exportData);
+            if (success) {
+                showToast({
+                    type: 'success',
+                    title: '已复制到剪贴板',
+                    duration: 2000
+                });
+            } else {
+                showToast({
+                    type: 'error',
+                    title: '复制失败，请重试',
+                    duration: 2000
+                });
+            }
+        } catch (_error) {
+            showToast({
+                type: 'error',
+                title: '导出失败，请重试',
                 duration: 2000
             });
         }
@@ -321,6 +353,12 @@ const TabContent: React.FC<TabContentProps> = ({
                                 className="flex-1 flex items-center justify-center py-3 border border-dashed border-neutral-200 dark:border-neutral-800 rounded-md text-xs text-neutral-800 dark:text-white transition-colors hover:opacity-80"
                             >
                                 <span className="mr-1">+</span> 添加器具
+                            </button>
+                            <button
+                                onClick={() => setShowEquipmentImportForm(true)}
+                                className="flex-1 flex items-center justify-center py-3 border border-dashed border-neutral-200 dark:border-neutral-800 rounded-md text-xs text-neutral-800 dark:text-white transition-colors hover:opacity-80"
+                            >
+                                <span className="mr-1">↓</span> 导入器具
                             </button>
                         </div>
                     )}
@@ -396,6 +434,11 @@ const TabContent: React.FC<TabContentProps> = ({
                                     if (method && method[index]) {
                                         handleShareMethod(method[index]);
                                     }
+                                }
+                            } : step.isCustom ? () => {
+                                const equipment = customEquipments.find(e => e.name === step.title);
+                                if (equipment) {
+                                    handleShareEquipment(equipment);
                                 }
                             } : undefined}
                             actionMenuStates={actionMenuStates}
