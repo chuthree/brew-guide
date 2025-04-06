@@ -1,7 +1,6 @@
-project_id: "brew-guide"
+project_id: brew-guide
 api_token_env: CROWDIN_PERSONAL_TOKEN
-preserve_hierarchy: true
-
+preserve_hierarchy: 1
 files:
   - source: /locales/en/common.json
-    translation: /locales/%two_letters_code%/common.json 
+    translation: /locales/%two_letters_code%/common.json
