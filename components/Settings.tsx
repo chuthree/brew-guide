@@ -9,6 +9,7 @@ import textZoomUtils from '@/lib/textZoom'
 import { useTheme } from 'next-themes'
 import { LayoutSettings } from './BrewingTimer'
 import confetti from 'canvas-confetti'
+import { notifyLanguageChange } from '@/providers/TranslationsProvider'
 
 // 定义设置选项接口
 export interface SettingsOptions {
@@ -17,6 +18,7 @@ export interface SettingsOptions {
     grindType: "通用" | "幻刺"
     textZoomLevel: number
     layoutSettings?: LayoutSettings // 添加布局设置
+    language: string // 添加语言设置
 }
 
 // 默认设置
@@ -29,7 +31,8 @@ export const defaultSettings: SettingsOptions = {
         stageInfoReversed: false,
         progressBarHeight: 4,
         controlsReversed: false
-    }
+    },
+    language: 'zh' // 默认使用中文
 }
 
 interface SettingsProps {
@@ -186,6 +189,11 @@ const Settings: React.FC<SettingsProps> = ({
         setSettings(newSettings)
         await Storage.set('brewGuideSettings', JSON.stringify(newSettings))
 
+        // 当语言设置改变时，触发自定义事件
+        if (key === 'language') {
+            notifyLanguageChange()
+        }
+
         // 当选择幻刺时触发彩带特效
         if (key === 'grindType' && value === '幻刺') {
             showConfetti();
@@ -300,6 +308,45 @@ const Settings: React.FC<SettingsProps> = ({
                         <h3 className="text-xs font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-4">
                             显示
                         </h3>
+
+                        {/* 语言选择 */}
+                        <div className="space-y-3 mb-6">
+                            <div className="text-sm text-neutral-700 dark:text-neutral-300">
+                                语言
+                            </div>
+                            <div className="inline-flex rounded-lg bg-neutral-100 p-1 dark:bg-neutral-800 w-full">
+                                <button
+                                    className={`flex-1 rounded-md py-3 text-sm font-medium transition-colors ${
+                                        settings.language === 'zh'
+                                            ? 'bg-white dark:bg-neutral-600 text-neutral-900 dark:text-white shadow-sm'
+                                            : 'text-neutral-600 dark:text-neutral-400'
+                                    }`}
+                                    onClick={() => {
+                                        handleChange('language', 'zh')
+                                        if (settings.hapticFeedback) {
+                                            hapticsUtils.light();
+                                        }
+                                    }}
+                                >
+                                    中文
+                                </button>
+                                <button
+                                    className={`flex-1 rounded-md py-3 text-sm font-medium transition-colors ${
+                                        settings.language === 'en'
+                                            ? 'bg-white dark:bg-neutral-600 text-neutral-900 dark:text-white shadow-sm'
+                                            : 'text-neutral-600 dark:text-neutral-400'
+                                    }`}
+                                    onClick={() => {
+                                        handleChange('language', 'en')
+                                        if (settings.hapticFeedback) {
+                                            hapticsUtils.light();
+                                        }
+                                    }}
+                                >
+                                    English
+                                </button>
+                            </div>
+                        </div>
 
                         {/* 外观模式切换 */}
                         <div className="space-y-3">

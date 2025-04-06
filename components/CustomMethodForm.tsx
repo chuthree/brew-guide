@@ -183,7 +183,8 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         notificationSound: true,
         hapticFeedback: true,
         grindType: '通用',
-        textZoomLevel: 1.0
+        textZoomLevel: 1.0,
+        language: 'zh'
     });
 
     // 加载设置

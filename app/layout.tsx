@@ -11,13 +11,16 @@ import KeyboardManager from '@/components/KeyboardManager'
 import { Suspense } from 'react'
 import CapacitorInit from './CapacitorInit'
 import { Toast } from '@/components/ui/toast';
+import { Inter } from 'next/font/google'
+import { TranslationsProvider } from '@/providers/TranslationsProvider'
+
+const inter = Inter({ subsets: ['latin'] })
 
 // SEO constants
 export const metadata: Metadata = {
   metadataBase: new URL('https://brew-guide.vercel.app/'),
-  title: '手冲咖啡冲煮指南',
-  description:
-    '专业的手冲咖啡冲煮指南，包含手冲咖啡的详细步骤、参数配置和计时器。提供清爽果香和醇厚平衡两种风味的冲煮方案，帮助您在家制作出完美的手冲咖啡。',
+  title: 'Brew Guide',
+  description: '专业的咖啡冲煮指南',
   keywords: [
     '手冲咖啡冲煮',
     'V60',
@@ -67,6 +70,11 @@ export const metadata: Metadata = {
       url: '/icons/icon-192x192.png',
     },
   },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: '手冲咖啡',
+  }
 }
 
 export const viewport: Viewport = {
@@ -114,24 +122,26 @@ export default function RootLayout({
           </>
         )}
       </head>
-      <body className="bg-neutral-50 dark:bg-neutral-900 fixed inset-0 overflow-hidden">
+      <body className={`${inter.className} bg-neutral-50 dark:bg-neutral-900 fixed inset-0 overflow-hidden`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
           enableSystem
           disableTransitionOnChange
         >
-          <ToastProvider>
-            <Suspense>
-              <CapacitorInit />
-              <KeyboardManager />
-            </Suspense>
-            <div className="h-full w-full overflow-hidden">
-              {children}
-            </div>
-            <PWAPrompt />
-            <Toast />
-          </ToastProvider>
+          <TranslationsProvider>
+            <ToastProvider>
+              <Suspense>
+                <CapacitorInit />
+                <KeyboardManager />
+              </Suspense>
+              <div className="h-full w-full overflow-hidden">
+                {children}
+              </div>
+              <PWAPrompt />
+              <Toast />
+            </ToastProvider>
+          </TranslationsProvider>
         </ThemeProvider>
         <Analytics />
       </body>

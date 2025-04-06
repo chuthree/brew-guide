@@ -9,6 +9,7 @@ import { formatGrindSize } from '@/lib/grindUtils'
 import { BREWING_EVENTS } from '@/lib/brewing/constants'
 import { listenToEvent } from '@/lib/brewing/events'
 import { updateParameterInfo } from '@/lib/brewing/parameters'
+import { useTranslations } from 'next-intl'
 
 // 定义一个隐藏滚动条的样式
 const noScrollbarStyle = `
@@ -120,20 +121,22 @@ const StepIndicator = ({
     disabledSteps?: BrewingStep[]
     hasCoffeeBeans?: boolean
 }) => {
+    const t = useTranslations('nav');
+
     // 根据是否有咖啡豆动态生成步骤数组
     const steps: { label: string; value: BrewingStep }[] = hasCoffeeBeans
         ? [
-            { label: '咖啡豆', value: 'coffeeBean' },
-            { label: '器具', value: 'equipment' },
-            { label: '方案', value: 'method' },
-            { label: '注水', value: 'brewing' },
-            { label: '记录', value: 'notes' },
+            { label: t('steps.beans'), value: 'coffeeBean' },
+            { label: t('steps.equipment'), value: 'equipment' },
+            { label: t('steps.method'), value: 'method' },
+            { label: t('steps.pour'), value: 'brewing' },
+            { label: t('steps.record'), value: 'notes' },
         ]
         : [
-            { label: '器具', value: 'equipment' },
-            { label: '方案', value: 'method' },
-            { label: '注水', value: 'brewing' },
-            { label: '记录', value: 'notes' },
+            { label: t('steps.equipment'), value: 'equipment' },
+            { label: t('steps.method'), value: 'method' },
+            { label: t('steps.pour'), value: 'brewing' },
+            { label: t('steps.record'), value: 'notes' },
         ];
 
     const getStepIndex = (step: BrewingStep) => {
@@ -327,6 +330,8 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
     navigateToStep, // 接收统一的步骤导航函数
     onStepClick // 接收步骤点击回调
 }) => {
+    const t = useTranslations('nav');
+
     // 获取禁用的步骤
     const getDisabledSteps = (): BrewingStep[] => {
         const disabledSteps: BrewingStep[] = [];
@@ -613,27 +618,27 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                             className="text-base font-light tracking-wide cursor-pointer"
                             onClick={handleTitleClick}
                         >
-                            手冲咖啡
+                            {t('title')}
                             <span className="ml-1 text-[8px] text-neutral-400 dark:text-neutral-600">v{APP_VERSION}</span>
                         </h1>
 
                         <div className="flex items-center space-x-6">
                             <TabButton
-                                tab="冲煮"
+                                tab={t('main.brewing')}
                                 isActive={activeMainTab === '冲煮'}
                                 onClick={() => handleMainTabClick('冲煮')}
                                 className="text-[10px] sm:text-xs"
                                 dataTab="冲煮"
                             />
                             <TabButton
-                                tab="咖啡豆"
+                                tab={t('main.beans')}
                                 isActive={activeMainTab === '咖啡豆'}
                                 onClick={() => handleMainTabClick('咖啡豆')}
                                 className="text-[10px] sm:text-xs"
                                 dataTab="咖啡豆"
                             />
                             <TabButton
-                                tab="笔记"
+                                tab={t('main.notes')}
                                 isActive={activeMainTab === '笔记'}
                                 onClick={() => handleMainTabClick('笔记')}
                                 className="text-[10px] sm:text-xs"
