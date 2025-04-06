@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { APP_VERSION } from '@/lib/config'
 import { Storage } from '@/lib/storage'
 import DataManager from './DataManager'
@@ -8,6 +8,7 @@ import hapticsUtils from '@/lib/haptics'
 import textZoomUtils from '@/lib/textZoom'
 import { useTheme } from 'next-themes'
 import { LayoutSettings } from './BrewingTimer'
+import confetti from 'canvas-confetti'
 
 // 定义设置选项接口
 export interface SettingsOptions {
@@ -57,6 +58,9 @@ const Settings: React.FC<SettingsProps> = ({
 
     // 获取主题相关方法
     const { theme, setTheme } = useTheme()
+
+    // 添加幻刺按钮引用
+    const phanciButtonRef = useRef<HTMLButtonElement>(null)
 
     // 添加主题颜色更新的 Effect
     useEffect(() => {
@@ -136,6 +140,42 @@ const Settings: React.FC<SettingsProps> = ({
         }
     }, [isOpen]);
 
+    // 触发彩带特效
+    const showConfetti = () => {
+        if (!phanciButtonRef.current) return;
+        
+        // 获取按钮元素的位置信息
+        const rect = phanciButtonRef.current.getBoundingClientRect();
+        const x = (rect.left + rect.width / 2) / window.innerWidth;
+        const y = (rect.top + rect.height / 2) / window.innerHeight;
+        
+        // 创建彩带效果
+        confetti({
+            particleCount: 100,
+            spread: 70,
+            origin: { x, y },
+            colors: ['#FFD700', '#FF6347', '#9370DB', '#3CB371', '#4682B4'],
+            zIndex: 9999,
+            shapes: ['square', 'circle'],
+            scalar: 0.8,
+        });
+        
+        // 烟花效果
+        setTimeout(() => {
+            confetti({
+                particleCount: 50,
+                spread: 90,
+                origin: { x, y },
+                colors: ['#FFD700', '#FF6347', '#9370DB'],
+                zIndex: 9999,
+                startVelocity: 30,
+                gravity: 0.8,
+                shapes: ['star'],
+                scalar: 1,
+            });
+        }, 250);
+    }
+
     // 处理设置变更
     const handleChange = async <K extends keyof SettingsOptions>(
         key: K,
@@ -145,6 +185,15 @@ const Settings: React.FC<SettingsProps> = ({
         const newSettings = { ...settings, [key]: value }
         setSettings(newSettings)
         await Storage.set('brewGuideSettings', JSON.stringify(newSettings))
+
+        // 当选择幻刺时触发彩带特效
+        if (key === 'grindType' && value === '幻刺') {
+            showConfetti();
+            // 选择幻刺时也提供触感反馈
+            if (settings.hapticFeedback) {
+                hapticsUtils.medium();
+            }
+        }
     }
 
     // 处理文本缩放变更
@@ -382,6 +431,7 @@ const Settings: React.FC<SettingsProps> = ({
                                             ? 'bg-white dark:bg-neutral-600 text-neutral-900 dark:text-white shadow-sm'
                                             : 'text-neutral-600 dark:text-neutral-400'
                                     }`}
+                                    ref={phanciButtonRef}
                                     onClick={() => handleChange('grindType', '幻刺')}
                                 >
                                     幻刺

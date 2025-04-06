@@ -5,6 +5,7 @@ import { Storage } from '@/lib/storage'
 import { SettingsOptions, defaultSettings } from '@/components/Settings'
 import hapticsUtils from '@/lib/haptics'
 import textZoomUtils from '@/lib/textZoom'
+import confetti from 'canvas-confetti'
 
 // 引导步骤类型
 export type OnboardingStep = 'welcome' | 'settings' | 'complete'
@@ -33,6 +34,8 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
     const previous = useRef(currentStep)
     // 检查TextZoom功能是否可用
     const [isTextZoomEnabled, setIsTextZoomEnabled] = useState(false)
+    // 幻刺切换按钮引用
+    const phanciToggleRef = useRef<HTMLDivElement>(null)
 
     // 初始化音频环境
     useEffect(() => {
@@ -101,6 +104,42 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
         }
     }
 
+    // 触发彩带特效
+    const showConfetti = () => {
+        if (!phanciToggleRef.current) return;
+        
+        // 获取按钮元素的位置信息
+        const rect = phanciToggleRef.current.getBoundingClientRect();
+        const x = (rect.left + rect.width / 2) / window.innerWidth;
+        const y = (rect.top + rect.height / 2) / window.innerHeight;
+        
+        // 创建彩带效果
+        confetti({
+            particleCount: 100,
+            spread: 70,
+            origin: { x, y },
+            colors: ['#FFD700', '#FF6347', '#9370DB', '#3CB371', '#4682B4'],
+            zIndex: 9999,
+            shapes: ['square', 'circle'],
+            scalar: 0.8,
+        });
+        
+        // 烟花效果
+        setTimeout(() => {
+            confetti({
+                particleCount: 50,
+                spread: 90,
+                origin: { x, y },
+                colors: ['#FFD700', '#FF6347', '#9370DB'],
+                zIndex: 9999,
+                startVelocity: 30,
+                gravity: 0.8,
+                shapes: ['star'],
+                scalar: 1,
+            });
+        }, 250);
+    }
+
     // 处理设置变更
     const handleSettingChange = <K extends keyof SettingsOptions>(key: K, value: SettingsOptions[K]) => {
         setSettings(prev => {
@@ -116,6 +155,20 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
         // 当改变触感设置时提供测试反馈
         if (key === 'hapticFeedback' && value === true) {
             testHapticFeedback()
+        }
+
+        // 当改变文本缩放级别时立即应用
+        if (key === 'textZoomLevel') {
+            textZoomUtils.set(value as number)
+        }
+
+        // 当选择幻刺时触发彩带特效
+        if (key === 'grindType' && value === '幻刺') {
+            showConfetti()
+            // 选择幻刺时也提供轻触感反馈
+            if (settings.hapticFeedback) {
+                hapticsUtils.medium()
+            }
         }
     }
 
@@ -342,6 +395,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
                                     </p>
                                 </div>
                                 <div
+                                    ref={phanciToggleRef}
                                     className={`relative w-12 h-6 rounded-full transition-colors duration-200 ease-in-out ${settings.grindType === '幻刺' ? 'bg-neutral-900 dark:bg-white' : 'bg-neutral-200 dark:bg-neutral-800'}`}
                                     onClick={() => handleSettingChange('grindType', settings.grindType === '幻刺' ? '通用' : '幻刺')}
                                 >
@@ -471,7 +525,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
                     <div className="mt-auto">
                         {renderProgressIndicator()}
 
-                        <div className="flex flex-col space-y-3 mt-4">
+                        <div className="mt-4">
                             {/* 下一步/完成按钮 */}
                             <button
                                 onClick={currentStep === 'complete' ? handleComplete : goToNextStep}
@@ -481,14 +535,16 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
                             </button>
 
                             {/* 上一步按钮（第一步不显示） */}
-                            {currentStep !== 'welcome' ? (
-                                <button
-                                    onClick={goToPrevStep}
-                                    className="py-3 px-4 rounded-xl w-full bg-neutral-100 dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 text-sm"
-                                >
-                                    返回
-                                </button>
-                            ) : null}
+                            {currentStep !== 'welcome' && (
+                                <div className="text-center mt-1">
+                                    <span 
+                                        onClick={goToPrevStep}
+                                        className="text-neutral-500 dark:text-neutral-400 text-xs cursor-pointer hover:text-neutral-700 dark:hover:text-neutral-300 transition-colors"
+                                    >
+                                        返回
+                                    </span>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
