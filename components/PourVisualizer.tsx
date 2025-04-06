@@ -174,6 +174,41 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
         }
     }
 
+    // 获取当前注水类型，优化错误处理和回退逻辑
+    const getCurrentPourType = useCallback(() => {
+        try {
+            if (!stages[currentStage]) return 'center';
+            
+            // 获取当前阶段的pourType，如果未设置，默认使用center
+            const pourType = stages[currentStage]?.pourType || 'center';
+            
+            console.log('[PourVisualizer] 当前注水类型:', {
+                pourType,
+                customAnimations: customEquipment?.customPourAnimations,
+                hasCustomAnimation: customEquipment?.customPourAnimations?.some(anim => anim.id === pourType)
+            });
+            
+            // 检查是否是自定义动画ID
+            if (customEquipment?.customPourAnimations?.some(anim => anim.id === pourType)) {
+                console.log('[PourVisualizer] 使用自定义动画:', pourType);
+                return pourType;
+            }
+            
+            // 检查是否是标准注水类型
+            if (pourType === 'center' || pourType === 'circle' || pourType === 'ice' || pourType === 'other') {
+                console.log('[PourVisualizer] 使用标准注水类型:', pourType);
+                return pourType;
+            }
+            
+            // 如果是其他自定义动画ID，直接返回
+            console.log('[PourVisualizer] 使用其他注水类型:', pourType);
+            return pourType;
+        } catch (error) {
+            console.error('获取注水类型出错，使用默认center类型', error);
+            return 'center';
+        }
+    }, [stages, currentStage, customEquipment]);
+
     // 定义可用的动画图片及其最大索引 - 移到组件顶部
     const availableAnimations = useMemo<Record<string, AnimationConfig>>(() => {
         // 基础动画配置
@@ -186,31 +221,20 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
         // 如果有自定义器具，添加自定义动画配置
         if (customEquipment?.customPourAnimations?.length) {
             customEquipment.customPourAnimations.forEach(animation => {
-                if (animation.pourType) {
-                    // 如果使用系统默认类型，则继承该类型的基本配置
-                    // 但可能有自定义动画帧
-                    if (animation.frames && animation.frames.length > 0) {
-                        baseAnimations[animation.pourType] = {
-                            ...baseAnimations[animation.pourType],
-                            frames: animation.frames
-                        };
-                    }
-                } else {
-                    // 完全自定义的动画类型
-                    const animationId = animation.id;
-                    if (animation.frames && animation.frames.length > 0) {
-                        // 使用自定义帧
-                        baseAnimations[animationId] = {
-                            maxIndex: animation.frames.length,
-                            frames: animation.frames
-                        };
-                    } else if (animation.customAnimationSvg) {
-                        // 兼容旧版单帧自定义动画
-                        baseAnimations[animationId] = {
-                            maxIndex: 1,
-                            frames: [{ id: 'frame-1', svgData: animation.customAnimationSvg }]
-                        };
-                    }
+                // 使用动画ID作为键
+                const animationId = animation.id;
+                if (animation.frames && animation.frames.length > 0) {
+                    // 使用自定义帧
+                    baseAnimations[animationId] = {
+                        maxIndex: animation.frames.length,
+                        frames: animation.frames
+                    };
+                } else if (animation.customAnimationSvg) {
+                    // 兼容旧版单帧自定义动画
+                    baseAnimations[animationId] = {
+                        maxIndex: 1,
+                        frames: [{ id: 'frame-1', svgData: animation.customAnimationSvg }]
+                    };
                 }
             });
         }
@@ -286,22 +310,6 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
             });
         };
     }, [imagesToPreload]);
-
-    // 获取当前注水类型，优化错误处理和回退逻辑
-    const getCurrentPourType = useCallback(() => {
-        try {
-            if (!stages[currentStage]) return 'center';
-            
-            // 获取当前阶段的pourType，如果未设置，默认使用center
-            const pourType = stages[currentStage]?.pourType || 'center';
-            
-            // 检查是否是有效的动画类型
-            return pourType in availableAnimations ? pourType : 'center';
-        } catch (error) {
-            console.error('获取注水类型出错，使用默认center类型', error);
-            return 'center';
-        }
-    }, [stages, currentStage, availableAnimations]);
 
     // 跟踪当前阶段的经过时间，用于确定是否在注水时间内 - 移到组件顶部
     useEffect(() => {

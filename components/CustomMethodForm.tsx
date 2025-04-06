@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { type Method, type Stage, CustomEquipment } from '@/lib/config'
+import { type Method, CustomEquipment } from '@/lib/config'
 import { ArrowLeft, ArrowRight, Check } from 'lucide-react'
 import AutoResizeTextarea from './AutoResizeTextarea'
 import { formatGrindSize } from '@/lib/grindUtils'
@@ -18,37 +18,57 @@ interface _CustomPourAnimation {
     pourType?: 'center' | 'circle' | 'ice' | 'other';
 }
 
+// 定义基础的 Stage 类型
+interface _Stage {
+    time: number;
+    pourTime?: number;
+    label: string;
+    water: string;
+    detail: string;
+    pourType: 'center' | 'circle' | 'ice' | 'other' | string;
+    valveStatus?: 'open' | 'closed';
+}
+
 // 扩展Stage类型以支持自定义注水动画ID
 type _ExtendedPourType = 'center' | 'circle' | 'ice' | 'other' | string;
 
-// 扩展Stage接口以支持自定义元数据
-interface _CustomStageMeta {
-    customAnimationId?: string; // 存储自定义注水动画ID
+// 扩展Stage类型
+interface _ExtendedStage extends _Stage {
+    pourType: _ExtendedPourType;
 }
 
-// 添加一个辅助接口，用于存储自定义动画ID
-interface StageWithCustomAnimation extends Stage {
-    _customAnimationId?: string;
-}
-
-interface CustomMethodFormProps {
-    customEquipment: CustomEquipment;
-    onSave: (method: Method) => void;
-    onCancel: () => void;
-    initialMethod?: Method;
+// 修改 Method 接口以使用新的 Stage 类型
+interface _Method extends Omit<Method, 'params'> {
+    params: {
+        coffee: string;
+        water: string;
+        ratio: string;
+        grindSize: string;
+        temp: string;
+        videoUrl: string;
+        stages: _Stage[];
+    };
 }
 
 // 定义步骤类型
-type Step = 'name' | 'params' | 'stages' | 'complete'
+type _Step = 'name' | 'params' | 'stages' | 'complete';
+
+// 修改组件 props 类型
+interface CustomMethodFormProps {
+    initialMethod?: _Method;
+    customEquipment: CustomEquipment;
+    onSave: (method: _Method) => void;
+    onBack: () => void;
+}
 
 const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
+    initialMethod,
     customEquipment,
     onSave,
-    onCancel,
-    initialMethod
+    onBack,
 }) => {
     // 当前步骤状态
-    const [currentStep, setCurrentStep] = useState<Step>('name')
+    const [currentStep, setCurrentStep] = useState<_Step>('name')
     const formRef = useRef<HTMLDivElement>(null)
     const inputRef = useRef<HTMLInputElement>(null)
     const stagesContainerRef = useRef<HTMLDivElement>(null)
@@ -59,7 +79,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     // 添加一个状态来跟踪正在编辑的累计水量输入
     const [editingCumulativeWater, setEditingCumulativeWater] = useState<{ index: number, value: string } | null>(null)
 
-    const [method, setMethod] = useState<Method>(() => {
+    const [method, setMethod] = useState<_Method>(() => {
         // 如果有初始方法，直接使用
         if (initialMethod) {
             // 如果是聪明杯，确保从标签中移除阀门状态标记
@@ -134,7 +154,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         }
 
         // 创建初始步骤和基本参数
-        const initialStage: Stage = {
+        const initialStage: _Stage = {
             time: 25,
             pourTime: 10,
             label: '焖蒸',
@@ -186,7 +206,10 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (formRef.current && !formRef.current.contains(event.target as Node)) {
-                onCancel()
+                // 确保 onBack 是一个函数
+                if (typeof onBack === 'function') {
+                    onBack();
+                }
             }
         }
 
@@ -194,7 +217,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         return () => {
             document.removeEventListener('mousedown', handleClickOutside)
         }
-    }, [onCancel])
+    }, [onBack])
 
     // 自动聚焦输入框
     useEffect(() => {
@@ -204,7 +227,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     }, [currentStep])
 
     // 步骤配置
-    const steps: { id: Step; label: string }[] = [
+    const steps: { id: _Step; label: string }[] = [
         { id: 'name', label: '方案名称' },
         { id: 'params', label: '基本参数' },
         { id: 'stages', label: '冲泡步骤' },
@@ -230,11 +253,17 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
 
     // 上一步/返回
     const handleBack = () => {
-        const currentIndex = getCurrentStepIndex()
+        const steps: { id: _Step }[] = [
+            { id: 'name' },
+            { id: 'params' },
+            { id: 'stages' },
+            { id: 'complete' }
+        ];
+        const currentIndex = steps.findIndex(step => step.id === currentStep);
         if (currentIndex > 0) {
-            setCurrentStep(steps[currentIndex - 1].id)
+            setCurrentStep(steps[currentIndex - 1].id);
         } else {
-            onCancel()
+            onBack();
         }
     }
 
@@ -316,7 +345,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         }
     }
 
-    const handleStageChange = (index: number, field: keyof Stage, value: string | number) => {
+    const handleStageChange = (index: number, field: keyof _Stage, value: string | number) => {
         const newStages = [...method.params.stages]
         const stage = { ...newStages[index] }
 
@@ -369,15 +398,29 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         // 检查是否是自定义预设
         const isCustomPreset = customEquipment.animationType === 'custom';
         
+        // 对于自定义预设，尝试使用第一个自定义动画作为默认值
+        let defaultPourType: string | undefined = undefined;
+        if (isCustomPreset && customEquipment.customPourAnimations && customEquipment.customPourAnimations.length > 0) {
+            // 使用第一个非系统默认的自定义动画
+            const firstCustomAnimation = customEquipment.customPourAnimations.find(anim => !anim.isSystemDefault);
+            if (firstCustomAnimation) {
+                defaultPourType = firstCustomAnimation.id;
+                console.log('[CustomMethodForm] 使用第一个自定义动画作为默认值:', {
+                    name: firstCustomAnimation.name,
+                    id: firstCustomAnimation.id
+                });
+            }
+        }
+        
         // 所有新添加的步骤都使用空值
-        const newStage: Stage = {
+        const newStage: _Stage = {
             time: 0,
             // pourTime默认为undefined而不是0
             label: '',
             water: '',
             detail: '',
-            pourType: isCustomPreset ? undefined : '' as 'center' | 'circle' | 'ice' | 'other', // 不预设注水方式，但保持类型正确
-            ...(customEquipment.hasValve ? { valveStatus: 'closed' as 'closed' | 'open' } : {}) // 如果是聪明杯，默认设置阀门状态为关闭
+            pourType: isCustomPreset ? defaultPourType || '' : '' as 'center' | 'circle' | 'ice' | 'other',
+            ...(customEquipment.hasValve ? { valveStatus: 'closed' as 'closed' | 'open' } : {})
         };
 
         setMethod({
@@ -427,7 +470,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
 
     const handleSubmit = () => {
         // 创建一个方法的深拷贝，以便修改
-        const finalMethod = JSON.parse(JSON.stringify(method)) as Method;
+        const finalMethod = JSON.parse(JSON.stringify(method)) as _Method;
 
         // 如果是聪明杯，将阀门状态添加到步骤名称中
         if (customEquipment.hasValve && finalMethod.params.stages) {
@@ -556,46 +599,55 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
 
     const handlePourTypeChange = (index: number, value: string) => {
         const newStages = [...method.params.stages]
-        const stage = { ...newStages[index] }
+        const stage = { ...newStages[index] } as _ExtendedStage
         const isCustomPreset = customEquipment.animationType === 'custom';
 
         // 检查是否选择了自定义注水动画（自定义注水动画的值是ID而不是pourType类型）
         const isCustomAnimation = value !== 'center' && value !== 'circle' && value !== 'ice' && value !== 'other';
+        
+        console.log('[CustomMethodForm] 选择注水类型:', {
+            value,
+            isCustomAnimation,
+            customAnimations: customEquipment.customPourAnimations,
+            matchedAnimation: customEquipment.customPourAnimations?.find(anim => anim.id === value)
+        });
         
         if (isCustomAnimation) {
             // 查找对应的自定义注水动画
             const customAnimation = customEquipment.customPourAnimations?.find(anim => anim.id === value);
             
             if (customAnimation) {
-                console.log(`[CustomMethodForm] 选择了自定义注水动画: ${customAnimation.name}`);
+                console.log(`[CustomMethodForm] 选择了自定义注水动画:`, {
+                    name: customAnimation.name,
+                    id: customAnimation.id,
+                    pourType: value
+                });
                 
-                // 使用StageWithCustomAnimation接口而不是any类型
-                const newStage: StageWithCustomAnimation = { ...stage };
-                newStage.pourType = 'other'; // 使用other作为pourType
-                newStage._customAnimationId = value; // 存储自定义动画ID
+                // 直接使用自定义动画的 ID 作为 pourType
+                stage.pourType = value;
                 
                 // 更新标签和详情（如果为空）
-                if (!newStage.label || newStage.label === getDefaultStageLabel('center') || 
-                    newStage.label === getDefaultStageLabel('circle') || 
-                    newStage.label === getDefaultStageLabel('ice') || 
-                    newStage.label === getDefaultStageLabel('other') ||
-                    newStage.label === '注水') {
-                    newStage.label = customAnimation.name;
+                if (!stage.label || stage.label === getDefaultStageLabel('center') || 
+                    stage.label === getDefaultStageLabel('circle') || 
+                    stage.label === getDefaultStageLabel('ice') || 
+                    stage.label === getDefaultStageLabel('other') ||
+                    stage.label === '注水') {
+                    stage.label = customAnimation.name;
                 }
                 
                 // 如果详情为空或是默认详情，使用自定义动画的名称作为详情
-                if (!newStage.detail || 
-                    newStage.detail === getDefaultStageDetail('center') || 
-                    newStage.detail === getDefaultStageDetail('circle') || 
-                    newStage.detail === getDefaultStageDetail('ice') || 
-                    newStage.detail === getDefaultStageDetail('other') ||
-                    newStage.detail === '注水' ||
-                    newStage.detail === '使咖啡粉充分吸水并释放气体，提升萃取效果') {
-                    newStage.detail = `使用${customAnimation.name}注水`;
+                if (!stage.detail || 
+                    stage.detail === getDefaultStageDetail('center') || 
+                    stage.detail === getDefaultStageDetail('circle') || 
+                    stage.detail === getDefaultStageDetail('ice') || 
+                    stage.detail === getDefaultStageDetail('other') ||
+                    stage.detail === '注水' ||
+                    stage.detail === '使咖啡粉充分吸水并释放气体，提升萃取效果') {
+                    stage.detail = `使用${customAnimation.name}注水`;
                 }
                 
                 // 将新的stage对象赋值给当前的stage
-                newStages[index] = newStage;
+                newStages[index] = stage;
                 
                 setMethod({
                     ...method,
