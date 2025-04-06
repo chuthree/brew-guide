@@ -1143,7 +1143,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                             // 设置参考图像的优先级：
                             // 1. customReferenceSvg: 滤杯SVG (作为主背景)
                             // 2. referenceSvg: 另一状态的阀门SVG (作为参考)
-                            customReferenceSvg={equipment.customShapeSvg || undefined}
+                            _customReferenceSvg={equipment.customShapeSvg || undefined}
                             // 另一状态的阀门作为参考
                             referenceSvg={valveEditMode === 'closed' 
                                 ? equipment.customValveOpenSvg  // 如果当前是绘制关闭状态，则显示开启状态作为参考

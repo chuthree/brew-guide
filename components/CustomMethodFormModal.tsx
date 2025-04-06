@@ -203,7 +203,7 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
                             >
                                 <CustomMethodForm
                                     onSave={handleSaveMethod}
-                                    onCancel={onCloseCustomForm}
+                                    onBack={onCloseCustomForm}
                                     initialMethod={editingMethod}
                                     customEquipment={currentCustomEquipment}
                                 />
