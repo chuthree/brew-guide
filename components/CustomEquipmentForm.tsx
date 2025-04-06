@@ -469,7 +469,6 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
 
     // 处理杯型绘制完成
     const handleDrawingComplete = (svg: string) => {
-        console.log('杯型绘制完成，获取到SVG数据，长度:', svg.length);
         if (svg && svg.trim() !== '') {
             // 更新equipment状态
             setEquipment(prev => ({
@@ -477,7 +476,6 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                 customShapeSvg: svg
             }));
             setHasDrawn(true);
-            console.log('已保存自定义杯型SVG到设备数据中');
             
             // 确保在绘制完成后立即更新引用值，避免状态延迟同步问题
             equipmentRef.current = {
@@ -562,7 +560,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
     };
 
     // 切换到阀门绘图界面
-    const handleShowValveDrawingCanvas = (mode: 'closed' | 'open' = 'closed') => {
+    const _handleShowValveDrawingCanvas = (mode: 'closed' | 'open' = 'closed') => {
         hapticsUtils.light();
         setValveEditMode(mode);
         setShowValveDrawingCanvas(true);
@@ -712,10 +710,14 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
     // 添加播放状态切换函数 - 使用useCallback以便可以用于依赖数组
     const handleTogglePlayback = useCallback(() => {
         if (animationEditorRef.current) {
+            const newPlayingState = !isPlaying;
             animationEditorRef.current.togglePlayback();
-            setIsPlaying(prev => !prev);
+            // 使用 requestAnimationFrame 确保状态更新在 DOM 更新之后
+            requestAnimationFrame(() => {
+                setIsPlaying(newPlayingState);
+            });
         }
-    }, []);
+    }, [isPlaying]);
     
     // 添加删除帧函数 - 使用useCallback
     const handleDeleteCurrentFrame = useCallback(() => {
@@ -770,9 +772,6 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
     // 获取自定义杯型SVG
     const customShapeSvg = useMemo(() => {
         const svg = equipment.customShapeSvg || equipmentRef.current.customShapeSvg;
-        if (svg) {
-            console.log('[注水动画编辑] 初始化杯型数据:', svg.length);
-        }
         return svg;
     }, [equipment.customShapeSvg]); // 只依赖于 equipment.customShapeSvg
     
@@ -939,18 +938,6 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                     
                     {/* 右侧：播放/暂停、撤销、删除 */}
                     <div className="flex items-center space-x-3">
-                        {/* 添加帧按钮 */}
-                        <button
-                            type="button"
-                            onClick={handleAddNewFrame}
-                            className="w-10 h-10 rounded-full bg-white dark:bg-neutral-800 flex items-center justify-center border border-neutral-200 dark:border-neutral-700"
-                            aria-label="添加帧"
-                        >
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M12 5V19M5 12H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                            </svg>
-                        </button>
-
                         <button
                             type="button"
                             onClick={handleTogglePlayback}
@@ -1468,8 +1455,8 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
 
                             {/* 阀门控制选项 */}
                             {selectedPreset === 'custom' && (
-                                <div className="mt-4 space-y-4">
-                                    <div className="flex items-center">
+                                <div className="space-y-4">
+                                    {/* <div className="flex items-center">
                                         <label className="inline-flex items-center cursor-pointer">
                                             <input
                                                 type="checkbox"
@@ -1481,7 +1468,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                                                 支持阀门控制（类似聪明杯）
                                             </span>
                                         </label>
-                                    </div>
+                                    </div> */}
                                     
                                     {equipment.hasValve && (
                                         <div className="pl-6 border-l-2 border-neutral-200 dark:border-neutral-700">
@@ -1541,7 +1528,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                                                 </label>
                                                 
                                                 {/* 自定义阀门样式 */}
-                                                <label
+                                                {/* <label
                                                     className={`relative flex flex-col p-3 rounded-lg border ${
                                                         valveShapeType === 'custom'
                                                             ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
@@ -1569,7 +1556,6 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                                                         )}
                                                     </div>
                                                     <div className="grid grid-cols-2 gap-2">
-                                                        {/* 关闭状态 */}
                                                         <button
                                                             type="button"
                                                             onClick={(e) => {
@@ -1640,7 +1626,6 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                                                             </div>
                                                         </button>
                                                         
-                                                        {/* 开启状态 */}
                                                         <button
                                                             type="button"
                                                             onClick={(e) => {
@@ -1711,7 +1696,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                                                             </div>
                                                         </button>
                                                     </div>
-                                                </label>
+                                                </label> */}
                                             </div>
                                         </div>
                                     )}

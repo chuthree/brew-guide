@@ -538,7 +538,6 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
   const saveDrawing = useCallback(() => {
     // 使用linesRef.current以确保获取最新的lines
     const svgString = linesToSvgPath(linesRef.current, width, height);
-    console.log("保存SVG绘图数据:", svgString.length, "字符");
     if (onDrawingComplete) {
       onDrawingComplete(svgString);
     }
@@ -620,34 +619,39 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
     updateCanvasOffset();
   }, [isDrawing, currentLine, saveDrawing, updateCanvasOffset]);
 
-  // 触摸事件处理 - 优化版本
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    // 避免使用preventDefault，以免阻止其他正常交互
-    if (e.touches.length !== 1) return; // 只处理单点触摸
-    
-    const touch = e.touches[0];
-    handleStart(touch.clientX, touch.clientY);
-    
-    // 防止触摸事件传播导致页面滚动
-    e.stopPropagation();
-  }, [handleStart]);
+  // 在 useEffect 之前添加新的事件处理设置
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
 
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (!isDrawing) return;
-    if (e.touches.length !== 1) return;
-    
-    const touch = e.touches[0];
-    handleMove(touch.clientX, touch.clientY);
-    
-    // 防止触摸移动引起页面滚动
-    e.stopPropagation();
-    e.preventDefault(); // 只在移动时阻止默认行为，防止页面滚动
-  }, [isDrawing, handleMove]);
+    const touchStartHandler = (e: TouchEvent) => {
+      if (e.touches.length !== 1) return;
+      const touch = e.touches[0];
+      handleStart(touch.clientX, touch.clientY);
+    };
 
-  const handleTouchEnd = useCallback((_e: React.TouchEvent) => {
-    if (!isDrawing) return;
-    handleEnd();
-  }, [isDrawing, handleEnd]);
+    const touchMoveHandler = (e: TouchEvent) => {
+      if (!isDrawing || e.touches.length !== 1) return;
+      const touch = e.touches[0];
+      handleMove(touch.clientX, touch.clientY);
+      e.preventDefault();
+    };
+
+    const touchEndHandler = () => {
+      if (!isDrawing) return;
+      handleEnd();
+    };
+
+    canvas.addEventListener('touchstart', touchStartHandler, { passive: true });
+    canvas.addEventListener('touchmove', touchMoveHandler, { passive: false });
+    canvas.addEventListener('touchend', touchEndHandler, { passive: true });
+
+    return () => {
+      canvas.removeEventListener('touchstart', touchStartHandler);
+      canvas.removeEventListener('touchmove', touchMoveHandler);
+      canvas.removeEventListener('touchend', touchEndHandler);
+    };
+  }, [isDrawing, handleStart, handleMove, handleEnd]);
 
   // 鼠标事件处理（用于桌面测试）- 优化版本
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -831,15 +835,11 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
         ref={canvasRef}
         width={width}
         height={height}
-        className=" bg-white dark:bg-neutral-900"
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
+        style={{ touchAction: 'none' }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
-        style={{ touchAction: 'none' }} // 防止触摸手势引起的页面滚动
       />
     </div>
   );
