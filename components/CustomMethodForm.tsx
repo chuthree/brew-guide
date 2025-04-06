@@ -25,12 +25,12 @@ interface _Stage {
     label: string;
     water: string;
     detail: string;
-    pourType?: 'center' | 'circle' | 'ice' | 'other';
+    pourType?: string;
     valveStatus?: 'open' | 'closed';
 }
 
 // 扩展Stage类型以支持自定义注水动画ID
-type _ExtendedPourType = 'center' | 'circle' | 'ice' | 'other';
+type _ExtendedPourType = string;
 
 // 扩展Stage类型
 interface _ExtendedStage extends _Stage {
@@ -381,7 +381,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                 stage[field] = value as string
             }
         } else if (field === 'pourType') {
-            stage[field] = value as 'center' | 'circle' | 'ice' | 'other'
+            stage[field] = value as string
         }
 
         newStages[index] = stage
@@ -419,7 +419,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
             label: '',
             water: '',
             detail: '',
-            pourType: isCustomPreset ? (defaultPourType as 'center' | 'circle' | 'ice' | 'other') : 'circle',
+            pourType: isCustomPreset ? (defaultPourType as string) : 'circle',
             ...(customEquipment.hasValve ? { valveStatus: 'closed' as 'closed' | 'open' } : {})
         };
 
@@ -624,7 +624,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                 });
                 
                 // 直接使用自定义动画的 ID 作为 pourType
-                stage.pourType = value as 'center' | 'circle' | 'ice' | 'other';
+                stage.pourType = value as string;
                 
                 // 更新标签和详情（如果为空）
                 if (!stage.label || stage.label === getDefaultStageLabel('center') || 
@@ -663,7 +663,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         } else {
             // 原有的标准注水类型处理逻辑
             // 更新注水类型
-            stage.pourType = value as 'center' | 'circle' | 'ice' | 'other'
+            stage.pourType = value as string;
 
             // 处理标签和详情
             // 对于自定义预设，如果选择'other'，不做特殊处理，保留用户输入

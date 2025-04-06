@@ -17,7 +17,7 @@ const CustomEquipmentFormModal: React.FC<CustomEquipmentFormModalProps> = ({
     onSave,
     editingEquipment
 }) => {
-    const handleExport = async (equipment: CustomEquipment) => {
+    const _handleExport = async (equipment: CustomEquipment) => {
         try {
             const exportData = exportEquipment(equipment);
             const success = await copyToClipboard(exportData);

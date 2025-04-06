@@ -311,7 +311,7 @@ export function useBrewingContent({
 			time: number; // 阶段持续时间
 			pourTime?: number; // 注水时间
 			originalIndex: number;
-			pourType?: "center" | "circle" | "ice" | "other";
+			pourType?: string; // 改为string类型以兼容config.ts
 			valveStatus?: "open" | "closed";
 		}[] = [];
 
@@ -429,6 +429,6 @@ export interface Stage {
 	detail: string;
 	time: number;
 	pourTime?: number;
-	pourType?: "center" | "circle" | "ice" | "other";
+	pourType?: string; // 改为string类型以与config.ts兼容
 	valveStatus?: "open" | "closed";
 }

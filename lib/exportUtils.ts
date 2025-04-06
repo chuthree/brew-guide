@@ -2,9 +2,6 @@
 
 import { type Method, type CustomEquipment } from './config'
 
-interface ExportableEquipment extends Omit<CustomEquipment, 'id'> {}
-interface ExportableMethod extends Omit<Method, 'id'> {}
-
 /**
  * 导出器具数据为文本
  * @param equipment 要导出的器具
@@ -12,10 +9,10 @@ interface ExportableMethod extends Omit<Method, 'id'> {}
  */
 export function exportEquipment(equipment: CustomEquipment): string {
     // 创建一个副本以避免修改原始对象
-    const exportData: ExportableEquipment = { ...equipment };
+    const exportData = { ...equipment };
     
     // 移除不需要导出的字段
-    delete (exportData as { id?: string }).id;  // 导入时会生成新的ID
+    delete (exportData as Partial<CustomEquipment>).id;  // 导入时会生成新的ID
     
     // 格式化为易读的JSON字符串
     return JSON.stringify(exportData, null, 2);
@@ -28,10 +25,10 @@ export function exportEquipment(equipment: CustomEquipment): string {
  */
 export function exportMethod(method: Method): string {
     // 创建一个副本以避免修改原始对象
-    const exportData: ExportableMethod = { ...method };
+    const exportData = { ...method };
     
     // 移除不需要导出的字段
-    delete (exportData as { id?: string }).id;  // 导入时会生成新的ID
+    delete (exportData as Partial<Method>).id;  // 导入时会生成新的ID
     
     // 格式化为易读的JSON字符串
     return JSON.stringify(exportData, null, 2);

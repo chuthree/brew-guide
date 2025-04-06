@@ -1001,7 +1001,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         pourTime?: number;
         water: string;
         detail: string;
-        pourType?: 'center' | 'circle' | 'ice' | 'other';
+        pourType?: string; // 改为string类型以与config.ts兼容
         valveStatus?: 'open' | 'closed';
         originalIndex: number;
     }[]>([]);
@@ -1765,7 +1765,9 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                         setIsFromAIRecipe(false);
                     }
                 }}
-                settings={settings}
+                _onEditMethod={() => {}}
+                _onDeleteMethod={() => {}}
+                _settings={settings}
             />
 
             {/* 咖啡豆表单模态框组件 */}

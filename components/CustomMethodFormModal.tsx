@@ -22,9 +22,9 @@ interface CustomMethodFormModalProps {
     onSaveCustomMethod: (method: Method) => void
     onCloseCustomForm: () => void
     onCloseImportForm: () => void
-    onEditMethod: (method: Method) => void
-    onDeleteMethod: (method: Method) => void
-    settings: SettingsType
+    _onEditMethod: (method: Method) => void
+    _onDeleteMethod: (method: Method) => void
+    _settings: SettingsType
 }
 
 const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
@@ -36,9 +36,9 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
     onSaveCustomMethod,
     onCloseCustomForm,
     onCloseImportForm,
-    onEditMethod,
-    onDeleteMethod,
-    settings
+    _onEditMethod,
+    _onDeleteMethod,
+    _settings
 }) => {
     const [_formData, setFormData] = useState<Partial<Method>>({})
     const [_validationError, setValidationError] = useState<string | null>(null)
@@ -154,7 +154,7 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
     }
 
     // 在 CustomMethodFormModal 组件内添加导出功能
-    const handleExport = async (method: Method) => {
+    const _handleExport = async (method: Method) => {
         try {
             const exportData = exportMethod(method);
             const success = await copyToClipboard(exportData);

@@ -56,7 +56,7 @@ interface BrewingTimerProps {
         pourTime?: number;
         water: string;
         detail: string;
-        pourType?: 'center' | 'circle' | 'ice' | 'other';
+        pourType?: string;
         valveStatus?: 'open' | 'closed';
         originalIndex: number;
     }[]) => void
@@ -76,7 +76,7 @@ type ExpandedStage = {
     pourTime?: number;
     water: string;
     detail: string;
-    pourType?: 'center' | 'circle' | 'ice' | 'other';
+    pourType?: string;
     valveStatus?: 'open' | 'closed';
     originalIndex: number;
 };
