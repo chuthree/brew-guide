@@ -662,7 +662,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                             src={equipmentImageSrc || '/images/v60-base.svg'}
                             alt={equipmentId || 'V60'}
                             fill
-                            className="object-contain invert-0 dark:invert"
+                            className={`object-contain invert-0 dark:invert ${equipmentOpacity}`}
                             sizes="(max-width: 768px) 100vw, 300px"
                             quality={85}
                             priority={true}
@@ -670,7 +670,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                         />
                     ) : (
                         // 自定义SVG内联数据 - 使用custom-cup-shape类，不再使用dark:invert
-                        <div className="w-full h-full custom-shape-svg-container outline-only custom-cup-shape" 
+                        <div className={`w-full h-full custom-shape-svg-container outline-only custom-cup-shape ${equipmentOpacity}`}
                             dangerouslySetInnerHTML={{ 
                                 __html: processCustomSvg(customEquipment.customShapeSvg) 
                             }} 
