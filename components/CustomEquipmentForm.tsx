@@ -979,19 +979,6 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                         </button>
                     </div>
                 </div>
-                
-                {/* 绘图提示 */}
-                <div className="mt-4 text-xs text-neutral-500 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-900 p-3 rounded-lg">
-                    <h4 className="font-medium mb-1">动画绘制提示</h4>
-                    <ul className="list-disc pl-4 space-y-1">
-                        <li>点击上方的缩略图切换帧</li>
-                        <li>点击 + 按钮添加新帧</li>
-                        <li>使用播放按钮预览动画效果</li>
-                        <li>左右箭头键可以快速切换帧</li>
-                        <li>可以复制现有帧作为起点</li>
-                        <li>绘制完成后点击右上角保存按钮</li>
-                    </ul>
-                </div>
             </>
         );
     }, [strokeWidth, handleTogglePlayback, handleDeleteCurrentFrame, handleAddNewFrame, currentEditingAnimation, canvasSize, customShapeSvg, showPourAnimationCanvas]);
