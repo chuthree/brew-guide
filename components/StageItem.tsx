@@ -13,6 +13,7 @@ interface StageItemProps {
     currentStage: number
     onEdit?: () => void
     onDelete?: () => void
+    onShare?: () => void
     actionMenuStates: Record<string, boolean>
     setActionMenuStates: React.Dispatch<React.SetStateAction<Record<string, boolean>>>
 }
@@ -42,6 +43,7 @@ const StageItem: React.FC<StageItemProps> = ({
     currentStage,
     onEdit,
     onDelete,
+    onShare,
     actionMenuStates,
     setActionMenuStates,
 }) => {
@@ -87,9 +89,17 @@ const StageItem: React.FC<StageItemProps> = ({
                 onClick: onDelete,
             });
         }
+
+        if (onShare) {
+            items.push({
+                id: 'share',
+                label: '分享',
+                onClick: onShare,
+            });
+        }
         
         return items;
-    }, [onEdit, onDelete]);
+    }, [onEdit, onDelete, onShare]);
 
     // 处理菜单开关变更
     const handleOpenChange = (open: boolean) => {

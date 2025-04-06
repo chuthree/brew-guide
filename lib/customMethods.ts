@@ -26,26 +26,10 @@ export async function loadCustomMethods(): Promise<Record<string, Method[]>> {
 			// Load methods for this equipment
 			const methods = await loadCustomMethodsForEquipment(equipmentId);
 			
-			// Add to result
-			result[equipmentId] = methods;
-		}
-		
-		// Also load methods from the legacy storage
-		try {
-			const legacyMethods = await Storage.get("customMethods");
-			if (legacyMethods) {
-				const parsedLegacyMethods = JSON.parse(legacyMethods);
-				// Merge with result
-				for (const equipmentId in parsedLegacyMethods) {
-					if (result[equipmentId]) {
-						result[equipmentId] = [...result[equipmentId], ...parsedLegacyMethods[equipmentId]];
-					} else {
-						result[equipmentId] = parsedLegacyMethods[equipmentId];
-					}
-				}
+			// Add to result if there are methods
+			if (methods.length > 0) {
+				result[equipmentId] = methods;
 			}
-		} catch (error) {
-			console.error('Error loading legacy custom methods:', error);
 		}
 		
 		return result;
@@ -79,47 +63,78 @@ export function loadCustomMethodsSync(): Record<string, Method[]> {
  */
 export async function loadCustomMethodsForEquipment(equipmentId: string): Promise<Method[]> {
 	try {
-		// Load methods from per-equipment storage
+		// 首先尝试从新存储加载
 		const methodsJson = await Storage.get(`customMethods_${equipmentId}`);
 		let methods: Method[] = [];
 		
-		// If methods found, parse them
 		if (methodsJson) {
 			methods = JSON.parse(methodsJson);
 		}
 		
-		// Also check legacy storage
+		// 检查旧存储并进行迁移
 		const legacyMethodsJson = await Storage.get("customMethods");
 		if (legacyMethodsJson) {
 			const legacyMethods = JSON.parse(legacyMethodsJson);
 			if (legacyMethods[equipmentId] && Array.isArray(legacyMethods[equipmentId])) {
-				// Merge with methods from per-equipment storage
-				methods = [...methods, ...legacyMethods[equipmentId]];
+				// 合并旧数据
+				const combinedMethods = [...methods, ...legacyMethods[equipmentId]];
+				
+				// 去重
+				methods = removeDuplicateMethods(combinedMethods);
+				
+				// 保存到新存储
+				await Storage.set(`customMethods_${equipmentId}`, JSON.stringify(methods));
+				
+				// 从旧存储中移除这个设备的数据
+				delete legacyMethods[equipmentId];
+				if (Object.keys(legacyMethods).length > 0) {
+					await Storage.set("customMethods", JSON.stringify(legacyMethods));
+				} else {
+					// 如果旧存储已经没有数据了，直接删除它
+					await Storage.remove("customMethods");
+				}
+				
+				console.log(`[customMethods] 成功迁移设备 ${equipmentId} 的旧数据`);
 			}
 		}
 		
-		// 去重复 - 先使用自定义的去重函数
-		methods = removeDuplicateMethods(methods);
-		
-		console.log(`[customMethods] 加载设备 ${equipmentId} 的方法: ${methods.length}个, 去重后`);
-		
-		// Ensure all methods have IDs
-		return methods.map((method: Method) => {
-			// 检查是否已经有ID
-			if (method.id) {
-				return method;
+		// 确保所有方法都有ID
+		methods = methods.map((method: Method) => {
+			if (!method.id) {
+				return {
+					...method,
+					id: `method-${uuidv4()}`
+				};
 			}
-			
-			// 为每个方法生成唯一ID，使用UUID
-			return {
-				...method,
-				id: `method-${uuidv4()}`
-			};
+			return method;
 		});
+		
+		console.log(`[customMethods] 加载设备 ${equipmentId} 的方法: ${methods.length}个`);
+		
+		return methods;
 	} catch (error) {
 		console.error('Error loading custom methods for equipment:', error);
 		return [];
 	}
+}
+
+/**
+ * 辅助函数：移除重复方法
+ * @param methods 方法数组
+ * @returns 去重后的方法数组
+ */
+function removeDuplicateMethods(methods: Method[]): Method[] {
+	const seen = new Map<string, Method>();
+	
+	// 按照ID和名称进行去重，优先保留有ID的方法
+	methods.forEach(method => {
+		const key = method.id || method.name;
+		if (!seen.has(key) || method.id) {
+			seen.set(key, method);
+		}
+	});
+	
+	return Array.from(seen.values());
 }
 
 /**
@@ -145,9 +160,6 @@ export async function saveCustomMethod(
 			// Load existing methods for this equipment
 			const existingMethods = await loadCustomMethodsForEquipment(equipmentId);
 			
-			// Check if we're updating an existing method
-			const existingIndex = existingMethods.findIndex(m => m.id === method.id);
-			
 			// Ensure method has an ID
 			const methodWithId = {
 				...method,
@@ -157,34 +169,14 @@ export async function saveCustomMethod(
 			// 确保方法ID在保存前是唯一的
 			console.log(`[customMethods] 保存方法 ${methodWithId.name}, ID: ${methodWithId.id}`);
 			
-			if (existingIndex >= 0) {
-				// Update existing method
-				existingMethods[existingIndex] = methodWithId;
-			} else {
-				// Add new method - 检查是否已经存在同名同ID的方法
-				const duplicateMethod = existingMethods.find(m => 
-					m.id === methodWithId.id || 
-					(m.name === methodWithId.name && !method.id) // 如果是新方法（没有id）且名称相同，也视为重复
-				);
-				
-				if (duplicateMethod) {
-					console.warn(`[customMethods] 检测到重复方法，跳过保存: ${methodWithId.name}`);
-					// 返回方法，但不实际添加到列表中
-					return true;
-				}
-				
-				// 正常添加新方法
-				existingMethods.push(methodWithId);
-			}
+			// 更新或添加方法
+			const updatedMethods = existingMethods.filter(m => m.id !== methodWithId.id);
+			updatedMethods.push(methodWithId);
 			
-			// 去重复后保存
-			const uniqueMethods = removeDuplicateMethods(existingMethods);
-			if (uniqueMethods.length < existingMethods.length) {
-				console.warn(`[customMethods] 在保存前移除了 ${existingMethods.length - uniqueMethods.length} 个重复方法`);
-			}
-			
-			// Save updated methods
+			// 去重并保存
+			const uniqueMethods = removeDuplicateMethods(updatedMethods);
 			await Storage.set(`customMethods_${equipmentId}`, JSON.stringify(uniqueMethods));
+			
 			return true;
 		} catch (error) {
 			console.error('Error saving custom method:', error);
@@ -208,86 +200,28 @@ export async function saveCustomMethod(
 		
 		console.log(`[customMethods] 保存方法(旧模式) ${methodWithId.name}, ID: ${methodWithId.id}`);
 
-		// 检查是否是编辑模式
-		const isEditing = editingMethod !== undefined;
-
-		// 创建新的自定义方法列表
-		let updatedMethods = [...(customMethods[selectedEquipment] || [])];
-
-		if (isEditing) {
-			// 编辑模式：移除旧方法，添加新方法
-			updatedMethods = updatedMethods.filter(
-				(m) => m.id !== editingMethod?.id
-			);
-			updatedMethods.push(methodWithId);
-		} else {
-			// 创建模式：检查是否存在重复方法
-			const duplicateMethod = updatedMethods.find(m => 
-				m.id === methodWithId.id || 
-				(m.name === methodWithId.name) // 名称相同也视为重复
-			);
-			
-			if (duplicateMethod) {
-				console.warn(`[customMethods] 检测到重复方法，跳过保存: ${methodWithId.name}`);
-				// 返回方法信息，但不添加到列表
-				return { 
-					newCustomMethods: customMethods, 
-					methodWithId 
-				};
-			}
-			
-			// 正常添加新方法
-			updatedMethods.push(methodWithId);
-		}
+		// 加载现有方法
+		const existingMethods = await loadCustomMethodsForEquipment(selectedEquipment);
 		
-		// 创建前去重
-		updatedMethods = removeDuplicateMethods(updatedMethods);
-
+		// 更新或添加方法
+		const updatedMethods = existingMethods.filter(m => 
+			m.id !== methodWithId.id && 
+			(editingMethod ? m.id !== editingMethod.id : true)
+		);
+		updatedMethods.push(methodWithId);
+		
+		// 去重并保存
+		const uniqueMethods = removeDuplicateMethods(updatedMethods);
+		await Storage.set(`customMethods_${selectedEquipment}`, JSON.stringify(uniqueMethods));
+		
+		// 为了保持向后兼容，也更新内存中的customMethods对象
 		const newCustomMethods = {
 			...customMethods,
-			[selectedEquipment]: updatedMethods,
+			[selectedEquipment]: uniqueMethods,
 		};
-
-		// 保存到存储
-		await Storage.set("customMethods", JSON.stringify(newCustomMethods));
-		
-		// 为了防止数据重复，先加载当前数据再合并保存
-		try {
-			const existingMethods = await loadCustomMethodsForEquipment(selectedEquipment);
-			// 合并并去重
-			const combinedMethods = removeDuplicateMethods([...existingMethods, ...updatedMethods]);
-			
-			// 保存合并后的数据
-			await Storage.set(`customMethods_${selectedEquipment}`, JSON.stringify(combinedMethods));
-		} catch (error) {
-			console.error('Error merging methods:', error);
-		}
 
 		return { newCustomMethods, methodWithId };
 	}
-}
-
-// 辅助函数：移除重复方法
-function removeDuplicateMethods(methods: Method[]): Method[] {
-	const seen = new Map<string, Method>();
-	const seenNames = new Map<string, Method>();
-	
-	// 先处理有ID的方法
-	methods.forEach(method => {
-		if (method.id) {
-			seen.set(method.id, method);
-		}
-	});
-	
-	// 再处理没有ID但有名称的方法
-	methods.forEach(method => {
-		if (!method.id && method.name && !seenNames.has(method.name)) {
-			seenNames.set(method.name, method);
-		}
-	});
-	
-	// 使用Array.from处理Map值
-	return [...Array.from(seen.values()), ...Array.from(seenNames.values())];
 }
 
 /**

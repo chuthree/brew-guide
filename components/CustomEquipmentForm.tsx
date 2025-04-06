@@ -573,7 +573,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
         // 创建新的注水动画
         const newAnimation: CustomPourAnimation = {
             id: `pour-${Date.now()}`,
-            name: '自定义注水',
+            name: '', // 不设置默认名称，要求用户必须输入
             customAnimationSvg: '',
             isSystemDefault: false
         };
@@ -810,6 +810,9 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
     const renderPourAnimationCanvas = useCallback(() => {
         if (!currentEditingAnimation) return null;
         
+        // 检查是否可以保存（名称不能为空）
+        const canSave = currentEditingAnimation.name.trim() !== '';
+        
         return (
             <>
                 <TopNav 
@@ -824,16 +827,21 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                         setIsPlaying(false);
                     }}
                     onSave={handleSavePourAnimation}
+                    saveDisabled={!canSave}
                 />
                 
                 <div className="mb-4">
-                    <FormField label="动画名称">
+                    <FormField 
+                        label="动画名称" 
+                        error={!currentEditingAnimation.name.trim() ? "请输入注水动画名称" : undefined}
+                        hint="例如：中心注水、绕圈注水等"
+                    >
                         <input
                             type="text"
                             value={currentEditingAnimation.name}
                             onChange={handlePourAnimationNameChange}
                             className="mt-1 block w-full rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500 dark:text-white"
-                            placeholder="例如：中心注水"
+                            placeholder="请输入注水动画名称"
                             readOnly={currentEditingAnimation.isSystemDefault}
                             maxLength={20}
                         />

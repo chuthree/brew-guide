@@ -10,6 +10,7 @@ import './globals.css'
 import KeyboardManager from '@/components/KeyboardManager'
 import { Suspense } from 'react'
 import CapacitorInit from './CapacitorInit'
+import { Toast } from '@/components/ui/toast';
 
 // SEO constants
 export const metadata: Metadata = {
@@ -129,6 +130,7 @@ export default function RootLayout({
               {children}
             </div>
             <PWAPrompt />
+            <Toast />
           </ToastProvider>
         </ThemeProvider>
         <Analytics />

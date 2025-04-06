@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import dynamic from 'next/dynamic';
-import { Method, equipmentList, CustomEquipment } from '@/lib/config';
+import { Method, equipmentList, CustomEquipment, commonMethods } from '@/lib/config';
 import StageItem from '@/components/StageItem';
 import { SettingsOptions } from './Settings';
 import { TabType, MainTabType, Content, Step } from '@/lib/hooks/useBrewingState';
@@ -8,6 +8,8 @@ import { CoffeeBean } from '@/app/types';
 import type { BrewingNoteData } from '@/app/types';
 import { CoffeeBeanManager } from '@/lib/coffeeBeanManager';
 import { v4 as _uuidv4 } from 'uuid';
+import { copyMethodToClipboard } from "@/lib/customMethods";
+import { showToast } from "@/components/ui/toast";
 
 // 动态导入客户端组件
 const PourVisualizer = dynamic(() => import('@/components/PourVisualizer'), {
@@ -78,6 +80,7 @@ interface TabContentProps {
     setEditingEquipment: (equipment: CustomEquipment | undefined) => void;
     handleSaveEquipment: (equipment: CustomEquipment) => Promise<void>;
     handleDeleteEquipment: (equipment: CustomEquipment) => Promise<void>;
+    _onShareMethod?: (method: Method) => void;
 }
 
 const TabContent: React.FC<TabContentProps> = ({
@@ -117,7 +120,8 @@ const TabContent: React.FC<TabContentProps> = ({
     setShowEquipmentForm,
     setEditingEquipment,
     handleSaveEquipment: _handleSaveEquipment,
-    handleDeleteEquipment
+    handleDeleteEquipment,
+    _onShareMethod,
 }) => {
     // 笔记表单状态
     const [noteSaved, setNoteSaved] = React.useState(false);
@@ -243,6 +247,24 @@ const TabContent: React.FC<TabContentProps> = ({
         }
     }, [showCustomForm, showImportForm, settings, isPourVisualizerPreloaded]);
 
+    // 处理分享方案
+    const handleShareMethod = async (method: Method) => {
+        try {
+            await copyMethodToClipboard(method);
+            showToast({
+                type: 'success',
+                title: '已复制到剪贴板',
+                duration: 2000
+            });
+        } catch (_error) {
+            showToast({
+                type: 'error',
+                title: '复制失败，请重试',
+                duration: 2000
+            });
+        }
+    };
+
     // 如果不是在冲煮主Tab，显示占位内容
     if (activeMainTab !== '冲煮') {
         return null; // 直接返回null，让父组件处理显示内容
@@ -363,6 +385,17 @@ const TabContent: React.FC<TabContentProps> = ({
                                 const equipment = customEquipments.find(e => e.name === step.title);
                                 if (equipment) {
                                     handleDeleteEquipment(equipment);
+                                }
+                            } : undefined}
+                            onShare={activeTab === '方案' as TabType ? () => {
+                                if (methodType === 'custom' && customMethods[selectedEquipment!]) {
+                                    const method = customMethods[selectedEquipment!][index];
+                                    handleShareMethod(method);
+                                } else if (methodType === 'common' && selectedEquipment) {
+                                    const method = commonMethods[selectedEquipment];
+                                    if (method && method[index]) {
+                                        handleShareMethod(method[index]);
+                                    }
                                 }
                             } : undefined}
                             actionMenuStates={actionMenuStates}
