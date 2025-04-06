@@ -152,6 +152,12 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(({
   const mergePreviousFrames = useCallback((endIndex: number) => {
     if (endIndex <= 0 || frames.length === 0) return '';
     
+    console.log('[合并前帧] 开始合并:', {
+      endIndex,
+      framesCount: frames.length,
+      framesWithData: frames.filter(f => f.svgData).length
+    });
+    
     // 创建一个临时的SVG文档
     const parser = new DOMParser();
     let combinedSvgDoc: Document | null = null;
@@ -161,8 +167,12 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(({
     // 遍历所有之前的帧，提取其SVG路径并合并
     for (let i = 0; i < endIndex; i++) {
       const frameSvg = frames[i]?.svgData || '';
-      if (!frameSvg || frameSvg.trim() === '') continue;
+      if (!frameSvg || frameSvg.trim() === '') {
+        console.log(`[合并前帧] 跳过空帧 ${i + 1}`);
+        continue;
+      }
       
+      console.log(`[合并前帧] 处理帧 ${i + 1}, SVG长度:`, frameSvg.length);
       const svgDoc = parser.parseFromString(frameSvg, 'image/svg+xml');
       
       // 如果是第一个有效的SVG，保存其宽高并作为基础SVG
@@ -170,6 +180,7 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(({
         combinedSvgDoc = svgDoc;
         firstSvgWidth = parseInt(svgDoc.documentElement.getAttribute('width') || `${width}`, 10);
         firstSvgHeight = parseInt(svgDoc.documentElement.getAttribute('height') || `${height}`, 10);
+        console.log(`[合并前帧] 使用帧 ${i + 1} 作为基础SVG`);
         continue;
       }
       
@@ -183,11 +194,15 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(({
             );
           }
         });
+        console.log(`[合并前帧] 合并帧 ${i + 1} 的路径到基础SVG`);
       }
     }
     
     // 如果没有有效的SVG帧，返回空字符串
-    if (!combinedSvgDoc) return '';
+    if (!combinedSvgDoc) {
+      console.log('[合并前帧] 没有找到有效的SVG帧');
+      return '';
+    }
     
     // 确保SVG设置了正确的宽高和viewBox
     if (combinedSvgDoc.documentElement) {
@@ -198,7 +213,9 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(({
     
     // 将DOM转换回字符串
     const serializer = new XMLSerializer();
-    return serializer.serializeToString(combinedSvgDoc);
+    const result = serializer.serializeToString(combinedSvgDoc);
+    console.log('[合并前帧] 完成合并, 结果SVG长度:', result.length);
+    return result;
   }, [frames, width, height]);
   
   // 保存当前帧内容
@@ -228,7 +245,12 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(({
     // 先保存当前帧的内容
     saveCurrentFrame();
     
-    // 切换到新帧 - 底图更新将在useEffect中处理
+    // 更新前面帧的合并SVG
+    const mergedSvg = mergePreviousFrames(index);
+    console.log('[切换帧] 合并前帧SVG长度:', mergedSvg.length);
+    setPreviousFramesSvg(mergedSvg);
+    
+    // 切换到新帧
     setCurrentFrameIndex(index);
     
     // 清空画布并加载当前帧内容（如果有）
@@ -247,7 +269,7 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(({
     }
     
     hapticsUtils.light();
-  }, [frames, saveCurrentFrame]);
+  }, [frames, saveCurrentFrame, mergePreviousFrames]);
   
   // 添加新帧
   const addFrame = useCallback(() => {
@@ -265,17 +287,28 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(({
     // 生成新的帧ID
     const newFrameId = `frame-${Date.now()}`;
     
-    // 添加新帧（空白）
-    setFrames(prev => [...prev, { id: newFrameId, svgData: '' }]);
-    
-    // 自动切换到新帧 - 底图更新将在useEffect中处理
-    setCurrentFrameIndex(frames.length);
+    // 添加新帧（空白）并更新当前帧索引
+    setFrames(prev => {
+      const newFrames = [...prev, { id: newFrameId, svgData: '' }];
+      // 在帧数组更新的同时更新当前帧索引，确保它们是同步的
+      const newIndex = newFrames.length - 1;
+      
+      // 更新前面帧的合并SVG
+      const mergedSvg = mergePreviousFrames(newIndex);
+      console.log('[添加新帧] 合并前帧SVG长度:', mergedSvg.length);
+      setPreviousFramesSvg(mergedSvg);
+      
+      // 更新当前帧索引
+      setCurrentFrameIndex(newIndex);
+      
+      return newFrames;
+    });
     
     // 清空当前绘图内容
     if (canvasRef.current) {
       canvasRef.current.clear();
     }
-  }, [frames, maxFrames, saveCurrentFrame]);
+  }, [frames, maxFrames, saveCurrentFrame, mergePreviousFrames]);
   
   // 删除当前帧
   const deleteCurrentFrame = useCallback(() => {
@@ -342,8 +375,17 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(({
     hapticsUtils.light();
   }, []);
   
+  // 确保参考图像在组件挂载时正确初始化
+  useEffect(() => {
+    if (referenceImages.length > 0 && !referenceSrc) {
+      console.log('[参考图像] 初始化默认参考图像:', referenceImages[0].url);
+      setReferenceSrc(referenceImages[0].url);
+    }
+  }, [referenceImages, referenceSrc]);
+  
   // 选择参考图像
   const selectReferenceImage = useCallback((src: string | null) => {
+    console.log('[参考图像] 切换参考图像:', src);
     setReferenceSrc(src);
     hapticsUtils.light();
   }, []);
@@ -417,13 +459,15 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(({
   useEffect(() => {
     // 只有在有多个帧，且当前帧索引大于0时才需要设置底图
     if (frames.length > 1 && currentFrameIndex > 0) {
-      console.log(`更新底图: 当前帧 ${currentFrameIndex + 1}, 合并前 ${currentFrameIndex} 帧`);
+      console.log(`[更新底图] 当前帧 ${currentFrameIndex + 1}, 合并前 ${currentFrameIndex} 帧`);
       
       // 合并当前帧之前的所有帧作为底图
       const mergedPreviousSvg = mergePreviousFrames(currentFrameIndex);
+      console.log('[更新底图] 合并前帧SVG长度:', mergedPreviousSvg.length);
       setPreviousFramesSvg(mergedPreviousSvg);
     } else if (currentFrameIndex === 0) {
       // 第一帧不需要底图
+      console.log('[更新底图] 第一帧，清空底图');
       setPreviousFramesSvg('');
     }
   }, [currentFrameIndex, frames, mergePreviousFrames]);
@@ -477,9 +521,10 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(({
           defaultSvg={currentFrame.svgData}
           onDrawingComplete={handleDrawingComplete}
           referenceSvg={previousFramesSvg}
-          referenceSvgUrl={referenceSrc || undefined}
-          customReferenceSvg={referenceSvg}
+          referenceSvgUrl={!referenceSvg ? (referenceSrc || undefined) : undefined}
+          _customReferenceSvg={referenceSvg}
           strokeColor={strokeColor}
+          showReference={true}
         />
         
         {/* 帧指示器 */}

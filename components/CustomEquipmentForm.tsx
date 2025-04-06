@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { CustomEquipment } from '@/lib/config';
 import { isEquipmentNameAvailable } from '@/lib/customEquipments';
 import DrawingCanvas, { DrawingCanvasRef } from './DrawingCanvas';
@@ -221,6 +221,14 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
     const [_hasValveDrawn, setHasValveDrawn] = useState(!!equipment.customValveSvg);
     const [valveEditMode, setValveEditMode] = useState<'closed' | 'open'>('closed');
     const [valvePreviewState, setValvePreviewState] = useState<'closed' | 'open'>('closed');
+    
+    // 添加对设备数据的引用，用于确保最新数据在各个视图间同步
+    const equipmentRef = useRef<Partial<CustomEquipment>>(equipment);
+    
+    // 当equipment状态更新时，同步更新引用
+    useEffect(() => {
+        equipmentRef.current = equipment;
+    }, [equipment]);
     
     // 添加当前预览帧状态
     const [previewFrameIndexes, setPreviewFrameIndexes] = useState<Record<string, number>>({});
@@ -463,12 +471,19 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
     const handleDrawingComplete = (svg: string) => {
         console.log('杯型绘制完成，获取到SVG数据，长度:', svg.length);
         if (svg && svg.trim() !== '') {
+            // 更新equipment状态
             setEquipment(prev => ({
                 ...prev,
                 customShapeSvg: svg
             }));
             setHasDrawn(true);
             console.log('已保存自定义杯型SVG到设备数据中');
+            
+            // 确保在绘制完成后立即更新引用值，避免状态延迟同步问题
+            equipmentRef.current = {
+                ...equipmentRef.current,
+                customShapeSvg: svg
+            };
         } else {
             console.error('绘制完成但SVG数据为空');
         }
@@ -567,6 +582,24 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
     };
 
     const handleEditPourAnimation = (animation: CustomPourAnimation) => {
+        // 记录当前杯型状态，有助于调试
+        console.log('[编辑注水] 开始编辑注水动画时的杯型状态:', {
+            hasCustomShape: !!equipment.customShapeSvg,
+            svgLength: equipment.customShapeSvg?.length || 0,
+            animationId: animation.id,
+            animationName: animation.name
+        });
+        
+        // 确保引用数据是最新的
+        if (equipment.customShapeSvg) {
+            equipmentRef.current = {
+                ...equipmentRef.current,
+                customShapeSvg: equipment.customShapeSvg
+            };
+            
+            console.log('[编辑注水] 已更新设备引用数据');
+        }
+        
         setCurrentEditingAnimation({...animation});
         setShowPourAnimationCanvas(true);
     };
@@ -708,25 +741,74 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
         }
     }, [showPourAnimationCanvas]);
 
-    // 渲染注水动画编辑画布
-    const renderPourAnimationCanvas = () => {
-        if (!currentEditingAnimation) return null;
-        
-        // 获取参考图像，格式为{ url: string; label: string }[]
-        const referenceImageUrls = getPourAnimationReferenceImages(currentEditingAnimation);
-        
-        // 将现有SVG转换为动画帧
-        let initialFrames: AnimationFrame[] = [];
-        if (currentEditingAnimation.frames && currentEditingAnimation.frames.length > 0) {
-            initialFrames = currentEditingAnimation.frames;
-            console.log(`[编辑动画] 使用已有的${initialFrames.length}帧数据`);
-        } else if (currentEditingAnimation.customAnimationSvg) {
-            initialFrames = _svgToAnimationFrames(currentEditingAnimation.customAnimationSvg);
-            console.log(`[编辑动画] 从SVG创建新帧，SVG长度: ${currentEditingAnimation.customAnimationSvg.length}`);
-        } else {
-            initialFrames = [{ id: 'frame-1', svgData: '' }];
-            console.log(`[编辑动画] 创建空帧`);
+    // 添加监听器，确保在打开注水动画编辑器时使用最新的杯型数据
+    useEffect(() => {
+        if (showPourAnimationCanvas && currentEditingAnimation) {
+            if (process.env.NODE_ENV === 'development') {
+                console.debug('[注水动画编辑] 监测到编辑器打开');
+                // 确保设备引用是最新的
+                if (equipment.customShapeSvg) {
+                    console.debug('[注水动画编辑] 杯型数据状态:', {
+                        hasCustomShape: true,
+                        svgLength: equipment.customShapeSvg.length,
+                        equipmentId: equipment.id || '未保存设备',
+                        animationId: currentEditingAnimation.id
+                    });
+                }
+            }
         }
+    }, [showPourAnimationCanvas, currentEditingAnimation?.id]);
+
+    // 获取参考图像
+    const referenceImageUrls = useMemo(() => 
+        currentEditingAnimation 
+            ? getPourAnimationReferenceImages(currentEditingAnimation)
+            : [],
+        [currentEditingAnimation]
+    );
+    
+    // 获取自定义杯型SVG
+    const customShapeSvg = useMemo(() => {
+        const svg = equipment.customShapeSvg || equipmentRef.current.customShapeSvg;
+        if (svg) {
+            console.log('[注水动画编辑] 初始化杯型数据:', svg.length);
+        }
+        return svg;
+    }, [equipment.customShapeSvg]); // 只依赖于 equipment.customShapeSvg
+    
+    // 获取初始帧数据
+    const initialFrames = useMemo(() => {
+        if (!currentEditingAnimation) return [{ id: 'frame-1', svgData: '' }];
+        
+        if (process.env.NODE_ENV === 'development') {
+            console.debug('[注水动画编辑] 帧数据状态:', {
+                hasFrames: Boolean(currentEditingAnimation.frames?.length),
+                hasCustomAnimation: Boolean(currentEditingAnimation.customAnimationSvg),
+                framesCount: currentEditingAnimation.frames?.length || 0,
+                animationId: currentEditingAnimation.id
+            });
+        }
+        
+        if (currentEditingAnimation.frames && currentEditingAnimation.frames.length > 0) {
+            return currentEditingAnimation.frames;
+        }
+        if (currentEditingAnimation.customAnimationSvg) {
+            return _svgToAnimationFrames(currentEditingAnimation.customAnimationSvg);
+        }
+        return [{ id: 'frame-1', svgData: '' }];
+    }, [currentEditingAnimation]);
+    
+    // 生成编辑器key - 添加 showPourAnimationCanvas 作为依赖
+    const editorKey = useMemo(() => 
+        currentEditingAnimation
+            ? `animation-editor-${currentEditingAnimation.id}-${customShapeSvg?.length || 0}-${showPourAnimationCanvas}`
+            : '',
+        [currentEditingAnimation, customShapeSvg, showPourAnimationCanvas]
+    );
+
+    // 渲染注水动画画布
+    const renderPourAnimationCanvas = useCallback(() => {
+        if (!currentEditingAnimation) return null;
         
         return (
             <>
@@ -739,7 +821,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                     }
                     onBack={() => {
                         setShowPourAnimationCanvas(false);
-                        setIsPlaying(false); // 退出时重置播放状态
+                        setIsPlaying(false);
                     }}
                     onSave={handleSavePourAnimation}
                 />
@@ -753,7 +835,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                             className="mt-1 block w-full rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500 dark:text-white"
                             placeholder="例如：中心注水"
                             readOnly={currentEditingAnimation.isSystemDefault}
-                            maxLength={20} // 添加最大长度限制
+                            maxLength={20}
                         />
                     </FormField>
                     
@@ -778,17 +860,12 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                     {canvasSize > 0 && (
                         <div className="animation-editor-custom">
                             <style jsx>{`
-                                /* 隐藏AnimationEditor组件的帧操作按钮工具栏 */
                                 .animation-editor-custom :global(.flex.flex-col.space-y-2 > div.flex.justify-between) {
                                     display: none;
                                 }
-                                
-                                /* 隐藏参考图像选择区域 */
                                 .animation-editor-custom :global(.flex.flex-col.space-y-2 > div.mt-2) {
                                     display: none;
                                 }
-                                
-                                /* 隐藏添加帧按钮 */
                                 .animation-editor-custom :global(.flex-shrink-0.w-16.h-16.bg-neutral-200.dark\\:bg-neutral-700.rounded-md.border-2.border-dashed) {
                                     display: none;
                                 }
@@ -801,7 +878,8 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                                 referenceImages={referenceImageUrls}
                                 strokeColor="white"
                                 maxFrames={currentEditingAnimation.previewFrames || 4}
-                                referenceSvg={equipment.customShapeSvg || undefined}
+                                referenceSvg={customShapeSvg}
+                                key={editorKey}
                             />
                         </div>
                     )}
@@ -921,7 +999,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                 </div>
             </>
         );
-    };
+    }, [strokeWidth, handleTogglePlayback, handleDeleteCurrentFrame, handleAddNewFrame, currentEditingAnimation, canvasSize, customShapeSvg, showPourAnimationCanvas]);
 
     // 渲染绘图界面
     const renderDrawingCanvas = () => (

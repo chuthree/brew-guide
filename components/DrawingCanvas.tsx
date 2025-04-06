@@ -24,7 +24,7 @@ interface DrawingCanvasProps {
   referenceSvg?: string;
   strokeColor?: string;
   showReference?: boolean;
-  customReferenceSvg?: string;
+  _customReferenceSvg?: string;
 }
 
 // 定义暴露给父组件的API接口
@@ -62,11 +62,12 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
   referenceSvg,
   strokeColor,
   showReference = true,
-  customReferenceSvg,
+  _customReferenceSvg,
 }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const linesRef = useRef<Line[]>([]);
+  const blobUrlRef = useRef<string | null>(null);
   
   // 状态
   const [isDrawing, setIsDrawing] = useState(false);
@@ -151,90 +152,194 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
     }
   }, [defaultSvg]);
 
-  // 加载URL参考图像（杯型等）
-  useEffect(() => {
-    if (!referenceSvgUrl) {
-      setUrlReferenceLoaded(false);
-      urlReferenceImageRef.current = null;
-      return;
+  // 清理函数
+  const cleanupBlobUrl = useCallback(() => {
+    if (blobUrlRef.current) {
+      URL.revokeObjectURL(blobUrlRef.current);
+      blobUrlRef.current = null;
     }
-    
-    const img = new Image();
-    img.src = referenceSvgUrl;
-    img.onload = () => {
-      urlReferenceImageRef.current = img;
-      setUrlReferenceLoaded(true);
-    };
-    
-    return () => {
-      img.onload = null;
-    };
-  }, [referenceSvgUrl]);
+  }, []);
 
-  // 加载SVG字符串作为参考图像（前帧）
+  // 加载SVG字符串作为参考图像
   useEffect(() => {
+    let mounted = true;
+    let currentBlobUrl: string | null = null;
+
     // 清理上一个引用
     setReferenceLoaded(false);
     referenceImageRef.current = null;
+    cleanupBlobUrl();
 
-    // 使用referenceSvg（直接的SVG字符串）
-    if (referenceSvg && referenceSvg.trim() !== '') {
+    // 优先使用自定义杯型SVG
+    const svgToUse = referenceSvg;
+    
+    if (!svgToUse || !svgToUse.trim()) {
+      console.log('[SVG加载] 没有SVG数据');
+      return () => {
+        mounted = false;
+      };
+    }
+
+    try {
+      console.log('[SVG加载] 开始处理SVG数据，长度:', svgToUse.length);
+      
       // 处理SVG颜色 - 在深色模式下将黑色线条转换为白色
-      let processedSvg = referenceSvg;
+      let processedSvg = svgToUse;
       if (isDark) {
-        // 简单替换黑色为白色（对于var(--custom-shape-color)和#000000两种情况）
         processedSvg = processedSvg
           .replace(/stroke="var\(--custom-shape-color\)"/g, 'stroke="#FFFFFF"')
           .replace(/stroke="#000000"/g, 'stroke="#FFFFFF"')
           .replace(/stroke="black"/g, 'stroke="#FFFFFF"');
       }
-      
+
       const svgBlob = new Blob([processedSvg], { type: 'image/svg+xml' });
       const url = URL.createObjectURL(svgBlob);
-      
+      currentBlobUrl = url;
+      blobUrlRef.current = url;
+
       const img = new Image();
       img.src = url;
-      img.onload = () => {
-        referenceImageRef.current = img;
-        setReferenceLoaded(true);
-        URL.revokeObjectURL(url); // 释放URL对象
-      };
-      
-      return () => {
-        img.onload = null;
-        URL.revokeObjectURL(url);
-      };
-    }
-  }, [referenceSvg, isDark]);
 
-  // 加载自定义杯型SVG作为参考图像
+      img.onload = () => {
+        if (mounted) {
+          console.log('[SVG加载] 图像加载完成');
+          referenceImageRef.current = img;
+          setReferenceLoaded(true);
+        }
+      };
+
+      // 添加错误处理
+      img.onerror = (error) => {
+        if (mounted) {
+          console.error('[SVG加载] 图像加载出错:', error);
+        }
+      };
+
+      return () => {
+        mounted = false;
+        // 组件卸载时清理资源
+        img.onload = null;
+        img.onerror = null;
+        if (currentBlobUrl) {
+          URL.revokeObjectURL(currentBlobUrl);
+        }
+      };
+    } catch (error) {
+      console.error('[SVG加载] 处理SVG时出错:', error);
+      if (currentBlobUrl) {
+        URL.revokeObjectURL(currentBlobUrl);
+      }
+    }
+  }, [referenceSvg, isDark, cleanupBlobUrl]);
+
+  // 加载URL参考图像（杯型等）
   useEffect(() => {
-    if (!customReferenceSvg) return;
-    
-    // 处理SVG颜色 - 在深色模式下将黑色线条转换为白色
-    let processedSvg = customReferenceSvg;
-    if (isDark) {
-      processedSvg = processedSvg
-        .replace(/stroke="var\(--custom-shape-color\)"/g, 'stroke="#FFFFFF"')
-        .replace(/stroke="#000000"/g, 'stroke="#FFFFFF"')
-        .replace(/stroke="black"/g, 'stroke="#FFFFFF"');
+    let mounted = true;
+
+    // 如果有自定义杯型，就不加载默认杯型
+    if (_customReferenceSvg) {
+      console.log('[杯型加载] 使用自定义杯型');
+      setUrlReferenceLoaded(false);
+      urlReferenceImageRef.current = null;
+      return () => {
+        mounted = false;
+      };
+    }
+
+    if (!referenceSvgUrl) {
+      setUrlReferenceLoaded(false);
+      urlReferenceImageRef.current = null;
+      return () => {
+        mounted = false;
+      };
     }
     
-    const svgBlob = new Blob([processedSvg], { type: 'image/svg+xml' });
-    const url = URL.createObjectURL(svgBlob);
+    console.log('[杯型加载] 开始加载默认杯型图像:', referenceSvgUrl);
     
     const img = new Image();
-    img.src = url;
+    img.src = referenceSvgUrl;
+    
     img.onload = () => {
-      urlReferenceImageRef.current = img;
-      setUrlReferenceLoaded(true);
-      URL.revokeObjectURL(url);
+      if (mounted) {
+        console.log('[杯型加载] 默认杯型图像加载完成');
+        urlReferenceImageRef.current = img;
+        setUrlReferenceLoaded(true);
+      }
+    };
+
+    img.onerror = (error) => {
+      if (mounted) {
+        console.error('[杯型加载] 默认杯型图像加载失败:', error);
+      }
     };
     
     return () => {
+      mounted = false;
       img.onload = null;
+      img.onerror = null;
     };
-  }, [customReferenceSvg, isDark]);
+  }, [referenceSvgUrl, _customReferenceSvg]);
+
+  // 加载自定义杯型SVG
+  useEffect(() => {
+    let mounted = true;
+    let currentBlobUrl: string | null = null;
+
+    if (!_customReferenceSvg) {
+      return () => {
+        mounted = false;
+      };
+    }
+
+    try {
+      console.log('[自定义杯型] 开始处理SVG数据，长度:', _customReferenceSvg.length);
+      
+      // 处理SVG颜色 - 在深色模式下将黑色线条转换为白色
+      let processedSvg = _customReferenceSvg;
+      if (isDark) {
+        processedSvg = processedSvg
+          .replace(/stroke="var\(--custom-shape-color\)"/g, 'stroke="#FFFFFF"')
+          .replace(/stroke="#000000"/g, 'stroke="#FFFFFF"')
+          .replace(/stroke="black"/g, 'stroke="#FFFFFF"');
+      }
+
+      const svgBlob = new Blob([processedSvg], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(svgBlob);
+      currentBlobUrl = url;
+      blobUrlRef.current = url;
+
+      const img = new Image();
+      img.src = url;
+
+      img.onload = () => {
+        if (mounted) {
+          console.log('[自定义杯型] 图像加载完成');
+          urlReferenceImageRef.current = img;
+          setUrlReferenceLoaded(true);
+        }
+      };
+
+      img.onerror = (error) => {
+        if (mounted) {
+          console.error('[自定义杯型] 图像加载失败:', error);
+        }
+      };
+
+      return () => {
+        mounted = false;
+        img.onload = null;
+        img.onerror = null;
+        if (currentBlobUrl) {
+          URL.revokeObjectURL(currentBlobUrl);
+        }
+      };
+    } catch (error) {
+      console.error('[自定义杯型] 处理SVG时出错:', error);
+      if (currentBlobUrl) {
+        URL.revokeObjectURL(currentBlobUrl);
+      }
+    }
+  }, [_customReferenceSvg, isDark]);
 
   // 设置画布偏移 - 优化版本，添加更多时机更新位置
   const updateCanvasOffset = useCallback(() => {
@@ -288,7 +393,31 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
     // 清空画布
     context.clearRect(0, 0, canvas.width, canvas.height);
     
-    // 绘制URL参考图像（杯型等）
+    // 首先绘制SVG参考图像（前帧）
+    if (showReference && referenceLoaded && referenceImageRef.current) {
+      context.save();
+      
+      // 设置透明度 - 前帧底图在深色模式下使用更高的不透明度以增强可见性
+      context.globalAlpha = isDark ? 0.6 : 0.4;
+      
+      // 不需要反转色彩，我们已经在加载SVG时处理过了
+      // 但在深色模式下可以增加一些滤镜提高可见性
+      if (isDark) {
+        context.filter = 'brightness(1.2)';
+      }
+      
+      context.drawImage(
+        referenceImageRef.current, 
+        0, 
+        0, 
+        canvas.width, 
+        canvas.height
+      );
+      
+      context.restore();
+    }
+    
+    // 然后绘制URL参考图像（杯型等）
     if (urlReferenceLoaded && urlReferenceImageRef.current) {
       context.save();
       
@@ -343,30 +472,6 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
       context.restore();
     }
     
-    // 绘制SVG参考图像（前帧）
-    if (referenceLoaded && referenceImageRef.current) {
-      context.save();
-      
-      // 设置透明度 - 前帧底图在深色模式下使用更高的不透明度以增强可见性
-      context.globalAlpha = isDark ? 0.6 : 0.4;
-      
-      // 不需要反转色彩，我们已经在加载SVG时处理过了
-      // 但在深色模式下可以增加一些滤镜提高可见性
-      if (isDark) {
-        context.filter = 'brightness(1.2)';
-      }
-      
-      context.drawImage(
-        referenceImageRef.current, 
-        0, 
-        0, 
-        canvas.width, 
-        canvas.height
-      );
-      
-      context.restore();
-    }
-    
     // 获取当前绘图颜色
     const drawingColor = getCurrentDrawingColor();
     
@@ -415,22 +520,14 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
       context.lineJoin = 'round';
       context.stroke();
     }
-    
-    // 在画布未就绪时，绘制提示
-    if (!isReady) {
-      // 在深色模式下使用白色文本
-      context.fillStyle = isDark ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)';
-      context.textAlign = 'center';
-      context.textBaseline = 'middle';
-      context.font = '14px sans-serif';
-      context.fillText('加载中...', canvas.width / 2, canvas.height / 2);
-    }
-  }, [lines, currentLine, referenceLoaded, urlReferenceLoaded, isReady, isDark, getCurrentDrawingColor]);
+  }, [lines, currentLine, referenceLoaded, urlReferenceLoaded, showReference, isDark, getCurrentDrawingColor, width, height, referenceSvg]);
 
   // 每次状态更新时重绘画布
   useEffect(() => {
-    redrawCanvas();
-  }, [lines, currentLine, redrawCanvas, isReady, referenceLoaded, urlReferenceLoaded, isDark]);
+    if (isReady) {
+      redrawCanvas();
+    }
+  }, [redrawCanvas, isReady]);
 
   // 更新linesRef当lines状态改变时
   useEffect(() => {
@@ -588,96 +685,134 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
     setColor: _setColor
   }), [clearCanvas, undoLastLine, saveDrawing, setStrokeWidth, _setColor]);
 
+  // 渲染函数
   const draw = useCallback(() => {
-    const canvas = canvasRef.current;
-    const ctx = canvas?.getContext('2d');
-    if (!canvas || !ctx) return;
+    if (!canvasRef.current || !isReady) return;
+    const ctx = canvasRef.current.getContext('2d');
+    if (!ctx) return;
 
     // 清空画布
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    // 如果启用了底图显示，则绘制参考图像
-    if (showReference) {
-      // 优先使用自定义杯型SVG
-      if (customReferenceSvg && urlReferenceImageRef.current) {
-        ctx.save();
-        ctx.globalAlpha = 0.2;
-        ctx.drawImage(
-          urlReferenceImageRef.current,
-          0,
-          0,
-          canvas.width,
-          canvas.height
-        );
-        ctx.restore();
-      }
-      // 如果没有自定义杯型，则使用默认参考图像
-      else if (urlReferenceLoaded && urlReferenceImageRef.current) {
-        ctx.save();
-        ctx.globalAlpha = 0.2;
-        ctx.drawImage(
-          urlReferenceImageRef.current,
-          0,
-          0,
-          canvas.width,
-          canvas.height
-        );
-        ctx.restore();
-      }
+    ctx.clearRect(0, 0, width, height);
 
-      // 绘制SVG参考图像（如果有）
+    // 如果需要显示参考图像
+    if (showReference) {
+      // 优先显示前帧底图（referenceSvg）
       if (referenceLoaded && referenceImageRef.current) {
         ctx.save();
-        ctx.globalAlpha = 0.2;
-        ctx.drawImage(
-          referenceImageRef.current,
-          0,
-          0,
-          canvas.width,
-          canvas.height
-        );
+        ctx.globalAlpha = isDark ? 0.4 : 0.3; // 调整前帧底图的透明度
+        
+        // 在深色模式下可以增加一些滤镜提高可见性
+        if (isDark) {
+          ctx.filter = 'brightness(1.2)';
+        }
+        
+        ctx.drawImage(referenceImageRef.current, 0, 0, width, height);
+        ctx.restore();
+      }
+      
+      // 然后显示杯型参考图像
+      if (urlReferenceLoaded && urlReferenceImageRef.current) {
+        ctx.save();
+        ctx.globalAlpha = isDark ? 0.8 : 0.2;
+        
+        if (isDark) {
+          // 在深色模式下强化反转和对比度
+          ctx.filter = 'invert(1) contrast(2) brightness(2.5)';
+          
+          // 先绘制一次增强的图像
+          ctx.drawImage(
+            urlReferenceImageRef.current, 
+            0, 
+            0, 
+            width, 
+            height
+          );
+          
+          // 再绘制一次轮廓加强效果
+          ctx.globalAlpha = 0.7;
+          ctx.filter = 'invert(1) contrast(3) brightness(3) saturate(0)';
+          ctx.drawImage(
+            urlReferenceImageRef.current, 
+            0, 
+            0, 
+            width, 
+            height
+          );
+          
+          // 添加第三次绘制，专注于轮廓
+          ctx.globalAlpha = 0.5;
+          ctx.filter = 'invert(1) brightness(5) contrast(5) saturate(0)';
+          ctx.drawImage(
+            urlReferenceImageRef.current, 
+            0, 
+            0, 
+            width, 
+            height
+          );
+        } else {
+          // 浅色模式正常绘制
+          ctx.drawImage(
+            urlReferenceImageRef.current, 
+            0, 
+            0, 
+            width, 
+            height
+          );
+        }
+        
         ctx.restore();
       }
     }
 
-    // 绘制所有已完成的线条
+    // 获取当前绘图颜色
+    const drawingColor = getCurrentDrawingColor();
+    
+    // 绘制所有已保存的线条
     lines.forEach(line => {
       if (line.points.length < 2) return;
       
       ctx.beginPath();
-      ctx.strokeStyle = isDark ? '#FFFFFF' : line.color;
+      ctx.moveTo(line.points[0].x, line.points[0].y);
+      
+      for (let i = 1; i < line.points.length; i++) {
+        ctx.lineTo(line.points[i].x, line.points[i].y);
+      }
+      
+      // 在深色模式下对黑色线条使用白色
+      const lineColor = 
+        (isDark && (line.color === '#000000' || line.color === 'black')) 
+          ? drawingColor 
+          : line.color;
+      
+      ctx.strokeStyle = lineColor;
       ctx.lineWidth = line.strokeWidth;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
-      
-      const [first, ...rest] = line.points;
-      ctx.moveTo(first.x, first.y);
-      
-      rest.forEach(point => {
-        ctx.lineTo(point.x, point.y);
-      });
-      
       ctx.stroke();
     });
     
     // 绘制当前正在绘制的线条
-    if (currentLine?.points.length) {
+    if (currentLine && currentLine.points.length > 1) {
       ctx.beginPath();
-      ctx.strokeStyle = isDark ? '#FFFFFF' : currentLine.color;
+      ctx.moveTo(currentLine.points[0].x, currentLine.points[0].y);
+      
+      for (let i = 1; i < currentLine.points.length; i++) {
+        ctx.lineTo(currentLine.points[i].x, currentLine.points[i].y);
+      }
+      
+      // 在深色模式下对黑色线条使用白色
+      const lineColor = 
+        (isDark && (currentLine.color === '#000000' || currentLine.color === 'black')) 
+          ? drawingColor 
+          : currentLine.color;
+      
+      ctx.strokeStyle = lineColor;
       ctx.lineWidth = currentLine.strokeWidth;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
-      
-      const [first, ...rest] = currentLine.points;
-      ctx.moveTo(first.x, first.y);
-      
-      rest.forEach(point => {
-        ctx.lineTo(point.x, point.y);
-      });
-      
       ctx.stroke();
     }
-  }, [lines, currentLine, isDark, urlReferenceLoaded, referenceLoaded, showReference, customReferenceSvg]);
+  }, [width, height, lines, currentLine, isReady, showReference, isDark, urlReferenceLoaded, referenceLoaded, getCurrentDrawingColor]);
 
   // 当任何相关状态改变时重新绘制
   useEffect(() => {
