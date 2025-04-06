@@ -65,7 +65,7 @@ const PRESET_OPTIONS = [
     { 
         value: 'v60', 
         label: 'V60预设', 
-        description: '适用于锥形、蛋糕杯、折纸等常规滤杯',
+        description: '适用于锥形、蛋糕杯、折纸等常规器具',
         equipmentId: 'V60', 
     },
     { 
@@ -1141,7 +1141,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                             }}
                             showReference={showReference}
                             // 设置参考图像的优先级：
-                            // 1. customReferenceSvg: 滤杯SVG (作为主背景)
+                            // 1. customReferenceSvg: 器具SVG (作为主背景)
                             // 2. referenceSvg: 另一状态的阀门SVG (作为参考)
                             _customReferenceSvg={equipment.customShapeSvg || undefined}
                             // 另一状态的阀门作为参考
@@ -1149,7 +1149,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                                 ? equipment.customValveOpenSvg  // 如果当前是绘制关闭状态，则显示开启状态作为参考
                                 : equipment.customValveSvg      // 如果当前是绘制开启状态，则显示关闭状态作为参考
                             }
-                            // 如果没有自定义滤杯，使用默认V60滤杯作为底图
+                            // 如果没有自定义器具，使用默认V60器具作为底图
                             referenceSvgUrl={!equipment.customShapeSvg ? "/images/v60-base.svg" : undefined}
                         />
                     )}
@@ -1266,7 +1266,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                     <ul className="list-disc pl-4 space-y-1">
                         <li>当前绘制：{valveEditMode === 'closed' ? "关闭" : "开启"}状态的阀门</li>
                         <li>使用<span className="inline-flex items-center justify-center bg-neutral-200 dark:bg-neutral-700 rounded-full w-5 h-5 mx-1"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14.6 15.5l4.6-4.6c.4-.4.4-1 0-1.4l-4.6-4.6M9.4 15.5L4.8 10.9c-.4-.4-.4-1 0-1.4l4.6-4.6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg></span>按钮切换阀门状态</li>
-                        <li>滤杯显示为底图，另一状态的阀门显示为参考</li>
+                        <li>器具显示为底图，另一状态的阀门显示为参考</li>
                         <li>简单明了的形状更易于识别</li>
                         <li>完成后点击右上角保存</li>
                     </ul>
@@ -1292,7 +1292,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                                 value={equipment.name || ''}
                                 onChange={(e) => handleChange('name', e.target.value)}
                                 className="block w-full rounded-md border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500 dark:text-white transition-colors"
-                                placeholder="例如：双层滤杯"
+                                placeholder="例如：双层器具"
                             />
                         </FormField>
 
@@ -1503,12 +1503,12 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                                                         <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">默认阀门样式</span>
                                                     </div>
                                                     <div className="w-full aspect-square flex items-center justify-center bg-neutral-50 dark:bg-neutral-900 rounded-md relative">
-                                                        {/* 滤杯底图层 */}
+                                                        {/* 器具底图层 */}
                                                         <div className="absolute inset-0 flex items-center justify-center">
                                                             <div className="w-3/4 h-3/4 relative">
                                                                 <Image
                                                                     src="/images/v60-base.svg"
-                                                                    alt="滤杯背景"
+                                                                    alt="器具背景"
                                                                     fill
                                                                     className="object-contain invert-0 dark:invert opacity-60"
                                                                     sizes="(max-width: 768px) 100vw, 300px"
@@ -1592,7 +1592,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                                                                             ) : (
                                                                                 <Image
                                                                                     src="/images/v60-base.svg"
-                                                                                    alt="滤杯背景"
+                                                                                    alt="器具背景"
                                                                                     fill
                                                                                     className="object-contain invert-0 dark:invert opacity-60"
                                                                                     sizes="(max-width: 768px) 100vw, 300px"
@@ -1620,7 +1620,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                                                                             ) : (
                                                                                 <Image
                                                                                     src="/images/v60-base.svg"
-                                                                                    alt="滤杯背景"
+                                                                                    alt="器具背景"
                                                                                     fill
                                                                                     className="object-contain invert-0 dark:invert opacity-60"
                                                                                     sizes="(max-width: 768px) 100vw, 300px"
@@ -1663,7 +1663,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                                                                             ) : (
                                                                                 <Image
                                                                                     src="/images/v60-base.svg"
-                                                                                    alt="滤杯背景"
+                                                                                    alt="器具背景"
                                                                                     fill
                                                                                     className="object-contain invert-0 dark:invert opacity-60"
                                                                                     sizes="(max-width: 768px) 100vw, 300px"
@@ -1691,7 +1691,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                                                                             ) : (
                                                                                 <Image
                                                                                     src="/images/v60-base.svg"
-                                                                                    alt="滤杯背景"
+                                                                                    alt="器具背景"
                                                                                     fill
                                                                                     className="object-contain invert-0 dark:invert opacity-60"
                                                                                     sizes="(max-width: 768px) 100vw, 300px"

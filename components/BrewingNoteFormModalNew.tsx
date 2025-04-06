@@ -5,9 +5,10 @@ import BrewingNoteForm from '@/components/BrewingNoteForm'
 import type { BrewingNoteData, CoffeeBean } from '@/app/types'
 import { equipmentList, brewingMethods } from '@/lib/config'
 import SteppedFormModal, { Step } from '@/components/SteppedFormModal'
-import { type Method } from '@/lib/config'
+import { type Method, type CustomEquipment } from '@/lib/config'
 import { Storage } from '@/lib/storage'
 import { CoffeeBeanManager } from '@/lib/coffeeBeanManager'
+import { loadCustomEquipments } from '@/lib/customEquipments'
 
 interface BrewingNoteFormModalNewProps {
     showForm: boolean
@@ -33,11 +34,12 @@ const BrewingNoteFormModalNew: React.FC<BrewingNoteFormModalNewProps> = ({
     const [selectedCoffeeBean, setSelectedCoffeeBean] = useState<CoffeeBean | null>(initialNote?.coffeeBean || null);
     const [coffeeBeans, setCoffeeBeans] = useState<CoffeeBean[]>([]);
 
-    // 添加滤杯和方案选择状态
+    // 添加器具和方案选择状态
     const [selectedEquipment, setSelectedEquipment] = useState<string>(initialNote?.equipment || '');
     const [selectedMethod, setSelectedMethod] = useState<string>(initialNote?.method || '');
     const [methodType, setMethodType] = useState<'common' | 'custom'>('common');
     const [customMethods, setCustomMethods] = useState<Method[]>([]);
+    const [customEquipments, setCustomEquipments] = useState<CustomEquipment[]>([]);
 
     // 添加本地状态以管理输入值
     const [coffeeAmount, setCoffeeAmount] = useState<string>('15');
@@ -72,7 +74,24 @@ const BrewingNoteFormModalNew: React.FC<BrewingNoteFormModalNewProps> = ({
         }
     }, [showForm]);
 
-    // 根据选择的滤杯和方案类型生成可用的方案列表
+    // 加载自定义器具列表
+    useEffect(() => {
+        const fetchCustomEquipments = async () => {
+            try {
+                const equipments = await loadCustomEquipments();
+                setCustomEquipments(equipments);
+            } catch (error) {
+                console.error('加载自定义器具失败:', error);
+            }
+        };
+
+        // 当表单显示时加载自定义器具列表
+        if (showForm) {
+            fetchCustomEquipments();
+        }
+    }, [showForm]);
+
+    // 根据选择的器具和方案类型生成可用的方案列表
     const availableMethods = selectedEquipment ?
         (methodType === 'common' ? brewingMethods[selectedEquipment] || [] :
             customMethods) : [];
@@ -229,15 +248,24 @@ const BrewingNoteFormModalNew: React.FC<BrewingNoteFormModalNewProps> = ({
         };
     };
 
-    // 处理滤杯选择
+    // 处理器具选择
     const handleEquipmentSelect = (equipmentId: string) => {
-        if (equipmentId === selectedEquipment) return; // 如果选择的是同一个滤杯，不做任何处理
+        if (equipmentId === selectedEquipment) return; // 如果选择的是同一个器具，不做任何处理
 
-        // 设置新的滤杯选择
+        // 设置新的器具选择
         setSelectedEquipment(equipmentId);
 
+        // 检查是否是自定义预设器具
+        const customEquipment = customEquipments.find(e => e.id === equipmentId);
+        const isCustomPresetEquipment = customEquipment?.animationType === 'custom';
+
+        // 如果是自定义预设器具，强制设置为自定义方案模式
+        if (isCustomPresetEquipment) {
+            setMethodType('custom');
+        }
+
         // 检查通用方案是否可用
-        const commonMethodsAvailable = brewingMethods[equipmentId]?.length > 0;
+        const commonMethodsAvailable = !isCustomPresetEquipment && brewingMethods[equipmentId]?.length > 0;
 
         // 加载该设备的自定义方案
         const loadCustomMethods = async () => {
@@ -259,6 +287,16 @@ const BrewingNoteFormModalNew: React.FC<BrewingNoteFormModalNewProps> = ({
 
         // 异步加载自定义方案并更新UI
         loadCustomMethods().then(customMethodsAvailable => {
+            // 如果是自定义预设器具，只能使用自定义方案
+            if (isCustomPresetEquipment) {
+                if (customMethodsAvailable) {
+                    setSelectedMethod(customMethods[0].id || customMethods[0].name);
+                } else {
+                    setSelectedMethod('');
+                }
+                return;
+            }
+
             // 保持当前的方案类型，只在必要时切换
             if (methodType === 'common') {
                 // 如果当前是通用方案模式
@@ -292,11 +330,23 @@ const BrewingNoteFormModalNew: React.FC<BrewingNoteFormModalNewProps> = ({
 
     // 切换方案类型
     const handleMethodTypeChange = (type: 'common' | 'custom') => {
+        // 检查是否是自定义预设器具
+        if (selectedEquipment) {
+            const customEquipment = customEquipments.find(e => e.id === selectedEquipment);
+            const isCustomPresetEquipment = customEquipment?.animationType === 'custom';
+
+            // 如果是自定义预设器具，只能使用自定义方案
+            if (isCustomPresetEquipment && type === 'common') {
+                console.log('自定义预设器具仅支持自定义方案');
+                return;
+            }
+        }
+
         // 只有当类型实际变化时才执行操作
         if (type !== methodType) {
             setMethodType(type);
 
-            // 确保有选择的滤杯
+            // 确保有选择的器具
             if (!selectedEquipment) return;
 
             // 当切换方案类型时，根据新类型重置选中的方案
@@ -561,14 +611,15 @@ const BrewingNoteFormModalNew: React.FC<BrewingNoteFormModalNewProps> = ({
         </div>
     );
 
-    // 步骤2：选择滤杯内容
+    // 步骤2：选择器具内容
     const equipmentStepContent = (
         <div className="space-y-6 py-4">
             <div className="space-y-2">
                 <label className="block text-sm text-neutral-700 dark:text-neutral-300">
-                    选择滤杯
+                    选择器具
                 </label>
                 <div className="grid grid-cols-2 gap-2">
+                    {/* 标准器具列表 */}
                     {equipmentList.map((equipment) => (
                         <button
                             key={equipment.id}
@@ -582,6 +633,24 @@ const BrewingNoteFormModalNew: React.FC<BrewingNoteFormModalNewProps> = ({
                             <div className="font-medium">{equipment.name}</div>
                             <div className="text-xs mt-1 line-clamp-1 opacity-80">
                                 {equipment.description}
+                            </div>
+                        </button>
+                    ))}
+                    
+                    {/* 自定义器具列表 */}
+                    {customEquipments.map((equipment) => (
+                        <button
+                            key={equipment.id}
+                            type="button"
+                            onClick={() => handleEquipmentSelect(equipment.id)}
+                            className={`p-3 rounded-md text-sm text-left transition ${selectedEquipment === equipment.id
+                                ? 'bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-800'
+                                : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300'
+                                }`}
+                        >
+                            <div className="font-medium">{equipment.name}</div>
+                            <div className="text-xs mt-1 line-clamp-1 opacity-80">
+                                {equipment.description || '自定义器具'}
                             </div>
                         </button>
                     ))}
@@ -701,7 +770,7 @@ const BrewingNoteFormModalNew: React.FC<BrewingNoteFormModalNewProps> = ({
                     </div>
                 ) : (
                     <div className="text-sm text-neutral-500 dark:text-neutral-400 p-3 bg-neutral-100 dark:bg-neutral-800 rounded-md">
-                        请先选择滤杯
+                        请先选择器具
                     </div>
                 )}
             </div>
@@ -744,7 +813,7 @@ const BrewingNoteFormModalNew: React.FC<BrewingNoteFormModalNewProps> = ({
         },
         {
             id: 'equipment',
-            label: '选择滤杯',
+            label: '选择器具',
             content: equipmentStepContent,
             isValid: !!selectedEquipment
         },

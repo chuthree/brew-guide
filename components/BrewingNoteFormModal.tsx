@@ -24,7 +24,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
     onClose,
     showOptimizationByDefault = false
 }) => {
-    // 添加滤杯和方案选择状态
+    // 添加器具和方案选择状态
     const [selectedEquipment, setSelectedEquipment] = useState<string>(initialNote?.equipment || '');
     const [selectedMethod, setSelectedMethod] = useState<string>(initialNote?.method || '');
     const [showNoteForm, setShowNoteForm] = useState(false);
@@ -63,7 +63,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
         };
     };
 
-    // 当选择滤杯变化时，重置方案
+    // 当选择器具变化时，重置方案
     useEffect(() => {
         if (selectedEquipment && availableMethods.length > 0 && !availableMethods.find(m => m.name === selectedMethod)) {
             setSelectedMethod(availableMethods[0].name);
@@ -106,7 +106,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
     // 处理继续按钮点击
     const handleContinue = () => {
         if (!selectedEquipment) {
-            alert('请选择滤杯');
+            alert('请选择器具');
             return;
         }
         if (!selectedMethod) {
@@ -116,7 +116,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
         setShowNoteForm(true);
     };
 
-    // 返回选择滤杯和方案的界面
+    // 返回选择器具和方案的界面
     const handleBack = () => {
         setShowNoteForm(false);
     };
@@ -284,10 +284,10 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
                                             <div className="w-8"></div>
                                         </div>
 
-                                        {/* 滤杯选择 */}
+                                        {/* 器具选择 */}
                                         <div className="space-y-2">
                                             <label className="block text-sm text-neutral-700 dark:text-neutral-300">
-                                                选择滤杯
+                                                选择器具
                                             </label>
                                             <div className="grid grid-cols-2 gap-2">
                                                 {equipmentList.map((equipment) => (
@@ -449,7 +449,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
                                             isOpen={true}
                                             onClose={onClose}
                                             onSave={(note) => {
-                                                // 加入滤杯和方案信息
+                                                // 加入器具和方案信息
                                                 const completeNote = {
                                                     ...note,
                                                     equipment: selectedEquipment,

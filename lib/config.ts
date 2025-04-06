@@ -89,15 +89,15 @@ export const equipmentList: Equipment[] = [
 	},
 	{
 		id: "Kalita",
-		name: "蛋糕滤杯",
+		name: "蛋糕器具",
 		description: "波浪形底部设计，流速稳定，萃取更均匀",
 	},
 	{
 		id: "Origami",
-		name: "折纸滤杯",
+		name: "折纸器具",
 		description: "褶皱设计兼具美感与实用性，可使用不同形状滤纸",
 	},
-	// 可以在这里添加更多滤杯
+	// 可以在这里添加更多器具
 ];
 
 // Brewing Methods Data

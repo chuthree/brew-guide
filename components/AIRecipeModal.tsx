@@ -50,7 +50,7 @@ const AIRecipeModal: React.FC<AIRecipeModalProps> = ({
         return diffDays;
     };
 
-    // 根据咖啡豆和选定的滤杯生成提示词
+    // 根据咖啡豆和选定的器具生成提示词
     const generatePrompt = () => {
         if (!coffeeBean) return ''
 
@@ -74,7 +74,7 @@ const AIRecipeModal: React.FC<AIRecipeModalProps> = ({
 风味描述: ${(coffeeBean.flavor || []).join(', ')}
 
 ## 器具
-${selectedEquipment}滤杯${userSuggestionSection}
+${selectedEquipment}器具${userSuggestionSection}
 
 ## 返回格式
 仅返回以下JSON格式数据：
@@ -354,10 +354,10 @@ stages数组中的每个阶段必须包含以下字段：
                                         )}
                                     </div>
 
-                                    {/* 选择滤杯 - 简化设计 */}
+                                    {/* 选择器具 - 简化设计 */}
                                     <div className="space-y-2">
                                         <label className="block text-sm font-medium text-neutral-800 dark:text-white">
-                                            选择滤杯
+                                            选择器具
                                         </label>
                                         <div className="flex">
                                             {equipmentList.map(item => (
