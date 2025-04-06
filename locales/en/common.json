@@ -1,0 +1,17 @@
+{
+  "nav": {
+    "title": "Pour Over",
+    "main": {
+      "brewing": "Brew",
+      "beans": "Beans",
+      "notes": "Notes"
+    },
+    "steps": {
+      "beans": "Beans",
+      "equipment": "Tools",
+      "method": "Plan",
+      "pour": "Pour",
+      "record": "Log"
+    }
+  }
+} 
