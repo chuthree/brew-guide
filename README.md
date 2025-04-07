@@ -65,6 +65,9 @@ bun dev
 
 欢迎提交问题和功能请求！如果您想贡献代码，请先开一个 issue 讨论您想要更改的内容。
 
+欢迎加微信交流群～
+![CleanShot 2025-04-07 at 18 29 25](https://github.com/user-attachments/assets/aea1f43a-037a-41dc-b310-b02568d16180)
+
 ## 许可
 
 [MIT](https://choosealicense.com/licenses/mit/)
