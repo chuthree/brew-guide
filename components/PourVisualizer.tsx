@@ -56,57 +56,14 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
     const [imagesPreloaded, setImagesPreloaded] = useState(false)
     const [displayedIceIndices, setDisplayedIceIndices] = useState<number[]>([])
 
-    // 添加深色模式CSS样式
+    // 移除旧的样式定义
     useEffect(() => {
         // 动态添加深色模式样式
         const style = document.createElement('style');
         style.innerHTML = `
-            @media (prefers-color-scheme: dark) {
-                .dark-mode-svg {
-                    color: white !important;
-                }
-            }
-            .dark .dark-mode-svg {
-                color: white !important;
-            }
-            /* 确保自定义杯型只显示轮廓而不填充 */
-            .custom-shape-svg-container svg {
-                fill: none !important;
-            }
-            .custom-shape-svg-container .cup-shape-outline * {
-                fill: none !important;
-                stroke: currentColor !important;
-            }
-            /* 移除深色模式下的强制白色描边，使用invert替代 */
-            /* .dark .custom-shape-svg-container .cup-shape-outline * {
-                stroke: white !important;
-            } */
-            /* 额外确保outline-only类的元素永远不会被填充 */
-            .outline-only svg *, 
-            .outline-only .cup-shape-outline * {
-                fill: none !important;
-                stroke-width: 1.5px;
-            }
-            /* 针对注水动画状态的特殊处理 */
-            .isPouring .custom-shape-svg-container svg *,
-            .isPouring .outline-only svg * {
-                fill: none !important;
-            }
-            
-            /* 自定义杯型的深色模式处理 - 直接设置颜色不使用invert */
-            @media (prefers-color-scheme: dark) {
-                .custom-cup-shape svg *,
-                .custom-cup-shape .cup-shape-outline * {
-                    stroke: #ffffff !important; /* 深色模式中使用白色描边 */
-                }
-            }
-            .dark .custom-cup-shape svg *,
-            .dark .custom-cup-shape .cup-shape-outline * {
-                stroke: #ffffff !important; /* 深色模式中使用白色描边 */
-            }
+            /* 移除所有旧的样式定义，现在使用全局 CSS */
         `;
         document.head.appendChild(style);
-        
         return () => {
             document.head.removeChild(style);
         };
@@ -451,6 +408,14 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
             // 如果是冰块动画类型(isStacking=true)，使用特殊处理
             if (availableAnimations[pourType]?.isStacking) return null;
             
+            // 如果是自定义动画，使用 frames
+            if (availableAnimations[pourType]?.frames) {
+                const frame = availableAnimations[pourType].frames?.[currentMotionIndex - 1];
+                if (frame?.svgData) {
+                    return processCustomSvg(frame.svgData);
+                }
+            }
+            
             return `/images/pour-${pourType}-motion-${currentMotionIndex}.svg`;
         } catch (error) {
             console.error('获取动画图片路径出错', error);
@@ -458,49 +423,20 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
         }
     }, [isRunning, getCurrentPourType, currentMotionIndex, availableAnimations]);
 
-    // 生成注入SVG标签时的共享函数
+    // 更新 processCustomSvg 函数
     const processCustomSvg = (svgContent: string) => {
         if (!svgContent) return '';
         
-        // 如果SVG内容中没有style标签，添加一个
-        const hasStyleTag = svgContent.includes('<style>') || svgContent.includes('<style ');
+        // 处理 SVG 内容，确保使用 CSS 变量
+        const processedSvg = svgContent
+            // 替换所有颜色相关的属性为 CSS 变量
+            .replace(/stroke="([^"]*)"/, 'stroke="var(--custom-shape-color)"')
+            .replace(/fill="([^"]*)"/, 'fill="none"');
         
-        // 提供基础样式，确保不填充且使用当前文本颜色作为描边
-        const baseStyle = `
-            <style>
-                /* 确保SVG元素不被填充，并使用继承的颜色作为描边 */
-                svg * { 
-                    fill: none !important; 
-                    stroke: currentColor !important;
-                }
-            </style>
-        `;
-        
-        // 在SVG标签中添加宽高属性和cup-shape-outline类
-        let processedSvg = svgContent.replace(/<svg([^>]*)>/, (match, attributes) => {
-            if (hasStyleTag) {
-                // 如果已有style标签，仅添加类名
-                return `<svg${attributes} width="100%" height="100%" class="cup-shape-outline">`;
-            } else {
-                // 如果没有style标签，添加类名和基础样式
-                return `<svg${attributes} width="100%" height="100%" class="cup-shape-outline">${baseStyle}`;
-            }
+        // 添加 SVG 属性和类名
+        return processedSvg.replace(/<svg([^>]*)>/, (match, attributes) => {
+            return `<svg${attributes} width="100%" height="100%" class="custom-cup-shape">`;
         });
-        
-        // 如果存在style标签，修改它以确保不填充
-        if (hasStyleTag) {
-            processedSvg = processedSvg.replace(/<style([^>]*)>/, (match, attributes) => {
-                return `<style${attributes}> 
-                    /* 确保SVG元素不被填充，并使用继承的颜色作为描边 */
-                    svg * { 
-                        fill: none !important; 
-                        stroke: currentColor !important;
-                    }
-                `;
-            });
-        }
-        
-        return processedSvg;
     };
 
     // 如果在倒计时期间，立即返回静态视图
@@ -669,8 +605,8 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                             onError={() => { }}
                         />
                     ) : (
-                        // 自定义SVG内联数据 - 使用custom-cup-shape类，不再使用dark:invert
-                        <div className={`w-full h-full custom-shape-svg-container outline-only custom-cup-shape ${equipmentOpacity}`}
+                        // 自定义SVG内联数据
+                        <div className={`w-full h-full custom-cup-shape outline-only ${equipmentOpacity}`}
                             dangerouslySetInnerHTML={{ 
                                 __html: processCustomSvg(customEquipment.customShapeSvg) 
                             }} 
@@ -698,7 +634,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
             <AnimatePresence mode="sync">
                 {shouldShowAnimation && (
                     <>
-                        {/* 对于普通动画类型（center, circle或自定义帧动画） */}
+                        {/* 对于普通动画类型 */}
                         {!availableAnimations[currentPourType as keyof typeof availableAnimations]?.isStacking && (
                             <motion.div
                                 key={`${currentStage}-${currentMotionIndex}`}
@@ -708,11 +644,10 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                                 transition={{ duration: 0.26 }}
                                 className="absolute inset-0"
                             >
-                                {/* 如果有自定义帧，优先使用帧 */}
                                 {availableAnimations[currentPourType as keyof typeof availableAnimations]?.frames ? (
-                                    // 使用自定义帧 - 使用custom-cup-shape类，不再使用dark:invert
+                                    // 使用自定义帧
                                     <div 
-                                        className="w-full h-full flex items-center justify-center outline-only custom-cup-shape"
+                                        className="w-full h-full flex items-center justify-center custom-cup-shape outline-only"
                                         dangerouslySetInnerHTML={{ 
                                             __html: processCustomSvg(availableAnimations[currentPourType as keyof typeof availableAnimations]?.frames?.[currentMotionIndex - 1]?.svgData || '')
                                         }}

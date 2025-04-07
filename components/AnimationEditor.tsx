@@ -112,9 +112,8 @@ interface AnimationEditorProps {
   height?: number;
   initialFrames?: AnimationFrame[];
   onAnimationComplete?: (frames: AnimationFrame[]) => void;
-  referenceImages?: { url: string; label: string }[];
+  referenceImages?: Array<{ url: string; label: string }>;
   maxFrames?: number;
-  strokeColor?: string;
   referenceSvg?: string;
 }
 
@@ -126,7 +125,6 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(({
   onAnimationComplete,
   referenceImages = [],
   maxFrames = 8,
-  strokeColor,
   referenceSvg,
 }, ref) => {
   // 引用和状态
@@ -173,6 +171,7 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(({
       }
       
       console.log(`[合并前帧] 处理帧 ${i + 1}, SVG长度:`, frameSvg.length);
+      
       const svgDoc = parser.parseFromString(frameSvg, 'image/svg+xml');
       
       // 如果是第一个有效的SVG，保存其宽高并作为基础SVG
@@ -180,6 +179,9 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(({
         combinedSvgDoc = svgDoc;
         firstSvgWidth = parseInt(svgDoc.documentElement.getAttribute('width') || `${width}`, 10);
         firstSvgHeight = parseInt(svgDoc.documentElement.getAttribute('height') || `${height}`, 10);
+        
+        // 为基础 SVG 添加类名
+        svgDoc.documentElement.setAttribute('class', 'custom-cup-shape outline-only');
         console.log(`[合并前帧] 使用帧 ${i + 1} 作为基础SVG`);
         continue;
       }
@@ -209,6 +211,8 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(({
       combinedSvgDoc.documentElement.setAttribute('width', `${firstSvgWidth || width}`);
       combinedSvgDoc.documentElement.setAttribute('height', `${firstSvgHeight || height}`);
       combinedSvgDoc.documentElement.setAttribute('viewBox', `0 0 ${firstSvgWidth || width} ${firstSvgHeight || height}`);
+      // 确保根 SVG 元素有正确的类名
+      combinedSvgDoc.documentElement.setAttribute('class', 'custom-cup-shape outline-only');
     }
     
     // 将DOM转换回字符串
@@ -523,7 +527,6 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(({
           referenceSvg={previousFramesSvg}
           referenceSvgUrl={!referenceSvg ? (referenceSrc || undefined) : undefined}
           _customReferenceSvg={referenceSvg}
-          strokeColor={strokeColor}
           showReference={true}
         />
         

@@ -16,9 +16,11 @@
   --font-sans: 'Geist Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
   --font-mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
   --keyboard-height: 0px;
+  /* SVG 基础颜色变量 */
+  --custom-shape-color: #000000;
 }
 
-/* 当系统偏好为暗黑模式时的样式，仅当使用系统主题时生效 */
+/* 当系统偏好为暗黑模式时的样式 */
 @media (prefers-color-scheme: dark) {
   :root {
     --foreground: #000;
@@ -32,94 +34,27 @@
   --foreground: #fff;
   --background: #171717;
   --rsbs-backdrop-bg: rgba(0, 0, 0, 0.5);
+  --custom-shape-color: #ffffff;
 }
 
-/* 自定义SVG样式，支持深色模式适配 */
-.custom-shape-svg-container svg {
-  color-scheme: light dark;
-  width: 100%;
-  height: 100%;
-}
-
-/* SVG深色模式反转 - 主要方法 */
+/* 标准 SVG 图片深色模式处理 */
 .dark .dark\:invert {
   filter: invert(1);
-  color: white;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not(.dark) .dark\:invert {
-    filter: invert(1);
-    color: white;
-  }
+/* 自定义 SVG 基础样式 */
+.custom-cup-shape svg *,
+.custom-shape-svg-container svg * {
+  stroke: var(--custom-shape-color) !important;
+  fill: none !important;
+  stroke-width: 1.5px;
 }
 
-/* 自定义SVG样式，确保在深色模式中可见 */
-.dark .dark-mode-svg {
-  color: white !important;
-}
-
-.dark .dark-mode-svg path,
-.dark .dark-mode-svg rect,
-.dark .dark-mode-svg circle,
-.dark .dark-mode-svg line,
-.dark .dark-mode-svg polyline,
-.dark .dark-mode-svg polygon {
-  fill: currentColor !important;
-  stroke: currentColor !important;
-}
-
-@media (prefers-color-scheme: dark) {
-  .dark-mode-svg {
-    color: white !important;
-  }
-  
-  .dark-mode-svg path,
-  .dark-mode-svg rect,
-  .dark-mode-svg circle,
-  .dark-mode-svg line,
-  .dark-mode-svg polyline,
-  .dark-mode-svg polygon {
-    fill: currentColor !important;
-    stroke: currentColor !important;
-  }
-}
-
-/* 浅色模式下的自定义SVG路径颜色 */
-.custom-shape-svg-container:not(.dark\:invert) svg path[stroke="var(--custom-shape-color)"] {
-  stroke: #000000;
-}
-
-/* 深色模式下的自定义SVG路径颜色 */
-.dark .custom-shape-svg-container:not(.dark\:invert) svg path[stroke="var(--custom-shape-color)"] {
-  stroke: #ffffff;
-}
-
-/* 通用的深色模式反转规则，确保所有SVG路径都能被反转颜色 */
-.dark .custom-shape-svg-container:not(.dark\:invert) svg path {
-  stroke: #ffffff !important;
-}
-
-/* 系统偏好设置为深色模式时的SVG颜色 */
-@media (prefers-color-scheme: dark) {
-  /* 仅当未手动设置.dark类时应用 */
-  :root:not(.dark) .custom-shape-svg-container:not(.dark\:invert) svg path[stroke="var(--custom-shape-color)"] {
-    stroke: #ffffff;
-  }
-  
-  /* 确保所有SVG路径在系统深色模式下可见 */
-  :root:not(.dark) .custom-shape-svg-container:not(.dark\:invert) svg path {
-    stroke: #ffffff !important;
-  }
-}
-
-/* 确保SVG内的所有路径可以使用invert类反转颜色 */
-.invert-0.dark\:invert svg path {
-  stroke: #000000;
-}
-
-.dark .invert-0.dark\:invert svg path {
-  stroke: #ffffff !important;
+/* 确保轮廓模式 */
+.outline-only svg * {
+  fill: none !important;
+  stroke: var(--custom-shape-color) !important;
+  stroke-width: 1.5px;
 }
 
 @layer base {
@@ -262,18 +197,5 @@ input:focus, textarea:focus, select:focus, [contenteditable]:focus {
       /* 阻止iOS缩放但不改变字体大小 */
       touch-action: manipulation;
     }
-  }
-}
-
-/* 自定义SVG样式，确保在深色模式中可见 */
-.dark .custom-shape-svg-container svg,
-.dark .custom-shape-svg-container svg * {
-  color: white;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not(.dark) .custom-shape-svg-container svg,
-  :root:not(.dark) .custom-shape-svg-container svg * {
-    color: white;
   }
 }

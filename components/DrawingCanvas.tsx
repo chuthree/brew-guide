@@ -36,20 +36,10 @@ export interface DrawingCanvasRef {
   setColor: React.Dispatch<React.SetStateAction<string>>;
 }
 
-// 添加主题检测辅助函数
+// 修改主题检测辅助函数
 function isDarkMode(): boolean {
-  // 检查是否支持document（仅在客户端执行）
-  if (typeof document === 'undefined') return false;
-  
-  // 首先检查HTML元素是否有dark类
-  const isDarkClass = document.documentElement.classList.contains('dark');
-  
-  // 如果没有dark类，检查系统偏好
-  if (!isDarkClass && window.matchMedia) {
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
-  }
-  
-  return isDarkClass;
+  // 只检查 HTML 元素是否有 dark 类
+  return document.documentElement.classList.contains('dark');
 }
 
 // 使用forwardRef改造组件，使其能够接收父组件的ref
@@ -183,14 +173,17 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
     try {
       console.log('[SVG加载] 开始处理SVG数据，长度:', svgToUse.length);
       
-      // 处理SVG颜色 - 在深色模式下将黑色线条转换为白色
+      // 处理SVG颜色 - 根据当前主题模式设置颜色
       let processedSvg = svgToUse;
-      if (isDark) {
-        processedSvg = processedSvg
-          .replace(/stroke="var\(--custom-shape-color\)"/g, 'stroke="#FFFFFF"')
-          .replace(/stroke="#000000"/g, 'stroke="#FFFFFF"')
-          .replace(/stroke="black"/g, 'stroke="#FFFFFF"');
-      }
+      const themeColor = isDark ? '#FFFFFF' : '#000000';
+      
+      // 统一替换所有颜色为当前主题色
+      processedSvg = processedSvg
+        .replace(/stroke="var\(--custom-shape-color\)"/g, `stroke="${themeColor}"`)
+        .replace(/stroke="#000000"/g, `stroke="${themeColor}"`)
+        .replace(/stroke="#FFFFFF"/g, `stroke="${themeColor}"`)
+        .replace(/stroke="black"/g, `stroke="${themeColor}"`)
+        .replace(/stroke="white"/g, `stroke="${themeColor}"`);
 
       const svgBlob = new Blob([processedSvg], { type: 'image/svg+xml' });
       const url = URL.createObjectURL(svgBlob);
@@ -294,14 +287,17 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
     try {
       console.log('[自定义杯型] 开始处理SVG数据，长度:', _customReferenceSvg.length);
       
-      // 处理SVG颜色 - 在深色模式下将黑色线条转换为白色
+      // 处理SVG颜色 - 根据当前主题模式设置颜色
       let processedSvg = _customReferenceSvg;
-      if (isDark) {
-        processedSvg = processedSvg
-          .replace(/stroke="var\(--custom-shape-color\)"/g, 'stroke="#FFFFFF"')
-          .replace(/stroke="#000000"/g, 'stroke="#FFFFFF"')
-          .replace(/stroke="black"/g, 'stroke="#FFFFFF"');
-      }
+      const themeColor = isDark ? '#FFFFFF' : '#000000';
+      
+      // 统一替换所有颜色为当前主题色
+      processedSvg = processedSvg
+        .replace(/stroke="var\(--custom-shape-color\)"/g, `stroke="${themeColor}"`)
+        .replace(/stroke="#000000"/g, `stroke="${themeColor}"`)
+        .replace(/stroke="#FFFFFF"/g, `stroke="${themeColor}"`)
+        .replace(/stroke="black"/g, `stroke="${themeColor}"`)
+        .replace(/stroke="white"/g, `stroke="${themeColor}"`);
 
       const svgBlob = new Blob([processedSvg], { type: 'image/svg+xml' });
       const url = URL.createObjectURL(svgBlob);
@@ -373,15 +369,16 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
     };
   }, [updateCanvasOffset]);
 
-  // 获取绘图当前颜色 - 根据主题模式调整
+  // 获取实际的绘图颜色值
   const getCurrentDrawingColor = useCallback(() => {
-    // 如果提供了strokeColor，则使用它
-    if (strokeColor) {
-      return strokeColor;
-    }
-    // 否则，在深色模式下使用白色，浅色模式下使用黑色
-    return isDark ? '#ffffff' : '#000000';
-  }, [isDark, strokeColor]);
+    // 获取实际的 CSS 变量值
+    const color = getComputedStyle(document.documentElement)
+      .getPropertyValue('--custom-shape-color')
+      .trim();
+    
+    // 如果获取失败，根据当前模式返回默认值
+    return color || (isDark ? '#FFFFFF' : '#000000');
+  }, [isDark]);
 
   // 重绘画布
   const redrawCanvas = useCallback(() => {
@@ -396,12 +393,8 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
     // 首先绘制SVG参考图像（前帧）
     if (showReference && referenceLoaded && referenceImageRef.current) {
       context.save();
-      
-      // 设置透明度 - 前帧底图在深色模式下使用更高的不透明度以增强可见性
       context.globalAlpha = isDark ? 0.6 : 0.4;
       
-      // 不需要反转色彩，我们已经在加载SVG时处理过了
-      // 但在深色模式下可以增加一些滤镜提高可见性
       if (isDark) {
         context.filter = 'brightness(1.2)';
       }
@@ -472,7 +465,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
       context.restore();
     }
     
-    // 获取当前绘图颜色
+    // 获取当前实际的绘图颜色
     const drawingColor = getCurrentDrawingColor();
     
     // 绘制所有已保存的线条
@@ -486,13 +479,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
         context.lineTo(line.points[i].x, line.points[i].y);
       }
       
-      // 在深色模式下对黑色线条使用白色
-      const lineColor = 
-        (isDark && (line.color === '#000000' || line.color === 'black')) 
-          ? drawingColor 
-          : line.color;
-      
-      context.strokeStyle = lineColor;
+      context.strokeStyle = drawingColor;
       context.lineWidth = line.strokeWidth;
       context.lineCap = 'round';
       context.lineJoin = 'round';
@@ -508,19 +495,13 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
         context.lineTo(currentLine.points[i].x, currentLine.points[i].y);
       }
       
-      // 在深色模式下对黑色线条使用白色
-      const lineColor = 
-        (isDark && (currentLine.color === '#000000' || currentLine.color === 'black')) 
-          ? drawingColor 
-          : currentLine.color;
-      
-      context.strokeStyle = lineColor;
+      context.strokeStyle = drawingColor;
       context.lineWidth = currentLine.strokeWidth;
       context.lineCap = 'round';
       context.lineJoin = 'round';
       context.stroke();
     }
-  }, [lines, currentLine, referenceLoaded, urlReferenceLoaded, showReference, isDark, getCurrentDrawingColor, width, height, referenceSvg]);
+  }, [lines, currentLine, referenceLoaded, urlReferenceLoaded, showReference, isDark, getCurrentDrawingColor]);
 
   // 每次状态更新时重绘画布
   useEffect(() => {
@@ -544,31 +525,29 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
     return svgString;
   }, [width, height, onDrawingComplete]);
 
-  // 处理触摸/鼠标开始事件 - 直接处理相对于画布的坐标
+  // 修改处理触摸/鼠标开始事件
   const handleStart = useCallback((clientX: number, clientY: number) => {
     if (!canvasRef.current || !isReady) return;
     
     hapticsUtils.light();
     
-    // 计算相对于画布左上角的坐标
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
     const x = clientX - rect.left;
     const y = clientY - rect.top;
     
-    // 确保坐标在画布范围内
     if (x < 0 || x > canvas.width || y < 0 || y > canvas.height) return;
     
-    // 固定使用黑色作为存储颜色（在保存SVG时会用到），但在深色模式下显示为白色
-    const drawColor = '#000000';
+    // 获取实际的颜色值
+    const drawingColor = getCurrentDrawingColor();
     
     setIsDrawing(true);
     setCurrentLine({
       points: [{ x, y }],
       strokeWidth,
-      color: drawColor
+      color: drawingColor // 使用实际的颜色值
     });
-  }, [strokeWidth, isReady]);
+  }, [strokeWidth, isReady, getCurrentDrawingColor]);
 
   // 处理触摸/鼠标移动事件 - 直接处理相对于画布的坐标
   const handleMove = useCallback((clientX: number, clientY: number) => {
@@ -768,7 +747,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
       }
     }
 
-    // 获取当前绘图颜色
+    // 获取当前实际的绘图颜色
     const drawingColor = getCurrentDrawingColor();
     
     // 绘制所有已保存的线条
@@ -782,13 +761,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
         ctx.lineTo(line.points[i].x, line.points[i].y);
       }
       
-      // 在深色模式下对黑色线条使用白色
-      const lineColor = 
-        (isDark && (line.color === '#000000' || line.color === 'black')) 
-          ? drawingColor 
-          : line.color;
-      
-      ctx.strokeStyle = lineColor;
+      ctx.strokeStyle = drawingColor;
       ctx.lineWidth = line.strokeWidth;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
@@ -804,13 +777,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
         ctx.lineTo(currentLine.points[i].x, currentLine.points[i].y);
       }
       
-      // 在深色模式下对黑色线条使用白色
-      const lineColor = 
-        (isDark && (currentLine.color === '#000000' || currentLine.color === 'black')) 
-          ? drawingColor 
-          : currentLine.color;
-      
-      ctx.strokeStyle = lineColor;
+      ctx.strokeStyle = drawingColor;
       ctx.lineWidth = currentLine.strokeWidth;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';

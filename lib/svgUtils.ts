@@ -30,36 +30,12 @@ export const linesToSvgPath = (
       pathData += ` L ${line.points[i].x} ${line.points[i].y}`;
     }
     
-    // 对于黑色线条，使用特殊的类名，以便在深色模式下可以反转颜色
-    // 对于其他颜色，保持原样
-    const isBlackColor = line.color.toLowerCase() === '#000000' || line.color.toLowerCase() === 'black';
-    
-    // 将路径添加到数组中，包括线条样式
-    if (isBlackColor) {
-      // 黑色线条使用特殊的stroke属性引用CSS变量
-      paths.push(`<path d="${pathData}" stroke="var(--custom-shape-color)" stroke-width="${line.strokeWidth}" fill="none" />`);
-    } else {
-      // 非黑色线条保持原色
-      paths.push(`<path d="${pathData}" stroke="${line.color}" stroke-width="${line.strokeWidth}" fill="none" />`);
-    }
+    // 所有线条都使用 CSS 变量
+    paths.push(`<path d="${pathData}" stroke="var(--custom-shape-color)" stroke-width="${line.strokeWidth}" fill="none" />`);
   });
   
-  // 组合所有路径为一个SVG字符串，添加CSS定义支持深色模式
-  return `<svg width="${canvasWidth}" height="${canvasHeight}" viewBox="0 0 ${canvasWidth} ${canvasHeight}" xmlns="http://www.w3.org/2000/svg">
-    <style>
-      :root {
-        --custom-shape-color: #000000;
-      }
-      @media (prefers-color-scheme: dark) {
-        :root {
-          --custom-shape-color: #ffffff;
-        }
-      }
-      /* 也为class选择器添加支持，适配Tailwind暗黑模式类 */
-      .dark {
-        --custom-shape-color: #ffffff;
-      }
-    </style>
+  // 组合所有路径为一个SVG字符串
+  return `<svg width="${canvasWidth}" height="${canvasHeight}" viewBox="0 0 ${canvasWidth} ${canvasHeight}" xmlns="http://www.w3.org/2000/svg" class="custom-cup-shape">
     ${paths.join('\n    ')}
   </svg>`;
 };
