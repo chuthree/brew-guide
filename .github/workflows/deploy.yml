@@ -6,20 +6,30 @@ on:
 
 jobs:
   deploy:
-    name: Build on Server
+    name: Deploy to Windows Server via SSH
     runs-on: ubuntu-latest
+
     steps:
-      - name: Execute build via SSH
+      - name: Deploy and Build via SSH
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.SERVER_IP }}
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            cd ~/brew-guide  # 替换为你的服务器项目路径
-            export http_proxy=http://127.0.0.1:47890                                                                   
-            export https_proxy=http://127.0.0.1:47890
-            export PATH=$PATH:~/node-v20.9.0-linux-x64/bin/
-            git pull origin main   # 如果需要同步最新代码
+            cd C:/websites/brew-guide
+
+            echo "🔄 Pulling latest code..."
+            git pull origin main
+
+            echo "📦 Installing dependencies..."
             npm install
+
+            echo "🏗️ Building project..."
             npm run build
+
+            echo "🧹 Removing old pm2 process (if exists)..."
+            pm2 delete brew-guide || echo "No old process"
+
+            echo "🚀 Starting new serve process..."
+            pm2 serve out 3000 --name brew-guide
