@@ -139,8 +139,7 @@ const EquipmentImportModal: React.FC<EquipmentImportModalProps> = ({
             } else {
                 setIsImporting(false);
             }
-        } catch (error) {
-            console.error('选择文件失败:', error);
+        } catch (_error) {
             setError('选择文件失败，请重试');
             setIsImporting(false);
         }
@@ -185,7 +184,7 @@ const EquipmentImportModal: React.FC<EquipmentImportModalProps> = ({
                 try {
                     // 解析导入数据
                     const data = extractJsonFromText(jsonText);
-                    
+
                     // 检查数据是否有效
                     if (!data) {
                         setError('无效的导入数据格式');
@@ -202,7 +201,7 @@ const EquipmentImportModal: React.FC<EquipmentImportModalProps> = ({
                     }
 
                     const equipment = exportData.equipment;
-                    
+
                     // 检查是否已存在同名器具
                     const existingEquipment = existingEquipments.find(e => e.name === equipment.name);
                     if (existingEquipment) {
@@ -226,30 +225,28 @@ const EquipmentImportModal: React.FC<EquipmentImportModalProps> = ({
                     };
 
                     // 提取方案（如果有）
-                    const methods = exportData.methods && Array.isArray(exportData.methods) 
+                    const methods = exportData.methods && Array.isArray(exportData.methods)
                         ? exportData.methods as Method[]
                         : undefined;
 
                     // 导入器具和方案
                     onImport(validEquipment, methods);
-                    
+
                     // 显示成功消息
                     showToast({
                         type: 'success',
                         title: '器具导入成功',
                         duration: 2000
                     });
-                    
+
                     // 关闭模态框
                     handleClose();
                 } catch (error) {
-                    console.error('处理导入数据失败:', error);
                     setError((error as Error).message || '处理导入数据失败');
                     setIsImporting(false);
                 }
             });
         } catch (error) {
-            console.error('导入失败:', error);
             setError((error as Error).message || '导入失败');
             setIsImporting(false);
         }
@@ -334,11 +331,10 @@ const EquipmentImportModal: React.FC<EquipmentImportModalProps> = ({
                             {/* 拖放区域 */}
                             <div
                                 ref={dropZoneRef}
-                                className={`relative mb-4 p-6 border-2 border-dashed rounded-lg transition-colors ${
-                                    isDragging
-                                        ? 'border-neutral-800 dark:border-neutral-200 bg-neutral-100/60 dark:bg-neutral-800/30'
-                                        : 'border-neutral-300 dark:border-neutral-700 hover:border-neutral-400 dark:hover:border-neutral-600'
-                                }`}
+                                className={`relative mb-4 p-6 border-2 border-dashed rounded-lg transition-colors ${isDragging
+                                    ? 'border-neutral-800 dark:border-neutral-200 bg-neutral-100/60 dark:bg-neutral-800/30'
+                                    : 'border-neutral-300 dark:border-neutral-700 hover:border-neutral-400 dark:hover:border-neutral-600'
+                                    }`}
                             >
                                 <div className="text-center">
                                     <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-2">
@@ -401,11 +397,10 @@ const EquipmentImportModal: React.FC<EquipmentImportModalProps> = ({
                                 <button
                                     onClick={() => processImportData(importData)}
                                     disabled={!importData.trim() || isImporting}
-                                    className={`w-full py-2.5 px-4 rounded-lg transition-colors ${
-                                        !importData.trim() || isImporting
-                                            ? 'bg-neutral-400 dark:bg-neutral-700 cursor-not-allowed'
-                                            : 'bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-800 hover:opacity-80'
-                                    }`}
+                                    className={`w-full py-2.5 px-4 rounded-lg transition-colors ${!importData.trim() || isImporting
+                                        ? 'bg-neutral-400 dark:bg-neutral-700 cursor-not-allowed'
+                                        : 'bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-800 hover:opacity-80'
+                                        }`}
                                 >
                                     {isImporting ? '导入中...' : '导入'}
                                 </button>

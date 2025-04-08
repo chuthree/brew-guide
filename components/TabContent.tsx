@@ -210,34 +210,16 @@ const TabContent: React.FC<TabContentProps> = ({
         // 首先尝试通过ID匹配
         const equipmentById = customEquipments.find(e => e.id === selectedEquipment);
         if (equipmentById?.animationType) {
-            console.log('找到自定义器具(通过ID):', {
-                id: equipmentById.id,
-                name: equipmentById.name,
-                animationType: equipmentById.animationType,
-                hasCustomShape: Boolean(equipmentById.customShapeSvg),
-                svgLength: equipmentById.customShapeSvg?.length || 0
-            });
             return equipmentById;
         }
 
         // 如果ID匹配失败，尝试通过名称匹配
         const equipmentByName = customEquipments.find(e => e.name === selectedEquipment);
         if (equipmentByName?.animationType) {
-            console.log('找到自定义器具(通过名称):', {
-                id: equipmentByName.id,
-                name: equipmentByName.name,
-                animationType: equipmentByName.animationType,
-                hasCustomShape: Boolean(equipmentByName.customShapeSvg),
-                svgLength: equipmentByName.customShapeSvg?.length || 0
-            });
             return equipmentByName;
         }
 
         // 未找到匹配的自定义器具
-        console.log('未找到匹配的自定义器具:', {
-            selectedEquipment,
-            customEquipmentsCount: customEquipments.length
-        });
         return undefined;
     }, [selectedEquipment, customEquipments]);
 
@@ -398,16 +380,6 @@ const TabContent: React.FC<TabContentProps> = ({
                                 if (activeTab === '器具' as TabType) {
                                     onEquipmentSelect(step.title);
                                 } else if (activeTab === '方案' as TabType) {
-                                    console.log('方案点击:', {
-                                        title: step.title,
-                                        index,
-                                        methodType,
-                                        selectedEquipment,
-                                        isCustom: step.isCustom,
-                                        isCommonMethod: step.isCommonMethod,
-                                        methodIndex: step.methodIndex,
-                                        fullStep: step  // 添加完整的 step 对象
-                                    });
                                     // 传递完整的 step 对象给 onMethodSelect 方法
                                     onMethodSelect(index, step);
                                 }

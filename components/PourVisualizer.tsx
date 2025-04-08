@@ -74,42 +74,33 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
         try {
             // 如果是自定义器具且有自定义SVG路径，使用自定义SVG
             if (customEquipment?.customShapeSvg) {
-                console.log('使用自定义杯型SVG:', 
-                    customEquipment.customShapeSvg.substring(0, 30) + '... (长度:' + 
-                    customEquipment.customShapeSvg.length + '字符)');
                 // 自定义杯型的SVG数据直接返回，作为内联SVG使用
                 return null;
             }
-            
+
             // 如果是自定义器具，使用对应的基础动画类型
             if (customEquipment && customEquipment.animationType) {
                 const type = customEquipment.animationType.toLowerCase();
-                console.log('使用自定义器具动画类型:', type);
                 return `/images/${type}-base.svg`;
             }
-            
+
             // 当设备ID为CleverDripper时，使用v60的图片
             if (equipmentId === 'CleverDripper') {
                 return '/images/v60-base.svg';
             }
-            
+
             // 检查equipmentId是否是预定义器具ID
             const standardEquipmentIds = ['V60', 'Kalita', 'Origami', 'CleverDripper'];
             const isStandardEquipment = standardEquipmentIds.includes(equipmentId);
-            
+
             if (isStandardEquipment) {
                 // 对于标准器具，使用小写ID作为图片名
                 return `/images/${equipmentId.toLowerCase()}-base.svg`;
             }
-            
+
             // 如果是自定义器具但找不到animationType，使用默认V60图片
-            console.warn('无法识别的器具类型或缺少动画类型，使用默认V60图片', {
-                equipmentId,
-                customEquipment
-            });
             return '/images/v60-base.svg';
-        } catch (error) {
-            console.error('获取器具图片路径出错，使用默认V60图片', error);
+        } catch (_error) {
             return '/images/v60-base.svg';
         }
     }
@@ -119,14 +110,13 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
         try {
             // 检查是否是需要显示阀门的器具（自定义带阀门的器具或标准聪明杯）
             const hasValveSupport = equipmentId === 'CleverDripper' || customEquipment?.hasValve;
-            
+
             if (!hasValveSupport) return null;
-            
+
             return valveStatus === 'open'
                 ? '/images/valve-open.svg'
                 : '/images/valve-closed.svg';
-        } catch (error) {
-            console.error('获取阀门图片路径出错', error);
+        } catch (_error) {
             return '/images/valve-closed.svg'; // 默认返回关闭阀门图片
         }
     }
@@ -135,33 +125,23 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
     const getCurrentPourType = useCallback(() => {
         try {
             if (!stages[currentStage]) return 'center';
-            
+
             // 获取当前阶段的pourType，如果未设置，默认使用center
             const pourType = stages[currentStage]?.pourType || 'center';
-            
-            console.log('[PourVisualizer] 当前注水类型:', {
-                pourType,
-                customAnimations: customEquipment?.customPourAnimations,
-                hasCustomAnimation: customEquipment?.customPourAnimations?.some(anim => anim.id === pourType)
-            });
-            
+
             // 检查是否是自定义动画ID
             if (customEquipment?.customPourAnimations?.some(anim => anim.id === pourType)) {
-                console.log('[PourVisualizer] 使用自定义动画:', pourType);
                 return pourType;
             }
-            
+
             // 检查是否是标准注水类型
             if (pourType === 'center' || pourType === 'circle' || pourType === 'ice' || pourType === 'other') {
-                console.log('[PourVisualizer] 使用标准注水类型:', pourType);
                 return pourType;
             }
-            
+
             // 如果是其他自定义动画ID，直接返回
-            console.log('[PourVisualizer] 使用其他注水类型:', pourType);
             return pourType;
-        } catch (error) {
-            console.error('获取注水类型出错，使用默认center类型', error);
+        } catch (_error) {
             return 'center';
         }
     }, [stages, currentStage, customEquipment]);
@@ -195,7 +175,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                 }
             });
         }
-        
+
         return baseAnimations;
     }, [customEquipment]);
 
@@ -207,26 +187,26 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
             '/images/kalita-base.svg',
             '/images/origami-base.svg',
         ];
-        
+
         // 聪明杯相关图片（阀门控制）
         const valveImages = [
             '/images/valve-open.svg',
             '/images/valve-closed.svg',
         ];
-        
+
         // 动画类型图片
         const animationImages = [
             // center 动画图片
-            ...Array.from({ length: availableAnimations.center.maxIndex }, 
+            ...Array.from({ length: availableAnimations.center.maxIndex },
                 (_, i) => `/images/pour-center-motion-${i + 1}.svg`),
             // circle 动画图片
-            ...Array.from({ length: availableAnimations.circle.maxIndex }, 
+            ...Array.from({ length: availableAnimations.circle.maxIndex },
                 (_, i) => `/images/pour-circle-motion-${i + 1}.svg`),
             // ice 动画图片
-            ...Array.from({ length: availableAnimations.ice.maxIndex }, 
+            ...Array.from({ length: availableAnimations.ice.maxIndex },
                 (_, i) => `/images/pour-ice-motion-${i + 1}.svg`),
         ];
-        
+
         return [...baseImages, ...valveImages, ...animationImages];
     }, [availableAnimations]);
 
@@ -241,7 +221,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
         let loadedCount = 0;
         const totalImages = imagesToPreload.length;
         const images: HTMLImageElement[] = [];
-        
+
         const onImageLoad = () => {
             loadedCount++;
             if (loadedCount >= totalImages) {
@@ -349,7 +329,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
     useEffect(() => {
         // 检查当前器具是否支持阀门功能（聪明杯或自定义带阀门的器具）
         const hasValveSupport = equipmentId === 'CleverDripper' || customEquipment?.hasValve;
-        
+
         if (!hasValveSupport || currentStage < 0) {
             return;
         }
@@ -382,15 +362,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
     const hasCustomSvg = Boolean(customEquipment?.customShapeSvg);
     const equipmentImageSrc = getEquipmentImageSrc();
 
-    // 添加调试日志
-    if (hasCustomSvg) {
-        console.log('检测到自定义SVG:', {
-            hasCustomSvg,
-            svgLength: customEquipment?.customShapeSvg?.length || 0,
-            equipmentId,
-            animationType: customEquipment?.animationType
-        });
-    }
+
 
     // 计算杯体透明度 - 在注水时为完全不透明，否则为半透明
     const equipmentOpacity = isPouring ? 'opacity-100' : 'opacity-50';
@@ -399,15 +371,15 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
     const getMotionSrc = useCallback(() => {
         try {
             if (!isRunning) return null;
-            
+
             const pourType = getCurrentPourType();
-            
+
             // 检查对应的动画类型是否存在
             if (!pourType || !(pourType in availableAnimations)) return null;
-            
+
             // 如果是冰块动画类型(isStacking=true)，使用特殊处理
             if (availableAnimations[pourType]?.isStacking) return null;
-            
+
             // 如果是自定义动画，使用 frames
             if (availableAnimations[pourType]?.frames) {
                 const frame = availableAnimations[pourType].frames?.[currentMotionIndex - 1];
@@ -415,10 +387,9 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                     return processCustomSvg(frame.svgData);
                 }
             }
-            
+
             return `/images/pour-${pourType}-motion-${currentMotionIndex}.svg`;
-        } catch (error) {
-            console.error('获取动画图片路径出错', error);
+        } catch (_error) {
             return null;
         }
     }, [isRunning, getCurrentPourType, currentMotionIndex, availableAnimations]);
@@ -426,13 +397,13 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
     // 更新 processCustomSvg 函数
     const processCustomSvg = (svgContent: string) => {
         if (!svgContent) return '';
-        
+
         // 处理 SVG 内容，确保使用 CSS 变量
         const processedSvg = svgContent
             // 替换所有颜色相关的属性为 CSS 变量
             .replace(/stroke="([^"]*)"/, 'stroke="var(--custom-shape-color)"')
             .replace(/fill="([^"]*)"/, 'fill="none"');
-        
+
         // 添加 SVG 属性和类名
         return processedSvg.replace(/<svg([^>]*)>/, (match, attributes) => {
             return `<svg${attributes} width="100%" height="100%" class="custom-cup-shape">`;
@@ -445,10 +416,10 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
             <div className="relative w-full aspect-square max-w-[300px] mx-auto px-safe">
                 {/* 底部杯体 - 使用自定义SVG或图片 */}
                 {hasCustomSvg ? (
-                    <div 
+                    <div
                         className={`absolute inset-0 ${equipmentOpacity} transition-opacity duration-300 custom-shape-svg-container outline-only custom-cup-shape`}
-                        dangerouslySetInnerHTML={{ 
-                            __html: processCustomSvg(customEquipment?.customShapeSvg || '') 
+                        dangerouslySetInnerHTML={{
+                            __html: processCustomSvg(customEquipment?.customShapeSvg || '')
                         }}
                     />
                 ) : (
@@ -460,9 +431,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                         priority
                         sizes="(max-width: 768px) 100vw, 300px"
                         quality={85}
-                        onError={(e) => { 
-                            console.error('图片加载失败:', e);
-                        }}
+                        onError={() => { }}
                     />
                 )}
                 {/* 显示阀门（如果器具支持） */}
@@ -489,10 +458,10 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
             <div className="relative w-full aspect-square max-w-[300px] mx-auto px-safe">
                 {/* 底部杯体 - 使用自定义SVG或图片 */}
                 {hasCustomSvg ? (
-                    <div 
+                    <div
                         className={`absolute inset-0 ${equipmentOpacity} transition-opacity duration-300 custom-shape-svg-container outline-only custom-cup-shape`}
-                        dangerouslySetInnerHTML={{ 
-                            __html: processCustomSvg(customEquipment?.customShapeSvg || '') 
+                        dangerouslySetInnerHTML={{
+                            __html: processCustomSvg(customEquipment?.customShapeSvg || '')
                         }}
                     />
                 ) : (
@@ -532,10 +501,10 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
             <div className="relative w-full aspect-square max-w-[300px] mx-auto px-safe">
                 {/* 底部杯体 - 使用自定义SVG或图片 */}
                 {hasCustomSvg ? (
-                    <div 
+                    <div
                         className={`absolute inset-0 ${equipmentOpacity} transition-opacity duration-300 custom-shape-svg-container outline-only custom-cup-shape`}
-                        dangerouslySetInnerHTML={{ 
-                            __html: processCustomSvg(customEquipment?.customShapeSvg || '') 
+                        dangerouslySetInnerHTML={{
+                            __html: processCustomSvg(customEquipment?.customShapeSvg || '')
                         }}
                     />
                 ) : (
@@ -547,9 +516,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                         priority
                         sizes="(max-width: 768px) 100vw, 300px"
                         quality={85}
-                        onError={(e) => { 
-                            console.error('图片加载失败:', e);
-                        }}
+                        onError={() => { }}
                     />
                 )}
                 {/* 显示阀门（如果器具支持） */}
@@ -607,14 +574,14 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                     ) : (
                         // 自定义SVG内联数据
                         <div className={`w-full h-full custom-cup-shape outline-only ${equipmentOpacity}`}
-                            dangerouslySetInnerHTML={{ 
-                                __html: processCustomSvg(customEquipment.customShapeSvg) 
-                            }} 
+                            dangerouslySetInnerHTML={{
+                                __html: processCustomSvg(customEquipment.customShapeSvg)
+                            }}
                         />
                     )}
                 </motion.div>
             </AnimatePresence>
-            
+
             {/* 阀门（如果适用） */}
             {valveStatus === 'open' && getValveImageSrc() && (
                 <div className="absolute inset-x-0 bottom-0 h-1/4 flex items-center justify-center">
@@ -646,9 +613,9 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                             >
                                 {availableAnimations[currentPourType as keyof typeof availableAnimations]?.frames ? (
                                     // 使用自定义帧
-                                    <div 
+                                    <div
                                         className="w-full h-full flex items-center justify-center custom-cup-shape outline-only"
-                                        dangerouslySetInnerHTML={{ 
+                                        dangerouslySetInnerHTML={{
                                             __html: processCustomSvg(availableAnimations[currentPourType as keyof typeof availableAnimations]?.frames?.[currentMotionIndex - 1]?.svgData || '')
                                         }}
                                     />

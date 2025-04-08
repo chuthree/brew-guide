@@ -11,30 +11,31 @@ export async function loadCustomMethods(): Promise<Record<string, Method[]>> {
 	try {
 		// Get all keys from storage
 		const keys = await Storage.keys();
-		
+
 		// Filter keys for custom methods
-		const methodKeys = keys.filter(key => key.startsWith('customMethods_'));
-		
+		const methodKeys = keys.filter((key) =>
+			key.startsWith("customMethods_")
+		);
+
 		// Create result object
 		const result: Record<string, Method[]> = {};
-		
+
 		// Load methods for each key
 		for (const key of methodKeys) {
 			// Extract equipment ID from key
-			const equipmentId = key.replace('customMethods_', '');
-			
+			const equipmentId = key.replace("customMethods_", "");
+
 			// Load methods for this equipment
 			const methods = await loadCustomMethodsForEquipment(equipmentId);
-			
+
 			// Add to result if there are methods
 			if (methods.length > 0) {
 				result[equipmentId] = methods;
 			}
 		}
-		
+
 		return result;
-	} catch (error) {
-		console.error('Error loading all custom methods:', error);
+	} catch (_error) {
 		return {};
 	}
 }
@@ -61,59 +62,68 @@ export function loadCustomMethodsSync(): Record<string, Method[]> {
  * @param equipmentId 设备ID
  * @returns 自定义方案数组
  */
-export async function loadCustomMethodsForEquipment(equipmentId: string): Promise<Method[]> {
+export async function loadCustomMethodsForEquipment(
+	equipmentId: string
+): Promise<Method[]> {
 	try {
 		// 首先尝试从新存储加载
 		const methodsJson = await Storage.get(`customMethods_${equipmentId}`);
 		let methods: Method[] = [];
-		
+
 		if (methodsJson) {
 			methods = JSON.parse(methodsJson);
 		}
-		
+
 		// 检查旧存储并进行迁移
 		const legacyMethodsJson = await Storage.get("customMethods");
 		if (legacyMethodsJson) {
 			const legacyMethods = JSON.parse(legacyMethodsJson);
-			if (legacyMethods[equipmentId] && Array.isArray(legacyMethods[equipmentId])) {
+			if (
+				legacyMethods[equipmentId] &&
+				Array.isArray(legacyMethods[equipmentId])
+			) {
 				// 合并旧数据
-				const combinedMethods = [...methods, ...legacyMethods[equipmentId]];
-				
+				const combinedMethods = [
+					...methods,
+					...legacyMethods[equipmentId],
+				];
+
 				// 去重
 				methods = removeDuplicateMethods(combinedMethods);
-				
+
 				// 保存到新存储
-				await Storage.set(`customMethods_${equipmentId}`, JSON.stringify(methods));
-				
+				await Storage.set(
+					`customMethods_${equipmentId}`,
+					JSON.stringify(methods)
+				);
+
 				// 从旧存储中移除这个设备的数据
 				delete legacyMethods[equipmentId];
 				if (Object.keys(legacyMethods).length > 0) {
-					await Storage.set("customMethods", JSON.stringify(legacyMethods));
+					await Storage.set(
+						"customMethods",
+						JSON.stringify(legacyMethods)
+					);
 				} else {
 					// 如果旧存储已经没有数据了，直接删除它
 					await Storage.remove("customMethods");
 				}
-				
-				console.log(`[customMethods] 成功迁移设备 ${equipmentId} 的旧数据`);
 			}
 		}
-		
+
 		// 确保所有方法都有ID
 		methods = methods.map((method: Method) => {
 			if (!method.id) {
 				return {
 					...method,
-					id: `method-${uuidv4()}`
+					id: `method-${uuidv4()}`,
 				};
 			}
 			return method;
 		});
-		
-		console.log(`[customMethods] 加载设备 ${equipmentId} 的方法: ${methods.length}个`);
-		
+
 		return methods;
-	} catch (error) {
-		console.error('Error loading custom methods for equipment:', error);
+	} catch (_error) {
 		return [];
 	}
 }
@@ -125,15 +135,15 @@ export async function loadCustomMethodsForEquipment(equipmentId: string): Promis
  */
 function removeDuplicateMethods(methods: Method[]): Method[] {
 	const seen = new Map<string, Method>();
-	
+
 	// 按照ID和名称进行去重，优先保留有ID的方法
-	methods.forEach(method => {
+	methods.forEach((method) => {
 		const key = method.id || method.name;
 		if (!seen.has(key) || method.id) {
 			seen.set(key, method);
 		}
 	});
-	
+
 	return Array.from(seen.values());
 }
 
@@ -149,37 +159,45 @@ export async function saveCustomMethod(
 	arg2: string | null | Method,
 	arg3?: Record<string, Method[]>,
 	editingMethod?: Method
-): Promise<boolean | { newCustomMethods: Record<string, Method[]>; methodWithId: Method }> {
+): Promise<
+	| boolean
+	| { newCustomMethods: Record<string, Method[]>; methodWithId: Method }
+> {
 	// Check which calling pattern is used
-	if (typeof arg1 === 'string') {
+	if (typeof arg1 === "string") {
 		// New pattern: saveCustomMethod(equipmentId, method)
 		const equipmentId = arg1;
 		const method = arg2 as Method;
-		
+
 		try {
 			// Load existing methods for this equipment
-			const existingMethods = await loadCustomMethodsForEquipment(equipmentId);
-			
+			const existingMethods = await loadCustomMethodsForEquipment(
+				equipmentId
+			);
+
 			// Ensure method has an ID
 			const methodWithId = {
 				...method,
-				id: method.id || `method-${uuidv4()}`
+				id: method.id || `method-${uuidv4()}`,
 			};
-			
+
 			// 确保方法ID在保存前是唯一的
-			console.log(`[customMethods] 保存方法 ${methodWithId.name}, ID: ${methodWithId.id}`);
-			
+
 			// 更新或添加方法
-			const updatedMethods = existingMethods.filter(m => m.id !== methodWithId.id);
+			const updatedMethods = existingMethods.filter(
+				(m) => m.id !== methodWithId.id
+			);
 			updatedMethods.push(methodWithId);
-			
+
 			// 去重并保存
 			const uniqueMethods = removeDuplicateMethods(updatedMethods);
-			await Storage.set(`customMethods_${equipmentId}`, JSON.stringify(uniqueMethods));
-			
+			await Storage.set(
+				`customMethods_${equipmentId}`,
+				JSON.stringify(uniqueMethods)
+			);
+
 			return true;
-		} catch (error) {
-			console.error('Error saving custom method:', error);
+		} catch (_error) {
 			return false;
 		}
 	} else {
@@ -187,7 +205,7 @@ export async function saveCustomMethod(
 		const method = arg1 as Method;
 		const selectedEquipment = arg2 as string | null;
 		const customMethods = arg3 as Record<string, Method[]>;
-		
+
 		if (!selectedEquipment) {
 			throw new Error("未选择设备");
 		}
@@ -197,23 +215,27 @@ export async function saveCustomMethod(
 			...method,
 			id: method.id || `method-${uuidv4()}`,
 		};
-		
-		console.log(`[customMethods] 保存方法(旧模式) ${methodWithId.name}, ID: ${methodWithId.id}`);
 
 		// 加载现有方法
-		const existingMethods = await loadCustomMethodsForEquipment(selectedEquipment);
-		
+		const existingMethods = await loadCustomMethodsForEquipment(
+			selectedEquipment
+		);
+
 		// 更新或添加方法
-		const updatedMethods = existingMethods.filter(m => 
-			m.id !== methodWithId.id && 
-			(editingMethod ? m.id !== editingMethod.id : true)
+		const updatedMethods = existingMethods.filter(
+			(m) =>
+				m.id !== methodWithId.id &&
+				(editingMethod ? m.id !== editingMethod.id : true)
 		);
 		updatedMethods.push(methodWithId);
-		
+
 		// 去重并保存
 		const uniqueMethods = removeDuplicateMethods(updatedMethods);
-		await Storage.set(`customMethods_${selectedEquipment}`, JSON.stringify(uniqueMethods));
-		
+		await Storage.set(
+			`customMethods_${selectedEquipment}`,
+			JSON.stringify(uniqueMethods)
+		);
+
 		// 为了保持向后兼容，也更新内存中的customMethods对象
 		const newCustomMethods = {
 			...customMethods,
@@ -237,28 +259,34 @@ export async function deleteCustomMethod(
 	arg3?: Record<string, Method[]> | string
 ): Promise<boolean | Record<string, Method[]>> {
 	// Check which calling pattern is used
-	if (typeof arg1 === 'string' && typeof arg3 === 'string') {
+	if (typeof arg1 === "string" && typeof arg3 === "string") {
 		// New pattern: deleteCustomMethod(equipmentId, methodId)
 		const equipmentId = arg1;
 		const methodId = arg3;
-		
+
 		try {
 			// Load existing methods
-			const existingMethods = await loadCustomMethodsForEquipment(equipmentId);
-			
+			const existingMethods = await loadCustomMethodsForEquipment(
+				equipmentId
+			);
+
 			// Filter out the method to delete
-			const updatedMethods = existingMethods.filter(method => method.id !== methodId);
-			
+			const updatedMethods = existingMethods.filter(
+				(method) => method.id !== methodId
+			);
+
 			// If no methods were removed, return false
 			if (updatedMethods.length === existingMethods.length) {
 				return false;
 			}
-			
+
 			// Save updated methods
-			await Storage.set(`customMethods_${equipmentId}`, JSON.stringify(updatedMethods));
+			await Storage.set(
+				`customMethods_${equipmentId}`,
+				JSON.stringify(updatedMethods)
+			);
 			return true;
-		} catch (error) {
-			console.error('Error deleting custom method:', error);
+		} catch (_error) {
 			return false;
 		}
 	} else {
@@ -266,7 +294,7 @@ export async function deleteCustomMethod(
 		const method = arg1 as Method;
 		const selectedEquipment = arg2 as string | null;
 		const customMethods = arg3 as Record<string, Method[]>;
-		
+
 		if (!selectedEquipment) {
 			throw new Error("未选择设备");
 		}
@@ -274,7 +302,7 @@ export async function deleteCustomMethod(
 		const updatedMethods = customMethods[selectedEquipment].filter(
 			(m) => m.id !== method.id
 		);
-		
+
 		const newCustomMethods = {
 			...customMethods,
 			[selectedEquipment]: updatedMethods,
@@ -282,9 +310,12 @@ export async function deleteCustomMethod(
 
 		// 保存到存储
 		await Storage.set("customMethods", JSON.stringify(newCustomMethods));
-		
+
 		// Also save to per-equipment storage for compatibility with new pattern
-		await Storage.set(`customMethods_${selectedEquipment}`, JSON.stringify(updatedMethods));
+		await Storage.set(
+			`customMethods_${selectedEquipment}`,
+			JSON.stringify(updatedMethods)
+		);
 
 		return newCustomMethods;
 	}
@@ -295,7 +326,10 @@ export async function deleteCustomMethod(
  * @param method 冲煮方案对象
  * @param customEquipment 自定义器具配置（可选）
  */
-export async function copyMethodToClipboard(method: Method, customEquipment?: CustomEquipment) {
+export async function copyMethodToClipboard(
+	method: Method,
+	customEquipment?: CustomEquipment
+) {
 	try {
 		// 使用新的自然语言格式
 		const text = methodToReadableText(method, customEquipment);
@@ -313,7 +347,6 @@ export async function copyMethodToClipboard(method: Method, customEquipment?: Cu
 			document.body.removeChild(textarea);
 		}
 	} catch (err) {
-		console.error("复制失败:", err);
 		throw err;
 	}
 }

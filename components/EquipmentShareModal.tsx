@@ -61,7 +61,7 @@ const EquipmentShareModal: React.FC<EquipmentShareModalProps> = ({
 
             // Prepare export data
             const exportData = {
-                equipment: { 
+                equipment: {
                     ...equipment,
                     // 确保包含自定义注水动画配置
                     customPourAnimations: equipment.customPourAnimations || []
@@ -80,7 +80,7 @@ const EquipmentShareModal: React.FC<EquipmentShareModalProps> = ({
 
             // Convert to JSON
             const jsonData = JSON.stringify(exportData, null, 2);
-            
+
             // Generate filename based on equipment name
             const fileName = `brew-guide-equipment-${equipment.name.replace(/\s+/g, '-')}.json`;
 
@@ -119,10 +119,9 @@ const EquipmentShareModal: React.FC<EquipmentShareModalProps> = ({
                         title: '器具已成功导出',
                         duration: 2000
                     });
-                    
+
                     onClose();
-                } catch (error) {
-                    console.error('保存文件失败:', error);
+                } catch (_error) {
                     showToast({
                         type: 'error',
                         title: '导出失败，请重试',
@@ -150,11 +149,10 @@ const EquipmentShareModal: React.FC<EquipmentShareModalProps> = ({
                     title: '器具已成功导出',
                     duration: 2000
                 });
-                
+
                 onClose();
             }
-        } catch (error) {
-            console.error('分享器具失败:', error);
+        } catch (_error) {
             showToast({
                 type: 'error',
                 title: '导出失败，请重试',
@@ -215,7 +213,7 @@ const EquipmentShareModal: React.FC<EquipmentShareModalProps> = ({
                                     </svg>
                                 </button>
                             </div>
-                            
+
                             {/* 方案选择 */}
                             {methods.length > 0 ? (
                                 <div className="space-y-3">
@@ -230,7 +228,7 @@ const EquipmentShareModal: React.FC<EquipmentShareModalProps> = ({
                                             {selectedMethods.length === methods.length ? '取消全选' : '全选'}
                                         </button>
                                     </div>
-                                    
+
                                     <div className="space-y-2">
                                         {methods.map(method => (
                                             <label
@@ -249,7 +247,7 @@ const EquipmentShareModal: React.FC<EquipmentShareModalProps> = ({
                                             </label>
                                         ))}
                                     </div>
-                                    
+
                                     <p className="text-xs text-neutral-500 dark:text-neutral-500 bg-neutral-100/60 dark:bg-neutral-800/30 p-2.5 rounded-lg">
                                         通用方案会根据器具类型自动加载，无需包含
                                     </p>
@@ -261,16 +259,15 @@ const EquipmentShareModal: React.FC<EquipmentShareModalProps> = ({
                                     </p>
                                 </div>
                             )}
-                            
+
                             {/* 按钮 */}
                             <button
                                 onClick={handleShare}
                                 disabled={isSharing}
-                                className={`w-full mt-6 py-2.5 px-4 rounded-lg transition-colors ${
-                                    isSharing
-                                        ? 'bg-neutral-400 dark:bg-neutral-700 cursor-not-allowed'
-                                        : 'bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-800 hover:opacity-80'
-                                }`}
+                                className={`w-full mt-6 py-2.5 px-4 rounded-lg transition-colors ${isSharing
+                                    ? 'bg-neutral-400 dark:bg-neutral-700 cursor-not-allowed'
+                                    : 'bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-800 hover:opacity-80'
+                                    }`}
                             >
                                 {isSharing ? '导出中...' : '导出为文件'}
                             </button>

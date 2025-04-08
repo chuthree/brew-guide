@@ -25,7 +25,6 @@ export async function loadCustomEquipments(): Promise<CustomEquipment[]> {
 			return JSON.parse(savedEquipments);
 		}
 	} catch (error) {
-		console.error("加载自定义器具失败:", error);
 		throw new CustomEquipmentError("无法加载自定义器具", error);
 	}
 	return [];
@@ -99,7 +98,6 @@ export async function saveCustomEquipment(
 			}
 		}
 	} catch (error) {
-		console.error("保存自定义器具失败:", error);
 		throw new CustomEquipmentError(
 			`${equipment.id ? "更新" : "创建"}自定义器具失败: ${
 				equipment.name
@@ -134,7 +132,6 @@ export async function updateCustomEquipment(
 
 		await Storage.set(STORAGE_KEY, JSON.stringify(updatedEquipments));
 	} catch (error) {
-		console.error("更新自定义器具失败:", error);
 		throw new CustomEquipmentError(
 			`更新自定义器具失败: ${equipment.name}`,
 			error
@@ -158,7 +155,6 @@ export async function deleteCustomEquipment(id: string): Promise<void> {
 		const filteredEquipments = equipments.filter((e) => e.id !== id);
 		await Storage.set(STORAGE_KEY, JSON.stringify(filteredEquipments));
 	} catch (error) {
-		console.error("删除自定义器具失败:", error);
 		throw new CustomEquipmentError(`删除自定义器具失败: ${id}`, error);
 	}
 }
@@ -177,7 +173,6 @@ export async function isEquipmentNameAvailable(
 		const equipments = await loadCustomEquipments();
 		return !equipments.some((e) => e.name === name && e.id !== currentId);
 	} catch (error) {
-		console.error("验证器具名称失败:", error);
 		throw new CustomEquipmentError(
 			`验证器具名称是否可用失败: ${name}`,
 			error

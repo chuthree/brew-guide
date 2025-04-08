@@ -26,8 +26,7 @@ const CustomEquipmentFormModal: React.FC<CustomEquipmentFormModalProps> = ({
             } else {
                 alert('复制失败，请重试');
             }
-        } catch (error) {
-            console.error('导出器具失败:', error);
+        } catch (_error) {
             alert('导出失败，请重试');
         }
     };
@@ -132,4 +131,4 @@ const CustomEquipmentFormModal: React.FC<CustomEquipmentFormModalProps> = ({
     );
 };
 
-export default CustomEquipmentFormModal; 
+export default CustomEquipmentFormModal;
