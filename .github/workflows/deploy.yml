@@ -19,10 +19,10 @@ jobs:
           script: |
             cd C:/websites/brew-guide
 
-            # 配置代理
+            # 设置代理环境变量
             echo "🔧 Configuring proxy for git..."
-            export http_proxy=http://127.0.0.1:7897
-            export https_proxy=http://127.0.0.1:7897
+            echo '$env:http_proxy="http://127.0.0.1:7897"' | powershell
+            echo '$env:https_proxy="http://127.0.0.1:7897"' | powershell
 
             echo "🔄 Pulling latest code..."
             git pull origin main
