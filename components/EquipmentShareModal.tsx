@@ -61,7 +61,11 @@ const EquipmentShareModal: React.FC<EquipmentShareModalProps> = ({
 
             // Prepare export data
             const exportData = {
-                equipment: { ...equipment },
+                equipment: { 
+                    ...equipment,
+                    // 确保包含自定义注水动画配置
+                    customPourAnimations: equipment.customPourAnimations || []
+                },
                 methods: methods.length > 0 ? methods.filter(method =>
                     selectedMethods.includes(method.id || method.name)
                 ).map(method => ({

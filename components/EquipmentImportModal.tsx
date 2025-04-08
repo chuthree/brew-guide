@@ -222,6 +222,7 @@ const EquipmentImportModal: React.FC<EquipmentImportModalProps> = ({
                         customShapeSvg: equipment.customShapeSvg,
                         customValveSvg: equipment.customValveSvg,
                         customValveOpenSvg: equipment.customValveOpenSvg,
+                        customPourAnimations: equipment.customPourAnimations || [],
                     };
 
                     // 提取方案（如果有）

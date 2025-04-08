@@ -45,6 +45,11 @@ export interface CustomEquipment extends Equipment {
 	customShapeSvg?: string; // 自定义杯型的SVG路径数据
 	customValveSvg?: string; // 自定义阀门关闭状态的SVG路径数据
 	customValveOpenSvg?: string; // 自定义阀门开启状态的SVG路径数据
+	customPourAnimations?: Array<{
+		id: string;
+		name: string;
+		svg?: string;
+	}>; // 自定义注水动画配置
 }
 
 export interface BrewingNote {
