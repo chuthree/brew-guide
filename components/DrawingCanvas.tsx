@@ -418,10 +418,8 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
       context.globalAlpha = isDark ? 0.8 : 0.2;
       
       if (isDark) {
-        // 在深色模式下强化反转和对比度
-        context.filter = 'invert(1) contrast(2) brightness(2.5)';
-        
-        // 先绘制一次增强的图像
+        // 在深色模式下使用更柔和的效果
+        context.filter = 'invert(1) contrast(1.5) brightness(1.5)';
         context.drawImage(
           urlReferenceImageRef.current, 
           0, 
@@ -430,20 +428,9 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
           canvas.height
         );
         
-        // 再绘制一次轮廓加强效果
-        context.globalAlpha = 0.7;
-        context.filter = 'invert(1) contrast(3) brightness(3) saturate(0)';
-        context.drawImage(
-          urlReferenceImageRef.current, 
-          0, 
-          0, 
-          canvas.width, 
-          canvas.height
-        );
-        
-        // 添加第三次绘制，专注于轮廓
-        context.globalAlpha = 0.5;
-        context.filter = 'invert(1) brightness(5) contrast(5) saturate(0)';
+        // 添加一次轮廓增强，但保持较低的不透明度
+        context.globalAlpha = 0.3;
+        context.filter = 'invert(1) contrast(2) brightness(2) saturate(0)';
         context.drawImage(
           urlReferenceImageRef.current, 
           0, 
@@ -696,13 +683,11 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
       // 然后显示杯型参考图像
       if (urlReferenceLoaded && urlReferenceImageRef.current) {
         ctx.save();
-        ctx.globalAlpha = isDark ? 0.8 : 0.2;
+        ctx.globalAlpha = isDark ? 0.4 : 0.2;
         
         if (isDark) {
-          // 在深色模式下强化反转和对比度
-          ctx.filter = 'invert(1) contrast(2) brightness(2.5)';
-          
-          // 先绘制一次增强的图像
+          // 在深色模式下使用更柔和的效果
+          ctx.filter = 'invert(1) contrast(1.5) brightness(1.5)';
           ctx.drawImage(
             urlReferenceImageRef.current, 
             0, 
@@ -711,20 +696,9 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
             height
           );
           
-          // 再绘制一次轮廓加强效果
-          ctx.globalAlpha = 0.7;
-          ctx.filter = 'invert(1) contrast(3) brightness(3) saturate(0)';
-          ctx.drawImage(
-            urlReferenceImageRef.current, 
-            0, 
-            0, 
-            width, 
-            height
-          );
-          
-          // 添加第三次绘制，专注于轮廓
-          ctx.globalAlpha = 0.5;
-          ctx.filter = 'invert(1) brightness(5) contrast(5) saturate(0)';
+          // 添加一次轮廓增强，但保持较低的不透明度
+          ctx.globalAlpha = 0.3;
+          ctx.filter = 'invert(1) contrast(2) brightness(2) saturate(0)';
           ctx.drawImage(
             urlReferenceImageRef.current, 
             0, 

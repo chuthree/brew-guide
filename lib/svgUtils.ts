@@ -34,9 +34,9 @@ export const linesToSvgPath = (
 			pathData += ` L ${line.points[i].x} ${line.points[i].y}`;
 		}
 
-		// 所有线条都使用 CSS 变量，统一线条粗细为1.5px
+		// 使用每条线的实际笔触宽度，而不是固定值
 		paths.push(
-			`<path d="${pathData}" stroke="var(--custom-shape-color)" stroke-width="1.5" fill="none" />`
+			`<path d="${pathData}" stroke="var(--custom-shape-color)" stroke-width="${line.strokeWidth}" fill="none" />`
 		);
 	});
 
