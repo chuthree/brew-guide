@@ -881,7 +881,6 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                                 height={canvasSize}
                                 initialFrames={initialFrames}
                                 referenceImages={referenceImageUrls}
-                                strokeColor="white"
                                 maxFrames={currentEditingAnimation.previewFrames || 4}
                                 referenceSvg={customShapeSvg}
                                 key={editorKey}

@@ -72,7 +72,7 @@ const EquipmentShareModal: React.FC<EquipmentShareModalProps> = ({
             };
 
             // Remove id from equipment as it will be regenerated on import
-            delete (exportData.equipment as any).id;
+            delete (exportData.equipment as Partial<CustomEquipment>).id;
 
             // Convert to JSON
             const jsonData = JSON.stringify(exportData, null, 2);

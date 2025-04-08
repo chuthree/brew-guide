@@ -175,17 +175,6 @@ const EquipmentImportModal: React.FC<EquipmentImportModalProps> = ({
         reader.readAsText(file);
     };
 
-    // 处理文本导入
-    const handleTextImport = () => {
-        if (!importData.trim()) {
-            setError('请输入要导入的数据');
-            return;
-        }
-
-        setIsImporting(true);
-        processImportData(importData);
-    };
-
     // 处理导入数据
     const processImportData = (jsonText: string) => {
         try {
@@ -196,10 +185,18 @@ const EquipmentImportModal: React.FC<EquipmentImportModalProps> = ({
                 // 解析导入数据
                 const data = extractJsonFromText(jsonText);
                 
+                // 检查数据是否有效
+                if (!data) {
+                    setError('无效的导入数据格式');
+                    setIsImporting(false);
+                    return;
+                }
+
                 // 检查是否是有效的器具导出文件
-                if (data.equipment) {
+                const exportData = data as { equipment?: CustomEquipment; methods?: Method[] };
+                if (exportData.equipment) {
                     // 新格式：包含器具和方案
-                    const equipment = data.equipment as CustomEquipment;
+                    const equipment = exportData.equipment;
                     
                     // 验证器具
                     if (!equipment.name) {
@@ -237,8 +234,8 @@ const EquipmentImportModal: React.FC<EquipmentImportModalProps> = ({
                     };
 
                     // 提取方案（如果有）
-                    const methods = data.methods && Array.isArray(data.methods) 
-                        ? data.methods as Method[]
+                    const methods = exportData.methods && Array.isArray(exportData.methods) 
+                        ? exportData.methods as Method[]
                         : undefined;
 
                     // 导入器具和方案

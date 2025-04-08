@@ -10,7 +10,6 @@ import { CoffeeBeanManager } from '@/lib/coffeeBeanManager';
 import { v4 as _uuidv4 } from 'uuid';
 import { copyMethodToClipboard } from "@/lib/customMethods";
 import { showToast } from "@/components/ui/toast";
-import { exportEquipment, copyToClipboard } from '@/lib/exportUtils';
 import EquipmentShareModal from '@/components/EquipmentShareModal';
 
 // 动态导入客户端组件
