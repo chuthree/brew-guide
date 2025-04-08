@@ -19,6 +19,11 @@ jobs:
           script: |
             cd C:/websites/brew-guide
 
+            # 配置代理
+            echo "🔧 Configuring proxy for git..."
+            export http_proxy=http://127.0.0.1:7897
+            export https_proxy=http://127.0.0.1:7897
+
             echo "🔄 Pulling latest code..."
             git pull origin main
 
