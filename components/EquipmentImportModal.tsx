@@ -182,36 +182,27 @@ const EquipmentImportModal: React.FC<EquipmentImportModalProps> = ({
             // 尝试从文本中提取数据
             import('@/lib/jsonUtils').then(async ({ extractJsonFromText }) => {
                 setError(null);
-                // 解析导入数据
-                const data = extractJsonFromText(jsonText);
-                
-                // 检查数据是否有效
-                if (!data) {
-                    setError('无效的导入数据格式');
-                    setIsImporting(false);
-                    return;
-                }
+                try {
+                    // 解析导入数据
+                    const data = extractJsonFromText(jsonText);
+                    
+                    // 检查数据是否有效
+                    if (!data) {
+                        setError('无效的导入数据格式');
+                        setIsImporting(false);
+                        return;
+                    }
 
-                // 检查是否是有效的器具导出文件
-                const exportData = data as { equipment?: CustomEquipment; methods?: Method[] };
-                if (exportData.equipment) {
-                    // 新格式：包含器具和方案
+                    // 检查是否是有效的器具导出文件
+                    const exportData = data as { equipment?: CustomEquipment; methods?: Method[] };
+                    if (!exportData.equipment) {
+                        setError('无效的器具导出文件格式，缺少equipment字段');
+                        setIsImporting(false);
+                        return;
+                    }
+
                     const equipment = exportData.equipment;
                     
-                    // 验证器具
-                    if (!equipment.name) {
-                        setError('器具缺少名称');
-                        setIsImporting(false);
-                        return;
-                    }
-
-                    // 验证动画类型
-                    if (!equipment.animationType || !['v60', 'kalita', 'origami', 'clever', 'custom'].includes(equipment.animationType)) {
-                        setError('器具动画类型无效');
-                        setIsImporting(false);
-                        return;
-                    }
-
                     // 检查是否已存在同名器具
                     const existingEquipment = existingEquipments.find(e => e.name === equipment.name);
                     if (existingEquipment) {
@@ -250,64 +241,15 @@ const EquipmentImportModal: React.FC<EquipmentImportModalProps> = ({
                     
                     // 关闭模态框
                     handleClose();
-                } else {
-                    // 旧格式：只有器具数据
-                    const equipment = data as CustomEquipment;
-                    
-                    // 验证器具
-                    if (!equipment.name) {
-                        setError('器具缺少名称');
-                        setIsImporting(false);
-                        return;
-                    }
-
-                    // 验证动画类型
-                    if (!equipment.animationType || !['v60', 'kalita', 'origami', 'clever', 'custom'].includes(equipment.animationType)) {
-                        setError('器具动画类型无效');
-                        setIsImporting(false);
-                        return;
-                    }
-
-                    // 检查是否已存在同名器具
-                    const existingEquipment = existingEquipments.find(e => e.name === equipment.name);
-                    if (existingEquipment) {
-                        setError(`已存在同名器具"${equipment.name}"，请修改后再导入`);
-                        setIsImporting(false);
-                        return;
-                    }
-
-                    // 确保equipment对象完全符合CustomEquipment接口
-                    const validEquipment: CustomEquipment = {
-                        id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-                        name: equipment.name,
-                        description: equipment.description || '',
-                        isCustom: true,
-                        animationType: equipment.animationType,
-                        hasValve: equipment.hasValve || false,
-                        customShapeSvg: equipment.customShapeSvg,
-                        customValveSvg: equipment.customValveSvg,
-                        customValveOpenSvg: equipment.customValveOpenSvg,
-                    };
-
-                    // 导入器具
-                    onImport(validEquipment);
-                    
-                    // 显示成功消息
-                    showToast({
-                        type: 'success',
-                        title: '器具导入成功',
-                        duration: 2000
-                    });
-                    
-                    // 关闭模态框
-                    handleClose();
+                } catch (error) {
+                    console.error('处理导入数据失败:', error);
+                    setError((error as Error).message || '处理导入数据失败');
+                    setIsImporting(false);
                 }
-            }).catch(err => {
-                setError('解析数据失败: ' + (err instanceof Error ? err.message : '未知错误'));
-                setIsImporting(false);
             });
-        } catch (err) {
-            setError('导入失败: ' + (err instanceof Error ? err.message : '未知错误'));
+        } catch (error) {
+            console.error('导入失败:', error);
+            setError((error as Error).message || '导入失败');
             setIsImporting(false);
         }
     };

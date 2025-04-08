@@ -30,20 +30,20 @@ PODS:
   - OSInAppBrowserLib (1.0.0)
 
 DEPENDENCIES:
-  - "Capacitor (from `../../node_modules/@capacitor/ios`)"
-  - "CapacitorCamera (from `../../node_modules/@capacitor/camera`)"
-  - "CapacitorCommunityKeepAwake (from `../../node_modules/@capacitor-community/keep-awake`)"
-  - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
-  - "CapacitorFilesystem (from `../../node_modules/@capacitor/filesystem`)"
-  - "CapacitorHaptics (from `../../node_modules/@capacitor/haptics`)"
-  - "CapacitorInappbrowser (from `../../node_modules/@capacitor/inappbrowser`)"
-  - "CapacitorKeyboard (from `../../node_modules/@capacitor/keyboard`)"
-  - "CapacitorPreferences (from `../../node_modules/@capacitor/preferences`)"
-  - "CapacitorShare (from `../../node_modules/@capacitor/share`)"
-  - "CapacitorSplashScreen (from `../../node_modules/@capacitor/splash-screen`)"
-  - "CapacitorStatusBar (from `../../node_modules/@capacitor/status-bar`)"
-  - "CapacitorTextZoom (from `../../node_modules/@capacitor/text-zoom`)"
-  - "CapawesomeCapacitorFilePicker (from `../../node_modules/@capawesome/capacitor-file-picker`)"
+  - "Capacitor (from `../../node_modules/.pnpm/@capacitor+ios@7.1.0_@capacitor+core@7.1.0/node_modules/@capacitor/ios`)"
+  - "CapacitorCamera (from `../../node_modules/.pnpm/@capacitor+camera@7.0.0_@capacitor+core@7.1.0/node_modules/@capacitor/camera`)"
+  - "CapacitorCommunityKeepAwake (from `../../node_modules/.pnpm/@capacitor-community+keep-awake@7.0.0_@capacitor+core@7.1.0/node_modules/@capacitor-community/keep-awake`)"
+  - "CapacitorCordova (from `../../node_modules/.pnpm/@capacitor+ios@7.1.0_@capacitor+core@7.1.0/node_modules/@capacitor/ios`)"
+  - "CapacitorFilesystem (from `../../node_modules/.pnpm/@capacitor+filesystem@7.0.0_@capacitor+core@7.1.0/node_modules/@capacitor/filesystem`)"
+  - "CapacitorHaptics (from `../../node_modules/.pnpm/@capacitor+haptics@7.0.0_@capacitor+core@7.1.0/node_modules/@capacitor/haptics`)"
+  - "CapacitorInappbrowser (from `../../node_modules/.pnpm/@capacitor+inappbrowser@2.0.1_@capacitor+core@7.1.0/node_modules/@capacitor/inappbrowser`)"
+  - "CapacitorKeyboard (from `../../node_modules/.pnpm/@capacitor+keyboard@7.0.0_@capacitor+core@7.1.0/node_modules/@capacitor/keyboard`)"
+  - "CapacitorPreferences (from `../../node_modules/.pnpm/@capacitor+preferences@7.0.0_@capacitor+core@7.1.0/node_modules/@capacitor/preferences`)"
+  - "CapacitorShare (from `../../node_modules/.pnpm/@capacitor+share@7.0.0_@capacitor+core@7.1.0/node_modules/@capacitor/share`)"
+  - "CapacitorSplashScreen (from `../../node_modules/.pnpm/@capacitor+splash-screen@7.0.0_@capacitor+core@7.1.0/node_modules/@capacitor/splash-screen`)"
+  - "CapacitorStatusBar (from `../../node_modules/.pnpm/@capacitor+status-bar@7.0.0_@capacitor+core@7.1.0/node_modules/@capacitor/status-bar`)"
+  - "CapacitorTextZoom (from `../../node_modules/.pnpm/@capacitor+text-zoom@7.0.0_@capacitor+core@7.1.0/node_modules/@capacitor/text-zoom`)"
+  - "CapawesomeCapacitorFilePicker (from `../../node_modules/.pnpm/@capawesome+capacitor-file-picker@7.0.1_@capacitor+core@7.1.0/node_modules/@capawesome/capacitor-file-picker`)"
 
 SPEC REPOS:
   trunk:
@@ -51,33 +51,33 @@ SPEC REPOS:
 
 EXTERNAL SOURCES:
   Capacitor:
-    :path: "../../node_modules/@capacitor/ios"
+    :path: "../../node_modules/.pnpm/@capacitor+ios@7.1.0_@capacitor+core@7.1.0/node_modules/@capacitor/ios"
   CapacitorCamera:
-    :path: "../../node_modules/@capacitor/camera"
+    :path: "../../node_modules/.pnpm/@capacitor+camera@7.0.0_@capacitor+core@7.1.0/node_modules/@capacitor/camera"
   CapacitorCommunityKeepAwake:
-    :path: "../../node_modules/@capacitor-community/keep-awake"
+    :path: "../../node_modules/.pnpm/@capacitor-community+keep-awake@7.0.0_@capacitor+core@7.1.0/node_modules/@capacitor-community/keep-awake"
   CapacitorCordova:
-    :path: "../../node_modules/@capacitor/ios"
+    :path: "../../node_modules/.pnpm/@capacitor+ios@7.1.0_@capacitor+core@7.1.0/node_modules/@capacitor/ios"
   CapacitorFilesystem:
-    :path: "../../node_modules/@capacitor/filesystem"
+    :path: "../../node_modules/.pnpm/@capacitor+filesystem@7.0.0_@capacitor+core@7.1.0/node_modules/@capacitor/filesystem"
   CapacitorHaptics:
-    :path: "../../node_modules/@capacitor/haptics"
+    :path: "../../node_modules/.pnpm/@capacitor+haptics@7.0.0_@capacitor+core@7.1.0/node_modules/@capacitor/haptics"
   CapacitorInappbrowser:
-    :path: "../../node_modules/@capacitor/inappbrowser"
+    :path: "../../node_modules/.pnpm/@capacitor+inappbrowser@2.0.1_@capacitor+core@7.1.0/node_modules/@capacitor/inappbrowser"
   CapacitorKeyboard:
-    :path: "../../node_modules/@capacitor/keyboard"
+    :path: "../../node_modules/.pnpm/@capacitor+keyboard@7.0.0_@capacitor+core@7.1.0/node_modules/@capacitor/keyboard"
   CapacitorPreferences:
-    :path: "../../node_modules/@capacitor/preferences"
+    :path: "../../node_modules/.pnpm/@capacitor+preferences@7.0.0_@capacitor+core@7.1.0/node_modules/@capacitor/preferences"
   CapacitorShare:
-    :path: "../../node_modules/@capacitor/share"
+    :path: "../../node_modules/.pnpm/@capacitor+share@7.0.0_@capacitor+core@7.1.0/node_modules/@capacitor/share"
   CapacitorSplashScreen:
-    :path: "../../node_modules/@capacitor/splash-screen"
+    :path: "../../node_modules/.pnpm/@capacitor+splash-screen@7.0.0_@capacitor+core@7.1.0/node_modules/@capacitor/splash-screen"
   CapacitorStatusBar:
-    :path: "../../node_modules/@capacitor/status-bar"
+    :path: "../../node_modules/.pnpm/@capacitor+status-bar@7.0.0_@capacitor+core@7.1.0/node_modules/@capacitor/status-bar"
   CapacitorTextZoom:
-    :path: "../../node_modules/@capacitor/text-zoom"
+    :path: "../../node_modules/.pnpm/@capacitor+text-zoom@7.0.0_@capacitor+core@7.1.0/node_modules/@capacitor/text-zoom"
   CapawesomeCapacitorFilePicker:
-    :path: "../../node_modules/@capawesome/capacitor-file-picker"
+    :path: "../../node_modules/.pnpm/@capawesome+capacitor-file-picker@7.0.1_@capacitor+core@7.1.0/node_modules/@capawesome/capacitor-file-picker"
 
 SPEC CHECKSUMS:
   Capacitor: bceb785fb78f5e81e4a9e37843bc1c24bd9c7194
@@ -96,6 +96,6 @@ SPEC CHECKSUMS:
   CapawesomeCapacitorFilePicker: 640114d8fd427375fe0e826ffc1ca54d91c2d611
   OSInAppBrowserLib: c3d0b21a0c8b6d81e69117ad08bb6b8a4849c4e1
 
-PODFILE CHECKSUM: d72c0bb74a312cf1f9ecb33f585b2c4ebb82d23e
+PODFILE CHECKSUM: 131415a5ff519e561dade7ae0ec1a594df040e9a
 
 COCOAPODS: 1.16.2

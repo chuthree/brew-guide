@@ -236,15 +236,38 @@ export function extractJsonFromText(
 		}
 
 		// 检查是否是器具数据
-		if ('animationType' in data && typeof data.animationType === 'string') {
+		if ('equipment' in data) {
+			const equipment = data.equipment;
+			
 			// 验证必要的字段
-			if (!data.name) {
+			if (!equipment.name) {
 				throw new Error('器具数据缺少名称');
 			}
-			if (!['v60', 'kalita', 'origami', 'clever', 'custom'].includes(data.animationType)) {
+			
+			if (!equipment.animationType || !['v60', 'kalita', 'origami', 'clever', 'custom'].includes(equipment.animationType)) {
 				throw new Error('无效的器具动画类型');
 			}
-			return data as CustomEquipment;
+			
+			// 验证自定义SVG（如果是自定义类型）
+			if (equipment.animationType === 'custom' && !equipment.customShapeSvg) {
+				throw new Error('自定义器具缺少形状SVG');
+			}
+			
+			// 如果有阀门，验证阀门SVG
+			if (equipment.hasValve) {
+				if (!equipment.customValveSvg || !equipment.customValveOpenSvg) {
+					throw new Error('带阀门的器具缺少阀门SVG');
+				}
+			}
+			
+			// 验证methods数组（如果存在）
+			if ('methods' in data && data.methods) {
+				if (!Array.isArray(data.methods)) {
+					throw new Error('methods字段必须是数组');
+				}
+			}
+			
+			return data;
 		}
 		
 		// 检查是否是方案数据
