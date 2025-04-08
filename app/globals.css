@@ -47,14 +47,23 @@
 .custom-shape-svg-container svg * {
   stroke: var(--custom-shape-color) !important;
   fill: none !important;
-  stroke-width: 1.5px;
+  stroke-width: 1.5px !important;
 }
 
 /* 确保轮廓模式 */
 .outline-only svg * {
   fill: none !important;
   stroke: var(--custom-shape-color) !important;
-  stroke-width: 1.5px;
+  stroke-width: 1.5px !important;
+}
+
+/* 确保 SVG 尺寸和视口统一 */
+.custom-cup-shape svg,
+.custom-shape-svg-container svg {
+  width: 300px !important;
+  height: 300px !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
 }
 
 @layer base {
@@ -164,7 +173,10 @@ body {
 }
 
 /* 键盘相关样式 - 只保留核心样式 */
-input:focus, textarea:focus, select:focus, [contenteditable]:focus {
+input:focus,
+textarea:focus,
+select:focus,
+[contenteditable]:focus {
   position: relative;
   z-index: 10;
   /* 添加边距，确保滚动时有足够的空间 */
@@ -176,13 +188,15 @@ input:focus, textarea:focus, select:focus, [contenteditable]:focus {
 .ios-device input:focus,
 .ios-device textarea:focus,
 .ios-device select:focus {
-  transform: translateZ(0); /* 触发iOS的硬件加速 */
+  transform: translateZ(0);
+  /* 触发iOS的硬件加速 */
 }
 
 /* 确保模态框的内容在键盘弹出时仍然可见 */
 .ios-device .modal-form-container,
 .android-device .modal-form-container {
-  padding-bottom: 100px !important; /* 确保模态框内容有足够的底部空间 */
+  padding-bottom: 100px !important;
+  /* 确保模态框内容有足够的底部空间 */
 }
 
 /* 针对表单内容在iOS上的处理 */
@@ -193,7 +207,10 @@ input:focus, textarea:focus, select:focus, [contenteditable]:focus {
 /* 解决Android表单聚焦问题 */
 @media (max-width: 768px) {
   @supports (-webkit-touch-callout: none) {
-    input, textarea, select {
+
+    input,
+    textarea,
+    select {
       /* 阻止iOS缩放但不改变字体大小 */
       touch-action: manipulation;
     }

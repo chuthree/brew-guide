@@ -399,15 +399,46 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
         if (!svgContent) return '';
 
         // 处理 SVG 内容，确保使用 CSS 变量
-        const processedSvg = svgContent
-            // 替换所有颜色相关的属性为 CSS 变量
-            .replace(/stroke="([^"]*)"/, 'stroke="var(--custom-shape-color)"')
-            .replace(/fill="([^"]*)"/, 'fill="none"');
+        let processedSvg = svgContent;
+
+        // 替换所有颜色相关的属性为 CSS 变量
+        processedSvg = processedSvg
+            .replace(/stroke="black"/g, 'stroke="var(--custom-shape-color)"')
+            .replace(/stroke="white"/g, 'stroke="var(--custom-shape-color)"')
+            .replace(/stroke="#000000"/g, 'stroke="var(--custom-shape-color)"')
+            .replace(/stroke="#FFFFFF"/g, 'stroke="var(--custom-shape-color)"')
+            .replace(/stroke="currentColor"/g, 'stroke="var(--custom-shape-color)"')
+            .replace(/fill="black"/g, 'fill="none"')
+            .replace(/fill="white"/g, 'fill="none"')
+            .replace(/fill="#000000"/g, 'fill="none"')
+            .replace(/fill="#FFFFFF"/g, 'fill="none"')
+            .replace(/fill="currentColor"/g, 'fill="none"');
+
+        // 检查是否已经包含 viewBox
+        const hasViewBox = /viewBox="[^"]*"/.test(processedSvg);
 
         // 添加 SVG 属性和类名
-        return processedSvg.replace(/<svg([^>]*)>/, (match, attributes) => {
-            return `<svg${attributes} width="100%" height="100%" class="custom-cup-shape">`;
+        processedSvg = processedSvg.replace(/<svg([^>]*)>/, (match, attributes) => {
+            // 添加缺失的 viewBox
+            const viewBoxAttr = hasViewBox ? '' : ' viewBox="0 0 300 300"';
+            // 添加统一的宽高和类名
+            return `<svg${attributes}${viewBoxAttr} width="300" height="300" class="custom-cup-shape outline-only">`;
         });
+
+        // 确保所有路径使用统一的线条粗细
+        processedSvg = processedSvg.replace(/<path([^>]*)stroke-width="[^"]*"([^>]*)>/g, (match, before, after) => {
+            return `<path${before}stroke-width="1.5"${after}>`;
+        });
+
+        // 添加缺失的 stroke-width 属性
+        processedSvg = processedSvg.replace(/<path([^>]*)(stroke="[^"]*")([^>]*)(stroke-width="[^"]*")?([^>]*)>/g, (match, before, stroke, middle, strokeWidth, after) => {
+            if (!strokeWidth) {
+                return `<path${before}${stroke}${middle} stroke-width="1.5"${after}>`;
+            }
+            return match;
+        });
+
+        return processedSvg;
     };
 
     // 如果在倒计时期间，立即返回静态视图
