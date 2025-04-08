@@ -65,20 +65,72 @@ export const extractPathsFromSvg = (
 	const paths: Array<{ path: string; stroke: string; strokeWidth: string }> =
 		[];
 
-	// 使用正则表达式提取path元素
-	const pathRegex =
-		/<path[^>]*d="([^"]*)"[^>]*stroke="([^"]*)"[^>]*stroke-width="([^"]*)"[^>]*\/>/g;
+	try {
+		// 使用DOMParser解析SVG字符串，这种方式更可靠
+		const parser = new DOMParser();
+		const svgDoc = parser.parseFromString(svgString, 'image/svg+xml');
+		
+		// 获取所有path元素
+		const pathElements = svgDoc.querySelectorAll('path');
+		
+		pathElements.forEach(path => {
+			// 提取每个path的属性
+			const d = path.getAttribute('d') || '';
+			const stroke = path.getAttribute('stroke') || 'var(--custom-shape-color)';
+			const strokeWidth = path.getAttribute('stroke-width') || '1.5';
+			
+			if (d) {
+				paths.push({
+					path: d,
+					stroke: stroke,
+					strokeWidth: strokeWidth
+				});
+			}
+		});
+		
+		// 如果没有找到任何path元素，尝试使用备用的正则表达式方法
+		if (paths.length === 0) {
+			fallbackExtractPaths(svgString, paths);
+		}
+	} catch (error) {
+		console.error('解析SVG时出错:', error);
+		// 出错时使用备用方法
+		fallbackExtractPaths(svgString, paths);
+	}
+
+	return paths;
+};
+
+/**
+ * 备用方法：使用正则表达式从SVG字符串中提取路径
+ */
+const fallbackExtractPaths = (
+	svgString: string,
+	paths: Array<{ path: string; stroke: string; strokeWidth: string }>
+) => {
+	// 更灵活的正则表达式，匹配各种格式的path元素
+	const pathRegex = /<path[^>]*d="([^"]*)"[^>]*(?:stroke="([^"]*)")?[^>]*(?:stroke-width="([^"]*)")?[^>]*>/g;
 	let match;
 
 	while ((match = pathRegex.exec(svgString)) !== null) {
 		paths.push({
 			path: match[1],
-			stroke: match[2],
-			strokeWidth: match[3],
+			stroke: match[2] || 'var(--custom-shape-color)',
+			strokeWidth: match[3] || '1.5',
 		});
 	}
 
-	return paths;
+	// 如果还没找到，尝试不同的属性顺序
+	if (paths.length === 0) {
+		const altPathRegex = /<path[^>]*(?:stroke-width="([^"]*)")?[^>]*(?:stroke="([^"]*)")?[^>]*d="([^"]*)"[^>]*>/g;
+		while ((match = altPathRegex.exec(svgString)) !== null) {
+			paths.push({
+				path: match[3],
+				stroke: match[2] || 'var(--custom-shape-color)',
+				strokeWidth: match[1] || '1.5',
+			});
+		}
+	}
 };
 
 /**
