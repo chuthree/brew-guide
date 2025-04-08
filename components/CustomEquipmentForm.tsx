@@ -1291,34 +1291,24 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                                         <div className="w-full aspect-square flex items-center justify-center bg-neutral-50 dark:bg-neutral-900 rounded-md relative">
                                             <div className="absolute inset-0 flex items-center justify-center">
                                                 <div className="w-3/4 h-3/4 relative">
-                                                    {equipment.customShapeSvg ? (
-                                                        <div
-                                                            className="w-full h-full flex items-center justify-center custom-cup-shape outline-only"
-                                                            dangerouslySetInnerHTML={{
-                                                                __html: equipment.customShapeSvg.replace(/<svg/, '<svg width="100%" height="100%"')
-                                                            }}
+                                                    {/* 默认杯型始终显示默认图像，不管customShapeSvg是否存在 */}
+                                                    <Image
+                                                        src="/images/v60-base.svg"
+                                                        alt="杯型背景"
+                                                        fill
+                                                        className="object-contain invert-0 dark:invert"
+                                                        sizes="(max-width: 768px) 100vw, 300px"
+                                                        quality={85}
+                                                    />
+                                                    {equipment.hasValve && (
+                                                        <Image
+                                                            src="/images/valve-closed.svg"
+                                                            alt="阀门背景"
+                                                            fill
+                                                            className="object-contain invert-0 dark:invert"
+                                                            sizes="(max-width: 768px) 100vw, 300px"
+                                                            quality={85}
                                                         />
-                                                    ) : (
-                                                        <>
-                                                            <Image
-                                                                src="/images/v60-base.svg"
-                                                                alt="杯型背景"
-                                                                fill
-                                                                className="object-contain invert-0 dark:invert"
-                                                                sizes="(max-width: 768px) 100vw, 300px"
-                                                                quality={85}
-                                                            />
-                                                            {equipment.hasValve && (
-                                                                <Image
-                                                                    src="/images/valve-closed.svg"
-                                                                    alt="阀门背景"
-                                                                    fill
-                                                                    className="object-contain invert-0 dark:invert"
-                                                                    sizes="(max-width: 768px) 100vw, 300px"
-                                                                    quality={85}
-                                                                />
-                                                            )}
-                                                        </>
                                                     )}
                                                 </div>
                                             </div>
@@ -1438,7 +1428,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                                         <div className="w-full aspect-square bg-neutral-50 dark:bg-neutral-900 rounded-md overflow-hidden relative">
                                             {/* 底部显示杯型 */}
                                             <div className="absolute inset-0 flex items-center justify-center opacity-60">
-                                                {equipment.customShapeSvg ? (
+                                                {cupShapeType === 'custom' && equipment.customShapeSvg ? (
                                                     <div
                                                         className="w-full h-full flex items-center justify-center custom-cup-shape outline-only"
                                                         dangerouslySetInnerHTML={{
@@ -1550,7 +1540,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                                         {/* 底部显示杯型 */}
                                         <div className="absolute inset-0 flex items-center justify-center">
                                             <div className="w-full h-full relative opacity-60">
-                                                {equipment.customShapeSvg ? (
+                                                {cupShapeType === 'custom' && equipment.customShapeSvg ? (
                                                     <div
                                                         className="w-full h-full flex items-center justify-center"
                                                         dangerouslySetInnerHTML={{
