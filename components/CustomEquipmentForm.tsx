@@ -7,23 +7,8 @@ import hapticsUtils from '@/lib/haptics';
 import { AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 
-// 修改CustomPourAnimation接口，添加previewSrc字段来显示预览图
-interface CustomPourAnimation {
-  id: string;
-  name: string; // 自定义名称，如"中心注水"、"绕圈注水" 
-  customAnimationSvg: string;
-  isSystemDefault?: boolean; // 标记是否是系统默认类型
-  pourType?: 'center' | 'circle' | 'ice'; // 对应系统默认类型
-  previewFrames?: number; // 该类型动画有几帧
-  frames?: AnimationFrame[]; // 动画帧数据
-}
-
-// 扩展CustomEquipment类型以包含注水动画
-declare module '@/lib/config' {
-  interface CustomEquipment {
-    customPourAnimations?: CustomPourAnimation[];
-  }
-}
+// 从CustomEquipment类型中提取PourAnimation类型
+type CustomPourAnimation = NonNullable<CustomEquipment['customPourAnimations']>[number];
 
 // 用于处理服务器端/客户端的窗口尺寸
 const useWindowSize = () => {

@@ -48,7 +48,14 @@ export interface CustomEquipment extends Equipment {
 	customPourAnimations?: Array<{
 		id: string;
 		name: string;
-		svg?: string;
+		customAnimationSvg: string;
+		isSystemDefault?: boolean;
+		pourType?: 'center' | 'circle' | 'ice';
+		previewFrames?: number;
+		frames?: Array<{
+			id: string;
+			svgData: string;
+		}>;
 	}>; // 自定义注水动画配置
 }
 
