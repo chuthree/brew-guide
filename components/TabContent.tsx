@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Method, equipmentList, CustomEquipment, commonMethods } from '@/lib/config';
 import StageItem from '@/components/StageItem';
@@ -11,6 +11,7 @@ import { v4 as _uuidv4 } from 'uuid';
 import { copyMethodToClipboard } from "@/lib/customMethods";
 import { showToast } from "@/components/ui/toast";
 import { exportEquipment, copyToClipboard } from '@/lib/exportUtils';
+import EquipmentShareModal from '@/components/EquipmentShareModal';
 
 // 动态导入客户端组件
 const PourVisualizer = dynamic(() => import('@/components/PourVisualizer'), {
@@ -206,7 +207,7 @@ const TabContent: React.FC<TabContentProps> = ({
     // 获取当前选中的自定义器具
     const getSelectedCustomEquipment = useCallback(() => {
         if (!selectedEquipment) return undefined;
-        
+
         // 首先尝试通过ID匹配
         const equipmentById = customEquipments.find(e => e.id === selectedEquipment);
         if (equipmentById?.animationType) {
@@ -219,7 +220,7 @@ const TabContent: React.FC<TabContentProps> = ({
             });
             return equipmentById;
         }
-        
+
         // 如果ID匹配失败，尝试通过名称匹配
         const equipmentByName = customEquipments.find(e => e.name === selectedEquipment);
         if (equipmentByName?.animationType) {
@@ -232,7 +233,7 @@ const TabContent: React.FC<TabContentProps> = ({
             });
             return equipmentByName;
         }
-        
+
         // 未找到匹配的自定义器具
         console.log('未找到匹配的自定义器具:', {
             selectedEquipment,
@@ -270,28 +271,37 @@ const TabContent: React.FC<TabContentProps> = ({
         }
     };
 
+    // 分享器具相关状态
+    const [showShareModal, setShowShareModal] = useState(false);
+    const [sharingEquipment, setSharingEquipment] = useState<CustomEquipment | null>(null);
+    const [sharingMethods, setSharingMethods] = useState<Method[]>([]);
+
     // 处理分享器具
     const handleShareEquipment = async (equipment: CustomEquipment) => {
         try {
-            const exportData = exportEquipment(equipment);
-            const success = await copyToClipboard(exportData);
-            if (success) {
-                showToast({
-                    type: 'success',
-                    title: '已复制到剪贴板',
-                    duration: 2000
-                });
-            } else {
-                showToast({
-                    type: 'error',
-                    title: '复制失败，请重试',
-                    duration: 2000
-                });
+            // 获取器具对应的自定义方案（不包含通用方案）
+            let methods: Method[] = [];
+            if (equipment.id) {
+                // 如果器具有ID，尝试从 customMethods 中获取对应的方案
+                methods = customMethods[equipment.id] || [];
             }
+
+            // 如果没有找到方案，尝试使用器具名称查找
+            if (methods.length === 0 && equipment.name) {
+                methods = customMethods[equipment.name] || [];
+            }
+
+            // 注意：不再添加通用方案，因为通用方案是根据器具类型预设的
+            // 用户导入器具后，会根据器具类型自动获得对应的通用方案
+
+            // 设置要分享的器具和方案
+            setSharingEquipment(equipment);
+            setSharingMethods(methods);
+            setShowShareModal(true);
         } catch (_error) {
             showToast({
                 type: 'error',
-                title: '导出失败，请重试',
+                title: '准备分享失败，请重试',
                 duration: 2000
             });
         }
@@ -447,8 +457,17 @@ const TabContent: React.FC<TabContentProps> = ({
                     ))}
                 </>
             )}
+            {/* 器具分享模态框 */}
+            {sharingEquipment && (
+                <EquipmentShareModal
+                    isOpen={showShareModal}
+                    onClose={() => setShowShareModal(false)}
+                    equipment={sharingEquipment}
+                    methods={sharingMethods}
+                />
+            )}
         </>
     );
 };
 
-export default TabContent; 
+export default TabContent;

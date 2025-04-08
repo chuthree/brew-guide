@@ -1,12 +1,15 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { type CustomEquipment } from '@/lib/config'
+import { type CustomEquipment, type Method } from '@/lib/config'
+import { Capacitor } from '@capacitor/core'
+import { FilePicker } from '@capawesome/capacitor-file-picker'
+import { showToast } from './ui/toast'
 
 interface EquipmentImportModalProps {
     showForm: boolean
-    onImport: (equipment: CustomEquipment) => void
+    onImport: (equipment: CustomEquipment, methods?: Method[]) => void
     onClose: () => void
     existingEquipments?: CustomEquipment[]
 }
@@ -20,14 +23,80 @@ const EquipmentImportModal: React.FC<EquipmentImportModalProps> = ({
     // 导入数据的状态
     const [importData, setImportData] = useState('');
     const [error, setError] = useState<string | null>(null);
+    const [isImporting, setIsImporting] = useState(false);
+    const [isDragging, setIsDragging] = useState(false);
+    const dropZoneRef = useRef<HTMLDivElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const isNative = Capacitor.isNativePlatform();
+    const isIOS = Capacitor.getPlatform() === 'ios';
+    const isAndroid = Capacitor.getPlatform() === 'android';
 
     // 监听showForm变化，当表单关闭时清除输入框内容
     useEffect(() => {
         if (!showForm) {
             setImportData('');
             setError(null);
+            setIsImporting(false);
+            setIsDragging(false);
         }
     }, [showForm]);
+
+    // 设置拖放事件监听器
+    useEffect(() => {
+        const dropZone = dropZoneRef.current;
+        if (!dropZone || isNative) return;
+
+        const handleDragOver = (e: DragEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsDragging(true);
+        };
+
+        const handleDragEnter = (e: DragEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsDragging(true);
+        };
+
+        const handleDragLeave = (e: DragEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsDragging(false);
+        };
+
+        const handleDrop = (e: DragEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsDragging(false);
+
+            if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
+                const file = e.dataTransfer.files[0];
+                handleFile(file);
+            } else if (e.dataTransfer?.items && e.dataTransfer.items.length > 0) {
+                // 尝试获取文本内容
+                for (let i = 0; i < e.dataTransfer.items.length; i++) {
+                    if (e.dataTransfer.items[i].kind === 'string') {
+                        e.dataTransfer.items[i].getAsString((text) => {
+                            setImportData(text);
+                        });
+                        break;
+                    }
+                }
+            }
+        };
+
+        dropZone.addEventListener('dragover', handleDragOver);
+        dropZone.addEventListener('dragenter', handleDragEnter);
+        dropZone.addEventListener('dragleave', handleDragLeave);
+        dropZone.addEventListener('drop', handleDrop);
+
+        return () => {
+            dropZone.removeEventListener('dragover', handleDragOver);
+            dropZone.removeEventListener('dragenter', handleDragEnter);
+            dropZone.removeEventListener('dragleave', handleDragLeave);
+            dropZone.removeEventListener('drop', handleDrop);
+        };
+    }, [isNative, showForm]);
 
     // 关闭并清除输入
     const handleClose = () => {
@@ -36,70 +105,213 @@ const EquipmentImportModal: React.FC<EquipmentImportModalProps> = ({
         onClose();
     };
 
-    // 处理导入数据
-    const handleImport = () => {
-        if (!importData) {
+    // 处理文件选择按钮点击
+    const handleFileButtonClick = () => {
+        if (isNative) {
+            handleNativeFilePicker();
+        } else if (fileInputRef.current) {
+            fileInputRef.current.click();
+        }
+    };
+
+    // 处理原生平台的文件选择
+    const handleNativeFilePicker = async () => {
+        try {
+            setIsImporting(true);
+            setError(null);
+
+            // 使用FilePicker插件选择文件
+            const result = await FilePicker.pickFiles({
+                types: ['application/json']
+            });
+
+            if (result.files.length > 0) {
+                const file = result.files[0];
+                // 读取文件内容
+                if (file.path) {
+                    const response = await fetch(file.path);
+                    const text = await response.text();
+                    processImportData(text);
+                } else {
+                    setError('无法读取文件');
+                    setIsImporting(false);
+                }
+            } else {
+                setIsImporting(false);
+            }
+        } catch (error) {
+            console.error('选择文件失败:', error);
+            setError('选择文件失败，请重试');
+            setIsImporting(false);
+        }
+    };
+
+    // 处理文件输入变化（Web平台）
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) {
+            setIsImporting(false);
+            return;
+        }
+        handleFile(file);
+    };
+
+    // 处理文件
+    const handleFile = (file: File) => {
+        if (!file.name.endsWith('.json') && file.type !== 'application/json') {
+            setError('请选择JSON文件');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const text = event.target?.result as string;
+            processImportData(text);
+        };
+        reader.onerror = () => {
+            setError('读取文件失败，请重试');
+            setIsImporting(false);
+        };
+        reader.readAsText(file);
+    };
+
+    // 处理文本导入
+    const handleTextImport = () => {
+        if (!importData.trim()) {
             setError('请输入要导入的数据');
             return;
         }
 
+        setIsImporting(true);
+        processImportData(importData);
+    };
+
+    // 处理导入数据
+    const processImportData = (jsonText: string) => {
         try {
+            setIsImporting(true);
             // 尝试从文本中提取数据
             import('@/lib/jsonUtils').then(async ({ extractJsonFromText }) => {
                 setError(null);
                 // 解析导入数据
-                const data = extractJsonFromText(importData);
-                const equipment = data as unknown as CustomEquipment;
+                const data = extractJsonFromText(jsonText);
+                
+                // 检查是否是有效的器具导出文件
+                if (data.equipment) {
+                    // 新格式：包含器具和方案
+                    const equipment = data.equipment as CustomEquipment;
+                    
+                    // 验证器具
+                    if (!equipment.name) {
+                        setError('器具缺少名称');
+                        setIsImporting(false);
+                        return;
+                    }
 
-                if (!equipment) {
-                    setError('无法从输入中提取有效数据');
-                    return;
+                    // 验证动画类型
+                    if (!equipment.animationType || !['v60', 'kalita', 'origami', 'clever', 'custom'].includes(equipment.animationType)) {
+                        setError('器具动画类型无效');
+                        setIsImporting(false);
+                        return;
+                    }
+
+                    // 检查是否已存在同名器具
+                    const existingEquipment = existingEquipments.find(e => e.name === equipment.name);
+                    if (existingEquipment) {
+                        setError(`已存在同名器具"${equipment.name}"，请修改后再导入`);
+                        setIsImporting(false);
+                        return;
+                    }
+
+                    // 确保equipment对象完全符合CustomEquipment接口
+                    const validEquipment: CustomEquipment = {
+                        id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+                        name: equipment.name,
+                        description: equipment.description || '',
+                        isCustom: true,
+                        animationType: equipment.animationType,
+                        hasValve: equipment.hasValve || false,
+                        customShapeSvg: equipment.customShapeSvg,
+                        customValveSvg: equipment.customValveSvg,
+                        customValveOpenSvg: equipment.customValveOpenSvg,
+                    };
+
+                    // 提取方案（如果有）
+                    const methods = data.methods && Array.isArray(data.methods) 
+                        ? data.methods as Method[]
+                        : undefined;
+
+                    // 导入器具和方案
+                    onImport(validEquipment, methods);
+                    
+                    // 显示成功消息
+                    showToast({
+                        type: 'success',
+                        title: '器具导入成功',
+                        duration: 2000
+                    });
+                    
+                    // 关闭模态框
+                    handleClose();
+                } else {
+                    // 旧格式：只有器具数据
+                    const equipment = data as CustomEquipment;
+                    
+                    // 验证器具
+                    if (!equipment.name) {
+                        setError('器具缺少名称');
+                        setIsImporting(false);
+                        return;
+                    }
+
+                    // 验证动画类型
+                    if (!equipment.animationType || !['v60', 'kalita', 'origami', 'clever', 'custom'].includes(equipment.animationType)) {
+                        setError('器具动画类型无效');
+                        setIsImporting(false);
+                        return;
+                    }
+
+                    // 检查是否已存在同名器具
+                    const existingEquipment = existingEquipments.find(e => e.name === equipment.name);
+                    if (existingEquipment) {
+                        setError(`已存在同名器具"${equipment.name}"，请修改后再导入`);
+                        setIsImporting(false);
+                        return;
+                    }
+
+                    // 确保equipment对象完全符合CustomEquipment接口
+                    const validEquipment: CustomEquipment = {
+                        id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+                        name: equipment.name,
+                        description: equipment.description || '',
+                        isCustom: true,
+                        animationType: equipment.animationType,
+                        hasValve: equipment.hasValve || false,
+                        customShapeSvg: equipment.customShapeSvg,
+                        customValveSvg: equipment.customValveSvg,
+                        customValveOpenSvg: equipment.customValveOpenSvg,
+                    };
+
+                    // 导入器具
+                    onImport(validEquipment);
+                    
+                    // 显示成功消息
+                    showToast({
+                        type: 'success',
+                        title: '器具导入成功',
+                        duration: 2000
+                    });
+                    
+                    // 关闭模态框
+                    handleClose();
                 }
-
-                // 验证器具对象是否有必要的字段
-                if (!equipment.name) {
-                    setError('器具缺少名称');
-                    return;
-                }
-
-                // 验证动画类型
-                if (!equipment.animationType || !['v60', 'kalita', 'origami', 'clever', 'custom'].includes(equipment.animationType)) {
-                    setError('器具动画类型无效');
-                    return;
-                }
-
-                // 检查是否已存在同名器具
-                const existingEquipment = existingEquipments.find(e => e.name === equipment.name);
-                if (existingEquipment) {
-                    setError(`已存在同名器具"${equipment.name}"，请修改后再导入`);
-                    return;
-                }
-
-                // 确保equipment对象完全符合CustomEquipment接口
-                const validEquipment: CustomEquipment = {
-                    id: equipment.id || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-                    name: equipment.name,
-                    description: equipment.description || '',
-                    isCustom: true,
-                    animationType: equipment.animationType,
-                    hasValve: equipment.hasValve || false,
-                    customShapeSvg: equipment.customShapeSvg,
-                    customValveSvg: equipment.customValveSvg,
-                    customValveOpenSvg: equipment.customValveOpenSvg,
-                };
-
-                // 导入器具
-                onImport(validEquipment);
-                // 导入成功后清空输入框和错误信息
-                setImportData('');
-                setError(null);
-                // 关闭模态框
-                handleClose();
             }).catch(err => {
                 setError('解析数据失败: ' + (err instanceof Error ? err.message : '未知错误'));
+                setIsImporting(false);
             });
         } catch (err) {
             setError('导入失败: ' + (err instanceof Error ? err.message : '未知错误'));
+            setIsImporting(false);
         }
     };
 
@@ -130,7 +342,7 @@ const EquipmentImportModal: React.FC<EquipmentImportModalProps> = ({
                         style={{
                             willChange: "transform"
                         }}
-                        className="absolute inset-x-0 bottom-0 max-h-[90vh] overflow-hidden rounded-t-2xl bg-neutral-50 dark:bg-neutral-900 shadow-xl"
+                        className={`absolute inset-x-0 bottom-0 max-h-[90vh] overflow-hidden rounded-t-2xl bg-neutral-50 dark:bg-neutral-900 shadow-xl ${isAndroid ? 'android-modal' : ''} ${isIOS ? 'ios-modal' : ''}`}
                     >
                         {/* 拖动条 */}
                         <div className="sticky top-0 z-10 flex justify-center py-2 bg-neutral-50 dark:bg-neutral-900">
@@ -152,78 +364,118 @@ const EquipmentImportModal: React.FC<EquipmentImportModalProps> = ({
                             }}
                             className="px-6 px-safe pb-6 pb-safe overflow-auto max-h-[calc(90vh-40px)]"
                         >
-                            <div className="flex flex-col">
-                                {/* 顶部标题 */}
-                                <div className="flex items-center justify-between mt-3 mb-6">
+                            {/* 标题栏 */}
+                            <div className="flex items-center justify-between py-4 mb-4">
+                                <button
+                                    type="button"
+                                    onClick={handleClose}
+                                    className="p-1.5 text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                                >
+                                    <svg
+                                        width="16"
+                                        height="16"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                    >
+                                        <path
+                                            d="M19 12H5M5 12L12 19M5 12L12 5"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                        />
+                                    </svg>
+                                </button>
+                                <h3 className="text-base font-medium text-neutral-900 dark:text-neutral-100">导入器具</h3>
+                                <div className="w-8"></div>
+                            </div>
+
+                            {/* 拖放区域 */}
+                            <div
+                                ref={dropZoneRef}
+                                className={`relative mb-4 p-6 border-2 border-dashed rounded-lg transition-colors ${
+                                    isDragging
+                                        ? 'border-neutral-800 dark:border-neutral-200 bg-neutral-100/60 dark:bg-neutral-800/30'
+                                        : 'border-neutral-300 dark:border-neutral-700 hover:border-neutral-400 dark:hover:border-neutral-600'
+                                }`}
+                            >
+                                <div className="text-center">
+                                    <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-2">
+                                        拖放JSON文件到此处，或
+                                    </p>
                                     <button
-                                        type="button"
-                                        onClick={handleClose}
-                                        className="rounded-full p-2"
+                                        onClick={handleFileButtonClick}
+                                        className="inline-flex items-center justify-center px-4 py-2 text-sm text-neutral-800 dark:text-neutral-200 bg-neutral-100/60 dark:bg-neutral-800/30 rounded-lg hover:opacity-80 transition-opacity"
                                     >
                                         <svg
-                                            width="16"
-                                            height="16"
+                                            className="w-4 h-4 mr-2"
                                             viewBox="0 0 24 24"
                                             fill="none"
                                             xmlns="http://www.w3.org/2000/svg"
-                                            className="text-neutral-800 dark:text-neutral-200"
                                         >
                                             <path
-                                                d="M19 12H5M5 12L12 19M5 12L12 5"
+                                                d="M12 4v16m0-16l-4 4m4-4l4 4"
                                                 stroke="currentColor"
                                                 strokeWidth="2"
                                                 strokeLinecap="round"
                                                 strokeLinejoin="round"
                                             />
                                         </svg>
+                                        选择文件
                                     </button>
-                                    <h3 className="text-base font-medium">导入器具</h3>
-                                    <div className="w-8"></div>
-                                </div>
-
-                                {/* 表单内容 */}
-                                <div className="space-y-4 mt-2">
-                                    <div className="flex flex-col space-y-2">
-                                        <p className="text-xs text-neutral-500 dark:text-neutral-500">
-                                            粘贴器具数据（支持分享的文本格式或JSON格式）：
-                                        </p>
-                                        <p className="text-xs text-neutral-500 dark:text-neutral-500">
-                                            支持常见复制格式，如Markdown代码块、掐头掐尾的JSON。系统会自动提取有效数据。
-                                        </p>
-                                    </div>
-                                    <textarea
-                                        className="w-full h-40 p-3 border border-neutral-300 dark:border-neutral-700 rounded-md bg-transparent focus:border-neutral-800 dark:focus:border-neutral-400 focus:outline-none text-neutral-800 dark:text-neutral-200"
-                                        placeholder='支持粘贴分享的文本或各种JSON格式，如{"name":"自定义V60","animationType":"v60",...} 或带有代码块的JSON'
-                                        value={importData}
-                                        onChange={(e) => setImportData(e.target.value)}
+                                    <input
+                                        ref={fileInputRef}
+                                        type="file"
+                                        accept=".json,application/json"
+                                        onChange={handleFileChange}
+                                        className="hidden"
                                     />
-                                    {error && (
-                                        <div className="text-sm text-red-500 dark:text-red-400">
-                                            {error}
-                                        </div>
-                                    )}
-                                    <div className="flex justify-end space-x-3 my-4">
-                                        <button
-                                            onClick={handleClose}
-                                            className="px-4 py-2 border border-neutral-300 dark:border-neutral-700 text-neutral-800 dark:text-neutral-200 rounded-md text-sm"
-                                        >
-                                            取消
-                                        </button>
-                                        <button
-                                            onClick={handleImport}
-                                            className="px-4 py-2 bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-800 rounded-md text-sm"
-                                        >
-                                            导入
-                                        </button>
-                                    </div>
                                 </div>
+                            </div>
+
+                            {/* 分隔线 */}
+                            <div className="flex items-center mb-4">
+                                <div className="flex-grow h-px bg-neutral-200 dark:bg-neutral-700"></div>
+                                <span className="px-3 text-xs text-neutral-500 dark:text-neutral-400">或粘贴JSON数据</span>
+                                <div className="flex-grow h-px bg-neutral-200 dark:bg-neutral-700"></div>
+                            </div>
+
+                            {/* 文本输入区域 */}
+                            <div className="space-y-4">
+                                <textarea
+                                    className="w-full h-40 p-3 text-sm border rounded-lg bg-neutral-100/60 dark:bg-neutral-800/30 border-neutral-200 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-200 focus:outline-none text-neutral-800 dark:text-neutral-200 placeholder-neutral-500 dark:placeholder-neutral-400 transition-colors"
+                                    placeholder='粘贴器具数据，支持JSON格式，如{"name":"自定义V60","animationType":"v60",...}'
+                                    value={importData}
+                                    onChange={(e) => setImportData(e.target.value)}
+                                />
+
+                                {/* 错误提示 */}
+                                {error && (
+                                    <div className="p-3 rounded-lg bg-red-100/60 dark:bg-red-900/30 text-sm text-red-600 dark:text-red-400">
+                                        {error}
+                                    </div>
+                                )}
+
+                                {/* 导入按钮 */}
+                                <button
+                                    onClick={() => processImportData(importData)}
+                                    disabled={!importData.trim() || isImporting}
+                                    className={`w-full py-2.5 px-4 rounded-lg transition-colors ${
+                                        !importData.trim() || isImporting
+                                            ? 'bg-neutral-400 dark:bg-neutral-700 cursor-not-allowed'
+                                            : 'bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-800 hover:opacity-80'
+                                    }`}
+                                >
+                                    {isImporting ? '导入中...' : '导入'}
+                                </button>
                             </div>
                         </motion.div>
                     </motion.div>
                 </motion.div>
             )}
         </AnimatePresence>
-    )
-}
+    );
+};
 
-export default EquipmentImportModal 
+export default EquipmentImportModal;
