@@ -8,7 +8,7 @@ import { SettingsOptions } from '@/components/Settings'
 import { formatGrindSize } from '@/lib/grindUtils'
 import { BREWING_EVENTS } from '@/lib/brewing/constants'
 import { listenToEvent } from '@/lib/brewing/events'
-import { updateParameterInfo } from '@/lib/brewing/parameters'
+import { updateParameterInfo, getEquipmentName } from '@/lib/brewing/parameters'
 import { useTranslations } from 'next-intl'
 
 // 定义一个隐藏滚动条的样式
@@ -324,7 +324,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
     setActiveTab,
     onTitleDoubleClick, // 接收双击标题的回调函数
     settings, // 接收设置
-    selectedCoffeeBean,
+    selectedCoffeeBean: _selectedCoffeeBean, // 重命名为下划线开头以避免未使用变量警告
     hasCoffeeBeans, // 接收是否有咖啡豆的属性
     navigateToStep, // 接收统一的步骤导航函数
     onStepClick // 接收步骤点击回调
@@ -392,8 +392,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
         return disabledSteps;
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const hasCoffeeBean = !!selectedCoffeeBean;
+    // 不再需要这个变量，因为我们直接使用props中的hasCoffeeBeans
 
     // 添加双击计时器和计数器
     const [lastTitleClickTime, setLastTitleClickTime] = useState(0);
@@ -520,9 +519,25 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                         }))
                     }
                 };
-                updateParameterInfo(detail.step, selectedEquipment, methodForUpdate, equipmentList);
+                // 加载自定义设备并更新参数栏
+                import('@/lib/customEquipments').then(async ({ loadCustomEquipments }) => {
+                    const customEquipments = await loadCustomEquipments();
+                    updateParameterInfo(detail.step, selectedEquipment, methodForUpdate, equipmentList, customEquipments);
+                }).catch(error => {
+                    console.error('加载自定义设备失败:', error);
+                    // 出错时使用标准设备列表
+                    updateParameterInfo(detail.step, selectedEquipment, methodForUpdate, equipmentList);
+                });
             } else {
-                updateParameterInfo(detail.step, selectedEquipment, null, equipmentList);
+                // 加载自定义设备并更新参数栏
+                import('@/lib/customEquipments').then(async ({ loadCustomEquipments }) => {
+                    const customEquipments = await loadCustomEquipments();
+                    updateParameterInfo(detail.step, selectedEquipment, null, equipmentList, customEquipments);
+                }).catch(error => {
+                    console.error('加载自定义设备失败:', error);
+                    // 出错时使用标准设备列表
+                    updateParameterInfo(detail.step, selectedEquipment, null, equipmentList);
+                });
             }
         };
 
@@ -704,12 +719,34 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                                             setActiveBrewingStep('method');
                                                             setActiveTab('方案');
                                                             if (selectedEquipment && selectedMethod) {
-                                                                const equipmentName = equipmentList.find(e => e.id === selectedEquipment)?.name || selectedEquipment;
-                                                                setParameterInfo({
-                                                                    equipment: equipmentName,
-                                                                    method: selectedMethod.name,
-                                                                    params: null,
-                                                                });
+                                                                // 尝试从标准设备列表中获取设备名称
+                                                                const standardEquipment = equipmentList.find(e => e.id === selectedEquipment);
+                                                                if (standardEquipment) {
+                                                                    setParameterInfo({
+                                                                        equipment: standardEquipment.name,
+                                                                        method: selectedMethod.name,
+                                                                        params: null,
+                                                                    });
+                                                                } else {
+                                                                    // 如果不是标准设备，尝试加载自定义设备
+                                                                    import('@/lib/customEquipments').then(async ({ loadCustomEquipments }) => {
+                                                                        const customEquipments = await loadCustomEquipments();
+                                                                        const equipmentName = getEquipmentName(selectedEquipment, equipmentList, customEquipments);
+                                                                        setParameterInfo({
+                                                                            equipment: equipmentName,
+                                                                            method: selectedMethod.name,
+                                                                            params: null,
+                                                                        });
+                                                                    }).catch(error => {
+                                                                        console.error('加载自定义设备失败:', error);
+                                                                        // 出错时使用原始ID
+                                                                        setParameterInfo({
+                                                                            equipment: selectedEquipment,
+                                                                            method: selectedMethod.name,
+                                                                            params: null,
+                                                                        });
+                                                                    });
+                                                                }
                                                             }
                                                         }}
                                                     >
@@ -809,4 +846,4 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
     );
 };
 
-export default NavigationBar; 
+export default NavigationBar;

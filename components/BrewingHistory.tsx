@@ -6,6 +6,7 @@ import type { BrewingNoteData, CoffeeBean } from '@/app/types'
 import BrewingNoteForm from './BrewingNoteForm'
 import { Storage } from '@/lib/storage'
 import { equipmentList } from '@/lib/config'
+import { getEquipmentName as getEquipmentNameUtil } from '@/lib/brewing/parameters'
 import ActionMenu from './ui/action-menu'
 import {
     Select,
@@ -80,9 +81,23 @@ const formatRating = (rating: number) => {
 }
 
 // 获取设备名称的辅助函数
-const getEquipmentName = (equipmentId: string): string => {
-    const equipment = equipmentList.find(e => e.id === equipmentId);
-    return equipment ? equipment.name : equipmentId; // 如果找不到匹配的设备，则返回原始ID
+const getEquipmentName = async (equipmentId: string): Promise<string> => {
+    // 首先尝试在标准设备列表中查找
+    const standardEquipment = equipmentList.find(e => e.id === equipmentId);
+    if (standardEquipment) return standardEquipment.name;
+
+    // 如果没找到，加载自定义设备列表并查找
+    try {
+        const { loadCustomEquipments } = await import('@/lib/customEquipments');
+        const customEquipments = await loadCustomEquipments();
+
+        // 使用工具函数获取设备名称
+        const equipmentName = getEquipmentNameUtil(equipmentId, equipmentList, customEquipments);
+        return equipmentName || equipmentId;
+    } catch (error) {
+        console.error('加载自定义设备失败:', error);
+        return equipmentId; // 出错时返回原始ID
+    }
 };
 
 const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingChange, onNavigateToBrewing, onAddNote }) => {
@@ -92,6 +107,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
     const [editingNote, setEditingNote] = useState<(Partial<BrewingNoteData> & { coffeeBean?: CoffeeBean | null }) | null>(null)
     const [forceRefreshKey, setForceRefreshKey] = useState(0); // 添加一个强制刷新的key
     const [toast, setToast] = useState<ToastState>({ visible: false, message: '', type: 'info' });
+    // 添加设备名称缓存状态
+    const [equipmentNames, setEquipmentNames] = useState<Record<string, string>>({});
 
     // 显示消息提示
     const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
@@ -122,7 +139,20 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
         try {
             const savedNotes = await Storage.get('brewingNotes');
             const parsedNotes = savedNotes ? JSON.parse(savedNotes) : [];
-            setNotes(sortNotes(parsedNotes));
+            const sortedNotes = sortNotes(parsedNotes);
+            setNotes(sortedNotes);
+
+            // 加载所有设备的名称
+            const equipmentIds = [...new Set(sortedNotes.map(note => note.equipment))];
+            const namesMap: Record<string, string> = {};
+
+            for (const id of equipmentIds) {
+                if (id) {
+                    namesMap[id] = await getEquipmentName(id);
+                }
+            }
+
+            setEquipmentNames(namesMap);
         } catch (_error) {
             // 加载失败时设置空数组
             setNotes([]);
@@ -192,7 +222,21 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
             try {
                 const updatedNotes = notes.filter(note => note.id !== noteId)
                 await Storage.set('brewingNotes', JSON.stringify(updatedNotes))
-                setNotes(sortNotes(updatedNotes))
+                const sortedNotes = sortNotes(updatedNotes);
+                setNotes(sortedNotes);
+
+                // 更新设备名称缓存，移除不再使用的设备
+                const remainingEquipmentIds = [...new Set(sortedNotes.map(note => note.equipment))];
+                const updatedEquipmentNames = { ...equipmentNames };
+
+                // 移除不再使用的设备名称
+                Object.keys(updatedEquipmentNames).forEach(id => {
+                    if (!remainingEquipmentIds.includes(id)) {
+                        delete updatedEquipmentNames[id];
+                    }
+                });
+
+                setEquipmentNames(updatedEquipmentNames);
             } catch {
                 // 删除失败时提示用户
                 showToast('删除笔记时出错，请重试', 'error');
@@ -275,7 +319,18 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                 );
 
                 await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
-                setNotes(sortNotes(updatedNotes));
+                const sortedNotes = sortNotes(updatedNotes);
+                setNotes(sortedNotes);
+
+                // 更新设备名称缓存
+                if (updatedData.equipment) {
+                    const equipmentName = await getEquipmentName(updatedData.equipment);
+                    setEquipmentNames(prev => ({
+                        ...prev,
+                        [updatedData.equipment]: equipmentName
+                    }));
+                }
+
                 setEditingNote(null);
                 showToast('笔记已更新', 'success');
             }
@@ -288,7 +343,18 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
 
                 const updatedNotes = [newNote, ...existingNotes];
                 await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
-                setNotes(sortNotes(updatedNotes));
+                const sortedNotes = sortNotes(updatedNotes);
+                setNotes(sortedNotes);
+
+                // 更新设备名称缓存
+                if (newNote.equipment) {
+                    const equipmentName = await getEquipmentName(newNote.equipment);
+                    setEquipmentNames(prev => ({
+                        ...prev,
+                        [newNote.equipment]: equipmentName
+                    }));
+                }
+
                 showToast('笔记已保存', 'success');
             }
         } catch (error) {
@@ -507,7 +573,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                                 <div className="flex items-baseline justify-between">
                                                     <div className="flex items-baseline space-x-2 min-w-0 overflow-hidden">
                                                         <div className="text-[10px] truncate text-neutral-800 dark:text-white">
-                                                            {getEquipmentName(note.equipment)}
+                                                            {equipmentNames[note.equipment] || note.equipment}
                                                         </div>
                                                         {note.method && (
                                                             <>

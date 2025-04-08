@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { Method, equipmentList, CustomEquipment, commonMethods } from '@/lib/config';
 import StageItem from '@/components/StageItem';
@@ -11,6 +11,7 @@ import { v4 as _uuidv4 } from 'uuid';
 import { copyMethodToClipboard } from "@/lib/customMethods";
 import { showToast } from "@/components/ui/toast";
 import EquipmentShareModal from '@/components/EquipmentShareModal';
+import { getEquipmentName } from '@/lib/brewing/parameters';
 
 // 动态导入客户端组件
 const PourVisualizer = dynamic(() => import('@/components/PourVisualizer'), {
@@ -252,10 +253,63 @@ const TabContent: React.FC<TabContentProps> = ({
         }
     };
 
+    // 获取设备名称的辅助函数
+    const getEquipmentNameForNote = async (equipmentId: string): Promise<string> => {
+        // 首先尝试在标准设备列表中查找
+        const standardEquipment = equipmentList.find(e => e.id === equipmentId);
+        if (standardEquipment) return standardEquipment.name;
+
+        // 如果没找到，加载自定义设备列表并查找
+        try {
+            const { loadCustomEquipments } = await import('@/lib/customEquipments');
+            const customEquipments = await loadCustomEquipments();
+
+            // 使用工具函数获取设备名称
+            const equipmentName = getEquipmentName(equipmentId, equipmentList, customEquipments);
+            return equipmentName || equipmentId;
+        } catch (error) {
+            console.error('加载自定义设备失败:', error);
+            return equipmentId; // 出错时返回原始ID
+        }
+    };
+
     // 分享器具相关状态
     const [showShareModal, setShowShareModal] = useState(false);
     const [sharingEquipment, setSharingEquipment] = useState<CustomEquipment | null>(null);
     const [sharingMethods, setSharingMethods] = useState<Method[]>([]);
+
+    // 笔记表单包装组件，用于异步加载设备名称
+    const NoteFormWrapper = () => {
+        const [equipmentName, setEquipmentName] = useState<string>('');
+
+        // 在组件挂载时加载设备名称
+        useEffect(() => {
+            const loadEquipmentName = async () => {
+                if (selectedEquipment) {
+                    const name = await getEquipmentNameForNote(selectedEquipment);
+                    setEquipmentName(name);
+                }
+            };
+
+            loadEquipmentName();
+        }, [selectedEquipment]);
+
+        return (
+            <BrewingNoteForm
+                id="brewingNoteForm"
+                isOpen={true}
+                onClose={handleCloseNoteForm}
+                onSave={handleSaveNote}
+                initialData={{
+                    equipment: equipmentName || (selectedEquipment || ''),
+                    method: currentBrewingMethod!.name,
+                    params: currentBrewingMethod!.params,
+                    totalTime: showComplete ? currentBrewingMethod!.params.stages[currentBrewingMethod!.params.stages.length - 1].time : 0,
+                    coffeeBean: selectedCoffeeBeanData || undefined
+                }}
+            />
+        );
+    };
 
     // 处理分享器具
     const handleShareEquipment = async (equipment: CustomEquipment) => {
@@ -304,19 +358,8 @@ const TabContent: React.FC<TabContentProps> = ({
                     }}
                 />
             ) : activeTab === ('记录' as TabType) && currentBrewingMethod ? (
-                <BrewingNoteForm
-                    id="brewingNoteForm"
-                    isOpen={true}
-                    onClose={handleCloseNoteForm}
-                    onSave={handleSaveNote}
-                    initialData={{
-                        equipment: selectedEquipment ? equipmentList.find(e => e.id === selectedEquipment)?.name || selectedEquipment : '',
-                        method: currentBrewingMethod.name,
-                        params: currentBrewingMethod.params,
-                        totalTime: showComplete ? currentBrewingMethod.params.stages[currentBrewingMethod.params.stages.length - 1].time : 0,
-                        coffeeBean: selectedCoffeeBeanData || undefined
-                    }}
-                />
+                <NoteFormWrapper />
+
             ) : isTimerRunning && !showComplete && currentBrewingMethod ? (
                 <div className="flex items-center justify-center h-full">
                     <div className="w-full max-w-[300px]">

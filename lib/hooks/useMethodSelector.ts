@@ -57,117 +57,202 @@ export function useMethodSelector({
 				setSelectedMethod(method);
 
 				// 即使选择了相同的方案，也更新方案（解决在冲煮完成后重新选择相同方案的问题）
-				setTimeout(async () => {
-					// 将方法重新设置回来
-					setSelectedMethod(method);
+				// 使用异步函数包装器
+				const setupMethod = async () => {
+					try {
+						// 将方法重新设置回来
+						setSelectedMethod(method);
 
-					// 获取设备的中文名称而不是使用ID
-					const equipmentName = selectedEquipment
-						? equipmentList.find((e) => e.id === selectedEquipment)
-								?.name || selectedEquipment
-						: null;
+						// 获取设备的中文名称而不是使用ID
+						// 先尝试从标准设备列表中获取设备名称
+						let equipmentName: string | null = null;
+						if (selectedEquipment) {
+							const standardEquipment = equipmentList.find(
+								(e) => e.id === selectedEquipment
+							);
+							if (standardEquipment) {
+								equipmentName = standardEquipment.name;
+							} else {
+								// 如果不是标准设备，尝试加载自定义设备
+								try {
+									const { loadCustomEquipments } =
+										await import("@/lib/customEquipments");
+									const { getEquipmentName } = await import(
+										"@/lib/brewing/parameters"
+									);
+									const customEquipments =
+										await loadCustomEquipments();
+									equipmentName = getEquipmentName(
+										selectedEquipment,
+										equipmentList,
+										customEquipments
+									);
+								} catch (error) {
+									console.error("加载自定义设备失败:", error);
+									equipmentName = selectedEquipment; // 出错时使用原始ID
+								}
+							}
+						}
 
-					// 直接更新参数信息，不依赖于useEffect
-					setParameterInfo({
-						equipment: equipmentName,
-						method: method.name,
-						params: {
-							coffee: method.params.coffee,
-							water: method.params.water,
-							ratio: method.params.ratio,
-							grindSize: method.params.grindSize,
-							temp: method.params.temp,
-						},
-					});
-
-					// 直接更新可编辑参数，不依赖于useEffect
-					setEditableParams({
-						coffee: method.params.coffee,
-						water: method.params.water,
-						ratio: method.params.ratio,
-						grindSize: method.params.grindSize || "",
-						temp: method.params.temp || "",
-					});
-
-					// 更新注水步骤内容
-					updateBrewingSteps(method.params.stages);
-
-					// 调整设置步骤和标签的方式，确保即使是在冲煮完成状态下也能正确导航
-					setActiveTab("注水");
-					setActiveBrewingStep("brewing");
-
-					// 设置标记，表示从方案选择进入注水步骤
-					localStorage.setItem("fromMethodToBrewing", "true");
-
-					// 重要：强制重置冲煮状态标志，确保可以正常导航
-					window.dispatchEvent(new CustomEvent("brewing:reset"));
-
-					// 设置短暂延迟，确保状态已更新
-					setTimeout(() => {
-						// 发送特殊事件，表示从方案选择到冲煮的转换
-						window.dispatchEvent(
-							new CustomEvent("brewing:methodToBrewing", {
-								detail: { fromMethod: true },
-							})
-						);
-
-						// 更新参数栏信息，转换params对象
-						const params: Record<string, string | undefined> = {
-							coffee: method.params.coffee,
-							water: method.params.water,
-							ratio: method.params.ratio,
-							grindSize: method.params.grindSize,
-							temp: method.params.temp,
-							videoUrl: method.params.videoUrl,
-							roastLevel: method.params.roastLevel,
-							// 不包含stages，避免类型不匹配
-						};
-
-						// 获取设备的中文名称
-						const equipmentNameInner = selectedEquipment
-							? equipmentList.find(
-									(e) => e.id === selectedEquipment
-							  )?.name || selectedEquipment
-							: null;
-
+						// 直接更新参数信息，不依赖于useEffect
 						setParameterInfo({
-							equipment: equipmentNameInner, // 使用设备名称而不是ID
+							equipment: equipmentName,
 							method: method.name,
-							params: params,
+							params: {
+								coffee: method.params.coffee,
+								water: method.params.water,
+								ratio: method.params.ratio,
+								grindSize: method.params.grindSize,
+								temp: method.params.temp,
+							},
 						});
 
-						// 强制再次设置标记，确保在任何情况下都能返回到方案页面
+						// 直接更新可编辑参数，不依赖于useEffect
+						setEditableParams({
+							coffee: method.params.coffee,
+							water: method.params.water,
+							ratio: method.params.ratio,
+							grindSize: method.params.grindSize || "",
+							temp: method.params.temp || "",
+						});
+
+						// 更新注水步骤内容
+						updateBrewingSteps(method.params.stages);
+
+						// 调整设置步骤和标签的方式，确保即使是在冲煮完成状态下也能正确导航
+						setActiveTab("注水");
+						setActiveBrewingStep("brewing");
+
+						// 设置标记，表示从方案选择进入注水步骤
 						localStorage.setItem("fromMethodToBrewing", "true");
-					}, 50);
 
-					// 增加另一个延迟检查，确保标记不被其他操作清除
-					setTimeout(() => {
-						if (
-							localStorage.getItem("fromMethodToBrewing") !==
-							"true"
-						) {
-							localStorage.setItem("fromMethodToBrewing", "true");
-						}
-					}, 300);
+						// 重要：强制重置冲煮状态标志，确保可以正常导航
+						window.dispatchEvent(new CustomEvent("brewing:reset"));
 
-					// 移除这里的扣减逻辑，在实际冲煮完成后再扣减
-					// 只记录选择的咖啡豆和方案信息，但不立即扣减咖啡豆
-					if (selectedCoffeeBean && method.params.coffee) {
-						try {
-							// 解析咖啡用量，格式通常为: "20g"
-							// 更严格的数字提取方式，只匹配数字部分
-							const match =
-								method.params.coffee.match(/(\d+\.?\d*)/);
-							if (!match) {
-								return;
+						// 设置短暂延迟，确保状态已更新
+						const updateParams = async () => {
+							try {
+								// 发送特殊事件，表示从方案选择到冲煮的转换
+								window.dispatchEvent(
+									new CustomEvent("brewing:methodToBrewing", {
+										detail: { fromMethod: true },
+									})
+								);
+
+								// 更新参数栏信息，转换params对象
+								const params: Record<
+									string,
+									string | undefined
+								> = {
+									coffee: method.params.coffee,
+									water: method.params.water,
+									ratio: method.params.ratio,
+									grindSize: method.params.grindSize,
+									temp: method.params.temp,
+									videoUrl: method.params.videoUrl,
+									roastLevel: method.params.roastLevel,
+									// 不包含stages，避免类型不匹配
+								};
+
+								// 获取设备的中文名称
+								// 先尝试从标准设备列表中获取设备名称
+								let equipmentNameInner: string | null = null;
+								if (selectedEquipment) {
+									const standardEquipment =
+										equipmentList.find(
+											(e) => e.id === selectedEquipment
+										);
+									if (standardEquipment) {
+										equipmentNameInner =
+											standardEquipment.name;
+									} else {
+										// 如果不是标准设备，尝试加载自定义设备
+										try {
+											const { loadCustomEquipments } =
+												await import(
+													"@/lib/customEquipments"
+												);
+											const { getEquipmentName } =
+												await import(
+													"@/lib/brewing/parameters"
+												);
+											const customEquipments =
+												await loadCustomEquipments();
+											equipmentNameInner =
+												getEquipmentName(
+													selectedEquipment,
+													equipmentList,
+													customEquipments
+												);
+										} catch (error) {
+											console.error(
+												"加载自定义设备失败:",
+												error
+											);
+											equipmentNameInner =
+												selectedEquipment; // 出错时使用原始ID
+										}
+									}
+								}
+
+								setParameterInfo({
+									equipment: equipmentNameInner, // 使用设备名称而不是ID
+									method: method.name,
+									params: params,
+								});
+
+								// 强制再次设置标记，确保在任何情况下都能返回到方案页面
+								localStorage.setItem(
+									"fromMethodToBrewing",
+									"true"
+								);
+							} catch (error) {
+								console.error("更新参数栏时出错:", error);
 							}
+						};
 
-							// 这里只解析咖啡用量，但不做任何操作
-							parseFloat(match[1]);
-						} catch (_error) {
-							// 错误处理
+						setTimeout(() => {
+							updateParams();
+						}, 50);
+
+						// 增加另一个延迟检查，确保标记不被其他操作清除
+						setTimeout(() => {
+							if (
+								localStorage.getItem("fromMethodToBrewing") !==
+								"true"
+							) {
+								localStorage.setItem(
+									"fromMethodToBrewing",
+									"true"
+								);
+							}
+						}, 300);
+
+						// 移除这里的扣减逻辑，在实际冲煮完成后再扣减
+						// 只记录选择的咖啡豆和方案信息，但不立即扣减咖啡豆
+						if (selectedCoffeeBean && method.params.coffee) {
+							try {
+								// 解析咖啡用量，格式通常为: "20g"
+								// 更严格的数字提取方式，只匹配数字部分
+								const match =
+									method.params.coffee.match(/(\d+\.?\d*)/);
+								if (!match) {
+									return;
+								}
+
+								// 这里只解析咖啡用量，但不做任何操作
+								parseFloat(match[1]);
+							} catch (_error) {
+								// 错误处理
+							}
 						}
+					} catch (error) {
+						console.error("处理方案选择时出错:", error);
 					}
+				};
+
+				setTimeout(() => {
+					setupMethod();
 				}, 0);
 
 				return true;
