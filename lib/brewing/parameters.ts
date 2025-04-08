@@ -13,16 +13,26 @@ interface EquipmentItem {
  * 获取设备名称
  * @param equipmentId 设备ID
  * @param equipmentList 设备列表
+ * @param customEquipments 自定义器具列表（可选）
  * @returns 设备名称
  */
 export const getEquipmentName = (
 	equipmentId: string | null,
-	equipmentList: EquipmentItem[]
+	equipmentList: EquipmentItem[],
+	customEquipments: EquipmentItem[] = []
 ): string | null => {
 	if (!equipmentId) return null;
 
-	const equipment = equipmentList.find((e) => e.id === equipmentId);
-	return equipment ? equipment.name : equipmentId;
+	// 首先在系统预设器具中查找
+	const standardEquipment = equipmentList.find((e) => e.id === equipmentId);
+	if (standardEquipment) return standardEquipment.name;
+	
+	// 如果没找到，再在自定义器具中查找
+	const customEquipment = customEquipments.find((e) => e.id === equipmentId);
+	if (customEquipment) return customEquipment.name;
+	
+	// 如果都没找到，则返回ID本身
+	return equipmentId;
 };
 
 /**
@@ -50,22 +60,23 @@ export const createParamsFromMethod = (
  * @param selectedEquipment 选择的设备
  * @param selectedMethod 选择的方案
  * @param equipmentList 设备列表
+ * @param customEquipments 自定义器具列表（可选）
  */
 export function updateParameterInfo(
 	step: BrewingStep,
 	selectedEquipment: string | null,
 	selectedMethod: Method | null,
-	equipmentList: EquipmentItem[]
+	equipmentList: EquipmentItem[],
+	customEquipments: EquipmentItem[] = []
 ) {
 	// 为了防止任何可能的问题，特别保护fromMethodToBrewing标记
 	const hasMethodToBrewing =
 		localStorage.getItem("fromMethodToBrewing") === "true";
 
-	// 获取设备名称
+	// 获取设备名称，同时考虑系统预设器具和自定义器具
 	let equipmentName: string | null = null;
 	if (selectedEquipment) {
-		const equipment = equipmentList.find((e) => e.id === selectedEquipment);
-		equipmentName = equipment ? equipment.name : selectedEquipment;
+		equipmentName = getEquipmentName(selectedEquipment, equipmentList, customEquipments);
 	}
 
 	let paramInfo: ParameterInfo;

@@ -267,9 +267,18 @@ const BrewingNoteFormModalNew: React.FC<BrewingNoteFormModalNewProps> = ({
         // 检查通用方案是否可用
         const commonMethodsAvailable = !isCustomPresetEquipment && brewingMethods[equipmentId]?.length > 0;
 
-        // 加载该设备的自定义方案
+        // 加载该设备的自定义方案 - 使用新的API loadCustomMethodsForEquipment
         const loadCustomMethods = async () => {
             try {
+                // 直接使用设备ID加载方案，而不是依赖自定义方法对象
+                const methodsModule = await import('@/lib/customMethods');
+                const methods = await methodsModule.loadCustomMethodsForEquipment(equipmentId);
+                if (methods && methods.length > 0) {
+                    setCustomMethods(methods);
+                    return true;
+                }
+                
+                // 如果直接通过ID找不到方案，检查旧版存储
                 const customMethodsStr = await Storage.get('customMethods');
                 if (customMethodsStr) {
                     const parsedData = JSON.parse(customMethodsStr);
@@ -278,9 +287,13 @@ const BrewingNoteFormModalNew: React.FC<BrewingNoteFormModalNewProps> = ({
                         return parsedData[equipmentId].length > 0;
                     }
                 }
+                
+                // 如果都没找到，清空当前自定义方案
+                setCustomMethods([]);
                 return false;
             } catch (error) {
                 console.error('加载设备自定义方案失败:', error);
+                setCustomMethods([]);
                 return false;
             }
         };

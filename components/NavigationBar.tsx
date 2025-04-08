@@ -100,9 +100,8 @@ const TabButton = ({
                         }`}
                 />
                 <span
-                    className={`absolute -bottom-1 left-0 right-0 z-10 h-px bg-neutral-800 dark:bg-neutral-100 ${
-                        isActive ? 'opacity-100 w-full' : 'opacity-0 w-0'
-                    }`}
+                    className={`absolute -bottom-1 left-0 right-0 z-10 h-px bg-neutral-800 dark:bg-neutral-100 ${isActive ? 'opacity-100 w-full' : 'opacity-0 w-0'
+                        }`}
                 />
             </span>
         </div>
@@ -602,15 +601,15 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
             <style jsx global>{noScrollbarStyle}</style>
 
             <AnimatePresence mode="wait">
-                <motion.div 
+                <motion.div
                     key="header"
                     className="overflow-hidden"
                     initial={shouldHideHeader ? { height: 0, opacity: 0 } : { height: "auto", opacity: 1 }}
                     animate={shouldHideHeader ? { height: 0, opacity: 0 } : { height: "auto", opacity: 1 }}
-                    transition={{ 
-                        duration: 0.2, 
+                    transition={{
+                        duration: 0.2,
                         ease: "easeInOut",
-                        opacity: { duration: 0.1 } 
+                        opacity: { duration: 0.1 }
                     }}
                 >
                     <div className="flex items-center justify-between px-6 px-safe py-4">
@@ -658,8 +657,8 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: "auto", opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
-                        transition={{ 
-                            duration: 0.25, 
+                        transition={{
+                            duration: 0.25,
                             ease: "easeOut",
                             opacity: { duration: 0.15 }
                         }}
@@ -671,9 +670,9 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                     initial={{ height: 0, opacity: 0 }}
                                     animate={{ height: "auto", opacity: 1 }}
                                     exit={{ height: 0, opacity: 0 }}
-                                    transition={{ 
+                                    transition={{
                                         duration: 0.2,
-                                        ease: "easeOut" 
+                                        ease: "easeOut"
                                     }}
                                     className="overflow-hidden"
                                 >

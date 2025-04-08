@@ -191,23 +191,28 @@ export function useMethodSelector({
 	);
 
 	const handleMethodSelect = useCallback(
-		async (methodIndex: number, step?: {
-			methodIndex?: number;
-			isCommonMethod?: boolean;
-		}) => {
+		async (
+			methodIndex: number,
+			step?: {
+				methodIndex?: number;
+				isCommonMethod?: boolean;
+			}
+		) => {
 			if (selectedEquipment) {
 				let method: Method | null = null;
-				
+
 				// 检查是否是预设器具（直接从equipmentList中检查）
 				const { equipmentList } = await import("@/lib/config");
-				const isPredefinedEquipment = equipmentList.some(e => e.id === selectedEquipment);
-				
+				const isPredefinedEquipment = equipmentList.some(
+					(e) => e.id === selectedEquipment
+				);
+
 				// 更新判断逻辑：只有当器具不是预设器具且其他条件满足时，才认为是自定义器具的通用方案
-				const isCustomEquipmentCommonMethod = 
-					step?.isCommonMethod === true && 
-					methodType === "common" && 
+				const isCustomEquipmentCommonMethod =
+					step?.isCommonMethod === true &&
+					methodType === "common" &&
 					!isPredefinedEquipment;
-				
+
 				// 添加调试信息
 				console.log("方法选择:", {
 					methodIndex,
@@ -216,82 +221,134 @@ export function useMethodSelector({
 					step,
 					isPredefinedEquipment,
 					isCustomEquipmentCommonMethod,
-					hasMethodIndex: step?.methodIndex !== undefined
+					hasMethodIndex: step?.methodIndex !== undefined,
 				});
 
 				// 获取有效的方法索引
-				const effectiveMethodIndex = step?.methodIndex !== undefined ? step.methodIndex : methodIndex;
+				const effectiveMethodIndex =
+					step?.methodIndex !== undefined
+						? step.methodIndex
+						: methodIndex;
 
 				if (methodType === "common") {
 					try {
 						// 导入commonMethods
 						const { commonMethods } = await import("@/lib/config");
-						
+
 						// 修改逻辑顺序：先检查是否是自定义器具
 						if (isCustomEquipmentCommonMethod) {
 							console.log("处理自定义器具的通用方案");
 							// 尝试使用step中的animationType属性来确定基础设备
 							// 这部分逻辑需要与useBrewingContent中的逻辑保持一致
-							const { loadCustomEquipments } = await import("@/lib/customEquipments");
-							const loadedEquipments = await loadCustomEquipments();
-							
-							const customEquipment = loadedEquipments.find(e => 
-								e.id === selectedEquipment || 
-								e.name === selectedEquipment
+							const { loadCustomEquipments } = await import(
+								"@/lib/customEquipments"
 							);
-							
+							const loadedEquipments =
+								await loadCustomEquipments();
+
+							const customEquipment = loadedEquipments.find(
+								(e) =>
+									e.id === selectedEquipment ||
+									e.name === selectedEquipment
+							);
+
 							if (customEquipment) {
 								console.log("找到自定义器具:", customEquipment);
-								let baseEquipmentId = '';
-								const animationType = customEquipment.animationType.toLowerCase();
+								let baseEquipmentId = "";
+								const animationType =
+									customEquipment.animationType.toLowerCase();
 								console.log("动画类型:", animationType);
-								
+
 								switch (animationType) {
-									case 'v60':
-										baseEquipmentId = 'V60';
+									case "v60":
+										baseEquipmentId = "V60";
 										break;
-									case 'kalita':
-										baseEquipmentId = 'Kalita';
+									case "kalita":
+										baseEquipmentId = "Kalita";
 										break;
-									case 'origami':
-										baseEquipmentId = 'Origami';
+									case "origami":
+										baseEquipmentId = "Origami";
 										break;
-									case 'clever':
-										baseEquipmentId = 'CleverDripper';
+									case "clever":
+										baseEquipmentId = "CleverDripper";
 										break;
 									default:
-										console.warn('未知的动画类型:', animationType);
-										baseEquipmentId = 'V60'; // 默认使用 V60 的方案
+										console.warn(
+											"未知的动画类型:",
+											animationType
+										);
+										baseEquipmentId = "V60"; // 默认使用 V60 的方案
 								}
-								
-								console.log("使用基础器具:", baseEquipmentId, "方法索引:", effectiveMethodIndex);
-								
+
+								console.log(
+									"使用基础器具:",
+									baseEquipmentId,
+									"方法索引:",
+									effectiveMethodIndex
+								);
+
 								// 确保 baseEquipmentId 存在于 commonMethods 中
 								if (commonMethods[baseEquipmentId]) {
 									// 确保方法索引有效
-									if (effectiveMethodIndex >= 0 && effectiveMethodIndex < commonMethods[baseEquipmentId].length) {
-										method = commonMethods[baseEquipmentId][effectiveMethodIndex];
-										console.log("找到自定义器具的通用方案:", method?.name);
+									if (
+										effectiveMethodIndex >= 0 &&
+										effectiveMethodIndex <
+											commonMethods[baseEquipmentId]
+												.length
+									) {
+										method =
+											commonMethods[baseEquipmentId][
+												effectiveMethodIndex
+											];
+										console.log(
+											"找到自定义器具的通用方案:",
+											method?.name
+										);
 									} else {
-										console.error("方法索引超出范围:", effectiveMethodIndex, "可用方法数量:", commonMethods[baseEquipmentId].length);
+										console.error(
+											"方法索引超出范围:",
+											effectiveMethodIndex,
+											"可用方法数量:",
+											commonMethods[baseEquipmentId]
+												.length
+										);
 									}
 								} else {
-									console.error("找不到基础器具:", baseEquipmentId);
+									console.error(
+										"找不到基础器具:",
+										baseEquipmentId
+									);
 								}
 							} else {
-								console.error("找不到自定义器具:", selectedEquipment);
+								console.error(
+									"找不到自定义器具:",
+									selectedEquipment
+								);
 							}
 						} else {
 							// 对于预定义器具，直接使用其通用方案
 							// 检查 selectedEquipment 是否存在于 commonMethods 中
-							if (commonMethods[selectedEquipment as keyof typeof commonMethods]) {
-								method = commonMethods[selectedEquipment as keyof typeof commonMethods][effectiveMethodIndex];
-								console.log("找到预定义器具的通用方案:", method?.name);
+							if (
+								commonMethods[
+									selectedEquipment as keyof typeof commonMethods
+								]
+							) {
+								method =
+									commonMethods[
+										selectedEquipment as keyof typeof commonMethods
+									][effectiveMethodIndex];
+								console.log(
+									"找到预定义器具的通用方案:",
+									method?.name
+								);
 							} else {
-								console.error("找不到预定义器具的通用方案:", selectedEquipment);
+								console.error(
+									"找不到预定义器具的通用方案:",
+									selectedEquipment
+								);
 							}
 						}
-						
+
 						if (method) {
 							await processSelectedMethod(method);
 						} else {
@@ -312,11 +369,13 @@ export function useMethodSelector({
 								customMethods[selectedEquipment][methodIndex];
 							await processSelectedMethod(method);
 						} else {
-							console.error("找不到自定义方法:", { 
-								selectedEquipment, 
-								methodIndex, 
-								hasCustomMethods: !!customMethods[selectedEquipment],
-								customMethodsLength: customMethods[selectedEquipment]?.length
+							console.error("找不到自定义方法:", {
+								selectedEquipment,
+								methodIndex,
+								hasCustomMethods:
+									!!customMethods[selectedEquipment],
+								customMethodsLength:
+									customMethods[selectedEquipment]?.length,
 							});
 						}
 					} catch (error) {

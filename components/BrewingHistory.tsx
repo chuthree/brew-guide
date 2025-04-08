@@ -173,7 +173,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
 
         window.addEventListener('storage', handleStorageChange);
         window.addEventListener('storage:changed', handleCustomStorageChange as EventListener);
-        
+
         return () => {
             window.removeEventListener('storage', handleStorageChange);
             window.removeEventListener('storage:changed', handleCustomStorageChange as EventListener);
@@ -569,20 +569,20 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                                     {note.coffeeBeanInfo?.name && (
                                                         <span>{note.coffeeBeanInfo.name}</span>
                                                     )}
-                                                    
+
                                                     {note.coffeeBeanInfo?.name && note.coffeeBeanInfo?.roastLevel && <span>·</span>}
-                                                    
+
                                                     {note.coffeeBeanInfo?.roastLevel && (
                                                         <span>{note.coffeeBeanInfo.roastLevel}</span>
                                                     )}
-                                                    
+
                                                     {note.coffeeBeanInfo?.roastDate && (
                                                         <>
                                                             <span>·</span>
                                                             <span>{calculateDaysAfterRoast(note.coffeeBeanInfo.roastDate, note.timestamp)}</span>
                                                         </>
                                                     )}
-                                                    
+
                                                     {/* 基本冲煮参数（次重要信息）*/}
                                                     {note.params && (
                                                         <>
@@ -590,7 +590,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                                             <span>{note.params.coffee}</span>
                                                             <span>·</span>
                                                             <span>{note.params.ratio}</span>
-                                                            
+
                                                             {/* 合并显示研磨度和水温 */}
                                                             {(note.params.grindSize || note.params.temp) && (
                                                                 <>

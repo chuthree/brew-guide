@@ -154,24 +154,28 @@ export function useBrewingContent({
 			});
 			
 			setContent((prev) => {
-				// 检查是否是自定义器具
-				console.log('选中的器具:', selectedEquipment);
-				console.log('自定义器具列表:', customEquipments);
-				console.log('自定义器具的 ID:', customEquipments.map(e => e.id));
+				// 首先，尝试通过ID查找自定义器具（优先使用ID匹配）
+				const customEquipmentById = customEquipments?.find(e => e.id === selectedEquipment);
 				
-				// 尝试通过 ID 或名称匹配自定义器具
-				const isCustomEquipment = customEquipments?.some(e => 
-					e.id === selectedEquipment || 
-					e.name === selectedEquipment
-				);
+				// 如果通过ID没找到，再尝试通过名称查找
+				const customEquipmentByName = !customEquipmentById 
+					? customEquipments?.find(e => e.name === selectedEquipment) 
+					: null;
+				
+				// 合并结果，优先使用ID匹配的结果
+				const customEquipment = customEquipmentById || customEquipmentByName;
+				
+				// 确认是否为自定义器具
+				const isCustomEquipment = !!customEquipment;
 				
 				// 检查是否是自定义预设器具（animationType === 'custom'）
-				const customEquipment = customEquipments?.find(e => 
-					e.id === selectedEquipment || 
-					e.name === selectedEquipment
-				);
 				const isCustomPresetEquipment = customEquipment?.animationType === 'custom';
 				
+				// 为调试目的记录信息
+				console.log('选中的器具:', selectedEquipment);
+				console.log('通过ID找到的自定义器具:', customEquipmentById?.name);
+				console.log('通过名称找到的自定义器具:', customEquipmentByName?.name);
+				console.log('最终使用的自定义器具:', customEquipment?.name);
 				console.log('是否是自定义器具:', isCustomEquipment);
 				console.log('是否是自定义预设器具:', isCustomPresetEquipment);
 				console.log('当前方案类型:', methodType);

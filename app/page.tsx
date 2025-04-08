@@ -27,7 +27,8 @@ import textZoomUtils from '@/lib/textZoom'
 import { navigateFromHistoryToBrewing } from '@/lib/brewing/navigation'
 import type { BrewingNote } from '@/lib/config'
 import type { BrewingNoteData } from '@/app/types'
-import { BREWING_EVENTS } from '@/lib/brewing/constants'
+import { BREWING_EVENTS, ParameterInfo } from '@/lib/brewing/constants'
+import { updateParameterInfo } from '@/lib/brewing/parameters'
 import BrewingNoteFormModalNew from '@/components/BrewingNoteFormModalNew'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import CoffeeBeans from '@/components/CoffeeBeans'
@@ -429,6 +430,21 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             // 重置冲煮完成状态，但保留其他状态
             setShowComplete(false);
             setIsCoffeeBrewed(false);
+            
+            // 确保参数栏中的器具名称显示正确
+            if (selectedEquipment && (currentBrewingMethod || selectedMethod)) {
+                // 使用自定义器具列表和标准器具列表查找正确的器具名称
+                const method = currentBrewingMethod || selectedMethod;
+                
+                // 更新参数栏信息，传入自定义器具列表确保器具名称显示正确
+                updateParameterInfo(
+                    "brewing",
+                    selectedEquipment,
+                    method,
+                    equipmentList,
+                    customEquipments
+                );
+            }
         };
 
         const handleGetParams = () => {
@@ -513,7 +529,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             window.removeEventListener('brewing:stageChange', handleStageChange as EventListener);
             window.removeEventListener('brewing:countdownChange', handleCountdownChange as EventListener);
         };
-    }, [setShowComplete, setIsCoffeeBrewed, setHasAutoNavigatedToNotes, setIsTimerRunning, setCurrentStage, setCountdownTime, setIsStageWaiting, currentBrewingMethod, selectedCoffeeBeanData]);
+    }, [setShowComplete, setIsCoffeeBrewed, setHasAutoNavigatedToNotes, setIsTimerRunning, setCurrentStage, setCountdownTime, setIsStageWaiting, currentBrewingMethod, selectedCoffeeBeanData, selectedEquipment, selectedMethod, customEquipments]);
 
     // 修改处理步骤点击的包装函数，允许在冲煮完成后切换到记录
     const handleBrewingStepClickWrapper = (step: BrewingStep) => {
@@ -914,7 +930,14 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
     // 处理选择器具但从参数传入设备名称的情况
     const handleEquipmentSelectWithName = useCallback((equipmentName: string) => {
-        const equipment = equipmentList.find(e => e.name === equipmentName)?.id || equipmentName;
+        // 首先，尝试通过名称在标准设备中查找
+        const standardEquipment = equipmentList.find(e => e.name === equipmentName);
+        
+        // 然后，尝试在自定义设备中查找
+        const customEquipment = customEquipments.find(e => e.name === equipmentName);
+        
+        // 确定最终使用的设备ID
+        const equipmentId = customEquipment?.id || standardEquipment?.id || equipmentName;
 
         // 更新parameterInfo，添加设备信息
         setParameterInfo({
@@ -924,9 +947,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         });
 
         // 检查是否是自定义预设器具（animationType === 'custom'）
-        const isCustomPresetEquipment = customEquipments.some(
-            e => (e.id === equipment || e.name === equipment) && e.animationType === 'custom'
-        );
+        const isCustomPresetEquipment = customEquipment?.animationType === 'custom';
 
         // 如果是自定义预设器具，强制设置方法类型为'custom'
         if (isCustomPresetEquipment) {
@@ -934,8 +955,11 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             console.log('检测到自定义预设器具，已自动切换到自定义方案模式');
         }
 
-        handleEquipmentSelect(equipment);
-    }, [handleEquipmentSelect, setParameterInfo, customEquipments, setMethodType]);
+        // 使用确定的equipmentId调用handleEquipmentSelect
+        handleEquipmentSelect(equipmentId);
+        
+        console.log(`设备选择: 名称=${equipmentName}, ID=${equipmentId}, 是否自定义=${!!customEquipment}, 是否预设器具=${isCustomPresetEquipment}`);
+    }, [handleEquipmentSelect, setParameterInfo, customEquipments, equipmentList, setMethodType]);
 
     // 当前页面相关初始化
     useEffect(() => {

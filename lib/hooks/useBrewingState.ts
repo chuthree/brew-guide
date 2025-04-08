@@ -191,12 +191,13 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 				// 发送关闭记录表单事件
 				emitEvent(BREWING_EVENTS.NOTES_FORM_CLOSE, { force: true });
 
-				// 更新参数栏信息 - 显示所有参数
+				// 更新参数栏信息 - 显示所有参数，传入自定义器具列表
 				updateParameterInfo(
 					"brewing",
 					selectedEquipment,
 					selectedMethod,
-					equipmentList
+					equipmentList,
+					customEquipments
 				);
 
 				// 设置标记，标识这是从记录到注水的特殊跳转
@@ -221,12 +222,13 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 				// 确保在localStorage中记录状态
 				localStorage.setItem("brewingNoteInProgress", "true");
 
-				// 更新参数栏信息 - 保持不变
+				// 更新参数栏信息 - 保持不变，传入自定义器具列表
 				updateParameterInfo(
 					"notes",
 					selectedEquipment,
 					selectedMethod,
-					equipmentList
+					equipmentList,
+					customEquipments
 				);
 
 				return true;
@@ -246,6 +248,7 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 			setCountdownTime,
 			selectedEquipment,
 			selectedMethod,
+			customEquipments,
 		]
 	);
 
@@ -377,12 +380,13 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 					preserveMethod: true,
 				});
 
-				// 更新参数栏信息
+				// 更新参数栏信息，传入自定义器具列表
 				updateParameterInfo(
 					step,
 					selectedEquipment,
 					selectedMethod,
-					equipmentList
+					equipmentList,
+					customEquipments
 				);
 
 				return true;
@@ -428,12 +432,13 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 				preserveMethod,
 			});
 
-			// 更新参数栏信息
+			// 更新参数栏信息，传入自定义器具列表
 			updateParameterInfo(
 				step,
 				selectedEquipment,
 				selectedMethod,
-				equipmentList
+				equipmentList,
+				customEquipments
 			);
 
 			return true;
@@ -452,6 +457,7 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 			setActiveTab,
 			selectedEquipment,
 			selectedMethod,
+			customEquipments,
 		]
 	);
 
@@ -473,8 +479,8 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 
 				navigateToStep("equipment", { resetParams: true });
 
-				// 确保参数栏信息被清空
-				updateParameterInfo("equipment", null, null, equipmentList);
+				// 确保参数栏信息被清空，传入自定义器具列表
+				updateParameterInfo("equipment", null, null, equipmentList, customEquipments);
 			} else {
 				// 部分重置状态，但保留已选方案、咖啡豆和参数
 
@@ -487,12 +493,13 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 						preserveCoffeeBean: true,
 					});
 
-					// 确保参数栏显示完整信息
+					// 确保参数栏显示完整信息，传入自定义器具列表
 					updateParameterInfo(
 						"brewing",
 						selectedEquipment,
 						selectedMethod,
-						equipmentList
+						equipmentList,
+						customEquipments
 					);
 				} else if (selectedEquipment) {
 					// 有设备但无方案，返回到方案步骤
@@ -501,12 +508,13 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 						preserveCoffeeBean: true,
 					});
 
-					// 确保参数栏只显示设备信息
+					// 确保参数栏只显示设备信息，传入自定义器具列表
 					updateParameterInfo(
 						"method",
 						selectedEquipment,
 						null,
-						equipmentList
+						equipmentList,
+						customEquipments
 					);
 				} else if (selectedCoffeeBean) {
 					// 只有咖啡豆，返回到设备步骤
@@ -514,18 +522,18 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 						preserveCoffeeBean: true,
 					});
 
-					// 确保参数栏被清空
-					updateParameterInfo("equipment", null, null, equipmentList);
+					// 确保参数栏被清空，传入自定义器具列表
+					updateParameterInfo("equipment", null, null, equipmentList, customEquipments);
 				} else {
 					// 没有任何选择，从头开始
 					navigateToStep("equipment", { resetParams: true });
 
-					// 确保参数栏被清空
-					updateParameterInfo("equipment", null, null, equipmentList);
+					// 确保参数栏被清空，传入自定义器具列表
+					updateParameterInfo("equipment", null, null, equipmentList, customEquipments);
 				}
 			}
 		},
-		[navigateToStep, selectedMethod, selectedEquipment, selectedCoffeeBean]
+		[navigateToStep, selectedMethod, selectedEquipment, selectedCoffeeBean, customEquipments]
 	);
 
 	// 处理从笔记页面跳转到导入方案页面的函数
