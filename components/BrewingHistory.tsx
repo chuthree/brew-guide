@@ -143,7 +143,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
             setNotes(sortedNotes);
 
             // 加载所有设备的名称
-            const equipmentIds = [...new Set(sortedNotes.map(note => note.equipment))];
+            const equipmentIds = Array.from(new Set(sortedNotes.map(note => note.equipment)));
             const namesMap: Record<string, string> = {};
 
             for (const id of equipmentIds) {
@@ -226,7 +226,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                 setNotes(sortedNotes);
 
                 // 更新设备名称缓存，移除不再使用的设备
-                const remainingEquipmentIds = [...new Set(sortedNotes.map(note => note.equipment))];
+                const remainingEquipmentIds = Array.from(new Set(sortedNotes.map(note => note.equipment)));
                 const updatedEquipmentNames = { ...equipmentNames };
 
                 // 移除不再使用的设备名称
@@ -324,10 +324,10 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
 
                 // 更新设备名称缓存
                 if (updatedData.equipment) {
-                    const equipmentName = await getEquipmentName(updatedData.equipment);
+                    const equipmentName = await getEquipmentName(updatedData.equipment as string);
                     setEquipmentNames(prev => ({
                         ...prev,
-                        [updatedData.equipment]: equipmentName
+                        [updatedData.equipment as string]: equipmentName
                     }));
                 }
 
@@ -348,10 +348,10 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
 
                 // 更新设备名称缓存
                 if (newNote.equipment) {
-                    const equipmentName = await getEquipmentName(newNote.equipment);
+                    const equipmentName = await getEquipmentName(newNote.equipment as string);
                     setEquipmentNames(prev => ({
                         ...prev,
-                        [newNote.equipment]: equipmentName
+                        [newNote.equipment as string]: equipmentName
                     }));
                 }
 

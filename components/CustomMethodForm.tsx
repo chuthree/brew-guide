@@ -1479,7 +1479,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         };
 
         return (
-            <div className="flex items-center justify-center my-8">
+            <div className="modal-bottom-button flex items-center justify-center">
                 <button
                     type="button"
                     onClick={handleButtonClick}

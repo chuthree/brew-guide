@@ -1362,7 +1362,7 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
         const valid = isStepValid();
 
         return (
-            <div className="flex items-center justify-center my-4 sticky bottom-4">
+            <div className="modal-bottom-button flex items-center justify-center">
                 <button
                     type="button"
                     onClick={handleNextStep}

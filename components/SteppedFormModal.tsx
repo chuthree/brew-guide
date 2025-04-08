@@ -207,7 +207,7 @@ const SteppedFormModal: React.FC<SteppedFormModalProps> = ({
                                 </div>
 
                                 {/* 下一步按钮 */}
-                                <div className="flex items-center justify-center my-4 sticky bottom-4">
+                                <div className="modal-bottom-button flex items-center justify-center">
                                     <button
                                         type="button"
                                         onClick={handleNext}

@@ -115,6 +115,29 @@ export function KeyboardManager() {
           .max-h-\\[85vh\\] .overflow-auto:has(select:focus) {
             padding-bottom: ${info.keyboardHeight + 40}px !important;
           }
+          
+          /* 处理模态框底部按钮 */
+          .modal-bottom-button {
+            position: fixed !important;
+            bottom: ${info.keyboardHeight + 16}px !important;
+            left: 0;
+            right: 0;
+            z-index: 60;
+            background: var(--background, #fafafa);
+            padding: 8px 16px;
+            margin: 0 !important;
+            box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.05);
+          }
+          
+          /* 对于传统使用 sticky bottom-4 的组件保持兼容 */
+          .keyboard-is-open .sticky.bottom-4:not(.modal-bottom-button) {
+            position: fixed !important;
+            bottom: ${info.keyboardHeight + 16}px !important;
+            left: 0;
+            right: 0;
+            z-index: 60;
+            margin: 0 !important;
+          }
         `;
         
         // 处理当前聚焦的输入元素
@@ -175,6 +198,20 @@ export function KeyboardManager() {
         if (brewingHistoryComponent) {
           brewingHistoryComponent.style.paddingBottom = '';
         }
+        
+        // 重置底部按钮样式
+        const stickyButtons = document.querySelectorAll('.sticky.bottom-4, .modal-bottom-button');
+        stickyButtons.forEach((button) => {
+          (button as HTMLElement).style.position = '';
+          (button as HTMLElement).style.bottom = '';
+          (button as HTMLElement).style.left = '';
+          (button as HTMLElement).style.right = '';
+          (button as HTMLElement).style.zIndex = '';
+          (button as HTMLElement).style.margin = '';
+          (button as HTMLElement).style.boxShadow = '';
+          (button as HTMLElement).style.background = '';
+          (button as HTMLElement).style.padding = '';
+        });
         
         // 重置标记
         isKeyboardHandlingApplied = false;

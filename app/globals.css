@@ -204,6 +204,28 @@ select:focus,
   padding-bottom: 60px !important;
 }
 
+/* 模态框底部按钮处理 */
+.modal-bottom-button {
+  position: sticky;
+  bottom: 16px;
+  z-index: 10;
+  margin: 16px 0;
+  transition: bottom 0.3s ease;
+}
+
+/* 键盘弹出时的模态框底部按钮处理 */
+.keyboard-is-open .modal-bottom-button {
+  position: fixed;
+  bottom: var(--keyboard-height, 0px);
+  left: 0;
+  right: 0;
+  padding: 8px 16px;
+  background: var(--background, #fafafa);
+  margin: 0;
+  z-index: 60;
+  box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
 /* 解决Android表单聚焦问题 */
 @media (max-width: 768px) {
   @supports (-webkit-touch-callout: none) {
