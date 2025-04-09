@@ -1324,7 +1324,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                     {(viewMode === VIEW_OPTIONS.RANKING || viewMode === VIEW_OPTIONS.BLOGGER) && (
                         <div className="mb-1">
                             {/* 豆子筛选选项卡 */}
-                            <div className="flex justify-between border-b mx-6 border-neutral-200 dark:border-neutral-800">
+                            <div className="flex justify-between border-b px-6 border-neutral-200 dark:border-neutral-800">
                                 <div className="flex">
                                     <button
                                         className={`pb-1.5 mr-3 text-[11px] relative ${rankingBeanType === 'all' ? 'text-neutral-800 dark:text-white' : 'text-neutral-600 dark:text-neutral-400'}`}
