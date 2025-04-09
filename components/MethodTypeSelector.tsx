@@ -1,19 +1,22 @@
 import React from 'react';
 import { SettingsOptions } from './Settings';
 import hapticsUtils from '@/lib/haptics';
+import BottomActionBar from './BottomActionBar';
 
 interface MethodTypeSelectorProps {
     methodType: 'common' | 'custom';
     settings: SettingsOptions;
     onSelectMethodType: (type: 'common' | 'custom') => void;
     hideSelector?: boolean;
+    showInTabContent?: boolean;
 }
 
 const MethodTypeSelector: React.FC<MethodTypeSelectorProps> = ({
     methodType,
     settings,
     onSelectMethodType,
-    hideSelector = false
+    hideSelector = false,
+    showInTabContent = true
 }) => {
     const handleMethodTypeChange = (type: 'common' | 'custom') => {
         if (settings.hapticFeedback) {
@@ -22,40 +25,29 @@ const MethodTypeSelector: React.FC<MethodTypeSelectorProps> = ({
         onSelectMethodType(type);
     };
 
-    if (hideSelector) {
+    if (hideSelector || showInTabContent) {
         return null;
     }
 
+    // 注意：由于方案类型选择现在已经集成到了TabContent组件中，
+    // 这个组件可能不再需要。保留它是为了向后兼容。
     return (
-        <div
-            className="bg-neutral-50 dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-800 pt-3 pb-safe px-6 px-safe"
-            style={{
-                paddingBottom: 'max(env(safe-area-inset-bottom), 28px)',
-                willChange: "transform, opacity"
-            }}
-        >
-            <div className="flex justify-start items-center">
-                <button
-                    onClick={() => handleMethodTypeChange('common')}
-                    className={`text-[12px] tracking-wider transition-colors ${methodType === 'common'
-                        ? 'text-neutral-800 dark:text-neutral-100'
-                        : 'text-neutral-500 dark:text-neutral-400'
-                        }`}
-                >
-                    通用方案
-                </button>
-                <span className="mx-3 text-neutral-300 dark:text-neutral-600 text-xs">|</span>
-                <button
-                    onClick={() => handleMethodTypeChange('custom')}
-                    className={`text-[12px] tracking-wider transition-colors ${methodType === 'custom'
-                        ? 'text-neutral-800 dark:text-neutral-100'
-                        : 'text-neutral-500 dark:text-neutral-400'
-                        }`}
-                >
-                    自定义方案
-                </button>
-            </div>
-        </div>
+        <BottomActionBar
+            buttons={[
+                [{
+                    text: '通用方案',
+                    onClick: () => handleMethodTypeChange('common'),
+                    active: methodType === 'common'
+                }],
+                [{
+                    text: '自定义方案',
+                    onClick: () => handleMethodTypeChange('custom'),
+                    active: methodType === 'custom'
+                }]
+            ]}
+            className="px-6 px-safe"
+            fixed={false} // 让它的定位由父组件控制
+        />
     );
 };
 

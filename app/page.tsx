@@ -1140,6 +1140,15 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             }
         };
 
+        // 添加方案类型变更事件监听器
+        const handleMethodTypeEvent = (e: CustomEvent) => {
+            const { detail } = e;
+            if (detail) {
+                // 调用方案类型切换函数
+                handleMethodTypeChange(detail);
+            }
+        };
+
         // 添加事件监听
         document.addEventListener(BREWING_EVENTS.NAVIGATE_TO_MAIN_TAB, handleMainTabNavigation as EventListener);
         document.addEventListener(BREWING_EVENTS.NAVIGATE_TO_STEP, handleStepNavigation as EventListener);
@@ -1147,6 +1156,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         document.addEventListener(BREWING_EVENTS.SELECT_EQUIPMENT, handleEquipmentSelection as EventListener);
         document.addEventListener(BREWING_EVENTS.SELECT_METHOD, handleMethodSelection as EventListener);
         document.addEventListener(BREWING_EVENTS.UPDATE_BREWING_PARAMS, handleParamsUpdate as EventListener);
+        window.addEventListener('methodTypeChange', handleMethodTypeEvent as EventListener);
 
         return () => {
             // 移除事件监听
@@ -1156,6 +1166,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             document.removeEventListener(BREWING_EVENTS.SELECT_EQUIPMENT, handleEquipmentSelection as EventListener);
             document.removeEventListener(BREWING_EVENTS.SELECT_METHOD, handleMethodSelection as EventListener);
             document.removeEventListener(BREWING_EVENTS.UPDATE_BREWING_PARAMS, handleParamsUpdate as EventListener);
+            window.removeEventListener('methodTypeChange', handleMethodTypeEvent as EventListener);
         };
     }, [
         navigateToStep,
@@ -1166,7 +1177,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         customMethods,
         handleMethodSelectWrapper,
         setActiveMainTab,
-        setActiveTab
+        setActiveTab,
+        handleMethodTypeChange
     ]);
 
     // 处理从历史记录直接跳转到注水步骤的情况

@@ -17,7 +17,8 @@ import {
 } from './ui/select'
 import { SORT_OPTIONS as RANKING_SORT_OPTIONS, RankingSortOption } from './CoffeeBeanRanking'
 import { useToast } from './GlobalToast'
-import { getBloggerBeans } from '@/lib/csvUtils' // 导入博主榜单豆子函数
+import { getBloggerBeans } from '@/lib/csvUtils'
+import BottomActionBar from '@/components/BottomActionBar'
 
 // 添加ExtendedCoffeeBean类型
 interface BlendComponent {
@@ -1769,34 +1770,30 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
 
                 {/* 添加和导入按钮 - 仅在仓库视图显示 */}
                 {viewMode === VIEW_OPTIONS.INVENTORY && (
-                    <div className="bottom-action-bar">
-                        <div className="absolute bottom-full left-0 right-0 h-12 bg-gradient-to-t from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none"></div>
-                        <div className="relative flex items-center bg-neutral-50 dark:bg-neutral-900 py-4">
-                            <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
-                            <div className="flex items-center space-x-3 mx-3">
-                                <button
-                                    onClick={() => {
-                                        if (showBeanForm) {
-                                            showBeanForm(null);
-                                        } else {
-                                            setShowAddForm(true);
-                                        }
-                                    }}
-                                    className="flex items-center justify-center text-[11px] text-neutral-500 dark:text-neutral-400"
-                                >
-                                    <span className="mr-1">+</span> 添加咖啡豆
-                                </button>
-                                <div className="flex-grow w-4 border-t border-neutral-200 dark:border-neutral-800"></div>
-                                <button
-                                    onClick={onShowImport}
-                                    className="flex items-center justify-center text-[11px] text-neutral-500 dark:text-neutral-400"
-                                >
-                                    <span className="mr-1">↓</span> 导入咖啡豆
-                                </button>
-                            </div>
-                            <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
-                        </div>
-                    </div>
+                    <BottomActionBar
+                        buttons={[
+                            {
+                                icon: '+',
+                                text: '添加咖啡豆',
+                                onClick: () => {
+                                    if (showBeanForm) {
+                                        showBeanForm(null);
+                                    } else {
+                                        setShowAddForm(true);
+                                    }
+                                },
+                                highlight: true
+                            },
+                            {
+                                icon: '↓',
+                                text: '导入咖啡豆',
+                                onClick: () => {
+                                    if (onShowImport) onShowImport();
+                                },
+                                highlight: true
+                            }
+                        ]}
+                    />
                 )}
             </div>
         </>
