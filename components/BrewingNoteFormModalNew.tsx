@@ -302,8 +302,8 @@ const BrewingNoteFormModalNew: React.FC<BrewingNoteFormModalNewProps> = ({
         loadCustomMethods().then(customMethodsAvailable => {
             // 如果是自定义预设器具，只能使用自定义方案
             if (isCustomPresetEquipment) {
-                if (customMethodsAvailable) {
-                    setSelectedMethod(customMethods[0].id || customMethods[0].name);
+                if (customMethodsAvailable && customMethods.length > 0) {
+                    setSelectedMethod(customMethods[0]?.id || customMethods[0]?.name || '');
                 } else {
                     setSelectedMethod('');
                 }
@@ -316,19 +316,19 @@ const BrewingNoteFormModalNew: React.FC<BrewingNoteFormModalNewProps> = ({
                 if (commonMethodsAvailable) {
                     // 选择第一个通用方案
                     setSelectedMethod(brewingMethods[equipmentId][0].name);
-                } else if (customMethodsAvailable) {
+                } else if (customMethodsAvailable && customMethods.length > 0) {
                     // 如果没有通用方案但有自定义方案，切换到自定义方案
                     setMethodType('custom');
-                    setSelectedMethod(customMethods[0].id || customMethods[0].name);
+                    setSelectedMethod(customMethods[0]?.id || customMethods[0]?.name || '');
                 } else {
                     // 如果都没有，清空选择
                     setSelectedMethod('');
                 }
             } else {
                 // 当前是自定义方案模式
-                if (customMethodsAvailable) {
+                if (customMethodsAvailable && customMethods.length > 0) {
                     // 选择第一个自定义方案
-                    setSelectedMethod(customMethods[0].id || customMethods[0].name);
+                    setSelectedMethod(customMethods[0]?.id || customMethods[0]?.name || '');
                 } else if (commonMethodsAvailable) {
                     // 如果没有自定义方案但有通用方案，切换到通用方案
                     setMethodType('common');
@@ -373,7 +373,7 @@ const BrewingNoteFormModalNew: React.FC<BrewingNoteFormModalNewProps> = ({
             } else {
                 // 切换到自定义方案
                 if (customMethods.length > 0) {
-                    setSelectedMethod(customMethods[0].id || customMethods[0].name);
+                    setSelectedMethod(customMethods[0]?.id || customMethods[0]?.name || '');
                 } else {
                     setSelectedMethod(''); // 没有自定义方案，清空选择
                 }

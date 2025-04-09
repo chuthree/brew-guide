@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import type { BrewingNote } from '@/lib/config'
 import type { BrewingNoteData, CoffeeBean } from '@/app/types'
+import type { Method } from '@/lib/config'
 import BrewingNoteForm from './BrewingNoteForm'
 import { Storage } from '@/lib/storage'
 import { equipmentList } from '@/lib/config'
@@ -64,18 +65,6 @@ const formatDate = (timestamp: number) => {
     })
 }
 
-// 添加计算天数差的辅助函数
-const calculateDaysAfterRoast = (roastDate: string, brewDate: number): string => {
-    const roast = new Date(roastDate);
-    const brew = new Date(brewDate);
-    const diffTime = Math.abs(brew.getTime() - roast.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    if (diffDays === 0) return '烘焙当天';
-    if (diffDays === 1) return '烘焙1天后';
-    return `烘焙${diffDays}天后`;
-}
-
 const formatRating = (rating: number) => {
     return `[ ${rating}/5 ]`
 }
@@ -109,6 +98,10 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
     const [toast, setToast] = useState<ToastState>({ visible: false, message: '', type: 'info' });
     // 添加设备名称缓存状态
     const [equipmentNames, setEquipmentNames] = useState<Record<string, string>>({});
+    // 添加筛选状态
+    const [selectedEquipment, setSelectedEquipment] = useState<string | null>(null);
+    const [availableEquipments, setAvailableEquipments] = useState<string[]>([]);
+    const [filteredNotes, setFilteredNotes] = useState<BrewingNote[]>([]);
 
     // 显示消息提示
     const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
@@ -141,9 +134,13 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
             const parsedNotes = savedNotes ? JSON.parse(savedNotes) : [];
             const sortedNotes = sortNotes(parsedNotes);
             setNotes(sortedNotes);
+            setFilteredNotes(sortedNotes); // 初始化时设置已筛选的笔记为所有笔记
+
+            // 收集所有设备ID
+            const equipmentIds = Array.from(new Set(sortedNotes.map(note => note.equipment)));
+            setAvailableEquipments(equipmentIds);
 
             // 加载所有设备的名称
-            const equipmentIds = Array.from(new Set(sortedNotes.map(note => note.equipment)));
             const namesMap: Record<string, string> = {};
 
             for (const id of equipmentIds) {
@@ -156,6 +153,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
         } catch (_error) {
             // 加载失败时设置空数组
             setNotes([]);
+            setFilteredNotes([]);
+            setAvailableEquipments([]);
         }
     }, [sortOption, sortNotes]);
 
@@ -214,8 +213,27 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
 
     useEffect(() => {
         // 当排序选项变化时，重新排序笔记
-        setNotes(prevNotes => sortNotes([...prevNotes]))
-    }, [sortOption, sortNotes])
+        setNotes(prevNotes => {
+            const sorted = sortNotes([...prevNotes]);
+            // 更新筛选后的笔记
+            updateFilteredNotes(sorted);
+            return sorted;
+        });
+    }, [sortOption, sortNotes]);
+
+    // 更新筛选后的笔记
+    const updateFilteredNotes = useCallback((notesToFilter: BrewingNote[]) => {
+        if (selectedEquipment) {
+            setFilteredNotes(notesToFilter.filter(note => note.equipment === selectedEquipment));
+        } else {
+            setFilteredNotes(notesToFilter);
+        }
+    }, [selectedEquipment]);
+
+    // 当选择的设备变化时，更新筛选后的笔记
+    useEffect(() => {
+        updateFilteredNotes(notes);
+    }, [selectedEquipment, notes, updateFilteredNotes]);
 
     const handleDelete = async (noteId: string) => {
         if (window.confirm('确定要删除这条笔记吗？')) {
@@ -241,59 +259,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                 // 删除失败时提示用户
                 showToast('删除笔记时出错，请重试', 'error');
             }
-        }
-    }
-
-    const handleEdit = (note: BrewingNote) => {
-        const formattedNote: Partial<BrewingNoteData> & { coffeeBean?: CoffeeBean | null } = {
-            id: note.id,
-            timestamp: note.timestamp,
-            coffeeBeanInfo: {
-                name: note.coffeeBeanInfo?.name || '',
-                roastLevel: note.coffeeBeanInfo?.roastLevel || '中度烘焙',
-                roastDate: note.coffeeBeanInfo?.roastDate || '',
-            },
-            rating: note.rating || 3,
-            taste: {
-                acidity: note.taste?.acidity || 3,
-                sweetness: note.taste?.sweetness || 3,
-                bitterness: note.taste?.bitterness || 3,
-                body: note.taste?.body || 3,
-            },
-            notes: note.notes || '',
-            equipment: note.equipment,
-            method: note.method,
-            params: note.params,
-            totalTime: note.totalTime,
-        }
-        setEditingNote(formattedNote)
-    }
-
-    const handleOptimize = (note: BrewingNote) => {
-        const formattedNote: Partial<BrewingNoteData> & { coffeeBean?: CoffeeBean | null } = {
-            id: note.id,
-            timestamp: note.timestamp,
-            coffeeBeanInfo: {
-                name: note.coffeeBeanInfo?.name || '',
-                roastLevel: note.coffeeBeanInfo?.roastLevel || '中度烘焙',
-                roastDate: note.coffeeBeanInfo?.roastDate || '',
-            },
-            rating: note.rating || 3,
-            taste: {
-                acidity: note.taste?.acidity || 3,
-                sweetness: note.taste?.sweetness || 3,
-                bitterness: note.taste?.bitterness || 3,
-                body: note.taste?.body || 3,
-            },
-            notes: note.notes || '',
-            equipment: note.equipment,
-            method: note.method,
-            params: note.params,
-            totalTime: note.totalTime,
-        }
-        setOptimizingNote(formattedNote)
-        if (onOptimizingChange) {
-            onOptimizingChange(true)
         }
     }
 
@@ -393,51 +358,33 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                 const customMethods = JSON.parse(customMethodsStr);
                 console.log("当前设备自定义方案:", note.equipment ? customMethods[note.equipment] : "无");
 
-                // 检查note.equipment是否存在，并且其对应的设备下是否有此方案
+                // 如果是自定义方案，记录方案ID
                 if (note.equipment && customMethods[note.equipment]) {
-                    // 检查设备对应的自定义方案列表中是否有匹配项
-                    const methodName = note.method || "";
-                    const isCustomMethod = customMethods[note.equipment].some(
-                        (method: { name: string; id?: string; params: Record<string, string> }) =>
-                            method.name === methodName
-                    );
-
-                    // 存储方案类型 - 直接设置为forceNavigationMethodType
-                    const methodType = isCustomMethod ? "custom" : "common";
-                    localStorage.setItem("forceNavigationMethodType", methodType);
-                    console.log("方案类型判断:", methodType, "- 直接设置为forceNavigationMethodType");
-
-                    // 关键修复：确保自定义方案导航有正确的步骤标识
-                    if (isCustomMethod) {
-                        // 设置完成后直接进入导航流程，使用 start 作为初始步骤
-                        localStorage.setItem("navigationStep", "start");
+                    const customMethod = customMethods[note.equipment].find((m: Method) => m.name === note.method);
+                    if (customMethod && customMethod.id) {
+                        localStorage.setItem("clickedMethodId", customMethod.id);
                     }
-                } else {
-                    console.log("无法在自定义方案中找到匹配设备:", note.equipment);
-                    localStorage.setItem("forceNavigationMethodType", "common");
-                    // 确保设置了导航步骤
-                    localStorage.setItem("navigationStep", "start");
                 }
-            } catch (error) {
-                console.error("解析自定义方案出错:", error);
-                localStorage.setItem("forceNavigationMethodType", "common"); // 出错时默认为通用方案
-                localStorage.setItem("navigationStep", "start");
+            } catch {
+                // 忽略解析错误
             }
-        } else {
-            console.log("没有自定义方案记录，默认为通用方案");
-            localStorage.setItem("forceNavigationMethodType", "common");
-            localStorage.setItem("navigationStep", "start");
         }
 
+        // 跳转到冲煮页面
         if (onNavigateToBrewing) {
             onNavigateToBrewing(note);
         }
     }
 
+    // 处理设备筛选点击
+    const handleEquipmentClick = (equipment: string | null) => {
+        setSelectedEquipment(equipment);
+    };
+
     if (!isOpen) return null
 
     return (
-        <div>
+        <div className="h-full flex flex-col">
             {editingNote ? (
                 <div className="h-full p-6 brewing-form">
                     <BrewingNoteForm
@@ -483,12 +430,14 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                     />
                 </div>
             ) : (
-                <div className="space-y-5 scroll-with-bottom-bar brewing-form">
-                    <div className="p-6 space-y-6">
+                <>
+                    <div className="pt-6 space-y-6 sticky top-0 bg-neutral-50 dark:bg-neutral-900 z-20">
                         {/* 排序控件和数量显示 */}
-                        <div className="flex justify-between items-center mb-6">
+                        <div className="flex justify-between items-center mb-6 px-6">
                             <div className="text-xs tracking-wide text-neutral-800 dark:text-white">
-                                共 {notes.length} 条记录
+                                {selectedEquipment 
+                                    ? `${filteredNotes.length}/${notes.length} 条记录` 
+                                    : `${notes.length} 条记录`}
                             </div>
                             <Select
                                 value={sortOption}
@@ -556,68 +505,87 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                             </Select>
                         </div>
 
-                        {/* 笔记列表 */}
-                        {notes.length === 0 ? (
-                            <div className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
-                                [ 暂无冲煮记录 ]
+                        {/* 设备筛选选项卡 */}
+                        {availableEquipments.length > 0 && (
+                            <div className="relative">
+                                <div className="border-b border-neutral-200 dark:border-neutral-800 px-6 relative">
+                                    <div className="flex overflow-x-auto no-scrollbar pr-14">
+                                        <button
+                                            onClick={() => handleEquipmentClick(null)}
+                                            className={`pb-1.5 mr-3 text-[11px] whitespace-nowrap relative ${selectedEquipment === null ? 'text-neutral-800 dark:text-white' : 'text-neutral-600 dark:text-neutral-400'}`}
+                                        >
+                                            <span className="relative">全部记录</span>
+                                            {selectedEquipment === null && (
+                                                <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
+                                            )}
+                                        </button>
+                                        {availableEquipments.map(equipment => (
+                                            <button
+                                                key={equipment}
+                                                onClick={() => handleEquipmentClick(equipment)}
+                                                className={`pb-1.5 mx-3 text-[11px] whitespace-nowrap relative ${selectedEquipment === equipment ? 'text-neutral-800 dark:text-white' : 'text-neutral-600 dark:text-neutral-400'}`}
+                                            >
+                                                <span className="relative">{equipmentNames[equipment] || equipment}</span>
+                                                {selectedEquipment === equipment && (
+                                                    <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
+                                                )}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
                             </div>
-                        ) : (
-                            <div className="space-y-6">
-                                {notes.map((note, _index) => (
-                                    <div
-                                        key={note.id}
-                                        className="group space-y-4 border-l border-neutral-200 dark:border-neutral-800 pl-6"
-                                    >
-                                        <div className="flex flex-col space-y-4">
-                                            <div className="space-y-2">
-                                                <div className="flex items-baseline justify-between">
-                                                    <div className="flex items-baseline space-x-2 min-w-0 overflow-hidden">
-                                                        <div className="text-[10px] truncate text-neutral-800 dark:text-white">
-                                                            {equipmentNames[note.equipment] || note.equipment}
-                                                        </div>
-                                                        {note.method && (
-                                                            <>
-                                                                <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400 shrink-0">
-                                                                    ·
-                                                                </div>
-                                                                <div
-                                                                    className="text-[10px] font-light tracking-wide truncate cursor-pointer hover:opacity-80 transition-colors group flex items-center text-neutral-800 dark:text-white"
-                                                                    onClick={(e) => handleMethodClick(note, e)}
-                                                                    title="点击跳转到注水步骤"
-                                                                >
-                                                                    <span className="border-b border-dashed border-neutral-400 dark:border-neutral-600 group-hover:border-neutral-800 dark:group-hover:border-white">
-                                                                        {note.method}
-                                                                    </span>
-                                                                    <svg
-                                                                        className="ml-1 w-3 h-3 opacity-50 group-hover:opacity-100 transition-all"
-                                                                        viewBox="0 0 24 24"
-                                                                        fill="none"
-                                                                        stroke="currentColor"
-                                                                        strokeWidth="2"
-                                                                        strokeLinecap="round"
-                                                                        strokeLinejoin="round"
-                                                                    >
-                                                                        <path d="M5 12h14M12 5l7 7-7 7" />
-                                                                    </svg>
-                                                                </div>
-                                                            </>
-                                                        )}
-                                                    </div>
+                        )}
+                    </div>
 
-                                                    <div className="flex items-baseline ml-2 shrink-0">
+                    <div className="flex-1 overflow-hidden">
+                        <div className="w-full h-full overflow-y-auto scroll-with-bottom-bar">
+                            {/* 笔记列表 */}
+                            {filteredNotes.length === 0 ? (
+                                <div className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
+                                    {selectedEquipment 
+                                        ? `[ 没有使用${equipmentNames[selectedEquipment] || selectedEquipment}的冲煮记录 ]` 
+                                        : '[ 暂无冲煮记录 ]'}
+                                </div>
+                            ) : (
+                                <div className="pb-20">
+                                    {filteredNotes.map((note, index) => (
+                                        <div
+                                            key={note.id}
+                                            className={`group space-y-3 px-6 py-3 hover:bg-neutral-50 dark:hover:bg-neutral-900/70 ${index === filteredNotes.length - 1 ? '' : 'border-b border-neutral-200 dark:border-neutral-800'}`}
+                                        >
+                                            <div className="flex flex-col space-y-3">
+                                                {/* 标题和操作菜单 */}
+                                                <div className="flex justify-between items-start">
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="text-[11px] font-normal break-words text-neutral-800 dark:text-white pr-2">
+                                                            {note.coffeeBeanInfo?.name || '未选择咖啡豆'}
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex-shrink-0 ml-1 relative">
                                                         <ActionMenu
                                                             items={[
                                                                 {
                                                                     id: 'edit',
                                                                     label: '编辑',
-                                                                    onClick: () => handleEdit(note),
-                                                                    color: 'default'
+                                                                    onClick: () => {
+                                                                        setEditingNote({
+                                                                            ...note,
+                                                                            coffeeBeanInfo: note.coffeeBeanInfo || undefined
+                                                                        });
+                                                                    }
                                                                 },
                                                                 {
                                                                     id: 'optimize',
                                                                     label: '优化',
-                                                                    onClick: () => handleOptimize(note),
-                                                                    color: 'success'
+                                                                    onClick: () => {
+                                                                        setOptimizingNote({
+                                                                            ...note,
+                                                                            coffeeBeanInfo: note.coffeeBeanInfo || undefined
+                                                                        });
+                                                                        if (onOptimizingChange) {
+                                                                            onOptimizingChange(true);
+                                                                        }
+                                                                    }
                                                                 },
                                                                 {
                                                                     id: 'delete',
@@ -630,26 +598,20 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                                     </div>
                                                 </div>
 
-                                                <div className="flex flex-wrap gap-2 text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
-                                                    {/* 咖啡豆信息（最重要的信息）*/}
-                                                    {note.coffeeBeanInfo?.name && (
-                                                        <span>{note.coffeeBeanInfo.name}</span>
-                                                    )}
-
-                                                    {note.coffeeBeanInfo?.name && note.coffeeBeanInfo?.roastLevel && <span>·</span>}
-
-                                                    {note.coffeeBeanInfo?.roastLevel && (
-                                                        <span>{note.coffeeBeanInfo.roastLevel}</span>
-                                                    )}
-
-                                                    {note.coffeeBeanInfo?.roastDate && (
+                                                {/* 方案信息 */}
+                                                <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400 space-x-1">
+                                                    {equipmentNames[note.equipment] && (
                                                         <>
+                                                            <span>{equipmentNames[note.equipment]}</span>
                                                             <span>·</span>
-                                                            <span>{calculateDaysAfterRoast(note.coffeeBeanInfo.roastDate, note.timestamp)}</span>
                                                         </>
                                                     )}
-
-                                                    {/* 基本冲煮参数（次重要信息）*/}
+                                                    <button
+                                                        onClick={(e) => handleMethodClick(note, e)}
+                                                        className="hover:text-neutral-800 dark:hover:text-white transition-colors"
+                                                    >
+                                                        {note.method}
+                                                    </button>
                                                     {note.params && (
                                                         <>
                                                             <span>·</span>
@@ -671,58 +633,64 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                                         </>
                                                     )}
                                                 </div>
-                                            </div>
 
-                                            <div className="grid grid-cols-2 gap-4">
-                                                {Object.entries(note.taste).map(([key, value], _i) => (
-                                                    <div
-                                                        key={key}
-                                                        className="space-y-1"
-                                                    >
-                                                        <div className="flex items-center justify-between">
-                                                            <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
-                                                                {
-                                                                    {
-                                                                        acidity: '酸度',
-                                                                        sweetness: '甜度',
-                                                                        bitterness: '苦度',
-                                                                        body: '醇度',
-                                                                    }[key]
-                                                                }
+                                                {/* 风味评分 */}
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    {Object.entries(note.taste).map(([key, value], _i) => (
+                                                        <div key={key} className="space-y-1">
+                                                            <div className="flex items-center justify-between">
+                                                                <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
+                                                                    {(() => {
+                                                                        switch (key) {
+                                                                            case 'acidity':
+                                                                                return '酸度';
+                                                                            case 'sweetness':
+                                                                                return '甜度';
+                                                                            case 'bitterness':
+                                                                                return '苦度';
+                                                                            case 'body':
+                                                                                return '醇度';
+                                                                            default:
+                                                                                return key;
+                                                                        }
+                                                                    })()}
+                                                                </div>
+                                                                <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
+                                                                    {value}
+                                                                </div>
                                                             </div>
-                                                            <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
-                                                                [ {value} ]
+                                                            <div className="h-px w-full overflow-hidden bg-neutral-200/50 dark:bg-neutral-800">
+                                                                <div
+                                                                    style={{ width: `${(value / 5) * 100}%` }}
+                                                                    className="h-full bg-neutral-800 dark:bg-neutral-100"
+                                                                />
                                                             </div>
                                                         </div>
-                                                        <div className="h-px w-full overflow-hidden bg-neutral-200/50 dark:bg-neutral-800">
-                                                            <div
-                                                                style={{ width: `${(value / 5) * 100}%` }}
-                                                                className="h-full bg-neutral-800 dark:bg-neutral-100"
-                                                            />
-                                                        </div>
+                                                    ))}
+                                                </div>
+
+                                                {/* 时间和评分 */}
+                                                <div className="flex items-baseline justify-between">
+                                                    <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
+                                                        {formatDate(note.timestamp)}
                                                     </div>
-                                                ))}
-                                            </div>
+                                                    <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
+                                                        {formatRating(note.rating)}
+                                                    </div>
+                                                </div>
 
-                                            <div className="flex items-baseline justify-between">
-                                                <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
-                                                    {formatDate(note.timestamp)}
-                                                </div>
-                                                <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
-                                                    {formatRating(note.rating)}
-                                                </div>
+                                                {/* 备注信息 */}
+                                                {note.notes && (
+                                                    <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
+                                                        {note.notes}
+                                                    </div>
+                                                )}
                                             </div>
-
-                                            {note.notes && (
-                                                <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
-                                                    {note.notes}
-                                                </div>
-                                            )}
                                         </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     {/* 添加笔记按钮 */}
@@ -739,7 +707,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                             <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
                         </div>
                     </div>
-                </div>
+                </>
             )}
 
             {/* Toast消息组件 */}

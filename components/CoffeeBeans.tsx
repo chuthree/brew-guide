@@ -1392,12 +1392,12 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                     }
                                 </div>
                             ) : (
-                                <div className="space-y-3 pb-20">
+                                <div className="pb-20">
                                     {filteredBeans.map((bean, index) => {
                                         return (
                                             <div
                                                 key={bean.id}
-                                                className={`group mt-3 space-y-3 px-6 pb-3 hover:bg-neutral-50 dark:hover:bg-neutral-900/70 ${index === filteredBeans.length - 1 ? '' : 'border-b border-neutral-200 dark:border-neutral-800'} ${isBeanEmpty(bean)
+                                                className={`group  space-y-3 px-6 py-3 hover:bg-neutral-50 dark:hover:bg-neutral-900/70 ${index === filteredBeans.length - 1 ? '' : 'border-b border-neutral-200 dark:border-neutral-800'} ${isBeanEmpty(bean)
                                                     ? 'bg-neutral-100/60 dark:bg-neutral-800/30'
                                                     : ''
                                                     }`}
