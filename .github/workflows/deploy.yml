@@ -26,9 +26,12 @@ jobs:
         port: ${{ secrets.SSH_PORT }}
         script: |
           cd C:\websites\brew-guide
-          "C:\Program Files\Git\cmd\git.exe" pull origin main
+          git config --global --add safe.directory C:/websites/brew-guide
+          git pull origin main
           pm2 stop brew-guide
-          "C:\Program Files\nodejs\npm.cmd" install
-          "C:\Program Files\nodejs\npm.cmd" run build
+          npm install
+          npm run build
           pm2 restart brew-guide
-          Write-Output "Deploy completed at $(Get-Date)"
+          $date = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+          Write-Output "Deploy completed at $date"
+        shell: cmd # 强制使用Windows命令提示符
