@@ -8,6 +8,7 @@ export interface ButtonConfig {
   highlight?: boolean; // 是否高亮显示（使用深色）
   position?: 'left' | 'center' | 'right'; // 按钮位置，用于特殊布局
   className?: string; // 添加自定义类名
+  id?: string; // 按钮标识，用于自定义预设模式下过滤按钮
 }
 
 interface BottomActionBarProps {
@@ -15,6 +16,7 @@ interface BottomActionBarProps {
   className?: string;
   fixed?: boolean; // 是否固定在页面底部
   specialLayout?: boolean; // 特殊布局，用于方案选择器
+  customPresetMode?: boolean; // 自定义预设模式，仅显示【新建方案】和【导入方案】按钮
 }
 
 /**
@@ -30,6 +32,7 @@ const BottomActionBar: React.FC<BottomActionBarProps> = ({
   className = '',
   fixed = true, // 默认固定在底部
   specialLayout = false, // 默认使用标准布局
+  customPresetMode = false, // 默认非自定义预设模式
 }) => {
   // 判断是否是按钮组数组
   const isGroupedButtons = Array.isArray(buttons[0]) && Array.isArray(buttons);
@@ -39,12 +42,35 @@ const BottomActionBar: React.FC<BottomActionBarProps> = ({
     ? `bottom-action-bar ${className}` 
     : className;
   
+  // 如果是自定义预设模式，过滤掉【通用方案】和【自定义方案】按钮
+  const processButtons = (btns: ButtonConfig[] | ButtonConfig[][]) => {
+    if (!customPresetMode) return btns;
+    
+    if (isGroupedButtons) {
+      // 按钮组数组
+      return (btns as ButtonConfig[][]).map(group => 
+        group.filter(btn => 
+          btn.id === 'new' || btn.id === 'import' || 
+          (!btn.id && (btn.text === '新建方案' || btn.text === '导入方案'))
+        )
+      ).filter(group => group.length > 0);
+    } else {
+      // 单个按钮数组
+      return (btns as ButtonConfig[]).filter(btn => 
+        btn.id === 'new' || btn.id === 'import' || 
+        (!btn.id && (btn.text === '新建方案' || btn.text === '导入方案'))
+      );
+    }
+  };
+  
+  const processedButtons = processButtons(buttons);
+  
   // 处理特殊布局（方案选择器专用）
   if (specialLayout && !isGroupedButtons) {
     // 将按钮分为左侧、中间和右侧
-    const leftButtons = (buttons as ButtonConfig[]).filter(btn => btn.position === 'left' || !btn.position);
-    const centerButtons = (buttons as ButtonConfig[]).filter(btn => btn.position === 'center');
-    const rightButtons = (buttons as ButtonConfig[]).filter(btn => btn.position === 'right');
+    const leftButtons = (processedButtons as ButtonConfig[]).filter(btn => btn.position === 'left' || !btn.position);
+    const centerButtons = (processedButtons as ButtonConfig[]).filter(btn => btn.position === 'center');
+    const rightButtons = (processedButtons as ButtonConfig[]).filter(btn => btn.position === 'right');
     
     return (
       <div className={baseClassName}>
@@ -125,8 +151,8 @@ const BottomActionBar: React.FC<BottomActionBarProps> = ({
   }
   
   // 处理单个按钮的情况
-  if (!isGroupedButtons && buttons.length === 1) {
-    const button = buttons[0] as ButtonConfig;
+  if (!isGroupedButtons && processedButtons.length === 1) {
+    const button = processedButtons[0] as ButtonConfig;
     return (
       <div className={baseClassName}>
         <div className="absolute bottom-full left-0 right-0 h-12 bg-gradient-to-t from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none"></div>
@@ -153,7 +179,7 @@ const BottomActionBar: React.FC<BottomActionBarProps> = ({
         <div className="relative flex items-center bg-neutral-50 dark:bg-neutral-900 py-4">
           <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
           <div className="flex items-center space-x-3 mx-3">
-            {(buttons as ButtonConfig[]).map((button, index) => (
+            {(processedButtons as ButtonConfig[]).map((button, index) => (
               <React.Fragment key={`button-${index}`}>
                 {index > 0 && (
                   <div className="flex-grow w-4 border-t border-neutral-200 dark:border-neutral-800"></div>
@@ -185,7 +211,7 @@ const BottomActionBar: React.FC<BottomActionBarProps> = ({
       <div className="relative flex items-center bg-neutral-50 dark:bg-neutral-900 py-4">
         <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
         <div className="flex items-center">
-          {(buttons as ButtonConfig[][]).map((buttonGroup, groupIndex) => (
+          {(processedButtons as ButtonConfig[][]).map((buttonGroup, groupIndex) => (
             <React.Fragment key={`group-${groupIndex}`}>
               {groupIndex > 0 && (
                 <span className="mx-3 text-neutral-300 dark:text-neutral-600 text-xs">|</span>

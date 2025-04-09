@@ -465,13 +465,15 @@ const TabContent: React.FC<TabContentProps> = ({
                                     text: '通用方案',
                                     onClick: () => handleMethodTypeChange('common'),
                                     active: methodType === 'common',
-                                    highlight: true
+                                    highlight: true,
+                                    id: 'common'
                                 },
                                 { 
                                     text: '自定义方案',
                                     onClick: () => handleMethodTypeChange('custom'),
                                     active: methodType === 'custom',
-                                    highlight: true
+                                    highlight: true,
+                                    id: 'custom'
                                 },
                                 
                                 // 创建方案按钮（始终显示，但在非自定义方案模式下半透明且不可点击）
@@ -480,7 +482,8 @@ const TabContent: React.FC<TabContentProps> = ({
                                     text: '新建方案',
                                     onClick: methodType === 'custom' ? () => setShowCustomForm(true) : () => {},
                                     highlight: methodType === 'custom',
-                                    className: methodType !== 'custom' ? 'opacity-30 pointer-events-none' : ''
+                                    className: methodType !== 'custom' ? 'opacity-30 pointer-events-none' : '',
+                                    id: 'new'
                                 },
                                 // 导入方案按钮（始终显示，但在非自定义方案模式下半透明且不可点击）
                                 {
@@ -488,9 +491,11 @@ const TabContent: React.FC<TabContentProps> = ({
                                     text: '导入方案',
                                     onClick: methodType === 'custom' ? () => setShowImportForm(true) : () => {},
                                     highlight: methodType === 'custom',
-                                    className: methodType !== 'custom' ? 'opacity-30 pointer-events-none' : ''
+                                    className: methodType !== 'custom' ? 'opacity-30 pointer-events-none' : '',
+                                    id: 'import'
                                 }
                             ]}
+                            customPresetMode={customEquipments.find(e => e.id === selectedEquipment)?.animationType === 'custom'}
                         />
                     )}
 
