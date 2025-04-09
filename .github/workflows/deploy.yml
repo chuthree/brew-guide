@@ -1,40 +1,28 @@
-name: Deploy to Server
+name: Deploy to Windows Server
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main" ] # 触发分支
 
 jobs:
   deploy:
-    name: Deploy to Windows Server via SSH
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy and Build via SSH
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.SERVER_IP }}
-          username: ${{ secrets.SSH_USERNAME }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            cd C:/websites/brew-guide
+    - name: Checkout Code
+      uses: actions/checkout@v4
 
-            # 设置代理环境变量
-            echo "🔧 Configuring proxy for git..."
-            echo '$env:http_proxy="http://127.0.0.1:7897"' | powershell
-            echo '$env:https_proxy="http://127.0.0.1:7897"' | powershell
-
-            echo "🔄 Pulling latest code..."
-            git pull origin main
-
-            echo "📦 Installing dependencies..."
-            npm install
-
-            echo "🏗️ Building project..."
-            npm run build
-
-            echo "🧹 Removing old pm2 process (if exists)..."
-            pm2 delete brew-guide || echo "No old process"
-
-            echo "🚀 Starting new serve process..."
-            pm2 serve out 3000 --name brew-guide
+    - name: Deploy via SSH
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.SERVER_IP }}
+        username: ${{ secrets.SSH_USERNAME }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        port: ${{ secrets.SSH_PORT }}
+        script: |
+          cd C:\websites\brew-guide
+          git pull origin main
+          pm2 stop brew-guide
+          npm install
+          npm run build
+          pm2 restart brew-guide
