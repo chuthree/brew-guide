@@ -510,13 +510,13 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         let totalWater = ''
 
         if (coffee && ratio) {
-            totalWater = `${Math.round(parseInt(coffee) * parseFloat(ratio))}g`
+            totalWater = `${Math.round(parseFloat(coffee) * parseFloat(ratio))}g`
         }
 
         // 更新第一个步骤的水量（咖啡粉量的2倍）
         const newStages = [...method.params.stages];
         if (newStages.length > 0 && coffee) {
-            const waterAmount = Math.round(parseInt(coffee) * 2);
+            const waterAmount = Math.round(parseFloat(coffee) * 2);
             newStages[0].water = `${waterAmount}g`;
         }
 
@@ -538,13 +538,13 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         let totalWater = ''
 
         if (coffee && ratio) {
-            totalWater = `${Math.round(parseInt(coffee) * parseFloat(ratio))}g`
+            totalWater = `${Math.round(parseFloat(coffee) * parseFloat(ratio))}g`
         }
 
         // 更新第一个步骤的水量（咖啡粉量的2倍）
         const newStages = [...method.params.stages];
         if (newStages.length > 0 && coffee) {
-            const waterAmount = Math.round(parseInt(coffee) * 2);
+            const waterAmount = Math.round(parseFloat(coffee) * 2);
             newStages[0].water = `${waterAmount}g`;
         }
 
