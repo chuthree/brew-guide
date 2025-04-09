@@ -1435,9 +1435,8 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                                     stage.time > 0 &&
                                     !!stage.label.trim() &&
                                     !!stage.water.trim() &&
-                                    !!stage.detail.trim() &&
                                     !!stage.pourType;
-                                // 注水时长可以为空或0，不再作为必填项
+                                // 注水时长和详细说明可以为空，不作为必填项
                                 
                                 // 如果是聪明杯，验证阀门状态
                                 if (customEquipment.hasValve) {
