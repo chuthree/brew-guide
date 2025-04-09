@@ -2,7 +2,7 @@ name: Deploy to Windows Server
 
 on:
   push:
-    branches: [ "main" ] # 触发分支
+    branches: [ "main" ]
 
 jobs:
   deploy:
@@ -12,6 +12,11 @@ jobs:
     - name: Checkout Code
       uses: actions/checkout@v4
 
+    - name: Add SSH Key
+      uses: webfactory/ssh-agent@v0.7.0
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
     - name: Deploy via SSH
       uses: appleboy/ssh-action@master
       with:
@@ -19,10 +24,12 @@ jobs:
         username: ${{ secrets.SSH_USERNAME }}
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         port: ${{ secrets.SSH_PORT }}
+        script_stop: true
         script: |
           cd C:\websites\brew-guide
-          git pull origin main
+          "C:\Program Files\Git\cmd\git.exe" pull origin main
           pm2 stop brew-guide
-          npm install
-          npm run build
+          "C:\Program Files\nodejs\npm.cmd" install
+          "C:\Program Files\nodejs\npm.cmd" run build
           pm2 restart brew-guide
+          echo "Deploy completed at $(Get-Date)"
