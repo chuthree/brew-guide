@@ -102,6 +102,10 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
     const [selectedEquipment, setSelectedEquipment] = useState<string | null>(null);
     const [availableEquipments, setAvailableEquipments] = useState<string[]>([]);
     const [filteredNotes, setFilteredNotes] = useState<BrewingNote[]>([]);
+    // 添加新的状态
+    const [filterMode, setFilterMode] = useState<'equipment' | 'bean'>('equipment');
+    const [selectedBean, setSelectedBean] = useState<string | null>(null);
+    const [availableBeans, setAvailableBeans] = useState<string[]>([]);
 
     // 显示消息提示
     const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
@@ -134,29 +138,41 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
             const parsedNotes = savedNotes ? JSON.parse(savedNotes) : [];
             const sortedNotes = sortNotes(parsedNotes);
             setNotes(sortedNotes);
-            setFilteredNotes(sortedNotes); // 初始化时设置已筛选的笔记为所有笔记
 
-            // 收集所有设备ID
+            // 收集所有设备ID和咖啡豆
             const equipmentIds = Array.from(new Set(sortedNotes.map(note => note.equipment)));
+            const beanNames = Array.from(new Set(sortedNotes
+                .map(note => note.coffeeBeanInfo?.name)
+                .filter((name): name is string => name !== undefined && name !== null)
+            ));
+            
             setAvailableEquipments(equipmentIds);
+            setAvailableBeans(beanNames);
+
+            // 根据当前筛选模式过滤笔记
+            let filtered = sortedNotes;
+            if (filterMode === 'equipment' && selectedEquipment) {
+                filtered = filtered.filter(note => note.equipment === selectedEquipment);
+            } else if (filterMode === 'bean' && selectedBean) {
+                filtered = filtered.filter(note => note.coffeeBeanInfo?.name === selectedBean);
+            }
+            setFilteredNotes(filtered);
 
             // 加载所有设备的名称
             const namesMap: Record<string, string> = {};
-
             for (const id of equipmentIds) {
                 if (id) {
                     namesMap[id] = await getEquipmentName(id);
                 }
             }
-
             setEquipmentNames(namesMap);
         } catch (_error) {
-            // 加载失败时设置空数组
             setNotes([]);
             setFilteredNotes([]);
             setAvailableEquipments([]);
+            setAvailableBeans([]);
         }
-    }, [sortOption, sortNotes]);
+    }, [sortOption, sortNotes, filterMode, selectedEquipment, selectedBean]);
 
     // 当isOpen状态变化时重新加载数据
     useEffect(() => {
@@ -376,10 +392,34 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
         }
     }
 
-    // 处理设备筛选点击
-    const handleEquipmentClick = (equipment: string | null) => {
+    // 添加咖啡豆筛选处理函数
+    const handleBeanClick = useCallback((beanName: string | null) => {
+        setSelectedBean(beanName);
+        if (beanName === null) {
+            setFilteredNotes(notes);
+        } else {
+            setFilteredNotes(notes.filter(note => note.coffeeBeanInfo?.name === beanName));
+        }
+    }, [notes]);
+
+    // 更新设备筛选处理函数
+    const handleEquipmentClick = useCallback((equipment: string | null) => {
         setSelectedEquipment(equipment);
-    };
+        if (equipment === null) {
+            setFilteredNotes(notes);
+        } else {
+            setFilteredNotes(notes.filter(note => note.equipment === equipment));
+        }
+    }, [notes]);
+
+    // 添加筛选模式切换处理函数
+    const handleFilterModeChange = useCallback((mode: 'equipment' | 'bean') => {
+        setFilterMode(mode);
+        // 重置选择状态
+        setSelectedEquipment(null);
+        setSelectedBean(null);
+        setFilteredNotes(notes);
+    }, [notes]);
 
     if (!isOpen) return null
 
@@ -506,31 +546,71 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                         </div>
 
                         {/* 设备筛选选项卡 */}
-                        {availableEquipments.length > 0 && (
+                        {(availableEquipments.length > 0 || availableBeans.length > 0) && (
                             <div className="relative">
                                 <div className="border-b border-neutral-200 dark:border-neutral-800 px-6 relative">
                                     <div className="flex overflow-x-auto no-scrollbar pr-14">
+                                        {filterMode === 'equipment' ? (
+                                            <>
+                                                <button
+                                                    onClick={() => handleEquipmentClick(null)}
+                                                    className={`pb-1.5 mr-3 text-[11px] whitespace-nowrap relative ${selectedEquipment === null ? 'text-neutral-800 dark:text-white' : 'text-neutral-600 dark:text-neutral-400'}`}
+                                                >
+                                                    <span className="relative">全部记录</span>
+                                                    {selectedEquipment === null && (
+                                                        <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
+                                                    )}
+                                                </button>
+                                                {availableEquipments.map(equipment => (
+                                                    <button
+                                                        key={equipment}
+                                                        onClick={() => handleEquipmentClick(equipment)}
+                                                        className={`pb-1.5 mx-3 text-[11px] whitespace-nowrap relative ${selectedEquipment === equipment ? 'text-neutral-800 dark:text-white' : 'text-neutral-600 dark:text-neutral-400'}`}
+                                                    >
+                                                        <span className="relative">{equipmentNames[equipment] || equipment}</span>
+                                                        {selectedEquipment === equipment && (
+                                                            <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
+                                                        )}
+                                                    </button>
+                                                ))}
+                                            </>
+                                        ) : (
+                                            <>
+                                                <button
+                                                    onClick={() => handleBeanClick(null)}
+                                                    className={`pb-1.5 mr-3 text-[11px] whitespace-nowrap relative ${selectedBean === null ? 'text-neutral-800 dark:text-white' : 'text-neutral-600 dark:text-neutral-400'}`}
+                                                >
+                                                    <span className="relative">全部记录</span>
+                                                    {selectedBean === null && (
+                                                        <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
+                                                    )}
+                                                </button>
+                                                {availableBeans.map(bean => (
+                                                    <button
+                                                        key={bean}
+                                                        onClick={() => handleBeanClick(bean)}
+                                                        className={`pb-1.5 mx-3 text-[11px] whitespace-nowrap relative ${selectedBean === bean ? 'text-neutral-800 dark:text-white' : 'text-neutral-600 dark:text-neutral-400'}`}
+                                                    >
+                                                        <span className="relative">{bean}</span>
+                                                        {selectedBean === bean && (
+                                                            <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
+                                                        )}
+                                                    </button>
+                                                ))}
+                                            </>
+                                        )}
+                                    </div>
+
+                                    {/* 筛选模式切换按钮 - 固定在右侧 */}
+                                    <div className="absolute right-6 top-0 bottom-0 flex items-center bg-gradient-to-l from-neutral-50 via-neutral-50 to-transparent dark:from-neutral-900 dark:via-neutral-900 pl-6">
                                         <button
-                                            onClick={() => handleEquipmentClick(null)}
-                                            className={`pb-1.5 mr-3 text-[11px] whitespace-nowrap relative ${selectedEquipment === null ? 'text-neutral-800 dark:text-white' : 'text-neutral-600 dark:text-neutral-400'}`}
+                                            onClick={() => handleFilterModeChange(filterMode === 'equipment' ? 'bean' : 'equipment')}
+                                            className={`pb-1.5 text-[11px] whitespace-nowrap relative text-neutral-800 dark:text-white font-normal`}
                                         >
-                                            <span className="relative">全部记录</span>
-                                            {selectedEquipment === null && (
-                                                <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
-                                            )}
+                                            <span className="relative mr-1">{filterMode === 'equipment' ? '器具' : '咖啡豆'}</span>
+                                            <span className="relative">/</span>
+
                                         </button>
-                                        {availableEquipments.map(equipment => (
-                                            <button
-                                                key={equipment}
-                                                onClick={() => handleEquipmentClick(equipment)}
-                                                className={`pb-1.5 mx-3 text-[11px] whitespace-nowrap relative ${selectedEquipment === equipment ? 'text-neutral-800 dark:text-white' : 'text-neutral-600 dark:text-neutral-400'}`}
-                                            >
-                                                <span className="relative">{equipmentNames[equipment] || equipment}</span>
-                                                {selectedEquipment === equipment && (
-                                                    <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
-                                                )}
-                                            </button>
-                                        ))}
                                     </div>
                                 </div>
                             </div>
@@ -558,7 +638,29 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                                 <div className="flex justify-between items-start">
                                                     <div className="flex-1 min-w-0">
                                                         <div className="text-[11px] font-normal break-words text-neutral-800 dark:text-white pr-2">
-                                                            {note.coffeeBeanInfo?.name || '未选择咖啡豆'}
+                                                            {note.coffeeBeanInfo?.name ? (
+                                                                <>
+                                                                    {note.coffeeBeanInfo.name}
+                                                                    <span className="text-neutral-600 dark:text-neutral-400 mx-1">·</span>
+                                                                    <button
+                                                                        onClick={(e) => handleMethodClick(note, e)}
+                                                                        className="hover:text-neutral-800 dark:hover:text-white transition-colors"
+                                                                    >
+                                                                        {note.method}
+                                                                    </button>
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    {equipmentNames[note.equipment] || note.equipment}
+                                                                    <span className="text-neutral-600 dark:text-neutral-400 mx-1">·</span>
+                                                                    <button
+                                                                        onClick={(e) => handleMethodClick(note, e)}
+                                                                        className="hover:text-neutral-800 dark:hover:text-white transition-colors"
+                                                                    >
+                                                                        {note.method}
+                                                                    </button>
+                                                                </>
+                                                            )}
                                                         </div>
                                                     </div>
                                                     <div className="flex-shrink-0 ml-1 relative">
@@ -600,21 +702,14 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
 
                                                 {/* 方案信息 */}
                                                 <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400 space-x-1">
-                                                    {equipmentNames[note.equipment] && (
+                                                    {note.coffeeBeanInfo?.name && (
                                                         <>
-                                                            <span>{equipmentNames[note.equipment]}</span>
+                                                            <span>{equipmentNames[note.equipment] || note.equipment}</span>
                                                             <span>·</span>
                                                         </>
                                                     )}
-                                                    <button
-                                                        onClick={(e) => handleMethodClick(note, e)}
-                                                        className="hover:text-neutral-800 dark:hover:text-white transition-colors"
-                                                    >
-                                                        {note.method}
-                                                    </button>
                                                     {note.params && (
                                                         <>
-                                                            <span>·</span>
                                                             <span>{note.params.coffee}</span>
                                                             <span>·</span>
                                                             <span>{note.params.ratio}</span>
