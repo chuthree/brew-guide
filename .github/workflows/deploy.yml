@@ -24,7 +24,6 @@ jobs:
         username: ${{ secrets.SSH_USERNAME }}
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         port: ${{ secrets.SSH_PORT }}
-        script_stop: true
         script: |
           cd C:\websites\brew-guide
           "C:\Program Files\Git\cmd\git.exe" pull origin main
@@ -32,4 +31,4 @@ jobs:
           "C:\Program Files\nodejs\npm.cmd" install
           "C:\Program Files\nodejs\npm.cmd" run build
           pm2 restart brew-guide
-          echo "Deploy completed at $(Get-Date)"
+          Write-Output "Deploy completed at $(Get-Date)"
