@@ -945,23 +945,42 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                                 烘焙日期
                             </label>
                             <div className="relative w-full">
-                                <input
-                                    type="date"
-                                    value={bean.roastDate || ''}
-                                    onChange={(e) => {
-                                        const newDate = e.target.value;
-                                        setBean(prev => ({
-                                            ...prev,
-                                            roastDate: newDate
-                                        }));
+                                {/* 创建一个自定义的日期输入样式，但实际上直接使用原生控件 */}
+                                <div 
+                                    className="w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400 flex items-center cursor-pointer"
+                                    onClick={() => {
+                                        // 显式聚焦到日期输入框，但不再尝试调用可能不受支持的 showPicker 方法
+                                        const dateInput = document.getElementById('bean-roast-date');
+                                        if (dateInput) {
+                                            (dateInput as HTMLInputElement).focus();
+                                        }
                                     }}
-                                    max={new Date().toISOString().split('T')[0]}
-                                    className="absolute inset-0 opacity-0 w-full h-full z-10 cursor-pointer"
-                                />
-                                <div className="w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400 flex items-center pointer-events-none">
+                                >
                                     <span className={`${!bean.roastDate ? 'text-neutral-500' : ''}`}>
                                         {bean.roastDate || '点击选择烘焙日期'}
                                     </span>
+                                    
+                                    {/* 隐藏原生日期选择器但保持其功能 */}
+                                    <input
+                                        id="bean-roast-date"
+                                        type="date"
+                                        value={bean.roastDate || ''}
+                                        onChange={(e) => {
+                                            const newDate = e.target.value;
+                                            setBean(prev => ({
+                                                ...prev,
+                                                roastDate: newDate
+                                            }));
+                                        }}
+                                        max={new Date().toISOString().split('T')[0]}
+                                        className="opacity-0 absolute inset-0 w-full h-full cursor-pointer z-10"
+                                        style={{
+                                            // 修改样式使得在电脑浏览器中能够正常打开日期选择器弹窗
+                                            // 在移动端这也能正常工作
+                                            width: '100%',
+                                            height: '100%'
+                                        }}
+                                    />
                                 </div>
                             </div>
                         </div>
