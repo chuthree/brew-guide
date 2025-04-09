@@ -66,22 +66,33 @@ export async function loadCustomMethodsForEquipment(
 	equipmentId: string
 ): Promise<Method[]> {
 	try {
+		console.log(`[loadCustomMethodsForEquipment] 加载设备(${equipmentId})的方案`);
+		
 		// 首先尝试从新存储加载
-		const methodsJson = await Storage.get(`customMethods_${equipmentId}`);
+		const storageKey = `customMethods_${equipmentId}`;
+		console.log(`[loadCustomMethodsForEquipment] 尝试从存储键加载: ${storageKey}`);
+		
+		const methodsJson = await Storage.get(storageKey);
 		let methods: Method[] = [];
 
 		if (methodsJson) {
 			methods = JSON.parse(methodsJson);
+			console.log(`[loadCustomMethodsForEquipment] 从存储中加载到${methods.length}个方案`);
+		} else {
+			console.log(`[loadCustomMethodsForEquipment] 存储键(${storageKey})中没有找到方案`);
 		}
 
 		// 检查旧存储并进行迁移
 		const legacyMethodsJson = await Storage.get("customMethods");
 		if (legacyMethodsJson) {
+			console.log(`[loadCustomMethodsForEquipment] 检查旧格式的方案存储`);
 			const legacyMethods = JSON.parse(legacyMethodsJson);
 			if (
 				legacyMethods[equipmentId] &&
 				Array.isArray(legacyMethods[equipmentId])
 			) {
+				console.log(`[loadCustomMethodsForEquipment] 在旧存储中找到${legacyMethods[equipmentId].length}个方案`);
+				
 				// 合并旧数据
 				const combinedMethods = [
 					...methods,
@@ -90,12 +101,14 @@ export async function loadCustomMethodsForEquipment(
 
 				// 去重
 				methods = removeDuplicateMethods(combinedMethods);
+				console.log(`[loadCustomMethodsForEquipment] 合并后方案数量: ${methods.length}`);
 
 				// 保存到新存储
 				await Storage.set(
-					`customMethods_${equipmentId}`,
+					storageKey,
 					JSON.stringify(methods)
 				);
+				console.log(`[loadCustomMethodsForEquipment] 已将合并的方案保存到新存储: ${storageKey}`);
 
 				// 从旧存储中移除这个设备的数据
 				delete legacyMethods[equipmentId];
@@ -104,10 +117,14 @@ export async function loadCustomMethodsForEquipment(
 						"customMethods",
 						JSON.stringify(legacyMethods)
 					);
+					console.log(`[loadCustomMethodsForEquipment] 更新了旧存储`);
 				} else {
 					// 如果旧存储已经没有数据了，直接删除它
 					await Storage.remove("customMethods");
+					console.log(`[loadCustomMethodsForEquipment] 删除了空的旧存储`);
 				}
+			} else {
+				console.log(`[loadCustomMethodsForEquipment] 旧存储中没有设备(${equipmentId})的方案`);
 			}
 		}
 
@@ -122,8 +139,10 @@ export async function loadCustomMethodsForEquipment(
 			return method;
 		});
 
+		console.log(`[loadCustomMethodsForEquipment] 最终返回${methods.length}个方案`);
 		return methods;
-	} catch (_error) {
+	} catch (error) {
+		console.error(`[loadCustomMethodsForEquipment] 加载方案出错:`, error);
 		return [];
 	}
 }
@@ -170,16 +189,20 @@ export async function saveCustomMethod(
 		const method = arg2 as Method;
 
 		try {
+			console.log(`[saveCustomMethod] 准备保存方案 "${method.name}" 到设备 "${equipmentId}"`);
+			
 			// Load existing methods for this equipment
 			const existingMethods = await loadCustomMethodsForEquipment(
 				equipmentId
 			);
+			console.log(`[saveCustomMethod] 设备现有方案数量: ${existingMethods.length}`);
 
 			// Ensure method has an ID
 			const methodWithId = {
 				...method,
 				id: method.id || `method-${uuidv4()}`,
 			};
+			console.log(`[saveCustomMethod] 方案ID: ${methodWithId.id}`);
 
 			// 确保方法ID在保存前是唯一的
 
@@ -188,11 +211,15 @@ export async function saveCustomMethod(
 				(m) => m.id !== methodWithId.id
 			);
 			updatedMethods.push(methodWithId);
+			console.log(`[saveCustomMethod] 更新后方案数量: ${updatedMethods.length}`);
 
 			// 去重并保存
 			const uniqueMethods = removeDuplicateMethods(updatedMethods);
+			const storageKey = `customMethods_${equipmentId}`;
+			console.log(`[saveCustomMethod] 保存方案到存储键: ${storageKey}, 方案数量: ${uniqueMethods.length}`);
+			
 			await Storage.set(
-				`customMethods_${equipmentId}`,
+				storageKey,
 				JSON.stringify(uniqueMethods)
 			);
 

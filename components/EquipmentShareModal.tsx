@@ -70,13 +70,13 @@ const EquipmentShareModal: React.FC<EquipmentShareModalProps> = ({
                     selectedMethods.includes(method.id || method.name)
                 ).map(method => ({
                     ...method,
-                    // Remove id as it will be regenerated on import
-                    id: undefined
+                    // 不再删除id，保留原有ID以确保关联性
+                    // id: undefined
                 })) : []
             };
 
-            // Remove id from equipment as it will be regenerated on import
-            delete (exportData.equipment as Partial<CustomEquipment>).id;
+            // 不再删除设备ID，保留原始ID
+            // delete (exportData.equipment as Partial<CustomEquipment>).id;
 
             // Convert to JSON
             const jsonData = JSON.stringify(exportData, null, 2);

@@ -3,7 +3,7 @@
 // 导入React和必要的hooks
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import dynamic from 'next/dynamic'
-import { equipmentList, APP_VERSION, commonMethods, CustomEquipment } from '@/lib/config'
+import { equipmentList, APP_VERSION, commonMethods, CustomEquipment, type Method } from '@/lib/config'
 import { Storage } from '@/lib/storage'
 import { initCapacitor } from './capacitor'
 // 只导入需要的类型
@@ -933,8 +933,15 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         // 首先，尝试通过名称在标准设备中查找
         const standardEquipment = equipmentList.find(e => e.name === equipmentName);
         
-        // 然后，尝试在自定义设备中查找
-        const customEquipment = customEquipments.find(e => e.name === equipmentName);
+        // 然后，尝试在自定义设备中查找 - 优先找最近添加的（倒序查找）
+        let customEquipment = null;
+        for (let i = customEquipments.length - 1; i >= 0; i--) {
+            if (customEquipments[i].name === equipmentName) {
+                customEquipment = customEquipments[i];
+                console.log(`找到匹配的自定义器具: ${equipmentName}, ID=${customEquipment.id}`);
+                break;
+            }
+        }
         
         // 确定最终使用的设备ID
         const equipmentId = customEquipment?.id || standardEquipment?.id || equipmentName;
@@ -1524,9 +1531,9 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     };
 
     // 处理保存自定义器具
-    const handleSaveEquipment = async (equipment: CustomEquipment) => {
+    const handleSaveEquipment = async (equipment: CustomEquipment, methods?: Method[]) => {
         try {
-            await saveCustomEquipment(equipment);
+            await saveCustomEquipment(equipment, methods);
             // 刷新器具列表
             const updatedEquipments = await loadCustomEquipments();
             setCustomEquipments(updatedEquipments);
@@ -1572,9 +1579,27 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     }, [selectedEquipment, customEquipments, methodType, setMethodType]);
 
     // 处理导入器具
-    const handleImportEquipment = async (equipment: CustomEquipment) => {
+    const handleImportEquipment = async (equipment: CustomEquipment, methods?: Method[]) => {
         try {
-            await handleSaveEquipment(equipment);
+            // 记录原始ID，确保后续使用正确的ID
+            const originalId = equipment.id;
+            console.log(`导入器具原始ID: ${originalId}`);
+            
+            // 传递methods参数给handleSaveEquipment
+            await handleSaveEquipment(equipment, methods);
+            
+            // 导入完成后，直接选择该设备
+            if (originalId) {
+                console.log(`导入完成，设置选定器具ID: ${originalId}`);
+                // 直接使用ID选择设备
+                handleEquipmentSelect(originalId);
+                
+                // 如果是自定义预设器具，强制设置方法类型为'custom'
+                if (equipment.animationType === 'custom') {
+                    setMethodType('custom');
+                }
+            }
+            
             setShowEquipmentImportForm(false);
         } catch (error) {
             console.error('导入器具失败:', error);

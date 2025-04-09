@@ -72,14 +72,14 @@ export async function saveCustomEquipment(
 						: e
 				);
 			} else {
-				// 如果找不到对应ID的器具，视为新建器具
-				const newId = generateCustomId(equipment.animationType);
+				// 如果找不到对应ID的器具，但已有ID，保留原始ID
+				// 不再生成新ID，以确保导入导出时方案关联不丢失
 				const newEquipment = {
 					...equipment,
-					id: newId,
 					isCustom: true as const,
 				};
 				updatedEquipments = [...equipments, newEquipment];
+				console.log(`导入具有ID的新器具: ${equipment.id}`);
 			}
 		} else {
 			// 如果是新建器具，生成新的 ID
@@ -114,10 +114,37 @@ export async function saveCustomEquipment(
 
 		// 如果提供了新方案，则保存方案
 		if (methods && methods.length > 0 && equipment.id) {
-			for (const method of methods) {
-				// 使用新的调用模式保存方案
+			console.log(`准备保存器具(${equipment.id})的${methods.length}个方案:`, methods.map(m => m.name));
+			
+			// 先检查现有方案，确保不会重复保存
+			const existingMethods = await loadCustomMethodsForEquipment(equipment.id);
+			console.log(`器具(${equipment.id})已有${existingMethods.length}个方案`);
+			
+			// 过滤出需要保存的新方案（不在现有方案中的）
+			const methodsToSave = methods.filter(method => {
+				const existingMethod = existingMethods.find(m => 
+					(method.id && m.id === method.id) || // 按ID匹配
+					(method.name && m.name === method.name) // 按名称匹配
+				);
+				return !existingMethod;
+			});
+			
+			console.log(`需要保存${methodsToSave.length}个新方案`);
+			
+			// 保存新方案
+			for (const method of methodsToSave) {
+				console.log(`保存方案: ${method.name} 到器具 ${equipment.id}`);
 				await saveCustomMethod(equipment.id, method);
 			}
+			
+			console.log(`器具${equipment.id}的方案保存完成`);
+		} else {
+			console.log(`没有方案需要保存，或者器具ID缺失:`, { 
+				hasId: !!equipment.id, 
+				id: equipment.id, 
+				hasMethods: !!methods, 
+				methodsCount: methods?.length 
+			});
 		}
 	} catch (error) {
 		throw new CustomEquipmentError(
