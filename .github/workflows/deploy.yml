@@ -32,6 +32,4 @@ jobs:
           npm install
           npm run build
           pm2 restart brew-guide
-          $date = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-          Write-Output "Deploy completed at $date"
-        shell: cmd # 强制使用Windows命令提示符
+          powershell -Command "Write-Output \"Deploy completed at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')\""
