@@ -262,6 +262,32 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         // 简化的初始化函数
         const initializeApp = async () => {
             try {
+                console.log('初始化应用...');
+                
+                // 首先修复现有方案数据关联
+                try {
+                    console.log('检查并修复方案关联...');
+                    const methodsModule = await import('@/lib/customMethods');
+                    await methodsModule.repairMethodsAssociation();
+                    console.log('方案修复完成');
+                } catch (error) {
+                    console.error('方案修复出错:', error);
+                }
+                
+                // 继续原有初始化流程
+                // 检查coffee beans而不是直接调用不存在的函数
+                let hasCoffeeBeans = initialHasBeans;
+                try {
+                    const beansStr = await Storage.get('coffeeBeans');
+                    if (beansStr) {
+                        const beans = JSON.parse(beansStr);
+                        hasCoffeeBeans = Array.isArray(beans) && beans.length > 0;
+                    }
+                } catch (error) {
+                    console.error('检查咖啡豆失败:', error);
+                }
+                setHasCoffeeBeans(hasCoffeeBeans);
+
                 // 0. 自动修复可能存在的数据问题
                 try {
                     // 导入数据管理工具
