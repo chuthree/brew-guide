@@ -245,7 +245,7 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
                         <button
                             type="button"
                             onClick={handleClear}
-                            className="absolute right-0 bottom-2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300"
+                            className="absolute right-0 bottom-2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 z-[51]"
                         >
                             <X className="h-4 w-4" />
                         </button>
