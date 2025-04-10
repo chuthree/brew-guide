@@ -13,7 +13,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ github.token }}
 
       - name: Deploy via SSH to Windows Server
         uses: appleboy/ssh-action@master
@@ -65,7 +65,7 @@ jobs:
                 git config --global --add safe.directory 'C:/websites/brew-guide'
                 
                 Write-DeployLog '更新远程仓库URL'
-                git remote set-url origin https://${{ secrets.GITHUB_TOKEN }}@github.com/chu3/brew-guide.git
+                git remote set-url origin https://${{ github.token }}@github.com/chu3/brew-guide.git
                 
                 Write-DeployLog '保存 Git 状态'
                 git status | Tee-Object -FilePath "$logDir\git-status-before.log"
