@@ -49,4 +49,4 @@ jobs:
             Set-Content -Path 'C:\websites\brew-guide\__last_deploy.txt' -Value \"Deployed at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')\";
 
             Write-Host '✅ Deployment finished.';
-          "
+            ";
