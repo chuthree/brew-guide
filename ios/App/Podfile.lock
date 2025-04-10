@@ -57,7 +57,7 @@ EXTERNAL SOURCES:
   CapacitorCommunityKeepAwake:
     :path: "../../node_modules/@capacitor-community/keep-awake"
   CapacitorCordova:
-    :path: "../../node_modules/@capacitor/ios"
+    :path: "../../_modules/@capacitor/ios"
   CapacitorFilesystem:
     :path: "../../node_modules/@capacitor/filesystem"
   CapacitorHaptics:

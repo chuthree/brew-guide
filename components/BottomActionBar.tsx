@@ -92,7 +92,15 @@ const BottomActionBar: React.FC<BottomActionBarProps> = ({
                   } ${button.className || ''}`}
                 >
                   {button.icon && <span className="mr-1">{button.icon}</span>}
-                  {button.text}
+                  {(button.text === '通用方案' || button.text === '自定义方案') ? (
+                    <>
+                      <span className={`transition-all duration-100 ease-in-out ${button.active ? 'inline-block w-auto opacity-100 mr-px' : 'inline-block w-0 opacity-0 overflow-hidden'}`}>[</span>
+                      {button.text}
+                      <span className={`transition-all duration-100 ease-in-out ${button.active ? 'inline-block w-auto opacity-100 ml-px' : 'inline-block w-0 opacity-0 overflow-hidden'}`}>]</span>
+                    </>
+                  ) : (
+                    button.text
+                  )}
                 </button>
               </React.Fragment>
             ))}
@@ -115,7 +123,15 @@ const BottomActionBar: React.FC<BottomActionBarProps> = ({
                     } ${button.className || ''}`}
                   >
                     {button.icon && <span className="mr-1">{button.icon}</span>}
-                    {button.text}
+                    {(button.text === '通用方案' || button.text === '自定义方案') ? (
+                      <>
+                        <span className={`transition-all duration-100 ease-in-out ${button.active ? 'inline-block w-auto opacity-100 mr-px' : 'inline-block w-0 opacity-0 overflow-hidden'}`}>[</span>
+                        {button.text}
+                        <span className={`transition-all duration-100 ease-in-out ${button.active ? 'inline-block w-auto opacity-100 ml-px' : 'inline-block w-0 opacity-0 overflow-hidden'}`}>]</span>
+                      </>
+                    ) : (
+                      button.text
+                    )}
                   </button>
                 </React.Fragment>
               ))}
@@ -139,7 +155,15 @@ const BottomActionBar: React.FC<BottomActionBarProps> = ({
                     } ${button.className || ''}`}
                   >
                     {button.icon && <span className="mr-1">{button.icon}</span>}
-                    {button.text}
+                    {(button.text === '通用方案' || button.text === '自定义方案') ? (
+                      <>
+                        <span className={`transition-all duration-100 ease-in-out ${button.active ? 'inline-block w-auto opacity-100 mr-px' : 'inline-block w-0 opacity-0 overflow-hidden'}`}>[</span>
+                        {button.text}
+                        <span className={`transition-all duration-100 ease-in-out ${button.active ? 'inline-block w-auto opacity-100 ml-px' : 'inline-block w-0 opacity-0 overflow-hidden'}`}>]</span>
+                      </>
+                    ) : (
+                      button.text
+                    )}
                   </button>
                 </React.Fragment>
               ))}
@@ -193,7 +217,15 @@ const BottomActionBar: React.FC<BottomActionBarProps> = ({
                   } ${button.className || ''}`}
                 >
                   {button.icon && <span className="mr-1">{button.icon}</span>}
-                  {button.text}
+                  {(button.text === '通用方案' || button.text === '自定义方案') ? (
+                    <>
+                      <span className={`transition-all duration-100 ease-in-out ${button.active ? 'inline-block w-auto opacity-100 mr-px' : 'inline-block w-0 opacity-0 overflow-hidden'}`}>[</span>
+                      {button.text}
+                      <span className={`transition-all duration-100 ease-in-out ${button.active ? 'inline-block w-auto opacity-100 ml-px' : 'inline-block w-0 opacity-0 overflow-hidden'}`}>]</span>
+                    </>
+                  ) : (
+                    button.text
+                  )}
                 </button>
               </React.Fragment>
             ))}
@@ -231,7 +263,15 @@ const BottomActionBar: React.FC<BottomActionBarProps> = ({
                       } ${button.className || ''}`}
                     >
                       {button.icon && <span className="mr-1">{button.icon}</span>}
-                      {button.text}
+                      {(button.text === '通用方案' || button.text === '自定义方案') ? (
+                        <>
+                          <span className={`transition-all duration-100 ease-in-out ${button.active ? 'inline-block w-auto opacity-100 mr-px' : 'inline-block w-0 opacity-0 overflow-hidden'}`}>[</span>
+                          {button.text}
+                          <span className={`transition-all duration-100 ease-in-out ${button.active ? 'inline-block w-auto opacity-100 ml-px' : 'inline-block w-0 opacity-0 overflow-hidden'}`}>]</span>
+                        </>
+                      ) : (
+                        button.text
+                      )}
                     </button>
                   </React.Fragment>
                 ))}
