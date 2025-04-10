@@ -22,7 +22,7 @@ jobs:
         port: ${{ secrets.SSH_PORT }}
         script: |
           powershell -Command "
-            Write-Host '💻 Connecting to server...';
+            Write-Host '💻 Connecting to server...'; Write-Host
             cd 'C:\websites\brew-guide';
 
             Write-Host '🔧 Fetching latest code from origin/main...';
@@ -45,7 +45,19 @@ jobs:
             pm2 restart brew-guide;
 
             Write-Host '📝 Writing deploy timestamp...';
-            Set-Content -Path 'C:\websites\brew-guide\__last_deploy.txt' -Value \"Deployed at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')\";
+            try {
+              $commit = git log -1 --pretty=format:'%H';
+              $branch = git rev-parse --abbrev-ref HEAD;
+              $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss';
+              $lines = @();
+              $lines += \"Deployed at: $timestamp\";
+              $lines += \"Commit: $commit\";
+              $lines += \"Branch: $branch\";
+              $lines | Out-File -FilePath 'C:\websites\brew-guide\__last_deploy.txt' -Encoding utf8 -Force;
+              Write-Host '📄 Timestamp file written successfully.';
+            } catch {
+              Write-Host \"⚠️ Failed to write deploy timestamp: $_\";
+            }
 
             Write-Host '✅ Deployment finished.';
           "
