@@ -10,48 +10,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-<<<<<<< HEAD
-    - name: Deploy via SSH to Windows Server
-      uses: appleboy/ssh-action@master
-      with:
-        host: ${{ secrets.SERVER_IP }}
-        username: ${{ secrets.SSH_USERNAME }}
-        key: ${{ secrets.SSH_PRIVATE_KEY }}
-        port: ${{ secrets.SSH_PORT }}
-        script: |
-          powershell -Command "
-            Write-Host '💻 Connecting to server...';
-            cd 'C:\websites\brew-guide';
-
-            Write-Host '🔧 Fetching latest code from origin/main...';
-            git fetch origin main;
-            git reset --hard origin/main;
-            git status;  # Add this line to check if repository is up-to-date
-
-            Write-Host '🔒 Marking directory as safe...';
-            git config --global --add safe.directory 'C:/websites/brew-guide';
-
-            Write-Host '🛑 Stopping app with PM2...';
-            pm2 stop brew-guide || Write-Host 'Failed to stop PM2 process';
-
-            Write-Host '📦 Installing dependencies...';
-            npm install || Write-Host 'npm install failed';
-
-            Write-Host '🔨 Building project...';
-            npm run build || Write-Host 'npm build failed';
-
-            Write-Host '🚀 Restarting app with PM2...';
-            pm2 restart brew-guide || Write-Host 'Failed to restart PM2 process';
-
-            Write-Host '📝 Writing deploy timestamp...';
-            Set-Content -Path 'C:\websites\brew-guide\__last_deploy.txt' -Value \"Deployed at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')\";
-
-            Write-Host '✅ Deployment finished.';
-            ";
-=======
       - name: Deploy via SSH to Windows Server
         uses: appleboy/ssh-action@master
         with:
@@ -133,4 +94,3 @@ jobs:
                 Write-Host '部署日志文件不存在'
               }
             "
->>>>>>> 6634308 (优化部署脚本：添加详细日志和错误处理)
