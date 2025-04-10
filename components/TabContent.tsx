@@ -2,6 +2,7 @@ import React, { useCallback, useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { Method, equipmentList, CustomEquipment, commonMethods } from '@/lib/config';
 import StageItem from '@/components/StageItem';
+import StageDivider from '@/components/StageDivider';
 import { SettingsOptions } from './Settings';
 import { TabType, MainTabType, Content, Step as BaseStep } from '@/lib/hooks/useBrewingState';
 import { CoffeeBean } from '@/app/types';
@@ -601,61 +602,75 @@ const TabContent: React.FC<TabContentProps> = ({
                         )}
                         
                         {/* 常规方案列表 */}
-                        {content[activeTab]?.steps.map((step: Step, index: number) => (
-                            <StageItem
-                                key={step.methodId ? `${step.methodId}-${index}` : `${step.title}-${index}`}
-                                step={step}
-                                index={index}
-                                onClick={() => {
-                                    if (activeTab === '器具' as TabType) {
-                                        onEquipmentSelect(step.title);
-                                    } else if (activeTab === '方案' as TabType) {
-                                        // 传递完整的 step 对象给 onMethodSelect 方法
-                                        onMethodSelect(index, step);
-                                    }
-                                }}
-                                activeTab={activeTab}
-                                selectedMethod={selectedMethod}
-                                currentStage={currentStage}
-                                onEdit={activeTab === '方案' as TabType && methodType === 'custom' && customMethods[selectedEquipment!] ? () => {
-                                    const method = customMethods[selectedEquipment!][index];
-                                    onEditMethod(method);
-                                } : step.isCustom ? () => {
-                                    const equipment = customEquipments.find(e => e.name === step.title);
-                                    if (equipment) {
-                                        setEditingEquipment(equipment);
-                                        setShowEquipmentForm(true);
-                                    }
-                                } : undefined}
-                                onDelete={activeTab === '方案' as TabType && methodType === 'custom' && customMethods[selectedEquipment!] ? () => {
-                                    const method = customMethods[selectedEquipment!][index];
-                                    onDeleteMethod(method);
-                                } : step.isCustom ? () => {
-                                    const equipment = customEquipments.find(e => e.name === step.title);
-                                    if (equipment) {
-                                        handleDeleteEquipment(equipment);
-                                    }
-                                } : undefined}
-                                onShare={activeTab === '方案' as TabType ? () => {
-                                    if (methodType === 'custom' && customMethods[selectedEquipment!]) {
-                                        const method = customMethods[selectedEquipment!][index];
-                                        handleShareMethod(method);
-                                    } else if (methodType === 'common' && selectedEquipment) {
-                                        const method = commonMethods[selectedEquipment];
-                                        if (method && method[index]) {
-                                            handleShareMethod(method[index]);
+                        {content[activeTab]?.steps.map((step: Step, index: number) => {
+                            // 如果是注水标签，检查originalIndex变化来添加阶段分隔线
+                            const showStageDivider = activeTab === '注水' as TabType && 
+                                index > 0 && 
+                                step.originalIndex !== undefined && 
+                                content[activeTab]?.steps[index-1]?.originalIndex !== undefined &&
+                                step.originalIndex !== content[activeTab]?.steps[index-1]?.originalIndex;
+                            
+                            return (
+                            <React.Fragment key={step.methodId ? `${step.methodId}-${index}` : `${step.title}-${index}`}>
+                                {/* 在注水标签页中，检测originalIndex变化添加分隔线 */}
+                                {showStageDivider && (
+                                    <StageDivider stageNumber={step.originalIndex! + 1} key={`divider-${index}`} />
+                                )}
+                                <StageItem
+                                    step={step}
+                                    index={index}
+                                    onClick={() => {
+                                        if (activeTab === '器具' as TabType) {
+                                            onEquipmentSelect(step.title);
+                                        } else if (activeTab === '方案' as TabType) {
+                                            // 传递完整的 step 对象给 onMethodSelect 方法
+                                            onMethodSelect(index, step);
                                         }
-                                    }
-                                } : step.isCustom ? () => {
-                                    const equipment = customEquipments.find(e => e.name === step.title);
-                                    if (equipment) {
-                                        handleShareEquipment(equipment);
-                                    }
-                                } : undefined}
-                                actionMenuStates={actionMenuStates}
-                                setActionMenuStates={setActionMenuStates}
-                            />
-                        ))}
+                                    }}
+                                    activeTab={activeTab}
+                                    selectedMethod={selectedMethod}
+                                    currentStage={currentStage}
+                                    onEdit={activeTab === '方案' as TabType && methodType === 'custom' && customMethods[selectedEquipment!] ? () => {
+                                        const method = customMethods[selectedEquipment!][index];
+                                        onEditMethod(method);
+                                    } : step.isCustom ? () => {
+                                        const equipment = customEquipments.find(e => e.name === step.title);
+                                        if (equipment) {
+                                            setEditingEquipment(equipment);
+                                            setShowEquipmentForm(true);
+                                        }
+                                    } : undefined}
+                                    onDelete={activeTab === '方案' as TabType && methodType === 'custom' && customMethods[selectedEquipment!] ? () => {
+                                        const method = customMethods[selectedEquipment!][index];
+                                        onDeleteMethod(method);
+                                    } : step.isCustom ? () => {
+                                        const equipment = customEquipments.find(e => e.name === step.title);
+                                        if (equipment) {
+                                            handleDeleteEquipment(equipment);
+                                        }
+                                    } : undefined}
+                                    onShare={activeTab === '方案' as TabType ? () => {
+                                        if (methodType === 'custom' && customMethods[selectedEquipment!]) {
+                                            const method = customMethods[selectedEquipment!][index];
+                                            handleShareMethod(method);
+                                        } else if (methodType === 'common' && selectedEquipment) {
+                                            const method = commonMethods[selectedEquipment];
+                                            if (method && method[index]) {
+                                                handleShareMethod(method[index]);
+                                            }
+                                        }
+                                    } : step.isCustom ? () => {
+                                        const equipment = customEquipments.find(e => e.name === step.title);
+                                        if (equipment) {
+                                            handleShareEquipment(equipment);
+                                        }
+                                    } : undefined}
+                                    actionMenuStates={actionMenuStates}
+                                    setActionMenuStates={setActionMenuStates}
+                                />
+                            </React.Fragment>
+                            );
+                        })}
                     </div>
 
                     {/* 方案标签底部操作栏 - 特殊布局 */}

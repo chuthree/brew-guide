@@ -367,7 +367,7 @@ export function useBrewingContent({
 						type: "wait",
 						label: "等待",
 						water: stage.water, // 水量与前一阶段相同
-						detail: "保持耐心，等待咖啡萃取",
+						detail: "",
 						startTime: prevStageTime + stagePourTime,
 						endTime: stage.time,
 						time: stage.time - (prevStageTime + stagePourTime),
@@ -382,7 +382,7 @@ export function useBrewingContent({
 					type: "wait",
 					label: "等待",
 					water: stage.water,
-					detail: "保持耐心，等待咖啡萃取",
+					detail: "",
 					startTime: prevStageTime,
 					endTime: stage.time,
 					time: stage.time - prevStageTime,
