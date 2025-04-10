@@ -522,11 +522,6 @@ const TabContent: React.FC<TabContentProps> = ({
                         {/* 器具列表中显示固定方案的器具 */}
                         {activeTab === '器具' as TabType && selectedCoffeeBeanData && pinnedMethods.length > 0 && (
                             <>
-                                {/* 固定器具标题 */}
-                                <div className="px-2 py-1 text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                                    常用器具
-                                </div>
-                                
                                 {/* 从固定方案中提取唯一器具并显示 */}
                                 {Array.from(new Set(pinnedMethods.map(m => m.equipmentId))).map((equipmentId, index) => {
                                     const equipment = equipmentList.find(e => e.id === equipmentId) || 
@@ -540,7 +535,7 @@ const TabContent: React.FC<TabContentProps> = ({
                                             step={{
                                                 title: equipment.name || equipmentId,
                                                 icon: '🔍', // 使用图标标识固定器具
-                                                detail: `${selectedCoffeeBeanData.name}的指定器具`
+                                                detail: `${selectedCoffeeBeanData.name}的常用器具`
                                             }}
                                             index={index}
                                             onClick={() => onEquipmentSelect(equipmentId)}
@@ -553,12 +548,13 @@ const TabContent: React.FC<TabContentProps> = ({
                                     );
                                 })}
                                 
-                                {/* 分割线 */}
-                                <div className="my-3 border-t border-neutral-200 dark:border-neutral-800"></div>
-                                
-                                {/* 常规器具列表标题 */}
-                                <div className="px-2 py-1 text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                                    所有器具
+                                {/* 分割线和描述文本 */}
+                                <div className="my-3 flex items-center">
+                                    <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
+                                    <span className="mx-2 text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
+                                        以上是常用器具
+                                    </span>
+                                    <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
                                 </div>
                             </>
                         )}
@@ -580,11 +576,6 @@ const TabContent: React.FC<TabContentProps> = ({
                                     
                                     return (
                                         <>
-                                            {/* 固定方案标题 */}
-                                            <div className="px-2 py-1 text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                                                常用方案
-                                            </div>
-                                            
                                             {/* 固定方案列表 - 只显示当前器具的固定方案 */}
                                             {filteredPinnedMethods.map((method, index) => (
                                                 <StageItem
@@ -605,12 +596,13 @@ const TabContent: React.FC<TabContentProps> = ({
                                                 />
                                             ))}
                                             
-                                            {/* 分割线 */}
-                                            <div className="my-3 border-t border-neutral-200 dark:border-neutral-800"></div>
-                                            
-                                            {/* 常规方案列表标题 */}
-                                            <div className="px-2 py-1 text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                                                所有方案
+                                            {/* 分割线和描述文本 */}
+                                            <div className="my-3 flex items-center">
+                                                <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
+                                                <span className="mx-2 text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
+                                                    以上是常用方案
+                                                </span>
+                                                <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
                                             </div>
                                         </>
                                     );

@@ -308,43 +308,43 @@ const BeanMethodsModal: React.FC<BeanMethodsModalProps> = ({
                                             methods.map(method => (
                                                 <div
                                                     key={method.id}
-                                                    className="p-4 rounded-xl bg-neutral-100 dark:bg-neutral-800"
+                                                    className="py-3 border-b border-neutral-200 dark:border-neutral-800"
                                                 >
                                                     <div className="flex justify-between items-start">
                                                         <div>
                                                             <div className="text-sm font-medium">
                                                                 {getEquipmentName(method.equipmentId)}
                                                             </div>
-                                                            <div className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                                                            <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400 mt-1">
                                                                 {method.methodId}
                                                             </div>
                                                             {/* 显示参数信息 */}
                                                             {method.params && (
-                                                                <div className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                                                                <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400 mt-1">
                                                                     {method.params.coffee}粉 / {method.params.water}水 / {method.params.grindSize} / {method.params.temp}
+                                                                </div>
+                                                            )}
+                                                            {method.notes && (
+                                                                <div className="mt-1 text-[10px] tracking-widest text-neutral-600 dark:text-neutral-300">
+                                                                    {method.notes}
                                                                 </div>
                                                             )}
                                                         </div>
                                                         <div className="flex items-center space-x-3">
                                                             <button
                                                                 onClick={() => handleEditMethod(method)}
-                                                                className="text-xs text-blue-500 dark:text-blue-400"
+                                                                className="text-[10px] tracking-widest text-blue-600 transition-colors dark:text-blue-500 font-medium"
                                                             >
-                                                                编辑
+                                                                [ 编辑 ]
                                                             </button>
                                                             <button
                                                                 onClick={() => handleDeleteMethod(method.id)}
-                                                                className="text-xs text-red-500 dark:text-red-400"
+                                                                className="text-[10px] tracking-widest text-red-600 transition-colors dark:text-red-500 font-medium"
                                                             >
-                                                                删除
+                                                                [ 删除 ]
                                                             </button>
                                                         </div>
                                                     </div>
-                                                    {method.notes && (
-                                                        <div className="mt-2 text-xs text-neutral-600 dark:text-neutral-300">
-                                                            {method.notes}
-                                                        </div>
-                                                    )}
                                                 </div>
                                             ))
                                         )}
@@ -468,14 +468,14 @@ const BeanMethodsModal: React.FC<BeanMethodsModalProps> = ({
                                         <div className="flex space-x-3">
                                             <button
                                                 onClick={resetForm}
-                                                className="flex-1 py-2 bg-neutral-200 dark:bg-neutral-700 text-neutral-800 dark:text-neutral-200 rounded-lg text-sm font-medium"
+                                                className="flex-1 py-2 border border-neutral-200 dark:border-neutral-700 text-neutral-800 dark:text-neutral-200 rounded-lg text-[10px] tracking-widest font-medium"
                                             >
                                                 取消
                                             </button>
                                             <button
                                                 onClick={isEditing ? handleUpdateMethod : handleAddMethod}
                                                 disabled={!selectedEquipment || !selectedMethod}
-                                                className="flex-1 py-2 bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-800 rounded-lg text-sm font-medium disabled:opacity-50"
+                                                className="flex-1 py-2 border border-neutral-200 dark:border-neutral-700 text-neutral-800 dark:text-neutral-200 rounded-lg text-[10px] tracking-widest font-medium disabled:opacity-50"
                                             >
                                                 {isEditing ? '保存修改' : '确认添加'}
                                             </button>
@@ -487,7 +487,7 @@ const BeanMethodsModal: React.FC<BeanMethodsModalProps> = ({
                                 {!showAddForm && (
                                     <button
                                         onClick={() => setShowAddForm(true)}
-                                        className="mt-6 w-full py-2 bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-800 rounded-full text-sm font-medium"
+                                        className="mt-6 w-full py-2 rounded-lg border border-neutral-200 dark:border-neutral-800 text-neutral-800 dark:text-neutral-200 text-[10px] tracking-widest font-medium"
                                     >
                                         添加方案
                                     </button>

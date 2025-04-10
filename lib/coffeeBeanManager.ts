@@ -221,7 +221,7 @@ export const CoffeeBeanManager = {
 	/**
 	 * 获取特定类型的已评分咖啡豆（意式或手冲）
 	 * @param type 豆子类型：'espresso' 或 'filter'
-	 * @returns 指定类型的已评分咖啡豆数组
+	 * @returns 特定类型的已评分咖啡豆数组
 	 */
 	async getRatedBeansByType(
 		type: "espresso" | "filter"

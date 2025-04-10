@@ -9,6 +9,7 @@ import { brewingMethods, type Method, type Stage } from '@/lib/config'
 // import { Storage } from '@/lib/storage'
 import AutoResizeTextarea from './AutoResizeTextarea'
 import { Capacitor } from '@capacitor/core'
+import { BeanMethodManager } from '@/lib/beanMethodManager'
 
 interface TasteRatings {
     acidity: number;
@@ -91,6 +92,9 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         grindSize: initialData?.params?.grindSize || '中细',
         temp: initialData?.params?.temp || '92°C',
     });
+
+    // 添加保存成功状态
+    const [saveSuccess, setSaveSuccess] = useState(false);
 
     // 添加平台检测状态
     const [isAndroid, setIsAndroid] = useState(false)
@@ -237,6 +241,68 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
             alert('保存笔记时出错，请重试');
         }
     }
+
+    // 保存为常用方案的处理函数
+    const saveAsBeanMethod = async () => {
+        // 检查是否选择了咖啡豆
+        if (!initialData.coffeeBean?.id) {
+            alert('请先选择咖啡豆，才能保存为常用方案');
+            return;
+        }
+
+        // 确保有设备和方法信息
+        if (!initialData.equipment || !initialData.method) {
+            alert('缺少设备或方法信息，无法保存为常用方案');
+            return;
+        }
+
+        try {
+            // 创建方案数据
+            const beanMethod = {
+                beanId: initialData.coffeeBean.id,
+                equipmentId: initialData.equipment,
+                methodId: initialData.method,
+                notes: formData.notes || '',
+                params: {
+                    coffee: methodParams.coffee,
+                    water: methodParams.water,
+                    grindSize: methodParams.grindSize,
+                    temp: methodParams.temp
+                }
+            };
+
+            // 保存为咖啡豆的常用方案
+            const result = await BeanMethodManager.addMethod(beanMethod);
+            
+            if (result) {
+                // 显示成功状态
+                setSaveSuccess(true);
+                
+                // 3秒后自动隐藏成功提示
+                setTimeout(() => {
+                    setSaveSuccess(false);
+                }, 3000);
+                
+                // 同时保存笔记
+                const noteData: BrewingNoteData = {
+                    id: id || Date.now().toString(),
+                    timestamp: Date.now(),
+                    ...formData,
+                    equipment: initialData.equipment,
+                    method: initialData.method,
+                    params: methodParams,
+                    totalTime: initialData.totalTime,
+                };
+                
+                onSave(noteData);
+            } else {
+                alert('保存常用方案失败，请重试');
+            }
+        } catch (error) {
+            console.error('保存常用方案出错:', error);
+            alert('保存常用方案时出错，请重试');
+        }
+    };
 
     const [isDragging, /*setIsDragging*/] = useState(false)
     const [currentValue, setCurrentValue] = useState<number | null>(null)
@@ -554,6 +620,20 @@ stages数组中的每个阶段必须包含以下字段：
                         >
                             [ 保存 ]
                         </button>
+                        {/* 添加"保存并设为常用方案"按钮 - 仅当选择了咖啡豆时显示 */}
+                        {initialData.coffeeBean?.id && (
+                            <button
+                                type="button"
+                                onClick={saveAsBeanMethod}
+                                className={`text-[10px] tracking-widest transition-colors ${
+                                    saveSuccess 
+                                    ? 'text-emerald-600 dark:text-emerald-500' 
+                                    : 'text-blue-600 dark:text-blue-500'
+                                } font-medium`}
+                            >
+                                [ {saveSuccess ? '已保存为常用方案' : '保存为常用方案'} ]
+                            </button>
+                        )}
                     </div>
                 ) : (
                     <div className="flex items-center space-x-4">
