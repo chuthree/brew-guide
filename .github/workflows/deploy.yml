@@ -22,41 +22,64 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           script: |
             powershell -Command "
-              Write-Host '💻 Connecting to server...';
-              cd 'C:\websites\brew-guide';
-
-              Write-Host '📂 Current location:';
-              Get-Location;
-
-              Write-Host '👤 Current user:';
-              $env:USERNAME;
-
-              Write-Output '✅ Deploy triggered via GitHub Actions at ' (Get-Date -Format 'yyyy-MM-dd HH:mm:ss') | Out-File -FilePath 'C:\websites\brew-guide\deploy-log.txt' -Append;
-
-              Write-Host '🔒 Marking directory as safe...';
-              git config --global --add safe.directory 'C:/websites/brew-guide';
-
-              Write-Host '🔍 Git status before pull:';
-              git status | Out-File -FilePath 'C:\websites\brew-guide\git-status-before.txt';
-
-              Write-Host '🔍 Git remote info:';
-              git remote -v | Out-File -FilePath 'C:\websites\brew-guide\git-remote.txt';
-
-              Write-Host '📦 Pulling latest code...';
-              git pull origin main | Tee-Object -FilePath 'C:\websites\brew-guide\git-pull-log.txt' -Append;
-
-              Write-Host '🛑 Stopping app via PM2...';
-              $env:PM2_HOME = 'C:\pm2'
-              pm2 stop brew-guide;
-
-              Write-Host '📦 Installing dependencies...';
-              npm install | Tee-Object -FilePath 'C:\websites\brew-guide\npm-install-log.txt' -Append;
-
-              Write-Host '🔨 Building project...';
-              npm run build | Tee-Object -FilePath 'C:\websites\brew-guide\npm-build-log.txt' -Append;
-
-              Write-Host '🚀 Restarting app...';
-              pm2 restart brew-guide;
-
-              Write-Host '✅ Deploy completed at ' (Get-Date -Format 'yyyy-MM-dd HH:mm:ss');
+              $ErrorActionPreference = 'Stop'
+              try {
+                Write-Host '💻 Connecting to server...'
+                Set-Location 'C:\websites\brew-guide'
+                
+                Write-Host '📂 Current location:'
+                Get-Location
+                
+                Write-Host '👤 Current user:'
+                $env:USERNAME
+                
+                Write-Host '📝 Writing deploy log...'
+                Add-Content -Path 'C:\websites\brew-guide\deploy-log.txt' -Value ('✅ Deploy triggered via GitHub Actions at ' + (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'))
+                
+                Write-Host '🔒 Configuring Git...'
+                git config --global --add safe.directory 'C:/websites/brew-guide'
+                
+                # 配置 Git 使用正确的 SSH 密钥
+                $env:GIT_SSH_COMMAND = 'ssh -i C:/Users/Administrator/.ssh/id_ed25519 -o StrictHostKeyChecking=no'
+                
+                Write-Host '🧹 Cleaning Git working directory...'
+                git reset --hard HEAD
+                git clean -fd
+                
+                Write-Host '🔄 Fetching latest changes...'
+                git fetch origin main
+                
+                Write-Host '📥 Pulling latest code...'
+                git pull origin main
+                if ($LASTEXITCODE -ne 0) {
+                  throw 'Git pull failed'
+                }
+                
+                Write-Host '🛑 Stopping app via PM2...'
+                $env:PM2_HOME = 'C:\pm2'
+                pm2 stop brew-guide
+                
+                Write-Host '📦 Installing dependencies...'
+                npm install --no-audit --no-fund
+                if ($LASTEXITCODE -ne 0) {
+                  throw 'npm install failed'
+                }
+                
+                Write-Host '🔨 Building project...'
+                npm run build
+                if ($LASTEXITCODE -ne 0) {
+                  throw 'npm build failed'
+                }
+                
+                Write-Host '🚀 Restarting app...'
+                pm2 restart brew-guide
+                
+                Write-Host '✅ Deploy completed successfully at ' (Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
+                Add-Content -Path 'C:\websites\brew-guide\deploy-log.txt' -Value ('✅ Deploy completed successfully at ' + (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'))
+              }
+              catch {
+                Write-Error ('❌ Deploy failed: ' + $_.Exception.Message)
+                Add-Content -Path 'C:\websites\brew-guide\deploy-log.txt' -Value ('❌ Deploy failed at ' + (Get-Date -Format 'yyyy-MM-dd HH:mm:ss') + ': ' + $_.Exception.Message)
+                exit 1
+              }
             "
