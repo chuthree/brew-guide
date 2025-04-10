@@ -1255,270 +1255,317 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                     {(isRunning || layoutSettings.alwaysShowTimerInfo) && (
                         <motion.div 
                             key="brewing-info"
-                            initial={{ opacity: 0, y: -10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -10 }}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
                             transition={{ 
-                                duration: 0.5, 
-                                ease: [0.2, 0.0, 0.2, 1.0],
-                                opacity: { duration: 0.7 } 
+                                duration: 0.3, 
+                                ease: "easeInOut"
                             }}
                             className="overflow-hidden"
                         >
-                            {/* 阶段信息区域 */}
-                            <div className="mb-4 space-y-3">
-                                <motion.div
-                                    initial={{ opacity: 0, x: -10 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ duration: 0.26 }}
-                                    className={`flex items-baseline border-l-2 border-neutral-800 pl-3 dark:border-neutral-100 ${layoutSettings.stageInfoReversed ? "flex-row-reverse" : "flex-row"
-                                        } justify-between`}
-                                >
-                                    <div
-                                        className={`${layoutSettings.stageInfoReversed ? "text-right" : "text-left"
-                                            }`}
-                                    >
-                                        <div className="text-xs text-neutral-500 dark:text-neutral-400">
-                                            当前阶段
-                                        </div>
-                                        <motion.div
-                                            key={currentStageIndex}
-                                            initial={{ opacity: 0, y: -10 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ duration: 0.26 }}
-                                            className="mt-1 text-sm font-medium tracking-wide"
-                                        >
-                                            {currentStage
-                                                ? currentStage.type === "pour"
-                                                    ? currentStage.label
-                                                    : `等待`
-                                                : "完成冲煮"}
-                                        </motion.div>
-                                    </div>
-                                    <div
-                                        className={`flex items-baseline flex-row ${layoutSettings.stageInfoReversed ? "text-left" : "text-right"
-                                            }`}
+                            {/* 使用内层容器控制高度和位置变化 */}
+                            <motion.div
+                                initial={{ y: -10, height: "auto", opacity: 0 }}
+                                animate={{ y: 0, height: "auto", opacity: 1 }}
+                                exit={{ y: -10, height: 0, opacity: 0 }}
+                                transition={{
+                                    duration: 0.3,
+                                    ease: "easeInOut"
+                                }}
+                            >
+                                {/* 阶段信息区域 */}
+                                <div className="mb-4 space-y-3">
+                                    <motion.div
+                                        initial={{ opacity: 0, x: -10 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ duration: 0.3, delay: 0.05 }}
+                                        className={`flex items-baseline border-l-2 border-neutral-800 pl-3 dark:border-neutral-100 ${layoutSettings.stageInfoReversed ? "flex-row-reverse" : "flex-row"
+                                            } justify-between`}
                                     >
                                         <div
-                                            className={layoutSettings.stageInfoReversed ? "mr-4" : "mr-0"}
+                                            className={`${layoutSettings.stageInfoReversed ? "text-right" : "text-left"
+                                                }`}
                                         >
                                             <div className="text-xs text-neutral-500 dark:text-neutral-400">
-                                                目标时间
+                                                当前阶段
                                             </div>
                                             <motion.div
-                                                key={`time-${currentStageIndex}`}
-                                                initial={{ opacity: 0.8 }}
-                                                animate={{ opacity: 1 }}
-                                                transition={{ duration: 0.26 }}
+                                                key={currentStageIndex}
+                                                initial={{ opacity: 0, y: -5 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ duration: 0.3, delay: 0.1 }}
                                                 className="mt-1 text-sm font-medium tracking-wide"
                                             >
-                                                {currentStage ? formatTime(currentStage.endTime, true) : "-"}
+                                                {currentStage
+                                                    ? currentStage.type === "pour"
+                                                        ? currentStage.label
+                                                        : `等待`
+                                                    : "完成冲煮"}
                                             </motion.div>
                                         </div>
-                                        <div className="min-w-24">
-                                            <div className="text-xs text-neutral-500 dark:text-neutral-400">
-                                                目标水量
-                                            </div>
-                                            <motion.div
-                                                key={`water-${currentStageIndex}`}
-                                                initial={{ opacity: 0.8 }}
-                                                animate={{ opacity: 1 }}
-                                                transition={{ duration: 0.26 }}
-                                                className="mt-1 flex flex-col text-sm font-medium tracking-wide"
-                                            >
-                                                {currentStage?.water ? (
-                                                    <div
-                                                        className={`flex items-baseline ${layoutSettings.stageInfoReversed
-                                                                ? "justify-start"
-                                                                : "justify-end"
-                                                            }`}
-                                                    >
-                                                        <span>{currentWaterAmount}</span>
-                                                        <span className="mx-0.5 text-neutral-300 dark:text-neutral-600">
-                                                            /
-                                                        </span>
-                                                        <span>{currentStage.water}</span>
-                                                    </div>
-                                                ) : (
-                                                    "-"
-                                                )}
-                                            </motion.div>
-                                        </div>
-                                    </div>
-                                </motion.div>
-
-                                <AnimatePresence mode="wait">
-                                    {nextStage && (
-                                        <motion.div
-                                            key={`next-${nextStageIndex}`}
-                                            initial={{ opacity: 0, height: 0, y: -20 }}
-                                            animate={{ opacity: 1, height: "auto", y: 0 }}
-                                            exit={{ opacity: 0, height: 0, y: -20 }}
-                                            transition={{ duration: 0.26 }}
-                                            className={`flex items-baseline border-l border-neutral-300 pl-3 dark:border-neutral-700 ${layoutSettings.stageInfoReversed
-                                                    ? "flex-row-reverse"
-                                                    : "flex-row"
-                                                } justify-between`}
+                                        <div
+                                            className={`flex items-baseline flex-row ${layoutSettings.stageInfoReversed ? "text-left" : "text-right"
+                                                }`}
                                         >
                                             <div
-                                                className={`${layoutSettings.stageInfoReversed
-                                                        ? "text-right"
-                                                        : "text-left"
-                                                    }`}
+                                                className={layoutSettings.stageInfoReversed ? "mr-4" : "mr-0"}
                                             >
-                                                <div
-                                                    className={`flex items-center ${layoutSettings.stageInfoReversed
-                                                            ? "justify-end"
-                                                            : "justify-start"
-                                                        } gap-2 text-xs text-neutral-500 dark:text-neutral-400`}
-                                                >
-                                                    <span>下一步</span>
+                                                <div className="text-xs text-neutral-500 dark:text-neutral-400">
+                                                    目标时间
                                                 </div>
                                                 <motion.div
-                                                    initial={{
-                                                        opacity: 0,
-                                                        x: layoutSettings.stageInfoReversed ? 10 : -10,
-                                                    }}
-                                                    animate={{ opacity: 1, x: 0 }}
-                                                    transition={{ duration: 0.26, delay: 0.1 }}
-                                                    className="mt-1"
+                                                    key={`time-${currentStageIndex}`}
+                                                    initial={{ opacity: 0 }}
+                                                    animate={{ opacity: 1 }}
+                                                    transition={{ duration: 0.3, delay: 0.1 }}
+                                                    className="mt-1 text-sm font-medium tracking-wide"
                                                 >
-                                                    <span className="text-sm font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
-                                                        {nextStage.type === "pour" ? nextStage.label : `等待`}
-                                                    </span>
+                                                    {currentStage ? formatTime(currentStage.endTime, true) : "-"}
                                                 </motion.div>
                                             </div>
+                                            <div className="min-w-24">
+                                                <div className="text-xs text-neutral-500 dark:text-neutral-400">
+                                                    目标水量
+                                                </div>
+                                                <motion.div
+                                                    key={`water-${currentStageIndex}`}
+                                                    initial={{ opacity: 0 }}
+                                                    animate={{ opacity: 1 }}
+                                                    transition={{ duration: 0.3, delay: 0.1 }}
+                                                    className="mt-1 flex flex-col text-sm font-medium tracking-wide"
+                                                >
+                                                    {currentStage?.water ? (
+                                                        <div
+                                                            className={`flex items-baseline ${layoutSettings.stageInfoReversed
+                                                                    ? "justify-start"
+                                                                    : "justify-end"
+                                                                }`}
+                                                        >
+                                                            <span>{currentWaterAmount}</span>
+                                                            <span className="mx-0.5 text-neutral-300 dark:text-neutral-600">
+                                                                /
+                                                            </span>
+                                                            <span>{currentStage.water}</span>
+                                                        </div>
+                                                    ) : (
+                                                        "-"
+                                                    )}
+                                                </motion.div>
+                                            </div>
+                                        </div>
+                                    </motion.div>
+
+                                    <AnimatePresence mode="wait">
+                                        {nextStage && (
                                             <motion.div
-                                                initial={{
-                                                    opacity: 0,
-                                                    x: layoutSettings.stageInfoReversed ? -10 : 10,
-                                                }}
-                                                animate={{ opacity: 1, x: 0 }}
-                                                transition={{ duration: 0.26, delay: 0.2 }}
-                                                className={`flex items-baseline flex-row ${layoutSettings.stageInfoReversed
-                                                        ? "text-left"
-                                                        : "text-right "
-                                                    }`}
+                                                key={`next-${nextStageIndex}`}
+                                                initial={{ opacity: 0, height: 0, y: -5 }}
+                                                animate={{ opacity: 1, height: "auto", y: 0 }}
+                                                exit={{ opacity: 0, height: 0, y: -5 }}
+                                                transition={{ duration: 0.3, delay: 0.05 }}
+                                                className={`flex items-baseline border-l border-neutral-300 pl-3 dark:border-neutral-700 ${layoutSettings.stageInfoReversed
+                                                        ? "flex-row-reverse"
+                                                        : "flex-row"
+                                                    } justify-between`}
                                             >
                                                 <div
-                                                    className={
-                                                        layoutSettings.stageInfoReversed ? "mr-4" : "mr-0"
-                                                    }
+                                                    className={`${layoutSettings.stageInfoReversed
+                                                            ? "text-right"
+                                                            : "text-left"
+                                                        }`}
                                                 >
-                                                    <div className="text-xs text-neutral-500 dark:text-neutral-400">
-                                                        目标时间
-                                                    </div>
-                                                    <div className="mt-1 text-sm font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
-                                                        {formatTime(nextStage.endTime, true)}
-                                                    </div>
-                                                </div>
-                                                <div className="min-w-24">
-                                                    <div className="text-xs text-neutral-500 dark:text-neutral-400">
-                                                        目标水量
-                                                    </div>
                                                     <div
-                                                        className={`mt-1 text-sm font-medium tracking-wide text-neutral-600 dark:text-neutral-400 ${layoutSettings.stageInfoReversed
-                                                                ? "text-left"
-                                                                : "text-right"
-                                                            }`}
+                                                        className={`flex items-center ${layoutSettings.stageInfoReversed
+                                                                ? "justify-end"
+                                                                : "justify-start"
+                                                            } gap-2 text-xs text-neutral-500 dark:text-neutral-400`}
                                                     >
-                                                        {nextStage.water}
+                                                        <span>下一步</span>
                                                     </div>
+                                                    <motion.div
+                                                        initial={{ opacity: 0 }}
+                                                        animate={{ opacity: 1 }}
+                                                        transition={{ duration: 0.3, delay: 0.15 }}
+                                                        className="mt-1"
+                                                    >
+                                                        <span className="text-sm font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
+                                                            {nextStage.type === "pour" ? nextStage.label : `等待`}
+                                                        </span>
+                                                    </motion.div>
                                                 </div>
+                                                <motion.div
+                                                    initial={{ opacity: 0 }}
+                                                    animate={{ opacity: 1 }}
+                                                    transition={{ duration: 0.3, delay: 0.15 }}
+                                                    className={`flex items-baseline flex-row ${layoutSettings.stageInfoReversed
+                                                            ? "text-left"
+                                                            : "text-right "
+                                                        }`}
+                                                >
+                                                    <div
+                                                        className={
+                                                            layoutSettings.stageInfoReversed ? "mr-4" : "mr-0"
+                                                        }
+                                                    >
+                                                        <div className="text-xs text-neutral-500 dark:text-neutral-400">
+                                                            目标时间
+                                                        </div>
+                                                        <div className="mt-1 text-sm font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
+                                                            {formatTime(nextStage.endTime, true)}
+                                                        </div>
+                                                    </div>
+                                                    <div className="min-w-24">
+                                                        <div className="text-xs text-neutral-500 dark:text-neutral-400">
+                                                            目标水量
+                                                        </div>
+                                                        <div
+                                                            className={`mt-1 text-sm font-medium tracking-wide text-neutral-600 dark:text-neutral-400 ${layoutSettings.stageInfoReversed
+                                                                    ? "text-left"
+                                                                    : "text-right"
+                                                                }`}
+                                                        >
+                                                            {nextStage.water}
+                                                        </div>
+                                                    </div>
+                                                </motion.div>
                                             </motion.div>
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
-                            </div>
+                                        )}
+                                    </AnimatePresence>
+                                </div>
 
-                            {/* 进度条区域 */}
-                            <div className="relative mb-4">
-                                {expandedStagesRef.current.map((stage) => {
-                                    const totalTime =
-                                        expandedStagesRef.current[expandedStagesRef.current.length - 1]
-                                            .endTime;
-                                    const percentage = (stage.endTime / totalTime) * 100;
-                                    return (
-                                        <div
-                                            key={stage.endTime}
-                                            className="absolute top-0 w-[2px] bg-neutral-50 dark:bg-neutral-900"
-                                            style={{
-                                                left: `${percentage}%`,
-                                                height: `${layoutSettings.progressBarHeight || 4}px`,
-                                            }}
-                                        />
-                                    );
-                                })}
-
-                                <div
-                                    className="w-full overflow-hidden bg-neutral-200/50 dark:bg-neutral-800"
-                                    style={{ height: `${layoutSettings.progressBarHeight || 4}px` }}
+                                {/* 进度条区域 */}
+                                <motion.div 
+                                    className="relative mb-4"
+                                    initial={{ opacity: 0, y: -5 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ 
+                                        duration: 0.3, 
+                                        delay: 0.05,
+                                        ease: "easeInOut" 
+                                    }}
                                 >
-                                    {expandedStagesRef.current.map((stage) => {
-                                        const totalTime =
-                                            expandedStagesRef.current[expandedStagesRef.current.length - 1]
-                                                .endTime;
-                                        const startPercentage = (stage.startTime / totalTime) * 100;
-                                        const width =
-                                            ((stage.endTime - stage.startTime) / totalTime) * 100;
+                                    <AnimatePresence>
+                                        {expandedStagesRef.current.map((stage) => {
+                                            const totalTime =
+                                                expandedStagesRef.current[expandedStagesRef.current.length - 1]
+                                                    .endTime;
+                                            const percentage = (stage.endTime / totalTime) * 100;
+                                            return (
+                                                <motion.div
+                                                    key={`marker-${stage.endTime}`}
+                                                    className="absolute top-0 w-[2px] bg-neutral-50 dark:bg-neutral-900"
+                                                    style={{
+                                                        left: `${percentage}%`,
+                                                        height: `${layoutSettings.progressBarHeight || 4}px`,
+                                                    }}
+                                                    initial={{ opacity: 0, scaleY: 0 }}
+                                                    animate={{ opacity: 1, scaleY: 1 }}
+                                                    exit={{ opacity: 0, scaleY: 0 }}
+                                                    transition={{ duration: 0.3, delay: 0.1 }}
+                                                />
+                                            );
+                                        })}
+                                    </AnimatePresence>
 
-                                        // 显示等待阶段的条纹背景
-                                        return stage.type === "wait" ? (
-                                            <div
-                                                key={`waiting-${stage.endTime}`}
-                                                className="absolute"
-                                                style={{
-                                                    left: `${startPercentage}%`,
-                                                    width: `${width}%`,
-                                                    height: `${layoutSettings.progressBarHeight || 4}px`,
-                                                    background: `repeating-linear-gradient(
-                                                        45deg,
-                                                        transparent,
-                                                        transparent 4px,
-                                                        rgba(0, 0, 0, 0.1) 4px,
-                                                        rgba(0, 0, 0, 0.1) 8px
-                                                    )`,
-                                                }}
-                                            />
-                                        ) : null;
-                                    })}
                                     <div
-                                        className="h-full bg-neutral-800 dark:bg-neutral-100"
-                                        style={{
-                                            width:
-                                                currentTime > 0 && expandedStagesRef.current.length > 0
+                                        className="w-full overflow-hidden bg-neutral-200/50 dark:bg-neutral-800"
+                                        style={{ height: `${layoutSettings.progressBarHeight || 4}px` }}
+                                    >
+                                        <AnimatePresence>
+                                            {expandedStagesRef.current.map((stage) => {
+                                                const totalTime =
+                                                    expandedStagesRef.current[expandedStagesRef.current.length - 1]
+                                                        .endTime;
+                                                const startPercentage = (stage.startTime / totalTime) * 100;
+                                                const width =
+                                                    ((stage.endTime - stage.startTime) / totalTime) * 100;
+
+                                                // 显示等待阶段的条纹背景
+                                                return stage.type === "wait" ? (
+                                                    <motion.div
+                                                        key={`waiting-${stage.endTime}`}
+                                                        className="absolute"
+                                                        style={{
+                                                            left: `${startPercentage}%`,
+                                                            width: `${width}%`,
+                                                            height: `${layoutSettings.progressBarHeight || 4}px`,
+                                                            background: `repeating-linear-gradient(
+                                                                45deg,
+                                                                transparent,
+                                                                transparent 4px,
+                                                                rgba(0, 0, 0, 0.1) 4px,
+                                                                rgba(0, 0, 0, 0.1) 8px
+                                                            )`,
+                                                        }}
+                                                        initial={{ opacity: 0 }}
+                                                        animate={{ opacity: 1 }}
+                                                        exit={{ opacity: 0 }}
+                                                        transition={{ duration: 0.3, delay: 0.1 }}
+                                                    />
+                                                ) : null;
+                                            })}
+                                        </AnimatePresence>
+                                        <motion.div
+                                            className="h-full bg-neutral-800 dark:bg-neutral-100"
+                                            style={{
+                                                width:
+                                                    currentTime > 0 && expandedStagesRef.current.length > 0
+                                                        ? `${(currentTime /
+                                                            (expandedStagesRef.current[
+                                                                expandedStagesRef.current.length - 1
+                                                            ]?.endTime || 1)) *
+                                                        100
+                                                        }%`
+                                                        : "0%",
+                                            }}
+                                            initial={{ width: "0%" }}
+                                            animate={{ 
+                                                width: currentTime > 0 && expandedStagesRef.current.length > 0
                                                     ? `${(currentTime /
                                                         (expandedStagesRef.current[
                                                             expandedStagesRef.current.length - 1
                                                         ]?.endTime || 1)) *
                                                     100
                                                     }%`
-                                                    : "0%",
-                                        }}
-                                    />
-                                </div>
+                                                    : "0%"
+                                            }}
+                                            transition={{ 
+                                                duration: 0.3, 
+                                                delay: 0.1,
+                                                ease: "easeInOut" 
+                                            }}
+                                        />
+                                    </div>
 
-                                <div className="relative mt-1 h-4 w-full">
-                                    {expandedStagesRef.current.map((stage) => {
-                                        const totalTime =
-                                            expandedStagesRef.current[expandedStagesRef.current.length - 1]
-                                                .endTime;
-                                        const percentage = (stage.endTime / totalTime) * 100;
-                                        return (
-                                            <div
-                                                key={stage.endTime}
-                                                className="absolute top-0 text-[8px] text-neutral-500 dark:text-neutral-400"
-                                                style={{
-                                                    left: `${percentage}%`,
-                                                    transform: "translateX(-100%)",
-                                                }}
-                                            >
-                                                {formatTime(stage.endTime, true)}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
+                                    <div className="relative mt-1 h-4 w-full">
+                                        <AnimatePresence>
+                                            {expandedStagesRef.current.map((stage) => {
+                                                const totalTime =
+                                                    expandedStagesRef.current[expandedStagesRef.current.length - 1]
+                                                        .endTime;
+                                                const percentage = (stage.endTime / totalTime) * 100;
+                                                return (
+                                                    <motion.div
+                                                        key={`time-marker-${stage.endTime}`}
+                                                        className="absolute top-0 text-[8px] text-neutral-500 dark:text-neutral-400"
+                                                        style={{
+                                                            left: `${percentage}%`,
+                                                            transform: "translateX(-100%)",
+                                                        }}
+                                                        initial={{ opacity: 0, y: 5 }}
+                                                        animate={{ opacity: 1, y: 0 }}
+                                                        exit={{ opacity: 0, y: 5 }}
+                                                        transition={{ duration: 0.3, delay: 0.15 }}
+                                                    >
+                                                        {formatTime(stage.endTime, true)}
+                                                    </motion.div>
+                                                );
+                                            })}
+                                        </AnimatePresence>
+                                    </div>
+                                </motion.div>
+                            </motion.div>
                         </motion.div>
                     )}
                 </AnimatePresence>
