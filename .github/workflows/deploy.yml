@@ -2,37 +2,46 @@ name: Deploy to Windows Server
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v3
 
-    - name: Add SSH Key
-      uses: webfactory/ssh-agent@v0.7.0
-      with:
-        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-    - name: Deploy via SSH
+    - name: Deploy via SSH to Windows Server
       uses: appleboy/ssh-action@master
       with:
         host: ${{ secrets.SERVER_IP }}
         username: ${{ secrets.SSH_USERNAME }}
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         port: ${{ secrets.SSH_PORT }}
-        shell: powershell
-        script_stop: true
         script: |
-          Write-Output "== Start Deploy =="
-          cd C:\websites\brew-guide
-          git config --global --add safe.directory C:/websites/brew-guide
-          git pull origin main
-          pm2 stop brew-guide
-          npm install
-          npm run build
-          pm2 restart brew-guide
-          Write-Output "== Deploy completed at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+          powershell -Command "
+            Write-Host '💻 Connecting to server...';
+            cd 'C:\websites\brew-guide';
+
+            Write-Host '🔒 Marking directory as safe...';
+            git config --global --add safe.directory 'C:/websites/brew-guide';
+
+            Write-Host '📦 Pulling latest code...';
+            git pull origin main;
+
+            Write-Host '🛑 Stopping app...';
+            pm2 stop brew-guide;
+
+            Write-Host '📦 Installing dependencies...';
+            npm install;
+
+            Write-Host '🔨 Building project...';
+            npm run build;
+
+            Write-Host '🚀 Restarting app...';
+            pm2 restart brew-guide;
+
+            Write-Host '✅ Deploy completed at ' (Get-Date -Format 'yyyy-MM-dd HH:mm:ss');
+          "
