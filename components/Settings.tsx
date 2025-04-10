@@ -28,7 +28,7 @@ export const defaultSettings: SettingsOptions = {
     grindType: "通用",
     textZoomLevel: 1.0,
     layoutSettings: {
-        stageInfoReversed: false,
+        stageInfoReversed: true,
         progressBarHeight: 4,
         controlsReversed: false
     },
