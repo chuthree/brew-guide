@@ -10,53 +10,42 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v3
 
-      - name: Deploy via SSH to Windows Server
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.SERVER_IP }}
-          username: ${{ secrets.SSH_USERNAME }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT }}
-          script: |
-            powershell -Command "
-              Write-Host '💻 Connecting to server...';
-              cd 'C:\websites\brew-guide';
+    - name: Deploy via SSH to Windows Server
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.SERVER_IP }}
+        username: ${{ secrets.SSH_USERNAME }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        port: ${{ secrets.SSH_PORT }}
+        script: |
+          powershell -Command "
+            Write-Host '💻 Connecting to server...';
+            cd 'C:\websites\brew-guide';
 
-              Write-Host '📂 Current location:';
-              Get-Location;
+            Write-Host '🔧 Fetching latest code from origin/main...';
+            git fetch origin main;
+            git reset --hard origin/main;
 
-              Write-Host '👤 Current user:';
-              $env:USERNAME;
+            Write-Host '🔒 Marking directory as safe...';
+            git config --global --add safe.directory 'C:/websites/brew-guide';
 
-              Write-Output '✅ Deploy triggered via GitHub Actions at ' (Get-Date -Format 'yyyy-MM-dd HH:mm:ss') | Out-File -FilePath 'C:\websites\brew-guide\deploy-log.txt' -Append;
+            Write-Host '🛑 Stopping app with PM2...';
+            pm2 stop brew-guide;
 
-              Write-Host '🔒 Marking directory as safe...';
-              git config --global --add safe.directory 'C:/websites/brew-guide';
+            Write-Host '📦 Installing dependencies...';
+            npm install;
 
-              Write-Host '🔍 Git status before pull:';
-              git status | Out-File -FilePath 'C:\websites\brew-guide\git-status-before.txt';
+            Write-Host '🔨 Building project...';
+            npm run build;
 
-              Write-Host '🔍 Git remote info:';
-              git remote -v | Out-File -FilePath 'C:\websites\brew-guide\git-remote.txt';
+            Write-Host '🚀 Restarting app with PM2...';
+            pm2 restart brew-guide;
 
-              Write-Host '📦 Pulling latest code...';
-              git pull origin main | Tee-Object -FilePath 'C:\websites\brew-guide\git-pull-log.txt' -Append;
+            Write-Host '📝 Writing deploy timestamp...';
+            Set-Content -Path 'C:\websites\brew-guide\__last_deploy.txt' -Value \"Deployed at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')\";
 
-              Write-Host '🛑 Stopping app via PM2...';
-              $env:PM2_HOME = 'C:\pm2'
-              pm2 stop brew-guide;
-
-              Write-Host '📦 Installing dependencies...';
-              npm install | Tee-Object -FilePath 'C:\websites\brew-guide\npm-install-log.txt' -Append;
-
-              Write-Host '🔨 Building project...';
-              npm run build | Tee-Object -FilePath 'C:\websites\brew-guide\npm-build-log.txt' -Append;
-
-              Write-Host '🚀 Restarting app...';
-              pm2 restart brew-guide;
-
-              Write-Host '✅ Deploy completed at ' (Get-Date -Format 'yyyy-MM-dd HH:mm:ss');
-            "
+            Write-Host '✅ Deployment finished.';
+          "
