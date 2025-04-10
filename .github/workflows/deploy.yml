@@ -55,8 +55,9 @@ jobs:
                   Remove-Item -Recurse -Force .\out
                 }
                 
-                # Git 操作
+                # Git 配置
                 Write-DeployLog '配置 Git'
+                git config --global credential.helper store
                 git config --global --unset http.proxy
                 git config --global --unset https.proxy
                 git config --global --add safe.directory 'C:/websites/brew-guide'
