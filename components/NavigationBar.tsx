@@ -627,7 +627,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                         opacity: { duration: 0.1 }
                     }}
                 >
-                    <div className="flex items-center justify-between px-6 px-safe py-4">
+                    <div className="flex items-center justify-between px-6 px-safe pb-4">
                         <h1
                             className="text-base font-light tracking-wide cursor-pointer"
                             onClick={handleTitleClick}
