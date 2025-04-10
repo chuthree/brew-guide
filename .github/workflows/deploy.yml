@@ -45,8 +45,20 @@ jobs:
                 Set-Location 'C:\websites\brew-guide'
                 Write-DeployLog "当前目录: $(Get-Location)"
                 
+                # 停止应用
+                Write-DeployLog '停止应用'
+                pm2 stop brew-guide
+                
+                # 清理输出目录
+                Write-DeployLog '清理输出目录'
+                if (Test-Path .\out) {
+                  Remove-Item -Recurse -Force .\out
+                }
+                
                 # Git 操作
-                Write-DeployLog '配置 Git 安全目录'
+                Write-DeployLog '配置 Git'
+                git config --global --unset http.proxy
+                git config --global --unset https.proxy
                 git config --global --add safe.directory 'C:/websites/brew-guide'
                 
                 Write-DeployLog '保存 Git 状态'
@@ -60,15 +72,15 @@ jobs:
                 
                 # NPM 操作
                 Write-DeployLog '安装依赖'
-                npm ci --no-audit --no-fund | Tee-Object -FilePath "$logDir\npm-install.log"
+                npm install --no-audit --no-fund | Tee-Object -FilePath "$logDir\npm-install.log"
                 
                 Write-DeployLog '构建项目'
                 npm run build | Tee-Object -FilePath "$logDir\npm-build.log"
                 
                 # PM2 操作
-                Write-DeployLog '重启应用'
+                Write-DeployLog '启动应用'
                 $env:PM2_HOME = 'C:\pm2'
-                pm2 restart brew-guide
+                pm2 start brew-guide
                 
                 Write-DeployLog '部署完成'
               } catch {
@@ -79,8 +91,8 @@ jobs:
             "
 
       - name: Check deployment logs
-        uses: appleboy/ssh-action@master
         if: always()
+        uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.SERVER_IP }}
           username: ${{ secrets.SSH_USERNAME }}
