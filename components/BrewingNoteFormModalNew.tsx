@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import BrewingNoteForm from '@/components/BrewingNoteForm'
 import type { BrewingNoteData, CoffeeBean } from '@/app/types'
 import { equipmentList, brewingMethods } from '@/lib/config'
@@ -91,10 +91,44 @@ const BrewingNoteFormModalNew: React.FC<BrewingNoteFormModalNewProps> = ({
         }
     }, [showForm]);
 
-    // 根据选择的器具和方案类型生成可用的方案列表
-    const availableMethods = selectedEquipment ?
-        (methodType === 'common' ? brewingMethods[selectedEquipment] || [] :
-            customMethods) : [];
+    // 使用 useMemo 重写 availableMethods 的计算逻辑
+    const availableMethods = useMemo(() => {
+        if (!selectedEquipment) {
+            return [];
+        }
+
+        const customEquipment = customEquipments.find(e => e.id === selectedEquipment || e.name === selectedEquipment);
+        const isCustomEquipment = !!customEquipment;
+        const isCustomPresetEquipment = isCustomEquipment && customEquipment.animationType === 'custom';
+
+        if (methodType === 'common') {
+            if (isCustomPresetEquipment) {
+                // 自定义预设器具没有通用方案
+                return [];
+            } else if (isCustomEquipment) {
+                // 基于预设的自定义器具
+                let baseEquipmentId = '';
+                if (customEquipment) {
+                    const animationType = customEquipment.animationType.toLowerCase();
+                    switch (animationType) {
+                        case 'v60': baseEquipmentId = 'V60'; break;
+                        case 'clever': baseEquipmentId = 'CleverDripper'; break;
+                        // 可以添加更多 case 如 'kalita', 'origami' 等，如果 brewingMethods 支持
+                        default: baseEquipmentId = 'V60'; // 默认 V60
+                    }
+                }
+                return brewingMethods[baseEquipmentId] || [];
+            } else {
+                // 预定义器具
+                return brewingMethods[selectedEquipment] || [];
+            }
+        } else if (methodType === 'custom') {
+            // 对于自定义方案，直接使用已加载的当前设备的自定义方案列表
+            return customMethods;
+        }
+
+        return [];
+    }, [selectedEquipment, methodType, customEquipments, brewingMethods, customMethods]);
 
     // 加载自定义方案
     useEffect(() => {

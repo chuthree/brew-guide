@@ -791,7 +791,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                     {/* 添加笔记按钮 */}
                     <div className="bottom-action-bar">
                         <div className="absolute bottom-full left-0 right-0 h-12 bg-gradient-to-t from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none"></div>
-                        <div className="relative flex items-center bg-neutral-50 dark:bg-neutral-900 py-4">
+                        <div className="relative max-w-[500px] mx-auto flex items-center bg-neutral-50 dark:bg-neutral-900 py-4">
                             <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
                             <button
                                 onClick={handleAddNote}
