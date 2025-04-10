@@ -906,7 +906,7 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-6 w-full">
+                        <div className="grid grid-cols-3 gap-6 w-full">
                             <div className="space-y-2">
                                 <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
                                     价格
@@ -938,29 +938,27 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                                     <option value="深度烘焙">深度烘焙</option>
                                 </select>
                             </div>
-                        </div>
 
-                        <div className="space-y-2 w-full">
-                            <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                                烘焙日期
-                            </label>
-                            <div className="relative w-full">
-                                {/* 创建一个自定义的日期输入样式，但实际上直接使用原生控件 */}
+                            <div className="space-y-2">
+                                <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                                    烘焙日期
+                                </label>
                                 <div 
-                                    className="w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400 flex items-center cursor-pointer"
+                                    className="relative w-full cursor-pointer"
                                     onClick={() => {
-                                        // 显式聚焦到日期输入框，但不再尝试调用可能不受支持的 showPicker 方法
                                         const dateInput = document.getElementById('bean-roast-date');
                                         if (dateInput) {
-                                            (dateInput as HTMLInputElement).focus();
+                                            (dateInput as HTMLInputElement & { showPicker: () => void }).showPicker();
                                         }
                                     }}
                                 >
-                                    <span className={`${!bean.roastDate ? 'text-neutral-500' : ''}`}>
-                                        {bean.roastDate || '点击选择烘焙日期'}
-                                    </span>
-                                    
-                                    {/* 隐藏原生日期选择器但保持其功能 */}
+                                    <div className="w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus-within:border-neutral-800 dark:focus-within:border-neutral-400">
+                                        <div className="flex items-center justify-between">
+                                            <span className={`${!bean.roastDate ? 'text-neutral-500' : ''}`}>
+                                                {bean.roastDate ? new Date(bean.roastDate).toLocaleDateString('zh-CN') : '点击选择'}
+                                            </span>
+                                        </div>
+                                    </div>
                                     <input
                                         id="bean-roast-date"
                                         type="date"
@@ -973,13 +971,7 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                                             }));
                                         }}
                                         max={new Date().toISOString().split('T')[0]}
-                                        className="opacity-0 absolute inset-0 w-full h-full cursor-pointer z-10"
-                                        style={{
-                                            // 修改样式使得在电脑浏览器中能够正常打开日期选择器弹窗
-                                            // 在移动端这也能正常工作
-                                            width: '100%',
-                                            height: '100%'
-                                        }}
+                                        className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
                                     />
                                 </div>
                             </div>
