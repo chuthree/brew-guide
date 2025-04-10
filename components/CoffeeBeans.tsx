@@ -1532,7 +1532,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                                                     }}
                                                                                     className="w-full px-3 py-1.5 text-left text-xs text-neutral-800 dark:text-white"
                                                                                 >
-                                                                                    指定方案
+                                                                                    常用方案
                                                                                 </button>
                                                                             </div>
                                                                         </div>

@@ -290,7 +290,7 @@ const BeanMethodsModal: React.FC<BeanMethodsModalProps> = ({
                         >
                             <div className="flex flex-col">
                                 <h3 className="text-lg text-center font-medium mt-3 mb-4">
-                                    {isEditing ? '编辑方案' : '指定方案'}
+                                    {isEditing ? '编辑方案' : '常用方案'}
                                 </h3>
                                 
                                 {/* 方案列表 */}
@@ -302,7 +302,7 @@ const BeanMethodsModal: React.FC<BeanMethodsModalProps> = ({
                                             </div>
                                         ) : methods.length === 0 ? (
                                             <div className="text-center text-sm text-neutral-500 dark:text-neutral-400">
-                                                还没有指定任何方案
+                                                还没有任何常用方案
                                             </div>
                                         ) : (
                                             methods.map(method => (

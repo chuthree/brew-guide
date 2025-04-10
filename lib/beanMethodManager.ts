@@ -15,7 +15,7 @@ export interface BeanMethod {
 class BeanMethodManager {
     private static readonly STORAGE_KEY = 'brew-guide:bean-methods'
 
-    // 获取指定咖啡豆的所有方案
+    // 获取常用咖啡豆的所有方案
     static async getBeanMethods(beanId: string): Promise<BeanMethod[]> {
         try {
             const methods = await this.getAllMethods()
@@ -95,7 +95,7 @@ class BeanMethodManager {
         }
     }
 
-    // 删除指定咖啡豆的所有方案
+    // 删除常用咖啡豆的所有方案
     static async deleteBeanMethods(beanId: string): Promise<boolean> {
         try {
             const methods = await this.getAllMethods()
