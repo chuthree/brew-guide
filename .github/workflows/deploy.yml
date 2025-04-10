@@ -12,6 +12,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Deploy via SSH to Windows Server
         uses: appleboy/ssh-action@master
@@ -61,6 +63,12 @@ jobs:
                 git config --global --unset http.proxy
                 git config --global --unset https.proxy
                 git config --global --add safe.directory 'C:/websites/brew-guide'
+                
+                # 设置 Git 认证
+                Write-DeployLog '配置 Git 认证'
+                $env:GIT_ASKPASS = 'echo'
+                $env:GIT_USERNAME = 'github-actions[bot]'
+                $env:GIT_PASSWORD = '${{ secrets.GITHUB_TOKEN }}'
                 
                 Write-DeployLog '保存 Git 状态'
                 git status | Tee-Object -FilePath "$logDir\git-status-before.log"
