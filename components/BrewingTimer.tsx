@@ -1530,7 +1530,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                                             animate={{ opacity: 1, y: 0 }}
                                             exit={{ opacity: 0, y: -10 }}
                                             transition={{ duration: 0.26 }}
-                                            className={`min-w-[5ch] ${layoutSettings.controlsReversed
+                                            className={`timer-font min-w-[5ch] ${layoutSettings.controlsReversed
                                                     ? "text-right"
                                                     : "text-left"
                                                 }`}
@@ -1544,7 +1544,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                                             animate={{ opacity: 1, y: 0 }}
                                             exit={{ opacity: 0, y: -10 }}
                                             transition={{ duration: 0.26 }}
-                                            className={`min-w-[5ch] ${layoutSettings.controlsReversed
+                                            className={`timer-font min-w-[5ch] ${layoutSettings.controlsReversed
                                                     ? "text-right"
                                                     : "text-left"
                                                 }`}
@@ -1565,7 +1565,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                             </span>
                             <div className="text-2xl font-light tracking-widest text-neutral-800 sm:text-3xl dark:text-neutral-100">
                                 <div
-                                    className={`min-w-[5ch] ${layoutSettings.controlsReversed ? "text-right" : "text-left"
+                                    className={`timer-font min-w-[5ch] ${layoutSettings.controlsReversed ? "text-right" : "text-left"
                                         }`}
                                 >
                                     <span>{currentWaterAmount}</span>

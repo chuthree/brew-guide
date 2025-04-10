@@ -3,18 +3,31 @@ import { ThemeProvider } from 'next-themes'
 import PWAPrompt from '@/components/PWAPrompt'
 import { Analytics } from '@vercel/analytics/next';
 import Script from 'next/script'
-import { GeistSans } from 'geist/font/sans'
-import { GeistMono } from 'geist/font/mono'
+import { Inter } from 'next/font/google'
+import { Noto_Sans_SC } from 'next/font/google'
+import { GeistMono } from 'geist/font'
 import { ToastProvider } from '@/components/GlobalToast'
 import './globals.css'
 import KeyboardManager from '@/components/KeyboardManager'
 import { Suspense } from 'react'
 import CapacitorInit from './CapacitorInit'
 import { Toast } from '@/components/ui/toast';
-import { Inter } from 'next/font/google'
 import { TranslationsProvider } from '@/providers/TranslationsProvider'
 
-const inter = Inter({ subsets: ['latin'] })
+// 配置 Inter 字体
+const inter = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-inter',
+})
+
+// 配置 Noto Sans SC 字体
+const notoSansSC = Noto_Sans_SC({
+  subsets: ['latin'],
+  weight: ['400', '500', '700'],
+  display: 'swap',
+  variable: '--font-noto-sans-sc',
+})
 
 // SEO constants
 export const metadata: Metadata = {
@@ -94,9 +107,9 @@ export default function RootLayout({
   const isDevelopment = process.env.NODE_ENV === 'development'
 
   return (
-    <html lang="zh" suppressHydrationWarning style={{
-      '--font-sans': GeistSans.style.fontFamily,
-      '--font-mono': GeistMono.style.fontFamily,
+    <html lang="zh" suppressHydrationWarning className={`${inter.variable} ${notoSansSC.variable}`} style={{
+      '--font-sans': `var(--font-noto-sans-sc), var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif`,
+      '--font-timer': GeistMono.style.fontFamily,
     } as React.CSSProperties}>
       <head>
         <meta name="application-name" content="Brew Guide" />

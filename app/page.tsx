@@ -1633,7 +1633,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     };
 
     return (
-        <div className="flex h-full flex-col overflow-hidden mx-auto max-w-[500px] font-mono text-neutral-800 dark:text-neutral-100">
+        <div className="flex h-full flex-col overflow-hidden mx-auto max-w-[500px] text-neutral-800 dark:text-neutral-100">
             {/* 使用 NavigationBar 组件替换原有的导航栏 */}
             <NavigationBar
                 activeMainTab={activeMainTab}
