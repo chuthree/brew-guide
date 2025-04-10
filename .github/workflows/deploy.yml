@@ -24,7 +24,10 @@ jobs:
         username: ${{ secrets.SSH_USERNAME }}
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         port: ${{ secrets.SSH_PORT }}
+        shell: powershell
+        script_stop: true
         script: |
+          Write-Output "== Start Deploy =="
           cd C:\websites\brew-guide
           git config --global --add safe.directory C:/websites/brew-guide
           git pull origin main
@@ -32,4 +35,4 @@ jobs:
           npm install
           npm run build
           pm2 restart brew-guide
-          powershell -Command "Write-Output \"Deploy completed at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')\""
+          Write-Output "== Deploy completed at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
