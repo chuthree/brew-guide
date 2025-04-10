@@ -143,7 +143,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
             const equipmentIds = Array.from(new Set(sortedNotes.map(note => note.equipment)));
             const beanNames = Array.from(new Set(sortedNotes
                 .map(note => note.coffeeBeanInfo?.name)
-                .filter((name): name is string => name !== undefined && name !== null)
+                .filter((name): name is string => name !== undefined && name !== null && name !== '')
             ));
             
             setAvailableEquipments(equipmentIds);
@@ -239,17 +239,19 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
 
     // 更新筛选后的笔记
     const updateFilteredNotes = useCallback((notesToFilter: BrewingNote[]) => {
-        if (selectedEquipment) {
+        if (filterMode === 'equipment' && selectedEquipment) {
             setFilteredNotes(notesToFilter.filter(note => note.equipment === selectedEquipment));
+        } else if (filterMode === 'bean' && selectedBean) {
+            setFilteredNotes(notesToFilter.filter(note => note.coffeeBeanInfo?.name === selectedBean));
         } else {
             setFilteredNotes(notesToFilter);
         }
-    }, [selectedEquipment]);
+    }, [selectedEquipment, selectedBean, filterMode]);
 
-    // 当选择的设备变化时，更新筛选后的笔记
+    // 当选择的设备或咖啡豆变化时，更新筛选后的笔记
     useEffect(() => {
         updateFilteredNotes(notes);
-    }, [selectedEquipment, notes, updateFilteredNotes]);
+    }, [selectedEquipment, selectedBean, filterMode, notes, updateFilteredNotes]);
 
     const handleDelete = async (noteId: string) => {
         if (window.confirm('确定要删除这条笔记吗？')) {
