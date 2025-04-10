@@ -12,8 +12,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-        with:
-          token: ${{ secrets.GH_PAT }}
 
       - name: Deploy via SSH to Windows Server
         uses: appleboy/ssh-action@master
@@ -24,91 +22,41 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           script: |
             powershell -Command "
-              # 设置错误处理
-              $ErrorActionPreference = 'Stop'
-              $ProgressPreference = 'SilentlyContinue'
-              
-              # 创建日志目录
-              $logDir = 'C:\websites\brew-guide\logs'
-              New-Item -ItemType Directory -Force -Path $logDir
-              
-              # 日志函数
-              function Write-DeployLog {
-                param($Message)
-                $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
-                Write-Host "$timestamp - $Message"
-                Add-Content -Path "$logDir\deploy.log" -Value "$timestamp - $Message"
-              }
-              
-              try {
-                Write-DeployLog '开始部署流程'
-                
-                # 切换到项目目录
-                Set-Location 'C:\websites\brew-guide'
-                Write-DeployLog "当前目录: $(Get-Location)"
-                
-                # 停止应用
-                Write-DeployLog '停止应用'
-                pm2 stop brew-guide
-                
-                # 清理输出目录
-                Write-DeployLog '清理输出目录'
-                if (Test-Path .\out) {
-                  Remove-Item -Recurse -Force .\out
-                }
-                
-                # Git 配置
-                Write-DeployLog '配置 Git'
-                git config --global credential.helper store
-                git config --global --unset http.proxy
-                git config --global --unset https.proxy
-                git config --global --add safe.directory 'C:/websites/brew-guide'
-                
-                Write-DeployLog '更新远程仓库URL'
-                git remote set-url origin https://${{ secrets.GH_PAT }}@github.com/chu3/brew-guide.git
-                
-                Write-DeployLog '保存 Git 状态'
-                git status | Tee-Object -FilePath "$logDir\git-status-before.log"
-                
-                Write-DeployLog '拉取最新代码'
-                git fetch origin main
-                git reset --hard origin/main
-                git clean -fd
-                git status | Tee-Object -FilePath "$logDir\git-status-after.log"
-                
-                # NPM 操作
-                Write-DeployLog '安装依赖'
-                npm install --no-audit --no-fund | Tee-Object -FilePath "$logDir\npm-install.log"
-                
-                Write-DeployLog '构建项目'
-                npm run build | Tee-Object -FilePath "$logDir\npm-build.log"
-                
-                # PM2 操作
-                Write-DeployLog '启动应用'
-                $env:PM2_HOME = 'C:\pm2'
-                pm2 start brew-guide
-                
-                Write-DeployLog '部署完成'
-              } catch {
-                Write-DeployLog "错误: $_"
-                Write-DeployLog $_.ScriptStackTrace
-                throw $_
-              }
-            "
+              Write-Host '💻 Connecting to server...';
+              cd 'C:\websites\brew-guide';
 
-      - name: Check deployment logs
-        if: always()
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.SERVER_IP }}
-          username: ${{ secrets.SSH_USERNAME }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT }}
-          script: |
-            powershell -Command "
-              if (Test-Path 'C:\websites\brew-guide\logs\deploy.log') {
-                Get-Content 'C:\websites\brew-guide\logs\deploy.log'
-              } else {
-                Write-Host '部署日志文件不存在'
-              }
+              Write-Host '📂 Current location:';
+              Get-Location;
+
+              Write-Host '👤 Current user:';
+              $env:USERNAME;
+
+              Write-Output '✅ Deploy triggered via GitHub Actions at ' (Get-Date -Format 'yyyy-MM-dd HH:mm:ss') | Out-File -FilePath 'C:\websites\brew-guide\deploy-log.txt' -Append;
+
+              Write-Host '🔒 Marking directory as safe...';
+              git config --global --add safe.directory 'C:/websites/brew-guide';
+
+              Write-Host '🔍 Git status before pull:';
+              git status | Out-File -FilePath 'C:\websites\brew-guide\git-status-before.txt';
+
+              Write-Host '🔍 Git remote info:';
+              git remote -v | Out-File -FilePath 'C:\websites\brew-guide\git-remote.txt';
+
+              Write-Host '📦 Pulling latest code...';
+              git pull origin main | Tee-Object -FilePath 'C:\websites\brew-guide\git-pull-log.txt' -Append;
+
+              Write-Host '🛑 Stopping app via PM2...';
+              $env:PM2_HOME = 'C:\pm2'
+              pm2 stop brew-guide;
+
+              Write-Host '📦 Installing dependencies...';
+              npm install | Tee-Object -FilePath 'C:\websites\brew-guide\npm-install-log.txt' -Append;
+
+              Write-Host '🔨 Building project...';
+              npm run build | Tee-Object -FilePath 'C:\websites\brew-guide\npm-build-log.txt' -Append;
+
+              Write-Host '🚀 Restarting app...';
+              pm2 restart brew-guide;
+
+              Write-Host '✅ Deploy completed at ' (Get-Date -Format 'yyyy-MM-dd HH:mm:ss');
             "
