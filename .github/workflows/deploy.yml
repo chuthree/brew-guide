@@ -64,11 +64,8 @@ jobs:
                 git config --global --unset https.proxy
                 git config --global --add safe.directory 'C:/websites/brew-guide'
                 
-                # 设置 Git 认证
-                Write-DeployLog '配置 Git 认证'
-                $env:GIT_ASKPASS = 'echo'
-                $env:GIT_USERNAME = 'github-actions[bot]'
-                $env:GIT_PASSWORD = '${{ secrets.GITHUB_TOKEN }}'
+                Write-DeployLog '更新远程仓库URL'
+                git remote set-url origin https://${{ secrets.GITHUB_TOKEN }}@github.com/chu3/brew-guide.git
                 
                 Write-DeployLog '保存 Git 状态'
                 git status | Tee-Object -FilePath "$logDir\git-status-before.log"
