@@ -13,6 +13,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
 
+<<<<<<< HEAD
     - name: Deploy via SSH to Windows Server
       uses: appleboy/ssh-action@master
       with:
@@ -50,3 +51,86 @@ jobs:
 
             Write-Host '✅ Deployment finished.';
             ";
+=======
+      - name: Deploy via SSH to Windows Server
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            powershell -Command "
+              # 设置错误处理
+              $ErrorActionPreference = 'Stop'
+              $ProgressPreference = 'SilentlyContinue'
+              
+              # 创建日志目录
+              $logDir = 'C:\websites\brew-guide\logs'
+              New-Item -ItemType Directory -Force -Path $logDir
+              
+              # 日志函数
+              function Write-DeployLog {
+                param($Message)
+                $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+                Write-Host "$timestamp - $Message"
+                Add-Content -Path "$logDir\deploy.log" -Value "$timestamp - $Message"
+              }
+              
+              try {
+                Write-DeployLog '开始部署流程'
+                
+                # 切换到项目目录
+                Set-Location 'C:\websites\brew-guide'
+                Write-DeployLog "当前目录: $(Get-Location)"
+                
+                # Git 操作
+                Write-DeployLog '配置 Git 安全目录'
+                git config --global --add safe.directory 'C:/websites/brew-guide'
+                
+                Write-DeployLog '保存 Git 状态'
+                git status | Tee-Object -FilePath "$logDir\git-status-before.log"
+                
+                Write-DeployLog '拉取最新代码'
+                git fetch origin main
+                git reset --hard origin/main
+                git clean -fd
+                git status | Tee-Object -FilePath "$logDir\git-status-after.log"
+                
+                # NPM 操作
+                Write-DeployLog '安装依赖'
+                npm ci --no-audit --no-fund | Tee-Object -FilePath "$logDir\npm-install.log"
+                
+                Write-DeployLog '构建项目'
+                npm run build | Tee-Object -FilePath "$logDir\npm-build.log"
+                
+                # PM2 操作
+                Write-DeployLog '重启应用'
+                $env:PM2_HOME = 'C:\pm2'
+                pm2 restart brew-guide
+                
+                Write-DeployLog '部署完成'
+              } catch {
+                Write-DeployLog "错误: $_"
+                Write-DeployLog $_.ScriptStackTrace
+                throw $_
+              }
+            "
+
+      - name: Check deployment logs
+        uses: appleboy/ssh-action@master
+        if: always()
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            powershell -Command "
+              if (Test-Path 'C:\websites\brew-guide\logs\deploy.log') {
+                Get-Content 'C:\websites\brew-guide\logs\deploy.log'
+              } else {
+                Write-Host '部署日志文件不存在'
+              }
+            "
+>>>>>>> 6634308 (优化部署脚本：添加详细日志和错误处理)
