@@ -6,7 +6,7 @@ interface StageDividerProps {
 
 const StageDivider: React.FC<StageDividerProps> = ({ stageNumber }) => {
     return (
-        <div className="my-7 relative">
+        <div className="my-6 relative">
             {/* 分隔线 - 使用虚线样式 */}
             <div className="border-t border-dashed border-neutral-200 dark:border-neutral-800 opacity-60"></div>
             

@@ -16,6 +16,7 @@ export interface LayoutSettings {
     stageInfoReversed?: boolean; // 是否反转阶段信息布局
     progressBarHeight?: number; // 进度条高度（像素）
     controlsReversed?: boolean; // 是否反转底部控制区布局
+    alwaysShowTimerInfo?: boolean; // 是否始终显示计时器信息区域
 }
 
 // 添加是否支持KeepAwake的检查
@@ -1251,13 +1252,17 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                     )}
                 </AnimatePresence>
                 <AnimatePresence mode="wait">
-                    {isRunning && (
+                    {(isRunning || layoutSettings.alwaysShowTimerInfo) && (
                         <motion.div 
                             key="brewing-info"
-                            initial={{ opacity: 0, height: 0, y: -20 }}
-                            animate={{ opacity: 1, height: "auto", y: 0 }}
-                            exit={{ opacity: 0, height: 0, y: -20 }}
-                            transition={{ duration: 0.3 }}
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            transition={{ 
+                                duration: 0.5, 
+                                ease: [0.2, 0.0, 0.2, 1.0],
+                                opacity: { duration: 0.7 } 
+                            }}
                             className="overflow-hidden"
                         >
                             {/* 阶段信息区域 */}
@@ -1265,6 +1270,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                                 <motion.div
                                     initial={{ opacity: 0, x: -10 }}
                                     animate={{ opacity: 1, x: 0 }}
+                                    transition={{ duration: 0.26 }}
                                     className={`flex items-baseline border-l-2 border-neutral-800 pl-3 dark:border-neutral-100 ${layoutSettings.stageInfoReversed ? "flex-row-reverse" : "flex-row"
                                         } justify-between`}
                                 >
@@ -1476,10 +1482,9 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                                             />
                                         ) : null;
                                     })}
-                                    <motion.div
+                                    <div
                                         className="h-full bg-neutral-800 dark:bg-neutral-100"
-                                        initial={{ width: 0 }}
-                                        animate={{
+                                        style={{
                                             width:
                                                 currentTime > 0 && expandedStagesRef.current.length > 0
                                                     ? `${(currentTime /
@@ -1490,7 +1495,6 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                                                     }%`
                                                     : "0%",
                                         }}
-                                        transition={{ duration: 0.26 }}
                                     />
                                 </div>
 
