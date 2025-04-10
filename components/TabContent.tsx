@@ -566,38 +566,55 @@ const TabContent: React.FC<TabContentProps> = ({
                         {/* 方案列表中显示固定方案 */}
                         {activeTab === '方案' as TabType && selectedCoffeeBeanData && pinnedMethods.length > 0 && (
                             <>
-                                {/* 固定方案标题 */}
-                                <div className="px-2 py-1 text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                                    常用方案
-                                </div>
-                                
-                                {/* 固定方案列表 */}
-                                {pinnedMethods.map((method, index) => (
-                                    <StageItem
-                                        key={`pinned-${method.id}-${index}`}
-                                        step={{
-                                            title: method.methodId,
-                                            methodId: method.methodId,
-                                            icon: '📌', // 使用图钉图标标识固定方案
-                                            detail: `${getEquipmentDisplayName(method.equipmentId)}${method.notes ? ` - ${method.notes}` : ''}`
-                                        }}
-                                        index={index}
-                                        onClick={() => handlePinnedMethodSelect(method)}
-                                        activeTab={activeTab}
-                                        selectedMethod={selectedMethod}
-                                        currentStage={currentStage}
-                                        actionMenuStates={actionMenuStates}
-                                        setActionMenuStates={setActionMenuStates}
-                                    />
-                                ))}
-                                
-                                {/* 分割线 */}
-                                <div className="my-3 border-t border-neutral-200 dark:border-neutral-800"></div>
-                                
-                                {/* 常规方案列表标题 */}
-                                <div className="px-2 py-1 text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                                    所有方案
-                                </div>
+                                {/* 筛选当前器具的固定方案 */}
+                                {(() => {
+                                    // 只显示当前选中器具的固定方案
+                                    const filteredPinnedMethods = pinnedMethods.filter(
+                                        method => method.equipmentId === selectedEquipment
+                                    );
+                                    
+                                    // 如果没有当前器具的固定方案，不显示此区域
+                                    if (filteredPinnedMethods.length === 0) {
+                                        return null;
+                                    }
+                                    
+                                    return (
+                                        <>
+                                            {/* 固定方案标题 */}
+                                            <div className="px-2 py-1 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                                                常用方案
+                                            </div>
+                                            
+                                            {/* 固定方案列表 - 只显示当前器具的固定方案 */}
+                                            {filteredPinnedMethods.map((method, index) => (
+                                                <StageItem
+                                                    key={`pinned-${method.id}-${index}`}
+                                                    step={{
+                                                        title: method.methodId,
+                                                        methodId: method.methodId,
+                                                        icon: '📌', // 使用图钉图标标识固定方案
+                                                        detail: `${getEquipmentDisplayName(method.equipmentId)}${method.notes ? ` - ${method.notes}` : ''}`
+                                                    }}
+                                                    index={index}
+                                                    onClick={() => handlePinnedMethodSelect(method)}
+                                                    activeTab={activeTab}
+                                                    selectedMethod={selectedMethod}
+                                                    currentStage={currentStage}
+                                                    actionMenuStates={actionMenuStates}
+                                                    setActionMenuStates={setActionMenuStates}
+                                                />
+                                            ))}
+                                            
+                                            {/* 分割线 */}
+                                            <div className="my-3 border-t border-neutral-200 dark:border-neutral-800"></div>
+                                            
+                                            {/* 常规方案列表标题 */}
+                                            <div className="px-2 py-1 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                                                所有方案
+                                            </div>
+                                        </>
+                                    );
+                                })()}
                             </>
                         )}
                         
