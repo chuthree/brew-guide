@@ -19,6 +19,7 @@ import { SORT_OPTIONS as RANKING_SORT_OPTIONS, RankingSortOption } from './Coffe
 import { useToast } from './GlobalToast'
 import { getBloggerBeans } from '@/lib/csvUtils'
 import BottomActionBar from '@/components/BottomActionBar'
+import BeanMethodsModal from './BeanMethodsModal'
 
 // 添加ExtendedCoffeeBean类型
 interface BlendComponent {
@@ -271,6 +272,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
     const isLoadingRef = useRef<boolean>(false)
     // 添加强制刷新的key
     const [forceRefreshKey, setForceRefreshKey] = useState(0)
+    const [showMethodsModal, setShowMethodsModal] = useState(false)
+    const [selectedBeanForMethods, setSelectedBeanForMethods] = useState<ExtendedCoffeeBean | null>(null)
 
     // 添加引用，用于点击外部关闭操作菜单
     const containerRef = React.useRef<HTMLDivElement>(null);
@@ -1021,6 +1024,12 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
         };
     }, [actionMenuStates]);
 
+    // 处理显示方案管理
+    const handleShowMethods = (bean: ExtendedCoffeeBean) => {
+        setSelectedBeanForMethods(bean)
+        setShowMethodsModal(true)
+    }
+
     if (!isOpen) return null
 
     return (
@@ -1081,6 +1090,16 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                         ratingSavedCallback();
                         setRatingSavedCallback(null); // 使用后清除
                     }
+                }}
+            />
+
+            {/* 添加方案管理模态框 */}
+            <BeanMethodsModal
+                showModal={showMethodsModal}
+                coffeeBean={selectedBeanForMethods}
+                onClose={() => {
+                    setShowMethodsModal(false)
+                    setSelectedBeanForMethods(null)
                 }}
             />
 
@@ -1502,6 +1521,18 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                                                     className="w-full px-3 py-1.5 text-left text-xs text-emerald-600 dark:text-emerald-500"
                                                                                 >
                                                                                     AI方案
+                                                                                </button>
+                                                                                <button
+                                                                                    onClick={() => {
+                                                                                        handleShowMethods(bean)
+                                                                                        setActionMenuStates(prev => ({
+                                                                                            ...prev,
+                                                                                            [bean.id]: false
+                                                                                        }))
+                                                                                    }}
+                                                                                    className="w-full px-3 py-1.5 text-left text-xs text-neutral-800 dark:text-white"
+                                                                                >
+                                                                                    指定方案
                                                                                 </button>
                                                                             </div>
                                                                         </div>

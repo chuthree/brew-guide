@@ -12,19 +12,22 @@ export interface Stage {
 	valveStatus?: "open" | "closed";
 }
 
+export interface MethodParams {
+	coffee: string;
+	water: string;
+	ratio: string;
+	grindSize: string;
+	temp: string;
+	videoUrl: string;
+	roastLevel?: string;
+	stages: Stage[];
+}
+
 export interface Method {
 	id?: string;
 	name: string;
-	params: {
-		coffee: string;
-		water: string;
-		ratio: string;
-		grindSize: string;
-		temp: string;
-		videoUrl: string;
-		roastLevel?: string;
-		stages: Stage[];
-	};
+	params: MethodParams;
+	timestamp?: number;
 }
 
 export interface BrewingMethods {

@@ -606,9 +606,9 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             setIsCoffeeBrewed(false);
         }
 
-        // 将 step 对象传递给 handleMethodSelect
-        await handleMethodSelect(index, step);
-    }, [handleMethodSelect, isCoffeeBrewed, setIsCoffeeBrewed]);
+        // 将正确的参数传递给 handleMethodSelect
+        await handleMethodSelect(selectedEquipment || "", index, methodType, step);
+    }, [handleMethodSelect, isCoffeeBrewed, setIsCoffeeBrewed, selectedEquipment, methodType]);
 
     // 处理冲煮完成后自动切换到笔记页面
     useEffect(() => {

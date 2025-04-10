@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { Method, equipmentList, Stage } from "@/lib/config";
+import { Method, equipmentList, Stage, commonMethods } from "@/lib/config";
 import { EditableParams } from "./useBrewingParameters";
 import { TabType, BrewingStep } from "./useBrewingState";
 
@@ -21,6 +21,13 @@ export interface UseMethodSelectorProps {
 	updateBrewingSteps: (stages: Stage[]) => void;
 	showComplete?: boolean;
 	resetBrewingState?: () => void;
+}
+
+// 添加StepWithCustomParams类型定义
+interface StepWithCustomParams {
+	methodIndex?: number;
+	isCommonMethod?: boolean;
+	customParams?: Record<string, string>;
 }
 
 export function useMethodSelector({
@@ -277,204 +284,144 @@ export function useMethodSelector({
 
 	const handleMethodSelect = useCallback(
 		async (
+			selectedEquipment: string,
 			methodIndex: number,
-			step?: {
-				methodIndex?: number;
-				isCommonMethod?: boolean;
-			}
-		) => {
-			if (selectedEquipment) {
-				let method: Method | null = null;
+			methodType: string,
+			step?: StepWithCustomParams
+		): Promise<Method | null> => {
+			console.log(
+				`选择方法: 器具=${selectedEquipment}, 方法索引=${methodIndex}, 类型=${methodType}`,
+				step ? `带自定义参数: ${JSON.stringify(step.customParams)}` : "无自定义参数"
+			);
 
-				// 检查是否是预设器具（直接从equipmentList中检查）
-				const { equipmentList } = await import("@/lib/config");
-				const isPredefinedEquipment = equipmentList.some(
-					(e) => e.id === selectedEquipment
-				);
-
-				// 更新判断逻辑：只有当器具不是预设器具且其他条件满足时，才认为是自定义器具的通用方案
-				const isCustomEquipmentCommonMethod =
-					step?.isCommonMethod === true &&
-					methodType === "common" &&
-					!isPredefinedEquipment;
-
-				// 添加调试信息
-				console.log("方法选择:", {
-					methodIndex,
-					methodType,
-					selectedEquipment,
-					step,
-					isPredefinedEquipment,
-					isCustomEquipmentCommonMethod,
-					hasMethodIndex: step?.methodIndex !== undefined,
-				});
-
-				// 获取有效的方法索引
-				const effectiveMethodIndex =
-					step?.methodIndex !== undefined
-						? step.methodIndex
-						: methodIndex;
-
-				if (methodType === "common") {
-					try {
-						// 导入commonMethods
-						const { commonMethods } = await import("@/lib/config");
-
-						// 修改逻辑顺序：先检查是否是自定义器具
-						if (isCustomEquipmentCommonMethod) {
-							console.log("处理自定义器具的通用方案");
-							// 尝试使用step中的animationType属性来确定基础设备
-							// 这部分逻辑需要与useBrewingContent中的逻辑保持一致
-							const { loadCustomEquipments } = await import(
-								"@/lib/customEquipments"
-							);
-							const loadedEquipments =
-								await loadCustomEquipments();
-
-							const customEquipment = loadedEquipments.find(
-								(e) =>
-									e.id === selectedEquipment ||
-									e.name === selectedEquipment
-							);
-
-							if (customEquipment) {
-								console.log("找到自定义器具:", customEquipment);
-								let baseEquipmentId = "";
-								const animationType =
-									customEquipment.animationType.toLowerCase();
-								console.log("动画类型:", animationType);
-
-								switch (animationType) {
-									case "v60":
-										baseEquipmentId = "V60";
-										break;
-									case "kalita":
-										baseEquipmentId = "Kalita";
-										break;
-									case "origami":
-										baseEquipmentId = "Origami";
-										break;
-									case "clever":
-										baseEquipmentId = "CleverDripper";
-										break;
-									default:
-										console.warn(
-											"未知的动画类型:",
-											animationType
-										);
-										baseEquipmentId = "V60"; // 默认使用 V60 的方案
-								}
-
-								console.log(
-									"使用基础器具:",
-									baseEquipmentId,
-									"方法索引:",
-									effectiveMethodIndex
-								);
-
-								// 确保 baseEquipmentId 存在于 commonMethods 中
-								if (commonMethods[baseEquipmentId]) {
-									// 确保方法索引有效
-									if (
-										effectiveMethodIndex >= 0 &&
-										effectiveMethodIndex <
-											commonMethods[baseEquipmentId]
-												.length
-									) {
-										method =
-											commonMethods[baseEquipmentId][
-												effectiveMethodIndex
-											];
-										console.log(
-											"找到自定义器具的通用方案:",
-											method?.name
-										);
-									} else {
-										console.error(
-											"方法索引超出范围:",
-											effectiveMethodIndex,
-											"可用方法数量:",
-											commonMethods[baseEquipmentId]
-												.length
-										);
-									}
-								} else {
-									console.error(
-										"找不到基础器具:",
-										baseEquipmentId
-									);
-								}
-							} else {
-								console.error(
-									"找不到自定义器具:",
-									selectedEquipment
-								);
-							}
-						} else {
-							// 对于预定义器具，直接使用其通用方案
-							// 检查 selectedEquipment 是否存在于 commonMethods 中
-							if (
-								commonMethods[
-									selectedEquipment as keyof typeof commonMethods
-								]
-							) {
-								method =
-									commonMethods[
-										selectedEquipment as keyof typeof commonMethods
-									][effectiveMethodIndex];
-								console.log(
-									"找到预定义器具的通用方案:",
-									method?.name
-								);
-							} else {
-								console.error(
-									"找不到预定义器具的通用方案:",
-									selectedEquipment
-								);
-							}
+			// 创建一个辅助函数来应用自定义参数
+			const applyCustomParams = async (method: Method, customParams?: Record<string, string>, isCustomMethod: boolean = false) => {
+				if (customParams) {
+					// 创建方法的浅拷贝
+					const methodCopy = { ...method };
+					
+					// 创建参数的浅拷贝
+					methodCopy.params = { ...method.params };
+					
+					// 应用自定义参数到方法参数中
+					Object.entries(customParams).forEach(([key, value]) => {
+						// 直接检查关键字段并跳过stages
+						if (key === 'stages') {
+							return; // 跳过stages字段
 						}
-
-						if (method) {
-							await processSelectedMethod(method);
-						} else {
-							console.error("未能找到合适的方法");
+						
+						if (key in methodCopy.params) {
+							// 使用类型断言避开TypeScript类型检查
+							// @ts-expect-error 自定义参数只应用于标量值，不应应用于stages数组
+							methodCopy.params[key] = String(value);
 						}
-					} catch (error) {
-						// 错误处理
-						console.error("选择方法时出错:", error);
-					}
-				} else if (methodType === "custom") {
-					try {
-						if (
-							customMethods &&
-							customMethods[selectedEquipment] &&
-							customMethods[selectedEquipment][methodIndex]
-						) {
-							method =
-								customMethods[selectedEquipment][methodIndex];
-							await processSelectedMethod(method);
-						} else {
-							console.error("找不到自定义方法:", {
-								selectedEquipment,
-								methodIndex,
-								hasCustomMethods:
-									!!customMethods[selectedEquipment],
-								customMethodsLength:
-									customMethods[selectedEquipment]?.length,
-							});
-						}
-					} catch (error) {
-						// 错误处理
-						console.error("选择自定义方法时出错:", error);
-					}
+					});
+					
+					console.log(
+						isCustomMethod ? "应用自定义参数到自定义方法:" : "应用自定义参数:", 
+						customParams
+					);
+					console.log(
+						isCustomMethod ? "修改后的自定义方法参数:" : "修改后的方法参数:", 
+						methodCopy.params
+					);
+					
+					// 使用修改后的方法
+					await processSelectedMethod(methodCopy);
+					return methodCopy;
+				} else {
+					// 没有自定义参数，使用原始方法
+					await processSelectedMethod(method);
+					return method;
 				}
+			};
 
-				return method;
+			let method: Method | null = null;
+
+			if (methodType === "predefined") {
+				try {
+					if (
+						customMethods &&
+						customMethods[selectedEquipment] &&
+						customMethods[selectedEquipment][methodIndex]
+					) {
+						method =
+							customMethods[selectedEquipment][methodIndex];
+						
+						// 使用辅助函数应用自定义参数
+						method = await applyCustomParams(method, step?.customParams);
+					} else {
+						console.error("找不到自定义方法:", {
+							selectedEquipment,
+							methodIndex,
+							hasCustomMethods:
+								!!customMethods[selectedEquipment],
+							customMethodsLength:
+								customMethods[selectedEquipment]?.length,
+						});
+					}
+				} catch (error) {
+					// 错误处理
+					console.error("选择方法时出错:", error);
+				}
+			} else if (methodType === "common") {
+				// 处理通用方法类型
+				try {
+					// 从commonMethods中获取方法
+					if (
+						commonMethods &&
+						commonMethods[selectedEquipment] &&
+						commonMethods[selectedEquipment][methodIndex]
+					) {
+						method = commonMethods[selectedEquipment][methodIndex];
+						
+						// 使用辅助函数应用自定义参数
+						method = await applyCustomParams(method, step?.customParams);
+					} else {
+						console.error("找不到通用方法:", {
+							selectedEquipment,
+							methodIndex,
+							hasCommonMethods:
+								!!commonMethods[selectedEquipment],
+							commonMethodsLength:
+								commonMethods[selectedEquipment]?.length,
+						});
+					}
+				} catch (error) {
+					// 错误处理
+					console.error("选择通用方法时出错:", error);
+				}
+			} else if (methodType === "custom") {
+				try {
+					if (
+						customMethods &&
+						customMethods[selectedEquipment] &&
+						customMethods[selectedEquipment][methodIndex]
+					) {
+						method =
+							customMethods[selectedEquipment][methodIndex];
+						
+						// 使用辅助函数应用自定义参数（标记为自定义方法）
+						method = await applyCustomParams(method, step?.customParams, true);
+					} else {
+						console.error("找不到自定义方法:", {
+							selectedEquipment,
+							methodIndex,
+							hasCustomMethods:
+								!!customMethods[selectedEquipment],
+							customMethodsLength:
+								customMethods[selectedEquipment]?.length,
+						});
+					}
+				} catch (error) {
+					// 错误处理
+					console.error("选择自定义方法时出错:", error);
+				}
 			}
 
-			return null;
+			return method;
 		},
-		[selectedEquipment, methodType, customMethods, processSelectedMethod]
+		[selectedEquipment, methodType, customMethods, commonMethods, processSelectedMethod]
 	);
 
 	return {

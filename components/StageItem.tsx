@@ -5,7 +5,11 @@ import ActionMenu from './ui/action-menu'
 import { Step } from '@/lib/hooks/useBrewingState'
 
 interface StageItemProps {
-    step: Step
+    step: Step & {
+        customParams?: Record<string, string | number | boolean>;
+        icon?: string;
+        isPinned?: boolean;
+    }
     index: number
     onClick: () => void
     activeTab: string
@@ -16,6 +20,7 @@ interface StageItemProps {
     onShare?: () => void
     actionMenuStates: Record<string, boolean>
     setActionMenuStates: React.Dispatch<React.SetStateAction<Record<string, boolean>>>
+    isPinned?: boolean
 }
 
 // 辅助函数：格式化时间
@@ -46,6 +51,7 @@ const StageItem: React.FC<StageItemProps> = ({
     onShare,
     actionMenuStates,
     setActionMenuStates,
+    isPinned: _isPinned
 }) => {
     // 创建一个唯一的ID来标识这个卡片
     const cardId = useMemo(() => 
@@ -124,6 +130,9 @@ const StageItem: React.FC<StageItemProps> = ({
                 <div className={activeTab !== '注水' ? 'cursor-pointer' : ''} onClick={onClick}>
                     <div className="flex items-baseline justify-between">
                         <div className="flex items-baseline gap-3 min-w-0 overflow-hidden">
+                            {step.icon && (
+                                <span className="text-xs mr-1">{step.icon}</span>
+                            )}
                             <h3 className={`text-xs font-normal tracking-wider truncate ${isCurrentStage ? 'text-neutral-800 dark:text-white' : ''}`}>
                                 {step.title}
                             </h3>
@@ -138,6 +147,11 @@ const StageItem: React.FC<StageItemProps> = ({
                         {step.description && (
                             <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
                                 {step.description}
+                            </p>
+                        )}
+                        {step.detail && (
+                            <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
+                                {step.detail}
                             </p>
                         )}
                         {onEdit && onDelete && (

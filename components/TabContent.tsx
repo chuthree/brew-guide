@@ -3,16 +3,24 @@ import dynamic from 'next/dynamic';
 import { Method, equipmentList, CustomEquipment, commonMethods } from '@/lib/config';
 import StageItem from '@/components/StageItem';
 import { SettingsOptions } from './Settings';
-import { TabType, MainTabType, Content, Step } from '@/lib/hooks/useBrewingState';
+import { TabType, MainTabType, Content, Step as BaseStep } from '@/lib/hooks/useBrewingState';
 import { CoffeeBean } from '@/app/types';
 import type { BrewingNoteData } from '@/app/types';
 import { CoffeeBeanManager } from '@/lib/coffeeBeanManager';
+import { BeanMethod, BeanMethodManager } from '@/lib/beanMethodManager';
 import { v4 as _uuidv4 } from 'uuid';
 import { copyMethodToClipboard } from "@/lib/customMethods";
 import { showToast } from "@/components/ui/toast";
 import EquipmentShareModal from '@/components/EquipmentShareModal';
 import { getEquipmentName } from '@/lib/brewing/parameters';
 import BottomActionBar from '@/components/BottomActionBar';
+
+// 扩展Step类型，增加固定方案所需的字段
+interface Step extends BaseStep {
+    customParams?: Record<string, string | number | boolean>;
+    icon?: string;
+    isPinned?: boolean;
+}
 
 // 动态导入客户端组件
 const PourVisualizer = dynamic(() => import('@/components/PourVisualizer'), {
@@ -130,6 +138,117 @@ const TabContent: React.FC<TabContentProps> = ({
 }) => {
     // 笔记表单状态
     const [noteSaved, setNoteSaved] = React.useState(false);
+
+    // 固定方案状态
+    const [pinnedMethods, setPinnedMethods] = useState<BeanMethod[]>([]);
+    const [_loadingPinnedMethods, setLoadingPinnedMethods] = useState(false);
+    
+    // 当选择咖啡豆变化时，加载固定方案
+    useEffect(() => {
+        const loadPinnedMethods = async () => {
+            if (!selectedCoffeeBeanData || !selectedCoffeeBeanData.id) {
+                setPinnedMethods([]);
+                return;
+            }
+            
+            try {
+                setLoadingPinnedMethods(true);
+                const methods = await BeanMethodManager.getBeanMethods(selectedCoffeeBeanData.id);
+                setPinnedMethods(methods);
+            } catch (error) {
+                console.error('加载咖啡豆固定方案失败:', error);
+                setPinnedMethods([]);
+            } finally {
+                setLoadingPinnedMethods(false);
+            }
+        };
+        
+        loadPinnedMethods();
+    }, [selectedCoffeeBeanData]);
+    
+    // 处理固定方案选择
+    const handlePinnedMethodSelect = async (method: BeanMethod) => {
+        if (settings?.hapticFeedback) {
+            (async () => {
+                const hapticsUtils = await import('@/lib/haptics');
+                hapticsUtils.default.light(); 
+            })();
+        }
+        
+        try {
+            // 切换到该固定方案对应的器具
+            if (method.equipmentId && method.equipmentId !== selectedEquipment) {
+                onEquipmentSelect(method.equipmentId);
+                
+                // 等待器具切换完成后再切换方案
+                setTimeout(() => {
+                    // 找到对应器具下的方案
+                    const methods = commonMethods[method.equipmentId] || [];
+                    
+                    // 查找与固定方案methodId匹配的方案索引
+                    const methodIndex = methods.findIndex(m => m.name === method.methodId);
+                    
+                    if (methodIndex !== -1) {
+                        // 切换方案类型并选择方案
+                        handleMethodTypeChange('common');
+                        
+                        // 延迟一点时间确保方案类型切换完成
+                        setTimeout(() => {
+                            // 传递带有自定义参数的step对象
+                            const step: Step = {
+                                title: methods[methodIndex].name,
+                                methodId: methods[methodIndex].name,
+                                customParams: method.params // 传递固定方案的自定义参数
+                            };
+                            onMethodSelect(methodIndex, step);
+                        }, 100);
+                    }
+                }, 200);
+            } else {
+                // 如果已经是正确的器具，直接查找并选择方案
+                const methods = commonMethods[method.equipmentId] || [];
+                
+                // 查找与固定方案methodId匹配的方案索引
+                const methodIndex = methods.findIndex(m => m.name === method.methodId);
+                
+                if (methodIndex !== -1) {
+                    // 切换方案类型并选择方案
+                    handleMethodTypeChange('common');
+                    
+                    // 延迟一点时间确保方案类型切换完成
+                    setTimeout(() => {
+                        // 传递带有自定义参数的step对象
+                        const step: Step = {
+                            title: methods[methodIndex].name,
+                            methodId: methods[methodIndex].name,
+                            customParams: method.params // 传递固定方案的自定义参数
+                        };
+                        onMethodSelect(methodIndex, step);
+                    }, 100);
+                }
+            }
+        } catch (error) {
+            console.error('选择固定方案失败:', error);
+            showToast({
+                type: 'error',
+                title: '选择固定方案失败',
+                duration: 2000
+            });
+        }
+    };
+    
+    // 获取器具名称的函数
+    const getEquipmentDisplayName = (equipmentId: string): string => {
+        // 先在预设器具中查找
+        const predefinedEquipment = equipmentList.find(e => e.id === equipmentId);
+        if (predefinedEquipment) return predefinedEquipment.name;
+
+        // 再在自定义器具中查找
+        const customEquipment = customEquipments.find(e => e.id === equipmentId);
+        if (customEquipment) return customEquipment.name;
+
+        return '未知器具';
+    };
 
     // 处理方案类型切换
     const handleMethodTypeChange = (type: 'common' | 'custom') => {
@@ -399,6 +518,89 @@ const TabContent: React.FC<TabContentProps> = ({
                 <>
                     {/* 列表内容容器，添加适当的底部padding */}
                     <div className="space-y-4 content-area">
+                        {/* 器具列表中显示固定方案的器具 */}
+                        {activeTab === '器具' as TabType && selectedCoffeeBeanData && pinnedMethods.length > 0 && (
+                            <>
+                                {/* 固定器具标题 */}
+                                <div className="px-2 py-1 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                                    常用器具
+                                </div>
+                                
+                                {/* 从固定方案中提取唯一器具并显示 */}
+                                {Array.from(new Set(pinnedMethods.map(m => m.equipmentId))).map((equipmentId, index) => {
+                                    const equipment = equipmentList.find(e => e.id === equipmentId) || 
+                                                      customEquipments.find(e => e.id === equipmentId);
+                                    
+                                    if (!equipment) return null;
+                                    
+                                    return (
+                                        <StageItem
+                                            key={`pinned-equipment-${equipmentId}-${index}`}
+                                            step={{
+                                                title: equipment.name || equipmentId,
+                                                icon: '🔍', // 使用图标标识固定器具
+                                                detail: `${selectedCoffeeBeanData.name}的指定器具`
+                                            }}
+                                            index={index}
+                                            onClick={() => onEquipmentSelect(equipmentId)}
+                                            activeTab={activeTab}
+                                            selectedMethod={selectedMethod}
+                                            currentStage={currentStage}
+                                            actionMenuStates={actionMenuStates}
+                                            setActionMenuStates={setActionMenuStates}
+                                        />
+                                    );
+                                })}
+                                
+                                {/* 分割线 */}
+                                <div className="my-3 border-t border-neutral-200 dark:border-neutral-800"></div>
+                                
+                                {/* 常规器具列表标题 */}
+                                <div className="px-2 py-1 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                                    所有器具
+                                </div>
+                            </>
+                        )}
+                        
+                        {/* 方案列表中显示固定方案 */}
+                        {activeTab === '方案' as TabType && selectedCoffeeBeanData && pinnedMethods.length > 0 && (
+                            <>
+                                {/* 固定方案标题 */}
+                                <div className="px-2 py-1 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                                    常用方案
+                                </div>
+                                
+                                {/* 固定方案列表 */}
+                                {pinnedMethods.map((method, index) => (
+                                    <StageItem
+                                        key={`pinned-${method.id}-${index}`}
+                                        step={{
+                                            title: method.methodId,
+                                            methodId: method.methodId,
+                                            icon: '📌', // 使用图钉图标标识固定方案
+                                            detail: `${getEquipmentDisplayName(method.equipmentId)}${method.notes ? ` - ${method.notes}` : ''}`
+                                        }}
+                                        index={index}
+                                        onClick={() => handlePinnedMethodSelect(method)}
+                                        activeTab={activeTab}
+                                        selectedMethod={selectedMethod}
+                                        currentStage={currentStage}
+                                        actionMenuStates={actionMenuStates}
+                                        setActionMenuStates={setActionMenuStates}
+                                    />
+                                ))}
+                                
+                                {/* 分割线 */}
+                                <div className="my-3 border-t border-neutral-200 dark:border-neutral-800"></div>
+                                
+                                {/* 常规方案列表标题 */}
+                                <div className="px-2 py-1 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                                    所有方案
+                                </div>
+                            </>
+                        )}
+                        
+                        {/* 常规方案列表 */}
                         {content[activeTab]?.steps.map((step: Step, index: number) => (
                             <StageItem
                                 key={step.methodId ? `${step.methodId}-${index}` : `${step.title}-${index}`}
