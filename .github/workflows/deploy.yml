@@ -22,42 +22,31 @@ jobs:
         port: ${{ secrets.SSH_PORT }}
         script: |
           powershell -Command "
-            Write-Host '💻 Connecting to server...'; Write-Host
+            Write-Host '💻 Connecting to server...';
             cd 'C:\websites\brew-guide';
-
+        
             Write-Host '🔧 Fetching latest code from origin/main...';
             git fetch origin main;
             git reset --hard origin/main;
-
+        
             Write-Host '🔒 Marking directory as safe...';
             git config --global --add safe.directory 'C:/websites/brew-guide';
-
+        
             Write-Host '🛑 Stopping app with PM2...';
             pm2 stop brew-guide;
-
+        
             Write-Host '📦 Installing dependencies...';
             npm install;
-
+        
             Write-Host '🔨 Building project...';
             npm run build;
-
+        
             Write-Host '🚀 Restarting app with PM2...';
             pm2 restart brew-guide;
-
+        
             Write-Host '📝 Writing deploy timestamp...';
-            try {
-              $commit = git log -1 --pretty=format:'%H';
-              $branch = git rev-parse --abbrev-ref HEAD;
-              $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss';
-              $lines = @();
-              $lines += \"Deployed at: $timestamp\";
-              $lines += \"Commit: $commit\";
-              $lines += \"Branch: $branch\";
-              $lines | Out-File -FilePath 'C:\websites\brew-guide\__last_deploy.txt' -Encoding utf8 -Force;
-              Write-Host '📄 Timestamp file written successfully.';
-            } catch {
-              Write-Host \"⚠️ Failed to write deploy timestamp: $_\";
-            }
-
+            Set-Content -Path 'C:\websites\brew-guide\__last_deploy.txt' -Value \"Deployed at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')\";
+        
             Write-Host '✅ Deployment finished.';
           "
+
