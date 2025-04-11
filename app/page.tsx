@@ -22,7 +22,7 @@ import Onboarding from '@/components/Onboarding'
 import CoffeeBeanFormModal from '@/components/CoffeeBeanFormModal'
 import ImportModal from '@/components/ImportModal'
 import { CoffeeBeanManager } from '@/lib/coffeeBeanManager'
-import AIRecipeModal from '@/components/AIRecipeModal'
+// import AIRecipeModal from '@/components/AIRecipeModal'
 import textZoomUtils from '@/lib/textZoom'
 import { navigateFromHistoryToBrewing } from '@/lib/brewing/navigation'
 import type { BrewingNote } from '@/lib/config'
@@ -146,8 +146,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     const [showImportBeanForm, setShowImportBeanForm] = useState(false);
 
     // AI方案生成器状态
-    const [showAIRecipeModal, setShowAIRecipeModal] = useState(false);
-    const [selectedBeanForAI, setSelectedBeanForAI] = useState<CoffeeBean | null>(null);
+    // const [showAIRecipeModal, setShowAIRecipeModal] = useState(false);
+    // const [selectedBeanForAI, setSelectedBeanForAI] = useState<CoffeeBean | null>(null);
     // 添加一个标志，跟踪是否是从AI方案跳转过来
     const [isFromAIRecipe, setIsFromAIRecipe] = useState(false);
 
@@ -772,10 +772,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     };
 
     // 处理AI方案生成
-    const handleGenerateAIRecipe = (bean: ExtendedCoffeeBean) => {
-        setSelectedBeanForAI(bean);
-        setShowAIRecipeModal(true);
-    };
+    // const handleGenerateAIRecipe = (bean: ExtendedCoffeeBean) => {
+    //     setSelectedBeanForAI(bean);
+    //     setShowAIRecipeModal(true);
+    // };
 
     // 完全重写checkCoffeeBeans函数，简化逻辑
     const checkCoffeeBeans = useCallback(async () => {
@@ -1727,7 +1727,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                         isOpen={activeMainTab === '咖啡豆'}
                         showBeanForm={handleBeanForm}
                         onShowImport={() => setShowImportBeanForm(true)}
-                        onGenerateAIRecipe={handleGenerateAIRecipe}
+                        // onGenerateAIRecipe={handleGenerateAIRecipe}
                     />
                 </ErrorBoundary>
             )}
@@ -1877,11 +1877,11 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             />
 
             {/* AI 方案生成器模态框组件 */}
-            <AIRecipeModal
+            {/* <AIRecipeModal
                 showModal={showAIRecipeModal}
                 onClose={() => setShowAIRecipeModal(false)}
                 coffeeBean={selectedBeanForAI}
-            />
+            /> */}
 
             {/* 冲煮笔记表单模态框组件 */}
             <BrewingNoteFormModalNew

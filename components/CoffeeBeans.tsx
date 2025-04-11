@@ -7,7 +7,7 @@ import { CoffeeBeanManager } from '@/lib/coffeeBeanManager'
 import CoffeeBeanFormModal from './CoffeeBeanFormModal'
 import CoffeeBeanRatingModal from './CoffeeBeanRatingModal'
 import CoffeeBeanRanking from './CoffeeBeanRanking'
-import AIRecipeModal from './AIRecipeModal'
+// import AIRecipeModal from './AIRecipeModal'
 import {
     Select,
     SelectContent,
@@ -241,7 +241,8 @@ const saveShowEmptyBeansPreference = (value: boolean): void => {
 // 初始化全局缓存的已用完状态
 globalCache.showEmptyBeans = getShowEmptyBeansPreference();
 
-const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowImport, onGenerateAIRecipe }) => {
+// const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowImport, onGenerateAIRecipe }) => {
+const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowImport }) => {
     const { showToast } = useToast()
     // 使用全局缓存的初始状态
     const [beans, setBeans] = useState<ExtendedCoffeeBean[]>(globalCache.beans)
@@ -250,8 +251,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
     const [editingBean, setEditingBean] = useState<ExtendedCoffeeBean | null>(null)
     const [actionMenuStates, setActionMenuStates] = useState<Record<string, boolean>>({}) // Keyed by bean.id
     const [sortOption, setSortOption] = useState<SortOption>(SORT_OPTIONS.REMAINING_DAYS_ASC)
-    const [showAIRecipeModal, setShowAIRecipeModal] = useState(false)
-    const [selectedBeanForAI, setSelectedBeanForAI] = useState<ExtendedCoffeeBean | null>(null)
+    // const [showAIRecipeModal, setShowAIRecipeModal] = useState(false)
+    // const [selectedBeanForAI, setSelectedBeanForAI] = useState<ExtendedCoffeeBean | null>(null)
     // 新增状态
     const [viewMode, setViewMode] = useState<ViewOption>(VIEW_OPTIONS.INVENTORY)
     const [showRatingModal, setShowRatingModal] = useState(false)
@@ -872,19 +873,19 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
     };
 
     // 添加方法处理AI方案生成
-    const handleGenerateAIRecipe = (bean: ExtendedCoffeeBean) => {
-        if (onGenerateAIRecipe) {
-            onGenerateAIRecipe(bean);
-        } else {
-            setSelectedBeanForAI(bean);
-            setShowAIRecipeModal(true);
-        }
-        // 关闭操作菜单
-        setActionMenuStates(prev => ({
-            ...prev,
-            [bean.id]: false
-        }));
-    }
+    // const handleGenerateAIRecipe = (bean: ExtendedCoffeeBean) => {
+    //     if (onGenerateAIRecipe) {
+    //         onGenerateAIRecipe(bean);
+    //     } else {
+    //         setSelectedBeanForAI(bean);
+    //         setShowAIRecipeModal(true);
+    //     }
+    //     // 关闭操作菜单
+    //     setActionMenuStates(prev => ({
+    //         ...prev,
+    //         [bean.id]: false
+    //     }));
+    // }
 
     // 处理咖啡豆评分
     const handleShowRatingForm = (bean: ExtendedCoffeeBean, onRatingSaved?: () => void) => {
@@ -1040,13 +1041,13 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
     return (
         <>
             {/* AI方案生成模态框 - 只在没有提供 onGenerateAIRecipe 时才显示 */}
-            {!onGenerateAIRecipe && (
+            {/* {!onGenerateAIRecipe && (
                 <AIRecipeModal
                     showModal={showAIRecipeModal}
                     onClose={() => setShowAIRecipeModal(false)}
                     coffeeBean={selectedBeanForAI}
                 />
-            )}
+            )} */}
 
             {/* 咖啡豆表单弹出框 */}
             <CoffeeBeanFormModal
@@ -1496,7 +1497,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                                                 return newStates;
                                                                             });
                                                                         }}
-                                                                        className="w-8 h-[16.5] flex items-center justify-center text-xs text-neutral-600 dark:text-neutral-400"
+                                                                        className="h-[16.5] flex items-center justify-center text-xs text-neutral-600 dark:text-neutral-400"
                                                                     >
                                                                         ···
                                                                     </button>
@@ -1506,6 +1507,18 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                                             className="absolute top-6 right-0 z-50 border border-neutral-200/70 dark:border-neutral-800/70 shadow-lg backdrop-blur-sm bg-white/95 dark:bg-neutral-900/95 rounded-lg overflow-hidden min-w-[100px]"
                                                                         >
                                                                             <div className="py-1">
+                                                                                <button
+                                                                                    onClick={() => {
+                                                                                        handleShowMethods(bean)
+                                                                                        setActionMenuStates(prev => ({
+                                                                                            ...prev,
+                                                                                            [bean.id]: false
+                                                                                        }))
+                                                                                    }}
+                                                                                    className="w-full px-3 py-1.5 text-left text-xs text-neutral-800 dark:text-white"
+                                                                                >
+                                                                                    方案
+                                                                                </button>
                                                                                 <button
                                                                                     onClick={() => {
                                                                                         handleEdit(bean);
@@ -1542,7 +1555,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                                                 >
                                                                                     删除
                                                                                 </button>
-                                                                                <button
+                                                                                {/* <button
                                                                                     onClick={() => {
                                                                                         handleGenerateAIRecipe(bean);
                                                                                         setActionMenuStates(prev => ({
@@ -1553,19 +1566,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                                                     className="w-full px-3 py-1.5 text-left text-xs text-emerald-600 dark:text-emerald-500"
                                                                                 >
                                                                                     AI方案
-                                                                                </button>
-                                                                                <button
-                                                                                    onClick={() => {
-                                                                                        handleShowMethods(bean)
-                                                                                        setActionMenuStates(prev => ({
-                                                                                            ...prev,
-                                                                                            [bean.id]: false
-                                                                                        }))
-                                                                                    }}
-                                                                                    className="w-full px-3 py-1.5 text-left text-xs text-neutral-800 dark:text-white"
-                                                                                >
-                                                                                    常用方案
-                                                                                </button>
+                                                                                </button> */}
+                                                                                
                                                                             </div>
                                                                         </div>
                                                                     )}

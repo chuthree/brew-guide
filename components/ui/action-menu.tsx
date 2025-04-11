@@ -116,7 +116,7 @@ const ActionMenu: React.FC<ActionMenuProps> = ({
           setOpen(!open)
         }}
         className={cn(
-          "w-8 h-[16.5] flex items-center justify-center text-xs text-neutral-600 dark:text-neutral-400",
+          "h-[16.5] flex items-center justify-center text-xs text-neutral-600 dark:text-neutral-400",
           triggerClassName
         )}
       >

@@ -678,19 +678,19 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                                                         });
                                                                     }
                                                                 },
-                                                                {
-                                                                    id: 'optimize',
-                                                                    label: '优化',
-                                                                    onClick: () => {
-                                                                        setOptimizingNote({
-                                                                            ...note,
-                                                                            coffeeBeanInfo: note.coffeeBeanInfo || undefined
-                                                                        });
-                                                                        if (onOptimizingChange) {
-                                                                            onOptimizingChange(true);
-                                                                        }
-                                                                    }
-                                                                },
+                                                                // {
+                                                                //     id: 'optimize',
+                                                                //     label: '优化',
+                                                                //     onClick: () => {
+                                                                //         setOptimizingNote({
+                                                                //             ...note,
+                                                                //             coffeeBeanInfo: note.coffeeBeanInfo || undefined
+                                                                //         });
+                                                                //         if (onOptimizingChange) {
+                                                                //             onOptimizingChange(true);
+                                                                //         }
+                                                                //     }
+                                                                // },
                                                                 {
                                                                     id: 'delete',
                                                                     label: '删除',
