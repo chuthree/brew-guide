@@ -219,25 +219,66 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         setShowOptimization(showOptimizationByDefault)
     }, [showOptimizationByDefault])
 
+    const [isFromBeanMethod, setIsFromBeanMethod] = useState(false)
+    const [currentBeanMethodId, setCurrentBeanMethodId] = useState<string | null>(null)
+
+    // 在组件加载时检查是否来自常用方案
+    useEffect(() => {
+        const checkBeanMethod = async () => {
+            if (!initialData.coffeeBean?.id) return;
+            
+            try {
+                const methods = await BeanMethodManager.getBeanMethods(initialData.coffeeBean.id);
+                const matchingMethod = methods.find(method => 
+                    method.equipmentId === initialData.equipment &&
+                    method.methodId === initialData.method
+                );
+                
+                if (matchingMethod) {
+                    setIsFromBeanMethod(true);
+                    setCurrentBeanMethodId(matchingMethod.id);
+                }
+            } catch (error) {
+                console.error('检查常用方案时出错:', error);
+            }
+        };
+        
+        checkBeanMethod();
+    }, [initialData.coffeeBean?.id, initialData.equipment, initialData.method]);
+
+    // 保存笔记的处理函数
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        
-        // 创建完整的笔记数据，确保包含ID（使用现有ID或生成新ID）
+
+        // 创建完整的笔记数据
         const noteData: BrewingNoteData = {
-            id: id || Date.now().toString(), // 始终包含ID，如果没有现有ID，则生成新ID
+            id: id || Date.now().toString(),
             timestamp: Date.now(),
             ...formData,
             equipment: initialData.equipment,
             method: initialData.method,
-            params: methodParams, // 使用修改后的方案参数
+            params: methodParams,
             totalTime: initialData.totalTime,
         };
 
-        // 不再直接保存到Storage，只传递数据给onSave回调
         try {
-            // 让外层组件处理存储和导航逻辑
+            // 如果是来自常用方案，则更新常用方案的参数
+            if (isFromBeanMethod && currentBeanMethodId) {
+                await BeanMethodManager.updateMethod(currentBeanMethodId, {
+                    params: {
+                        coffee: methodParams.coffee,
+                        water: methodParams.water,
+                        grindSize: methodParams.grindSize,
+                        temp: methodParams.temp,
+                        ratio: methodParams.ratio
+                    }
+                });
+            }
+
+            // 保存笔记
             onSave(noteData);
-        } catch (_error) {
+        } catch (error) {
+            console.error('保存笔记时出错:', error);
             alert('保存笔记时出错，请重试');
         }
     }
@@ -266,6 +307,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                 params: {
                     coffee: methodParams.coffee,
                     water: methodParams.water,
+                    ratio: methodParams.ratio || '1:15',
                     grindSize: methodParams.grindSize,
                     temp: methodParams.temp
                 }
@@ -524,25 +566,6 @@ stages数组中的每个阶段必须包含以下字段：
         }
     }, [isDragging])
 
-    // 更新咖啡粉量和水量时同步更新水粉比
-    const updateRatio = (coffee: string, water: string) => {
-        // 提取数字部分
-        const coffeeMatch = coffee.match(/(\d+(\.\d+)?)/);
-        const waterMatch = water.match(/(\d+(\.\d+)?)/);
-        
-        if (coffeeMatch && waterMatch) {
-            const coffeeValue = parseFloat(coffeeMatch[0]);
-            const waterValue = parseFloat(waterMatch[0]);
-            
-            if (!isNaN(coffeeValue) && !isNaN(waterValue) && coffeeValue > 0) {
-                const ratio = (waterValue / coffeeValue).toFixed(1);
-                return `1:${ratio}`;
-            }
-        }
-        
-        return methodParams.ratio;
-    };
-
     // 处理咖啡粉量变化
     const handleCoffeeChange = (value: string) => {
         const newMethodParams = {
@@ -550,21 +573,19 @@ stages数组中的每个阶段必须包含以下字段：
             coffee: value,
         };
         
-        // 自动更新水粉比
-        newMethodParams.ratio = updateRatio(value, methodParams.water);
+        // 根据新的咖啡粉量和当前粉水比计算水量
+        const coffeeMatch = value.match(/(\d+(\.\d+)?)/);
+        const ratioMatch = methodParams.ratio.match(/1:(\d+(\.\d+)?)/);
         
-        setMethodParams(newMethodParams);
-    };
-    
-    // 处理水量变化
-    const handleWaterChange = (value: string) => {
-        const newMethodParams = {
-            ...methodParams,
-            water: value,
-        };
-        
-        // 自动更新水粉比
-        newMethodParams.ratio = updateRatio(methodParams.coffee, value);
+        if (coffeeMatch && ratioMatch) {
+            const coffeeValue = parseFloat(coffeeMatch[0]);
+            const ratioValue = parseFloat(ratioMatch[1]);
+            
+            if (!isNaN(coffeeValue) && !isNaN(ratioValue) && coffeeValue > 0) {
+                const waterValue = Math.round(coffeeValue * ratioValue);
+                newMethodParams.water = `${waterValue}g`;
+            }
+        }
         
         setMethodParams(newMethodParams);
     };
@@ -595,7 +616,7 @@ stages数组中的每个阶段必须包含以下字段：
                 <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
                     {showOptimization
                         ? '优化冲煮方案'
-                        : `${initialData?.id ? '编辑记录' : '新建记录'} · ${new Date().toLocaleString('zh-CN', {
+                        : `${isFromBeanMethod ? '常用方案 · ' : ''}${initialData?.id ? '编辑记录' : '新建记录'} · ${new Date().toLocaleString('zh-CN', {
                             month: 'numeric',
                             day: 'numeric',
                             hour: 'numeric',
@@ -620,8 +641,8 @@ stages数组中的每个阶段必须包含以下字段：
                         >
                             [ 保存 ]
                         </button>
-                        {/* 添加"保存并设为常用方案"按钮 - 仅当选择了咖啡豆时显示 */}
-                        {initialData.coffeeBean?.id && (
+                        {/* 添加"保存为常用方案"按钮 - 仅当选择了咖啡豆且不是来自常用方案时显示 */}
+                        {initialData.coffeeBean?.id && !isFromBeanMethod && (
                             <button
                                 type="button"
                                 onClick={saveAsBeanMethod}
@@ -719,24 +740,33 @@ stages数组中的每个阶段必须包含以下字段：
                             <div>
                                 <input
                                     type="text"
-                                    value={methodParams.water}
-                                    onChange={(e) => handleWaterChange(e.target.value)}
+                                    value={methodParams.ratio}
+                                    onChange={(e) => {
+                                        const newRatio = e.target.value;
+                                        const newMethodParams = {
+                                            ...methodParams,
+                                            ratio: newRatio,
+                                        };
+                                        
+                                        // 根据新的粉水比和当前咖啡粉量计算水量
+                                        const coffeeMatch = methodParams.coffee.match(/(\d+(\.\d+)?)/);
+                                        if (coffeeMatch && newRatio) {
+                                            const coffeeValue = parseFloat(coffeeMatch[0]);
+                                            const ratioValue = parseFloat(newRatio.replace('1:', ''));
+                                            if (!isNaN(coffeeValue) && !isNaN(ratioValue) && coffeeValue > 0) {
+                                                const waterValue = Math.round(coffeeValue * ratioValue);
+                                                newMethodParams.water = `${waterValue}g`;
+                                            }
+                                        }
+                                        
+                                        setMethodParams(newMethodParams);
+                                    }}
                                     className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
-                                    placeholder="水量 (如: 225g)"
+                                    placeholder="粉水比 (如: 1:15)"
                                 />
                             </div>
                         </div>
                         <div className="grid grid-cols-3 gap-6">
-                            <div>
-                                <input
-                                    type="text"
-                                    value={methodParams.ratio}
-                                    onChange={(e) => setMethodParams({...methodParams, ratio: e.target.value})}
-                                    className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
-                                    placeholder="水粉比 (如: 1:15)"
-                                    readOnly
-                                />
-                            </div>
                             <div>
                                 <input
                                     type="text"
@@ -874,24 +904,33 @@ stages数组中的每个阶段必须包含以下字段：
                             <div>
                                 <input
                                     type="text"
-                                    value={methodParams.water}
-                                    onChange={(e) => handleWaterChange(e.target.value)}
+                                    value={methodParams.ratio}
+                                    onChange={(e) => {
+                                        const newRatio = e.target.value;
+                                        const newMethodParams = {
+                                            ...methodParams,
+                                            ratio: newRatio,
+                                        };
+                                        
+                                        // 根据新的粉水比和当前咖啡粉量计算水量
+                                        const coffeeMatch = methodParams.coffee.match(/(\d+(\.\d+)?)/);
+                                        if (coffeeMatch && newRatio) {
+                                            const coffeeValue = parseFloat(coffeeMatch[0]);
+                                            const ratioValue = parseFloat(newRatio.replace('1:', ''));
+                                            if (!isNaN(coffeeValue) && !isNaN(ratioValue) && coffeeValue > 0) {
+                                                const waterValue = Math.round(coffeeValue * ratioValue);
+                                                newMethodParams.water = `${waterValue}g`;
+                                            }
+                                        }
+                                        
+                                        setMethodParams(newMethodParams);
+                                    }}
                                     className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
-                                    placeholder="水量 (如: 225g)"
+                                    placeholder="粉水比 (如: 1:15)"
                                 />
                             </div>
                         </div>
                         <div className="grid grid-cols-3 gap-6">
-                            <div>
-                                <input
-                                    type="text"
-                                    value={methodParams.ratio}
-                                    onChange={(e) => setMethodParams({...methodParams, ratio: e.target.value})}
-                                    className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
-                                    placeholder="水粉比 (如: 1:15)"
-                                    readOnly
-                                />
-                            </div>
                             <div>
                                 <input
                                     type="text"

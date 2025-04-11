@@ -29,7 +29,7 @@ const BeanMethodsModal: React.FC<BeanMethodsModalProps> = ({
     const [selectedMethod, setSelectedMethod] = useState<string>('')
     const [methodNotes, setMethodNotes] = useState('')
     const [availableMethods, setAvailableMethods] = useState<Method[]>([])
-    const [editableParams, setEditableParams] = useState<{ coffee: string; water: string; grindSize: string; temp: string; } | null>(null)
+    const [editableParams, setEditableParams] = useState<{ coffee: string; water: string; grindSize: string; temp: string; ratio: string; } | null>(null)
     
     // 编辑状态
     const [editingMethodId, setEditingMethodId] = useState<string | null>(null)
@@ -124,7 +124,8 @@ const BeanMethodsModal: React.FC<BeanMethodsModalProps> = ({
                     coffee: methodDetails.params.coffee,
                     water: methodDetails.params.water,
                     grindSize: methodDetails.params.grindSize,
-                    temp: methodDetails.params.temp
+                    temp: methodDetails.params.temp,
+                    ratio: (methodDetails.params.ratio as string) || '1:15'
                 })
             } else {
                 setEditableParams(null) // Reset if method not found
@@ -161,7 +162,8 @@ const BeanMethodsModal: React.FC<BeanMethodsModalProps> = ({
                 coffee: method.params.coffee as string,
                 water: method.params.water as string,
                 grindSize: method.params.grindSize as string,
-                temp: method.params.temp as string
+                temp: method.params.temp as string,
+                ratio: (method.params.ratio as string) || '1:15'
             })
             setHasSetEditParams(true) // 标记已设置编辑参数
         }
@@ -193,7 +195,13 @@ const BeanMethodsModal: React.FC<BeanMethodsModalProps> = ({
                 equipmentId: selectedEquipment,
                 methodId: selectedMethod,
                 notes: methodNotes,
-                params: editableParams
+                params: {
+                    coffee: String(editableParams.coffee),
+                    water: String(editableParams.water),
+                    grindSize: String(editableParams.grindSize),
+                    temp: String(editableParams.temp),
+                    ratio: String(editableParams.ratio)
+                }
             })
 
             if (updatedMethod) {
@@ -219,7 +227,13 @@ const BeanMethodsModal: React.FC<BeanMethodsModalProps> = ({
                 equipmentId: selectedEquipment,
                 methodId: selectedMethod, 
                 notes: methodNotes,
-                params: editableParams // Pass the edited params
+                params: {
+                    coffee: String(editableParams.coffee),
+                    water: String(editableParams.water),
+                    grindSize: String(editableParams.grindSize),
+                    temp: String(editableParams.temp),
+                    ratio: String(editableParams.ratio)
+                }
             })
 
             if (newMethod) {
@@ -242,6 +256,20 @@ const BeanMethodsModal: React.FC<BeanMethodsModalProps> = ({
         setEditingMethodId(null)
         setIsEditing(false)
         setHasSetEditParams(false) // 重置编辑参数标记
+    }
+
+    // 提取数字
+    const extractNumber = (str: string): number => {
+        return parseFloat(str.replace(/[^0-9.]/g, ''))
+    }
+
+    // 提取比例数字
+    const extractRatioNumber = (ratio: string | undefined): number => {
+        if (!ratio) return 15; // 默认粉水比 1:15
+        const parts = ratio.split(':');
+        if (parts.length !== 2) return 15;
+        const number = parseFloat(parts[1]);
+        return isNaN(number) ? 15 : number;
     }
 
     return (
@@ -321,7 +349,7 @@ const BeanMethodsModal: React.FC<BeanMethodsModalProps> = ({
                                                             {/* 显示参数信息 */}
                                                             {method.params && (
                                                                 <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400 mt-1">
-                                                                    {method.params.coffee}粉 / {method.params.water}水 / {method.params.grindSize} / {method.params.temp}
+                                                                    {String(method.params.coffee)}粉 / {String(method.params.ratio)} / {String(method.params.grindSize)} / {String(method.params.temp)}
                                                                 </div>
                                                             )}
                                                             {method.notes && (
@@ -407,23 +435,42 @@ const BeanMethodsModal: React.FC<BeanMethodsModalProps> = ({
                                                             value={editableParams.coffee.replace('g', '')} 
                                                             onChange={(e) => {
                                                                 const value = e.target.value.replace(/[^0-9.]/g, '');
-                                                                setEditableParams(prev => prev ? { ...prev, coffee: `${value}g` } : null)
+                                                                const newCoffee = `${value}g`;
+                                                                // 根据新的咖啡粉量和当前粉水比计算水量
+                                                                const ratio = extractRatioNumber(editableParams.ratio);
+                                                                const calculatedWater = Math.round(parseFloat(value) * ratio);
+                                                                setEditableParams(prev => prev ? {
+                                                                    ...prev,
+                                                                    coffee: newCoffee,
+                                                                    water: `${calculatedWater}g`
+                                                                } : null);
                                                             }}
                                                             className="w-full p-2 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-sm"
                                                         />
                                                     </div>
                                                     <div className="space-y-1">
-                                                        <label className="block text-xs font-medium text-neutral-600 dark:text-neutral-400">水量 (g)</label>
-                                                        <input 
-                                                            type="text" 
-                                                            inputMode="decimal"
-                                                            value={editableParams.water.replace('g', '')} 
-                                                            onChange={(e) => {
-                                                                const value = e.target.value.replace(/[^0-9.]/g, '');
-                                                                setEditableParams(prev => prev ? { ...prev, water: `${value}g` } : null)
-                                                            }}
-                                                            className="w-full p-2 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-sm"
-                                                        />
+                                                        <label className="block text-xs font-medium text-neutral-600 dark:text-neutral-400">粉水比</label>
+                                                        <div className="flex items-center bg-neutral-100 dark:bg-neutral-800 rounded-lg">
+                                                            <span className="pl-2 text-sm text-neutral-600 dark:text-neutral-400">1:</span>
+                                                            <input 
+                                                                type="text" 
+                                                                inputMode="decimal"
+                                                                value={extractRatioNumber(editableParams.ratio)} 
+                                                                onChange={(e) => {
+                                                                    const value = e.target.value.replace(/[^0-9.]/g, '');
+                                                                    const newRatio = `1:${value}`;
+                                                                    // 根据新的粉水比和当前咖啡粉量计算水量
+                                                                    const coffee = extractNumber(editableParams.coffee);
+                                                                    const calculatedWater = Math.round(coffee * parseFloat(value));
+                                                                    setEditableParams(prev => prev ? {
+                                                                        ...prev,
+                                                                        ratio: newRatio,
+                                                                        water: `${calculatedWater}g`
+                                                                    } : null);
+                                                                }}
+                                                                className="w-full p-2 bg-transparent text-sm"
+                                                            />
+                                                        </div>
                                                     </div>
                                                 </div>
                                                 <div className="grid grid-cols-2 gap-4">

@@ -684,8 +684,7 @@ export function methodToReadableText(method: Method, customEquipment?: CustomEqu
 	// 构建可读文本
 	let text = `【冲煮方案】${name}\n\n`;
 	text += `咖啡粉量: ${params.coffee || "未设置"}\n`;
-	text += `水量: ${params.water || "未设置"}\n`;
-	text += `比例: ${params.ratio || "未设置"}\n`;
+	text += `粉水比: ${params.ratio || "未设置"}\n`;
 	text += `研磨度: ${params.grindSize || "未设置"}\n`;
 	text += `水温: ${params.temp || "未设置"}\n`;
 

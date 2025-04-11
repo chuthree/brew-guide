@@ -153,11 +153,9 @@ export function useBrewingParameters() {
 						parsedValue * currentRatioNumber
 					);
 					newParams = {
+						...editableParams,
 						coffee: `${parsedValue}g`,
 						water: `${calculatedWater}g`,
-						ratio: editableParams.ratio,
-						grindSize: editableParams.grindSize,
-						temp: editableParams.temp,
 					};
 					const waterRatio =
 						calculatedWater /
@@ -183,49 +181,13 @@ export function useBrewingParameters() {
 					setCurrentBrewingMethod(updatedMethod);
 					break;
 				}
-				case "water": {
-					const calculatedRatio = parsedValue / currentCoffee;
-					newParams = {
-						coffee: editableParams.coffee,
-						water: `${parsedValue}g`,
-						ratio: `1:${formatRatio(calculatedRatio)}`,
-						grindSize: editableParams.grindSize,
-						temp: editableParams.temp,
-					};
-					const waterRatio =
-						parsedValue /
-						extractNumber(selectedMethod.params.water);
-					const updatedStages = selectedMethod.params.stages.map(
-						(stage) => ({
-							...stage,
-							water: `${Math.round(
-								extractNumber(stage.water) * waterRatio
-							)}g`,
-						})
-					);
-					updateBrewingSteps(updatedStages);
-					const updatedMethod = {
-						...currentBrewingMethod,
-						params: {
-							...currentBrewingMethod.params,
-							water: `${parsedValue}g`,
-							ratio: `1:${formatRatio(calculatedRatio)}`,
-							stages: updatedStages,
-						},
-					};
-					setCurrentBrewingMethod(updatedMethod);
-					break;
-				}
 				case "ratio": {
-					const calculatedWater = Math.round(
-						currentCoffee * parsedValue
-					);
+					const newRatio = parsedValue;
+					const calculatedWater = Math.round(currentCoffee * newRatio);
 					newParams = {
-						coffee: editableParams.coffee,
+						...editableParams,
+						ratio: `1:${newRatio}`,
 						water: `${calculatedWater}g`,
-						ratio: `1:${formatRatio(parsedValue)}`,
-						grindSize: editableParams.grindSize,
-						temp: editableParams.temp,
 					};
 					const waterRatio =
 						calculatedWater /
@@ -243,8 +205,8 @@ export function useBrewingParameters() {
 						...currentBrewingMethod,
 						params: {
 							...currentBrewingMethod.params,
+							ratio: `1:${newRatio}`,
 							water: `${calculatedWater}g`,
-							ratio: `1:${formatRatio(parsedValue)}`,
 							stages: updatedStages,
 						},
 					};
@@ -252,7 +214,6 @@ export function useBrewingParameters() {
 					break;
 				}
 				case "grindSize": {
-					// 研磨度直接更新，不需要计算
 					newParams = {
 						...editableParams,
 						grindSize: value
@@ -268,7 +229,6 @@ export function useBrewingParameters() {
 					break;
 				}
 				case "temp": {
-					// 添加温度单位如果不存在
 					const formattedTemp = value.includes('°C') ? value : `${value}°C`;
 					newParams = {
 						...editableParams,
