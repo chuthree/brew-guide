@@ -231,6 +231,30 @@ export function useBrewingContent({
 					} else {
 						// 对于预定义器具，直接使用其通用方案
 						methodsForEquipment = commonMethods[selectedEquipment as keyof typeof commonMethods] || [];
+						
+						// 如果未找到方法但是使用自定义器具ID，尝试从ID推断基础器具类型
+						if (methodsForEquipment.length === 0 && selectedEquipment && selectedEquipment.startsWith('custom-')) {
+							// 尝试解析自定义器具类型
+							let baseEquipmentId = '';
+							
+							// 从自定义器具ID中识别其基础类型
+							if (selectedEquipment.includes('-v60-')) {
+								baseEquipmentId = 'V60';
+							} else if (selectedEquipment.includes('-clever-')) {
+								baseEquipmentId = 'CleverDripper';
+							} else if (selectedEquipment.includes('-kalita-')) {
+								baseEquipmentId = 'Kalita';
+							} else if (selectedEquipment.includes('-origami-')) {
+								baseEquipmentId = 'Origami';
+							}
+							
+							// 如果识别出基础器具类型，使用对应的通用方法
+							if (baseEquipmentId && commonMethods[baseEquipmentId]) {
+								console.log(`使用${baseEquipmentId}的通用方法列表`);
+								methodsForEquipment = commonMethods[baseEquipmentId] || [];
+							}
+						}
+						
 						console.log('预定义器具的通用方案:', methodsForEquipment);
 					}
 				}

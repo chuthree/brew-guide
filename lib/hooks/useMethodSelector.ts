@@ -367,7 +367,7 @@ export function useMethodSelector({
 			} else if (methodType === "common") {
 				// 处理通用方法类型
 				try {
-					// 从commonMethods中获取方法
+					// 首先尝试直接从commonMethods中获取方法
 					if (
 						commonMethods &&
 						commonMethods[selectedEquipment] &&
@@ -377,6 +377,42 @@ export function useMethodSelector({
 						
 						// 使用辅助函数应用自定义参数
 						method = await applyCustomParams(method, step?.customParams);
+					} 
+					// 如果直接获取失败，检查是否为自定义器具的通用方法
+					else if (selectedEquipment && selectedEquipment.startsWith('custom-')) {
+						// 尝试解析自定义器具类型
+						let baseEquipmentId = '';
+						
+						// 从自定义器具ID中识别其基础类型
+						if (selectedEquipment.includes('-v60-')) {
+							baseEquipmentId = 'V60';
+						} else if (selectedEquipment.includes('-clever-')) {
+							baseEquipmentId = 'CleverDripper';
+						} else if (selectedEquipment.includes('-kalita-')) {
+							baseEquipmentId = 'Kalita';
+						} else if (selectedEquipment.includes('-origami-')) {
+							baseEquipmentId = 'Origami';
+						}
+						
+						// 如果识别出基础器具类型，尝试获取对应的通用方法
+						if (
+							baseEquipmentId && 
+							commonMethods && 
+							commonMethods[baseEquipmentId] && 
+							commonMethods[baseEquipmentId][methodIndex]
+						) {
+							console.log(`使用${baseEquipmentId}的通用方法`);
+							method = commonMethods[baseEquipmentId][methodIndex];
+							
+							// 使用辅助函数应用自定义参数
+							method = await applyCustomParams(method, step?.customParams);
+						} else {
+							console.error("无法为自定义器具找到对应的通用方法:", {
+								selectedEquipment,
+								baseEquipmentId,
+								methodIndex,
+							});
+						}
 					} else {
 						console.error("找不到通用方法:", {
 							selectedEquipment,
