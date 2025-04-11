@@ -1,29 +1,31 @@
 import { CoffeeBean } from '@/app/types';
-import filterBeansCSV from '@/public/data/filter-beans.csv';
-import espressoBeansCSV from '@/public/data/espresso-beans.csv';
+// Import 2025 data (assuming these are the current files)
+import filterBeans2025CSV from '@/public/data/filter-beans.csv';
+import espressoBeans2025CSV from '@/public/data/espresso-beans.csv';
+// Import 2024 data
+import filterBeans2024CSV from '@/public/data/filter-beans-2024.csv';
+import espressoBeans2024CSV from '@/public/data/espresso-beans-2024.csv';
 
 export interface BloggerBean extends CoffeeBean {
     isBloggerRecommended: boolean;
     dataSource?: string;
     videoEpisode?: string; // 视频期数
+    year?: number; // Add year identifier
+    originalIndex?: number; // Add original index for sorting
 }
 
-function parseCSVContent(records: unknown[], beanType: 'espresso' | 'filter'): BloggerBean[] {
-    // 跳过前两行（标题行和列名行）
-    const dataRows = records.slice(2);
+// Parsing function for 2025 CSV data
+function parseCSVContent2025(records: unknown[], beanType: 'espresso' | 'filter'): BloggerBean[] {
+    // Skip header rows (adjust if necessary, assuming 2 header rows)
+    const dataRows = records.slice(2); 
     
     return dataRows
         .filter(row => {
-            // 过滤掉空行和无效数据
-            if (!Array.isArray(row) || row.length < 5) return false;
-            
-            const [_序号, 品牌, 咖啡豆, 烘焙度, 克价, _喜好星值] = row;
-            
-            // 检查是否有品牌和咖啡豆名称
-            return 品牌 && 咖啡豆 && 烘焙度 && 克价;
+            if (!Array.isArray(row) || row.length < 6) return false; // Basic validation for 2025 format
+            const [_序号, 品牌, 咖啡豆, _烘焙度, 克价, 喜好星值] = row;
+            return 品牌 && 咖啡豆 && 克价 !== undefined && 喜好星值 !== undefined; // Ensure essential fields exist
         })
         .map(row => {
-            // 使用类型断言，避免 any 类型警告
             const rowArray = row as [
                 string | number, // 序号
                 string,         // 品牌 
@@ -41,45 +43,37 @@ function parseCSVContent(records: unknown[], beanType: 'espresso' | 'filter'): B
             
             const [序号, 品牌, 咖啡豆, 烘焙度, 克价, 喜好星值, videoEpisode, ...rest] = rowArray;
             
-            // 序号可能是数字或字符串，确保正确处理
             const beanId = 序号 !== undefined ? String(序号).trim() : '';
-            
-            // 安全地解析数值
             const price = parseFloat(String(克价)) || 0;
             const rating = parseFloat(String(喜好星值)) || 0;
             const name = `${品牌} ${咖啡豆}`;
-            const capacity = '200'; // 默认值
+            const capacity = '200'; // Default capacity
             
-            // 获取备注，在意式豆CSV中是第11列(索引为10)，手冲豆中可能在不同位置
             let 备注 = '';
             let purchaseChannel = '';
             
             if (beanType === 'espresso') {
-                // 意式豆的处理
                 if (rest.length >= 3) {
-                    purchaseChannel = String(rest[2] || ''); // 意式豆的购买渠道在第10列
-                    备注 = String(rest[3] || ''); // 意式豆的备注在第11列
+                    purchaseChannel = String(rest[2] || ''); // 意式豆 - 购买渠道 (Index 9 in original rowArray, rest index 2)
+                    备注 = String(rest[3] || ''); // 意式豆 - 备注 (Index 10 in original rowArray, rest index 3)
                 }
             } else if (beanType === 'filter') {
-                // 手冲豆的处理
-                if (rest.length >= 1) {
-                    purchaseChannel = String(rest[0] || ''); // 手冲豆的购买渠道在第8列
-                    备注 = String(rest[1] || ''); // 手冲豆的备注可能在第9列
-                }
+                 if (rest.length >= 1) {
+                     purchaseChannel = String(rest[0] || ''); // 手冲豆 - 购买渠道 (Index 7 in original rowArray, rest index 0)
+                     备注 = String(rest[1] || ''); // 手冲豆 - 备注 (Index 8 in original rowArray, rest index 1)
+                 }
             }
             
-            // 视频期数处理 - 确保是字符串格式
             const episode = videoEpisode ? String(videoEpisode).trim() : '';
-            
-            // 生成唯一ID，加入序号以便识别
-            const uniqueId = `blogger-${beanType}-${beanId}-${name}-${Math.random().toString(36).substr(2, 5)}`;
+            const uniqueId = `blogger-${beanType}-2025-${beanId}-${name}-${Math.random().toString(36).substr(2, 5)}`;
             
             return {
                 id: uniqueId,
                 name,
                 beanType,
-                roastLevel: String(烘焙度),
-                price: `${(price * 100).toFixed(2)}`, // 转换为每百克价格，保留两位小数
+                year: 2025, // Add year
+                roastLevel: String(烘焙度 || '未知'), // Handle potentially undefined roast level
+                price: `${(price * 100).toFixed(2)}`, // Convert price per gram to price per 100g
                 capacity,
                 remaining: capacity,
                 overallRating: rating,
@@ -88,86 +82,171 @@ function parseCSVContent(records: unknown[], beanType: 'espresso' | 'filter'): B
                 videoEpisode: episode,
                 timestamp: Date.now(),
                 isBloggerRecommended: true,
-                dataSource: '数据来自于 Peter 咖啡豆评测榜单',
+                dataSource: '数据来自于 Peter 2025 咖啡豆评测榜单',
                 ...(beanType === 'espresso' && rest.length >= 2 && {
                     ratingEspresso: ((value) => {
                         const parsed = parseFloat(String(value));
-                        return isNaN(parsed) ? 0 : parsed; // 如果解析为NaN则返回0
-                    })(rest[0]),
+                        return isNaN(parsed) ? undefined : parsed; // Use undefined if NaN
+                    })(rest[0]), // Espresso score (Index 7 in original rowArray, rest index 0)
                     ratingMilkBased: ((value) => {
                         const parsed = parseFloat(String(value));
-                        return isNaN(parsed) ? 0 : parsed; // 如果解析为NaN则返回0
-                    })(rest[1])
+                        return isNaN(parsed) ? undefined : parsed; // Use undefined if NaN
+                    })(rest[1]) // Milk score (Index 8 in original rowArray, rest index 1)
                 })
             } as BloggerBean;
         });
 }
 
-export function getBloggerBeans(type: 'all' | 'espresso' | 'filter' = 'all'): BloggerBean[] {
+// Parsing function for 2024 CSV data
+function parseCSVContent2024(records: unknown[], beanType: 'espresso' | 'filter'): BloggerBean[] {
+    // Skip Title (Row 1) and Headers (Row 2)
+    const potentiallyDataRows = records.slice(2);
+
+    // Filter out potentially empty rows AND ensure row is an array for type safety
+    const validRows: { row: (string | number | null | undefined)[]; originalIndex: number }[] = potentiallyDataRows
+        .map((row, index) => ({ row, originalIndex: index })) // Keep original index relative to potentiallyDataRows
+        .filter((item): item is { row: (string | number | null | undefined)[]; originalIndex: number } => { 
+            // Type guard and empty row check
+            return Array.isArray(item.row) && item.row.some(cell => cell !== null && cell !== undefined && String(cell).trim() !== '');
+        });
+
+    // Now map and filter the validated rows
+    return validRows
+        // .map((row, index) => ({ row, originalIndex: index })) // Mapping already done above
+        .filter(({ row }) => { // row is now correctly typed as an array
+            // Main data validation filter
+            if (beanType === 'filter') {
+                if (row.length < 7) return false; 
+                const [_序号, 品牌, 豆子, _烘焙度, _推荐值, 元克, 期] = row;
+                const brandExists = String(品牌 ?? '').trim().length > 0;
+                const nameExists = String(豆子 ?? '').trim().length > 0;
+                const priceVal = String(元克 ?? '').replace('没花钱','0').trim();
+                const priceIsValid = priceVal.length > 0 && !isNaN(parseFloat(priceVal));
+                const episodeExists = 期 !== undefined && 期 !== null && String(期).trim().length > 0;
+                return brandExists && nameExists && priceIsValid && episodeExists;
+            } else if (beanType === 'espresso') { 
+                // Simplify the filter: Check only essential identifiers: Episode, Brand, Name
+                if (row.length < 3) return false; // Need at least 期, 品牌, 豆子 columns
+                const [期, 品牌, 豆子] = row; // Only need these for the basic check
+                const brandExists = String(品牌 ?? '').trim().length > 0;
+                const nameExists = String(豆子 ?? '').trim().length > 0;
+                const episodeExists = 期 !== undefined && 期 !== null && String(期).trim().length > 0;
+                
+                // Debug log for the specific bean
+                if (String(品牌 ?? '').trim() === '皮爷咖啡' && String(豆子 ?? '').trim() === '多明戈大街') {
+                    console.log('Checking simplified filter for 皮爷咖啡 多明戈大街:', { brandExists, nameExists, episodeExists, row });
+                }
+
+                return brandExists && nameExists && episodeExists; // Return based on simplified check
+            } else {
+               return false; 
+            }
+        })
+        .map(({ row, originalIndex }) => { // Use the preserved original index from validRows mapping
+            let _序号_unused: string | number = ''; 
+            let 品牌: string = '';
+            let 豆子: string = '';
+            let 烘焙度: string = '未知';
+            let 推荐值: string | number = 0;
+            let 元克: string | number = 0;
+            let 期: string | number = '';
+
+            // row is already confirmed Array type here
+            if (beanType === 'filter') {
+                const rowArray = row as [string | number, string, string, string, string | number, string | number, string | number, ...unknown[]];
+                [_序号_unused, 品牌, 豆子, 烘焙度, 推荐值, 元克, 期] = rowArray; 
+            } else { // espresso
+                const rowArray = row as [string | number, string, string, string, string | number, string | number, ...unknown[]];
+                [期, 品牌, 豆子, 烘焙度, 推荐值, 元克] = rowArray;
+            }
+
+            // Use originalIndex relative to the potentiallyDataRows for consistent ID and sorting key
+            const beanId = `${originalIndex + 2}`; // +2 because originalIndex is from potentiallyDataRows which starts after first 2 rows
+            const pricePerGram = parseFloat(String(元克 ?? '').replace('没花钱','0')) || 0; 
+            const rating = parseFloat(String(推荐值 ?? 0)) || 0;
+            const name = `${String(品牌 ?? '').trim()} ${String(豆子 ?? '').trim()}`;
+            const capacity = '200'; 
+            const episode = 期 ? String(期).trim() : '';
+
+            const uniqueId = `blogger-${beanType}-2024-${beanId}-${name.replace(/\s+/g, '-')}-${Math.random().toString(36).substr(2, 5)}`;
+
+            return {
+                id: uniqueId,
+                name,
+                beanType,
+                year: 2024, 
+                originalIndex, // Store original index relative to valid data rows for sorting
+                roastLevel: String(烘焙度 || '未知').trim(), 
+                price: `${(pricePerGram * 100).toFixed(2)}`, 
+                capacity,
+                remaining: capacity,
+                overallRating: rating,
+                ratingNotes: '', 
+                purchaseChannel: '', 
+                videoEpisode: episode,
+                timestamp: Date.now(),
+                isBloggerRecommended: true,
+                dataSource: '数据来自于 Peter 2024 咖啡豆评测榜单',
+            } as BloggerBean;
+        });
+}
+
+
+export function getBloggerBeans(type: 'all' | 'espresso' | 'filter' = 'all', year: 2024 | 2025 = 2025): BloggerBean[] {
     let beans: BloggerBean[] = [];
+    const parseFn = year === 2024 ? parseCSVContent2024 : parseCSVContent2025;
+    const filterCSV = year === 2024 ? filterBeans2024CSV : filterBeans2025CSV;
+    const espressoCSV = year === 2024 ? espressoBeans2024CSV : espressoBeans2025CSV;
 
     try {
         if (type === 'all' || type === 'filter') {
-            const filterBeans = parseCSVContent(filterBeansCSV, 'filter');
-            console.log('加载手冲豆:', filterBeans.length, '款');
+            const filterBeans = parseFn(filterCSV, 'filter');
+            console.log(`加载${year}手冲豆:`, filterBeans.length, '款');
             beans = [...beans, ...filterBeans];
         }
 
         if (type === 'all' || type === 'espresso') {
-            const espressoBeans = parseCSVContent(espressoBeansCSV, 'espresso');
-            console.log('加载意式豆:', espressoBeans.length, '款');
+            const espressoBeans = parseFn(espressoCSV, 'espresso');
+            console.log(`加载${year}意式豆:`, espressoBeans.length, '款');
             beans = [...beans, ...espressoBeans];
         }
 
-        console.log('总共加载博主榜单咖啡豆:', beans.length, '款');
+        console.log(`总共加载${year}博主榜单咖啡豆:`, beans.length, '款');
         
-        // 修改排序逻辑：
-        // 对于博主榜单豆列表，保留原始排序顺序，不排除0分豆子
+        // Sort based on the original index from the CSV file
         return beans.sort((a, b) => {
-            // 默认情况下，使用ID中的序号进行排序
-            const aId = a.id || '';
-            const bId = b.id || '';
-            
-            // 从 id 中提取序号（格式为 blogger-type-序号-name-随机字符）
-            const aMatch = aId.match(/blogger-\w+-(\d+)-/);
-            const bMatch = bId.match(/blogger-\w+-(\d+)-/);
-            
-            if (aMatch && bMatch) {
-                // 如果两者都有序号，按序号排序
-                return parseInt(aMatch[1]) - parseInt(bMatch[1]);
-            } else if (aMatch) {
-                // a 有序号，b 没有，a 排前面
-                return -1;
-            } else if (bMatch) {
-                // b 有序号，a 没有，b 排前面
-                return 1;
-            }
-            
-            // 如果没有序号信息，则按评分排序
-            return (b.overallRating || 0) - (a.overallRating || 0);
+            // Use originalIndex for stable sorting based on CSV order
+            const indexA = a.originalIndex ?? Infinity;
+            const indexB = b.originalIndex ?? Infinity;
+            return indexA - indexB;
         });
+
     } catch (error) {
-        console.error('解析博主榜单咖啡豆数据失败:', error);
+        console.error(`解析 ${year} 博主榜单咖啡豆数据失败:`, error);
         return [];
     }
 }
 
-// 辅助函数 - 从视频期数转换为视频链接地址
-export function getVideoUrlFromEpisode(episode?: string, beanType?: 'espresso' | 'filter'): string {
-    if (!episode) return '';
+// Helper function - Get video URL from episode
+export function getVideoUrlFromEpisode(
+    episode?: string, 
+    brand?: string, 
+    beanName?: string, 
+): string {
+    if (!episode || !brand || !beanName) return ''; // Need all parts
     
-    // 格式化期数，确保是两位数（如 01、02、03）
-    const formattedEpisode = episode.trim().length === 1 ? `0${episode.trim()}` : episode.trim();
+    // Format episode number (zero-pad if single digit)
+    const trimmedEpisode = episode.trim();
+    const formattedEpisode = trimmedEpisode.length === 1 ? `0${trimmedEpisode}` : trimmedEpisode;
+
+    // Construct the search keyword: formattedEpisode + brand + beanName (without spaces)
+    const keyword = `${formattedEpisode}${brand.trim()}${beanName.trim()}`;
     
-    // 根据豆子类型生成不同的搜索链接
-    if (beanType === 'filter') {
-        // 手冲豆视频链接
-        return `https://search.bilibili.com/all?keyword=Peter%E7%AE%97%E6%98%AF%E5%92%96%E5%95%A1%E4%BA%BA%E3%80%90%E6%89%8B%E5%86%B2%E8%B1%86%E8%AF%84%E6%B5%8B+2.0+%E7%89%88+${formattedEpisode}`;
-    } else if (beanType === 'espresso') {
-        // 意式豆视频链接
-        return `https://search.bilibili.com/all?keyword=Peter%E7%AE%97%E6%98%AF%E5%92%96%E5%95%A1%E4%BA%BA%E3%80%90%E5%92%96%E5%95%A1%E8%B1%86%E8%AF%84%E6%B5%8B+2.0+%E7%89%88+${formattedEpisode}`;
-    }
+    // URL encode the keyword
+    const encodedKeyword = encodeURIComponent(keyword);
     
-    // 默认返回空字符串
-    return '';
-} 
+    // Construct the final URL
+    const baseSearchUrl = 'https://search.bilibili.com/all?keyword=';
+    
+    return baseSearchUrl + encodedKeyword;
+}

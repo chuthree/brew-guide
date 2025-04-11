@@ -199,7 +199,10 @@ const globalCache: {
     beans: ExtendedCoffeeBean[];
     ratedBeans: ExtendedCoffeeBean[];
     filteredBeans: ExtendedCoffeeBean[];
-    bloggerBeans: ExtendedCoffeeBean[]; // 添加博主榜单豆子
+    bloggerBeans: { // Make bloggerBeans year-indexed
+        2024: ExtendedCoffeeBean[];
+        2025: ExtendedCoffeeBean[];
+    };
     varieties: string[];
     selectedVariety: string | null;
     showEmptyBeans: boolean;
@@ -208,7 +211,7 @@ const globalCache: {
     beans: [],
     ratedBeans: [],
     filteredBeans: [],
-    bloggerBeans: [], // 初始化博主榜单豆子
+    bloggerBeans: { 2024: [], 2025: [] }, // Initialize bloggerBeans for both years
     varieties: [],
     selectedVariety: null,
     showEmptyBeans: false,
@@ -245,7 +248,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
     const [ratedBeans, setRatedBeans] = useState<ExtendedCoffeeBean[]>(globalCache.ratedBeans)
     const [showAddForm, setShowAddForm] = useState(false)
     const [editingBean, setEditingBean] = useState<ExtendedCoffeeBean | null>(null)
-    const [actionMenuStates, setActionMenuStates] = useState<Record<string, boolean>>({})
+    const [actionMenuStates, setActionMenuStates] = useState<Record<string, boolean>>({}) // Keyed by bean.id
     const [sortOption, setSortOption] = useState<SortOption>(SORT_OPTIONS.REMAINING_DAYS_ASC)
     const [showAIRecipeModal, setShowAIRecipeModal] = useState(false)
     const [selectedBeanForAI, setSelectedBeanForAI] = useState<ExtendedCoffeeBean | null>(null)
@@ -266,6 +269,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
     // 榜单视图的筛选状态
     const [rankingBeanType, setRankingBeanType] = useState<'all' | 'espresso' | 'filter'>('all')
     const [rankingEditMode, setRankingEditMode] = useState<boolean>(false)
+    // ** Add state for selected blogger year **
+    const [bloggerYear, setBloggerYear] = useState<2024 | 2025>(2025)
     // 使用useRef避免不必要的重新渲染
     const [_isFirstLoad, setIsFirstLoad] = useState<boolean>(!globalCache.initialized)
     const unmountTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -532,18 +537,18 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
         if (viewMode !== VIEW_OPTIONS.BLOGGER) return;
         
         try {
-            // 直接调用 csvUtils 中的函数，而不是通过 CoffeeBeanManager
-            const bloggerBeansData = getBloggerBeans(rankingBeanType);
+            // Directly call the function from csvUtils with the selected year
+            const bloggerBeansData = getBloggerBeans(rankingBeanType, bloggerYear); // Pass bloggerYear
             
-            // 更新全局缓存
-            globalCache.bloggerBeans = bloggerBeansData;
+            // Update the correct year in global cache
+            globalCache.bloggerBeans[bloggerYear] = bloggerBeansData;
             
-            // 触发更新
+            // Trigger update (no direct state set for bloggerBeans, rely on global cache)
             setForceRefreshKey(prev => prev + 1);
         } catch (error) {
-            console.error("加载博主榜单咖啡豆失败:", error);
+            console.error(`加载博主榜单咖啡豆 (${bloggerYear}) 失败:`, error);
         }
-    }, [viewMode, rankingBeanType]);
+    }, [viewMode, rankingBeanType, bloggerYear]); // Add bloggerYear dependency
 
     // 根据isOpen状态和排序选项加载数据
     useEffect(() => {
@@ -556,7 +561,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
             
             loadBeans();
             loadRatedBeans();
-            loadBloggerBeans(); // 添加加载博主榜单的调用
+            loadBloggerBeans(); // Call loadBloggerBeans
         } else {
             // 组件关闭时，不立即清空状态，而是延迟重置
             // 这样在切换页面时数据会保留一段时间，避免闪烁
@@ -565,7 +570,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                 // 仍然使用全局缓存的数据
             }, 5000); // 5秒后再考虑重置，通常用户已经看不到了
         }
-    }, [isOpen, sortOption, selectedVariety, loadBeans, loadRatedBeans, loadBloggerBeans, rankingBeanType]); // 添加rankingBeanType依赖
+    }, [isOpen, sortOption, selectedVariety, loadBeans, loadRatedBeans, loadBloggerBeans, rankingBeanType, bloggerYear]); // Add bloggerYear dependency
 
     // 在视图切换时更新数据
     useEffect(() => {
@@ -1117,14 +1122,15 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                     if (viewMode === VIEW_OPTIONS.INVENTORY) {
                                         return `${selectedVariety ? `${filteredBeans.length}/${beans.length}` : beans.length} 款咖啡豆`;
                                     } else if (viewMode === VIEW_OPTIONS.BLOGGER) {
-                                        // 博主榜单视图
+                                        // Blogger view - use globalCache for the selected year
+                                        const currentYearBeans = globalCache.bloggerBeans[bloggerYear] || [];
                                         const filteredCount = rankingBeanType === 'all' 
-                                            ? globalCache.bloggerBeans.length 
-                                            : globalCache.bloggerBeans.filter(bean => bean.beanType === rankingBeanType).length;
+                                            ? currentYearBeans.length 
+                                            : currentYearBeans.filter(bean => bean.beanType === rankingBeanType).length;
                                         
-                                        return `${filteredCount} 款咖啡豆`;
+                                        return `${filteredCount} 款 (${bloggerYear}) 咖啡豆`; // Show year
                                     } else {
-                                        // 榜单视图
+                                        // Ranking view
                                         const filteredCount = rankingBeanType === 'all' 
                                             ? ratedBeans.length 
                                             : ratedBeans.filter(bean => bean.beanType === rankingBeanType).length;
@@ -1374,18 +1380,44 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                     </button>
                                 </div>
 
-                                {/* 编辑按钮 - 仅在个人榜单视图下显示 */}
-                                {viewMode === VIEW_OPTIONS.RANKING && (
-                                    <button
-                                        onClick={() => setRankingEditMode(!rankingEditMode)}
-                                        className={`pb-1.5 text-[11px] relative ${rankingEditMode ? 'text-neutral-800 dark:text-white' : 'text-neutral-600 dark:text-neutral-400'}`}
-                                    >
-                                        <span className="relative">{rankingEditMode ? '完成' : '编辑'}</span>
-                                        {rankingEditMode && (
-                                            <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
-                                        )}
-                                    </button>
-                                )}
+                                <div className="flex items-center">
+                                    {/* Year selector - Only in Blogger view */} 
+                                    {viewMode === VIEW_OPTIONS.BLOGGER && (
+                                        <div className="flex items-center ml-3"> {/* Use ml-3 for initial spacing */} 
+                                            <button
+                                                onClick={() => setBloggerYear(2025)}
+                                                className={`pb-1.5 mx-3 text-[11px] relative ${bloggerYear === 2025 ? 'text-neutral-800 dark:text-white' : 'text-neutral-600 dark:text-neutral-400'}`} // Use mx-3, remove px-2
+                                            >
+                                                <span className="relative">2025</span>
+                                                {bloggerYear === 2025 && (
+                                                    <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
+                                                )}
+                                            </button>
+                                            <button
+                                                onClick={() => setBloggerYear(2024)}
+                                                className={`pb-1.5 ml-3 text-[11px] relative ${bloggerYear === 2024 ? 'text-neutral-800 dark:text-white' : 'text-neutral-600 dark:text-neutral-400'}`} // Use mx-3, remove px-2
+                                            >
+                                                <span className="relative">2024</span>
+                                                {bloggerYear === 2024 && (
+                                                    <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
+                                                )}
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {/* Edit button - Only in personal Ranking view */} 
+                                    {viewMode === VIEW_OPTIONS.RANKING && (
+                                        <button
+                                            onClick={() => setRankingEditMode(!rankingEditMode)}
+                                            className={`pb-1.5 text-[11px] relative ${rankingEditMode ? 'text-neutral-800 dark:text-white' : 'text-neutral-600 dark:text-neutral-400'}`}
+                                        >
+                                            <span className="relative">{rankingEditMode ? '完成' : '编辑'}</span>
+                                            {rankingEditMode && (
+                                                <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
+                                            )}
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     )}
@@ -1794,6 +1826,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                 beanType={rankingBeanType}
                                 editMode={rankingEditMode}
                                 viewMode={viewMode === VIEW_OPTIONS.BLOGGER ? 'blogger' : 'personal'}
+                                year={viewMode === VIEW_OPTIONS.BLOGGER ? bloggerYear : undefined} // Pass year to Ranking component
                             />
                         </div>
                     )}
