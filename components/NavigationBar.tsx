@@ -8,7 +8,7 @@ import { SettingsOptions } from '@/components/Settings'
 import { formatGrindSize } from '@/lib/grindUtils'
 import { BREWING_EVENTS } from '@/lib/brewing/constants'
 import { listenToEvent } from '@/lib/brewing/events'
-import { updateParameterInfo, getEquipmentName } from '@/lib/brewing/parameters'
+import { updateParameterInfo } from '@/lib/brewing/parameters'
 import { useTranslations } from 'next-intl'
 
 // 定义一个隐藏滚动条的样式
@@ -489,7 +489,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
     // 修复updateParameterInfo处理逻辑
     useEffect(() => {
         // 定义事件处理函数
-        const handleStepChanged = (detail: {
+        const handleStepChanged = async (detail: {
             step: BrewingStep;
             resetParams?: boolean;
             preserveStates?: string[];
@@ -519,25 +519,28 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                         }))
                     }
                 };
-                // 加载自定义设备并更新参数栏
-                import('@/lib/customEquipments').then(async ({ loadCustomEquipments }) => {
+
+                try {
+                    // 加载自定义设备并更新参数栏
+                    const { loadCustomEquipments } = await import('@/lib/customEquipments');
                     const customEquipments = await loadCustomEquipments();
                     updateParameterInfo(detail.step, selectedEquipment, methodForUpdate, equipmentList, customEquipments);
-                }).catch(error => {
+                } catch (error) {
                     console.error('加载自定义设备失败:', error);
                     // 出错时使用标准设备列表
                     updateParameterInfo(detail.step, selectedEquipment, methodForUpdate, equipmentList);
-                });
+                }
             } else {
-                // 加载自定义设备并更新参数栏
-                import('@/lib/customEquipments').then(async ({ loadCustomEquipments }) => {
+                try {
+                    // 即使没有选择方案，也需要加载自定义设备以正确显示器具名称
+                    const { loadCustomEquipments } = await import('@/lib/customEquipments');
                     const customEquipments = await loadCustomEquipments();
                     updateParameterInfo(detail.step, selectedEquipment, null, equipmentList, customEquipments);
-                }).catch(error => {
+                } catch (error) {
                     console.error('加载自定义设备失败:', error);
                     // 出错时使用标准设备列表
                     updateParameterInfo(detail.step, selectedEquipment, null, equipmentList);
-                });
+                }
             }
         };
 
@@ -730,21 +733,34 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                                                 } else {
                                                                     // 如果不是标准设备，尝试加载自定义设备
                                                                     import('@/lib/customEquipments').then(async ({ loadCustomEquipments }) => {
-                                                                        const customEquipments = await loadCustomEquipments();
-                                                                        const equipmentName = getEquipmentName(selectedEquipment, equipmentList, customEquipments);
-                                                                        setParameterInfo({
-                                                                            equipment: equipmentName,
-                                                                            method: selectedMethod.name,
-                                                                            params: null,
-                                                                        });
-                                                                    }).catch(error => {
-                                                                        console.error('加载自定义设备失败:', error);
-                                                                        // 出错时使用原始ID
-                                                                        setParameterInfo({
-                                                                            equipment: selectedEquipment,
-                                                                            method: selectedMethod.name,
-                                                                            params: null,
-                                                                        });
+                                                                        try {
+                                                                            const customEquipments = await loadCustomEquipments();
+                                                                            // 先尝试通过ID查找自定义器具
+                                                                            const customEquipment = customEquipments.find(e => e.id === selectedEquipment);
+                                                                            if (customEquipment) {
+                                                                                setParameterInfo({
+                                                                                    equipment: customEquipment.name,
+                                                                                    method: selectedMethod.name,
+                                                                                    params: null,
+                                                                                });
+                                                                            } else {
+                                                                                // 如果通过ID找不到，尝试通过名称查找
+                                                                                const equipmentByName = customEquipments.find(e => e.name === selectedEquipment);
+                                                                                setParameterInfo({
+                                                                                    equipment: equipmentByName?.name || selectedEquipment,
+                                                                                    method: selectedMethod.name,
+                                                                                    params: null,
+                                                                                });
+                                                                            }
+                                                                        } catch (error) {
+                                                                            console.error('加载自定义设备失败:', error);
+                                                                            // 出错时尝试使用已有的参数信息中的器具名称
+                                                                            setParameterInfo({
+                                                                                equipment: parameterInfo?.equipment || selectedEquipment,
+                                                                                method: selectedMethod.name,
+                                                                                params: null,
+                                                                            });
+                                                                        }
                                                                     });
                                                                 }
                                                             }
