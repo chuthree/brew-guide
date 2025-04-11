@@ -7,7 +7,6 @@ import { CoffeeBeanManager } from '@/lib/coffeeBeanManager'
 import CoffeeBeanFormModal from './CoffeeBeanFormModal'
 import CoffeeBeanRatingModal from './CoffeeBeanRatingModal'
 import CoffeeBeanRanking from './CoffeeBeanRanking'
-// import AIRecipeModal from './AIRecipeModal'
 import {
     Select,
     SelectContent,
@@ -16,11 +15,12 @@ import {
     SelectValue,
 } from './ui/select'
 import { SORT_OPTIONS as RANKING_SORT_OPTIONS, RankingSortOption } from './CoffeeBeanRanking'
-import { useToast } from './GlobalToast'
 import { getBloggerBeans } from '@/lib/csvUtils'
 import BottomActionBar from '@/components/BottomActionBar'
 import BeanMethodsModal from './BeanMethodsModal'
 import ActionMenu from './ui/action-menu'
+import { useCopy } from "@/lib/hooks/useCopy"
+import CopyFailureModal from "./ui/copy-failure-modal"
 
 // 添加ExtendedCoffeeBean类型
 interface BlendComponent {
@@ -244,7 +244,7 @@ globalCache.showEmptyBeans = getShowEmptyBeansPreference();
 
 // const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowImport, onGenerateAIRecipe }) => {
 const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowImport }) => {
-    const { showToast } = useToast()
+    const { copyText, showFailureModal, failureContent, closeFailureModal } = useCopy()
     // 使用全局缓存的初始状态
     const [beans, setBeans] = useState<ExtendedCoffeeBean[]>(globalCache.beans)
     const [ratedBeans, setRatedBeans] = useState<ExtendedCoffeeBean[]>(globalCache.ratedBeans)
@@ -731,44 +731,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
         }
     }
 
-    // 复制到剪贴板
-    const copyTextToClipboard = async (text: string) => {
-        // 检查是否支持 navigator.clipboard API
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            try {
-                await navigator.clipboard.writeText(text);
-                return Promise.resolve();
-            } catch {
-                // 如果是安全或权限错误，尝试回退方法
-            }
-        }
-
-        // 回退方法：使用document.execCommand
-        try {
-            const textArea = document.createElement('textarea');
-            textArea.value = text;
-            textArea.style.position = 'fixed';
-            textArea.style.left = '-999999px';
-            textArea.style.top = '-999999px';
-            document.body.appendChild(textArea);
-            textArea.focus();
-            textArea.select();
-
-            const successful = document.execCommand('copy');
-            document.body.removeChild(textArea);
-
-            if (successful) {
-                return Promise.resolve();
-            } else {
-                return Promise.reject(new Error('复制命令执行失败'));
-            }
-        } catch {
-            // 如果是在安全上下文中不支持clipboard，则提供用户可以手动复制的选项
-            alert('自动复制不可用，请手动复制以下内容:\n\n' + text);
-            return Promise.reject(new Error('复制到剪贴板失败'));
-        }
-    };
-
     // 保存咖啡豆评分 - 优化为立即更新UI
     const handleSaveRating = async (id: string, ratings: Partial<ExtendedCoffeeBean>) => {
         try {
@@ -835,41 +797,19 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
             import('@/lib/jsonUtils').then(({ beanToReadableText }) => {
                 // @ts-expect-error - 我们知道这个对象结构与函数期望的类型兼容
                 const readableText = beanToReadableText(shareableBean);
-
-                copyTextToClipboard(readableText)
-                    .then(() => {
-                        showToast({
-                            type: 'success',
-                            title: '已复制到剪贴板',
-                            duration: 2000
-                        });
-                        // 关闭操作菜单
-                        setActionMenuStates(prev => ({
-                            ...prev,
-                            [bean.id]: false
-                        }));
-                    })
-                    .catch(() => {
-                        showToast({
-                            type: 'error',
-                            title: '复制失败，请手动复制',
-                            duration: 2000
-                        });
-                    });
+                copyText(readableText);
+                // 关闭操作菜单
+                setActionMenuStates(prev => ({
+                    ...prev,
+                    [bean.id]: false
+                }));
             }).catch(() => {
                 // 转换失败时回退到JSON格式
                 const jsonString = JSON.stringify(shareableBean, null, 2);
-                copyTextToClipboard(jsonString)
-                    .catch(() => {
-                        showToast({
-                            type: 'error',
-                            title: '复制失败，请手动复制',
-                            duration: 2000
-                        });
-                    });
+                copyText(jsonString);
             });
-        } catch {
-            // 忽略异常
+        } catch (error) {
+            console.error('分享咖啡豆信息时出错:', error);
         }
     };
 
@@ -1031,7 +971,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
         };
     }, [actionMenuStates]);
 
-    const matchesSearch = (bean: ExtendedCoffeeBean, parameter: string): boolean => {
+    const _matchesSearch = (bean: ExtendedCoffeeBean, parameter: string): boolean => {
         if (!parameter) return true;
         
         // 检查name字段是否匹配
@@ -1809,6 +1749,11 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                     />
                 )}
             </div>
+            <CopyFailureModal
+                isOpen={showFailureModal}
+                onClose={closeFailureModal}
+                content={failureContent || ""}
+            />
         </>
     )
 }

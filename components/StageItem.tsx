@@ -19,6 +19,8 @@ interface StageItemProps {
     onDelete?: () => void
     onShare?: () => void
     isPinned?: boolean
+    actionMenuStates?: Record<string, boolean>
+    setActionMenuStates?: React.Dispatch<React.SetStateAction<Record<string, boolean>>>
 }
 
 // 辅助函数：格式化时间
@@ -47,7 +49,9 @@ const StageItem: React.FC<StageItemProps> = ({
     onEdit,
     onDelete,
     onShare,
-    isPinned: _isPinned
+    isPinned: _isPinned,
+    actionMenuStates: _actionMenuStates,
+    setActionMenuStates: _setActionMenuStates
 }) => {
     // 判断是否为等待阶段
     const isWaitingStage = step.type === 'wait';

@@ -34,17 +34,22 @@ export function exportMethod(method: Method): string {
     return JSON.stringify(exportData, null, 2);
 }
 
+export interface CopyResult {
+    success: boolean
+    content?: string
+}
+
 /**
  * 复制文本到剪贴板
  * @param text 要复制的文本
- * @returns Promise<boolean> 是否复制成功
+ * @returns Promise<CopyResult> 包含复制结果和失败时的内容
  */
-export async function copyToClipboard(text: string): Promise<boolean> {
+export async function copyToClipboard(text: string): Promise<CopyResult> {
     try {
         // 首先尝试使用现代API
-        if (navigator.clipboard && navigator.clipboard.writeText) {
+        if (navigator.clipboard && window.isSecureContext) {
             await navigator.clipboard.writeText(text);
-            return true;
+            return { success: true };
         }
 
         // 回退方法：创建临时textarea元素
@@ -66,9 +71,13 @@ export async function copyToClipboard(text: string): Promise<boolean> {
         // 清理
         document.body.removeChild(textArea);
         
-        return successful;
+        if (successful) {
+            return { success: true };
+        } else {
+            return { success: false, content: text };
+        }
     } catch (error) {
         console.error('复制到剪贴板失败:', error);
-        return false;
+        return { success: false, content: text };
     }
 } 
