@@ -239,7 +239,7 @@ const TabContent: React.FC<TabContentProps> = ({
     };
     
     // 获取器具名称的函数
-    const getEquipmentDisplayName = (equipmentId: string): string => {
+    const _getEquipmentDisplayName = (equipmentId: string): string => {
         // 先在预设器具中查找
         const predefinedEquipment = equipmentList.find(e => e.id === equipmentId);
         if (predefinedEquipment) return predefinedEquipment.name;
@@ -534,8 +534,9 @@ const TabContent: React.FC<TabContentProps> = ({
                                             key={`pinned-equipment-${equipmentId}-${index}`}
                                             step={{
                                                 title: equipment.name || equipmentId,
-                                                icon: '🔍', // 使用图标标识固定器具
-                                                detail: `${selectedCoffeeBeanData.name}的常用器具`
+                                                items: [
+                                                    `${selectedCoffeeBeanData.name}的常用器具`
+                                                ]
                                             }}
                                             index={index}
                                             onClick={() => onEquipmentSelect(equipmentId)}
@@ -583,8 +584,11 @@ const TabContent: React.FC<TabContentProps> = ({
                                                     step={{
                                                         title: method.methodId,
                                                         methodId: method.methodId,
-                                                        icon: '📌', // 使用图钉图标标识固定方案
-                                                        detail: `${getEquipmentDisplayName(method.equipmentId)}${method.notes ? ` - ${method.notes}` : ''}`
+                                                        items: [
+                                                            `水粉比 ${method.params?.ratio || '1:15'}`,
+                                                            `总时长 ${method.params?.time || '2:00'}`,
+                                                            `研磨度 ${method.params?.grindSize || '中细'}`
+                                                        ]
                                                     }}
                                                     index={index}
                                                     onClick={() => handlePinnedMethodSelect(method)}
