@@ -20,6 +20,7 @@ import { useToast } from './GlobalToast'
 import { getBloggerBeans } from '@/lib/csvUtils'
 import BottomActionBar from '@/components/BottomActionBar'
 import BeanMethodsModal from './BeanMethodsModal'
+import ActionMenu from './ui/action-menu'
 
 // 添加ExtendedCoffeeBean类型
 interface BlendComponent {
@@ -278,7 +279,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
     const isLoadingRef = useRef<boolean>(false)
     // 添加强制刷新的key
     const [forceRefreshKey, setForceRefreshKey] = useState(0)
-    const [showMethodsModal, setShowMethodsModal] = useState(false)
+    const [showMethodsModal, setShowMethodsModal] = useState<boolean>(false)
     const [selectedBeanForMethods, setSelectedBeanForMethods] = useState<ExtendedCoffeeBean | null>(null)
 
     // 添加引用，用于点击外部关闭操作菜单
@@ -1030,6 +1031,14 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
         };
     }, [actionMenuStates]);
 
+    const matchesSearch = (bean: ExtendedCoffeeBean, parameter: string): boolean => {
+        if (!parameter) return true;
+        
+        // 检查name字段是否匹配
+        const name = generateBeanTitle(bean);
+        return name.toLowerCase().includes(parameter.toLowerCase());
+    };
+
     // 处理显示方案管理
     const handleShowMethods = (bean: ExtendedCoffeeBean) => {
         setSelectedBeanForMethods(bean)
@@ -1406,7 +1415,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                         </div>
                                     )}
 
-                                    {/* Edit button - Only in personal Ranking view */} 
+                                    {/* Edit button - Only in personal Ranking view */}
                                     {viewMode === VIEW_OPTIONS.RANKING && (
                                         <button
                                             onClick={() => setRankingEditMode(!rankingEditMode)}
@@ -1484,93 +1493,31 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                                     )}
                                                                 </div>
                                                                 <div className="flex-shrink-0 ml-1 relative">
-                                                                    <button
-                                                                        onClick={() => {
-                                                                            setActionMenuStates(prev => {
-                                                                                const newStates = { ...prev };
-                                                                                // 关闭所有其他菜单
-                                                                                Object.keys(newStates).forEach(id => {
-                                                                                    newStates[id] = false;
-                                                                                });
-                                                                                // 切换当前菜单
-                                                                                newStates[bean.id] = !prev[bean.id];
-                                                                                return newStates;
-                                                                            });
-                                                                        }}
-                                                                        className="h-[16.5] flex items-center justify-center text-xs text-neutral-600 dark:text-neutral-400"
-                                                                    >
-                                                                        ···
-                                                                    </button>
-                                                                    
-                                                                    {actionMenuStates[bean.id] && (
-                                                                        <div
-                                                                            className="absolute top-6 right-0 z-50 border border-neutral-200/70 dark:border-neutral-800/70 shadow-lg backdrop-blur-sm bg-white/95 dark:bg-neutral-900/95 rounded-lg overflow-hidden min-w-[100px]"
-                                                                        >
-                                                                            <div className="py-1">
-                                                                                <button
-                                                                                    onClick={() => {
-                                                                                        handleShowMethods(bean)
-                                                                                        setActionMenuStates(prev => ({
-                                                                                            ...prev,
-                                                                                            [bean.id]: false
-                                                                                        }))
-                                                                                    }}
-                                                                                    className="w-full px-3 py-1.5 text-left text-xs text-neutral-800 dark:text-white"
-                                                                                >
-                                                                                    方案
-                                                                                </button>
-                                                                                <button
-                                                                                    onClick={() => {
-                                                                                        handleEdit(bean);
-                                                                                        setActionMenuStates(prev => ({
-                                                                                            ...prev,
-                                                                                            [bean.id]: false
-                                                                                        }));
-                                                                                    }}
-                                                                                    className="w-full px-3 py-1.5 text-left text-xs text-neutral-800 dark:text-white"
-                                                                                >
-                                                                                    编辑
-                                                                                </button>
-                                                                                <button
-                                                                                    onClick={() => {
-                                                                                        handleShare(bean);
-                                                                                        setActionMenuStates(prev => ({
-                                                                                            ...prev,
-                                                                                            [bean.id]: false
-                                                                                        }));
-                                                                                    }}
-                                                                                    className="w-full px-3 py-1.5 text-left text-xs text-neutral-800 dark:text-white"
-                                                                                >
-                                                                                    分享
-                                                                                </button>
-                                                                                <button
-                                                                                    onClick={() => {
-                                                                                        handleDelete(bean);
-                                                                                        setActionMenuStates(prev => ({
-                                                                                            ...prev,
-                                                                                            [bean.id]: false
-                                                                                        }));
-                                                                                    }}
-                                                                                    className="w-full px-3 py-1.5 text-left text-xs text-red-500 dark:text-red-400"
-                                                                                >
-                                                                                    删除
-                                                                                </button>
-                                                                                {/* <button
-                                                                                    onClick={() => {
-                                                                                        handleGenerateAIRecipe(bean);
-                                                                                        setActionMenuStates(prev => ({
-                                                                                            ...prev,
-                                                                                            [bean.id]: false
-                                                                                        }));
-                                                                                    }}
-                                                                                    className="w-full px-3 py-1.5 text-left text-xs text-emerald-600 dark:text-emerald-500"
-                                                                                >
-                                                                                    AI方案
-                                                                                </button> */}
-                                                                                
-                                                                            </div>
-                                                                        </div>
-                                                                    )}
+                                                                    <ActionMenu
+                                                                        items={[
+                                                                            {
+                                                                                id: 'methods',
+                                                                                label: '方案',
+                                                                                onClick: () => handleShowMethods(bean)
+                                                                            },
+                                                                            {
+                                                                                id: 'edit',
+                                                                                label: '编辑',
+                                                                                onClick: () => handleEdit(bean)
+                                                                            },
+                                                                            {
+                                                                                id: 'share',
+                                                                                label: '分享',
+                                                                                onClick: () => handleShare(bean)
+                                                                            },
+                                                                            {
+                                                                                id: 'delete',
+                                                                                label: '删除',
+                                                                                color: 'danger',
+                                                                                onClick: () => handleDelete(bean)
+                                                                            }
+                                                                        ]}
+                                                                    />
                                                                 </div>
                                                             </div>
 

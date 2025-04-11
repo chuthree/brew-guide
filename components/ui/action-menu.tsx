@@ -39,11 +39,16 @@ const ActionMenu: React.FC<ActionMenuProps> = ({
   const [internalOpen, setInternalOpen] = React.useState(false)
   const open = isOpen !== undefined ? isOpen : internalOpen
   const menuRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
 
   // 更新开关状态
   const setOpen = (value: boolean) => {
     setInternalOpen(value)
     onOpenChange?.(value)
+    // 如果正在关闭菜单，触发onClose回调
+    if (!value) {
+      onClose?.()
+    }
   }
 
   // 点击外部关闭
@@ -51,15 +56,19 @@ const ActionMenu: React.FC<ActionMenuProps> = ({
     if (!open) return
 
     const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+      // 检查点击是否在菜单内或触发按钮上
+      const isInMenu = menuRef.current && menuRef.current.contains(event.target as Node)
+      const isOnTrigger = triggerRef.current && triggerRef.current.contains(event.target as Node)
+      
+      if (!isInMenu && !isOnTrigger) {
         setOpen(false)
-        onClose?.()
       }
     }
 
-    document.addEventListener("mousedown", handleClickOutside)
+    // 使用捕获阶段确保在冒泡阶段前处理事件
+    document.addEventListener("mousedown", handleClickOutside, true)
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside)
+      document.removeEventListener("mousedown", handleClickOutside, true)
     }
   }, [open, onClose])
 
@@ -85,20 +94,24 @@ const ActionMenu: React.FC<ActionMenuProps> = ({
     }
   }
 
+  // 处理触发按钮点击
+  const handleTriggerClick = (e: React.MouseEvent) => {
+    handleStop(e)
+    setOpen(!open)
+  }
+
   // 渲染触发按钮
   const renderTrigger = () => {
     if (showAnimation) {
       return (
         <motion.button
+          ref={triggerRef}
           key="more-button"
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.26, ease: "easeOut" }}
-          onClick={(e) => {
-            handleStop(e)
-            setOpen(!open)
-          }}
+          onClick={handleTriggerClick}
           className={cn(
             "w-7 h-7 flex items-center justify-center text-xs text-neutral-500 dark:text-neutral-400",
             triggerClassName
@@ -111,10 +124,8 @@ const ActionMenu: React.FC<ActionMenuProps> = ({
 
     return (
       <button
-        onClick={(e) => {
-          handleStop(e)
-          setOpen(!open)
-        }}
+        ref={triggerRef}
+        onClick={handleTriggerClick}
         className={cn(
           "h-[16.5] flex items-center justify-center text-xs text-neutral-600 dark:text-neutral-400",
           triggerClassName
@@ -183,7 +194,7 @@ const ActionMenu: React.FC<ActionMenuProps> = ({
   }
 
   return (
-    <div className={cn("relative", className)} onClick={handleStop}>
+    <div className={cn("relative", className)}>
       {showAnimation ? (
         <AnimatePresence mode="wait">
           {open ? renderMenuContent() : null}
