@@ -28,10 +28,11 @@ export const defaultSettings: SettingsOptions = {
     grindType: "通用",
     textZoomLevel: 1.0,
     layoutSettings: {
-        stageInfoReversed: true,
+        stageInfoReversed: false,
         progressBarHeight: 4,
         controlsReversed: false,
-        alwaysShowTimerInfo: false // 默认不显示计时器信息
+        alwaysShowTimerInfo: false, // 默认不显示计时器信息
+        showStageDivider: true // 默认显示阶段分隔线
     },
     language: 'zh' // 默认使用中文
 }
@@ -589,6 +590,30 @@ const Settings: React.FC<SettingsProps> = ({
                             </div>
                             <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-4">
                                 开启后，阶段信息和进度条将始终显示，而不仅在计时器运行时显示
+                            </p>
+                            
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm text-neutral-700 dark:text-neutral-300">
+                                    显示阶段分隔线
+                                </span>
+                                <label className="relative inline-flex cursor-pointer items-center">
+                                    <input
+                                        type="checkbox"
+                                        checked={settings.layoutSettings?.showStageDivider || false}
+                                        onChange={(e) => {
+                                            const newLayoutSettings = {
+                                                ...settings.layoutSettings,
+                                                showStageDivider: e.target.checked
+                                            };
+                                            handleChange('layoutSettings', newLayoutSettings);
+                                        }}
+                                        className="peer sr-only"
+                                    />
+                                    <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
+                                </label>
+                            </div>
+                            <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-4">
+                                是否在不同阶段之间显示分隔线
                             </p>
                         
                             <div className="flex items-center justify-between">

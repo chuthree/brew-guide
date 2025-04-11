@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef, useLayoutEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import BrewingNoteForm from "@/components/BrewingNoteForm";
 import type { BrewingNoteData, CoffeeBean } from "@/app/types";
@@ -111,7 +111,6 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
   const [hasStartedOnce, setHasStartedOnce] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
   const [isHapticsSupported, setIsHapticsSupported] = useState(false);
-  const [isProgressBarReady, setIsProgressBarReady] = useState(false);
   const lastStageRef = useRef<number>(-1);
   // 添加一个引用来记录上一次的倒计时状态，避免重复触发事件
   const prevCountdownTimeRef = useRef<number | null>(null);
@@ -358,26 +357,19 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     return expandedStages;
   }, [currentBrewingMethod]);
 
-  // 修改扩展阶段数组更新的 useEffect
-  useLayoutEffect(() => {
-    if (currentBrewingMethod?.params?.stages) {
-      const newExpandedStages = createExpandedStages();
-      expandedStagesRef.current = newExpandedStages;
+  // 更新扩展阶段数组当配方变化时
+  useEffect(() => {
+    const newExpandedStages = createExpandedStages();
+    expandedStagesRef.current = newExpandedStages;
 
-      // 通知扩展阶段变化
-      if (onExpandedStagesChange) {
-        onExpandedStagesChange(newExpandedStages);
-      }
-
-      // 重置当前阶段索引
-      setCurrentExpandedStageIndex(-1);
-      
-      // 标记进度条准备就绪
-      setIsProgressBarReady(true);
-    } else {
-      setIsProgressBarReady(false);
+    // 始终通知扩展阶段变化，确保父组件能更新
+    if (onExpandedStagesChange) {
+      onExpandedStagesChange(newExpandedStages);
     }
-  }, [createExpandedStages, onExpandedStagesChange, currentBrewingMethod]);
+
+    // 重置当前阶段索引
+    setCurrentExpandedStageIndex(-1);
+  }, [createExpandedStages, onExpandedStagesChange]);
 
   // 获取当前阶段 - 修改为使用扩展阶段
   const getCurrentStage = useCallback(() => {
@@ -1271,7 +1263,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
           )}
         </AnimatePresence>
         <AnimatePresence mode="wait">
-          {(isRunning || layoutSettings.alwaysShowTimerInfo) && isProgressBarReady && (
+          {(isRunning || layoutSettings.alwaysShowTimerInfo) && (
             <motion.div
               key="brewing-info"
               className="overflow-hidden will-change-auto"
@@ -1293,207 +1285,286 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                 <motion.div
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
-                  className="space-y-3"
+                  className={`flex items-baseline border-l-2 border-neutral-800 pl-3 dark:border-neutral-100 ${
+                    layoutSettings.stageInfoReversed
+                      ? "flex-row-reverse"
+                      : "flex-row"
+                  } justify-between`}
                   style={{
                     willChange: "transform, opacity",
                     backfaceVisibility: "hidden",
                   }}
                 >
                   <div
-                    className={`flex items-baseline border-l-2 border-neutral-800 pl-3 dark:border-neutral-100 ${
+                    className={`${
                       layoutSettings.stageInfoReversed
-                        ? "flex-row-reverse"
-                        : "flex-row"
-                    } justify-between`}
+                        ? "text-right"
+                        : "text-left"
+                    }`}
+                  >
+                    <div className="text-xs text-neutral-500 dark:text-neutral-400">
+                      当前阶段
+                    </div>
+                    <motion.div
+                      key={currentStageIndex}
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.26 }}
+                      className="mt-1 text-sm font-medium tracking-wide"
+                      style={{
+                        willChange: "transform, opacity",
+                        backfaceVisibility: "hidden",
+                      }}
+                    >
+                      {currentStage
+                        ? currentStage.type === "pour"
+                          ? currentStage.label
+                          : `等待`
+                        : "完成冲煮"}
+                    </motion.div>
+                  </div>
+                  <div
+                    className={`flex items-baseline flex-row ${
+                      layoutSettings.stageInfoReversed
+                        ? "text-left"
+                        : "text-right"
+                    }`}
                   >
                     <div
-                      className={`${
-                        layoutSettings.stageInfoReversed
-                          ? "text-right"
-                          : "text-left"
-                      }`}
+                      className={
+                        layoutSettings.stageInfoReversed ? "mr-4" : "mr-0"
+                      }
                     >
                       <div className="text-xs text-neutral-500 dark:text-neutral-400">
-                        当前阶段
+                        目标时间
                       </div>
                       <motion.div
-                        key={currentStageIndex}
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
+                        key={`time-${currentStageIndex}`}
+                        initial={{ opacity: 0.8 }}
+                        animate={{ opacity: 1 }}
                         transition={{ duration: 0.26 }}
                         className="mt-1 text-sm font-medium tracking-wide"
-                        style={{
-                          willChange: "transform, opacity",
-                          backfaceVisibility: "hidden",
-                        }}
                       >
                         {currentStage
-                          ? currentStage.type === "pour"
-                            ? currentStage.label
-                            : `等待`
-                          : "完成冲煮"}
+                          ? formatTime(currentStage.endTime, true)
+                          : "-"}
                       </motion.div>
                     </div>
-                    <div
-                      className={`flex items-baseline flex-row ${
-                        layoutSettings.stageInfoReversed
-                          ? "text-left"
-                          : "text-right"
-                      }`}
-                    >
-                      <div
-                        className={
-                          layoutSettings.stageInfoReversed ? "mr-4" : "mr-0"
-                        }
+                    <div className="min-w-24">
+                      <div className="text-xs text-neutral-500 dark:text-neutral-400">
+                        目标水量
+                      </div>
+                      <motion.div
+                        key={`water-${currentStageIndex}`}
+                        initial={{ opacity: 0.8 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.26 }}
+                        className="mt-1 flex flex-col text-sm font-medium tracking-wide"
                       >
-                        <div className="text-xs text-neutral-500 dark:text-neutral-400">
-                          目标时间
-                        </div>
-                        <motion.div
-                          key={`time-${currentStageIndex}`}
-                          initial={{ opacity: 0.8 }}
-                          animate={{ opacity: 1 }}
-                          transition={{ duration: 0.26 }}
-                          className="mt-1 text-sm font-medium tracking-wide"
-                        >
-                          {currentStage
-                            ? formatTime(currentStage.endTime, true)
-                            : "-"}
-                        </motion.div>
-                      </div>
-                      <div className="min-w-24">
-                        <div className="text-xs text-neutral-500 dark:text-neutral-400">
-                          目标水量
-                        </div>
-                        <motion.div
-                          key={`water-${currentStageIndex}`}
-                          initial={{ opacity: 0.8 }}
-                          animate={{ opacity: 1 }}
-                          transition={{ duration: 0.26 }}
-                          className="mt-1 flex flex-col text-sm font-medium tracking-wide"
-                        >
-                          {currentStage?.water ? (
-                            <div
-                              className={`flex items-baseline ${
-                                layoutSettings.stageInfoReversed
-                                  ? "justify-start"
-                                  : "justify-end"
-                              }`}
-                            >
-                              <span>{currentWaterAmount}</span>
-                              <span className="mx-0.5 text-neutral-300 dark:text-neutral-600">
-                                /
-                              </span>
-                              <span>{currentStage.water}</span>
-                            </div>
-                          ) : (
-                            "-"
-                          )}
-                        </motion.div>
-                      </div>
+                        {currentStage?.water ? (
+                          <div
+                            className={`flex items-baseline ${
+                              layoutSettings.stageInfoReversed
+                                ? "justify-start"
+                                : "justify-end"
+                            }`}
+                          >
+                            <span>{currentWaterAmount}</span>
+                            <span className="mx-0.5 text-neutral-300 dark:text-neutral-600">
+                              /
+                            </span>
+                            <span>{currentStage.water}</span>
+                          </div>
+                        ) : (
+                          "-"
+                        )}
+                      </motion.div>
                     </div>
                   </div>
+                </motion.div>
 
-                  <AnimatePresence mode="wait">
-                    {nextStage && (
-                      <motion.div
-                        key={`next-${nextStageIndex}`}
-                        initial={{ opacity: 0, height: 0, y: -20 }}
-                        animate={{ opacity: 1, height: "auto", y: 0 }}
-                        exit={{ opacity: 0, height: 0, y: -20 }}
-                        transition={{ duration: 0.26 }}
-                        className={`flex items-baseline border-l border-neutral-300 pl-3 dark:border-neutral-700 ${
+                <AnimatePresence mode="wait">
+                  {nextStage && (
+                    <motion.div
+                      key={`next-${nextStageIndex}`}
+                      initial={{ opacity: 0, height: 0, y: -20 }}
+                      animate={{ opacity: 1, height: "auto", y: 0 }}
+                      exit={{ opacity: 0, height: 0, y: -20 }}
+                      transition={{ duration: 0.26 }}
+                      className={`flex items-baseline border-l border-neutral-300 pl-3 dark:border-neutral-700 ${
+                        layoutSettings.stageInfoReversed
+                          ? "flex-row-reverse"
+                          : "flex-row"
+                      } justify-between transform-gpu`}
+                      style={{
+                        willChange: "transform, opacity, height",
+                        backfaceVisibility: "hidden",
+                      }}
+                    >
+                      <div
+                        className={`${
                           layoutSettings.stageInfoReversed
-                            ? "flex-row-reverse"
-                            : "flex-row"
-                        } justify-between transform-gpu`}
-                        style={{
-                          willChange: "transform, opacity, height",
-                          backfaceVisibility: "hidden",
-                        }}
+                            ? "text-right"
+                            : "text-left"
+                        }`}
                       >
                         <div
-                          className={`${
+                          className={`flex items-center ${
                             layoutSettings.stageInfoReversed
-                              ? "text-right"
-                              : "text-left"
-                          }`}
+                              ? "justify-end"
+                              : "justify-start"
+                          } gap-2 text-xs text-neutral-500 dark:text-neutral-400`}
                         >
-                          <div
-                            className={`flex items-center ${
-                              layoutSettings.stageInfoReversed
-                                ? "justify-end"
-                                : "justify-start"
-                            } gap-2 text-xs text-neutral-500 dark:text-neutral-400`}
-                          >
-                            <span>下一步</span>
-                          </div>
-                          <motion.div
-                            initial={{
-                              opacity: 0,
-                              x: layoutSettings.stageInfoReversed ? 10 : -10,
-                            }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ duration: 0.26, delay: 0.1 }}
-                            className="mt-1"
-                          >
-                            <span className="text-sm font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
-                              {nextStage.type === "pour"
-                                ? nextStage.label
-                                : `等待`}
-                            </span>
-                          </motion.div>
+                          <span>下一步</span>
                         </div>
                         <motion.div
                           initial={{
                             opacity: 0,
-                            x: layoutSettings.stageInfoReversed ? -10 : 10,
+                            x: layoutSettings.stageInfoReversed ? 10 : -10,
                           }}
                           animate={{ opacity: 1, x: 0 }}
-                          transition={{ duration: 0.26, delay: 0.2 }}
-                          className={`flex items-baseline flex-row ${
-                            layoutSettings.stageInfoReversed
-                              ? "text-left"
-                              : "text-right "
-                          }`}
+                          transition={{ duration: 0.26, delay: 0.1 }}
+                          className="mt-1"
                         >
-                          <div
-                            className={
-                              layoutSettings.stageInfoReversed ? "mr-4" : "mr-0"
-                            }
-                          >
-                            <div className="text-xs text-neutral-500 dark:text-neutral-400">
-                              目标时间
-                            </div>
-                            <div className="mt-1 text-sm font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
-                              {formatTime(nextStage.endTime, true)}
-                            </div>
-                          </div>
-                          <div className="min-w-24">
-                            <div className="text-xs text-neutral-500 dark:text-neutral-400">
-                              目标水量
-                            </div>
-                            <div
-                              className={`mt-1 text-sm font-medium tracking-wide text-neutral-600 dark:text-neutral-400 ${
-                                layoutSettings.stageInfoReversed
-                                  ? "text-left"
-                                  : "text-right"
-                              }`}
-                            >
-                              {nextStage.water}
-                            </div>
-                          </div>
+                          <span className="text-sm font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
+                            {nextStage.type === "pour"
+                              ? nextStage.label
+                              : `等待`}
+                          </span>
                         </motion.div>
+                      </div>
+                      <motion.div
+                        initial={{
+                          opacity: 0,
+                          x: layoutSettings.stageInfoReversed ? -10 : 10,
+                        }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.26, delay: 0.2 }}
+                        className={`flex items-baseline flex-row ${
+                          layoutSettings.stageInfoReversed
+                            ? "text-left"
+                            : "text-right "
+                        }`}
+                      >
+                        <div
+                          className={
+                            layoutSettings.stageInfoReversed ? "mr-4" : "mr-0"
+                          }
+                        >
+                          <div className="text-xs text-neutral-500 dark:text-neutral-400">
+                            目标时间
+                          </div>
+                          <div className="mt-1 text-sm font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
+                            {formatTime(nextStage.endTime, true)}
+                          </div>
+                        </div>
+                        <div className="min-w-24">
+                          <div className="text-xs text-neutral-500 dark:text-neutral-400">
+                            目标水量
+                          </div>
+                          <div
+                            className={`mt-1 text-sm font-medium tracking-wide text-neutral-600 dark:text-neutral-400 ${
+                              layoutSettings.stageInfoReversed
+                                ? "text-left"
+                                : "text-right"
+                            }`}
+                          >
+                            {nextStage.water}
+                          </div>
+                        </div>
                       </motion.div>
-                    )}
-                  </AnimatePresence>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.26, ease: [0.4, 0, 0.2, 1] }}
-                    className="relative"
+                <div className="relative mb-4">
+                  {expandedStagesRef.current.map((stage) => {
+                    const totalTime =
+                      expandedStagesRef.current[
+                        expandedStagesRef.current.length - 1
+                      ].endTime;
+                    const percentage = (stage.endTime / totalTime) * 100;
+                    return (
+                      <div
+                        key={stage.endTime}
+                        className="absolute top-0 w-[2px] bg-neutral-50 dark:bg-neutral-900"
+                        style={{
+                          left: `${percentage}%`,
+                          height: `${layoutSettings.progressBarHeight || 4}px`,
+                          opacity: 0.8,
+                          transform: "translateZ(0)",
+                        }}
+                      />
+                    );
+                  })}
+
+                  <div
+                    className="w-full overflow-hidden bg-neutral-200/50 dark:bg-neutral-800"
+                    style={{
+                      height: `${layoutSettings.progressBarHeight || 4}px`,
+                      contain: "paint layout",
+                    }}
                   >
+                    {expandedStagesRef.current.map((stage) => {
+                      const totalTime =
+                        expandedStagesRef.current[
+                          expandedStagesRef.current.length - 1
+                        ].endTime;
+                      const startPercentage =
+                        (stage.startTime / totalTime) * 100;
+                      const width =
+                        ((stage.endTime - stage.startTime) / totalTime) * 100;
+
+                      // 显示等待阶段的条纹背景
+                      return stage.type === "wait" ? (
+                        <div
+                          key={`waiting-${stage.endTime}`}
+                          className="absolute"
+                          style={{
+                            left: `${startPercentage}%`,
+                            width: `${width}%`,
+                            height: `${
+                              layoutSettings.progressBarHeight || 4
+                            }px`,
+                            background: `repeating-linear-gradient(
+                              45deg,
+                              transparent,
+                              transparent 4px,
+                              rgba(0, 0, 0, 0.1) 4px,
+                              rgba(0, 0, 0, 0.1) 8px
+                            )`,
+                            transform: "translateZ(0)",
+                          }}
+                        />
+                      ) : null;
+                    })}
+                    <motion.div
+                      className="h-full bg-neutral-800 dark:bg-neutral-100 transform-gpu"
+                      initial={{ width: 0, opacity: 0 }}
+                      animate={{
+                        width:
+                          currentTime > 0 &&
+                          expandedStagesRef.current.length > 0
+                            ? `${
+                                (currentTime /
+                                  (expandedStagesRef.current[
+                                    expandedStagesRef.current.length - 1
+                                  ]?.endTime || 1)) *
+                                100
+                              }%`
+                            : "0%",
+                      }}
+                      transition={{ duration: 0.26 }}
+                      style={{
+                        willChange: "width",
+                        transformOrigin: "left center",
+                        contain: "layout",
+                        backfaceVisibility: "hidden",
+                      }}
+                    />
+                  </div>
+
+                  <div className="relative mt-1 h-4 w-full">
                     {expandedStagesRef.current.map((stage) => {
                       const totalTime =
                         expandedStagesRef.current[
@@ -1503,100 +1574,18 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                       return (
                         <div
                           key={stage.endTime}
-                          className="absolute top-0 w-[2px] bg-neutral-50 dark:bg-neutral-900"
+                          className="absolute top-0 text-[8px] text-neutral-500 dark:text-neutral-400"
                           style={{
                             left: `${percentage}%`,
-                            height: `${layoutSettings.progressBarHeight || 4}px`,
-                            opacity: 0.8,
-                            transform: "translateZ(0)",
+                            transform: "translateX(-100%)",
                           }}
-                        />
+                        >
+                          {formatTime(stage.endTime, true)}
+                        </div>
                       );
                     })}
-
-                    <div
-                      className="w-full overflow-hidden bg-neutral-200/50 dark:bg-neutral-800"
-                      style={{
-                        height: `${layoutSettings.progressBarHeight || 4}px`,
-                        contain: "paint layout",
-                      }}
-                    >
-                      {expandedStagesRef.current.map((stage) => {
-                        const totalTime =
-                          expandedStagesRef.current[
-                            expandedStagesRef.current.length - 1
-                          ].endTime;
-                        const startPercentage =
-                          (stage.startTime / totalTime) * 100;
-                        const width =
-                          ((stage.endTime - stage.startTime) / totalTime) * 100;
-
-                        return stage.type === "wait" ? (
-                          <div
-                            key={`waiting-${stage.endTime}`}
-                            className="absolute"
-                            style={{
-                              left: `${startPercentage}%`,
-                              width: `${width}%`,
-                              height: `${
-                                layoutSettings.progressBarHeight || 4
-                              }px`,
-                              background: `repeating-linear-gradient(
-                                45deg,
-                                transparent,
-                                transparent 4px,
-                                rgba(0, 0, 0, 0.1) 4px,
-                                rgba(0, 0, 0, 0.1) 8px
-                              )`,
-                              transform: "translateZ(0)",
-                            }}
-                          />
-                        ) : null;
-                      })}
-                      <motion.div
-                        className="h-full bg-neutral-800 dark:bg-neutral-100 transform-gpu"
-                        initial={{ width: 0 }}
-                        animate={{
-                          width: currentTime > 0 && expandedStagesRef.current.length > 0
-                            ? `${(currentTime / (expandedStagesRef.current[expandedStagesRef.current.length - 1]?.endTime || 1)) * 100}%`
-                            : "0%"
-                        }}
-                        transition={{
-                          duration: 0.26,
-                          ease: [0.4, 0, 0.2, 1],
-                        }}
-                        style={{
-                          willChange: "width",
-                          transformOrigin: "left center",
-                          contain: "layout",
-                          backfaceVisibility: "hidden",
-                        }}
-                      />
-                    </div>
-
-                    <div className="relative mt-1 h-4 w-full">
-                      {expandedStagesRef.current.map((stage) => {
-                        const totalTime =
-                          expandedStagesRef.current[
-                            expandedStagesRef.current.length - 1
-                          ].endTime;
-                        const percentage = (stage.endTime / totalTime) * 100;
-                        return (
-                          <div
-                            key={stage.endTime}
-                            className="absolute top-0 text-[8px] text-neutral-500 dark:text-neutral-400"
-                            style={{
-                              left: `${percentage}%`,
-                              transform: "translateX(-100%)",
-                            }}
-                          >
-                            {formatTime(stage.endTime, true)}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </motion.div>
-                </motion.div>
+                  </div>
+                </div>
               </div>
             </motion.div>
           )}

@@ -145,12 +145,12 @@ const StageItem: React.FC<StageItemProps> = ({
                             )}
                         </div>
                         {step.description && (
-                            <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
+                            <p className="text-xs text-neutral-600 dark:text-neutral-400 truncate">
                                 {step.description}
                             </p>
                         )}
                         {step.detail && (
-                            <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
+                            <p className="text-xs text-neutral-600 dark:text-neutral-400 truncate">
                                 {step.detail}
                             </p>
                         )}

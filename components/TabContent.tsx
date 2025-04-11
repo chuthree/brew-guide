@@ -551,7 +551,7 @@ const TabContent: React.FC<TabContentProps> = ({
                                 {/* 分割线和描述文本 */}
                                 <div className="my-3 flex items-center">
                                     <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
-                                    <span className="mx-2 text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
+                                    <span className="mx-2 text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
                                         以上是常用器具
                                     </span>
                                     <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
@@ -599,7 +599,7 @@ const TabContent: React.FC<TabContentProps> = ({
                                             {/* 分割线和描述文本 */}
                                             <div className="my-3 flex items-center">
                                                 <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
-                                                <span className="mx-2 text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
+                                                <span className="mx-2 text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
                                                     以上是常用方案
                                                 </span>
                                                 <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
@@ -617,7 +617,8 @@ const TabContent: React.FC<TabContentProps> = ({
                                 index > 0 && 
                                 step.originalIndex !== undefined && 
                                 content[activeTab]?.steps[index-1]?.originalIndex !== undefined &&
-                                step.originalIndex !== content[activeTab]?.steps[index-1]?.originalIndex;
+                                step.originalIndex !== content[activeTab]?.steps[index-1]?.originalIndex &&
+                                (settings?.layoutSettings?.showStageDivider !== false); // 根据设置决定是否显示分隔线
                             
                             return (
                             <React.Fragment key={step.methodId ? `${step.methodId}-${index}` : `${step.title}-${index}`}>
