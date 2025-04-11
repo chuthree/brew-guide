@@ -420,7 +420,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
             label: '',
             water: '',
             detail: '',
-            pourType: isCustomPreset ? (defaultPourType as string) : 'circle',
+            pourType: isCustomPreset ? (defaultPourType as string) : '', // 对于非自定义预设，不设置默认注水方式
             ...(customEquipment.hasValve ? { valveStatus: 'closed' as 'closed' | 'open' } : {})
         };
 
@@ -1061,13 +1061,17 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                                                                     <option value="other">其他方式</option>
                                                                 </>
                                                             )}
+                                                            {/* 为自定义预设添加其他方式选项 */}
+                                                            {customEquipment.animationType === 'custom' && (
+                                                                <option value="other">其他方式</option>
+                                                            )}
                                                         </>
                                                     ) : (
                                                         <>
                                                             {/* 自定义预设器具显示更简化的选项列表 */}
                                                             {customEquipment.animationType === 'custom' ? (
                                                                 <>
-                                                                    <option value="other">自定义方式</option>
+                                                                    <option value="other">其他方式</option>
                                                                     {/* 添加提示信息 */}
                                                                     <option value="" disabled style={{ fontStyle: 'italic', color: '#999' }}>
                                                                         提示：可在器具设置中添加自定义注水动画
