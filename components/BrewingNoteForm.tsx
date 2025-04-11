@@ -65,13 +65,13 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         coffeeBeanInfo: initialCoffeeBeanInfo,
         rating: initialData?.rating || 3,
         taste: {
-            acidity: initialData?.taste?.acidity || 3,
-            sweetness: initialData?.taste?.sweetness || 3,
-            bitterness: initialData?.taste?.bitterness || 3,
-            body: initialData?.taste?.body || 3,
+            acidity: initialData?.taste?.acidity || 0,
+            sweetness: initialData?.taste?.sweetness || 0,
+            bitterness: initialData?.taste?.bitterness || 0,
+            body: initialData?.taste?.body || 0,
         },
         notes: initialData?.notes || '',
-    })
+    });
 
     // 添加优化相关状态，初始化理想风味为当前风味
     const [showOptimization, setShowOptimization] = useState(showOptimizationByDefault) // 控制是否显示优化界面，由外部传入默认值
@@ -192,10 +192,10 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                 coffeeBeanInfo: coffeeBeanInfo,
                 rating: initialData.rating || 3,
                 taste: {
-                    acidity: initialData.taste?.acidity || 3,
-                    sweetness: initialData.taste?.sweetness || 3,
-                    bitterness: initialData.taste?.bitterness || 3,
-                    body: initialData.taste?.body || 3,
+                    acidity: initialData.taste?.acidity || 0,
+                    sweetness: initialData.taste?.sweetness || 0,
+                    bitterness: initialData.taste?.bitterness || 0,
+                    body: initialData.taste?.body || 0,
                 },
                 notes: initialData.notes || '',
             })
@@ -209,6 +209,11 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                     grindSize: initialData.params.grindSize || '中细',
                     temp: initialData.params.temp || '92°C',
                 });
+            }
+
+            // Show flavor ratings section if any rating is greater than 0
+            if (initialData.taste && Object.values(initialData.taste).some(value => value > 0)) {
+                setShowFlavorRatings(true);
             }
         }
     }, [initialData])
@@ -590,6 +595,9 @@ stages数组中的每个阶段必须包含以下字段：
         setMethodParams(newMethodParams);
     };
 
+    // Inside the component, add a new state for showing/hiding flavor ratings
+    const [showFlavorRatings, setShowFlavorRatings] = useState(false);
+
     if (!isOpen) return null
 
     // 为平台添加特定类名
@@ -791,51 +799,63 @@ stages数组中的每个阶段必须包含以下字段：
 
                     {/* 风味评分 */}
                     <div className="space-y-4">
-                        <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
-                            风味评分
+                        <div className="flex items-center justify-between">
+                            <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
+                                风味评分
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setShowFlavorRatings(!showFlavorRatings)}
+                                className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400"
+                            >
+                                [ {showFlavorRatings ? '收起' : '展开'} ]
+                            </button>
                         </div>
-                        <div className="grid grid-cols-2 gap-8">
-                            {Object.entries(formData.taste).map(([key, value]) => (
-                                <div key={key} className="space-y-2">
-                                    <div className="flex items-center justify-between">
-                                        <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
-                                            {
+                        
+                        {showFlavorRatings && (
+                            <div className="grid grid-cols-2 gap-8">
+                                {Object.entries(formData.taste).map(([key, value]) => (
+                                    <div key={key} className="space-y-2">
+                                        <div className="flex items-center justify-between">
+                                            <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
                                                 {
-                                                    acidity: '酸度',
-                                                    sweetness: '甜度',
-                                                    bitterness: '苦度',
-                                                    body: '醇度',
-                                                }[key]
-                                            }
+                                                    {
+                                                        acidity: '酸度',
+                                                        sweetness: '甜度',
+                                                        bitterness: '苦度',
+                                                        body: '醇度',
+                                                    }[key]
+                                                }
+                                            </div>
+                                            <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
+                                                [ {value || 0} ]
+                                            </div>
                                         </div>
-                                        <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
-                                            [ {value} ]
+                                        <div className="relative py-4 -my-4">
+                                            <input
+                                                type="range"
+                                                min="0"
+                                                max="5"
+                                                value={value || 0}
+                                                onChange={(e) =>
+                                                    setFormData({
+                                                        ...formData,
+                                                        taste: {
+                                                            ...formData.taste,
+                                                            [key]: parseInt(e.target.value),
+                                                        },
+                                                    })
+                                                }
+                                                onTouchStart={handleTouchStart(key, value)}
+                                                onTouchMove={handleTouchMove(key)}
+                                                onTouchEnd={handleTouchEnd}
+                                                className="relative h-[1px] w-full appearance-none bg-neutral-300 dark:bg-neutral-600 cursor-pointer touch-none [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-0 [&::-webkit-slider-thumb]:bg-neutral-800 dark:[&::-webkit-slider-thumb]:bg-white [&::-moz-range-thumb]:h-3 [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-neutral-800 dark:[&::-moz-range-thumb]:bg-white"
+                                            />
                                         </div>
                                     </div>
-                                    <div className="relative py-4 -my-4">
-                                        <input
-                                            type="range"
-                                            min="1"
-                                            max="5"
-                                            value={value}
-                                            onChange={(e) =>
-                                                setFormData({
-                                                    ...formData,
-                                                    taste: {
-                                                        ...formData.taste,
-                                                        [key]: parseInt(e.target.value),
-                                                    },
-                                                })
-                                            }
-                                            onTouchStart={handleTouchStart(key, value)}
-                                            onTouchMove={handleTouchMove(key)}
-                                            onTouchEnd={handleTouchEnd}
-                                            className="relative h-[1px] w-full appearance-none bg-neutral-300 dark:bg-neutral-600 cursor-pointer touch-none [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-0 [&::-webkit-slider-thumb]:bg-neutral-800 dark:[&::-webkit-slider-thumb]:bg-white [&::-moz-range-thumb]:h-3 [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-neutral-800 dark:[&::-moz-range-thumb]:bg-white"
-                                        />
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     {/* 总体评分 */}
