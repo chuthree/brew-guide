@@ -2,14 +2,11 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 
-// 从 types.ts 导入 BrewingNoteData 类型
 import type { BrewingNoteData, CoffeeBean } from '@/app/types'
 import { generateOptimizationJson } from '@/lib/jsonUtils'
 import { brewingMethods, type Method, type Stage } from '@/lib/config'
-// import { Storage } from '@/lib/storage'
 import AutoResizeTextarea from './AutoResizeTextarea'
 import { Capacitor } from '@capacitor/core'
-import { BeanMethodManager } from '@/lib/beanMethodManager'
 
 interface TasteRatings {
     acidity: number;
@@ -92,9 +89,6 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         grindSize: initialData?.params?.grindSize || '中细',
         temp: initialData?.params?.temp || '92°C',
     });
-
-    // 添加保存成功状态
-    const [saveSuccess, setSaveSuccess] = useState(false);
 
     // 添加平台检测状态
     const [isAndroid, setIsAndroid] = useState(false)
@@ -223,133 +217,6 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         // 当外部传入的showOptimizationByDefault变化时，更新内部状态
         setShowOptimization(showOptimizationByDefault)
     }, [showOptimizationByDefault])
-
-    const [isFromBeanMethod, setIsFromBeanMethod] = useState(false)
-    const [currentBeanMethodId, setCurrentBeanMethodId] = useState<string | null>(null)
-
-    // 在组件加载时检查是否来自常用方案
-    useEffect(() => {
-        const checkBeanMethod = async () => {
-            if (!initialData.coffeeBean?.id) return;
-            
-            try {
-                const methods = await BeanMethodManager.getBeanMethods(initialData.coffeeBean.id);
-                const matchingMethod = methods.find(method => 
-                    method.equipmentId === initialData.equipment &&
-                    method.methodId === initialData.method
-                );
-                
-                if (matchingMethod) {
-                    setIsFromBeanMethod(true);
-                    setCurrentBeanMethodId(matchingMethod.id);
-                }
-            } catch (error) {
-                console.error('检查常用方案时出错:', error);
-            }
-        };
-        
-        checkBeanMethod();
-    }, [initialData.coffeeBean?.id, initialData.equipment, initialData.method]);
-
-    // 保存笔记的处理函数
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
-
-        // 创建完整的笔记数据
-        const noteData: BrewingNoteData = {
-            id: id || Date.now().toString(),
-            timestamp: Date.now(),
-            ...formData,
-            equipment: initialData.equipment,
-            method: initialData.method,
-            params: methodParams,
-            totalTime: initialData.totalTime,
-        };
-
-        try {
-            // 如果是来自常用方案，则更新常用方案的参数
-            if (isFromBeanMethod && currentBeanMethodId) {
-                await BeanMethodManager.updateMethod(currentBeanMethodId, {
-                    params: {
-                        coffee: methodParams.coffee,
-                        water: methodParams.water,
-                        grindSize: methodParams.grindSize,
-                        temp: methodParams.temp,
-                        ratio: methodParams.ratio
-                    }
-                });
-            }
-
-            // 保存笔记
-            onSave(noteData);
-        } catch (error) {
-            console.error('保存笔记时出错:', error);
-            alert('保存笔记时出错，请重试');
-        }
-    }
-
-    // 保存为常用方案的处理函数
-    const saveAsBeanMethod = async () => {
-        // 检查是否选择了咖啡豆
-        if (!initialData.coffeeBean?.id) {
-            alert('请先选择咖啡豆，才能保存为常用方案');
-            return;
-        }
-
-        // 确保有设备和方法信息
-        if (!initialData.equipment || !initialData.method) {
-            alert('缺少设备或方法信息，无法保存为常用方案');
-            return;
-        }
-
-        try {
-            // 创建方案数据
-            const beanMethod = {
-                beanId: initialData.coffeeBean.id,
-                equipmentId: initialData.equipment,
-                methodId: initialData.method,
-                notes: formData.notes || '',
-                params: {
-                    coffee: methodParams.coffee,
-                    water: methodParams.water,
-                    ratio: methodParams.ratio || '1:15',
-                    grindSize: methodParams.grindSize,
-                    temp: methodParams.temp
-                }
-            };
-
-            // 保存为咖啡豆的常用方案
-            const result = await BeanMethodManager.addMethod(beanMethod);
-            
-            if (result) {
-                // 显示成功状态
-                setSaveSuccess(true);
-                
-                // 3秒后自动隐藏成功提示
-                setTimeout(() => {
-                    setSaveSuccess(false);
-                }, 3000);
-                
-                // 同时保存笔记
-                const noteData: BrewingNoteData = {
-                    id: id || Date.now().toString(),
-                    timestamp: Date.now(),
-                    ...formData,
-                    equipment: initialData.equipment,
-                    method: initialData.method,
-                    params: methodParams,
-                    totalTime: initialData.totalTime,
-                };
-                
-                onSave(noteData);
-            } else {
-                alert('保存常用方案失败，请重试');
-            }
-        } catch (error) {
-            console.error('保存常用方案出错:', error);
-            alert('保存常用方案时出错，请重试');
-        }
-    };
 
     const [isDragging, /*setIsDragging*/] = useState(false)
     const [currentValue, setCurrentValue] = useState<number | null>(null)
@@ -598,6 +465,30 @@ stages数组中的每个阶段必须包含以下字段：
     // Inside the component, add a new state for showing/hiding flavor ratings
     const [showFlavorRatings, setShowFlavorRatings] = useState(false);
 
+    // 保存笔记的处理函数 - Moved definition higher
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+
+        // 创建完整的笔记数据
+        const noteData: BrewingNoteData = {
+            id: id || Date.now().toString(),
+            timestamp: Date.now(),
+            ...formData,
+            equipment: initialData.equipment,
+            method: initialData.method,
+            params: methodParams,
+            totalTime: initialData.totalTime,
+        };
+
+        try {
+            // 保存笔记
+            onSave(noteData);
+        } catch (error) {
+            console.error('保存笔记时出错:', error);
+            alert('保存笔记时出错，请重试');
+        }
+    }
+
     if (!isOpen) return null
 
     // 为平台添加特定类名
@@ -608,7 +499,7 @@ stages数组中的每个阶段必须包含以下字段：
         <form 
             id={id} 
             ref={formRef}
-            onSubmit={handleSubmit} 
+            onSubmit={handleSubmit} // Correctly referenced now
             className="relative flex h-full flex-col space-y-8"
         >
             {/* 隐藏的返回按钮，仅用于导航栏返回按钮查找 */}
@@ -624,7 +515,7 @@ stages数组中的每个阶段必须包含以下字段：
                 <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
                     {showOptimization
                         ? '优化冲煮方案'
-                        : `${isFromBeanMethod ? '常用方案 · ' : ''}${initialData?.id ? '编辑记录' : '新建记录'} · ${new Date().toLocaleString('zh-CN', {
+                        : `${initialData?.id ? '编辑记录' : '新建记录'} · ${new Date().toLocaleString('zh-CN', {
                             month: 'numeric',
                             day: 'numeric',
                             hour: 'numeric',
@@ -649,20 +540,6 @@ stages数组中的每个阶段必须包含以下字段：
                         >
                             [ 保存 ]
                         </button>
-                        {/* 添加"保存为常用方案"按钮 - 仅当选择了咖啡豆且不是来自常用方案时显示 */}
-                        {initialData.coffeeBean?.id && !isFromBeanMethod && (
-                            <button
-                                type="button"
-                                onClick={saveAsBeanMethod}
-                                className={`text-[10px] tracking-widest transition-colors ${
-                                    saveSuccess 
-                                    ? 'text-emerald-600 dark:text-emerald-500' 
-                                    : 'text-blue-600 dark:text-blue-500'
-                                } font-medium`}
-                            >
-                                [ {saveSuccess ? '已保存为常用方案' : '保存为常用方案'} ]
-                            </button>
-                        )}
                     </div>
                 ) : (
                     <div className="flex items-center space-x-4">

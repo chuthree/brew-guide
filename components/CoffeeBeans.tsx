@@ -17,7 +17,6 @@ import {
 import { SORT_OPTIONS as RANKING_SORT_OPTIONS, RankingSortOption } from './CoffeeBeanRanking'
 import { getBloggerBeans } from '@/lib/csvUtils'
 import BottomActionBar from '@/components/BottomActionBar'
-import BeanMethodsModal from './BeanMethodsModal'
 import ActionMenu from './ui/action-menu'
 import { useCopy } from "@/lib/hooks/useCopy"
 import CopyFailureModal from "./ui/copy-failure-modal"
@@ -279,8 +278,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
     const isLoadingRef = useRef<boolean>(false)
     // 添加强制刷新的key
     const [forceRefreshKey, setForceRefreshKey] = useState(0)
-    const [showMethodsModal, setShowMethodsModal] = useState<boolean>(false)
-    const [selectedBeanForMethods, setSelectedBeanForMethods] = useState<ExtendedCoffeeBean | null>(null)
+    // 方案管理模态框状态 - Removed as no longer needed
+    // const [showMethodsModal, setShowMethodsModal] = useState(false)
+    // const [selectedBeanForMethods, setSelectedBeanForMethods] = useState<ExtendedCoffeeBean | null>(null)
 
     // 添加引用，用于点击外部关闭操作菜单
     const containerRef = React.useRef<HTMLDivElement>(null);
@@ -813,21 +813,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
         }
     };
 
-    // 添加方法处理AI方案生成
-    // const handleGenerateAIRecipe = (bean: ExtendedCoffeeBean) => {
-    //     if (onGenerateAIRecipe) {
-    //         onGenerateAIRecipe(bean);
-    //     } else {
-    //         setSelectedBeanForAI(bean);
-    //         setShowAIRecipeModal(true);
-    //     }
-    //     // 关闭操作菜单
-    //     setActionMenuStates(prev => ({
-    //         ...prev,
-    //         [bean.id]: false
-    //     }));
-    // }
-
     // 处理咖啡豆评分
     const handleShowRatingForm = (bean: ExtendedCoffeeBean, onRatingSaved?: () => void) => {
         setSelectedBeanForRating(bean);
@@ -979,25 +964,10 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
         return name.toLowerCase().includes(parameter.toLowerCase());
     };
 
-    // 处理显示方案管理
-    const handleShowMethods = (bean: ExtendedCoffeeBean) => {
-        setSelectedBeanForMethods(bean)
-        setShowMethodsModal(true)
-    }
-
     if (!isOpen) return null
 
     return (
         <>
-            {/* AI方案生成模态框 - 只在没有提供 onGenerateAIRecipe 时才显示 */}
-            {/* {!onGenerateAIRecipe && (
-                <AIRecipeModal
-                    showModal={showAIRecipeModal}
-                    onClose={() => setShowAIRecipeModal(false)}
-                    coffeeBean={selectedBeanForAI}
-                />
-            )} */}
-
             {/* 咖啡豆表单弹出框 */}
             <CoffeeBeanFormModal
                 showForm={showAddForm || editingBean !== null}
@@ -1045,16 +1015,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                         ratingSavedCallback();
                         setRatingSavedCallback(null); // 使用后清除
                     }
-                }}
-            />
-
-            {/* 添加方案管理模态框 */}
-            <BeanMethodsModal
-                showModal={showMethodsModal}
-                coffeeBean={selectedBeanForMethods}
-                onClose={() => {
-                    setShowMethodsModal(false)
-                    setSelectedBeanForMethods(null)
                 }}
             />
 
@@ -1331,12 +1291,12 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                 </div>
 
                                 <div className="flex items-center">
-                                    {/* Year selector - Only in Blogger view */} 
+                                    {/* Year selector - Only in Blogger view */}
                                     {viewMode === VIEW_OPTIONS.BLOGGER && (
-                                        <div className="flex items-center ml-3"> {/* Use ml-3 for initial spacing */} 
+                                        <div className="flex items-center ml-3">
                                             <button
                                                 onClick={() => setBloggerYear(2025)}
-                                                className={`pb-1.5 mx-3 text-[11px] relative ${bloggerYear === 2025 ? 'text-neutral-800 dark:text-white' : 'text-neutral-600 dark:text-neutral-400'}`} // Use mx-3, remove px-2
+                                                className={`pb-1.5 mx-3 text-[11px] relative ${bloggerYear === 2025 ? 'text-neutral-800 dark:text-white' : 'text-neutral-600 dark:text-neutral-400'}`}
                                             >
                                                 <span className="relative">2025</span>
                                                 {bloggerYear === 2025 && (
@@ -1345,7 +1305,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                             </button>
                                             <button
                                                 onClick={() => setBloggerYear(2024)}
-                                                className={`pb-1.5 ml-3 text-[11px] relative ${bloggerYear === 2024 ? 'text-neutral-800 dark:text-white' : 'text-neutral-600 dark:text-neutral-400'}`} // Use mx-3, remove px-2
+                                                className={`pb-1.5 ml-3 text-[11px] relative ${bloggerYear === 2024 ? 'text-neutral-800 dark:text-white' : 'text-neutral-600 dark:text-neutral-400'}`}
                                             >
                                                 <span className="relative">2024</span>
                                                 {bloggerYear === 2024 && (
@@ -1435,11 +1395,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                                 <div className="flex-shrink-0 ml-1 relative">
                                                                     <ActionMenu
                                                                         items={[
-                                                                            {
-                                                                                id: 'methods',
-                                                                                label: '方案',
-                                                                                onClick: () => handleShowMethods(bean)
-                                                                            },
                                                                             {
                                                                                 id: 'edit',
                                                                                 label: '编辑',
