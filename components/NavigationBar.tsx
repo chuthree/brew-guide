@@ -196,15 +196,21 @@ const EditableParameter = ({
     unit,
     className = '',
     prefix = '',
+    isGrindSize = false,  // 标识是否为研磨度参数
+    originalGrindSize = '', // 原始研磨度值（未转换的通用研磨度）
 }: {
     value: string
     onChange: (value: string) => void
     unit: string
     className?: string
     prefix?: string
+    isGrindSize?: boolean
+    originalGrindSize?: string
 }) => {
     const [isEditing, setIsEditing] = useState(false)
-    const [tempValue, setTempValue] = useState(value)
+    // 如果是研磨度且提供了原始值，则使用原始值作为编辑初始值
+    // 这确保编辑的是通用研磨度值，而不是转换后的特定磨豆机研磨度
+    const [tempValue, setTempValue] = useState(isGrindSize && originalGrindSize ? originalGrindSize : value)
     const inputRef = React.useRef<HTMLInputElement>(null)
 
     useEffect(() => {
@@ -215,12 +221,15 @@ const EditableParameter = ({
     }, [isEditing])
 
     useEffect(() => {
-        setTempValue(value)
-    }, [value])
+        // 如果是研磨度且提供了原始值，则使用原始值，否则使用显示值
+        // 这确保编辑表单显示的始终是通用研磨度值
+        setTempValue(isGrindSize && originalGrindSize ? originalGrindSize : value)
+    }, [value, isGrindSize, originalGrindSize])
 
     const handleBlur = () => {
         setIsEditing(false)
-        if (tempValue !== value) {
+        // 确保编辑研磨度时将原始值与通用研磨度值比较
+        if (tempValue !== (isGrindSize && originalGrindSize ? originalGrindSize : value)) {
             onChange(tempValue)
         }
     }
@@ -793,11 +802,19 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                                         {parameterInfo.params?.grindSize && (
                                                             <>
                                                                 <span className="flex-shrink-0">·</span>
+                                                                {/* 
+                                                                  * 研磨度显示和编辑处理：
+                                                                  * - value属性传入转换后的研磨度(formatGrindSize)用于显示
+                                                                  * - 传入isGrindSize=true标记这是研磨度参数
+                                                                  * - originalGrindSize传入原始通用研磨度，用于编辑时显示和提交
+                                                                  */}
                                                                 <EditableParameter
-                                                                    value={editableParams.grindSize}
+                                                                    value={formatGrindSize(editableParams.grindSize, settings.grindType)}
                                                                     onChange={(v) => handleParamChange('grindSize', v)}
                                                                     unit=""
                                                                     className="border-b border-dashed border-neutral-200 dark:border-neutral-700"
+                                                                    isGrindSize={true}
+                                                                    originalGrindSize={editableParams.grindSize}
                                                                 />
                                                             </>
                                                         )}
@@ -833,6 +850,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                                         <span className="whitespace-nowrap">{parameterInfo.params.ratio}</span>
                                                         <span className="flex-shrink-0">·</span>
                                                         <span className="whitespace-nowrap">
+                                                            {/* 显示时使用formatGrindSize将通用研磨度转换为特定磨豆机的研磨度 */}
                                                             {formatGrindSize(parameterInfo.params.grindSize || "", settings.grindType)}
                                                         </span>
                                                         <span className="flex-shrink-0">·</span>

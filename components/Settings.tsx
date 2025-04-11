@@ -1,7 +1,7 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
-import { APP_VERSION } from '@/lib/config'
+import React, { useState, useEffect } from 'react'
+import { APP_VERSION, availableGrinders } from '@/lib/config'
 import { Storage } from '@/lib/storage'
 import DataManager from './DataManager'
 import hapticsUtils from '@/lib/haptics'
@@ -10,12 +10,13 @@ import { useTheme } from 'next-themes'
 import { LayoutSettings } from './BrewingTimer'
 import confetti from 'canvas-confetti'
 import { notifyLanguageChange } from '@/providers/TranslationsProvider'
+import { getReferenceGrindSizes, getCategorizedGrindSizes } from '@/lib/grindUtils'
 
 // 定义设置选项接口
 export interface SettingsOptions {
     notificationSound: boolean
     hapticFeedback: boolean
-    grindType: "通用" | "幻刺"
+    grindType: string
     textZoomLevel: number
     layoutSettings?: LayoutSettings // 添加布局设置
     language: string // 添加语言设置
@@ -25,7 +26,7 @@ export interface SettingsOptions {
 export const defaultSettings: SettingsOptions = {
     notificationSound: true,
     hapticFeedback: true,
-    grindType: "通用",
+    grindType: "generic",
     textZoomLevel: 1.0,
     layoutSettings: {
         stageInfoReversed: false,
@@ -63,9 +64,6 @@ const Settings: React.FC<SettingsProps> = ({
 
     // 获取主题相关方法
     const { theme, setTheme } = useTheme()
-
-    // 添加幻刺按钮引用
-    const phanciButtonRef = useRef<HTMLButtonElement>(null)
 
     // 添加主题颜色更新的 Effect
     useEffect(() => {
@@ -147,10 +145,12 @@ const Settings: React.FC<SettingsProps> = ({
 
     // 触发彩带特效
     const showConfetti = () => {
-        if (!phanciButtonRef.current) return;
+        // Find the selected grinder button element
+        const selectedGrinderButton = document.getElementById(`grinder-button-${settings.grindType}`);
+        if (!selectedGrinderButton) return;
         
         // 获取按钮元素的位置信息
-        const rect = phanciButtonRef.current.getBoundingClientRect();
+        const rect = selectedGrinderButton.getBoundingClientRect();
         const x = (rect.left + rect.width / 2) / window.innerWidth;
         const y = (rect.top + rect.height / 2) / window.innerHeight;
         
@@ -197,7 +197,7 @@ const Settings: React.FC<SettingsProps> = ({
         }
 
         // 当选择幻刺时触发彩带特效
-        if (key === 'grindType' && value === '幻刺') {
+        if (key === 'grindType' && value === 'phanci_pro') {
             showConfetti();
             // 选择幻刺时也提供触感反馈
             if (settings.hapticFeedback) {
@@ -461,62 +461,104 @@ const Settings: React.FC<SettingsProps> = ({
                         </h3>
                         <div className="space-y-4">
                             <div className="text-sm text-neutral-700 dark:text-neutral-300">
-                                研磨度类型
+                                磨豆机类型
                             </div>
-                            <div className="inline-flex rounded-lg bg-neutral-100 p-1 dark:bg-neutral-800 w-full">
-                                <button
-                                    className={`flex-1 rounded-md py-3 text-sm font-medium transition-colors ${
-                                        settings.grindType === '通用'
-                                            ? 'bg-white dark:bg-neutral-600 text-neutral-900 dark:text-white shadow-sm'
-                                            : 'text-neutral-600 dark:text-neutral-400'
-                                    }`}
-                                    onClick={() => handleChange('grindType', '通用')}
+                            <div className="relative">
+                                <select
+                                    value={settings.grindType}
+                                    onChange={(e) => handleChange('grindType', e.target.value)}
+                                    className="w-full py-3 px-4 text-sm font-medium rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white appearance-none focus:outline-none focus:ring-2 focus:ring-neutral-500"
                                 >
-                                    通用
-                                </button>
-                                <button
-                                    className={`flex-1 rounded-md py-3 text-sm font-medium transition-colors ${
-                                        settings.grindType === '幻刺'
-                                            ? 'bg-white dark:bg-neutral-600 text-neutral-900 dark:text-white shadow-sm'
-                                            : 'text-neutral-600 dark:text-neutral-400'
-                                    }`}
-                                    ref={phanciButtonRef}
-                                    onClick={() => handleChange('grindType', '幻刺')}
-                                >
-                                    幻刺
-                                </button>
+                                    {availableGrinders.map((grinder) => (
+                                        <option key={grinder.id} value={grinder.id}>
+                                            {grinder.name}
+                                        </option>
+                                    ))}
+                                </select>
+                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-neutral-700 dark:text-neutral-300">
+                                    <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                                </div>
                             </div>
                             <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                                选择&quot;幻刺&quot;将显示专用于幻刺(Pro)磨豆机的研磨度设置
+                                选择你的磨豆机型号，将显示对应的研磨度参考（如果可用）
                             </p>
 
-                            {settings.grindType === '幻刺' && (
-                                <div className="mt-3 border-l-2 border-neutral-300 dark:border-neutral-700 pl-4 py-3">
-                                    <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-3">
-                                        幻刺(Pro)研磨度参考
-                                    </p>
-                                    <div className="grid grid-cols-2 gap-y-3">
-                                        <div className="text-sm text-neutral-700 dark:text-neutral-300">
-                                            <span className="font-medium">意式</span>: 2-4格
+                            {/* Display grinder specific reference grind sizes if available */}
+                            {(() => {
+                                const referenceGrindSizes = getReferenceGrindSizes(settings.grindType);
+                                
+                                if (Object.keys(referenceGrindSizes).length > 0) {
+                                    const selectedGrinder = availableGrinders.find(g => g.id === settings.grindType);
+                                    
+                                    // 使用新函数获取分类后的研磨度数据
+                                    const { basicGrindSizes, applicationGrindSizes } = getCategorizedGrindSizes(settings.grindType);
+                                    
+                                    return (
+                                        <div className="mt-3 border-l-2 border-neutral-300 dark:border-neutral-700 pl-4 py-3">
+                                            <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-3">
+                                                {selectedGrinder?.name || "磨豆机"} 研磨度参考表
+                                            </p>
+                                            <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-2">
+                                                此表仅作参考，显示通用研磨度与特定磨豆机刻度对照关系
+                                            </p>
+                                            
+                                            {/* 基础研磨度部分 */}
+                                            <div className="mb-4">
+                                                <p className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-2">
+                                                    基础研磨度:
+                                                </p>
+                                                <div className="grid grid-cols-2 gap-y-3">
+                                                    {Object.entries(basicGrindSizes).map(([key, value]) => (
+                                                        <div key={key} className="text-sm text-neutral-700 dark:text-neutral-300">
+                                                            <span className="font-medium">{key}</span>: {value}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            
+                                            {/* 特定应用研磨度部分 */}
+                                            {Object.keys(applicationGrindSizes).length > 0 && (
+                                                <div>
+                                                    <p className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-2">
+                                                        特定应用研磨度:
+                                                    </p>
+                                                    <div className="grid grid-cols-2 gap-y-3">
+                                                        {Object.entries(applicationGrindSizes).map(([key, value]) => (
+                                                            <div key={key} className="text-sm text-neutral-700 dark:text-neutral-300">
+                                                                <span className="font-medium">{key}</span>: {value}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                            
+                                            {settings.grindType === 'phanci_pro' && (
+                                                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-3">
+                                                    手冲中细常用建议：8-9格
+                                                </p>
+                                            )}
+                                            
+                                            {/* 数据来源和用户调研信息 */}
+                                            <div className="mt-4 pt-4 border-t border-neutral-200 dark:border-neutral-700">
+                                                <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                                                    数据来源：网络收集和用户调研，仅供参考
+                                                </p>
+                                                <div className="mt-2">
+                                                    <a 
+                                                        href="https://wj.qq.com/s2/19815833/44ae/" 
+                                                        target="_blank" 
+                                                        rel="noopener noreferrer"
+                                                        className="text-xs text-blue-600 dark:text-blue-400 flex items-center"
+                                                    >
+                                                        <span>→ 参与研磨度调研问卷，帮助完善数据</span>
+                                                    </a>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div className="text-sm text-neutral-700 dark:text-neutral-300">
-                                            <span className="font-medium">摩卡壶</span>: 3-6.5格
-                                        </div>
-                                        <div className="text-sm text-neutral-700 dark:text-neutral-300">
-                                            <span className="font-medium text-neutral-900 dark:text-neutral-100">手冲</span>: 6-10格
-                                        </div>
-                                        <div className="text-sm text-neutral-700 dark:text-neutral-300">
-                                            <span className="font-medium">法压壶</span>: 9-11.5格
-                                        </div>
-                                        <div className="text-sm text-neutral-700 dark:text-neutral-300">
-                                            <span className="font-medium">冷萃</span>: 8-12格
-                                        </div>
-                                    </div>
-                                    <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-3">
-                                        手冲中细常用建议：8-9格
-                                    </p>
-                                </div>
-                            )}
+                                    );
+                                }
+                                return null;
+                            })()}
                         </div>
                     </section>
 

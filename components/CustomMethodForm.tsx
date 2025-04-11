@@ -2,11 +2,11 @@
 
 import React, { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { type Method, CustomEquipment } from '@/lib/config'
+import { type Method, CustomEquipment, availableGrinders, Grinder } from '@/lib/config'
 import { ArrowLeft, ArrowRight, Check } from 'lucide-react'
 import AutoResizeTextarea from './AutoResizeTextarea'
 import { formatGrindSize } from '@/lib/grindUtils'
-import { SettingsOptions } from '@/components/Settings'
+import { SettingsOptions, defaultSettings } from '@/components/Settings'
 import { Storage } from '@/lib/storage'
 
 // 自定义注水动画类型
@@ -182,26 +182,49 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     const [localSettings, setLocalSettings] = useState<SettingsOptions>({
         notificationSound: true,
         hapticFeedback: true,
-        grindType: '通用',
+        grindType: 'generic', // Use grinder ID
         textZoomLevel: 1.0,
         language: 'zh'
     });
 
     // 加载设置
     useEffect(() => {
-        if (localSettings) {
-            setLocalSettings(localSettings);
-        } else {
-            // 尝试从存储中加载设置
-            const loadSettings = async () => {
-                const savedSettings = await Storage.get('brewGuideSettings');
-                if (savedSettings) {
-                    setLocalSettings(JSON.parse(savedSettings) as SettingsOptions);
+        // Renamed settings prop to avoid conflict with state variable
+        // const loadSettings = async (currentSettingsProp?: SettingsOptions) => {
+        const loadSettings = async () => {
+            // If settings prop is provided, use it directly
+            // if (currentSettingsProp) {
+            //     setLocalSettings(currentSettingsProp);
+            //     return;
+            // }
+            // Otherwise, try loading from storage
+            const savedSettings = await Storage.get('brewGuideSettings');
+            if (savedSettings) {
+                try {
+                    const parsedSettings = JSON.parse(savedSettings) as SettingsOptions;
+                    // Ensure default layout settings if missing
+                    if (!parsedSettings.layoutSettings) {
+                        parsedSettings.layoutSettings = defaultSettings.layoutSettings;
+                    }
+                     // Ensure default language if missing
+                    if (!parsedSettings.language) {
+                        parsedSettings.language = defaultSettings.language;
+                    }
+                    setLocalSettings(parsedSettings);
+                } catch (e) {
+                    console.error("Failed to parse settings from storage:", e);
+                    // Fallback to default settings if parsing fails
+                    setLocalSettings(defaultSettings);
                 }
-            };
-            loadSettings();
-        }
-    }, [localSettings]);
+            } else {
+                 // Fallback to default settings if nothing in storage
+                 setLocalSettings(defaultSettings);
+            }
+        };
+        // Pass the settings prop to the load function
+        // loadSettings(settingsProp);
+        loadSettings();
+    }, []); // Removed settingsProp from dependencies as it's not used
 
     // 点击外部关闭
     useEffect(() => {
@@ -835,6 +858,11 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                 )
 
             case 'params':
+                // Find the selected grinder based on localSettings
+                const selectedGrinder = availableGrinders.find((g: Grinder) => g.id === localSettings.grindType);
+                const grinderName = selectedGrinder ? selectedGrinder.name : '通用';
+                const showSpecificGrindInfo = selectedGrinder && selectedGrinder.id !== 'generic' && selectedGrinder.grindSizes;
+
                 return (
                     <motion.div
                         key="params-step"
@@ -886,7 +914,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
 
                             <div className="space-y-2">
                                 <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                                    研磨度 {localSettings.grindType === '幻刺' && <span className="text-xs text-neutral-400">（将自动转换为幻刺刻度）</span>}
+                                    研磨度 {grinderName !== '通用' && <span className="text-xs text-neutral-400">({grinderName})</span>}
                                 </label>
                                 <input
                                     type="text"
@@ -900,28 +928,46 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                                     })}
                                     onFocus={(e) => e.target.select()}
                                     placeholder={
-                                        localSettings.grindType === "幻刺"
-                                            ? "例如：中细 (8-9格)"
-                                            : undefined
+                                        // Provide example based on selected grinder
+                                        selectedGrinder?.id === "phanci_pro"
+                                            ? "例如：中细、特细 (可自动转为对应格数)"
+                                            : "例如：中细、特细、中粗等"
                                     }
                                     className="w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
                                 />
-                                {method.params.grindSize && localSettings.grindType === '幻刺' && (
+                                {method.params.grindSize && showSpecificGrindInfo && (
                                     <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                                        幻刺研磨度：{formatGrindSize(method.params.grindSize, '幻刺')}
+                                        参考{grinderName}刻度：{formatGrindSize(method.params.grindSize, localSettings.grindType)}
                                     </p>
                                 )}
 
                                 {/* 研磨度参考提示 */}
                                 {!method.params.grindSize && (
                                     <div className="mt-1 text-xs space-y-1">
-                                        <p className="text-neutral-500 dark:text-neutral-400">研磨度参考:</p>
-                                        <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-                                            <p className="text-neutral-500 dark:text-neutral-400">· 意式: 极细/特细</p>
-                                            <p className="text-neutral-500 dark:text-neutral-400">· 摩卡壶: 细</p>
-                                            <p className="text-neutral-500 dark:text-neutral-400">· 手冲: 中细{localSettings.grindType === '幻刺' && " (8-9格)"}</p>
-                                            <p className="text-neutral-500 dark:text-neutral-400">· 法压: 中粗/粗</p>
-                                        </div>
+                                        <p className="text-neutral-500 dark:text-neutral-400">研磨度参考 (可自由输入):</p>
+                                        {selectedGrinder && selectedGrinder.grindSizes ? (
+                                            // Show specific hints if available
+                                            <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+                                                {Object.entries(selectedGrinder.grindSizes)
+                                                    .filter(([key]) => {
+                                                        // 只显示粗细度类型，而不是冲煮器具名称
+                                                        const basicKeywords = ['极细', '特细', '细', '中细', '中细偏粗', '中粗', '粗', '特粗'];
+                                                        return basicKeywords.includes(key);
+                                                    })
+                                                    .map(([key, value]) => (
+                                                        <p key={key} className="text-neutral-500 dark:text-neutral-400">· {key}: {value}</p>
+                                                    ))
+                                                }
+                                            </div>
+                                        ) : (
+                                            // Show generic hints
+                                            <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+                                                <p className="text-neutral-500 dark:text-neutral-400">· 极细 特细</p>
+                                                <p className="text-neutral-500 dark:text-neutral-400">· 细</p>
+                                                <p className="text-neutral-500 dark:text-neutral-400">· 中细</p>
+                                                <p className="text-neutral-500 dark:text-neutral-400">· 中粗 粗</p>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>

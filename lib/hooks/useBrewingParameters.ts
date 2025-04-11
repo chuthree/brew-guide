@@ -214,6 +214,7 @@ export function useBrewingParameters() {
 					break;
 				}
 				case "grindSize": {
+					// 存储原始输入的研磨度值，不进行转换，确保通用研磨度值保存
 					newParams = {
 						...editableParams,
 						grindSize: value
