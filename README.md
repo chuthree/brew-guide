@@ -41,22 +41,7 @@ bun dev
 2. 选择合适的冲泡方案或创建自定义方案
 3. 按照指导进行注水操作
 4. 记录您的冲泡体验和口感评价
-
-## 自定义冲煮方案功能
-
-该应用允许用户为自定义器具创建专属的冲煮方案。主要特点：
-
-1. **自定义方案管理** - 用户可以为每个自定义器具添加多个冲煮方案
-2. **器具特性集成** - 方案会根据器具特性（如阀门）自动调整冲煮步骤
-3. **自定义注水方式** - 支持基于器具配置的自定义注水动画
-4. **本地存储** - 方案数据保存在本地，确保持久化
-
-### 使用流程
-
-1. 创建自定义器具
-2. 访问自定义器具的冲煮方案页面
-3. 添加新方案，设置参数、阶段和注水方式
-4. 保存后即可使用该方案开始冲煮
+   ...
 
 ## 技术栈
 
@@ -66,14 +51,16 @@ bun dev
 -   [Framer Motion](https://www.framer.com/motion/) - 动画库
 -   [TypeScript](https://www.typescriptlang.org/) - 类型安全
 
+## 交流群
+
+欢迎加微信交流群～
+![CleanShot 2025-04-12 at 21 58 33](https://github.com/user-attachments/assets/7bbf3350-ce74-4c00-b27a-ec74f81cda61)
+
+
 ## 贡献
 
 欢迎提交问题和功能请求！如果您想贡献代码，请先开一个 issue 讨论您想要更改的内容。
 
-## 交流群
-
-欢迎加微信交流群～
-![CleanShot 2025-04-07 at 18 29 25](https://github.com/user-attachments/assets/aea1f43a-037a-41dc-b310-b02568d16180)
 
 ## 许可
 
@@ -93,12 +80,3 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-# 测试自动部署 - 2025年 4月10日 星期四 15时18分49秒 CST
-# 再次测试自动部署 - 2025年 4月10日 星期四 15时20分32秒 CST
-# 测试自动部署修复 - 2025年 4月10日 星期四 15时37分11秒 CST
-# 最终测试自动部署 - 2025年 4月10日 星期四 15时41分06秒 CST
-# 最终确认测试 - 2025年 4月10日 星期四 15时51分27秒 CST
-
-## 部署测试
-- 测试时间：2024-04-10
-- 目的：验证 GitHub Actions 自动部署功能
