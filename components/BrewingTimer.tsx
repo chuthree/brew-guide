@@ -198,6 +198,26 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         },
       })
     );
+
+    // 将更新保存到 Storage 以确保持久化
+    const updateSettings = async () => {
+      try {
+        // 先获取当前设置
+        const currentSettingsStr = await Storage.get('brewGuideSettings');
+        if (currentSettingsStr) {
+          const currentSettings = JSON.parse(currentSettingsStr);
+          // 更新 showFlowRate 设置
+          const newSettings = { ...currentSettings, showFlowRate };
+          // 保存回存储
+          await Storage.set('brewGuideSettings', JSON.stringify(newSettings));
+          console.log('流速设置已保存', showFlowRate);
+        }
+      } catch (error) {
+        console.error('保存流速设置失败', error);
+      }
+    };
+    
+    updateSettings();
   }, []);
 
   // 检查设备是否支持触感反馈

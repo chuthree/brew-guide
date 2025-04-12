@@ -141,6 +141,28 @@ const TabContent: React.FC<TabContentProps> = ({
 
     const [_showNoteForm, _setShowNoteForm] = React.useState(false);
     const [_noteFormData, _setNoteFormData] = React.useState<Partial<BrewingNoteData> | null>(null);
+    
+    // 添加本地流速显示设置状态
+    const [localShowFlowRate, setLocalShowFlowRate] = React.useState(settings.showFlowRate);
+    
+    // 监听流速设置变化
+    React.useEffect(() => {
+        // 从props更新本地状态
+        setLocalShowFlowRate(settings.showFlowRate);
+        
+        // 监听计时器组件发出的设置变更事件
+        const handleSettingsChange = (e: CustomEvent<{showFlowRate?: boolean}>) => {
+            if (e.detail && e.detail.showFlowRate !== undefined) {
+                setLocalShowFlowRate(e.detail.showFlowRate);
+            }
+        };
+        
+        window.addEventListener('brewing:settingsChange', handleSettingsChange as EventListener);
+        
+        return () => {
+            window.removeEventListener('brewing:settingsChange', handleSettingsChange as EventListener);
+        };
+    }, [settings.showFlowRate]);
 
     // 获取器具名称的函数
     const _getEquipmentDisplayName = (equipmentId: string): string => {
@@ -490,6 +512,8 @@ const TabContent: React.FC<TabContentProps> = ({
                                     } : undefined}
                                     actionMenuStates={actionMenuStates}
                                     setActionMenuStates={setActionMenuStates}
+                                    showFlowRate={localShowFlowRate}
+                                    allSteps={content[activeTab]?.steps || []}
                                 />
                             </React.Fragment>
                             );

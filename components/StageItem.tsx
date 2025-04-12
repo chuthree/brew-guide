@@ -21,6 +21,8 @@ interface StageItemProps {
     isPinned?: boolean
     actionMenuStates?: Record<string, boolean>
     setActionMenuStates?: React.Dispatch<React.SetStateAction<Record<string, boolean>>>
+    showFlowRate?: boolean
+    allSteps?: Step[]
 }
 
 // 辅助函数：格式化时间
@@ -38,6 +40,66 @@ const formatTime = (seconds: number, compact: boolean = false) => {
     return `${mins}:${secs.toString().padStart(2, '0')}`
 }
 
+// 辅助函数：计算流速
+const calculateFlowRate = (waterAmount: string, time: string | number) => {
+    if (!waterAmount || !time) return 0;
+    const water = parseInt(waterAmount);
+    const seconds = typeof time === 'string' ? parseInt(time) : time;
+    if (seconds <= 0) return 0;
+    return water / seconds;
+}
+
+// 改进的流速计算函数：考虑前后阶段的水量差值
+const calculateImprovedFlowRate = (step: Step, allSteps: Step[]) => {
+    if (!step || !step.items || !step.note || step.type !== 'pour') return 0;
+    
+    // 获取当前阶段的水量和时间
+    const currentWater = parseInt(step.items[0]);
+    const currentTime = typeof step.note === 'string' ? parseInt(step.note) : step.note;
+    
+    if (!currentTime || currentTime <= 0) return 0;
+    
+    // 查找相同originalIndex的前一个阶段
+    if (step.originalIndex !== undefined) {
+        // 查找所有具有相同originalIndex的阶段
+        const sameStageSteps = allSteps.filter(s => 
+            s.originalIndex === step.originalIndex && s.type === 'pour');
+        
+        // 找出当前步骤在这些阶段中的位置
+        const stepIndex = sameStageSteps.findIndex(s => s === step);
+        
+        // 如果是该originalIndex的第一个阶段
+        if (stepIndex === 0) {
+            // 查找前一个originalIndex的最后一个阶段
+            const prevOriginalIndex = step.originalIndex - 1;
+            const prevStageSteps = allSteps.filter(s => 
+                s.originalIndex === prevOriginalIndex && s.type === 'pour');
+            
+            // 获取前一个阶段的最后一个步骤的水量
+            let prevWater = 0;
+            if (prevStageSteps.length > 0) {
+                const prevStep = prevStageSteps[prevStageSteps.length - 1];
+                prevWater = prevStep.items ? parseInt(prevStep.items[0]) : 0;
+            }
+            
+            // 计算水量差值
+            const waterDiff = currentWater - prevWater;
+            return waterDiff / currentTime;
+        } else if (stepIndex > 0) {
+            // 如果不是第一个阶段，获取同一originalIndex的前一个阶段的水量
+            const prevStep = sameStageSteps[stepIndex - 1];
+            const prevWater = prevStep.items ? parseInt(prevStep.items[0]) : 0;
+            
+            // 计算水量差值
+            const waterDiff = currentWater - prevWater;
+            return waterDiff / currentTime;
+        }
+    }
+    
+    // 如果无法确定前一个阶段，使用简单的计算方法
+    return currentWater / currentTime;
+}
+
 // StageItem组件
 const StageItem: React.FC<StageItemProps> = ({
     step,
@@ -51,7 +113,9 @@ const StageItem: React.FC<StageItemProps> = ({
     onShare,
     isPinned: _isPinned,
     actionMenuStates: _actionMenuStates,
-    setActionMenuStates: _setActionMenuStates
+    setActionMenuStates: _setActionMenuStates,
+    showFlowRate = false,
+    allSteps = []
 }) => {
     // 判断是否为等待阶段
     const isWaitingStage = step.type === 'wait';
@@ -124,6 +188,16 @@ const StageItem: React.FC<StageItemProps> = ({
                                     <span>{step.endTime ? formatTime(step.endTime, true) : formatTime(parseInt(step.note), true)}</span>
                                     <span>·</span>
                                     <span>{step.items[0]}</span>
+                                    {showFlowRate && step.type === 'pour' && (
+                                        <>
+                                            <span>·</span>
+                                            <span>
+                                                {allSteps.length > 0 
+                                                    ? calculateImprovedFlowRate(step, allSteps).toFixed(1) 
+                                                    : calculateFlowRate(step.items[0], step.note).toFixed(1)}g/s
+                                            </span>
+                                        </>
+                                    )}
                                 </div>
                             )}
                         </div>
