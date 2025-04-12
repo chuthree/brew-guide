@@ -157,11 +157,17 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
   const [showSkipButton, setShowSkipButton] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [localLayoutSettings, setLocalLayoutSettings] = useState<LayoutSettings>(layoutSettings);
+  const [localShowFlowRate, setLocalShowFlowRate] = useState(settings.showFlowRate);
 
   // 监听布局设置变化
   useEffect(() => {
     setLocalLayoutSettings(layoutSettings);
   }, [layoutSettings]);
+
+  // 监听流速显示设置变化
+  useEffect(() => {
+    setLocalShowFlowRate(settings.showFlowRate);
+  }, [settings.showFlowRate]);
 
   // 处理布局设置变化
   const handleLayoutChange = useCallback((newSettings: LayoutSettings) => {
@@ -175,6 +181,21 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     window.dispatchEvent(
       new CustomEvent("brewing:layoutChange", {
         detail: { layoutSettings: newSettings },
+      })
+    );
+  }, []);
+
+  // 处理流速显示设置变化
+  const handleFlowRateSettingChange = useCallback((showFlowRate: boolean) => {
+    // 更新本地状态
+    setLocalShowFlowRate(showFlowRate);
+    
+    // 发送事件通知父组件更新设置
+    window.dispatchEvent(
+      new CustomEvent("brewing:settingsChange", {
+        detail: {
+          showFlowRate: showFlowRate,
+        },
       })
     );
   }, []);
@@ -1302,7 +1323,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 10 }}
-              className="absolute bottom-full left-0 right-0 mb-2 px-6 bg-neutral-50 dark:bg-neutral-900 transform-gpu"
+              className="absolute bottom-full left-0 right-0 px-6 py-4  bg-neutral-50 dark:bg-neutral-900 transform-gpu"
               style={{
                 willChange: "transform, opacity",
                 transform: "translateZ(0)",
@@ -1419,6 +1440,23 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                           };
                           setLocalLayoutSettings(newSettings);
                           handleLayoutChange(newSettings);
+                        }}
+                        className="peer sr-only"
+                      />
+                      <div className="peer h-5 w-9 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500" />
+                    </label>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-neutral-700 dark:text-neutral-300">
+                      显示流速
+                    </span>
+                    <label className="relative inline-flex cursor-pointer items-center">
+                      <input
+                        type="checkbox"
+                        checked={localShowFlowRate || false}
+                        onChange={(e) => {
+                          handleFlowRateSettingChange(e.target.checked);
                         }}
                         className="peer sr-only"
                       />
@@ -1578,7 +1616,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                             : "-"}
                         </motion.div>
                       </div>
-                      <div className="min-w-20">
+                      <div className={`${localShowFlowRate ? 'min-w-20' : 'min-w-24'}`}>
                         <div className="text-xs text-neutral-500 dark:text-neutral-400">
                           目标水量
                         </div>
@@ -1608,24 +1646,26 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                           )}
                         </motion.div>
                       </div>
-                      <div className="min-w-14">
-                        <div className="text-xs text-neutral-500 dark:text-neutral-400">
-                          流速
+                      {localShowFlowRate && (
+                        <div className="min-w-14">
+                          <div className="text-xs text-neutral-500 dark:text-neutral-400">
+                            流速
+                          </div>
+                          <motion.div
+                            key={`flow-rate-${currentStageIndex}`}
+                            initial={{ opacity: 0.8 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ duration: 0.26 }}
+                            className="mt-1 text-sm font-medium tracking-wide"
+                          >
+                            {currentStage?.type === "pour" ? (
+                              <span>{displayFlowRate.toFixed(1)}</span>
+                            ) : (
+                              "-"
+                            )}
+                          </motion.div>
                         </div>
-                        <motion.div
-                          key={`flow-rate-${currentStageIndex}`}
-                          initial={{ opacity: 0.8 }}
-                          animate={{ opacity: 1 }}
-                          transition={{ duration: 0.26 }}
-                          className="mt-1 text-sm font-medium tracking-wide"
-                        >
-                          {currentStage?.type === "pour" ? (
-                            <span>{displayFlowRate.toFixed(1)}</span>
-                          ) : (
-                            "-"
-                          )}
-                        </motion.div>
-                      </div>
+                      )}
                     </div>
                   </div>
 
@@ -1704,7 +1744,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                               {formatTime(nextStage.endTime, true)}
                             </div>
                           </div>
-                          <div className="min-w-20">
+                          <div className={`${localShowFlowRate ? 'min-w-20' : 'min-w-24'}`}>
                             <div className="text-xs text-neutral-500 dark:text-neutral-400">
                               目标水量
                             </div>
@@ -1718,26 +1758,28 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                               {nextStage.water}
                             </div>
                           </div>
-                          <div className="min-w-14">
-                            <div className="text-xs text-neutral-500 dark:text-neutral-400">
-                              流速
+                          {localShowFlowRate && (
+                            <div className="min-w-14">
+                              <div className="text-xs text-neutral-500 dark:text-neutral-400">
+                                流速
+                              </div>
+                              <div
+                                className={`mt-1 text-sm font-medium tracking-wide text-neutral-600 dark:text-neutral-400 ${
+                                  localLayoutSettings.stageInfoReversed
+                                    ? "text-left"
+                                    : "text-right"
+                                }`}
+                              >
+                                {nextStage.type === "pour" ? (
+                                  <>
+                                    <span>{calculateTargetFlowRate(nextStage).toFixed(1)}</span>
+                                  </>
+                                ) : (
+                                  "-"
+                                )}
+                              </div>
                             </div>
-                            <div
-                              className={`mt-1 text-sm font-medium tracking-wide text-neutral-600 dark:text-neutral-400 ${
-                                localLayoutSettings.stageInfoReversed
-                                  ? "text-left"
-                                  : "text-right"
-                              }`}
-                            >
-                              {nextStage.type === "pour" ? (
-                                <>
-                                  <span>{calculateTargetFlowRate(nextStage).toFixed(1)}</span>
-                                </>
-                              ) : (
-                                "-"
-                              )}
-                            </div>
-                          </div>
+                          )}
                         </motion.div>
                       </motion.div>
                     )}
@@ -1864,10 +1906,10 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
           } justify-between`}
         >
           <div
-            className={`flex items-start ${
+            className={`grid ${
               localLayoutSettings.controlsReversed
-                ? "flex-row-reverse space-x-4 space-x-reverse sm:space-x-8 sm:space-x-reverse"
-                : "flex-row space-x-4 sm:space-x-8"
+                ? `grid-cols-[auto_auto_auto] ${localShowFlowRate ? 'gap-4' : 'gap-8'}`
+                : `grid-cols-[auto_auto_auto] ${localShowFlowRate ? 'gap-4' : 'gap-8'}`
             }`}
           >
             <div
@@ -1963,38 +2005,40 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
               </div>
             </div>
 
-            <div
-              className={`flex flex-col ${
-                localLayoutSettings.controlsReversed ? "items-end" : "items-start"
-              }`}
-            >
-              <span className="text-xs text-neutral-500 dark:text-neutral-400 mb-1">
-                流速
-              </span>
-              <div className="text-2xl font-light tracking-widest text-neutral-800 sm:text-3xl dark:text-neutral-100">
-                <motion.div
-                  className={`timer-font min-w-[3ch] ${
-                    localLayoutSettings.controlsReversed ? "text-right" : "text-left"
-                  } transform-gpu`}
-                  animate={{
-                    opacity: [null, 1],
-                    scale: displayFlowRate > 0 ? [1.02, 1] : 1,
-                  }}
-                  transition={{
-                    duration: 0.15,
-                    ease: [0.4, 0, 0.2, 1],
-                  }}
-                  style={{
-                    willChange: "transform, opacity",
-                    transform: "translateZ(0)",
-                    contain: "content",
-                    backfaceVisibility: "hidden",
-                  }}
-                >
-                  <span>{displayFlowRate.toFixed(1)}</span>
-                </motion.div>
+            {localShowFlowRate && (
+              <div
+                className={`flex flex-col ${
+                  localLayoutSettings.controlsReversed ? "items-end" : "items-start"
+                }`}
+              >
+                <span className="text-xs text-neutral-500 dark:text-neutral-400 mb-1">
+                  流速
+                </span>
+                <div className="text-2xl font-light tracking-widest text-neutral-800 sm:text-3xl dark:text-neutral-100">
+                  <motion.div
+                    className={`timer-font min-w-[3ch] ${
+                      localLayoutSettings.controlsReversed ? "text-right" : "text-left"
+                    } transform-gpu`}
+                    animate={{
+                      opacity: [null, 1],
+                      scale: displayFlowRate > 0 ? [1.02, 1] : 1,
+                    }}
+                    transition={{
+                      duration: 0.15,
+                      ease: [0.4, 0, 0.2, 1],
+                    }}
+                    style={{
+                      willChange: "transform, opacity",
+                      transform: "translateZ(0)",
+                      contain: "content",
+                      backfaceVisibility: "hidden",
+                    }}
+                  >
+                    <span>{displayFlowRate.toFixed(1)}</span>
+                  </motion.div>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           <div
@@ -2006,7 +2050,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
           >
             <motion.button
               onClick={isRunning ? pauseTimer : startTimer}
-              className="w-12 h-12 flex items-center justify-center rounded-full bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400 transform-gpu"
+              className={`${localShowFlowRate ? 'w-12 h-12' : 'w-14 h-14'} flex items-center justify-center rounded-full bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400 transform-gpu`}
               whileTap={{ scale: 0.95 }}
               transition={{ duration: 0.1, ease: [0.4, 0, 0.2, 1] }}
               style={{
@@ -2023,7 +2067,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                   viewBox="0 0 24 24"
                   strokeWidth={1.5}
                   stroke="currentColor"
-                  className="w-5 h-5"
+                  className={`${localShowFlowRate ? 'w-5 h-5' : 'w-6 h-6'}`}
                 >
                   <path
                     strokeLinecap="round"
@@ -2038,7 +2082,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                   viewBox="0 0 24 24"
                   strokeWidth={1.5}
                   stroke="currentColor"
-                  className="w-5 h-5"
+                  className={`${localShowFlowRate ? 'w-5 h-5' : 'w-6 h-6'}`}
                 >
                   <path
                     strokeLinecap="round"
@@ -2050,7 +2094,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
             </motion.button>
             <motion.button
               onClick={resetTimer}
-              className="w-12 h-12 flex items-center justify-center rounded-full bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400 transform-gpu"
+              className={`${localShowFlowRate ? 'w-12 h-12' : 'w-14 h-14'} flex items-center justify-center rounded-full bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400 transform-gpu`}
               whileTap={{ scale: 0.95 }}
               transition={{ duration: 0.1, ease: [0.4, 0, 0.2, 1] }}
               style={{
@@ -2066,7 +2110,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                 viewBox="0 0 24 24"
                 strokeWidth={1.5}
                 stroke="currentColor"
-                className="w-5 h-5"
+                className={`${localShowFlowRate ? 'w-5 h-5' : 'w-6 h-6'}`}
               >
                 <path
                   strokeLinecap="round"

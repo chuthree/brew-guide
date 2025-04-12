@@ -20,6 +20,7 @@ export interface SettingsOptions {
     textZoomLevel: number
     layoutSettings?: LayoutSettings // 添加布局设置
     language: string // 添加语言设置
+    showFlowRate: boolean // 添加显示流速选项
 }
 
 // 默认设置
@@ -35,7 +36,8 @@ export const defaultSettings: SettingsOptions = {
         alwaysShowTimerInfo: false, // 默认不显示计时器信息
         showStageDivider: true // 默认显示阶段分隔线
     },
-    language: 'zh' // 默认使用中文
+    language: 'zh', // 默认使用中文
+    showFlowRate: false // 默认不显示流速
 }
 
 interface SettingsProps {
@@ -656,6 +658,24 @@ const Settings: React.FC<SettingsProps> = ({
                             </div>
                             <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-4">
                                 是否在不同阶段之间显示分隔线
+                            </p>
+
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm text-neutral-700 dark:text-neutral-300">
+                                    显示流速
+                                </span>
+                                <label className="relative inline-flex cursor-pointer items-center">
+                                    <input
+                                        type="checkbox"
+                                        checked={settings.showFlowRate || false}
+                                        onChange={(e) => handleChange('showFlowRate', e.target.checked)}
+                                        className="peer sr-only"
+                                    />
+                                    <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
+                                </label>
+                            </div>
+                            <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-4">
+                                是否显示当前注水流速
                             </p>
                         
                             <div className="flex items-center justify-between">
