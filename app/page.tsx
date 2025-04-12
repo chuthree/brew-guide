@@ -1159,6 +1159,13 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
                 const methodIndex = allMethods.findIndex(m => m.name === methodName);
                 if (methodIndex !== -1) {
+                    const selectedMethodObject = allMethods[methodIndex]; // Get the method object
+                    // Update parameterInfo when method is selected
+                    setParameterInfo(prevInfo => ({
+                        ...prevInfo, // Keep existing equipment name
+                        method: selectedMethodObject.name,
+                        params: null // Clear params when method changes
+                    }));
                     handleMethodSelectWrapper(methodIndex);
                 }
             }
@@ -1166,10 +1173,15 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
         const handleParamsUpdate = (e: CustomEvent) => {
             // 注意: 暂未实现参数更新逻辑，保留此函数以匹配事件监听需要
-            const { params } = e.detail;
+            const { params } = e.detail; // Assuming params is the full params object
             if (params) {
                 // 将在未来实现
                 console.log("参数更新请求", params);
+                // Update parameterInfo when params change
+                setParameterInfo(prevInfo => ({
+                    ...prevInfo, // Keep existing equipment and method
+                    params: params // Update the params object
+                }));
             }
         };
 

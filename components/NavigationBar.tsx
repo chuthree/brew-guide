@@ -711,11 +711,6 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                                     onClick={() => {
                                                         setActiveBrewingStep('equipment');
                                                         setActiveTab('器具');
-                                                        setParameterInfo({
-                                                            equipment: parameterInfo.equipment,
-                                                            method: null,
-                                                            params: null,
-                                                        });
                                                     }}
                                                 >
                                                     {parameterInfo.equipment}
@@ -730,49 +725,6 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                                         onClick={() => {
                                                             setActiveBrewingStep('method');
                                                             setActiveTab('方案');
-                                                            if (selectedEquipment && selectedMethod) {
-                                                                // 尝试从标准设备列表中获取设备名称
-                                                                const standardEquipment = equipmentList.find(e => e.id === selectedEquipment);
-                                                                if (standardEquipment) {
-                                                                    setParameterInfo({
-                                                                        equipment: standardEquipment.name,
-                                                                        method: selectedMethod.name,
-                                                                        params: null,
-                                                                    });
-                                                                } else {
-                                                                    // 如果不是标准设备，尝试加载自定义设备
-                                                                    import('@/lib/customEquipments').then(async ({ loadCustomEquipments }) => {
-                                                                        try {
-                                                                            const customEquipments = await loadCustomEquipments();
-                                                                            // 先尝试通过ID查找自定义器具
-                                                                            const customEquipment = customEquipments.find(e => e.id === selectedEquipment);
-                                                                            if (customEquipment) {
-                                                                                setParameterInfo({
-                                                                                    equipment: customEquipment.name,
-                                                                                    method: selectedMethod.name,
-                                                                                    params: null,
-                                                                                });
-                                                                            } else {
-                                                                                // 如果通过ID找不到，尝试通过名称查找
-                                                                                const equipmentByName = customEquipments.find(e => e.name === selectedEquipment);
-                                                                                setParameterInfo({
-                                                                                    equipment: equipmentByName?.name || selectedEquipment,
-                                                                                    method: selectedMethod.name,
-                                                                                    params: null,
-                                                                                });
-                                                                            }
-                                                                        } catch (error) {
-                                                                            console.error('加载自定义设备失败:', error);
-                                                                            // 出错时尝试使用已有的参数信息中的器具名称
-                                                                            setParameterInfo({
-                                                                                equipment: parameterInfo?.equipment || selectedEquipment,
-                                                                                method: selectedMethod.name,
-                                                                                params: null,
-                                                                            });
-                                                                        }
-                                                                    });
-                                                                }
-                                                            }
                                                         }}
                                                     >
                                                         {parameterInfo.method}
