@@ -112,7 +112,6 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
   const [isCompleted, setIsCompleted] = useState(false);
   const [isHapticsSupported, setIsHapticsSupported] = useState(false);
   const [isProgressBarReady, setIsProgressBarReady] = useState(false);
-  const [flowRate, setFlowRate] = useState(0);
   const lastStageRef = useRef<number>(-1);
   // 添加一个引用来记录上一次的倒计时状态，避免重复触发事件
   const prevCountdownTimeRef = useRef<number | null>(null);
@@ -1240,17 +1239,6 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     return targetWaterDiff / stage.time;
   }, []);
 
-  // 修改流速计算的 useEffect
-  useEffect(() => {
-    if (isRunning && expandedStagesRef.current[currentExpandedStageIndex]?.type === "pour") {
-      const currentStage = expandedStagesRef.current[currentExpandedStageIndex];
-      const targetRate = calculateTargetFlowRate(currentStage);
-      setFlowRate(targetRate);
-    } else {
-      setFlowRate(0);
-    }
-  }, [currentExpandedStageIndex, isRunning, calculateTargetFlowRate]);
-
   if (!currentBrewingMethod) return null;
 
   // 获取当前扩展阶段
@@ -1275,6 +1263,14 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
 
   const nextStage =
     nextStageIndex >= 0 ? expandedStagesRef.current[nextStageIndex] : null;
+
+  // 计算当前阶段的流速（无论是否正在运行）
+  const currentFlowRateValue = currentStage?.type === "pour" 
+    ? calculateTargetFlowRate(currentStage) 
+    : 0;
+    
+  // 直接使用计算好的流速值
+  const displayFlowRate = currentFlowRateValue;
 
   return (
     <>
@@ -1582,7 +1578,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                             : "-"}
                         </motion.div>
                       </div>
-                      <div className="min-w-16">
+                      <div className="min-w-20">
                         <div className="text-xs text-neutral-500 dark:text-neutral-400">
                           目标水量
                         </div>
@@ -1624,13 +1620,10 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                           className="mt-1 text-sm font-medium tracking-wide"
                         >
                           {currentStage?.type === "pour" ? (
-                            <span>{flowRate.toFixed(1)}</span>
+                            <span>{displayFlowRate.toFixed(1)}</span>
                           ) : (
                             "-"
                           )}
-                          <span className="text-sm text-neutral-500 dark:text-neutral-400 ml-1">
-                            g/s
-                          </span>
                         </motion.div>
                       </div>
                     </div>
@@ -1644,7 +1637,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                         animate={{ opacity: 1, height: "auto", y: 0 }}
                         exit={{ opacity: 0, height: 0, y: -20 }}
                         transition={{ duration: 0.26 }}
-                        className={`flex items-baseline border-l border-neutral-300 pl-3 dark:border-neutral-700 ${
+                        className={`flex items-baseline border-l m border-neutral-300 pl-3 dark:border-neutral-700 ${
                           localLayoutSettings.stageInfoReversed
                             ? "flex-row-reverse"
                             : "flex-row"
@@ -1711,7 +1704,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                               {formatTime(nextStage.endTime, true)}
                             </div>
                           </div>
-                          <div className="min-w-16">
+                          <div className="min-w-20">
                             <div className="text-xs text-neutral-500 dark:text-neutral-400">
                               目标水量
                             </div>
@@ -1739,9 +1732,6 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                               {nextStage.type === "pour" ? (
                                 <>
                                   <span>{calculateTargetFlowRate(nextStage).toFixed(1)}</span>
-                                  <span className="text-sm text-neutral-500 dark:text-neutral-400 ml-1">
-                                    g/s
-                                  </span>
                                 </>
                               ) : (
                                 "-"
@@ -1753,11 +1743,12 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                     )}
                   </AnimatePresence>
 
+                  {/* 进度条 */}
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ duration: 0.26, ease: [0.4, 0, 0.2, 1] }}
-                    className="relative"
+                    className="relative mb-3"
                   >
                     {expandedStagesRef.current.map((stage) => {
                       const totalTime =
@@ -1987,7 +1978,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                   } transform-gpu`}
                   animate={{
                     opacity: [null, 1],
-                    scale: flowRate > 0 ? [1.02, 1] : 1,
+                    scale: displayFlowRate > 0 ? [1.02, 1] : 1,
                   }}
                   transition={{
                     duration: 0.15,
@@ -2000,7 +1991,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                     backfaceVisibility: "hidden",
                   }}
                 >
-                  <span>{flowRate.toFixed(1)}</span>
+                  <span>{displayFlowRate.toFixed(1)}</span>
                 </motion.div>
               </div>
             </div>
