@@ -112,6 +112,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
   const [isCompleted, setIsCompleted] = useState(false);
   const [isHapticsSupported, setIsHapticsSupported] = useState(false);
   const [isProgressBarReady, setIsProgressBarReady] = useState(false);
+  const [flowRate, setFlowRate] = useState(0);
   const lastStageRef = useRef<number>(-1);
   // 添加一个引用来记录上一次的倒计时状态，避免重复触发事件
   const prevCountdownTimeRef = useRef<number | null>(null);
@@ -155,6 +156,29 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
   >(null);
 
   const [showSkipButton, setShowSkipButton] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [localLayoutSettings, setLocalLayoutSettings] = useState<LayoutSettings>(layoutSettings);
+
+  // 监听布局设置变化
+  useEffect(() => {
+    setLocalLayoutSettings(layoutSettings);
+  }, [layoutSettings]);
+
+  // 处理布局设置变化
+  const handleLayoutChange = useCallback((newSettings: LayoutSettings) => {
+    // 首先更新本地状态
+    setLocalLayoutSettings(newSettings);
+    
+    // 记录日志
+    console.log('发送布局设置变更:', newSettings);
+    
+    // 然后派发事件，通知其他组件
+    window.dispatchEvent(
+      new CustomEvent("brewing:layoutChange", {
+        detail: { layoutSettings: newSettings },
+      })
+    );
+  }, []);
 
   // 检查设备是否支持触感反馈
   useEffect(() => {
@@ -1203,6 +1227,30 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     setShowSkipButton(isLastStage && isWaitingStage && isRunning);
   }, [currentTime, getCurrentStage, currentBrewingMethod, isRunning]);
 
+  // 计算目标流速
+  const calculateTargetFlowRate = useCallback((stage: ExpandedStage | null) => {
+    if (!stage || stage.type !== "pour") return 0;
+    
+    const waterAmount = parseInt(stage.water);
+    const prevStageIndex = expandedStagesRef.current.findIndex(s => s.endTime === stage.startTime);
+    const prevWater = prevStageIndex >= 0 ? parseInt(expandedStagesRef.current[prevStageIndex].water) : 0;
+    const targetWaterDiff = waterAmount - prevWater;
+    
+    if (stage.time <= 0) return 0;
+    return targetWaterDiff / stage.time;
+  }, []);
+
+  // 修改流速计算的 useEffect
+  useEffect(() => {
+    if (isRunning && expandedStagesRef.current[currentExpandedStageIndex]?.type === "pour") {
+      const currentStage = expandedStagesRef.current[currentExpandedStageIndex];
+      const targetRate = calculateTargetFlowRate(currentStage);
+      setFlowRate(targetRate);
+    } else {
+      setFlowRate(0);
+    }
+  }, [currentExpandedStageIndex, isRunning, calculateTargetFlowRate]);
+
   if (!currentBrewingMethod) return null;
 
   // 获取当前扩展阶段
@@ -1231,11 +1279,184 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
   return (
     <>
       <div
-        className="px-6 sticky bottom-0 border-t border-neutral-200 bg-neutral-50 pt-6 dark:border-neutral-800 dark:bg-neutral-900 pb-safe"
+        className="px-6 sticky bottom-0 bg-neutral-50 pt-6 dark:bg-neutral-900 pb-safe relative"
         style={{
           paddingBottom: "max(env(safe-area-inset-bottom), 28px)",
         }}
       >
+        {/* 添加设置点和边框 */}
+        <div className="absolute top-0 left-0 right-0 flex items-center justify-center">
+          <div className="relative w-full border-t border-neutral-200 dark:border-neutral-800">
+            <div className="absolute top-1/2 right-6 -translate-y-1/2 flex items-center">
+              <button
+                onClick={() => setShowSettings(!showSettings)}
+                className="h-4 px-2 -mr-2 bg-neutral-50 dark:bg-neutral-900 flex items-center gap-1"
+              >
+                <div className="w-[3px] h-[3px] rounded-full bg-neutral-300 dark:bg-neutral-700 hover:bg-neutral-400 dark:hover:bg-neutral-600 transition-colors" />
+                <div className="w-[3px] h-[3px] rounded-full bg-neutral-300 dark:bg-neutral-700 hover:bg-neutral-400 dark:hover:bg-neutral-600 transition-colors" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* 设置面板 */}
+        <AnimatePresence>
+          {showSettings && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              className="absolute bottom-full left-0 right-0 mb-2 px-6 bg-neutral-50 dark:bg-neutral-900 transform-gpu"
+              style={{
+                willChange: "transform, opacity",
+                transform: "translateZ(0)",
+                zIndex: 40,
+              }}
+            >
+              {/* 添加渐变阴影 */}
+              <div className="absolute -top-12 left-0 right-0 h-12 bg-gradient-to-t from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none"></div>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
+                    计时器设置
+                  </h3>
+                  <button
+                    onClick={() => setShowSettings(false)}
+                    className="p-1 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth={1.5}
+                      stroke="currentColor"
+                      className="w-4 h-4"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-neutral-700 dark:text-neutral-300">
+                      阶段信息布局反转
+                    </span>
+                    <label className="relative inline-flex cursor-pointer items-center">
+                      <input
+                        type="checkbox"
+                        checked={localLayoutSettings?.stageInfoReversed || false}
+                        onChange={(e) => {
+                          const newSettings = {
+                            ...localLayoutSettings,
+                            stageInfoReversed: e.target.checked,
+                          };
+                          setLocalLayoutSettings(newSettings);
+                          handleLayoutChange(newSettings);
+                        }}
+                        className="peer sr-only"
+                      />
+                      <div className="peer h-5 w-9 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500" />
+                    </label>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-neutral-700 dark:text-neutral-300">
+                      控制区布局反转
+                    </span>
+                    <label className="relative inline-flex cursor-pointer items-center">
+                      <input
+                        type="checkbox"
+                        checked={localLayoutSettings?.controlsReversed || false}
+                        onChange={(e) => {
+                          const newSettings = {
+                            ...localLayoutSettings,
+                            controlsReversed: e.target.checked,
+                          };
+                          setLocalLayoutSettings(newSettings);
+                          handleLayoutChange(newSettings);
+                        }}
+                        className="peer sr-only"
+                      />
+                      <div className="peer h-5 w-9 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500" />
+                    </label>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-neutral-700 dark:text-neutral-300">
+                      始终显示计时器信息
+                    </span>
+                    <label className="relative inline-flex cursor-pointer items-center">
+                      <input
+                        type="checkbox"
+                        checked={localLayoutSettings?.alwaysShowTimerInfo || false}
+                        onChange={(e) => {
+                          const newSettings = {
+                            ...localLayoutSettings,
+                            alwaysShowTimerInfo: e.target.checked,
+                          };
+                          setLocalLayoutSettings(newSettings);
+                          handleLayoutChange(newSettings);
+                        }}
+                        className="peer sr-only"
+                      />
+                      <div className="peer h-5 w-9 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500" />
+                    </label>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-neutral-700 dark:text-neutral-300">
+                      显示阶段分隔线
+                    </span>
+                    <label className="relative inline-flex cursor-pointer items-center">
+                      <input
+                        type="checkbox"
+                        checked={localLayoutSettings?.showStageDivider || false}
+                        onChange={(e) => {
+                          const newSettings = {
+                            ...localLayoutSettings,
+                            showStageDivider: e.target.checked,
+                          };
+                          setLocalLayoutSettings(newSettings);
+                          handleLayoutChange(newSettings);
+                        }}
+                        className="peer sr-only"
+                      />
+                      <div className="peer h-5 w-9 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500" />
+                    </label>
+                  </div>
+
+                  <div className="space-y-2">
+                    <span className="text-sm text-neutral-700 dark:text-neutral-300">
+                      进度条高度：{localLayoutSettings?.progressBarHeight || 4}px
+                    </span>
+                    <input
+                      type="range"
+                      min="2"
+                      max="12"
+                      step="1"
+                      value={localLayoutSettings?.progressBarHeight || 4}
+                      onChange={(e) => {
+                        const newSettings = {
+                          ...localLayoutSettings,
+                          progressBarHeight: parseInt(e.target.value),
+                        };
+                        setLocalLayoutSettings(newSettings);
+                        handleLayoutChange(newSettings);
+                      }}
+                      className="w-full h-1 bg-neutral-200 rounded-full appearance-none cursor-pointer dark:bg-neutral-700"
+                    />
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <AnimatePresence>
           {showSkipButton && (
             <motion.button
@@ -1271,7 +1492,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
           )}
         </AnimatePresence>
         <AnimatePresence mode="wait">
-          {(isRunning || layoutSettings.alwaysShowTimerInfo) && isProgressBarReady && (
+          {(isRunning || localLayoutSettings.alwaysShowTimerInfo) && isProgressBarReady && (
             <motion.div
               key="brewing-info"
               className="overflow-hidden will-change-auto"
@@ -1301,14 +1522,14 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                 >
                   <div
                     className={`flex items-baseline border-l-2 border-neutral-800 pl-3 dark:border-neutral-100 ${
-                      layoutSettings.stageInfoReversed
+                      localLayoutSettings.stageInfoReversed
                         ? "flex-row-reverse"
                         : "flex-row"
                     } justify-between`}
                   >
                     <div
                       className={`${
-                        layoutSettings.stageInfoReversed
+                        localLayoutSettings.stageInfoReversed
                           ? "text-right"
                           : "text-left"
                       }`}
@@ -1336,14 +1557,14 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                     </div>
                     <div
                       className={`flex items-baseline flex-row ${
-                        layoutSettings.stageInfoReversed
+                        localLayoutSettings.stageInfoReversed
                           ? "text-left"
                           : "text-right"
                       }`}
                     >
                       <div
                         className={
-                          layoutSettings.stageInfoReversed ? "mr-4" : "mr-0"
+                          localLayoutSettings.stageInfoReversed ? "mr-4" : "mr-0"
                         }
                       >
                         <div className="text-xs text-neutral-500 dark:text-neutral-400">
@@ -1361,7 +1582,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                             : "-"}
                         </motion.div>
                       </div>
-                      <div className="min-w-24">
+                      <div className="min-w-16">
                         <div className="text-xs text-neutral-500 dark:text-neutral-400">
                           目标水量
                         </div>
@@ -1375,7 +1596,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                           {currentStage?.water ? (
                             <div
                               className={`flex items-baseline ${
-                                layoutSettings.stageInfoReversed
+                                localLayoutSettings.stageInfoReversed
                                   ? "justify-start"
                                   : "justify-end"
                               }`}
@@ -1391,6 +1612,27 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                           )}
                         </motion.div>
                       </div>
+                      <div className="min-w-14">
+                        <div className="text-xs text-neutral-500 dark:text-neutral-400">
+                          流速
+                        </div>
+                        <motion.div
+                          key={`flow-rate-${currentStageIndex}`}
+                          initial={{ opacity: 0.8 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ duration: 0.26 }}
+                          className="mt-1 text-sm font-medium tracking-wide"
+                        >
+                          {currentStage?.type === "pour" ? (
+                            <span>{flowRate.toFixed(1)}</span>
+                          ) : (
+                            "-"
+                          )}
+                          <span className="text-sm text-neutral-500 dark:text-neutral-400 ml-1">
+                            g/s
+                          </span>
+                        </motion.div>
+                      </div>
                     </div>
                   </div>
 
@@ -1403,7 +1645,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                         exit={{ opacity: 0, height: 0, y: -20 }}
                         transition={{ duration: 0.26 }}
                         className={`flex items-baseline border-l border-neutral-300 pl-3 dark:border-neutral-700 ${
-                          layoutSettings.stageInfoReversed
+                          localLayoutSettings.stageInfoReversed
                             ? "flex-row-reverse"
                             : "flex-row"
                         } justify-between transform-gpu`}
@@ -1414,14 +1656,14 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                       >
                         <div
                           className={`${
-                            layoutSettings.stageInfoReversed
+                            localLayoutSettings.stageInfoReversed
                               ? "text-right"
                               : "text-left"
                           }`}
                         >
                           <div
                             className={`flex items-center ${
-                              layoutSettings.stageInfoReversed
+                              localLayoutSettings.stageInfoReversed
                                 ? "justify-end"
                                 : "justify-start"
                             } gap-2 text-xs text-neutral-500 dark:text-neutral-400`}
@@ -1431,7 +1673,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                           <motion.div
                             initial={{
                               opacity: 0,
-                              x: layoutSettings.stageInfoReversed ? 10 : -10,
+                              x: localLayoutSettings.stageInfoReversed ? 10 : -10,
                             }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ duration: 0.26, delay: 0.1 }}
@@ -1447,19 +1689,19 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                         <motion.div
                           initial={{
                             opacity: 0,
-                            x: layoutSettings.stageInfoReversed ? -10 : 10,
+                            x: localLayoutSettings.stageInfoReversed ? -10 : 10,
                           }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ duration: 0.26, delay: 0.2 }}
                           className={`flex items-baseline flex-row ${
-                            layoutSettings.stageInfoReversed
+                            localLayoutSettings.stageInfoReversed
                               ? "text-left"
                               : "text-right "
                           }`}
                         >
                           <div
                             className={
-                              layoutSettings.stageInfoReversed ? "mr-4" : "mr-0"
+                              localLayoutSettings.stageInfoReversed ? "mr-4" : "mr-0"
                             }
                           >
                             <div className="text-xs text-neutral-500 dark:text-neutral-400">
@@ -1469,18 +1711,41 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                               {formatTime(nextStage.endTime, true)}
                             </div>
                           </div>
-                          <div className="min-w-24">
+                          <div className="min-w-16">
                             <div className="text-xs text-neutral-500 dark:text-neutral-400">
                               目标水量
                             </div>
                             <div
                               className={`mt-1 text-sm font-medium tracking-wide text-neutral-600 dark:text-neutral-400 ${
-                                layoutSettings.stageInfoReversed
+                                localLayoutSettings.stageInfoReversed
                                   ? "text-left"
                                   : "text-right"
                               }`}
                             >
                               {nextStage.water}
+                            </div>
+                          </div>
+                          <div className="min-w-14">
+                            <div className="text-xs text-neutral-500 dark:text-neutral-400">
+                              流速
+                            </div>
+                            <div
+                              className={`mt-1 text-sm font-medium tracking-wide text-neutral-600 dark:text-neutral-400 ${
+                                localLayoutSettings.stageInfoReversed
+                                  ? "text-left"
+                                  : "text-right"
+                              }`}
+                            >
+                              {nextStage.type === "pour" ? (
+                                <>
+                                  <span>{calculateTargetFlowRate(nextStage).toFixed(1)}</span>
+                                  <span className="text-sm text-neutral-500 dark:text-neutral-400 ml-1">
+                                    g/s
+                                  </span>
+                                </>
+                              ) : (
+                                "-"
+                              )}
                             </div>
                           </div>
                         </motion.div>
@@ -1500,24 +1765,24 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                           expandedStagesRef.current.length - 1
                         ].endTime;
                       const percentage = (stage.endTime / totalTime) * 100;
-                      return (
+                      return localLayoutSettings?.showStageDivider ? (
                         <div
                           key={stage.endTime}
                           className="absolute top-0 w-[2px] bg-neutral-50 dark:bg-neutral-900"
                           style={{
                             left: `${percentage}%`,
-                            height: `${layoutSettings.progressBarHeight || 4}px`,
+                            height: `${localLayoutSettings.progressBarHeight || 4}px`,
                             opacity: 0.8,
                             transform: "translateZ(0)",
                           }}
                         />
-                      );
+                      ) : null;
                     })}
 
                     <div
                       className="w-full overflow-hidden bg-neutral-200/50 dark:bg-neutral-800"
                       style={{
-                        height: `${layoutSettings.progressBarHeight || 4}px`,
+                        height: `${localLayoutSettings.progressBarHeight || 4}px`,
                         contain: "paint layout",
                       }}
                     >
@@ -1539,7 +1804,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                               left: `${startPercentage}%`,
                               width: `${width}%`,
                               height: `${
-                                layoutSettings.progressBarHeight || 4
+                                localLayoutSettings.progressBarHeight || 4
                               }px`,
                               background: `repeating-linear-gradient(
                                 45deg,
@@ -1604,19 +1869,19 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
 
         <div
           className={`flex items-center ${
-            layoutSettings.controlsReversed ? "flex-row-reverse" : "flex-row"
+            localLayoutSettings.controlsReversed ? "flex-row-reverse" : "flex-row"
           } justify-between`}
         >
           <div
             className={`flex items-start ${
-              layoutSettings.controlsReversed
-                ? "flex-row-reverse space-x-8 space-x-reverse sm:space-x-12 sm:space-x-reverse"
-                : "flex-row space-x-8 sm:space-x-12"
+              localLayoutSettings.controlsReversed
+                ? "flex-row-reverse space-x-4 space-x-reverse sm:space-x-8 sm:space-x-reverse"
+                : "flex-row space-x-4 sm:space-x-8"
             }`}
           >
             <div
               className={`flex flex-col ${
-                layoutSettings.controlsReversed ? "items-end" : "items-start"
+                localLayoutSettings.controlsReversed ? "items-end" : "items-start"
               }`}
             >
               <span className="text-xs text-neutral-500 dark:text-neutral-400 mb-1">
@@ -1631,8 +1896,8 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
                       transition={{ duration: 0.26 }}
-                      className={`timer-font min-w-[5ch] ${
-                        layoutSettings.controlsReversed
+                      className={`timer-font min-w-[4ch] ${
+                        localLayoutSettings.controlsReversed
                           ? "text-right"
                           : "text-left"
                       } transform-gpu`}
@@ -1652,8 +1917,8 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
                       transition={{ duration: 0.26 }}
-                      className={`timer-font min-w-[5ch] ${
-                        layoutSettings.controlsReversed
+                      className={`timer-font min-w-[4ch] ${
+                        localLayoutSettings.controlsReversed
                           ? "text-right"
                           : "text-left"
                       } transform-gpu`}
@@ -1673,7 +1938,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
 
             <div
               className={`flex flex-col ${
-                layoutSettings.controlsReversed ? "items-end" : "items-start"
+                localLayoutSettings.controlsReversed ? "items-end" : "items-start"
               }`}
             >
               <span className="text-xs text-neutral-500 dark:text-neutral-400 mb-1">
@@ -1681,8 +1946,8 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
               </span>
               <div className="text-2xl font-light tracking-widest text-neutral-800 sm:text-3xl dark:text-neutral-100">
                 <motion.div
-                  className={`timer-font min-w-[5ch] ${
-                    layoutSettings.controlsReversed ? "text-right" : "text-left"
+                  className={`timer-font min-w-[4ch] ${
+                    localLayoutSettings.controlsReversed ? "text-right" : "text-left"
                   } transform-gpu`}
                   animate={{
                     opacity: [null, 1],
@@ -1706,18 +1971,51 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                 </motion.div>
               </div>
             </div>
+
+            <div
+              className={`flex flex-col ${
+                localLayoutSettings.controlsReversed ? "items-end" : "items-start"
+              }`}
+            >
+              <span className="text-xs text-neutral-500 dark:text-neutral-400 mb-1">
+                流速
+              </span>
+              <div className="text-2xl font-light tracking-widest text-neutral-800 sm:text-3xl dark:text-neutral-100">
+                <motion.div
+                  className={`timer-font min-w-[3ch] ${
+                    localLayoutSettings.controlsReversed ? "text-right" : "text-left"
+                  } transform-gpu`}
+                  animate={{
+                    opacity: [null, 1],
+                    scale: flowRate > 0 ? [1.02, 1] : 1,
+                  }}
+                  transition={{
+                    duration: 0.15,
+                    ease: [0.4, 0, 0.2, 1],
+                  }}
+                  style={{
+                    willChange: "transform, opacity",
+                    transform: "translateZ(0)",
+                    contain: "content",
+                    backfaceVisibility: "hidden",
+                  }}
+                >
+                  <span>{flowRate.toFixed(1)}</span>
+                </motion.div>
+              </div>
+            </div>
           </div>
 
           <div
             className={`flex items-center ${
-              layoutSettings.controlsReversed
-                ? "flex-row-reverse space-x-4 space-x-reverse sm:space-x-6 sm:space-x-reverse"
-                : "flex-row space-x-4 sm:space-x-6"
-            } mb-safe`}
+              localLayoutSettings.controlsReversed
+                ? "flex-row-reverse space-x-4 space-x-reverse"
+                : "flex-row space-x-4"
+            }`}
           >
             <motion.button
               onClick={isRunning ? pauseTimer : startTimer}
-              className="w-14 h-14 flex items-center justify-center rounded-full bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400 transform-gpu"
+              className="w-12 h-12 flex items-center justify-center rounded-full bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400 transform-gpu"
               whileTap={{ scale: 0.95 }}
               transition={{ duration: 0.1, ease: [0.4, 0, 0.2, 1] }}
               style={{
@@ -1734,7 +2032,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                   viewBox="0 0 24 24"
                   strokeWidth={1.5}
                   stroke="currentColor"
-                  className="w-6 h-6"
+                  className="w-5 h-5"
                 >
                   <path
                     strokeLinecap="round"
@@ -1749,7 +2047,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                   viewBox="0 0 24 24"
                   strokeWidth={1.5}
                   stroke="currentColor"
-                  className="w-6 h-6"
+                  className="w-5 h-5"
                 >
                   <path
                     strokeLinecap="round"
@@ -1761,7 +2059,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
             </motion.button>
             <motion.button
               onClick={resetTimer}
-              className="w-14 h-14 flex items-center justify-center rounded-full bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400 transform-gpu"
+              className="w-12 h-12 flex items-center justify-center rounded-full bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400 transform-gpu"
               whileTap={{ scale: 0.95 }}
               transition={{ duration: 0.1, ease: [0.4, 0, 0.2, 1] }}
               style={{
@@ -1777,7 +2075,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                 viewBox="0 0 24 24"
                 strokeWidth={1.5}
                 stroke="currentColor"
-                className="w-6 h-6"
+                className="w-5 h-5"
               >
                 <path
                   strokeLinecap="round"

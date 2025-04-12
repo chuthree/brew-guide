@@ -544,6 +544,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         window.addEventListener('brewing:timerStatus', handleTimerStatusChange as EventListener);
         window.addEventListener('brewing:stageChange', handleStageChange as EventListener);
         window.addEventListener('brewing:countdownChange', handleCountdownChange as EventListener);
+        window.addEventListener('brewing:layoutChange', handleLayoutChange as EventListener);
 
         // 清理函数
         return () => {
@@ -554,8 +555,22 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             window.removeEventListener('brewing:timerStatus', handleTimerStatusChange as EventListener);
             window.removeEventListener('brewing:stageChange', handleStageChange as EventListener);
             window.removeEventListener('brewing:countdownChange', handleCountdownChange as EventListener);
+            window.removeEventListener('brewing:layoutChange', handleLayoutChange as EventListener);
         };
     }, [setShowComplete, setIsCoffeeBrewed, setHasAutoNavigatedToNotes, setIsTimerRunning, setCurrentStage, setCountdownTime, setIsStageWaiting, currentBrewingMethod, selectedCoffeeBeanData, selectedEquipment, selectedMethod, customEquipments]);
+
+    // 处理布局设置变更
+    const handleLayoutChange = (e: CustomEvent) => {
+        if (e.detail && e.detail.layoutSettings) {
+            console.log('接收到布局设置变更:', e.detail.layoutSettings);
+            const newSettings = {
+                ...settings,
+                layoutSettings: e.detail.layoutSettings
+            };
+            // 更新全局设置
+            handleSettingsChange(newSettings);
+        }
+    };
 
     // 修改处理步骤点击的包装函数，允许在冲煮完成后切换到记录
     const handleBrewingStepClickWrapper = (step: BrewingStep) => {
