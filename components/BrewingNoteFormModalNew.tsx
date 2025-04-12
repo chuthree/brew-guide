@@ -45,6 +45,8 @@ const BrewingNoteFormModalNew: React.FC<BrewingNoteFormModalNewProps> = ({
     const [coffeeAmount, setCoffeeAmount] = useState<string>('15');
     const [ratioAmount, setRatioAmount] = useState<string>('15');
     const [waterAmount, setWaterAmount] = useState<string>('225g');
+    const [grindSize, setGrindSize] = useState<string>('中细');
+    const [tempValue, setTempValue] = useState<string>('92');
 
     // 处理关闭，确保重置所有状态
     const handleClose = () => {
@@ -576,10 +578,13 @@ const BrewingNoteFormModalNew: React.FC<BrewingNoteFormModalNewProps> = ({
     const initMethodParams = (method: Method) => {
         const coffeeValue = extractNumber(method.params.coffee);
         const ratioValue = extractRatioNumber(method.params.ratio);
+        const tempValueStr = method.params.temp.replace('°C', '');
         
         setCoffeeAmount(coffeeValue);
         setRatioAmount(ratioValue);
         setWaterAmount(method.params.water);
+        setGrindSize(method.params.grindSize);
+        setTempValue(tempValueStr);
     };
     
     // 当选择方法发生变化时，初始化参数
@@ -599,6 +604,30 @@ const BrewingNoteFormModalNew: React.FC<BrewingNoteFormModalNewProps> = ({
             }
         }
     }, [selectedMethod, selectedEquipment, methodType]);
+
+    // 处理研磨度变化
+    const handleGrindSizeChange = (value: string, method: Method) => {
+        setGrindSize(value);
+        
+        // 更新方法参数
+        method.params.grindSize = value;
+        
+        // 强制重新渲染
+        setSelectedMethod(methodType === 'common' ? method.name : (method.id || method.name));
+    };
+    
+    // 处理水温变化
+    const handleTempChange = (value: string, method: Method) => {
+        if (value === '' || !isNaN(Number(value))) {
+            setTempValue(value);
+            
+            // 更新方法参数
+            method.params.temp = `${value}°C`;
+            
+            // 强制重新渲染
+            setSelectedMethod(methodType === 'common' ? method.name : (method.id || method.name));
+        }
+    };
 
     // 步骤1: 选择咖啡豆内容
     const coffeeBeanStepContent = (
@@ -772,33 +801,35 @@ const BrewingNoteFormModalNew: React.FC<BrewingNoteFormModalNewProps> = ({
                                             className="mt-3 pt-3 border-t border-neutral-300 dark:border-neutral-600"
                                             onClick={(e) => e.stopPropagation()}
                                         >
-                                            <div className="text-xs font-medium mb-2 text-white dark:text-neutral-800">
+                                            <div className="text-xs font-medium mb-2">
                                                 调整参数
                                             </div>
-                                            <div className="space-y-4 mt-4">
+                                            <div className="space-y-3 mt-3">
                                                 {/* 咖啡粉量 */}
                                                 <div className="flex items-center justify-between">
-                                                    <label className="text-gray-700">咖啡粉量</label>
-                                                    <input
-                                                        type="text"
-                                                        value={coffeeAmount}
-                                                        onChange={(e) => handleCoffeeAmountChange(e.target.value, method)}
-                                                        className="w-24 px-2 py-1 border rounded text-right"
-                                                        placeholder="15"
-                                                    />
-                                                    <span className="ml-1">g</span>
+                                                    <label className="text-xs text-white dark:text-neutral-200">咖啡粉量</label>
+                                                    <div className="flex items-center">
+                                                        <input
+                                                            type="text"
+                                                            value={coffeeAmount}
+                                                            onChange={(e) => handleCoffeeAmountChange(e.target.value, method)}
+                                                            className="w-16 py-1 px-2 border border-neutral-400 dark:border-neutral-600 rounded bg-white dark:bg-neutral-700 text-neutral-800 dark:text-white text-right text-xs"
+                                                            placeholder="15"
+                                                        />
+                                                        <span className="ml-1 text-xs text-white dark:text-neutral-200">g</span>
+                                                    </div>
                                                 </div>
                                                 
                                                 {/* 粉水比 */}
                                                 <div className="flex items-center justify-between">
-                                                    <label className="text-gray-700">粉水比</label>
+                                                    <label className="text-xs text-white dark:text-neutral-200">粉水比</label>
                                                     <div className="flex items-center">
-                                                        <span className="mr-1">1:</span>
+                                                        <span className="mr-1 text-xs text-white dark:text-neutral-200">1:</span>
                                                         <input
                                                             type="text"
                                                             value={ratioAmount}
                                                             onChange={(e) => handleRatioAmountChange(e.target.value, method)}
-                                                            className="w-16 px-2 py-1 border rounded text-right"
+                                                            className="w-16 py-1 px-2 border border-neutral-400 dark:border-neutral-600 rounded bg-white dark:bg-neutral-700 text-neutral-800 dark:text-white text-right text-xs"
                                                             placeholder="15"
                                                         />
                                                     </div>
@@ -806,43 +837,34 @@ const BrewingNoteFormModalNew: React.FC<BrewingNoteFormModalNewProps> = ({
                                                 
                                                 {/* 研磨度 */}
                                                 <div className="flex items-center justify-between">
-                                                    <label className="text-gray-700">研磨度</label>
-                                                    <select
-                                                        value={method.params.grindSize}
-                                                        onChange={(e) => {
-                                                            method.params.grindSize = e.target.value;
-                                                            setSelectedMethod(methodType === 'common' ? method.name : (method.id || method.name));
-                                                        }}
-                                                        className="w-32 px-2 py-1 border rounded text-right"
-                                                    >
-                                                        <option value="极细">极细</option>
-                                                        <option value="特细">特细</option>
-                                                        <option value="细">细</option>
-                                                        <option value="中细">中细</option>
-                                                        <option value="中细偏粗">中细偏粗</option>
-                                                        <option value="中粗">中粗</option>
-                                                        <option value="粗">粗</option>
-                                                        <option value="特粗">特粗</option>
-                                                    </select>
+                                                    <label className="text-xs text-white dark:text-neutral-200">研磨度</label>
+                                                    <div className="flex items-center">
+                                                        <input
+                                                            type="text"
+                                                            value={grindSize}
+                                                            onChange={(e) => handleGrindSizeChange(e.target.value, method)}
+                                                            className="w-24 py-1 px-2 border border-neutral-400 dark:border-neutral-600 rounded bg-white dark:bg-neutral-700 text-neutral-800 dark:text-white text-right text-xs"
+                                                            placeholder="中细"
+                                                        />
+                                                    </div>
                                                 </div>
                                                 
                                                 {/* 水温 */}
                                                 <div className="flex items-center justify-between">
-                                                    <label className="text-gray-700">水温</label>
-                                                    <input
-                                                        type="text"
-                                                        value={method.params.temp.replace('°C', '')}
-                                                        onChange={(e) => {
-                                                            method.params.temp = `${e.target.value}°C`;
-                                                            setSelectedMethod(methodType === 'common' ? method.name : (method.id || method.name));
-                                                        }}
-                                                        className="w-24 px-2 py-1 border rounded text-right"
-                                                        placeholder="92"
-                                                    />
-                                                    <span className="ml-1">°C</span>
+                                                    <label className="text-xs text-white dark:text-neutral-200">水温</label>
+                                                    <div className="flex items-center">
+                                                        <input
+                                                            type="text"
+                                                            value={tempValue}
+                                                            onChange={(e) => handleTempChange(e.target.value, method)}
+                                                            className="w-16 py-1 px-2 border border-neutral-400 dark:border-neutral-600 rounded bg-white dark:bg-neutral-700 text-neutral-800 dark:text-white text-right text-xs"
+                                                            placeholder="92"
+                                                        />
+                                                        <span className="ml-1 text-xs text-white dark:text-neutral-200">°C</span>
+                                                    </div>
                                                 </div>
                                             </div>
-                                            <div className="mt-2 flex items-center gap-1 text-[10px] text-white dark:text-neutral-800 opacity-80">
+                                            <div className="mt-2 flex items-center gap-1 text-[10px] text-white dark:text-neutral-200 opacity-80">
                                                 <span>计算出的水量:</span>
                                                 <span className="font-medium">{waterAmount}</span>
                                             </div>
