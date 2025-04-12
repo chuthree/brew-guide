@@ -691,6 +691,7 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 			// 重置方案相关状态
 			setSelectedMethod(null);
 			setCurrentBrewingMethod(null);
+			setMethodType('common');
 
 			// 设置新的设备
 			setSelectedEquipment(equipment);
@@ -702,7 +703,19 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 			// 返回实际的设备名称，以便外部函数使用
 			return equipmentName;
 		},
-		[activeMainTab, showComplete, resetBrewingState]
+		[
+			activeMainTab,
+			showComplete,
+			resetBrewingState,
+			setActiveMainTab,
+			setShowHistory,
+			setSelectedMethod,
+			setCurrentBrewingMethod,
+			setMethodType,
+			setSelectedEquipment,
+			setActiveTab,
+			setActiveBrewingStep,
+		]
 	);
 
 	// 加载自定义方案

@@ -7,6 +7,7 @@ import { CoffeeBean } from '@/app/types'
 import AutoResizeTextarea from './AutoResizeTextarea'
 import AutocompleteInput from './AutocompleteInput'
 import Image from 'next/image'
+import imageCompression from 'browser-image-compression';
 // 移除Capacitor导入
 
 // 添加拼配成分接口定义
@@ -735,112 +736,50 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                             <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
                                 咖啡豆图片
                             </label>
-                            <div className="flex items-center justify-center relative">
-                                <div
-                                    className="w-32 h-32 rounded-lg border-2 border-dashed border-neutral-300 dark:border-neutral-700 flex flex-col items-center justify-center cursor-pointer overflow-visible relative"
-                                    onClick={() => {
-                                        const fileInput = document.createElement('input');
-                                        fileInput.type = 'file';
-                                        fileInput.accept = 'image/*';
-                                        fileInput.onchange = async (e) => {
-                                            const input = e.target as HTMLInputElement;
-                                            if (!input.files || input.files.length === 0) return;
-
-                                            const file = input.files[0];
-                                            try {
-                                                // 读取文件并转换为Base64
-                                                const reader = new FileReader();
-                                                reader.onload = () => {
-                                                    if (typeof reader.result === 'string') {
-                                                        const imageData = reader.result as string;
-
-                                                        // 检查图片大小是否需要压缩
-                                                        if (imageData.length > 1024 * 1024) { // 如果大于1MB
-                                                            // 压缩图片
-                                                            const img = new globalThis.Image();
-                                                            img.onload = () => {
-                                                                const canvas = document.createElement('canvas');
-                                                                let width = img.width;
-                                                                let height = img.height;
-
-                                                                // 限制最大尺寸为800px
-                                                                const maxSize = 800;
-                                                                if (width > height && width > maxSize) {
-                                                                    height = (height * maxSize) / width;
-                                                                    width = maxSize;
-                                                                } else if (height > maxSize) {
-                                                                    width = (width * maxSize) / height;
-                                                                    height = maxSize;
-                                                                }
-
-                                                                canvas.width = width;
-                                                                canvas.height = height;
-                                                                const ctx = canvas.getContext('2d');
-                                                                ctx?.drawImage(img, 0, 0, width, height);
-
-                                                                // 转换为base64，使用较低的质量
-                                                                const compressedImage = canvas.toDataURL('image/jpeg', 0.6);
-
-                                                                // 更新豆子图片
-                                                                setBean(prev => ({
-                                                                    ...prev,
-                                                                    image: compressedImage
-                                                                }));
-                                                            };
-                                                            img.src = imageData;
-                                                        } else {
-                                                            // 如果图片不大，直接使用
-                                                            setBean(prev => ({
-                                                                ...prev,
-                                                                image: imageData
-                                                            }));
-                                                        }
-                                                    }
-                                                };
-                                                reader.readAsDataURL(file);
-                                            } catch {
-
-                                                alert('上传图片失败，请重试');
-                                            }
-                                        };
-                                        fileInput.click();
-                                    }}
-                                >
+                            <div className="relative aspect-square w-32 mx-auto">
+                                <div className="absolute inset-0 rounded-2xl border-2 border-dashed border-neutral-300 dark:border-neutral-700 overflow-hidden">
                                     {bean.image ? (
                                         <div className="relative w-full h-full">
                                             <Image
                                                 src={bean.image}
                                                 alt="咖啡豆图片"
-                                                className="object-cover"
                                                 fill
-                                                sizes="(max-width: 768px) 100vw, 300px"
+                                                className="object-cover"
                                             />
-                                            <div className="absolute inset-0 bg-black bg-opacity-30 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
-                                                <span className="text-white text-xs font-medium">点击更换</span>
-                                            </div>
-                                            {/* 删除按钮放在图片容器内，定位在右上角 */}
                                             <button
                                                 type="button"
-                                                className="absolute top-1 right-1 w-6 h-6 bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-800 rounded-full flex items-center justify-center shadow-md hover:bg-red-500 dark:hover:bg-red-500 dark:hover:text-white transition-colors z-10"
-                                                onClick={(e) => {
-                                                    e.stopPropagation(); // 阻止冒泡，避免触发父元素的点击事件
+                                                className="absolute top-2 right-2 p-1.5 bg-neutral-800/50 hover:bg-neutral-800/70 rounded-full text-white"
+                                                onClick={() => {
                                                     setBean(prev => ({
                                                         ...prev,
-                                                        image: undefined
+                                                        image: ''
                                                     }));
                                                 }}
                                             >
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
                                                     <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
                                                 </svg>
                                             </button>
                                         </div>
                                     ) : (
                                         <>
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-neutral-400 dark:text-neutral-600 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                            </svg>
-                                            <span className="text-xs text-neutral-500 dark:text-neutral-400">点击上传图片</span>
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={(e) => {
+                                                    const file = e.target.files?.[0];
+                                                    if (file) {
+                                                        handleImageUpload(file);
+                                                    }
+                                                }}
+                                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                            />
+                                            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-neutral-400 dark:text-neutral-600 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                </svg>
+                                                <span className="text-xs text-neutral-500 dark:text-neutral-400">点击上传图片</span>
+                                            </div>
                                         </>
                                     )}
                                 </div>
@@ -1521,6 +1460,33 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
         // 当步骤变化时验证剩余容量
         validateRemaining();
     }, [currentStep, validateRemaining]);
+
+    const handleImageUpload = async (file: File) => {
+        try {
+            // 压缩选项
+            const options = {
+                maxSizeMB: 1,
+                maxWidthOrHeight: 1024,
+                useWebWorker: true
+            };
+
+            // 压缩图片
+            const compressedFile = await imageCompression(file, options);
+            
+            // 转换为base64
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setBean(prev => ({
+                    ...prev,
+                    image: reader.result as string
+                }));
+            };
+            reader.readAsDataURL(compressedFile);
+        } catch (error) {
+            console.error('图片压缩失败:', error);
+            // 可以在这里添加错误提示
+        }
+    };
 
     return (
         <div className="flex flex-col">
