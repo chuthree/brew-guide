@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import ReactCrop, { Crop } from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
 import { recognizeImage, RecognitionError } from '@/services/recognition'
+import { debounce } from 'lodash'
 
 interface ImportBeanModalProps {
     showForm: boolean
@@ -45,73 +46,89 @@ const ImportBeanModal: React.FC<ImportBeanModalProps> = ({
     // 添加手动模式状态
     const [manualMode, setManualMode] = useState(false);
 
-    // Function to handle crop complete - 移到前面并使用useCallback
-    const handleCropComplete = useCallback(async (crop: Crop) => {
-        if (!selectedImage || !imgRef.current) return;
+    // Function to handle crop complete - 移到前面并使用useCallback并添加防抖处理
+    const handleCropComplete = useCallback(
+        debounce(async (crop: Crop) => {
+            if (!selectedImage || !imgRef.current) return;
 
-        const image = new Image();
-        image.src = selectedImage;
+            const image = new Image();
+            image.src = selectedImage;
 
-        // 等待图片加载完成
-        await new Promise((resolve) => {
-            if (image.complete) {
-                resolve(true);
+            // 等待图片加载完成
+            await new Promise((resolve) => {
+                if (image.complete) {
+                    resolve(true);
+                } else {
+                    image.onload = () => resolve(true);
+                }
+            });
+
+            const canvas = document.createElement('canvas');
+            // 获取显示的图片元素
+            const displayedImage = imgRef.current;
+
+            // 计算实际比例
+            const scaleX = image.naturalWidth / displayedImage.width;
+            const scaleY = image.naturalHeight / displayedImage.height;
+
+            // 根据单位计算裁剪区域的实际尺寸
+            let cropWidth, cropHeight, cropX, cropY;
+            if (crop.unit === '%') {
+                cropWidth = (crop.width! / 100) * displayedImage.width;
+                cropHeight = (crop.height! / 100) * displayedImage.height;
+                cropX = (crop.x! / 100) * displayedImage.width;
+                cropY = (crop.y! / 100) * displayedImage.height;
             } else {
-                image.onload = () => resolve(true);
+                cropWidth = crop.width!;
+                cropHeight = crop.height!;
+                cropX = crop.x!;
+                cropY = crop.y!;
             }
-        });
 
-        const canvas = document.createElement('canvas');
-        // 获取显示的图片元素
-        const displayedImage = imgRef.current;
+            // 降低画布分辨率以提升性能，减小输出图片的尺寸
+            const maxCanvasSize = 800; // 最大尺寸限制，防止生成过大的图片
+            const aspectRatio = cropWidth / cropHeight;
+            
+            let finalWidth = cropWidth * scaleX;
+            let finalHeight = cropHeight * scaleY;
+            
+            // 如果图片过大，则按比例缩小
+            if (finalWidth > maxCanvasSize || finalHeight > maxCanvasSize) {
+                if (aspectRatio >= 1) {
+                    finalWidth = maxCanvasSize;
+                    finalHeight = finalWidth / aspectRatio;
+                } else {
+                    finalHeight = maxCanvasSize;
+                    finalWidth = finalHeight * aspectRatio;
+                }
+            }
+            
+            // 设置画布尺寸为调整后的大小
+            canvas.width = finalWidth;
+            canvas.height = finalHeight;
 
-        // 计算实际比例
-        const scaleX = image.naturalWidth / displayedImage.width;
-        const scaleY = image.naturalHeight / displayedImage.height;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return;
 
-        // 根据单位计算裁剪区域的实际尺寸
-        let cropWidth, cropHeight, cropX, cropY;
-        if (crop.unit === '%') {
-            cropWidth = (crop.width! / 100) * displayedImage.width;
-            cropHeight = (crop.height! / 100) * displayedImage.height;
-            cropX = (crop.x! / 100) * displayedImage.width;
-            cropY = (crop.y! / 100) * displayedImage.height;
-        } else {
-            cropWidth = crop.width!;
-            cropHeight = crop.height!;
-            cropX = crop.x!;
-            cropY = crop.y!;
-        }
+            // 使用更高效的绘图方式
+            ctx.drawImage(
+                image,
+                cropX * scaleX,
+                cropY * scaleY,
+                cropWidth * scaleX,
+                cropHeight * scaleY,
+                0,
+                0,
+                finalWidth,
+                finalHeight
+            );
 
-        // 设置画布尺寸为裁剪区域的实际大小
-        canvas.width = cropWidth * scaleX;
-        canvas.height = cropHeight * scaleY;
-
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-
-        ctx.drawImage(
-            image,
-            cropX * scaleX,
-            cropY * scaleY,
-            cropWidth * scaleX,
-            cropHeight * scaleY,
-            0,
-            0,
-            canvas.width,
-            canvas.height
-        );
-
-        const croppedDataUrl = canvas.toDataURL('image/jpeg', 1.0);
-        console.log('crop success', {
-            naturalSize: { width: image.naturalWidth, height: image.naturalHeight },
-            displaySize: { width: displayedImage.width, height: displayedImage.height },
-            scale: { x: scaleX, y: scaleY },
-            crop: { ...crop },
-            canvasSize: { width: canvas.width, height: canvas.height }
-        });
-        setCroppedImage(croppedDataUrl);
-    }, [selectedImage]); // 只依赖selectedImage
+            // 使用较低的图片质量来提高性能
+            const croppedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+            setCroppedImage(croppedDataUrl);
+        }, 150), // 150毫秒的防抖延迟
+        [selectedImage]
+    );
 
     // Automatically trigger crop complete when cropper is shown
     useEffect(() => {
@@ -424,6 +441,7 @@ const ImportBeanModal: React.FC<ImportBeanModalProps> = ({
                                 ref={imgRef}
                                 src={selectedImage}
                                 alt="Upload preview"
+                                style={{ maxHeight: '60vh' }} // 限制图片显示高度，避免过大图片导致性能问题
                             />
                         </ReactCrop>
                         <div className="flex justify-end space-x-2">
