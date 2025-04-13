@@ -54,7 +54,8 @@ bun dev
 ## 交流群
 
 欢迎加微信交流群～
-![CleanShot 2025-04-12 at 21 58 33](https://github.com/user-attachments/assets/7bbf3350-ce74-4c00-b27a-ec74f81cda61)
+![IMG_2286](https://github.com/user-attachments/assets/92209e15-45ff-487d-b427-c730bc10e197)
+
 
 
 ## 贡献
