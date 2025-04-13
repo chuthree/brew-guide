@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { APP_VERSION, equipmentList, Method } from '@/lib/config'
+import { equipmentList, Method } from '@/lib/config'
 import hapticsUtils from '@/lib/haptics'
 import { SettingsOptions } from '@/components/Settings'
 import { formatGrindSize } from '@/lib/grindUtils'
@@ -10,6 +10,7 @@ import { BREWING_EVENTS } from '@/lib/brewing/constants'
 import { listenToEvent } from '@/lib/brewing/events'
 import { updateParameterInfo } from '@/lib/brewing/parameters'
 import { useTranslations } from 'next-intl'
+import { Equal } from 'lucide-react'
 
 // 定义一个隐藏滚动条的样式
 const noScrollbarStyle = `
@@ -401,23 +402,14 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
         return disabledSteps;
     };
 
-    // 不再需要这个变量，因为我们直接使用props中的hasCoffeeBeans
-
-    // 添加双击计时器和计数器
-    const [lastTitleClickTime, setLastTitleClickTime] = useState(0);
-
     // 处理标题点击事件
     const handleTitleClick = () => {
-        const currentTime = new Date().getTime();
         // 每次点击事件只有成功触发时才执行触感反馈
         if (settings.hapticFeedback) {
             hapticsUtils.light(); // 添加轻触感反馈
         }
-        // 如果距离上次点击不超过300毫秒，视为双击
-        if (currentTime - lastTitleClickTime < 300) {
-            onTitleDoubleClick(); // 调用父组件传入的回调函数
-        }
-        setLastTitleClickTime(currentTime);
+        // 直接调用父组件传入的回调函数打开设置
+        onTitleDoubleClick();
     };
 
     // 处理冲煮步骤点击
@@ -640,13 +632,13 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                     }}
                 >
                     <div className="flex items-center justify-between px-6 px-safe pb-4">
-                        <h1
-                            className="text-base font-light tracking-wide cursor-pointer"
+                        <div 
                             onClick={handleTitleClick}
+                            className="cursor-pointer text-[10px] sm:text-xs tracking-widest text-neutral-500 dark:text-neutral-400 flex items-center"
                         >
-                            {t('title')}
-                            <span className="ml-1 text-[8px] text-neutral-400 dark:text-neutral-600">v{APP_VERSION}</span>
-                        </h1>
+                            <Equal className="w-4 h-4 mr-1" />
+                            <span>{t('title')}</span>
+                        </div>
 
                         <div className="flex items-center space-x-6">
                             <TabButton

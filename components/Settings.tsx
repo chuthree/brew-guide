@@ -254,10 +254,6 @@ const Settings: React.FC<SettingsProps> = ({
 
             {/* 滚动内容区域 */}
             <div className="flex-1 overflow-y-auto pb-safe">
-                <div className="px-6 py-3 text-xs text-neutral-500 dark:text-neutral-400">
-                    <p>双击应用标题可打开此面板</p>
-                </div>
-
                 {/* 设置分组 */}
                     {/* 通知设置 */}
                     <section className="px-6 py-4 border-b border-neutral-200 dark:border-neutral-800">
