@@ -201,7 +201,7 @@ const CoffeeBeanRatingModal: React.FC<CoffeeBeanRatingModalProps> = ({
                                 </button>
                                 <button
                                     onClick={handleSave}
-                                    className="flex-1 py-2 rounded-md bg-neutral-900 dark:bg-neutral-100 text-xs text-white dark:text-neutral-900"
+                                    className="flex-1 py-2 rounded-md bg-neutral-900 dark:bg-neutral-100 text-xs text-neutral-100 dark:text-neutral-900"
                                 >
                                     保存
                                 </button>

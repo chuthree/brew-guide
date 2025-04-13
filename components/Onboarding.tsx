@@ -294,7 +294,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
                                         <span className="text-3xl">☕</span>
                                     </div>
                                 </div>
-                                <h2 className="text-xl font-bold text-neutral-900 dark:text-white">
+                                <h2 className="text-xl font-bold text-neutral-900 dark:text-neutral-100">
                                     欢迎使用手冲咖啡指南
                                 </h2>
                                 <p className="text-sm mt-2 text-neutral-500 dark:text-neutral-400">
@@ -342,7 +342,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
                                     <span className="text-3xl">⚙️</span>
                                 </div>
                             </div>
-                            <h2 className="text-xl font-bold mb-6 text-neutral-900 dark:text-white text-center">
+                            <h2 className="text-xl font-bold mb-6 text-neutral-900 dark:text-neutral-100 text-center">
                                 偏好设置
                             </h2>
                         </div>
@@ -350,7 +350,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
                         <div className="w-full space-y-5 mb-4">
                             <div className="flex items-center justify-between bg-neutral-50 dark:bg-neutral-900 p-4 rounded-xl">
                                 <div className="flex flex-col">
-                                    <label className="text-sm font-medium text-neutral-900 dark:text-white">
+                                    <label className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
                                         声音提示
                                     </label>
                                     <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
@@ -369,7 +369,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
 
                             <div className="flex items-center justify-between bg-neutral-50 dark:bg-neutral-900 p-4 rounded-xl">
                                 <div className="flex flex-col">
-                                    <label className="text-sm font-medium text-neutral-900 dark:text-white">
+                                    <label className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
                                         震动反馈
                                     </label>
                                     <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
@@ -388,14 +388,14 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
                             
                             {/* Updated Grinder Selection */}
                             <div id="onboarding-grinder-select-wrapper" className="bg-neutral-50 dark:bg-neutral-900 p-4 rounded-xl">
-                                <label className="text-sm font-medium text-neutral-900 dark:text-white mb-1 block">
+                                <label className="text-sm font-medium text-neutral-900 dark:text-neutral-100 mb-1 block">
                                     磨豆机类型
                                 </label>
                                 <div className="relative">
                                     <select
                                         value={settings.grindType}
                                         onChange={(e) => handleSettingChange('grindType', e.target.value)}
-                                        className="w-full py-2 px-3 text-sm font-medium rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white appearance-none focus:outline-none focus:ring-2 focus:ring-neutral-500"
+                                        className="w-full py-2 px-3 text-sm font-medium rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 appearance-none focus:outline-none focus:ring-2 focus:ring-neutral-500"
                                     >
                                         {availableGrinders.map((grinder) => (
                                             <option key={grinder.id} value={grinder.id}>
@@ -416,7 +416,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
                             {isTextZoomEnabled && (
                                 <div className="flex items-center justify-between bg-neutral-50 dark:bg-neutral-900 p-4 rounded-xl">
                                     <div className="flex flex-col">
-                                        <label className="text-sm font-medium text-neutral-900 dark:text-white">
+                                        <label className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
                                             文本大小
                                         </label>
                                         <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
@@ -434,7 +434,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
                                         <button
                                             onClick={() => handleSettingChange('textZoomLevel', 1.0)}
                                             className={`px-2 py-1 text-xs rounded-md transition-colors ${Math.abs(settings.textZoomLevel - 1.0) < 0.05
-                                                ? 'bg-neutral-900 dark:bg-white text-white dark:text-black'
+                                                ? 'bg-neutral-900 dark:bg-white text-neutral-100 dark:text-black'
                                                 : 'bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300'
                                                 }`}
                                         >
@@ -466,7 +466,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
                                     <span className="text-3xl">✨</span>
                                 </div>
                             </div>
-                            <h2 className="text-xl font-bold text-neutral-900 dark:text-white">
+                            <h2 className="text-xl font-bold text-neutral-900 dark:text-neutral-100">
                                 准备就绪！
                             </h2>
                             <p className="text-sm mt-2 text-neutral-500 dark:text-neutral-400">
@@ -536,7 +536,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
                             {/* 下一步/完成按钮 */}
                             <button
                                 onClick={currentStep === 'complete' ? handleComplete : goToNextStep}
-                                className="w-full py-3 px-4 bg-neutral-900 dark:bg-white text-white dark:text-black rounded-lg font-medium hover:bg-neutral-800 dark:hover:bg-neutral-100 transition-colors"
+                                className="w-full py-3 px-4 bg-neutral-900 dark:bg-white text-neutral-100 dark:text-black rounded-lg font-medium hover:bg-neutral-800 dark:hover:bg-neutral-100 transition-colors"
                             >
                                 {currentStep === 'complete' ? '开始使用' : '继续'}
                             </button>

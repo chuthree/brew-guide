@@ -114,7 +114,7 @@ const Toast: React.FC<{ toast: ToastMessage, onClose: () => void }> = ({ toast, 
             animate={{ opacity: 1, y: 0, x: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.3 }}
-            className="bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-800 p-4 rounded-lg shadow-lg"
+            className="bg-neutral-800 dark:bg-neutral-200 text-neutral-100 dark:text-neutral-800 p-4 rounded-lg shadow-lg"
         >
             <div className="flex items-start">
                 <div className="flex-shrink-0 mr-2">
@@ -132,7 +132,7 @@ const Toast: React.FC<{ toast: ToastMessage, onClose: () => void }> = ({ toast, 
                 </div>
                 <button
                     onClick={onClose}
-                    className="text-neutral-400 hover:text-white dark:hover:text-neutral-800 ml-2"
+                    className="text-neutral-400 hover:text-neutral-100 dark:hover:text-neutral-800 ml-2"
                 >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M6 18L18 6M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />

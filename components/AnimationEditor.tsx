@@ -531,7 +531,7 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(({
         />
         
         {/* 帧指示器 */}
-        <div className="absolute top-2 left-2 bg-black/60 text-white text-xs py-1 px-2 rounded-md">
+        <div className="absolute top-2 left-2 bg-black/60 text-neutral-100 text-xs py-1 px-2 rounded-md">
           帧 {currentFrameIndex + 1}/{frames.length}
         </div>
       </div>
@@ -565,7 +565,7 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(({
                   <span className="text-xs text-neutral-400 dark:text-neutral-500">空白</span>
                 )}
               </div>
-              <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[10px] text-center">
+              <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-neutral-100 text-[10px] text-center">
                 帧 {index + 1}
               </div>
             </button>
@@ -713,7 +713,7 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(({
                     <path d="M18.364 18.364C21.8787 14.8492 21.8787 9.15076 18.364 5.63604C14.8492 2.12132 9.15076 2.12132 5.63604 5.63604M18.364 18.364C14.8492 21.8787 9.15076 21.8787 5.63604 18.364C2.12132 14.8492 2.12132 9.15076 5.63604 5.63604M18.364 18.364L5.63604 5.63604" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                 </div>
-                <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[10px] text-center">
+                <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-neutral-100 text-[10px] text-center">
                   无
                 </div>
               </button>
@@ -739,7 +739,7 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(({
                     height={48}
                     className="object-contain"
                   />
-                  <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[10px] text-center">
+                  <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-neutral-100 text-[10px] text-center">
                     {img.label}
                   </div>
                 </button>

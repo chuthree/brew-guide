@@ -476,7 +476,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                     <div className="pt-6 space-y-6 sticky top-0 bg-neutral-50 dark:bg-neutral-900 z-20">
                         {/* 排序控件和数量显示 */}
                         <div className="flex justify-between items-center mb-6 px-6">
-                            <div className="text-xs tracking-wide text-neutral-800 dark:text-white">
+                            <div className="text-xs tracking-wide text-neutral-800 dark:text-neutral-100">
                                 {selectedEquipment 
                                     ? `${filteredNotes.length}/${notes.length} 条记录` 
                                     : `${notes.length} 条记录`}
@@ -487,7 +487,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                             >
                                 <SelectTrigger
                                     variant="minimal"
-                                    className="w-auto min-w-[65px] tracking-wide text-neutral-800 dark:text-white transition-colors hover:opacity-80 text-right"
+                                    className="w-auto min-w-[65px] tracking-wide text-neutral-800 dark:text-neutral-100 transition-colors hover:opacity-80 text-right"
                                 >
                                     <div className="flex items-center justify-end w-full">
                                         {SORT_LABELS[sortOption]}
@@ -519,7 +519,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                         <SelectItem
                                             key={value}
                                             value={value}
-                                            className="tracking-wide text-neutral-800 dark:text-white data-[highlighted]:opacity-80 transition-colors"
+                                            className="tracking-wide text-neutral-800 dark:text-neutral-100 data-[highlighted]:opacity-80 transition-colors"
                                         >
                                             <div className="flex items-center justify-between w-full">
                                                 <span>{SORT_LABELS[value].split(' ')[0]}</span>
@@ -556,7 +556,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                             <>
                                                 <button
                                                     onClick={() => handleEquipmentClick(null)}
-                                                    className={`pb-1.5 mr-3 text-[11px] whitespace-nowrap relative ${selectedEquipment === null ? 'text-neutral-800 dark:text-white' : 'text-neutral-600 dark:text-neutral-400'}`}
+                                                    className={`pb-1.5 mr-3 text-[11px] whitespace-nowrap relative ${selectedEquipment === null ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
                                                 >
                                                     <span className="relative">全部记录</span>
                                                     {selectedEquipment === null && (
@@ -567,7 +567,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                                     <button
                                                         key={equipment}
                                                         onClick={() => handleEquipmentClick(equipment)}
-                                                        className={`pb-1.5 mx-3 text-[11px] whitespace-nowrap relative ${selectedEquipment === equipment ? 'text-neutral-800 dark:text-white' : 'text-neutral-600 dark:text-neutral-400'}`}
+                                                        className={`pb-1.5 mx-3 text-[11px] whitespace-nowrap relative ${selectedEquipment === equipment ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
                                                     >
                                                         <span className="relative">{equipmentNames[equipment] || equipment}</span>
                                                         {selectedEquipment === equipment && (
@@ -580,7 +580,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                             <>
                                                 <button
                                                     onClick={() => handleBeanClick(null)}
-                                                    className={`pb-1.5 mr-3 text-[11px] whitespace-nowrap relative ${selectedBean === null ? 'text-neutral-800 dark:text-white' : 'text-neutral-600 dark:text-neutral-400'}`}
+                                                    className={`pb-1.5 mr-3 text-[11px] whitespace-nowrap relative ${selectedBean === null ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
                                                 >
                                                     <span className="relative">全部记录</span>
                                                     {selectedBean === null && (
@@ -591,7 +591,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                                     <button
                                                         key={bean}
                                                         onClick={() => handleBeanClick(bean)}
-                                                        className={`pb-1.5 mx-3 text-[11px] whitespace-nowrap relative ${selectedBean === bean ? 'text-neutral-800 dark:text-white' : 'text-neutral-600 dark:text-neutral-400'}`}
+                                                        className={`pb-1.5 mx-3 text-[11px] whitespace-nowrap relative ${selectedBean === bean ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
                                                     >
                                                         <span className="relative">{bean}</span>
                                                         {selectedBean === bean && (
@@ -607,7 +607,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                     <div className="absolute right-6 top-0 bottom-0 flex items-center bg-gradient-to-l from-neutral-50 via-neutral-50 to-transparent dark:from-neutral-900 dark:via-neutral-900 pl-6">
                                         <button
                                             onClick={() => handleFilterModeChange(filterMode === 'equipment' ? 'bean' : 'equipment')}
-                                            className={`pb-1.5 text-[11px] whitespace-nowrap relative text-neutral-800 dark:text-white font-normal`}
+                                            className={`pb-1.5 text-[11px] whitespace-nowrap relative text-neutral-800 dark:text-neutral-100 font-normal`}
                                         >
                                             <span className="relative mr-1">{filterMode === 'equipment' ? '器具' : '咖啡豆'}</span>
                                             <span className="relative">/</span>
@@ -639,14 +639,14 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                                 {/* 标题和操作菜单 */}
                                                 <div className="flex justify-between items-start">
                                                     <div className="flex-1 min-w-0">
-                                                        <div className="text-[11px] font-normal break-words text-neutral-800 dark:text-white pr-2">
+                                                        <div className="text-[11px] font-normal break-words text-neutral-800 dark:text-neutral-100 pr-2">
                                                             {note.coffeeBeanInfo?.name ? (
                                                                 <>
                                                                     {note.coffeeBeanInfo.name}
                                                                     <span className="text-neutral-600 dark:text-neutral-400 mx-1">·</span>
                                                                     <button
                                                                         onClick={(e) => handleMethodClick(note, e)}
-                                                                        className="hover:text-neutral-800 dark:hover:text-white transition-colors"
+                                                                        className="hover:text-neutral-800 dark:hover:text-neutral-100 transition-colors"
                                                                     >
                                                                         {note.method}
                                                                     </button>
@@ -657,7 +657,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                                                     <span className="text-neutral-600 dark:text-neutral-400 mx-1">·</span>
                                                                     <button
                                                                         onClick={(e) => handleMethodClick(note, e)}
-                                                                        className="hover:text-neutral-800 dark:hover:text-white transition-colors"
+                                                                        className="hover:text-neutral-800 dark:hover:text-neutral-100 transition-colors"
                                                                     >
                                                                         {note.method}
                                                                     </button>
@@ -825,7 +825,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                             <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
                             <button
                                 onClick={handleAddNote}
-                                className="flex items-center justify-center text-[11px] text-neutral-800 dark:text-white hover:opacity-80 mx-3"
+                                className="flex items-center justify-center text-[11px] text-neutral-800 dark:text-neutral-100 hover:opacity-80 mx-3"
                             >
                                 <span className="mr-1">+</span> 添加笔记
                             </button>
@@ -838,7 +838,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
             {/* Toast消息组件 */}
             {toast.visible && (
                 <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-50 px-4 py-2 rounded-md shadow-lg text-sm transition-opacity duration-300 ease-in-out bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700">
-                    <div className={`text-center ${toast.type === 'error' ? 'text-red-500 dark:text-red-400' : toast.type === 'success' ? 'text-emerald-600 dark:text-emerald-500' : 'text-neutral-800 dark:text-white'}`}>
+                    <div className={`text-center ${toast.type === 'error' ? 'text-red-500 dark:text-red-400' : toast.type === 'success' ? 'text-emerald-600 dark:text-emerald-500' : 'text-neutral-800 dark:text-neutral-100'}`}>
                         {toast.message}
                     </div>
                 </div>

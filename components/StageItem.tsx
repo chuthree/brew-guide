@@ -126,7 +126,7 @@ const StageItem: React.FC<StageItemProps> = ({
     // 获取文本样式
     const textStyle = useMemo(() => 
         isCurrentStage
-            ? 'text-neutral-800 dark:text-white'
+            ? 'text-neutral-800 dark:text-neutral-100'
             : 'text-neutral-600 dark:text-neutral-400',
         [isCurrentStage]
     );
@@ -180,7 +180,7 @@ const StageItem: React.FC<StageItemProps> = ({
                             {step.icon && (
                                 <span className="text-xs mr-1">{step.icon}</span>
                             )}
-                            <h3 className={`text-xs font-normal tracking-wider truncate ${isCurrentStage ? 'text-neutral-800 dark:text-white' : ''}`}>
+                            <h3 className={`text-xs font-normal tracking-wider truncate ${isCurrentStage ? 'text-neutral-800 dark:text-neutral-100' : ''}`}>
                                 {step.title}
                             </h3>
                             {activeTab === '注水' && selectedMethod && step.originalIndex !== undefined && step.items && step.note && (
@@ -243,7 +243,7 @@ const StageItem: React.FC<StageItemProps> = ({
         <div
             className={`group relative ${
                 currentStage === index
-                    ? 'text-neutral-800 dark:text-white'
+                    ? 'text-neutral-800 dark:text-neutral-100'
                     : 'text-neutral-600 dark:text-neutral-400'
             }`}
             onClick={onClick}

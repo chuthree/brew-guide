@@ -216,7 +216,7 @@ const SteppedFormModal: React.FC<SteppedFormModalProps> = ({
                         flex items-center justify-center rounded-full
                         ${currentStep.isValid === false ? 'opacity-50 cursor-not-allowed' : ''}
                         ${currentStepIndex === steps.length - 1
-                                                ? 'bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-800 px-6 py-3 text-sm font-medium'
+                                                ? 'bg-neutral-800 dark:bg-neutral-200 text-neutral-100 dark:text-neutral-800 px-6 py-3 text-sm font-medium'
                                                 : 'p-4 bg-neutral-50/80 dark:bg-neutral-900/80 backdrop-blur-md'
                                             }
                       `}

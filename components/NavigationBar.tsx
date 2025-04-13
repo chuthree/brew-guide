@@ -172,7 +172,6 @@ const StepIndicator = ({
                             isDisabled={isDisabled}
                             isCompleted={isCompleted}
                             onClick={() => handleStepClick(step.value)}
-                            className="text-[10px] sm:text-xs"
                             dataTab={step.value}
                         />
                         {index < steps.length - 1 && (
@@ -246,7 +245,7 @@ const EditableParameter = ({
 
     return (
         <span
-            className={`group relative inline-flex items-center ${className} cursor-pointer min-w-0 max-w-[40px] sm:max-w-[50px]`}
+            className={`group relative inline-flex items-center ${className} cursor-pointer min-w-0 max-w-[40px]`}
             onClick={() => setIsEditing(true)}
         >
             {prefix && <span className="flex-shrink-0">{prefix}</span>}
@@ -258,7 +257,7 @@ const EditableParameter = ({
                     onChange={(e) => setTempValue(e.target.value)}
                     onBlur={handleBlur}
                     onKeyDown={handleKeyDown}
-                    className="w-full border-b border-neutral-300 bg-transparent text-center text-[10px] outline-none sm:text-xs px-0.5"
+                    className="w-full border-b border-neutral-300 bg-transparent text-center text-[10px] outline-none px-0.5"
                 />
             ) : (
                 <span className="inline-flex items-center whitespace-nowrap">
@@ -634,7 +633,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                     <div className="flex items-center justify-between px-6 px-safe pb-4">
                         <div 
                             onClick={handleTitleClick}
-                            className="cursor-pointer text-[10px] sm:text-xs tracking-widest text-neutral-500 dark:text-neutral-400 flex items-center"
+                            className="cursor-pointer text-[12px] tracking-widest text-neutral-500 dark:text-neutral-400 flex items-center"
                         >
                             <Equal className="w-4 h-4 mr-1" />
                             <span>{t('title')}</span>
@@ -645,21 +644,18 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                 tab={t('main.brewing')}
                                 isActive={activeMainTab === '冲煮'}
                                 onClick={() => handleMainTabClick('冲煮')}
-                                className="text-[10px] sm:text-xs"
                                 dataTab="冲煮"
                             />
                             <TabButton
                                 tab={t('main.beans')}
                                 isActive={activeMainTab === '咖啡豆'}
                                 onClick={() => handleMainTabClick('咖啡豆')}
-                                className="text-[10px] sm:text-xs"
                                 dataTab="咖啡豆"
                             />
                             <TabButton
                                 tab={t('main.notes')}
                                 isActive={activeMainTab === '笔记'}
                                 onClick={() => handleMainTabClick('笔记')}
-                                className="text-[10px] sm:text-xs"
                                 dataTab="笔记"
                             />
                         </div>

@@ -311,7 +311,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                     <div className="flex justify-between border-b border-neutral-200 dark:border-neutral-800 px-3">
                         <div className="flex">
                             <button
-                                className={`pb-1.5 px-3 text-[11px] relative ${beanType === 'all' ? 'text-neutral-800 dark:text-white' : 'text-neutral-600 dark:text-neutral-400'}`}
+                                className={`pb-1.5 px-3 text-[11px] relative ${beanType === 'all' ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
                                 onClick={() => setBeanType('all')}
                             >
                                 <span className="relative">全部豆子</span>
@@ -320,7 +320,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                                 )}
                             </button>
                             <button
-                                className={`pb-1.5 px-3 text-[11px] relative ${beanType === 'espresso' ? 'text-neutral-800 dark:text-white' : 'text-neutral-600 dark:text-neutral-400'}`}
+                                className={`pb-1.5 px-3 text-[11px] relative ${beanType === 'espresso' ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
                                 onClick={() => setBeanType('espresso')}
                             >
                                 <span className="relative">意式豆</span>
@@ -329,7 +329,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                                 )}
                             </button>
                             <button
-                                className={`pb-1.5 px-3 text-[11px] relative ${beanType === 'filter' ? 'text-neutral-800 dark:text-white' : 'text-neutral-600 dark:text-neutral-400'}`}
+                                className={`pb-1.5 px-3 text-[11px] relative ${beanType === 'filter' ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
                                 onClick={() => setBeanType('filter')}
                             >
                                 <span className="relative">手冲豆</span>
@@ -343,7 +343,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                         {viewMode === 'personal' && (
                             <button
                                 onClick={toggleEditMode}
-                                className={`pb-1.5 px-3 text-[11px] relative ${editMode ? 'text-neutral-800 dark:text-white' : 'text-neutral-600 dark:text-neutral-400'}`}
+                                className={`pb-1.5 px-3 text-[11px] relative ${editMode ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
                             >
                                 <span className="relative">{editMode ? '完成' : '编辑'}</span>
                                 {editMode && (
@@ -377,8 +377,8 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                                     {/* 咖啡豆信息 */}
                                     <div className="cursor-pointer">
                                         <div className="flex items-center">
-                                            <div className="text-[11px] text-neutral-800 dark:text-white">{bean.name}</div>
-                                            <div className="ml-2 text-[11px] text-neutral-800 dark:text-white">
+                                            <div className="text-[11px] text-neutral-800 dark:text-neutral-100">{bean.name}</div>
+                                            <div className="ml-2 text-[11px] text-neutral-800 dark:text-neutral-100">
                                                 +{bean.overallRating !== undefined ? bean.overallRating : 0}
                                             </div>
                                         </div>
@@ -471,7 +471,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                                 {editMode && (
                                     <button
                                         onClick={() => handleRateBeanClick(bean as CoffeeBean)}
-                                        className="text-[10px] text-neutral-600 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-white"
+                                        className="text-[10px] text-neutral-600 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-100"
                                     >
                                         编辑
                                     </button>
@@ -517,7 +517,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                                             {/* 咖啡豆信息 */}
                                             <div className="cursor-pointer">
                                                 <div className="flex items-center">
-                                                    <div className="text-[11px] text-neutral-800 dark:text-white">{bean.name}</div>
+                                                    <div className="text-[11px] text-neutral-800 dark:text-neutral-100">{bean.name}</div>
                                                 </div>
                                                 <div className="text-[10px] text-neutral-600 dark:text-neutral-400 mt-0.5">
                                                     {(() => {
@@ -554,7 +554,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                                         {/* 添加评分按钮 */}
                                         <button
                                             onClick={() => handleRateBeanClick(bean as CoffeeBean)}
-                                            className="text-[10px] text-neutral-800 dark:text-white hover:opacity-80"
+                                            className="text-[10px] text-neutral-800 dark:text-neutral-100 hover:opacity-80"
                                         >
                                             添加评分
                                         </button>

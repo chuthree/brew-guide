@@ -266,7 +266,7 @@ const EquipmentShareModal: React.FC<EquipmentShareModalProps> = ({
                                 disabled={isSharing}
                                 className={`w-full mt-6 py-2.5 px-4 rounded-lg transition-colors ${isSharing
                                     ? 'bg-neutral-400 dark:bg-neutral-700 cursor-not-allowed'
-                                    : 'bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-800 hover:opacity-80'
+                                    : 'bg-neutral-800 dark:bg-neutral-200 text-neutral-100 dark:text-neutral-800 hover:opacity-80'
                                     }`}
                             >
                                 {isSharing ? '导出中...' : '导出为文件'}

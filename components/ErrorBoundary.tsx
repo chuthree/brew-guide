@@ -93,7 +93,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
                     <div className="flex space-x-2">
                         <button
                             onClick={this.resetError}
-                            className="px-3 py-1 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors"
+                            className="px-3 py-1 text-sm font-medium text-neutral-100 bg-red-600 rounded-md hover:bg-red-700 transition-colors"
                         >
                             重试
                         </button>

@@ -417,7 +417,7 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
                                             <button
                                                 type="button"
                                                 onClick={() => setShowConfirmReset(false)}
-                                                className="px-3 py-1.5 text-xs rounded-md bg-neutral-100 text-neutral-800 dark:bg-neutral-700 dark:text-white transition-colors hover:bg-neutral-200 dark:hover:bg-neutral-600"
+                                                className="px-3 py-1.5 text-xs rounded-md bg-neutral-100 text-neutral-800 dark:bg-neutral-700 dark:text-neutral-100 transition-colors hover:bg-neutral-200 dark:hover:bg-neutral-600"
                                             >
                                                 取消
                                             </button>
@@ -425,7 +425,7 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
                                                 type="button"
                                                 onClick={handleReset}
                                                 disabled={isResetting}
-                                                className="px-3 py-1.5 text-xs rounded-md bg-red-600 text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+                                                className="px-3 py-1.5 text-xs rounded-md bg-red-600 text-neutral-100 transition-colors hover:bg-red-700 disabled:opacity-50"
                                             >
                                                 {isResetting ? '重置中...' : '确认重置'}
                                             </button>

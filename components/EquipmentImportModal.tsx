@@ -407,7 +407,7 @@ const EquipmentImportModal: React.FC<EquipmentImportModalProps> = ({
                                     disabled={!importData.trim() || isImporting}
                                     className={`w-full py-2.5 px-4 rounded-lg transition-colors ${!importData.trim() || isImporting
                                         ? 'bg-neutral-400 dark:bg-neutral-700 cursor-not-allowed'
-                                        : 'bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-800 hover:opacity-80'
+                                        : 'bg-neutral-800 dark:bg-neutral-200 text-neutral-100 dark:text-neutral-800 hover:opacity-80'
                                         }`}
                                 >
                                     {isImporting ? '导入中...' : '导入'}

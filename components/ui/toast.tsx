@@ -54,12 +54,12 @@ export function Toast() {
                         exit={{ opacity: 0, y: -20 }}
                         className={`px-4 py-2 rounded-md shadow-lg text-sm ${
                             toast.type === 'success'
-                                ? 'bg-green-500 text-white'
+                                ? 'bg-green-500 text-neutral-100'
                                 : toast.type === 'error'
-                                ? 'bg-red-500 text-white'
+                                ? 'bg-red-500 text-neutral-100'
                                 : toast.type === 'warning'
-                                ? 'bg-yellow-500 text-white'
-                                : 'bg-blue-500 text-white'
+                                ? 'bg-yellow-500 text-neutral-100'
+                                : 'bg-blue-500 text-neutral-100'
                         }`}
                     >
                         {toast.title}

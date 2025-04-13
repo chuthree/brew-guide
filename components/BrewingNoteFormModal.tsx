@@ -298,7 +298,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
                                                         whileTap={{ scale: 0.98 }}
                                                         onClick={() => setSelectedEquipment(equipment.id)}
                                                         className={`p-3 rounded-md text-sm text-left transition ${selectedEquipment === equipment.id
-                                                            ? 'bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-800'
+                                                            ? 'bg-neutral-800 dark:bg-neutral-200 text-neutral-100 dark:text-neutral-800'
                                                             : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300'
                                                             }`}
                                                     >
@@ -330,7 +330,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
                                                                     initMethodParams(method);
                                                                 }}
                                                                 className={`w-full p-3 rounded-md text-sm text-left transition ${selectedMethod === method.name
-                                                                    ? 'bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-800'
+                                                                    ? 'bg-neutral-800 dark:bg-neutral-200 text-neutral-100 dark:text-neutral-800'
                                                                     : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300'
                                                                     }`}
                                                             >
@@ -351,36 +351,36 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
                                                                         className="mt-3 pt-3 border-t border-neutral-300 dark:border-neutral-600"
                                                                         onClick={(e) => e.stopPropagation()}
                                                                     >
-                                                                        <div className="text-xs font-medium mb-2 text-white dark:text-neutral-800">
+                                                                        <div className="text-xs font-medium mb-2 text-neutral-100 dark:text-neutral-800">
                                                                             调整参数
                                                                         </div>
                                                                         <div className="grid grid-cols-2 gap-3 mt-1">
                                                                             <div>
-                                                                                <label className="block text-[10px] tracking-widest text-white dark:text-neutral-800 mb-1 opacity-80">
+                                                                                <label className="block text-[10px] tracking-widest text-neutral-100 dark:text-neutral-800 mb-1 opacity-80">
                                                                                     咖啡粉量 (g)
                                                                                 </label>
                                                                                 <input
                                                                                     type="number"
                                                                                     value={coffeeAmount}
                                                                                     onChange={(e) => handleCoffeeAmountChange(e.target.value, method)}
-                                                                                    className="w-full border border-neutral-300 dark:border-neutral-700 bg-neutral-700/50 dark:bg-white/50 p-1.5 text-[11px] rounded-md outline-none text-white dark:text-neutral-800"
+                                                                                    className="w-full border border-neutral-300 dark:border-neutral-700 bg-neutral-700/50 dark:bg-white/50 p-1.5 text-[11px] rounded-md outline-none text-neutral-100 dark:text-neutral-800"
                                                                                     placeholder="15"
                                                                                 />
                                                                             </div>
                                                                             <div>
-                                                                                <label className="block text-[10px] tracking-widest text-white dark:text-neutral-800 mb-1 opacity-80">
+                                                                                <label className="block text-[10px] tracking-widest text-neutral-100 dark:text-neutral-800 mb-1 opacity-80">
                                                                                     水粉比 (1:X)
                                                                                 </label>
                                                                                 <input
                                                                                     type="number"
                                                                                     value={ratioAmount}
                                                                                     onChange={(e) => handleRatioAmountChange(e.target.value, method)}
-                                                                                    className="w-full border border-neutral-300 dark:border-neutral-700 bg-neutral-700/50 dark:bg-white/50 p-1.5 text-[11px] rounded-md outline-none text-white dark:text-neutral-800"
+                                                                                    className="w-full border border-neutral-300 dark:border-neutral-700 bg-neutral-700/50 dark:bg-white/50 p-1.5 text-[11px] rounded-md outline-none text-neutral-100 dark:text-neutral-800"
                                                                                     placeholder="15"
                                                                                 />
                                                                             </div>
                                                                         </div>
-                                                                        <div className="mt-2 flex items-center gap-1 text-[10px] text-white dark:text-neutral-800 opacity-80">
+                                                                        <div className="mt-2 flex items-center gap-1 text-[10px] text-neutral-100 dark:text-neutral-800 opacity-80">
                                                                             <span>计算出的水量:</span>
                                                                             <span className="font-medium">{waterAmount}</span>
                                                                         </div>
@@ -404,7 +404,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
                                                 whileHover={{ scale: 1.02 }}
                                                 whileTap={{ scale: 0.98 }}
                                                 onClick={handleContinue}
-                                                className="px-6 py-3 bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-800 rounded-full text-sm font-medium"
+                                                className="px-6 py-3 bg-neutral-800 dark:bg-neutral-200 text-neutral-100 dark:text-neutral-800 rounded-full text-sm font-medium"
                                                 disabled={!selectedEquipment || !selectedMethod}
                                             >
                                                 继续

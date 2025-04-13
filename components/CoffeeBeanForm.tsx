@@ -748,7 +748,7 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                                             />
                                             <button
                                                 type="button"
-                                                className="absolute top-2 right-2 p-1.5 bg-neutral-800/50 hover:bg-neutral-800/70 rounded-full text-white"
+                                                className="absolute top-2 right-2 p-1.5 bg-neutral-800/50 hover:bg-neutral-800/70 rounded-full text-neutral-100"
                                                 onClick={() => {
                                                     setBean(prev => ({
                                                         ...prev,
@@ -1135,7 +1135,7 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                                 <button
                                     type="button"
                                     onClick={handleAddFlavor}
-                                    className="ml-3 h-[36px] px-4 flex items-center justify-center text-xs font-medium bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-800 rounded-full"
+                                    className="ml-3 h-[36px] px-4 flex items-center justify-center text-xs font-medium bg-neutral-800 dark:bg-neutral-200 text-neutral-100 dark:text-neutral-800 rounded-full"
                                 >
                                     添加
                                 </button>
@@ -1171,7 +1171,7 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                                                     }
                                                 }}
                                                 className={`rounded-full px-3 py-1 text-xs ${bean.flavor?.includes(flavor)
-                                                    ? 'bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-800'
+                                                    ? 'bg-neutral-800 dark:bg-neutral-200 text-neutral-100 dark:text-neutral-800'
                                                     : 'bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-600 dark:text-neutral-300'
                                                     }`}
                                             >
@@ -1321,7 +1321,7 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                         flex items-center justify-center rounded-full
                         ${!valid ? 'opacity-50 cursor-not-allowed' : ''}
                         ${isLastStep
-                            ? 'bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-800 px-6 py-3'
+                            ? 'bg-neutral-800 dark:bg-neutral-200 text-neutral-100 dark:text-neutral-800 px-6 py-3'
                             : 'p-4 bg-neutral-50/80 dark:bg-neutral-900/80 backdrop-blur-md'
                         }
                     `}

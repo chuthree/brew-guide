@@ -318,7 +318,7 @@ const Settings: React.FC<SettingsProps> = ({
                                 <button
                                     className={`flex-1 rounded-md py-3 text-sm font-medium transition-colors ${
                                         settings.language === 'zh'
-                                            ? 'bg-white dark:bg-neutral-600 text-neutral-900 dark:text-white shadow-sm'
+                                            ? 'bg-white dark:bg-neutral-600 text-neutral-900 dark:text-neutral-100 shadow-sm'
                                             : 'text-neutral-600 dark:text-neutral-400'
                                     }`}
                                     onClick={() => {
@@ -333,7 +333,7 @@ const Settings: React.FC<SettingsProps> = ({
                                 <button
                                     className={`flex-1 rounded-md py-3 text-sm font-medium transition-colors ${
                                         settings.language === 'en'
-                                            ? 'bg-white dark:bg-neutral-600 text-neutral-900 dark:text-white shadow-sm'
+                                            ? 'bg-white dark:bg-neutral-600 text-neutral-900 dark:text-neutral-100 shadow-sm'
                                             : 'text-neutral-600 dark:text-neutral-400'
                                     }`}
                                     onClick={() => {
@@ -357,7 +357,7 @@ const Settings: React.FC<SettingsProps> = ({
                                 <button
                                     className={`flex-1 rounded-md py-3 text-sm font-medium transition-colors ${
                                         theme === 'light'
-                                            ? 'bg-white dark:bg-neutral-600 text-neutral-900 dark:text-white shadow-sm'
+                                            ? 'bg-white dark:bg-neutral-600 text-neutral-900 dark:text-neutral-100 shadow-sm'
                                             : 'text-neutral-600 dark:text-neutral-400'
                                     }`}
                                     onClick={() => {
@@ -372,7 +372,7 @@ const Settings: React.FC<SettingsProps> = ({
                                 <button
                                     className={`flex-1 rounded-md py-3 text-sm font-medium transition-colors ${
                                         theme === 'dark'
-                                            ? 'bg-white dark:bg-neutral-600 text-neutral-900 dark:text-white shadow-sm'
+                                            ? 'bg-white dark:bg-neutral-600 text-neutral-900 dark:text-neutral-100 shadow-sm'
                                             : 'text-neutral-600 dark:text-neutral-400'
                                     }`}
                                     onClick={() => {
@@ -387,7 +387,7 @@ const Settings: React.FC<SettingsProps> = ({
                                 <button
                                     className={`flex-1 rounded-md py-3 text-sm font-medium transition-colors ${
                                         theme === 'system'
-                                            ? 'bg-white dark:bg-neutral-600 text-neutral-900 dark:text-white shadow-sm'
+                                            ? 'bg-white dark:bg-neutral-600 text-neutral-900 dark:text-neutral-100 shadow-sm'
                                             : 'text-neutral-600 dark:text-neutral-400'
                                     }`}
                                     onClick={() => {
@@ -423,7 +423,7 @@ const Settings: React.FC<SettingsProps> = ({
                                                 onClick={() => handleTextZoomChange(1.0)}
                                                 className={`px-4 py-2 rounded-md text-sm transition-colors ${
                                                     Math.abs(zoomLevel - 1.0) < 0.05
-                                                        ? 'bg-neutral-800 text-white dark:bg-neutral-200 dark:text-neutral-900'
+                                                        ? 'bg-neutral-800 text-neutral-100 dark:bg-neutral-200 dark:text-neutral-900'
                                                         : 'text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800'
                                                 }`}
                                             >
@@ -465,7 +465,7 @@ const Settings: React.FC<SettingsProps> = ({
                                 <select
                                     value={settings.grindType}
                                     onChange={(e) => handleChange('grindType', e.target.value)}
-                                    className="w-full py-3 px-4 text-sm font-medium rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white appearance-none focus:outline-none focus:ring-2 focus:ring-neutral-500"
+                                    className="w-full py-3 px-4 text-sm font-medium rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 appearance-none focus:outline-none focus:ring-2 focus:ring-neutral-500"
                                 >
                                     {availableGrinders.map((grinder) => (
                                         <option key={grinder.id} value={grinder.id}>

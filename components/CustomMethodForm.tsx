@@ -1537,7 +1537,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                     className={`
                         flex items-center justify-center p-4
                         ${!stepValid ? 'opacity-50 cursor-not-allowed' : ''}
-                        ${isLastStep ? 'bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-800 px-6 py-3 rounded-full' : ''}
+                        ${isLastStep ? 'bg-neutral-800 dark:bg-neutral-200 text-neutral-100 dark:text-neutral-800 px-6 py-3 rounded-full' : ''}
                     `}
                 >
                     {isLastStep ? (

@@ -456,7 +456,7 @@ const ImportBeanModal: React.FC<ImportBeanModalProps> = ({
                             </button>
                             <button
                                 onClick={handleImageRecognition}
-                                className="px-3 py-1 text-sm bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-800 rounded"
+                                className="px-3 py-1 text-sm bg-neutral-800 dark:bg-neutral-200 text-neutral-100 dark:text-neutral-800 rounded"
                             >
                                 确认裁剪并识别
                             </button>
@@ -616,7 +616,7 @@ const ImportBeanModal: React.FC<ImportBeanModalProps> = ({
                                         </button>
                                         <button
                                             onClick={handleImport}
-                                            className="px-4 py-2 bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-800 rounded-md text-sm"
+                                            className="px-4 py-2 bg-neutral-800 dark:bg-neutral-200 text-neutral-100 dark:text-neutral-800 rounded-md text-sm"
                                         >
                                             导入
                                         </button>

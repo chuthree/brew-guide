@@ -87,7 +87,7 @@ const BottomActionBar: React.FC<BottomActionBarProps> = ({
                   onClick={button.onClick}
                   className={`flex items-center justify-center text-[11px] ${
                     button.highlight || button.active
-                      ? 'text-neutral-800 dark:text-white'
+                      ? 'text-neutral-800 dark:text-neutral-100'
                       : 'text-neutral-500 dark:text-neutral-400'
                   } ${button.className || ''}`}
                 >
@@ -118,7 +118,7 @@ const BottomActionBar: React.FC<BottomActionBarProps> = ({
                     onClick={button.onClick}
                     className={`flex items-center justify-center text-[11px] ${
                       button.highlight || button.active
-                        ? 'text-neutral-800 dark:text-white'
+                        ? 'text-neutral-800 dark:text-neutral-100'
                         : 'text-neutral-500 dark:text-neutral-400'
                     } ${button.className || ''}`}
                   >
@@ -150,7 +150,7 @@ const BottomActionBar: React.FC<BottomActionBarProps> = ({
                     onClick={button.onClick}
                     className={`flex items-center justify-center text-[11px] ${
                       button.highlight || button.active
-                        ? 'text-neutral-800 dark:text-white'
+                        ? 'text-neutral-800 dark:text-neutral-100'
                         : 'text-neutral-500 dark:text-neutral-400'
                     } ${button.className || ''}`}
                   >
@@ -184,7 +184,7 @@ const BottomActionBar: React.FC<BottomActionBarProps> = ({
           <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
           <button
             onClick={button.onClick}
-            className="flex items-center justify-center text-[11px] text-neutral-800 dark:text-white hover:opacity-80 mx-3"
+            className="flex items-center justify-center text-[11px] text-neutral-800 dark:text-neutral-100 hover:opacity-80 mx-3"
           >
             <span className="mr-1">{button.icon || '+'}</span> {button.text}
           </button>
@@ -212,7 +212,7 @@ const BottomActionBar: React.FC<BottomActionBarProps> = ({
                   onClick={button.onClick}
                   className={`flex items-center justify-center text-[11px] ${
                     button.highlight || button.active
-                      ? 'text-neutral-800 dark:text-white' 
+                      ? 'text-neutral-800 dark:text-neutral-100' 
                       : 'text-neutral-500 dark:text-neutral-400'
                   } ${button.className || ''}`}
                 >
@@ -258,7 +258,7 @@ const BottomActionBar: React.FC<BottomActionBarProps> = ({
                       onClick={button.onClick}
                       className={`flex items-center justify-center text-[11px] ${
                         button.highlight || button.active
-                          ? 'text-neutral-800 dark:text-white' 
+                          ? 'text-neutral-800 dark:text-neutral-100' 
                           : 'text-neutral-500 dark:text-neutral-400'
                       } ${button.className || ''}`}
                     >
