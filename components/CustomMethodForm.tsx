@@ -1561,7 +1561,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="flex flex-col h-[calc(100vh-12rem)]"
+            className="flex flex-col h-[calc(100vh-8rem)]"
         >
             {/* 顶部导航栏 */}
             <div className="flex items-center justify-between mt-3 mb-6">
