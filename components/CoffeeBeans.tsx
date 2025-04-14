@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 'use client'
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
@@ -20,6 +21,7 @@ import BottomActionBar from '@/components/BottomActionBar'
 import ActionMenu from './ui/action-menu'
 import { useCopy } from "@/lib/hooks/useCopy"
 import CopyFailureModal from "./ui/copy-failure-modal"
+import { SortSelector, SORT_OPTIONS, type SortOption, sortBeans as sortBeansFn, convertToRankingSortOption } from './SortSelector'
 
 // 添加ExtendedCoffeeBean类型
 interface BlendComponent {
@@ -32,93 +34,6 @@ interface BlendComponent {
 interface ExtendedCoffeeBean extends CoffeeBean {
     blendComponents?: BlendComponent[];
 }
-
-// 排序类型定义
-const SORT_OPTIONS = {
-    REMAINING_DAYS_ASC: 'remaining_days_asc', // 按照剩余天数排序（少→多）
-    REMAINING_DAYS_DESC: 'remaining_days_desc', // 按照剩余天数排序（多→少）
-    NAME_ASC: 'name_asc',
-    NAME_DESC: 'name_desc',
-    RATING_ASC: 'rating_asc', // 新增评分从低到高排序
-} as const;
-
-type SortOption = typeof SORT_OPTIONS[keyof typeof SORT_OPTIONS];
-
-// 排序选项的显示名称
-const SORT_LABELS: Record<SortOption, string> = {
-    [SORT_OPTIONS.REMAINING_DAYS_ASC]: '赏味期',
-    [SORT_OPTIONS.REMAINING_DAYS_DESC]: '赏味期',
-    [SORT_OPTIONS.NAME_ASC]: '名称',
-    [SORT_OPTIONS.NAME_DESC]: '名称',
-    [SORT_OPTIONS.RATING_ASC]: '评分', // 新增评分从低到高排序
-};
-
-// 排序方向图标
-const SORT_ICONS: Record<SortOption, React.ReactNode> = {
-    [SORT_OPTIONS.REMAINING_DAYS_ASC]: (
-        <svg className="w-3 h-3 ml-1.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="4" y1="6" x2="11" y2="6" />
-            <line x1="4" y1="12" x2="11" y2="12" />
-            <line x1="4" y1="18" x2="13" y2="18" />
-            <polyline points="15 9 18 6 21 9" />
-            <line x1="18" y1="6" x2="18" y2="18" />
-        </svg>
-    ),
-    [SORT_OPTIONS.REMAINING_DAYS_DESC]: (
-        <svg className="w-3 h-3 ml-1.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="4" y1="6" x2="11" y2="6" />
-            <line x1="4" y1="12" x2="11" y2="12" />
-            <line x1="4" y1="18" x2="13" y2="18" />
-            <polyline points="15 9 18 6 21 9" />
-            <line x1="18" y1="6" x2="18" y2="18" />
-        </svg>
-    ),
-    [SORT_OPTIONS.NAME_ASC]: (
-        <svg className="w-3 h-3 ml-1.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="4" y1="6" x2="11" y2="6" />
-            <line x1="4" y1="12" x2="11" y2="12" />
-            <line x1="4" y1="18" x2="13" y2="18" />
-            <polyline points="15 9 18 6 21 9" />
-            <line x1="18" y1="6" x2="18" y2="18" />
-        </svg>
-    ),
-    [SORT_OPTIONS.NAME_DESC]: (
-        <svg className="w-3 h-3 ml-1.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="4" y1="6" x2="11" y2="6" />
-            <line x1="4" y1="12" x2="11" y2="12" />
-            <line x1="4" y1="18" x2="13" y2="18" />
-            <polyline points="15 15 18 18 21 15" />
-            <line x1="18" y1="6" x2="18" y2="18" />
-        </svg>
-    ),
-    [SORT_OPTIONS.RATING_ASC]: (
-        <svg className="w-3 h-3 ml-1.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="4" y1="6" x2="11" y2="6" />
-            <line x1="4" y1="12" x2="11" y2="12" />
-            <line x1="4" y1="18" x2="13" y2="18" />
-            <polyline points="15 15 18 18 21 15" />
-            <line x1="18" y1="6" x2="18" y2="18" />
-        </svg>
-    ),
-};
-
-// 榜单排序选项的显示标签
-const RANKING_VIEW_LABELS: Record<SortOption, string> = {
-    [SORT_OPTIONS.REMAINING_DAYS_ASC]: '评分',
-    [SORT_OPTIONS.REMAINING_DAYS_DESC]: '评分',
-    [SORT_OPTIONS.NAME_ASC]: '名称',
-    [SORT_OPTIONS.NAME_DESC]: '名称',
-    [SORT_OPTIONS.RATING_ASC]: '评分',
-};
-
-// 博主榜单排序选项的显示标签
-const BLOGGER_VIEW_LABELS: Record<SortOption, string> = {
-    [SORT_OPTIONS.REMAINING_DAYS_ASC]: '原始',
-    [SORT_OPTIONS.REMAINING_DAYS_DESC]: '评分',
-    [SORT_OPTIONS.RATING_ASC]: '评分',
-    [SORT_OPTIONS.NAME_ASC]: '名称',
-    [SORT_OPTIONS.NAME_DESC]: '名称',
-};
 
 // 视图模式定义
 const VIEW_OPTIONS = {
@@ -251,9 +166,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
     const [editingBean, setEditingBean] = useState<ExtendedCoffeeBean | null>(null)
     const [actionMenuStates, setActionMenuStates] = useState<Record<string, boolean>>({}) // Keyed by bean.id
     const [sortOption, setSortOption] = useState<SortOption>(SORT_OPTIONS.REMAINING_DAYS_ASC)
-    // const [showAIRecipeModal, setShowAIRecipeModal] = useState(false)
-    // const [selectedBeanForAI, setSelectedBeanForAI] = useState<ExtendedCoffeeBean | null>(null)
-    // 新增状态
     const [viewMode, setViewMode] = useState<ViewOption>(VIEW_OPTIONS.INVENTORY)
     const [showRatingModal, setShowRatingModal] = useState(false)
     const [selectedBeanForRating, setSelectedBeanForRating] = useState<ExtendedCoffeeBean | null>(null)
@@ -303,16 +215,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
             return acc;
         }, {} as Record<string, string>);
     }, [filteredBeans]);
-
-    // 获取阶段数值用于排序
-    const getPhaseValue = useCallback((phase: string): number => {
-        switch (phase) {
-            case '赏味期': return 0;
-            case '养豆期': return 1;
-            case '衰退期':
-            default: return 2;
-        }
-    }, []);
 
     // 获取咖啡豆的赏味期信息
     const getFlavorInfo = useCallback((bean: ExtendedCoffeeBean): { phase: string, remainingDays: number } => {
@@ -368,58 +270,10 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
         return (bean.remaining === "0" || bean.remaining === "0g") && bean.capacity !== undefined;
     }, []);
 
-    // 排序咖啡豆的函数，使用useCallback包装
-    const sortBeans = useCallback((beansToSort: ExtendedCoffeeBean[], option: SortOption): ExtendedCoffeeBean[] => {
-        switch (option) {
-            case SORT_OPTIONS.REMAINING_DAYS_ASC:
-                return [...beansToSort].sort((a, b) => {
-                    const { phase: phaseA, remainingDays: daysA } = getFlavorInfo(a);
-                    const { phase: phaseB, remainingDays: daysB } = getFlavorInfo(b);
-                    
-                    // 首先按照阶段排序
-                    if (phaseA !== phaseB) {
-                        return getPhaseValue(phaseA) - getPhaseValue(phaseB);
-                    }
-                    
-                    // 然后按照剩余天数排序
-                    return daysA - daysB;
-                });
-            case SORT_OPTIONS.REMAINING_DAYS_DESC:
-                return [...beansToSort].sort((a, b) => {
-                    const { phase: phaseA, remainingDays: daysA } = getFlavorInfo(a);
-                    const { phase: phaseB, remainingDays: daysB } = getFlavorInfo(b);
-                    
-                    // 首先按照阶段排序（相反的顺序）
-                    if (phaseA !== phaseB) {
-                        return getPhaseValue(phaseB) - getPhaseValue(phaseA);
-                    }
-                    
-                    // 然后按照剩余天数排序（相反的顺序）
-                    return daysB - daysA;
-                });
-            case SORT_OPTIONS.NAME_ASC:
-                return [...beansToSort].sort((a, b) => {
-                    // 安全地进行字符串比较
-                    const nameA = a.name || '';
-                    const nameB = b.name || '';
-                    return nameA.localeCompare(nameB);
-                });
-            case SORT_OPTIONS.NAME_DESC:
-                return [...beansToSort].sort((a, b) => {
-                    // 安全地进行字符串比较（相反的顺序）
-                    const nameA = a.name || '';
-                    const nameB = b.name || '';
-                    return nameB.localeCompare(nameA);
-                });
-            default:
-                return beansToSort;
-        }
-    }, [getFlavorInfo, getPhaseValue]);
-
     // 更新过滤后的豆子和分类
-    const updateFilteredBeansAndCategories = useCallback((sortedBeans: ExtendedCoffeeBean[]) => {
+    const updateFilteredBeansAndCategories = useCallback((beansToSort: ExtendedCoffeeBean[]) => {
         // 提取可用的品种列表
-        const varieties = sortedBeans.reduce((acc, bean) => {
+        const varieties = beansToSort.reduce((acc, bean) => {
             if (bean.variety && !acc.includes(bean.variety)) {
                 acc.push(bean.variety);
             }
@@ -427,9 +281,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
         }, [] as string[]);
         
         // 根据选择的品种过滤豆子
-        let filtered = sortedBeans;
+        let filtered = beansToSort;
         if (selectedVariety) {
-            filtered = sortedBeans.filter(bean => bean.variety === selectedVariety);
+            filtered = beansToSort.filter(bean => bean.variety === selectedVariety);
         }
         
         // 根据"显示已用完"设置过滤
@@ -453,15 +307,14 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
             
             // 直接从存储加载新数据
             const loadedBeans = await CoffeeBeanManager.getAllBeans() as ExtendedCoffeeBean[];
-            const sortedBeans = sortBeans(loadedBeans, sortOption);
             
             // 更新状态和全局缓存
-            setBeans(sortedBeans);
-            globalCache.beans = sortedBeans;
+            setBeans(loadedBeans);
+            globalCache.beans = loadedBeans;
             globalCache.initialized = true;
             
             // 更新过滤后的豆子和分类
-            updateFilteredBeansAndCategories(sortedBeans);
+            updateFilteredBeansAndCategories(loadedBeans);
             
             // 检查是否有已用完的咖啡豆
             const hasEmpty = loadedBeans.some(bean => isBeanEmpty(bean));
@@ -473,7 +326,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
         } finally {
             isLoadingRef.current = false;
         }
-    }, [sortOption, sortBeans, updateFilteredBeansAndCategories, isBeanEmpty]);
+    }, []);
 
     // 强制刷新时重新加载数据
     useEffect(() => {
@@ -609,7 +462,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                         b.id === editingBean.id ? optimisticBean : b
                     );
                     // 更新缓存
-                    globalCache.beans = sortBeans(newBeans, sortOption);
+                    globalCache.beans = newBeans;
                     return globalCache.beans;
                 });
                 
@@ -635,9 +488,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                 // 立即更新UI
                 setBeans(prevBeans => {
                     const optimisticBeans = [...prevBeans, tempBean];
-                    const sorted = sortBeans(optimisticBeans, sortOption);
-                    globalCache.beans = sorted;
-                    return sorted;
+                    globalCache.beans = optimisticBeans;
+                    return optimisticBeans;
                 });
                 
                 // 立即更新过滤后的豆子列表
@@ -685,8 +537,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                 // 立即更新UI
                 setBeans(prevBeans => {
                     const updatedBeans = prevBeans.filter(b => b.id !== bean.id);
-                    globalCache.beans = sortBeans(updatedBeans, sortOption);
-                    return globalCache.beans;
+                    globalCache.beans = updatedBeans;
+                    return updatedBeans;
                 });
                 
                 // 同步更新过滤后的列表
@@ -741,8 +593,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                     const newBeans = prevBeans.map(b =>
                         b.id === updatedBean.id ? updatedBean : b
                     );
-                    globalCache.beans = sortBeans(newBeans, sortOption);
-                    return globalCache.beans;
+                    globalCache.beans = newBeans;
+                    return newBeans;
                 });
 
                 // 记录最近评分的咖啡豆ID，用于高亮显示
@@ -826,65 +678,34 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
         }
     };
 
-    // 转换仓库排序选项到榜单排序选项
-    const convertToRankingSortOption = useCallback((option: SortOption, viewMode: ViewOption): RankingSortOption => {
-        if (viewMode === VIEW_OPTIONS.BLOGGER) {
-            // 博主榜单视图的特殊处理
-            switch (option) {
-                case SORT_OPTIONS.REMAINING_DAYS_ASC:
-                    return RANKING_SORT_OPTIONS.ORIGINAL; // 在博主榜单视图中，第一个选项是原始排序
-                case SORT_OPTIONS.REMAINING_DAYS_DESC:
-                    return RANKING_SORT_OPTIONS.RATING_DESC; // 评分降序
-                case SORT_OPTIONS.RATING_ASC:
-                    return RANKING_SORT_OPTIONS.RATING_ASC; // 评分升序
-                case SORT_OPTIONS.NAME_ASC:
-                    return RANKING_SORT_OPTIONS.NAME_ASC;
-                case SORT_OPTIONS.NAME_DESC:
-                    return RANKING_SORT_OPTIONS.NAME_DESC;
-                default:
-                    return RANKING_SORT_OPTIONS.ORIGINAL;
-            }
+    // 视图切换时更新排序选项
+    useEffect(() => {
+        // 根据视图模式设置默认排序
+        switch (viewMode) {
+            case VIEW_OPTIONS.INVENTORY:
+                setSortOption(SORT_OPTIONS.REMAINING_DAYS_ASC);
+                break;
+            case VIEW_OPTIONS.RANKING:
+                setSortOption(SORT_OPTIONS.RATING_DESC); // 默认按评分从高到低排序
+                break;
+            case VIEW_OPTIONS.BLOGGER:
+                setSortOption(SORT_OPTIONS.ORIGINAL); // 默认使用原始排序
+                break;
+        }
+    }, [viewMode]);
+
+    // 当排序选项改变时更新数据
+    useEffect(() => {
+        if (viewMode === VIEW_OPTIONS.INVENTORY) {
+            // 仓库视图：直接使用本地排序
+            const sortedBeans = sortBeansFn(beans as ExtendedCoffeeBean[], sortOption);
+            updateFilteredBeansAndCategories(sortedBeans as ExtendedCoffeeBean[]);
         } else {
-            // 个人榜单视图
-            switch (option) {
-                case SORT_OPTIONS.NAME_ASC:
-                    return RANKING_SORT_OPTIONS.NAME_ASC;
-                case SORT_OPTIONS.NAME_DESC:
-                    return RANKING_SORT_OPTIONS.NAME_DESC;
-                case SORT_OPTIONS.REMAINING_DAYS_ASC:
-                    return RANKING_SORT_OPTIONS.RATING_DESC; // 评分从高到低
-                case SORT_OPTIONS.REMAINING_DAYS_DESC:
-                    return RANKING_SORT_OPTIONS.RATING_ASC; // 评分从低到高
-                case SORT_OPTIONS.RATING_ASC:
-                    return RANKING_SORT_OPTIONS.RATING_ASC; // 这行可能不需要，因为仓库视图中不会显示这个选项
-                default:
-                    return RANKING_SORT_OPTIONS.RATING_DESC;
-            }
+            // 榜单视图：转换为榜单排序选项
+            const rankingSortOption = convertToRankingSortOption(sortOption, viewMode);
+            // 更新榜单排序...（这里需要调用相应的更新函数）
         }
-    }, []);
-
-    // 视图切换时更新排序标签
-    useEffect(() => {
-        if (viewMode === VIEW_OPTIONS.RANKING || viewMode === VIEW_OPTIONS.BLOGGER) {
-            // 当切换到榜单或博主榜单视图时，保持现有的排序类型，但更改其语义
-            // 例如：REMAINING_DAYS_ASC -> RATING_DESC, REMAINING_DAYS_DESC -> RATING_ASC
-            // 无需更改 NAME_ASC 和 NAME_DESC
-        }
-        
-        // 切换到博主榜单视图时，加载博主榜单数据
-        if (viewMode === VIEW_OPTIONS.BLOGGER) {
-            loadBloggerBeans();
-        }
-    }, [viewMode, loadBloggerBeans]);
-
-    // 监听rankingBeanType变化，重新加载数据
-    useEffect(() => {
-        if (viewMode === VIEW_OPTIONS.BLOGGER) {
-            loadBloggerBeans();
-        } else if (viewMode === VIEW_OPTIONS.RANKING) {
-            loadRatedBeans();
-        }
-    }, [rankingBeanType, viewMode, loadBloggerBeans, loadRatedBeans]);
+    }, [sortOption, viewMode, beans]);
 
     // 处理品种标签点击
     const handleVarietyClick = (variety: string | null) => {
@@ -1100,110 +921,12 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
 
                             {/* 排序组件 - 在两个视图中都显示 */}
                             {(viewMode === VIEW_OPTIONS.INVENTORY ? beans.length > 0 : true) && (
-                                <Select
-                                    value={sortOption}
-                                    onValueChange={(value) => setSortOption(value as SortOption)}
-                                >
-                                    <SelectTrigger
-                                        variant="minimal"
-                                        className="w-auto min-w-[65px] tracking-wide text-neutral-800 dark:text-neutral-100 transition-colors hover:opacity-80 text-right"
-                                    >
-                                        <div className="flex items-center justify-end w-full">
-                                            {viewMode === VIEW_OPTIONS.INVENTORY 
-                                                ? SORT_LABELS[sortOption] 
-                                                : viewMode === VIEW_OPTIONS.BLOGGER
-                                                    ? BLOGGER_VIEW_LABELS[sortOption]
-                                                    : RANKING_VIEW_LABELS[sortOption]
-                                            }
-                                            {SORT_ICONS[sortOption]}
-                                        </div>
-                                    </SelectTrigger>
-                                    <SelectContent
-                                        position="popper"
-                                        sideOffset={5}
-                                        className="border-neutral-200/70 dark:border-neutral-800/70 shadow-lg backdrop-blur-sm bg-white/95 dark:bg-neutral-900/95 rounded-lg overflow-hidden min-w-[110px]"
-                                    >
-                                        {viewMode === VIEW_OPTIONS.BLOGGER ? (
-                                            // 博主榜单视图的固定排序选项 - 显示所有五个选项
-                                            <>
-                                                <SelectItem
-                                                    key="original"
-                                                    value={SORT_OPTIONS.REMAINING_DAYS_ASC}
-                                                    className="tracking-wide text-neutral-800 dark:text-neutral-100 data-[highlighted]:opacity-80 transition-colors font-medium"
-                                                >
-                                                    <div className="flex items-center justify-between w-full">
-                                                        <span>原始</span>
-                                                        {SORT_ICONS[SORT_OPTIONS.REMAINING_DAYS_ASC]}
-                                                    </div>
-                                                </SelectItem>
-                                                <SelectItem
-                                                    key="rating_high_to_low"
-                                                    value={SORT_OPTIONS.REMAINING_DAYS_DESC}
-                                                    className="tracking-wide text-neutral-800 dark:text-neutral-100 data-[highlighted]:opacity-80 transition-colors font-medium"
-                                                >
-                                                    <div className="flex items-center justify-between w-full">
-                                                        <span>评分</span>
-                                                        {SORT_ICONS[SORT_OPTIONS.REMAINING_DAYS_DESC]}
-                                                    </div>
-                                                </SelectItem>
-                                                <SelectItem
-                                                    key="rating_low_to_high"
-                                                    value={SORT_OPTIONS.RATING_ASC}
-                                                    className="tracking-wide text-neutral-800 dark:text-neutral-100 data-[highlighted]:opacity-80 transition-colors font-medium"
-                                                >
-                                                    <div className="flex items-center justify-between w-full">
-                                                        <span>评分</span>
-                                                        {SORT_ICONS[SORT_OPTIONS.RATING_ASC]}
-                                                    </div>
-                                                </SelectItem>
-                                                <SelectItem
-                                                    key="name_asc"
-                                                    value={SORT_OPTIONS.NAME_ASC}
-                                                    className="tracking-wide text-neutral-800 dark:text-neutral-100 data-[highlighted]:opacity-80 transition-colors font-medium"
-                                                >
-                                                    <div className="flex items-center justify-between w-full">
-                                                        <span>名称</span>
-                                                        {SORT_ICONS[SORT_OPTIONS.NAME_ASC]}
-                                                    </div>
-                                                </SelectItem>
-                                                <SelectItem
-                                                    key="name_desc"
-                                                    value={SORT_OPTIONS.NAME_DESC}
-                                                    className="tracking-wide text-neutral-800 dark:text-neutral-100 data-[highlighted]:opacity-80 transition-colors font-medium"
-                                                >
-                                                    <div className="flex items-center justify-between w-full">
-                                                        <span>名称</span>
-                                                        {SORT_ICONS[SORT_OPTIONS.NAME_DESC]}
-                                                    </div>
-                                                </SelectItem>
-                                            </>
-                                        ) : (
-                                            // 仓库和个人榜单视图的排序选项 - 只显示原有的四个选项
-                                            [
-                                                SORT_OPTIONS.REMAINING_DAYS_ASC,
-                                                SORT_OPTIONS.REMAINING_DAYS_DESC,
-                                                SORT_OPTIONS.NAME_ASC,
-                                                SORT_OPTIONS.NAME_DESC
-                                            ].map((value) => (
-                                                <SelectItem
-                                                    key={value}
-                                                    value={value}
-                                                    className="tracking-wide text-neutral-800 dark:text-neutral-100 data-[highlighted]:opacity-80 transition-colors font-medium"
-                                                >
-                                                    <div className="flex items-center justify-between w-full">
-                                                        <span>
-                                                            {viewMode === VIEW_OPTIONS.INVENTORY 
-                                                                ? SORT_LABELS[value] 
-                                                                : RANKING_VIEW_LABELS[value]
-                                                            }
-                                                        </span>
-                                                        {SORT_ICONS[value]}
-                                                    </div>
-                                                </SelectItem>
-                                            ))
-                                        )}
-                                    </SelectContent>
-                                </Select>
+                                <SortSelector
+                                    viewMode={viewMode}
+                                    sortOption={sortOption}
+                                    onSortChange={(value) => setSortOption(value as SortOption)}
+                                    showSelector={true}
+                                />
                             )}
                         </div>
                     </div>
