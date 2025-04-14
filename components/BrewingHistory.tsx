@@ -4,7 +4,8 @@ import React, { useState, useEffect, useCallback } from 'react'
 import ActionMenu from './ui/action-menu'
 import BrewingNoteForm from './BrewingNoteForm'
 import { Storage } from '@/lib/storage'
-import { BrewingNote, BrewingNoteData } from '@/app/types'
+import { BrewingNoteData } from '@/app/types'
+import type { BrewingNote } from '@/lib/config'
 import {
     Select,
     SelectContent,
