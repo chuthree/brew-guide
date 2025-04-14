@@ -7,7 +7,7 @@ Web版（支持PWA）：
 - 🔗 （国内） [https://coffee.chu3.top/](http://coffee.chu3.top/)
 - 🔗 （海外） [https://brew-guide.vercel.app/](https://brew-guide.vercel.app/)
 
-![版本](https://img.shields.io/badge/版本-1.2.1-blue)
+![版本](https://img.shields.io/badge/版本-1.2.2-blue)
 
 ## 功能特点
 

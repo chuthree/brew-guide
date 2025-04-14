@@ -10,7 +10,7 @@ ext {
     coreSplashScreenVersion = '1.0.0'
     androidxWebkitVersion = '1.12.1'
     junitVersion = '4.13.2'
-    androidxJunitVersion = '1.2.1'
+    androidxJunitVersion = '1.2.2'
     androidxEspressoCoreVersion = '3.6.1'
     cordovaAndroidVersion = '10.1.1'
 }
