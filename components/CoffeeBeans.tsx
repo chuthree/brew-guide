@@ -698,14 +698,42 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
     useEffect(() => {
         if (viewMode === VIEW_OPTIONS.INVENTORY) {
             // 仓库视图：直接使用本地排序
-            const sortedBeans = sortBeansFn(beans as ExtendedCoffeeBean[], sortOption);
-            updateFilteredBeansAndCategories(sortedBeans as ExtendedCoffeeBean[]);
+            // 解决类型兼容性问题，将beans数组中的元素属性提取出来后再排序
+            const compatibleBeans = beans.map(bean => ({
+                id: bean.id,
+                name: bean.name,
+                roastDate: bean.roastDate,
+                startDay: bean.startDay,
+                endDay: bean.endDay,
+                roastLevel: bean.roastLevel,
+                capacity: bean.capacity,
+                remaining: bean.remaining,
+                timestamp: bean.timestamp,
+                rating: bean.overallRating,
+                variety: bean.variety,
+                price: bean.price
+            }));
+            const sortedBeans = sortBeansFn(compatibleBeans, sortOption);
+            
+            // 保持原始引用以维护其他属性
+            const resultBeans = beans.slice(); // 创建浅拷贝
+            
+            // 按照排序后的顺序重新排列原始beans数组
+            for (let i = 0; i < sortedBeans.length; i++) {
+                const sortedBean = sortedBeans[i];
+                const originalIndex = beans.findIndex(b => b.id === sortedBean.id);
+                if (originalIndex !== -1) {
+                    resultBeans[i] = beans[originalIndex];
+                }
+            }
+            
+            updateFilteredBeansAndCategories(resultBeans);
         } else {
             // 榜单视图：转换为榜单排序选项
             const rankingSortOption = convertToRankingSortOption(sortOption, viewMode);
             // 更新榜单排序...（这里需要调用相应的更新函数）
         }
-    }, [sortOption, viewMode, beans]);
+    }, [sortOption, viewMode, beans, updateFilteredBeansAndCategories]);
 
     // 处理品种标签点击
     const handleVarietyClick = (variety: string | null) => {
