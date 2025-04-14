@@ -807,7 +807,7 @@ const BrewingNoteFormModalNew: React.FC<BrewingNoteFormModalNewProps> = ({
                                             <div className="space-y-3 mt-3">
                                                 {/* 咖啡粉量 */}
                                                 <div className="flex items-center justify-between">
-                                                    <label className="text-xs text-neutral-100 dark:text-neutral-200">咖啡粉量</label>
+                                                    <label className="text-xs text-neutral-100 dark:text-neutral-900">咖啡粉量</label>
                                                     <div className="flex items-center">
                                                         <input
                                                             type="text"
@@ -816,15 +816,15 @@ const BrewingNoteFormModalNew: React.FC<BrewingNoteFormModalNewProps> = ({
                                                             className="w-16 py-1 px-2 border border-neutral-400 dark:border-neutral-600 rounded bg-white dark:bg-neutral-700 text-neutral-800 dark:text-neutral-100 text-right text-xs"
                                                             placeholder="15"
                                                         />
-                                                        <span className="ml-1 text-xs text-neutral-100 dark:text-neutral-200">g</span>
+                                                        <span className="ml-1 text-xs text-neutral-100 dark:text-neutral-900">g</span>
                                                     </div>
                                                 </div>
                                                 
                                                 {/* 粉水比 */}
                                                 <div className="flex items-center justify-between">
-                                                    <label className="text-xs text-neutral-100 dark:text-neutral-200">粉水比</label>
+                                                    <label className="text-xs text-neutral-100 dark:text-neutral-900">粉水比</label>
                                                     <div className="flex items-center">
-                                                        <span className="mr-1 text-xs text-neutral-100 dark:text-neutral-200">1:</span>
+                                                        <span className="mr-1 text-xs text-neutral-100 dark:text-neutral-900">1:</span>
                                                         <input
                                                             type="text"
                                                             value={ratioAmount}
@@ -837,7 +837,7 @@ const BrewingNoteFormModalNew: React.FC<BrewingNoteFormModalNewProps> = ({
                                                 
                                                 {/* 研磨度 */}
                                                 <div className="flex items-center justify-between">
-                                                    <label className="text-xs text-neutral-100 dark:text-neutral-200">研磨度</label>
+                                                    <label className="text-xs text-neutral-100 dark:text-neutral-900">研磨度</label>
                                                     <div className="flex items-center">
                                                         <input
                                                             type="text"
@@ -851,7 +851,7 @@ const BrewingNoteFormModalNew: React.FC<BrewingNoteFormModalNewProps> = ({
                                                 
                                                 {/* 水温 */}
                                                 <div className="flex items-center justify-between">
-                                                    <label className="text-xs text-neutral-100 dark:text-neutral-200">水温</label>
+                                                    <label className="text-xs text-neutral-100 dark:text-neutral-900">水温</label>
                                                     <div className="flex items-center">
                                                         <input
                                                             type="text"
@@ -860,11 +860,11 @@ const BrewingNoteFormModalNew: React.FC<BrewingNoteFormModalNewProps> = ({
                                                             className="w-16 py-1 px-2 border border-neutral-400 dark:border-neutral-600 rounded bg-white dark:bg-neutral-700 text-neutral-800 dark:text-neutral-100 text-right text-xs"
                                                             placeholder="92"
                                                         />
-                                                        <span className="ml-1 text-xs text-neutral-100 dark:text-neutral-200">°C</span>
+                                                        <span className="ml-1 text-xs text-neutral-100 dark:text-neutral-900">°C</span>
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div className="mt-2 flex items-center gap-1 text-[10px] text-neutral-100 dark:text-neutral-200 opacity-80">
+                                            <div className="mt-2 flex items-center gap-1 text-[10px] text-neutral-100 dark:text-neutral-900 opacity-80">
                                                 <span>计算出的水量:</span>
                                                 <span className="font-medium">{waterAmount}</span>
                                             </div>

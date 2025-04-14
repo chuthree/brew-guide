@@ -1,20 +1,21 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
-import type { BrewingNote } from '@/lib/config'
-import type { BrewingNoteData, CoffeeBean } from '@/app/types'
-import type { Method } from '@/lib/config'
+import ActionMenu from './ui/action-menu'
 import BrewingNoteForm from './BrewingNoteForm'
 import { Storage } from '@/lib/storage'
-import { equipmentList } from '@/lib/config'
-import { getEquipmentName as getEquipmentNameUtil } from '@/lib/brewing/parameters'
-import ActionMenu from './ui/action-menu'
+import { BrewingNote, BrewingNoteData } from '@/app/types'
 import {
     Select,
     SelectContent,
     SelectItem,
     SelectTrigger,
 } from './ui/select'
+import { CoffeeBeanManager } from '@/lib/coffeeBeanManager'
+import type { CoffeeBean } from '@/app/types'
+import type { Method } from '@/lib/config'
+import { equipmentList } from '@/lib/config'
+import { getEquipmentName as getEquipmentNameUtil } from '@/lib/brewing/parameters'
 
 // 消息提示状态接口
 interface ToastState {
@@ -89,6 +90,78 @@ const getEquipmentName = async (equipmentId: string): Promise<string> => {
     }
 };
 
+// 计算总咖啡消耗量的函数 - 添加在formatRating函数后
+const calculateTotalCoffeeConsumption = (notes: BrewingNote[]): number => {
+    return notes.reduce((total, note) => {
+        if (note.params && note.params.coffee) {
+            // 提取咖啡量中的数字部分
+            const match = note.params.coffee.match(/(\d+(\.\d+)?)/);
+            if (match) {
+                const coffeeAmount = parseFloat(match[0]);
+                if (!isNaN(coffeeAmount)) {
+                    return total + coffeeAmount;
+                }
+            }
+        }
+        return total;
+    }, 0);
+};
+
+// 获取咖啡豆单位价格的函数 - 添加在calculateTotalCoffeeConsumption函数后
+const getCoffeeBeanUnitPrice = async (beanName: string): Promise<number> => {
+    try {
+        // 获取所有咖啡豆
+        const beans = await CoffeeBeanManager.getAllBeans();
+        // 查找匹配的咖啡豆
+        const bean = beans.find(b => b.name === beanName);
+        if (bean && bean.price && bean.capacity) {
+            // 价格格式可能是"100元"或"100"
+            const priceMatch = bean.price.match(/(\d+(\.\d+)?)/);
+            const capacityMatch = bean.capacity.match(/(\d+(\.\d+)?)/);
+            
+            if (priceMatch && capacityMatch) {
+                const price = parseFloat(priceMatch[0]);
+                const capacity = parseFloat(capacityMatch[0]);
+                
+                if (!isNaN(price) && !isNaN(capacity) && capacity > 0) {
+                    // 返回每克价格
+                    return price / capacity;
+                }
+            }
+        }
+        return 0; // 找不到匹配的咖啡豆或无法计算价格时返回0
+    } catch (error) {
+        console.error('获取咖啡豆单位价格出错:', error);
+        return 0;
+    }
+};
+
+// 计算笔记消费的函数 - 添加在getCoffeeBeanUnitPrice函数后
+const calculateNoteCost = async (note: BrewingNote): Promise<number> => {
+    if (!note.params?.coffee || !note.coffeeBeanInfo?.name) return 0;
+    
+    const coffeeMatch = note.params.coffee.match(/(\d+(\.\d+)?)/);
+    if (!coffeeMatch) return 0;
+    
+    const coffeeAmount = parseFloat(coffeeMatch[0]);
+    if (isNaN(coffeeAmount)) return 0;
+    
+    const unitPrice = await getCoffeeBeanUnitPrice(note.coffeeBeanInfo.name);
+    return coffeeAmount * unitPrice;
+};
+
+// 计算总花费的函数 - 添加在calculateNoteCost函数后
+const calculateTotalCost = async (notes: BrewingNote[]): Promise<number> => {
+    let totalCost = 0;
+    
+    for (const note of notes) {
+        const cost = await calculateNoteCost(note);
+        totalCost += cost;
+    }
+    
+    return totalCost;
+};
+
 const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingChange, onNavigateToBrewing, onAddNote }) => {
     const [notes, setNotes] = useState<BrewingNote[]>([])
     const [sortOption, setSortOption] = useState<SortOption>(SORT_OPTIONS.TIME_DESC)
@@ -106,6 +179,10 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
     const [filterMode, setFilterMode] = useState<'equipment' | 'bean'>('equipment');
     const [selectedBean, setSelectedBean] = useState<string | null>(null);
     const [availableBeans, setAvailableBeans] = useState<string[]>([]);
+    // 添加状态来存储总消耗量和总花费
+    const [totalCoffeeConsumption, setTotalCoffeeConsumption] = useState<number>(0);
+    const [_totalCost, setTotalCost] = useState<number>(0);
+    const [unitPriceCache, setUnitPriceCache] = useState<Record<string, number>>({});
 
     // 显示消息提示
     const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
@@ -166,11 +243,31 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                 }
             }
             setEquipmentNames(namesMap);
+            
+            // 计算总消耗量
+            const consumption = calculateTotalCoffeeConsumption(filtered);
+            setTotalCoffeeConsumption(consumption);
+            
+            // 计算总花费
+            const cost = await calculateTotalCost(filtered);
+            setTotalCost(cost);
+            
+            // 创建咖啡豆单位价格缓存
+            const priceCache: Record<string, number> = {};
+            for (const bean of beanNames) {
+                if (bean) {
+                    priceCache[bean] = await getCoffeeBeanUnitPrice(bean);
+                }
+            }
+            setUnitPriceCache(priceCache);
+            
         } catch (_error) {
             setNotes([]);
             setFilteredNotes([]);
             setAvailableEquipments([]);
             setAvailableBeans([]);
+            setTotalCoffeeConsumption(0);
+            setTotalCost(0);
         }
     }, [sortOption, sortNotes, filterMode, selectedEquipment, selectedBean]);
 
@@ -423,6 +520,15 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
         setFilteredNotes(notes);
     }, [notes]);
 
+    // 修改消耗量显示格式的函数
+    const formatConsumption = (amount: number): string => {
+        if (amount < 1000) {
+            return `${Math.round(amount)}g`;
+        } else {
+            return `${(amount / 1000).toFixed(1)}kg`;
+        }
+    };
+
     if (!isOpen) return null
 
     return (
@@ -478,8 +584,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                         <div className="flex justify-between items-center mb-6 px-6">
                             <div className="text-xs tracking-wide text-neutral-800 dark:text-neutral-100">
                                 {selectedEquipment 
-                                    ? `${filteredNotes.length}/${notes.length} 条记录` 
-                                    : `${notes.length} 条记录`}
+                                    ? `${filteredNotes.length}/${notes.length} 条记录，已消耗 ${formatConsumption(totalCoffeeConsumption)}` 
+                                    : `${notes.length} 条记录，已消耗 ${formatConsumption(totalCoffeeConsumption)}`}
                             </div>
                             <Select
                                 value={sortOption}
@@ -678,19 +784,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                                                         });
                                                                     }
                                                                 },
-                                                                // {
-                                                                //     id: 'optimize',
-                                                                //     label: '优化',
-                                                                //     onClick: () => {
-                                                                //         setOptimizingNote({
-                                                                //             ...note,
-                                                                //             coffeeBeanInfo: note.coffeeBeanInfo || undefined
-                                                                //         });
-                                                                //         if (onOptimizingChange) {
-                                                                //             onOptimizingChange(true);
-                                                                //         }
-                                                                //     }
-                                                                // },
                                                                 {
                                                                     id: 'delete',
                                                                     label: '删除',
@@ -702,7 +795,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                                     </div>
                                                 </div>
 
-                                                {/* 方案信息 */}
+                                                {/* 方案信息 - 修改参数显示，添加单位克价 */}
                                                 <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400 space-x-1">
                                                     {note.coffeeBeanInfo?.name && (
                                                         <>
@@ -712,7 +805,14 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                                     )}
                                                     {note.params && (
                                                         <>
-                                                            <span>{note.params.coffee}</span>
+                                                            <span>
+                                                                {note.params.coffee}
+                                                                {note.coffeeBeanInfo?.name && unitPriceCache[note.coffeeBeanInfo.name] > 0 && (
+                                                                    <span className="ml-1">
+                                                                        ({unitPriceCache[note.coffeeBeanInfo.name].toFixed(2)}元/克)
+                                                                    </span>
+                                                                )}
+                                                            </span>
                                                             <span>·</span>
                                                             <span>{note.params.ratio}</span>
 

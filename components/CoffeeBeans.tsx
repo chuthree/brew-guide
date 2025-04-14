@@ -879,7 +879,23 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                             <div className="text-xs tracking-wide text-neutral-800 dark:text-neutral-100">
                                 {(() => {
                                     if (viewMode === VIEW_OPTIONS.INVENTORY) {
-                                        return `${selectedVariety ? `${filteredBeans.length}/${beans.length}` : beans.length} 款咖啡豆`;
+                                        // 计算总重量
+                                        const totalWeight = filteredBeans
+                                            .filter(bean => bean.remaining && parseFloat(bean.remaining) > 0)
+                                            .reduce((sum, bean) => sum + parseFloat(bean.remaining || '0'), 0);
+                                        
+                                        // 智能单位选择：小于1000克用g，大于等于1000克用kg
+                                        let weightDisplay = '';
+                                        if (totalWeight < 1000) {
+                                            // 对于小重量，直接用克显示
+                                            weightDisplay = `${Math.round(totalWeight)} g`;
+                                        } else {
+                                            // 对于大重量，用千克显示，保留1位小数
+                                            const totalWeightKg = (totalWeight / 1000).toFixed(1);
+                                            weightDisplay = `${totalWeightKg} kg`;
+                                        }
+                                        
+                                        return `${selectedVariety ? `${filteredBeans.length}/${beans.length}` : beans.length} 款咖啡豆，总计 ${weightDisplay}`;
                                     } else if (viewMode === VIEW_OPTIONS.BLOGGER) {
                                         // Blogger view - use globalCache for the selected year
                                         const currentYearBeans = globalCache.bloggerBeans[bloggerYear] || [];
