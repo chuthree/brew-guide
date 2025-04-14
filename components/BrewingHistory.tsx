@@ -732,10 +732,9 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                                 </div>
 
                                                 {/* 风味评分 - 只有当存在有效评分(大于0)时才显示 */}
-                                                {Object.values(note.taste).some(value => value > 0) ? (
+                                                {Object.values(note.taste).some(value => value >= 0) ? (
                                                     <div className="grid grid-cols-2 gap-4">
                                                         {Object.entries(note.taste)
-                                                            .filter(([_, value]) => value > 0)
                                                             .map(([key, value], _i) => (
                                                                 <div key={key} className="space-y-1">
                                                                     <div className="flex items-center justify-between">
@@ -761,7 +760,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                                                     </div>
                                                                     <div className="h-px w-full overflow-hidden bg-neutral-200/50 dark:bg-neutral-800">
                                                                         <div
-                                                                            style={{ width: `${(value / 5) * 100}%` }}
+                                                                            style={{ width: `${value === 0 ? 0 : (value / 5) * 100}%` }}
                                                                             className="h-full bg-neutral-800 dark:bg-neutral-100"
                                                                         />
                                                                     </div>
@@ -793,7 +792,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                                             </div>
                                                             <div className="h-px w-full overflow-hidden bg-neutral-200/50 dark:bg-neutral-800">
                                                                 <div
-                                                                    style={{ width: `${(note.rating / 5) * 100}%` }}
+                                                                    style={{ width: `${note.rating === 0 ? 0 : (note.rating / 5) * 100}%` }}
                                                                     className="h-full bg-neutral-800 dark:bg-neutral-100"
                                                                 />
                                                             </div>

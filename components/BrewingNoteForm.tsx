@@ -73,10 +73,10 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     // 添加优化相关状态，初始化理想风味为当前风味
     const [showOptimization, setShowOptimization] = useState(showOptimizationByDefault) // 控制是否显示优化界面，由外部传入默认值
     const [idealTaste, setIdealTaste] = useState<TasteRatings>({
-        acidity: initialData?.taste?.acidity || 3,
-        sweetness: initialData?.taste?.sweetness || 3,
-        bitterness: initialData?.taste?.bitterness || 3,
-        body: initialData?.taste?.body || 3,
+        acidity: initialData?.taste?.acidity || 0,
+        sweetness: initialData?.taste?.sweetness || 0,
+        bitterness: initialData?.taste?.bitterness || 0,
+        body: initialData?.taste?.body || 0,
     })
     const [optimizationNotes, setOptimizationNotes] = useState('')
     const [optimizationPrompt, setOptimizationPrompt] = useState('')
@@ -236,7 +236,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         const width = rect.width
         const x = touch.clientX - rect.left
         const percentage = Math.max(0, Math.min(1, x / width))
-        const newValue = Math.round(percentage * 4) + 1
+        const newValue = Math.round(percentage * 5)
 
         if (newValue !== currentValue) {
             setFormData({
@@ -270,7 +270,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         const width = rect.width
         const x = touch.clientX - rect.left
         const percentage = Math.max(0, Math.min(1, x / width))
-        const newValue = Math.round(percentage * 4) + 1
+        const newValue = Math.round(percentage * 5)
 
         if (newValue !== currentValue) {
             setIdealTaste({
@@ -713,6 +713,7 @@ stages数组中的每个阶段必须包含以下字段：
                                                 type="range"
                                                 min="0"
                                                 max="5"
+                                                step="1"
                                                 value={value || 0}
                                                 onChange={(e) =>
                                                     setFormData({
@@ -882,8 +883,9 @@ stages数组中的每个阶段必须包含以下字段：
                                     <div className="relative py-4 -my-4">
                                         <input
                                             type="range"
-                                            min="1"
+                                            min="0"
                                             max="5"
+                                            step="1"
                                             value={value}
                                             onChange={(e) =>
                                                 setIdealTaste({
