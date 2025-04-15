@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import Image from 'next/image'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useAnimation } from 'framer-motion'
 import { Stage } from '@/lib/config'
 import { AnimationFrame } from './AnimationEditor'
 
@@ -55,6 +55,38 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
     const [valveStatus, setValveStatus] = useState<'open' | 'closed'>('closed') // 添加阀门状态
     const [imagesPreloaded, setImagesPreloaded] = useState(false)
     const [displayedIceIndices, setDisplayedIceIndices] = useState<number[]>([])
+    const [isEasterEggActive, setIsEasterEggActive] = useState(false)
+
+    // 添加动画控制器
+    const controls = useAnimation()
+
+    // 定义彩蛋动画变体
+    const easterEggVariants = {
+        normal: {
+            scale: 1,
+            rotate: 0,
+            filter: 'hue-rotate(0deg)',
+        },
+        active: {
+            scale: [1, 1.1, 0.9, 1.05, 1],
+            rotate: [0, 10, -10, 5, 0],
+            filter: ['hue-rotate(0deg)', 'hue-rotate(90deg)', 'hue-rotate(180deg)', 'hue-rotate(270deg)', 'hue-rotate(360deg)'],
+            transition: {
+                duration: 1.5,
+                ease: "easeInOut",
+                times: [0, 0.2, 0.4, 0.6, 1],
+            }
+        }
+    }
+
+    // 处理彩蛋触发
+    const handleEasterEgg = useCallback(async () => {
+        if (!isEasterEggActive) {
+            setIsEasterEggActive(true)
+            await controls.start('active')
+            setIsEasterEggActive(false)
+        }
+    }, [controls, isEasterEggActive])
 
     // 移除旧的样式定义
     useEffect(() => {
@@ -362,8 +394,6 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
     const hasCustomSvg = Boolean(customEquipment?.customShapeSvg);
     const equipmentImageSrc = getEquipmentImageSrc();
 
-
-
     // 计算杯体透明度 - 在注水时为完全不透明，否则为半透明
     const equipmentOpacity = isPouring ? 'opacity-100' : 'opacity-50';
 
@@ -595,7 +625,17 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
     const shouldShowAnimation = isPouring && imagesPreloaded && isValidAnimation && countdownTime === null;
 
     return (
-        <div className={`relative aspect-square w-full max-w-[300px] mx-auto px-safe overflow-hidden ${isRunning ? 'bg-transparent' : 'bg-neutral-900'} ${isPouring ? 'isPouring' : ''}`}>
+        <motion.div 
+            className={`relative aspect-square w-full max-w-[300px] mx-auto px-safe overflow-hidden ${isRunning ? 'bg-transparent' : 'bg-neutral-900'} ${isPouring ? 'isPouring' : ''}`}
+            variants={easterEggVariants}
+            animate={controls}
+            initial="normal"
+            onDoubleClick={handleEasterEgg}
+            onContextMenu={(e) => {
+                e.preventDefault()
+                handleEasterEgg()
+            }}
+        >
             {/* 基础杯型 */}
             <AnimatePresence mode='wait'>
                 <motion.div
@@ -706,7 +746,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                     </>
                 )}
             </AnimatePresence>
-        </div>
+        </motion.div>
     )
 }
 

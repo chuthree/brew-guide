@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React from 'react';
 import { Select, SelectContent, SelectTrigger } from './ui/select';
 import * as SelectPrimitive from "@radix-ui/react-select";
