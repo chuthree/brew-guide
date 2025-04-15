@@ -224,7 +224,7 @@ const Settings: React.FC<SettingsProps> = ({
     if (!isOpen) return null
 
     return (
-        <div className="fixed inset-0 z-50 flex flex-col bg-neutral-50 dark:bg-neutral-900">
+        <div className="fixed inset-0 z-50 flex flex-col bg-neutral-50 dark:bg-neutral-900 max-w-[500px] mx-auto">
             {/* 头部导航栏 */}
             <div 
                 className="relative flex items-center justify-center py-4 pt-safe border-b border-neutral-200 dark:border-neutral-800"

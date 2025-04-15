@@ -148,7 +148,7 @@ export default function RootLayout({
                 <CapacitorInit />
                 <KeyboardManager />
               </Suspense>
-              <div className="h-full w-full overflow-hidden">
+              <div className="h-full w-full overflow-hidden max-w-[500px] mx-auto">
                 {children}
               </div>
               <PWAPrompt />

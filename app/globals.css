@@ -246,3 +246,17 @@ select:focus,
   -webkit-font-feature-settings: "tnum" on, "lnum" on;
   -moz-font-feature-settings: "tnum" on, "lnum" on;
 }
+
+/* 模态框容器样式 */
+.modal-container {
+  @apply fixed inset-0 z-50 flex items-center justify-center;
+}
+
+.modal-content {
+  @apply w-full max-w-[500px] mx-auto relative;
+}
+
+/* 确保模态框内容不会超出屏幕 */
+.modal-content > div {
+  @apply max-h-[90vh] w-full;
+}
