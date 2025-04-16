@@ -201,17 +201,13 @@ export function getBloggerBeans(type: 'all' | 'espresso' | 'filter' = 'all', yea
     try {
         if (type === 'all' || type === 'filter') {
             const filterBeans = parseFn(filterCSV, 'filter');
-            console.log(`加载${year}手冲豆:`, filterBeans.length, '款');
             beans = [...beans, ...filterBeans];
         }
 
         if (type === 'all' || type === 'espresso') {
             const espressoBeans = parseFn(espressoCSV, 'espresso');
-            console.log(`加载${year}意式豆:`, espressoBeans.length, '款');
             beans = [...beans, ...espressoBeans];
         }
-
-        console.log(`总共加载${year}博主榜单咖啡豆:`, beans.length, '款');
         
         // Sort based on the original index from the CSV file
         return beans.sort((a, b) => {
