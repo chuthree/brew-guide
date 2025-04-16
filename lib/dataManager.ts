@@ -526,12 +526,17 @@ export const DataManager = {
 							// 检查组件是否是有效对象
 							if (!comp || typeof comp !== 'object') return true;
 							
+							// 如果percentage字段未定义，不再视为无效数据
+							// 因为新版本中percentage是可选的
+							if (comp.percentage === undefined || comp.percentage === null) return false;
+							
 							// 处理字符串类型的百分比
 							if (typeof comp.percentage === 'string') {
 								return comp.percentage === "";
 							}
-							// 处理其他类型
-							return comp.percentage === undefined || comp.percentage === null;
+							
+							// 不再检查undefined，因为它是有效值
+							return false;
 						}
 					);
 
@@ -544,7 +549,7 @@ export const DataManager = {
 						const validComponents = bean.blendComponents
 							.filter(comp => 
 								comp && typeof comp === "object" && 
-								comp.percentage !== undefined && comp.percentage !== null
+								(comp.percentage !== undefined && comp.percentage !== null)
 							)
 							.map(comp => {
 								// 确保percentage是数字
@@ -556,69 +561,66 @@ export const DataManager = {
 								};
 							});
 
-						if (validComponents.length > 0) {
-							// 重新分配百分比，确保总和为100%
-							const totalPercentage = validComponents.reduce(
-								(sum, comp) => sum + (typeof comp.percentage === 'number' ? comp.percentage : 0), 
-								0
-							);
+						// 重新分配百分比，确保总和为100%
+						const totalPercentage = validComponents.reduce(
+							(sum, comp) => sum + (typeof comp.percentage === 'number' ? comp.percentage : 0), 
+							0
+						);
+						
+						if (Math.abs(totalPercentage - 100) > 0.1) { // 允许0.1%的误差
+							const fixedComponents = validComponents.map((comp, index) => {
+								if (totalPercentage > 0) {
+									// 按比例调整
+									const adjustedPercentage = Math.round((comp.percentage! / totalPercentage) * 100 * 10) / 10;
+									return {
+										...comp,
+										percentage: index === validComponents.length - 1 
+											? 100 - validComponents.slice(0, -1).reduce((sum, c) => sum + (c.percentage || 0), 0) 
+											: adjustedPercentage
+									};
+								} else {
+									// 如果总和为0，平均分配
+									const perComponent = Math.floor(100 / validComponents.length);
+									const remainder = 100 - (perComponent * validComponents.length);
+									
+									return {
+										...comp,
+										percentage: index === validComponents.length - 1 
+											? perComponent + remainder 
+											: perComponent
+									};
+								}
+							});
 							
-							// 如果总和不是100%，按比例调整
-							if (Math.abs(totalPercentage - 100) > 0.1) { // 允许0.1%的误差
-								const fixedComponents = validComponents.map((comp, index) => {
-									if (totalPercentage > 0) {
-										// 按比例调整
-										const adjustedPercentage = Math.round((comp.percentage / totalPercentage) * 100 * 10) / 10;
-										return {
-											...comp,
-											percentage: index === validComponents.length - 1 
-												? 100 - validComponents.slice(0, -1).reduce((sum, c) => sum + c.percentage, 0) 
-												: adjustedPercentage
-										};
-									} else {
-										// 如果总和为0，平均分配
-										const perComponent = Math.floor(100 / validComponents.length);
-										const remainder = 100 - (perComponent * validComponents.length);
-										
-										return {
-											...comp,
-											percentage: index === validComponents.length - 1 
-												? perComponent + remainder 
-												: perComponent
-										};
-									}
-								});
-								
-								return {
-									...bean,
-									blendComponents: fixedComponents
-								};
-							}
-							
-							// 总和接近100%，使用有效组件
 							return {
 								...bean,
-								blendComponents: validComponents
-							};
-						} else if (bean.origin) {
-							// 如果没有有效成分但有产地信息，创建一个默认成分
-							return {
-								...bean,
-								blendComponents: [{
-									percentage: 100,
-									origin: bean.origin || "",
-									process: bean.process || "",
-									variety: bean.variety || ""
-								}]
-							};
-						} else {
-							// 无法修复的情况，移除blendComponents
-							const { blendComponents: _unusedBlendComponents, ...restBean } = bean;
-							return {
-								...restBean,
-								type: "单品" // 改为单品
+								blendComponents: fixedComponents
 							};
 						}
+						
+						// 总和接近100%，使用有效组件
+						return {
+							...bean,
+							blendComponents: validComponents
+						};
+					} else if (bean.origin) {
+						// 如果没有有效成分但有产地信息，创建一个默认成分
+						return {
+							...bean,
+							blendComponents: [{
+								percentage: 100,
+								origin: bean.origin || "",
+								process: bean.process || "",
+								variety: bean.variety || ""
+							}]
+						};
+					} else {
+						// 无法修复的情况，移除blendComponents
+						const { blendComponents: _unusedBlendComponents, ...restBean } = bean;
+						return {
+							...restBean,
+							type: "单品" // 改为单品
+						};
 					}
 				} else if (bean.type !== "拼配" && bean.blendComponents) {
 					// 非拼配豆不应该有blendComponents，移除它

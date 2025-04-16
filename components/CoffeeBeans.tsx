@@ -26,7 +26,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 
 // 添加ExtendedCoffeeBean类型
 interface BlendComponent {
-    percentage: number;  // 百分比 (1-100)
+    percentage?: number;  // 百分比 (1-100)，改为可选
     origin?: string;     // 产地
     process?: string;    // 处理法
     variety?: string;    // 品种
@@ -1377,18 +1377,30 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                                             if (!component || typeof component !== 'object') {
                                                                                 return null;
                                                                             }
-                                                                            // 安全处理percentage字段
-                                                                            const safePercentage = (() => {
-                                                                                if (component.percentage === undefined || component.percentage === null) return "0";
-                                                                                if (typeof component.percentage === 'string' && component.percentage === "") return "0";
-                                                                                return typeof component.percentage === 'number' 
-                                                                                    ? component.percentage.toString() 
-                                                                                    : component.percentage;
-                                                                            })();
+                                                                            
+                                                                            // 使用类型断言处理可能的类型不匹配
+                                                                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                                                            const comp = component as any; // 使用any处理不同文件中的BlendComponent类型定义可能不一致的问题
+                                                                            
+                                                                            // 获取组件内容
+                                                                            const componentContent = [
+                                                                                comp.origin || '',
+                                                                                comp.process || '',
+                                                                                comp.variety || ''
+                                                                            ].filter(Boolean).join('');
+                                                                            
+                                                                            // 检查是否有百分比
+                                                                            const hasPercentage = comp.percentage !== undefined && 
+                                                                                               comp.percentage !== null && 
+                                                                                               comp.percentage !== "";
+                                                                            
                                                                             return (
                                                                                 <React.Fragment key={idx}>
                                                                                     {idx > 0 && <span className="opacity-50 mx-1">·</span>}
-                                                                                    <span>{`${component.origin || ''}${component.process ? `${component.process}` : ''}${component.variety ? `${component.variety}` : ''}(${safePercentage}%)`}</span>
+                                                                                    <span>
+                                                                                        {componentContent}
+                                                                                        {hasPercentage && ` (${comp.percentage}%)`}
+                                                                                    </span>
                                                                                 </React.Fragment>
                                                                             );
                                                                         })}

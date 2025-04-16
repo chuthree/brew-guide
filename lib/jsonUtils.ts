@@ -67,7 +67,7 @@ interface BrewingNote {
 
 // 定义BlendComponent接口
 interface BlendComponent {
-	percentage: string;
+	percentage?: number | string;
 	origin?: string;
 	process?: string;
 	variety?: string;

@@ -46,7 +46,7 @@ declare global {
 
 // 添加ExtendedCoffeeBean类型
 interface BlendComponent {
-    percentage: number;  // 百分比 (1-100)
+    percentage?: number;  // 百分比 (1-100)，改为可选
     origin?: string;     // 产地
     process?: string;    // 处理法
     variety?: string;    // 品种
@@ -722,15 +722,19 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                     // 先验证拼配成分的格式是否正确
                     const validComponents = bean.blendComponents.filter((comp: BlendComponentInput) => 
                         comp && (typeof comp === 'object') && 
-                        (comp.percentage !== undefined) &&
+                        // 允许percentage为undefined/可选
                         (comp.origin !== undefined || comp.process !== undefined || comp.variety !== undefined)
                     );
                     
                     if (validComponents.length > 0) {
-                        bean.blendComponents = validComponents.map((comp: { percentage: string | number }) => ({
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        bean.blendComponents = validComponents.map((comp: any) => ({
                             ...comp,
-                            percentage: typeof comp.percentage === 'string' ?
-                                parseInt(comp.percentage, 10) : comp.percentage
+                            // 如果存在percentage字段，确保它是数字类型
+                            ...(comp.percentage !== undefined ? {
+                                percentage: typeof comp.percentage === 'string' ?
+                                    parseInt(comp.percentage, 10) : comp.percentage
+                            } : {})
                         }));
                     } else if (bean.type === '拼配') {
                         console.warn('拼配豆数据格式不正确，重置拼配成分');

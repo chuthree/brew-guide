@@ -8,7 +8,7 @@ import { Capacitor } from '@capacitor/core'
 
 // 导入ExtendedCoffeeBean类型
 interface BlendComponent {
-    percentage: number;  // 百分比 (1-100)
+    percentage?: number;  // 百分比 (1-100)，改为可选
     origin?: string;     // 产地
     process?: string;    // 处理法
     variety?: string;    // 品种

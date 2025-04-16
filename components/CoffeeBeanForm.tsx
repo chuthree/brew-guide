@@ -12,7 +12,7 @@ import imageCompression from 'browser-image-compression';
 
 // 添加拼配成分接口定义
 interface BlendComponent {
-    percentage: number;  // 百分比 (1-100)
+    percentage?: number;  // 百分比 (1-100)，可选
     origin?: string;     // 产地
     process?: string;    // 处理法
     variety?: string;    // 品种
@@ -182,7 +182,6 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
         }
         // 默认添加一个空成分
         return [{
-            percentage: 100,
             origin: '',
             process: '',
             variety: ''
@@ -486,20 +485,10 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
 
     // 添加拼配成分处理函数
     const handleAddBlendComponent = () => {
-        // 计算当前所有成分的百分比总和
-        const currentSum = blendComponents.reduce((sum, comp) => sum + (comp.percentage || 0), 0);
-
-        // 如果总和已经接近或超过100%，则不添加新成分
-        if (currentSum >= 99.9) {
-            alert('拼配比例总和已达100%，请先调整现有成分比例');
-            return;
-        }
-
-        // 添加新成分，使用剩余的百分比
+        // 添加新成分，不再自动计算和分配比例
         setBlendComponents([
             ...blendComponents,
             {
-                percentage: Math.max(0, 100 - currentSum),
                 origin: '',
                 process: '',
                 variety: ''
@@ -511,17 +500,6 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
         if (blendComponents.length <= 1) return; // 至少保留一个成分
 
         const newComponents = blendComponents.filter((_, i) => i !== index);
-        // 重新分配百分比
-        const totalPercentage = newComponents.reduce((sum, comp) => sum + comp.percentage, 0);
-        if (totalPercentage < 100) {
-            // 分配剩余百分比
-            const remaining = 100 - totalPercentage;
-            const perComponent = remaining / newComponents.length;
-            newComponents.forEach(comp => {
-                comp.percentage += perComponent;
-            });
-        }
-
         setBlendComponents(newComponents);
     };
 
@@ -530,29 +508,12 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
         if (field === 'percentage') {
             // 处理空值的情况
             if (value === '' || value === null || value === undefined) {
-                newComponents[index][field] = 0; // 空值设为0
+                // 如果输入为空，则移除百分比属性
+                delete newComponents[index].percentage;
             } else {
                 // 确保是数字且在0-100范围内
                 const numValue = typeof value === 'string' ? parseInt(value) || 0 : value;
-                newComponents[index][field] = Math.max(0, Math.min(100, numValue));
-            }
-
-            // 调整其他成分的百分比，确保总和为100%
-            const totalOthers = newComponents.reduce((sum, comp, i) =>
-                i !== index ? sum + comp.percentage : sum, 0);
-
-            if (totalOthers + newComponents[index].percentage > 100) {
-                // 如果总和超过100%，按比例缩减其他成分
-                const excess = totalOthers + newComponents[index].percentage - 100;
-                const factor = excess / totalOthers;
-
-                if (totalOthers > 0) { // 防止除以零
-                    newComponents.forEach((comp, i) => {
-                        if (i !== index) {
-                            comp.percentage = Math.max(0, comp.percentage - (comp.percentage * factor));
-                        }
-                    });
-                }
+                newComponents[index].percentage = Math.max(0, Math.min(100, numValue));
             }
         } else {
             // 处理其他字段（字符串）
@@ -569,19 +530,10 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
 
         // 如果是拼配豆，添加拼配成分到bean中
         if (bean.type === '拼配') {
-            // 确保百分比总和为100
-            const components = [...blendComponents];
-            const totalPercentage = components.reduce((sum, comp) => sum + comp.percentage, 0);
-
-            if (totalPercentage !== 100) {
-                // 调整最后一个成分的百分比使总和为100
-                const lastIndex = components.length - 1;
-                components[lastIndex].percentage += (100 - totalPercentage);
-            }
-
+            // 直接使用当前的拼配成分数据，不再强制调整百分比
             onSave({
                 ...bean,
-                blendComponents: components
+                blendComponents: blendComponents
             });
         } else {
             onSave(bean);
@@ -943,7 +895,6 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                                                 // 当类型从拼配变为单品时，清空拼配成分
                                                 if (bean.type === '拼配' && type.value === '单品') {
                                                     setBlendComponents([{
-                                                        percentage: 100,
                                                         origin: '',
                                                         process: '',
                                                         variety: ''
@@ -1256,14 +1207,18 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                                 <div className="flex flex-col py-2 border-b border-neutral-200 dark:border-neutral-700">
                                     <div className="flex justify-between mb-2">
                                         <span className="text-sm text-neutral-500 dark:text-neutral-400 flex-shrink-0">拼配成分</span>
-                                        <span className="text-xs text-neutral-500 dark:text-neutral-400 flex-shrink-0">比例</span>
+                                        <span className="text-xs text-neutral-500 dark:text-neutral-400 flex-shrink-0">
+                                            {blendComponents.some(comp => comp.percentage !== undefined) ? '比例' : ''}
+                                        </span>
                                     </div>
                                     <div className="space-y-3">
                                         {blendComponents.map((comp, index) => (
                                             <div key={index} className="text-left">
                                                 <div className="flex justify-between items-center">
                                                     <span className="text-sm font-medium truncate max-w-[70%]">成分 #{index + 1}</span>
-                                                    <span className="text-sm font-medium flex-shrink-0">{comp.percentage}%</span>
+                                                    {comp.percentage !== undefined && (
+                                                        <span className="text-sm font-medium flex-shrink-0">{comp.percentage}%</span>
+                                                    )}
                                                 </div>
                                                 <div className="flex flex-wrap gap-1 mt-1">
                                                     {comp.origin && (
@@ -1383,21 +1338,18 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
 
                             <div className="space-y-1 mb-3">
                                 <label className="block text-xs text-neutral-500 dark:text-neutral-400">
-                                    比例
+                                    比例 (可选)
                                 </label>
                                 <AutocompleteInput
-                                    value={component.percentage === 0 ? '' : component.percentage.toString()}
+                                    value={component.percentage !== undefined ? component.percentage.toString() : ''}
                                     onChange={(value) => handleBlendComponentChange(index, 'percentage', value)}
                                     placeholder="0-100"
                                     unit="%"
                                     inputType="tel"
-                                    clearable={false}
+                                    clearable={true}
                                     suggestions={[]}
                                     onBlur={() => {
-                                        // 当失焦时，如果比例为0或NaN，设置为1%
-                                        if (component.percentage === 0 || isNaN(component.percentage)) {
-                                            handleBlendComponentChange(index, 'percentage', 1);
-                                        }
+                                        // 不再需要强制设置默认值
                                     }}
                                 />
                             </div>
@@ -1434,23 +1386,9 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                     ))}
                 </div>
 
-                <div className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 flex items-center">
-                    <div className="h-1 w-full bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden mr-2">
-                        <div
-                            className={`h-full transition-all duration-300 ease-in-out ${Math.abs(blendComponents.reduce((sum, comp) => sum + (comp.percentage || 0), 0) - 100) < 0.1
-                                ? 'bg-neutral-800 dark:bg-neutral-200'
-                                : 'bg-amber-500'
-                                }`}
-                            style={{ width: `${Math.min(100, blendComponents.reduce((sum, comp) => sum + (comp.percentage || 0), 0))}%` }}
-                        />
-                    </div>
-                    <span>
-                        {Math.round(blendComponents.reduce((sum, comp) => sum + (comp.percentage || 0), 0))}%
-                    </span>
+                <div className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                    <p>提示：比例为可选项，如需添加请确保各成分比例总和为100%</p>
                 </div>
-                <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                    各成分比例总和应为100%
-                </p>
             </div>
         );
     };
