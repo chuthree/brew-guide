@@ -22,6 +22,7 @@ import ActionMenu from './ui/action-menu'
 import { useCopy } from "@/lib/hooks/useCopy"
 import CopyFailureModal from "./ui/copy-failure-modal"
 import { SortSelector, SORT_OPTIONS, type SortOption, sortBeans as sortBeansFn, convertToRankingSortOption } from './SortSelector'
+import { motion, AnimatePresence } from 'framer-motion'
 
 // 添加ExtendedCoffeeBean类型
 interface BlendComponent {
@@ -190,10 +191,15 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
     const isLoadingRef = useRef<boolean>(false)
     // 添加强制刷新的key
     const [forceRefreshKey, setForceRefreshKey] = useState(0)
-    // 方案管理模态框状态 - Removed as no longer needed
-    // const [showMethodsModal, setShowMethodsModal] = useState(false)
-    // const [selectedBeanForMethods, setSelectedBeanForMethods] = useState<ExtendedCoffeeBean | null>(null)
 
+    // 添加剩余量编辑状态
+    const [editingRemaining, setEditingRemaining] = useState<{
+        beanId: string,
+        value: string,
+        position: { x: number, y: number } | null
+    } | null>(null)
+    const remainingInputRef = useRef<HTMLInputElement>(null)
+    
     // 添加引用，用于点击外部关闭操作菜单
     const containerRef = React.useRef<HTMLDivElement>(null);
 
@@ -813,6 +819,186 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
         return name.toLowerCase().includes(parameter.toLowerCase());
     };
 
+    // 添加剩余量编辑状态
+    const handleRemainingClick = (bean: ExtendedCoffeeBean, event: React.MouseEvent) => {
+        event.stopPropagation();
+        const rect = (event.target as HTMLElement).getBoundingClientRect();
+        setEditingRemaining({
+            beanId: bean.id,
+            value: bean.remaining, // 移除单位'g'，便于编辑
+            position: {
+                x: rect.left,
+                y: rect.top + rect.height
+            }
+        });
+
+        // 聚焦输入框
+        setTimeout(() => {
+            if (remainingInputRef.current) {
+                remainingInputRef.current.focus();
+                remainingInputRef.current.select();
+            }
+        }, 50);
+    };
+
+    // 处理剩余量更新
+    const handleRemainingUpdate = async () => {
+        if (!editingRemaining) return;
+
+        try {
+            const beanToUpdate = beans.find(bean => bean.id === editingRemaining.beanId);
+            if (!beanToUpdate) return;
+
+            // 验证输入值
+            let valueToSave = editingRemaining.value.trim();
+            if (valueToSave === '') valueToSave = '0';
+            
+            // 确保是有效数字
+            const numValue = parseFloat(valueToSave);
+            if (isNaN(numValue) || numValue < 0) {
+                valueToSave = '0';
+            }
+
+            // 优化UI更新：先更新本地状态
+            setBeans(prevBeans => {
+                const newBeans = prevBeans.map(b => {
+                    if (b.id === editingRemaining.beanId) {
+                        return { ...b, remaining: valueToSave };
+                    }
+                    return b;
+                });
+                globalCache.beans = newBeans;
+                return newBeans;
+            });
+
+            // 更新过滤后的豆子列表
+            updateFilteredBeansAndCategories(globalCache.beans);
+
+            // 异步更新数据库
+            await CoffeeBeanManager.updateBean(editingRemaining.beanId, { remaining: valueToSave });
+
+            // 触发自定义事件以通知其他组件更新
+            window.dispatchEvent(new CustomEvent('coffeeBeansUpdated'));
+
+            // 关闭编辑状态
+            setEditingRemaining(null);
+            
+            // 强制刷新
+            setForceRefreshKey(prev => prev + 1);
+        } catch (error) {
+            console.error('更新剩余量失败:', error);
+            // 出错时仍然关闭编辑状态
+            setEditingRemaining(null);
+        }
+    };
+
+    // 处理快捷减量按钮点击
+    const handleQuickDecrement = async (decrementAmount: number) => {
+        if (!editingRemaining) return;
+        
+        try {
+            const beanToUpdate = beans.find(bean => bean.id === editingRemaining.beanId);
+            if (!beanToUpdate) return;
+            
+            // 获取当前值（不带单位）
+            const currentValue = parseFloat(editingRemaining.value);
+            if (isNaN(currentValue)) return;
+            
+            // 计算新值，确保不小于0
+            const newValue = Math.max(0, currentValue - decrementAmount);
+            
+            // 是否减到0（剩余量不足）
+            const reducedToZero = currentValue < decrementAmount;
+            
+            // 更新输入框值
+            setEditingRemaining(prev => 
+                prev ? { ...prev, value: newValue.toString() } : null
+            );
+            
+            // 立即更新UI状态
+            setBeans(prevBeans => {
+                const newBeans = prevBeans.map(b => {
+                    if (b.id === editingRemaining.beanId) {
+                        return { ...b, remaining: newValue.toString() };
+                    }
+                    return b;
+                });
+                globalCache.beans = newBeans;
+                return newBeans;
+            });
+            
+            // 更新过滤后的豆子列表
+            updateFilteredBeansAndCategories(globalCache.beans);
+            
+            // 异步更新数据库
+            await CoffeeBeanManager.updateBean(editingRemaining.beanId, { remaining: newValue.toString() });
+            
+            // 触发自定义事件以通知其他组件更新
+            window.dispatchEvent(new CustomEvent('coffeeBeansUpdated'));
+            
+            // 如果减到0，提供视觉反馈（例如闪烁一下）
+            if (reducedToZero) {
+                // 在这里可以添加剩余量不足时的反馈
+                // 比如闪烁UI或显示提示信息
+                console.log(`剩余量不足，已减至0g`);
+            }
+            
+            // 关闭编辑状态
+            setEditingRemaining(null);
+            
+            // 强制刷新
+            setForceRefreshKey(prev => prev + 1);
+        } catch (error) {
+            console.error('快捷减量失败:', error);
+            setEditingRemaining(null);
+        }
+    };
+
+    // 添加键盘事件处理
+    useEffect(() => {
+        if (!editingRemaining) return;
+
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                handleRemainingUpdate();
+            } else if (event.key === 'Escape') {
+                event.preventDefault();
+                handleRemainingCancel();
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        return () => {
+            document.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [editingRemaining]);
+
+    // 处理剩余量编辑取消
+    const handleRemainingCancel = () => {
+        setEditingRemaining(null);
+    };
+
+    // 添加点击外部关闭剩余量编辑器的处理函数
+    useEffect(() => {
+        if (!editingRemaining) return;
+
+        const handleClickOutside = (event: MouseEvent) => {
+            if (
+                remainingInputRef.current && 
+                !remainingInputRef.current.contains(event.target as Node)
+            ) {
+                // 点击的不是输入框本身，应用更改
+                handleRemainingUpdate();
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [editingRemaining]);
+
     if (!isOpen) return null
 
     return (
@@ -1221,7 +1407,14 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                                                                         剩余量
                                                                     </div>
                                                                     <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
-                                                                        {bean.remaining}g / {bean.capacity}g
+                                                                        <span 
+                                                                            className="cursor-pointer border-dashed border-b border-neutral-400 dark:border-neutral-600 transition-colors"
+                                                                            onClick={(e) => handleRemainingClick(bean, e)}
+                                                                        >
+                                                                            {bean.remaining}g
+                                                                        </span>
+                                                                        {" / "}
+                                                                        {bean.capacity}g
                                                                     </div>
                                                                 </div>
                                                                 <div
@@ -1474,6 +1667,79 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                 onClose={closeFailureModal}
                 content={failureContent || ""}
             />
+
+            {/* 剩余量编辑弹出层 */}
+            <AnimatePresence>
+                {editingRemaining && editingRemaining.position && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -5 }}
+                        transition={{ duration: 0.15 }}
+                        className="fixed z-50 bg-white dark:bg-neutral-800 rounded-lg shadow-lg border border-neutral-200 dark:border-neutral-700 p-2"
+                        style={{ 
+                            left: `${editingRemaining.position.x}px`,
+                            top: `${editingRemaining.position.y + 5}px`,
+                            transform: 'translateX(-50%)'
+                        }}
+                    >
+                        <div className="flex flex-col space-y-2">
+                            <div className="flex items-center">
+                                <input
+                                    ref={remainingInputRef}
+                                    type="number"
+                                    className="w-16 text-sm bg-transparent border border-neutral-200 dark:border-neutral-700 rounded px-2 py-1 text-neutral-800 dark:text-neutral-100 outline-none focus:border-neutral-400 dark:focus:border-neutral-500"
+                                    value={editingRemaining.value}
+                                    min="0"
+                                    onChange={(e) => setEditingRemaining(prev => 
+                                        prev ? { ...prev, value: e.target.value } : null
+                                    )}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            handleRemainingUpdate();
+                                        } else if (e.key === 'Escape') {
+                                            e.preventDefault();
+                                            handleRemainingCancel();
+                                        }
+                                    }}
+                                />
+                                <span className="text-sm flex items-center ml-1 text-neutral-800 dark:text-neutral-100">g</span>
+                                <div className="flex ml-2">
+                                    <button 
+                                        className="text-sm text-white bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-800 rounded px-2 py-1 ml-1"
+                                        onClick={handleRemainingUpdate}
+                                    >
+                                        确定
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            {/* 快捷按钮组 */}
+                            <div className="flex space-x-1 pt-1">
+                                <button
+                                    className="flex-1 text-[10px] bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-neutral-800 dark:text-neutral-200 rounded py-1 transition-colors"
+                                    onClick={() => handleQuickDecrement(15)}
+                                >
+                                    -15
+                                </button>
+                                <button
+                                    className="flex-1 text-[10px] bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-neutral-800 dark:text-neutral-200 rounded py-1 transition-colors"
+                                    onClick={() => handleQuickDecrement(16)}
+                                >
+                                    -16
+                                </button>
+                                <button
+                                    className="flex-1 text-[10px] bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-neutral-800 dark:text-neutral-200 rounded py-1 transition-colors"
+                                    onClick={() => handleQuickDecrement(18)}
+                                >
+                                    -18
+                                </button>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </>
     )
 }
