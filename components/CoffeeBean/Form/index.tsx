@@ -156,19 +156,20 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
     };
 
     // 添加风味标签
-    const handleAddFlavor = () => {
-        if (!flavorInput.trim()) return;
+    const handleAddFlavor = (flavorValue?: string) => {
+        const value = flavorValue || flavorInput;
+        if (!value.trim()) return;
 
-        if (bean.flavor?.includes(flavorInput.trim())) {
-            setFlavorInput('');
+        if (bean.flavor?.includes(value.trim())) {
+            if (!flavorValue) setFlavorInput('');
             return;
         }
 
         setBean({
             ...bean,
-            flavor: [...(bean.flavor || []), flavorInput.trim()]
+            flavor: [...(bean.flavor || []), value.trim()]
         });
-        setFlavorInput('');
+        if (!flavorValue) setFlavorInput('');
     };
 
     // 移除风味标签

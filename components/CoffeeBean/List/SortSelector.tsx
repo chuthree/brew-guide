@@ -1,11 +1,16 @@
 import React from 'react';
-import { Select, SelectContent, SelectTrigger } from './ui/select';
+import { ExtendedCoffeeBean } from '@/app/types';
+import { cn } from '@/lib/utils';
+import {
+    Select,
+    SelectContent,
+    SelectTrigger,
+} from '../ui/select';
 import * as SelectPrimitive from "@radix-ui/react-select";
-import { cn } from "../lib/utils";
-import { SORT_OPTIONS as RANKING_SORT_OPTIONS, RankingSortOption } from './CoffeeBeanRanking';
+import { SORT_OPTIONS as RANKING_SORT_OPTIONS, RankingSortOption } from '../Ranking';
 
 // 自定义SelectItem，移除右侧指示器
-const SelectItem = React.forwardRef<
+const CustomSelectItem = React.forwardRef<
     React.ElementRef<typeof SelectPrimitive.Item>,
     React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item>
 >(({ className, children, ...props }, ref) => (
@@ -20,7 +25,7 @@ const SelectItem = React.forwardRef<
         <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
     </SelectPrimitive.Item>
 ))
-SelectItem.displayName = SelectPrimitive.Item.displayName;
+CustomSelectItem.displayName = SelectPrimitive.Item.displayName;
 
 // 排序类型定义
 export const SORT_OPTIONS = {
@@ -40,23 +45,6 @@ export const SORT_OPTIONS = {
 } as const;
 
 export type SortOption = typeof SORT_OPTIONS[keyof typeof SORT_OPTIONS];
-
-// 添加ExtendedCoffeeBean类型
-interface ExtendedCoffeeBean {
-    id: string;
-    name: string;
-    roastDate?: string;
-    startDay?: number;
-    endDay?: number;
-    roastLevel?: string;
-    capacity?: string;
-    remaining?: string;
-    timestamp?: number;
-    rating?: number;
-    variety?: string;
-    price?: string;
-    [key: string]: unknown;
-}
 
 // 获取阶段数值用于排序
 const getPhaseValue = (phase: string): number => {
@@ -133,9 +121,10 @@ const calculatePricePerGram = (bean: ExtendedCoffeeBean): number => {
 
 // 排序咖啡豆的函数
 export const sortBeans = (beansToSort: ExtendedCoffeeBean[], option: SortOption): ExtendedCoffeeBean[] => {
+    const sorted = [...beansToSort];
     switch (option) {
         case SORT_OPTIONS.REMAINING_DAYS_ASC:
-            return [...beansToSort].sort((a, b) => {
+            return sorted.sort((a, b) => {
                 const { phase: phaseA, remainingDays: daysA } = getFlavorInfo(a);
                 const { phase: phaseB, remainingDays: daysB } = getFlavorInfo(b);
                 
@@ -161,7 +150,7 @@ export const sortBeans = (beansToSort: ExtendedCoffeeBean[], option: SortOption)
                 }
             });
         case SORT_OPTIONS.REMAINING_DAYS_DESC:
-            return [...beansToSort].sort((a, b) => {
+            return sorted.sort((a, b) => {
                 const { phase: phaseA, remainingDays: daysA } = getFlavorInfo(a);
                 const { phase: phaseB, remainingDays: daysB } = getFlavorInfo(b);
                 
@@ -187,77 +176,67 @@ export const sortBeans = (beansToSort: ExtendedCoffeeBean[], option: SortOption)
                 }
             });
         case SORT_OPTIONS.NAME_ASC:
-            return [...beansToSort].sort((a, b) => {
+            return sorted.sort((a, b) => {
                 // 安全地进行字符串比较（A → Z）
                 const nameA = a.name || '';
                 const nameB = b.name || '';
                 return nameA.localeCompare(nameB);
             });
         case SORT_OPTIONS.NAME_DESC:
-            return [...beansToSort].sort((a, b) => {
+            return sorted.sort((a, b) => {
                 // 安全地进行字符串比较（Z → A）
                 const nameA = a.name || '';
                 const nameB = b.name || '';
                 return nameB.localeCompare(nameA);
             });
         case SORT_OPTIONS.RATING_ASC:
-            return [...beansToSort].sort((a, b) => {
-                // 评分排序（低 → 高）
-                const ratingA = a.rating || 0;
-                const ratingB = b.rating || 0;
-                return ratingA - ratingB;
-            });
+            return sorted.sort((a, b) => (a.overallRating || 0) - (b.overallRating || 0));
         case SORT_OPTIONS.RATING_DESC:
-            return [...beansToSort].sort((a, b) => {
-                // 评分排序（高 → 低）
-                const ratingA = a.rating || 0;
-                const ratingB = b.rating || 0;
-                return ratingB - ratingA;
-            });
+            return sorted.sort((a, b) => (b.overallRating || 0) - (a.overallRating || 0));
         case SORT_OPTIONS.REMAINING_AMOUNT_ASC:
-            return [...beansToSort].sort((a, b) => {
+            return sorted.sort((a, b) => {
                 // 剩余量从少到多排序
                 const remainingA = parseFloat(a.remaining || '0');
                 const remainingB = parseFloat(b.remaining || '0');
                 return remainingA - remainingB;
             });
         case SORT_OPTIONS.REMAINING_AMOUNT_DESC:
-            return [...beansToSort].sort((a, b) => {
+            return sorted.sort((a, b) => {
                 // 剩余量从多到少排序
                 const remainingA = parseFloat(a.remaining || '0');
                 const remainingB = parseFloat(b.remaining || '0');
                 return remainingB - remainingA;
             });
         case SORT_OPTIONS.ROAST_DATE_ASC:
-            return [...beansToSort].sort((a, b) => {
+            return sorted.sort((a, b) => {
                 // 烘焙日期从早到晚排序
                 const dateA = a.roastDate ? new Date(a.roastDate).getTime() : 0;
                 const dateB = b.roastDate ? new Date(b.roastDate).getTime() : 0;
                 return dateA - dateB;
             });
         case SORT_OPTIONS.ROAST_DATE_DESC:
-            return [...beansToSort].sort((a, b) => {
+            return sorted.sort((a, b) => {
                 // 烘焙日期从晚到早排序
                 const dateA = a.roastDate ? new Date(a.roastDate).getTime() : 0;
                 const dateB = b.roastDate ? new Date(b.roastDate).getTime() : 0;
                 return dateB - dateA;
             });
         case SORT_OPTIONS.PRICE_ASC:
-            return [...beansToSort].sort((a, b) => {
+            return sorted.sort((a, b) => {
                 // 每克价格从低到高排序
                 const pricePerGramA = calculatePricePerGram(a);
                 const pricePerGramB = calculatePricePerGram(b);
                 return pricePerGramA - pricePerGramB;
             });
         case SORT_OPTIONS.PRICE_DESC:
-            return [...beansToSort].sort((a, b) => {
+            return sorted.sort((a, b) => {
                 // 每克价格从高到低排序
                 const pricePerGramA = calculatePricePerGram(a);
                 const pricePerGramB = calculatePricePerGram(b);
                 return pricePerGramB - pricePerGramA;
             });
         default:
-            return beansToSort;
+            return sorted;
     }
 };
 
@@ -619,7 +598,7 @@ export const SortSelector: React.FC<SortSelectorProps> = ({
                         排序方式
                     </div>
                     {getAvailableSortTypes(viewMode).map((type) => (
-                        <SelectItem
+                        <CustomSelectItem
                             key={type}
                             value={type === SORT_TYPES.ORIGINAL ? SORT_OPTIONS.ORIGINAL : getSortOption(type, currentOrder)}
                             className="tracking-wide text-neutral-800 dark:text-neutral-100 data-[highlighted]:opacity-80 transition-colors font-medium"
@@ -635,7 +614,7 @@ export const SortSelector: React.FC<SortSelectorProps> = ({
                                 </div>
                                 <span>{SORT_TYPE_LABELS[type]}</span>
                             </div>
-                        </SelectItem>
+                        </CustomSelectItem>
                     ))}
                 </div>
                 {shouldShowSortOrder(currentType) && (
@@ -646,7 +625,7 @@ export const SortSelector: React.FC<SortSelectorProps> = ({
                                 排序顺序
                             </div>
                             {getSortOrdersForType(currentType).map((order) => (
-                                <SelectItem
+                                <CustomSelectItem
                                     key={order}
                                     value={getSortOption(currentType, order)}
                                     className="tracking-wide text-neutral-800 dark:text-neutral-100 data-[highlighted]:opacity-80 transition-colors font-medium"
@@ -663,7 +642,7 @@ export const SortSelector: React.FC<SortSelectorProps> = ({
                                         <span>{getSortOrderLabel(currentType, order)}</span>
                                         {getSortOrderIcon(currentType, order)}
                                     </div>
-                                </SelectItem>
+                                </CustomSelectItem>
                             ))}
                         </div>
                     </>

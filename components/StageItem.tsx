@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { Method } from '@/lib/config'
-import ActionMenu from './ui/action-menu'
+import ActionMenu from '@/components/CoffeeBean/ui/action-menu'
 import { Step } from '@/lib/hooks/useBrewingState'
 
 interface StageItemProps {

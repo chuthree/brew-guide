@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
-import ActionMenu from './ui/action-menu'
+import ActionMenu from '@/components/CoffeeBean/ui/action-menu'
 import BrewingNoteForm from './BrewingNoteForm'
 import { Storage } from '@/lib/storage'
 import { BrewingNoteData } from '@/app/types'
@@ -11,7 +11,7 @@ import {
     SelectContent,
     SelectItem,
     SelectTrigger,
-} from './ui/select'
+} from '@/components/CoffeeBean/ui/select'
 import { CoffeeBeanManager } from '@/lib/coffeeBeanManager'
 import type { CoffeeBean } from '@/app/types'
 import type { Method } from '@/lib/config'

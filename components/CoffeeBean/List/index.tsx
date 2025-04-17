@@ -6,21 +6,21 @@ import Image from 'next/image'
 import { CoffeeBean } from '@/app/types'
 import { CoffeeBeanManager } from '@/lib/coffeeBeanManager'
 import CoffeeBeanFormModal from '@/components/CoffeeBean/Form/Modal'
-import CoffeeBeanRatingModal from './CoffeeBeanRatingModal'
-import CoffeeBeanRanking from './CoffeeBeanRanking'
+import CoffeeBeanRatingModal from '../Rating/Modal'
+import CoffeeBeanRanking from '../Ranking'
 import {
     Select,
     SelectContent,
     SelectItem,
     SelectTrigger,
     SelectValue,
-} from './ui/select'
-import { SORT_OPTIONS as RANKING_SORT_OPTIONS, RankingSortOption } from './CoffeeBeanRanking'
+} from '../ui/select'
+import { SORT_OPTIONS as RANKING_SORT_OPTIONS, RankingSortOption } from '../Ranking'
 import { getBloggerBeans } from '@/lib/csvUtils'
 import BottomActionBar from '@/components/BottomActionBar'
-import ActionMenu from './ui/action-menu'
+import ActionMenu from '../ui/action-menu'
 import { useCopy } from "@/lib/hooks/useCopy"
-import CopyFailureModal from "./ui/copy-failure-modal"
+import CopyFailureModal from "../ui/copy-failure-modal"
 import { SortSelector, SORT_OPTIONS, type SortOption, sortBeans as sortBeansFn, convertToRankingSortOption } from './SortSelector'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus } from 'lucide-react'
@@ -718,7 +718,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                 timestamp: bean.timestamp,
                 rating: bean.overallRating,
                 variety: bean.variety,
-                price: bean.price
+                price: bean.price,
+                type: bean.type
             }));
             const sortedBeans = sortBeansFn(compatibleBeans, sortOption);
             

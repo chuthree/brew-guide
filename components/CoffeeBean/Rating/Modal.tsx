@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CoffeeBean } from '@/app/types'
-import StarRating from './ui/StarRating'
+import StarRating from '../ui/StarRating'
 
 interface CoffeeBeanRatingModalProps {
     showModal: boolean

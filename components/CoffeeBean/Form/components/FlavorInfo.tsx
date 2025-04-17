@@ -8,7 +8,7 @@ interface FlavorInfoProps {
     bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>;
     flavorInput: string;
     onFlavorInputChange: (value: string) => void;
-    onAddFlavor: () => void;
+    onAddFlavor: (flavorValue?: string) => void;
     onRemoveFlavor: (flavor: string) => void;
 }
 
@@ -75,7 +75,7 @@ const FlavorInfo: React.FC<FlavorInfoProps> = ({
                     </div>
                     <button
                         type="button"
-                        onClick={onAddFlavor}
+                        onClick={() => onAddFlavor()}
                         className="ml-3 h-[36px] px-4 flex items-center justify-center text-xs font-medium bg-neutral-800 dark:bg-neutral-200 text-neutral-100 dark:text-neutral-800 rounded-full"
                     >
                         添加
@@ -102,8 +102,8 @@ const FlavorInfo: React.FC<FlavorInfoProps> = ({
                                         if (bean.flavor?.includes(flavor)) {
                                             onRemoveFlavor(flavor);
                                         } else {
-                                            onFlavorInputChange(flavor);
-                                            onAddFlavor();
+                                            // 直接添加标签，无需经过输入框
+                                            onAddFlavor(flavor);
                                         }
                                     }}
                                     className={`rounded-full px-3 py-1 text-xs ${
@@ -123,4 +123,4 @@ const FlavorInfo: React.FC<FlavorInfoProps> = ({
     );
 };
 
-export default FlavorInfo; 
+export default FlavorInfo;

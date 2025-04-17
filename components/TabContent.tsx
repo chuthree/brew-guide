@@ -14,6 +14,7 @@ import { showToast } from "@/components/ui/toast";
 import EquipmentShareModal from '@/components/EquipmentShareModal';
 import { getEquipmentName } from '@/lib/brewing/parameters';
 import BottomActionBar from '@/components/BottomActionBar';
+import CoffeeBeanList from '@/components/CoffeeBean/List/ListView';
 
 // 扩展Step类型，增加固定方案所需的字段
 interface Step extends BaseStep {
@@ -24,12 +25,6 @@ interface Step extends BaseStep {
 
 // 动态导入客户端组件
 const PourVisualizer = dynamic(() => import('@/components/PourVisualizer'), {
-    ssr: false,
-    loading: () => null
-});
-
-// 动态导入CoffeeBeanList组件
-const CoffeeBeanList = dynamic(() => import('@/components/CoffeeBeanList'), {
     ssr: false,
     loading: () => null
 });
