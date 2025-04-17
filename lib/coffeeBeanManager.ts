@@ -150,7 +150,7 @@ export const CoffeeBeanManager = {
 			}
 
 			// 转换为数字计算
-			const currentRemaining = parseFloat(bean.remaining) || 0;
+			const currentRemaining = bean.remaining ? parseFloat(bean.remaining) : 0;
 
 			// 确保计算正确，保留一位小数的精度
 			const newRemaining = Math.max(0, currentRemaining - usedAmount);

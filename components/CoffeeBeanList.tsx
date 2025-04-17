@@ -299,9 +299,9 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
                 }
 
                 // 添加容量信息
-                const remaining = typeof bean.remaining === 'string' ? parseFloat(bean.remaining) : bean.remaining;
-                const capacity = typeof bean.capacity === 'string' ? parseFloat(bean.capacity) : bean.capacity;
-                if (!isNaN(remaining) && !isNaN(capacity) && remaining > 0) {
+                const remaining = typeof bean.remaining === 'string' ? parseFloat(bean.remaining) : bean.remaining ?? 0;
+                const capacity = typeof bean.capacity === 'string' ? parseFloat(bean.capacity) : bean.capacity ?? 0;
+                if (remaining > 0 && capacity > 0) {
                     items.push(`容量 ${remaining}/${capacity} g`);
                 }
 

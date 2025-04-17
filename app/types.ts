@@ -7,31 +7,41 @@ export interface TasteRatings {
 	body: number;
 }
 
+// 拼配成分接口定义
+export interface BlendComponent {
+	percentage?: number;  // 百分比 (1-100)，可选
+	origin?: string;     // 产地
+	process?: string;    // 处理法
+	variety?: string;    // 品种
+}
+
 // 咖啡豆数据模型
 export interface CoffeeBean {
 	id: string;
+	timestamp: number;
 	name: string;
-	image?: string; // 图片URL或Base64
-	price?: string; // 价格
-	capacity: string; // 总容量
-	remaining: string; // 剩余容量
-	roastLevel?: string; // 烘焙程度
-	roastDate?: string; // 烘焙日期
-	flavor?: string[]; // 风味描述
-	origin?: string; // 产地
-	process?: string; // 处理法
-	variety?: string; // 品种
-	type?: string; // 类型
-	notes?: string; // 备注
-	timestamp: number; // 创建/添加时间
-	startDay?: number; // 养豆期结束天数
-	endDay?: number; // 赏味期结束天数（原为最佳赏味期结束天数）
-	blendComponents?: Array<{
-		percentage?: number; // 百分比 (1-100)，只支持数字类型，现改为可选
-		origin?: string; // 产地
-		process?: string; // 处理法
-		variety?: string; // 品种
-	}>; // 拼配组成成分
+	type: '单品' | '拼配';
+	image?: string;
+	capacity?: string;
+	remaining?: string;
+	price?: string;
+	roastLevel?: string;
+	roastDate?: string;
+	origin?: string;
+	process?: string;
+	variety?: string;
+	altitude?: string;
+	acidity?: number;
+	sweetness?: number;
+	body?: number;
+	aftertaste?: number;
+	flavor?: string[];
+	aroma?: number;
+	balance?: number;
+	clean?: number;
+	notes?: string;
+	startDay?: number;
+	endDay?: number;
 	// 榜单相关字段
 	beanType?: "espresso" | "filter"; // 豆子类型：意式/手冲
 	overallRating?: number; // 总体评分/喜好星值 (1-5)
@@ -42,6 +52,11 @@ export interface CoffeeBean {
 	ratingAftertaste?: number; // 余韵评分 (手冲豆)
 	purchaseChannel?: string; // 购买渠道
 	ratingNotes?: string; // 评价备注
+}
+
+// 扩展CoffeeBean类型以支持拼配成分
+export type ExtendedCoffeeBean = CoffeeBean & {
+	blendComponents?: BlendComponent[];
 }
 
 // 修改 BrewingNoteData 接口，避免使用 any

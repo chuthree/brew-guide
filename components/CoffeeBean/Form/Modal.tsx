@@ -2,21 +2,9 @@
 
 import React, { useEffect, useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import CoffeeBeanForm from '@/components/CoffeeBeanForm'
-import { CoffeeBean } from '@/app/types'
 import { Capacitor } from '@capacitor/core'
-
-// 导入ExtendedCoffeeBean类型
-interface BlendComponent {
-    percentage?: number;  // 百分比 (1-100)，改为可选
-    origin?: string;     // 产地
-    process?: string;    // 处理法
-    variety?: string;    // 品种
-}
-
-interface ExtendedCoffeeBean extends CoffeeBean {
-    blendComponents?: BlendComponent[];
-}
+import { ExtendedCoffeeBean } from './types'
+import CoffeeBeanForm from './index'
 
 interface CoffeeBeanFormModalProps {
     showForm: boolean
@@ -136,10 +124,7 @@ const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
                             className={`px-6 px-safe pb-6 pb-safe overflow-auto max-h-[calc(85vh-40px)] modal-form-container ${isAndroid ? 'android-modal-container' : ''} ${isIOS ? 'ios-modal-container' : ''}`}
                         >
                             <CoffeeBeanForm
-                                onSave={(bean) => {
-                                    onSave(bean)
-                                    onClose()
-                                }}
+                                onSave={onSave}
                                 onCancel={onClose}
                                 initialBean={initialBean || undefined}
                             />

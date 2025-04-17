@@ -19,7 +19,7 @@ import Settings, { SettingsOptions, defaultSettings } from '@/components/Setting
 import TabContent from '@/components/TabContent'
 import MethodTypeSelector from '@/components/MethodTypeSelector'
 import Onboarding from '@/components/Onboarding'
-import CoffeeBeanFormModal from '@/components/CoffeeBeanFormModal'
+import CoffeeBeanFormModal from '@/components/CoffeeBean/Form/Modal'
 import ImportModal from '@/components/ImportModal'
 import { CoffeeBeanManager } from '@/lib/coffeeBeanManager'
 // import AIRecipeModal from '@/components/AIRecipeModal'

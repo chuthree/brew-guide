@@ -3,7 +3,7 @@ import React from 'react';
 export interface ButtonConfig {
   text: string;
   onClick: () => void;
-  icon?: string; // 可选的图标，默认为 '+'
+  icon?: React.ReactNode; // 可选的图标，支持 ReactNode
   active?: boolean; // 是否激活状态
   highlight?: boolean; // 是否高亮显示（使用深色）
   position?: 'left' | 'center' | 'right'; // 按钮位置，用于特殊布局

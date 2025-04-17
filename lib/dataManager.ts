@@ -1,6 +1,6 @@
 import { Storage } from "@/lib/storage";
 import { Method } from "@/lib/config";
-import { CoffeeBean } from "@/app/types";
+import { CoffeeBean, ExtendedCoffeeBean } from "@/app/types";
 
 // 定义导出数据的接口
 interface ExportData {
@@ -501,7 +501,8 @@ export const DataManager = {
 			let hasChanges = false;
 
 			// 遍历所有咖啡豆，查找并修复问题
-			const fixedBeans = beans.map(bean => {
+			const fixedBeans = beans.map(originalBean => {
+				const bean = originalBean as ExtendedCoffeeBean;
 				// 检查是否是拼配豆且有拼配成分
 				if (bean.type === "拼配" && bean.blendComponents) {
 					// 确保blendComponents是数组

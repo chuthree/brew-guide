@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import Image from 'next/image'
 import { CoffeeBean } from '@/app/types'
 import { CoffeeBeanManager } from '@/lib/coffeeBeanManager'
-import CoffeeBeanFormModal from './CoffeeBeanFormModal'
+import CoffeeBeanFormModal from '@/components/CoffeeBean/Form/Modal'
 import CoffeeBeanRatingModal from './CoffeeBeanRatingModal'
 import CoffeeBeanRanking from './CoffeeBeanRanking'
 import {
@@ -23,6 +23,7 @@ import { useCopy } from "@/lib/hooks/useCopy"
 import CopyFailureModal from "./ui/copy-failure-modal"
 import { SortSelector, SORT_OPTIONS, type SortOption, sortBeans as sortBeansFn, convertToRankingSortOption } from './SortSelector'
 import { motion, AnimatePresence } from 'framer-motion'
+import { Plus } from 'lucide-react'
 
 // 添加ExtendedCoffeeBean类型
 interface BlendComponent {
@@ -825,7 +826,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
         const rect = (event.target as HTMLElement).getBoundingClientRect();
         setEditingRemaining({
             beanId: bean.id,
-            value: bean.remaining, // 移除单位'g'，便于编辑
+            value: bean.remaining || '', // 移除单位'g'，便于编辑
             position: {
                 x: rect.left,
                 y: rect.top + rect.height

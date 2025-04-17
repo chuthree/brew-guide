@@ -781,26 +781,23 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 									// 格式化剩余量和容量显示
 									// 确保剩余量和容量都是数字类型
 									const remainingNum =
-										typeof updatedBean.remaining ===
-										"string"
-											? parseFloat(updatedBean.remaining)
-											: updatedBean.remaining;
+										typeof updatedBean.remaining === "string"
+												? parseFloat(updatedBean.remaining)
+												: updatedBean.remaining ?? 0;
 
 									const capacityNum =
 										typeof updatedBean.capacity === "string"
-											? parseFloat(updatedBean.capacity)
-											: updatedBean.capacity;
+												? parseFloat(updatedBean.capacity)
+												: updatedBean.capacity ?? 0;
 
 									const _formattedRemaining =
-										Number.isInteger(remainingNum)
-											? remainingNum.toString()
-											: remainingNum.toFixed(1);
+											Number.isInteger(remainingNum)
+													? remainingNum.toString()
+													: remainingNum.toFixed(1);
 
-									const _formattedCapacity = Number.isInteger(
-										capacityNum
-									)
-										? capacityNum.toString()
-										: capacityNum.toFixed(1);
+									const _formattedCapacity = Number.isInteger(capacityNum)
+											? capacityNum.toString()
+											: capacityNum.toFixed(1);
 								} else {
 								}
 							} else {
