@@ -1,26 +1,26 @@
 {
 	"ios": {
-		"iconBackground": "#ffffff",
+		"iconBackground": "transparent",
 		"splashBackground": "#ffffff",
 		"icon": {
-			"source": "assets/logo.svg"
+			"source": "assets/logo-new.png"
 		},
 		"splash": {
-			"source": "assets/logo.svg",
+			"source": "assets/logo-new.png",
 			"backgroundColor": "#ffffff"
 		}
 	},
 	"android": {
-		"iconBackground": "#ffffff",
+		"iconBackground": "transparent",
 		"splashBackground": "#ffffff",
 		"icon": {
-			"source": "assets/logo.svg",
+			"source": "assets/logo-new.png",
 			"foreground": {
-				"source": "assets/logo.svg"
+				"source": "assets/logo-new.png"
 			}
 		},
 		"splash": {
-			"source": "assets/logo.svg",
+			"source": "assets/logo-new.png",
 			"backgroundColor": "#ffffff"
 		}
 	}
