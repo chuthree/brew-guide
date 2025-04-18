@@ -691,7 +691,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                     }}
                                     className="overflow-hidden"
                                 >
-                                    <div className="px-6 py-2 bg-neutral-100 dark:bg-neutral-800 text-[10px] text-neutral-500 dark:text-neutral-400 relative">
+                                    <div className="px-6 py-2 mb-3 bg-neutral-100 dark:bg-neutral-800 text-[10px] text-neutral-500 dark:text-neutral-400 relative">
                                         <div className="flex items-center min-w-0 overflow-x-auto no-scrollbar max-w-full">
                                             {parameterInfo.equipment && (
                                                 <span
@@ -805,7 +805,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                         </AnimatePresence>
 
                         {/* 步骤指示器 - 内部不再单独有动画 */}
-                        <div className="px-6 px-safe py-3">
+                        <div className="mx-6 px-safe mb-3">
                             <StepIndicator
                                 currentStep={activeBrewingStep}
                                 onStepClick={handleBrewingStepClick}

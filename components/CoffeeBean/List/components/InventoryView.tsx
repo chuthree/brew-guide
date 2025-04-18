@@ -12,12 +12,13 @@ interface InventoryViewProps {
     selectedVariety: string | null
     showEmptyBeans: boolean
     onVarietyClick: (variety: string | null) => void
+    onToggleShowEmptyBeans: () => void
     availableVarieties: string[]
     beans: ExtendedCoffeeBean[]
     onEdit: (bean: ExtendedCoffeeBean) => void
     onDelete: (bean: ExtendedCoffeeBean) => void
     onShare: (bean: ExtendedCoffeeBean) => void
-    onRemainingUpdate: (beanId: string, value: string) => Promise<{ success: boolean, value?: string, error?: Error }>
+    _onRemainingUpdate: (beanId: string, value: string) => Promise<{ success: boolean, value?: string, error?: Error }>
     onQuickDecrement: (beanId: string, currentValue: string, decrementAmount: number) => Promise<{ success: boolean, value?: string, reducedToZero?: boolean, error?: Error }>
 }
 
@@ -26,12 +27,13 @@ const InventoryView: React.FC<InventoryViewProps> = ({
     selectedVariety,
     showEmptyBeans,
     onVarietyClick,
+    onToggleShowEmptyBeans,
     availableVarieties,
     beans,
     onEdit,
     onDelete,
     onShare,
-    onRemainingUpdate,
+    _onRemainingUpdate,
     onQuickDecrement
 }) => {
     // 为所有豆子预计算标题并缓存
@@ -72,20 +74,6 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                 y: rect.top + rect.height
             }
         });
-    };
-
-    // 处理剩余量更新
-    const handleRemainingUpdate = async () => {
-        if (!editingRemaining) return;
-        try {
-            const result = await onRemainingUpdate(editingRemaining.beanId, editingRemaining.value);
-            if (result.success) {
-                setEditingRemaining(null);
-            }
-        } catch (error) {
-            console.error('更新剩余量失败:', error);
-            setEditingRemaining(null);
-        }
     };
 
     // 处理快捷减量
@@ -144,7 +132,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                     {beans.length > 0 && (
                         <div className="absolute right-6 top-0 bottom-0 flex items-center bg-gradient-to-l from-neutral-50 via-neutral-50 to-transparent dark:from-neutral-900 dark:via-neutral-900 pl-6">
                             <button
-                                onClick={() => onVarietyClick(selectedVariety)}
+                                onClick={onToggleShowEmptyBeans}
                                 className={`pb-1.5 text-[11px] whitespace-nowrap relative ${showEmptyBeans ? 'text-neutral-800 dark:text-neutral-100 font-normal' : 'text-neutral-600 dark:text-neutral-400'}`}
                             >
                                 <span className="relative">已用完</span>
@@ -190,10 +178,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
             <AnimatePresence>
                 {editingRemaining && (
                     <RemainingEditor
-                        value={editingRemaining.value}
                         position={editingRemaining.position}
-                        onChange={(value) => setEditingRemaining(prev => prev ? { ...prev, value } : null)}
-                        onSave={handleRemainingUpdate}
                         onCancel={handleRemainingCancel}
                         onQuickDecrement={handleQuickDecrement}
                     />
@@ -203,4 +188,4 @@ const InventoryView: React.FC<InventoryViewProps> = ({
     );
 };
 
-export default InventoryView; 
+export default InventoryView;

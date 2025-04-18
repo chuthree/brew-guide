@@ -423,9 +423,33 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
         }
     };
 
-    // 切换显示空豆子状态 (作为可选功能保留，但避免未使用错误)
-    const _toggleShowEmptyBeans = () => {
-        setShowEmptyBeans(!showEmptyBeans);
+    // 切换显示空豆子状态
+    const toggleShowEmptyBeans = () => {
+        const newShowEmptyBeans = !showEmptyBeans;
+        setShowEmptyBeans(newShowEmptyBeans);
+        // 更新全局缓存
+        globalCache.showEmptyBeans = newShowEmptyBeans;
+        
+        // 重新应用过滤
+        if (selectedVariety) {
+            const filtered = beans.filter(bean => {
+                // 如果选择的是"拼配豆"分类
+                if (selectedVariety === '拼配豆') {
+                    return bean.type === '拼配' && (newShowEmptyBeans || !isBeanEmpty(bean));
+                }
+                // 否则按照常规品种筛选，但排除拼配豆
+                return bean.type !== '拼配' && (bean.variety || '未分类') === selectedVariety &&
+                    (newShowEmptyBeans || !isBeanEmpty(bean));
+            });
+            globalCache.filteredBeans = filtered;
+            setFilteredBeans(filtered);
+        } else {
+            const filtered = beans.filter(bean => 
+                (newShowEmptyBeans || !isBeanEmpty(bean))
+            );
+            globalCache.filteredBeans = filtered;
+            setFilteredBeans(filtered);
+        }
     };
 
     if (!isOpen) return null;
@@ -498,12 +522,13 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                             selectedVariety={selectedVariety}
                             showEmptyBeans={showEmptyBeans}
                             onVarietyClick={handleVarietyClick}
+                            onToggleShowEmptyBeans={toggleShowEmptyBeans}
                             availableVarieties={availableVarieties}
                             beans={beans}
                             onEdit={handleEdit}
                             onDelete={(bean) => handleDelete(bean)}
                             onShare={(bean) => handleShare(bean, copyText)}
-                            onRemainingUpdate={handleRemainingUpdate}
+                            _onRemainingUpdate={handleRemainingUpdate}
                             onQuickDecrement={handleQuickDecrement}
                         />
                     ) : (
