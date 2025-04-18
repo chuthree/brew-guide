@@ -91,6 +91,36 @@ const getEquipmentName = async (equipmentId: string): Promise<string> => {
     }
 };
 
+// 规范化器具ID的辅助函数
+const normalizeEquipmentId = async (equipmentIdOrName: string): Promise<string> => {
+    // 首先，检查这是否是标准设备的ID
+    const standardEquipmentById = equipmentList.find(e => e.id === equipmentIdOrName);
+    if (standardEquipmentById) return standardEquipmentById.id;
+
+    // 检查是否是标准设备的名称
+    const standardEquipmentByName = equipmentList.find(e => e.name === equipmentIdOrName);
+    if (standardEquipmentByName) return standardEquipmentByName.id;
+
+    // 如果不是标准设备，加载自定义设备
+    try {
+        const { loadCustomEquipments } = await import('@/lib/customEquipments');
+        const customEquipments = await loadCustomEquipments();
+
+        // 检查是否是自定义设备的ID
+        const customEquipmentById = customEquipments.find(e => e.id === equipmentIdOrName);
+        if (customEquipmentById) return customEquipmentById.id;
+
+        // 检查是否是自定义设备的名称
+        const customEquipmentByName = customEquipments.find(e => e.name === equipmentIdOrName);
+        if (customEquipmentByName) return customEquipmentByName.id;
+    } catch (error) {
+        console.error('加载自定义设备失败:', error);
+    }
+
+    // 无法规范化，返回原始值
+    return equipmentIdOrName;
+};
+
 // 计算总咖啡消耗量的函数 - 添加在formatRating函数后
 const calculateTotalCoffeeConsumption = (notes: BrewingNote[]): number => {
     return notes.reduce((total, note) => {
@@ -218,27 +248,42 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
             setNotes(sortedNotes);
 
             // 收集所有设备ID和咖啡豆
-            const equipmentIds = Array.from(new Set(sortedNotes.map(note => note.equipment)));
+            const rawEquipmentIds = sortedNotes.map(note => note.equipment).filter(Boolean);
+            
+            // 规范化所有设备ID
+            const normalizedEquipmentIdsPromises = rawEquipmentIds.map(id => 
+                id ? normalizeEquipmentId(id) : Promise.resolve('')
+            );
+            const normalizedEquipmentIds = await Promise.all(normalizedEquipmentIdsPromises);
+            
+            // 过滤掉空值，并确保唯一性
+            const uniqueEquipmentIds = Array.from(new Set(normalizedEquipmentIds.filter(Boolean)));
+            
             const beanNames = Array.from(new Set(sortedNotes
                 .map(note => note.coffeeBeanInfo?.name)
                 .filter((name): name is string => name !== undefined && name !== null && name !== '')
             ));
             
-            setAvailableEquipments(equipmentIds);
+            setAvailableEquipments(uniqueEquipmentIds);
             setAvailableBeans(beanNames);
 
-            // 根据当前筛选模式过滤笔记
+            // 重新调整筛选逻辑以匹配规范化后的ID
             let filtered = sortedNotes;
             if (filterMode === 'equipment' && selectedEquipment) {
-                filtered = filtered.filter(note => note.equipment === selectedEquipment);
+                // 使用非严格匹配，以便可以匹配到不同形式的同一设备
+                filtered = await asyncFilter(sortedNotes, async (note) => {
+                    if (!note.equipment) return false;
+                    const normalizedNoteEquipment = await normalizeEquipmentId(note.equipment);
+                    return normalizedNoteEquipment === selectedEquipment;
+                });
             } else if (filterMode === 'bean' && selectedBean) {
-                filtered = filtered.filter(note => note.coffeeBeanInfo?.name === selectedBean);
+                filtered = sortedNotes.filter(note => note.coffeeBeanInfo?.name === selectedBean);
             }
             setFilteredNotes(filtered);
 
             // 加载所有设备的名称
             const namesMap: Record<string, string> = {};
-            for (const id of equipmentIds) {
+            for (const id of uniqueEquipmentIds) {
                 if (id) {
                     namesMap[id] = await getEquipmentName(id);
                 }
@@ -336,9 +381,15 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
     }, [sortOption, sortNotes]);
 
     // 更新筛选后的笔记
-    const updateFilteredNotes = useCallback((notesToFilter: BrewingNote[]) => {
+    const updateFilteredNotes = useCallback(async (notesToFilter: BrewingNote[]) => {
         if (filterMode === 'equipment' && selectedEquipment) {
-            setFilteredNotes(notesToFilter.filter(note => note.equipment === selectedEquipment));
+            // 使用异步过滤器来处理规范化ID
+            const filtered = await asyncFilter(notesToFilter, async (note) => {
+                if (!note.equipment) return false;
+                const normalizedNoteEquipment = await normalizeEquipmentId(note.equipment);
+                return normalizedNoteEquipment === selectedEquipment;
+            });
+            setFilteredNotes(filtered);
         } else if (filterMode === 'bean' && selectedBean) {
             setFilteredNotes(notesToFilter.filter(note => note.coffeeBeanInfo?.name === selectedBean));
         } else {
@@ -350,6 +401,12 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
     useEffect(() => {
         updateFilteredNotes(notes);
     }, [selectedEquipment, selectedBean, filterMode, notes, updateFilteredNotes]);
+
+    // 异步过滤器辅助函数
+    const asyncFilter = async <T,>(array: T[], predicate: (item: T) => Promise<boolean>): Promise<T[]> => {
+        const results = await Promise.all(array.map(predicate));
+        return array.filter((_, index) => results[index]);
+    };
 
     const handleDelete = async (noteId: string) => {
         if (window.confirm('确定要删除这条笔记吗？')) {
@@ -508,9 +565,11 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
         if (equipment === null) {
             setFilteredNotes(notes);
         } else {
-            setFilteredNotes(notes.filter(note => note.equipment === equipment));
+            // 注意：这里不立即更新filteredNotes，而是通过useEffect中的updateFilteredNotes来处理
+            // 这样可以确保异步过滤器正确工作
+            updateFilteredNotes(notes);
         }
-    }, [notes]);
+    }, [notes, updateFilteredNotes]);
 
     // 添加筛选模式切换处理函数
     const handleFilterModeChange = useCallback((mode: 'equipment' | 'bean') => {
