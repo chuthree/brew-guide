@@ -1837,8 +1837,33 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                       style={{
                         height: `${localLayoutSettings.progressBarHeight || 4}px`,
                         contain: "paint layout",
+                        position: "relative",
                       }}
                     >
+                      {/* 阶段分隔线 */}
+                      {expandedStagesRef.current.map((stage, index) => {
+                        // 跳过第一个阶段的开始线（最左侧）
+                        if (index === 0) return null;
+                        
+                        const totalTime =
+                          expandedStagesRef.current[
+                            expandedStagesRef.current.length - 1
+                          ].endTime;
+                        const percentage = (stage.startTime / totalTime) * 100;
+                        
+                        return (
+                          <div
+                            key={`divider-${stage.startTime}`}
+                            className="absolute top-0 bottom-0 z-10 w-[1.5px] bg-neutral-100 dark:bg-neutral-700"
+                            style={{
+                              left: `${percentage}%`,
+                              height: `${localLayoutSettings.progressBarHeight || 4}px`,
+                            }}
+                          />
+                        );
+                      })}
+                      
+                      {/* 等待阶段的斜纹背景 */}
                       {expandedStagesRef.current.map((stage) => {
                         const totalTime =
                           expandedStagesRef.current[
@@ -1871,6 +1896,8 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                           />
                         ) : null;
                       })}
+                      
+                      {/* 进度指示器 */}
                       <motion.div
                         className="h-full bg-neutral-800 dark:bg-neutral-100 transform-gpu"
                         initial={{ width: 0 }}
@@ -1888,30 +1915,36 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                           transformOrigin: "left center",
                           contain: "layout",
                           backfaceVisibility: "hidden",
+                          position: "relative",
+                          zIndex: 5,
                         }}
                       />
                     </div>
 
                     <div className="relative mt-1 h-4 w-full">
-                      {expandedStagesRef.current.map((stage) => {
-                        const totalTime =
-                          expandedStagesRef.current[
-                            expandedStagesRef.current.length - 1
-                          ].endTime;
-                        const percentage = (stage.endTime / totalTime) * 100;
-                        return (
-                          <div
-                            key={stage.endTime}
-                            className="absolute top-0 text-[8px] text-neutral-500 dark:text-neutral-400"
-                            style={{
-                              left: `${percentage}%`,
-                              transform: "translateX(-100%)",
-                            }}
-                          >
-                            {formatTime(stage.endTime, true)}
-                          </div>
-                        );
-                      })}
+                      {/* 当前阶段时间标记 */}
+                      {currentStage && (
+                        <div
+                          key={`current-${currentStage.endTime}`}
+                          className="absolute top-0 font-medium text-[9px] text-neutral-600 dark:text-neutral-300"
+                          style={{
+                            left: `${(currentStage.endTime / expandedStagesRef.current[expandedStagesRef.current.length - 1].endTime) * 100}%`,
+                            transform: "translateX(-100%)",
+                          }}
+                        >
+                          {formatTime(currentStage.endTime, true)}
+                        </div>
+                      )}
+                      
+                      {/* 最后阶段时间标记 */}
+                      {expandedStagesRef.current.length > 0 && (
+                        <div
+                          key="final-time"
+                          className="absolute top-0 right-0 font-medium text-[9px] text-neutral-600 dark:text-neutral-300"
+                        >
+                          {formatTime(expandedStagesRef.current[expandedStagesRef.current.length - 1].endTime, true)}
+                        </div>
+                      )}
                     </div>
                   </motion.div>
                 </motion.div>
