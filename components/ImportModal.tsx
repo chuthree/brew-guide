@@ -167,7 +167,10 @@ const ImportBeanModal: React.FC<ImportBeanModalProps> = ({
     const _templatePrompt = (() => {
         // 不再使用模板生成
         // const templateJson = generateBeanTemplateJson();
-        return `提取咖啡豆数据，返回JSON格式。
+        return `提取咖啡豆数据，返回JSON格式。支持批量导入。
+
+单个咖啡豆使用：{...}
+多个咖啡豆使用：[{...},{...}]
 
 数据字段：
 - id: 留空
@@ -242,6 +245,23 @@ const ImportBeanModal: React.FC<ImportBeanModalProps> = ({
             return;
         }
 
+        // 确保某些字段始终是字符串类型
+        const ensureStringFields = (item: ImportedBean) => {
+            const result = { ...item };
+            // 确保 capacity 和 remaining 是字符串
+            if (result.capacity !== undefined && result.capacity !== null) {
+                result.capacity = String(result.capacity);
+            }
+            if (result.remaining !== undefined && result.remaining !== null) {
+                result.remaining = String(result.remaining);
+            }
+            // 确保 price 是字符串
+            if (result.price !== undefined && result.price !== null) {
+                result.price = String(result.price);
+            }
+            return result;
+        };
+
         try {
             // 尝试从文本中提取数据
             import('@/lib/jsonUtils').then(async ({ extractJsonFromText }) => {
@@ -253,47 +273,49 @@ const ImportBeanModal: React.FC<ImportBeanModalProps> = ({
                     return;
                 }
 
-                // 检查是否是咖啡豆类型数据
-                if (!('roastLevel' in beanData)) {
-                    setError('提取的数据不是有效的咖啡豆信息');
-                    return;
-                }
-
-                // 确保某些字段始终是字符串类型
-                const ensureStringFields = (item: ImportedBean) => {
-                    const result = { ...item };
-                    // 确保 capacity 和 remaining 是字符串
-                    if (result.capacity !== undefined && result.capacity !== null) {
-                        result.capacity = String(result.capacity);
+                // 处理单个或多个咖啡豆数据
+                if (Array.isArray(beanData)) {
+                    // 处理多个咖啡豆
+                    // 验证每个条目都是咖啡豆
+                    if (!beanData.every(item => 'roastLevel' in item)) {
+                        setError('部分数据不是有效的咖啡豆信息');
+                        return;
                     }
-                    if (result.remaining !== undefined && result.remaining !== null) {
-                        result.remaining = String(result.remaining);
+                    
+                    // 处理数组中的每个咖啡豆对象
+                    const processedBeans = beanData.map(bean => ({
+                        ...ensureStringFields(bean as unknown as ImportedBean),
+                        timestamp: Date.now()
+                    }));
+                    
+                    try {
+                        setSuccess('正在批量导入咖啡豆数据...');
+                        await onImport(JSON.stringify(processedBeans));
+                        handleClose();
+                    } catch (error) {
+                        setError('导入失败: ' + (error instanceof Error ? error.message : '未知错误'));
+                        setSuccess(null);
                     }
-                    // 确保 price 是字符串
-                    if (result.price !== undefined && result.price !== null) {
-                        result.price = String(result.price);
+                } else {
+                    // 处理单个咖啡豆
+                    if (!('roastLevel' in beanData)) {
+                        setError('提取的数据不是有效的咖啡豆信息');
+                        return;
                     }
-                    return result;
-                };
-
-                // 为对象添加时间戳
-                const dataWithTimestamp = {
-                    ...ensureStringFields(beanData as unknown as ImportedBean),
-                    timestamp: Date.now()
-                };
-
-                try {
-                    // 显示处理中的消息
-                    setSuccess('正在导入咖啡豆数据...');
-
-                    // 调用上层组件的导入回调
-                    await onImport(JSON.stringify(dataWithTimestamp));
-
-                    // 导入成功后关闭模态框（上层组件会处理跳转和编辑）
-                    handleClose();
-                } catch (error) {
-                    setError('导入失败: ' + (error instanceof Error ? error.message : '未知错误'));
-                    setSuccess(null);
+                    
+                    const dataWithTimestamp = {
+                        ...ensureStringFields(beanData as unknown as ImportedBean),
+                        timestamp: Date.now()
+                    };
+                    
+                    try {
+                        setSuccess('正在导入咖啡豆数据...');
+                        await onImport(JSON.stringify([dataWithTimestamp])); // 始终返回数组格式
+                        handleClose();
+                    } catch (error) {
+                        setError('导入失败: ' + (error instanceof Error ? error.message : '未知错误'));
+                        setSuccess(null);
+                    }
                 }
             }).catch(err => {
                 setError('数据处理失败: ' + (err instanceof Error ? err.message : '未知错误'));
@@ -406,9 +428,9 @@ const ImportBeanModal: React.FC<ImportBeanModalProps> = ({
                         <div className="bg-neutral-100 dark:bg-neutral-800 p-3 rounded-md text-xs text-neutral-600 dark:text-neutral-400">
                             <p className="mb-2">使用《豆包》AI获取JSON数据：</p>
                             <ol className="list-decimal pl-6 space-y-1">
-                                <li>准备好咖啡豆商品页截图</li>
+                                <li>准备好咖啡豆商品页截图（多豆批量导入需多次识别）</li>
                                 <li>打开《豆包》将提示词与截图一并发送</li>
-                                <li>将返回的 json 数据复制进来</li>
+                                <li>将返回的 json 数据复制进来（多豆请使用[{},{}]格式）</li>
                             </ol>
                         </div>
                         <div className="bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 p-3 rounded-md text-xs">
@@ -593,7 +615,9 @@ const ImportBeanModal: React.FC<ImportBeanModalProps> = ({
                                     </div>
                                     <textarea
                                         className="w-full h-40 p-3 border border-neutral-300 dark:border-neutral-700 rounded-md bg-transparent focus:border-neutral-800 dark:focus:border-neutral-400 focus:outline-none text-neutral-800 dark:text-neutral-200"
-                                        placeholder={manualMode ? '{"name":"埃塞俄比亚耶加雪菲", "capacity":"200",...}' : '支持粘贴分享的文本或JSON格式，例如："【咖啡豆】埃塞俄比亚耶加雪菲"或{"name":"埃塞俄比亚耶加雪菲",...}'}
+                                        placeholder={manualMode ? 
+                                            '单个：{"name":"埃塞俄比亚耶加雪菲", "capacity":"200",...}\n多个：[{"name":"耶加雪菲",...},{"name":"瑰夏",...}]' : 
+                                            '支持单个或多个咖啡豆数据，多个豆使用数组格式[{},{},...]'}
                                         value={importData}
                                         onChange={(e) => setImportData(e.target.value)}
                                     />
