@@ -114,8 +114,8 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
         setEditingRemaining(null);
 
         if (bean.capacity && bean.remaining) {
-            const capacityNum = parseInt(bean.capacity);
-            const remainingNum = parseInt(bean.remaining);
+            const capacityNum = parseFloat(bean.capacity);
+            const remainingNum = parseFloat(bean.remaining);
 
             if (!isNaN(capacityNum) && !isNaN(remainingNum) && remainingNum > capacityNum) {
                 setBean(prev => ({
@@ -185,13 +185,20 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
         const safeValue = String(value || '');
 
         if (field === 'capacity') {
-            const numericValue = safeValue.replace(/[^0-9]/g, '');
+            // 修改正则表达式以允许小数点
+            const numericValue = safeValue.replace(/[^0-9.]/g, '');
+            
+            // 确保只有一个小数点
+            const dotCount = (numericValue.match(/\./g) || []).length;
+            const sanitizedValue = dotCount > 1 ? 
+                numericValue.substring(0, numericValue.lastIndexOf('.')) : 
+                numericValue;
 
-            if (numericValue.trim() !== '') {
+            if (sanitizedValue.trim() !== '') {
                 setBean(prev => ({
                     ...prev,
-                    capacity: numericValue,
-                    remaining: numericValue
+                    capacity: sanitizedValue,
+                    remaining: sanitizedValue
                 }));
                 setEditingRemaining(null);
             } else {
@@ -203,13 +210,20 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                 setEditingRemaining(null);
             }
         } else if (field === 'remaining') {
-            const numericValue = safeValue.replace(/[^0-9]/g, '');
+            // 修改正则表达式以允许小数点
+            const numericValue = safeValue.replace(/[^0-9.]/g, '');
+            
+            // 确保只有一个小数点
+            const dotCount = (numericValue.match(/\./g) || []).length;
+            const sanitizedValue = dotCount > 1 ? 
+                numericValue.substring(0, numericValue.lastIndexOf('.')) : 
+                numericValue;
 
-            setEditingRemaining(numericValue);
+            setEditingRemaining(sanitizedValue);
 
-            if (bean.capacity && numericValue.trim() !== '') {
-                const capacityNum = parseInt(bean.capacity);
-                const remainingNum = parseInt(numericValue);
+            if (bean.capacity && sanitizedValue.trim() !== '') {
+                const capacityNum = parseFloat(bean.capacity);
+                const remainingNum = parseFloat(sanitizedValue);
 
                 if (!isNaN(capacityNum) && !isNaN(remainingNum)) {
                     if (remainingNum > capacityNum) {
@@ -225,7 +239,7 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
 
             setBean(prev => ({
                 ...prev,
-                remaining: numericValue
+                remaining: sanitizedValue
             }));
         } else if (field === 'roastLevel') {
             setBean(prev => ({
