@@ -456,12 +456,12 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
             },
         })
 
-        // 设置一个标记，表示需要滚动到新步骤
-        newStageRef.current = {} as HTMLDivElement
+        // 创建一个标志，表示需要滚动到新添加的步骤
+        const needToScrollToNewStage = true;
 
         // 使用setTimeout确保DOM已更新
         setTimeout(() => {
-            if (stagesContainerRef.current && newStageRef.current) {
+            if (stagesContainerRef.current && needToScrollToNewStage) {
                 const newStageElement = stagesContainerRef.current.lastElementChild as HTMLElement
                 if (newStageElement) {
                     // 修改滚动行为，考虑底部阴影的高度
