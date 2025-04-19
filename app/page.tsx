@@ -686,55 +686,67 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 throw new Error('无法从输入中提取有效数据');
             }
 
-            // 检查数据是单个对象还是数组
+            // 检查是否是咖啡豆数据类型，通过类型守卫确保安全访问属性
+            const isCoffeeBean = (data: any): data is CoffeeBean => 
+                data && typeof data === 'object' && 'roastLevel' in data;
+            
+            // 检查是否是咖啡豆数组
+            const isCoffeeBeanArray = (data: any): data is CoffeeBean[] => 
+                Array.isArray(data) && data.length > 0 && data.every(isCoffeeBean);
+            
+            // 确保提取的数据是咖啡豆或咖啡豆数组
+            if (!isCoffeeBean(extractedData) && !isCoffeeBeanArray(extractedData)) {
+                throw new Error('导入的数据不是有效的咖啡豆信息');
+            }
+
             const beansToImport = Array.isArray(extractedData) ? extractedData : [extractedData];
 
             let importCount = 0;
             let lastImportedBean: ExtendedCoffeeBean | null = null;
-            for (const bean of beansToImport) {
+            for (const beanData of beansToImport) {
+                // 将导入的咖啡豆转换为ExtendedCoffeeBean类型
+                const bean = {
+                    name: beanData.name,
+                    roastLevel: beanData.roastLevel || '浅度烘焙',
+                    capacity: beanData.capacity || '200',
+                    remaining: beanData.remaining || beanData.capacity || '200',
+                    price: beanData.price || '',
+                    roastDate: beanData.roastDate || '',
+                    process: beanData.process || '',
+                    origin: beanData.origin || '',
+                    variety: beanData.variety || '',
+                    flavor: beanData.flavor || [],
+                    notes: beanData.notes || '',
+                    // 确保type是有效值，否则设为'单品'
+                    type: (beanData.type === '单品' || beanData.type === '拼配') ? beanData.type : '单品',
+                    startDay: beanData.startDay,
+                    endDay: beanData.endDay
+                } as Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>;
+
                 // 验证必要的字段
                 if (!bean.name) {
                     console.warn('导入数据缺少咖啡豆名称，跳过');
                     continue;
                 }
 
-                // 确保有容量（默认为200g）
-                if (!bean.capacity) {
-                    bean.capacity = "200";
-                }
-
-                // 确保烘焙度有默认值
-                if (!bean.roastLevel) {
-                    bean.roastLevel = '浅度烘焙';
-                }
-
-                // 处理拼配成分，确保百分比是数字类型
-                if (bean.blendComponents && Array.isArray(bean.blendComponents)) {
-                    // 定义拼配成分接口
-                    interface BlendComponentInput {
-                        percentage?: string | number;
-                        origin?: string;
-                        process?: string;
-                        variety?: string;
-                        [key: string]: unknown;
-                    }
-                    
-                    // 先验证拼配成分的格式是否正确
-                    const validComponents = bean.blendComponents.filter((comp: BlendComponentInput) => 
-                        comp && (typeof comp === 'object') && 
-                        // 允许percentage为undefined/可选
-                        (comp.origin !== undefined || comp.process !== undefined || comp.variety !== undefined)
-                    );
+                // 处理拼配成分
+                const beanBlendComponents = (beanData as any).blendComponents;
+                if (beanBlendComponents && Array.isArray(beanBlendComponents)) {
+                    // 验证拼配成分的格式是否正确
+                    const validComponents = beanBlendComponents
+                        .filter((comp: any) => 
+                            comp && (typeof comp === 'object') && 
+                            (comp.origin !== undefined || comp.process !== undefined || comp.variety !== undefined)
+                        );
                     
                     if (validComponents.length > 0) {
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
                         bean.blendComponents = validComponents.map((comp: any) => ({
-                            ...comp,
-                            // 如果存在percentage字段，确保它是数字类型
-                            ...(comp.percentage !== undefined ? {
-                                percentage: typeof comp.percentage === 'string' ?
-                                    parseInt(comp.percentage, 10) : comp.percentage
-                            } : {})
+                            origin: comp.origin || '',
+                            process: comp.process || '',
+                            variety: comp.variety || '',
+                            percentage: typeof comp.percentage === 'string' ? 
+                                parseInt(comp.percentage, 10) : 
+                                (typeof comp.percentage === 'number' ? comp.percentage : 100)
                         }));
                     } else if (bean.type === '拼配') {
                         console.warn('拼配豆数据格式不正确，重置拼配成分');
@@ -745,9 +757,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                             process: bean.process || '',
                             variety: bean.variety || ''
                         }];
-                    } else {
-                        // 非拼配豆，移除无效的拼配成分
-                        delete bean.blendComponents;
                     }
                 }
 
