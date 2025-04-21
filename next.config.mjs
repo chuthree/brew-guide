@@ -1,4 +1,3 @@
-import type { NextConfig } from "next";
 import nextPWA from 'next-pwa';
 
 // 检查当前环境
@@ -107,8 +106,10 @@ const pwaConfig = {
 };
 
 // 创建基础配置
-const nextConfig: NextConfig = {
-    devIndicators: false,
+const nextConfig = {
+    devIndicators: {
+        buildActivity: false
+    },
     reactStrictMode: true,
     // 为 Capacitor 启用静态导出模式
     output: 'export',
@@ -122,10 +123,6 @@ const nextConfig: NextConfig = {
                 hostname: '**',
             },
         ],
-    },
-    experimental: {
-        // 启用 CSS 优化
-        optimizeCss: true,
     },
     // 增加静态页面生成超时时间
     staticPageGenerationTimeout: 180,
@@ -150,5 +147,5 @@ const nextConfig: NextConfig = {
 
 // 应用 PWA 配置
 const withPWAConfig = nextPWA(pwaConfig);
-// @ts-expect-error - next-pwa 类型定义问题
-export default withPWAConfig(nextConfig);
+// next-pwa 类型定义问题
+export default withPWAConfig(nextConfig); 

@@ -1,7 +1,8 @@
-import { type Config } from "tailwindcss";
+import type { Config } from "tailwindcss";
 import safeArea from "tailwindcss-safe-area";
 
-const config = {
+const config: Config = {
+	darkMode: 'class',
 	content: [
 		"./pages/**/*.{js,ts,jsx,tsx,mdx}",
 		"./components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -58,6 +59,6 @@ const config = {
 	future: {
 		hoverOnlyWhenSupported: true,
 	},
-} satisfies Config;
+};
 
 export default config;
