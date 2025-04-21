@@ -101,7 +101,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
 
     return (
         <div
-            className={`group space-y-3 px-6 py-3 hover:bg-neutral-50 dark:hover:bg-neutral-900/70 ${isLast ? '' : 'border-b border-neutral-200 dark:border-neutral-800'} ${
+            className={`group space-y-3 px-6 py-3 ${isLast ? '' : 'border-b border-neutral-200 dark:border-neutral-800'} ${
                 isEmpty ? 'bg-neutral-100/60 dark:bg-neutral-800/30' : ''
             }`}
         >

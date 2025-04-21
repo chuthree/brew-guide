@@ -799,7 +799,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                     {filteredNotes.map((note, index) => (
                                         <div
                                             key={note.id}
-                                            className={`group space-y-3 px-6 py-3 hover:bg-neutral-50 dark:hover:bg-neutral-900/70 ${index === filteredNotes.length - 1 ? '' : 'border-b border-neutral-200 dark:border-neutral-800'}`}
+                                            className={`group space-y-3 px-6 py-3 ${index === filteredNotes.length - 1 ? '' : 'border-b border-neutral-200 dark:border-neutral-800'}`}
                                         >
                                             <div className="flex flex-col space-y-3">
                                                 {/* 标题和操作菜单 */}

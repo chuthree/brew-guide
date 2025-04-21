@@ -45,7 +45,7 @@ const MethodTypeSelector: React.FC<MethodTypeSelectorProps> = ({
                     active: methodType === 'custom'
                 }]
             ]}
-            className="px-6 px-safe"
+            className="px-6 "
             fixed={false} // 让它的定位由父组件控制
         />
     );

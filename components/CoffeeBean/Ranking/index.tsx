@@ -365,7 +365,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                     {ratedBeans.map((bean, index) => (
                         <div
                             key={bean.id}
-                            className={`border-b border-neutral-200/60 dark:border-neutral-800/40 last:border-none transition-colors ${updatedBeanId === bean.id ? 'bg-neutral-100/50 dark:bg-neutral-800/50' : ''}`}
+                            className={`border-b border-neutral-200/60 dark:border-neutral-800/40 last:border-none transition-colors ${updatedBeanId === bean.id ? 'bg-neutral-100/50 dark:bg-neutral-800' : ''}`}
                         >
                             <div className="flex justify-between items-start px-6 py-2.5">
                                 <div className="flex items-start">

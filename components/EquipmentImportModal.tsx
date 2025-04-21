@@ -307,7 +307,7 @@ const EquipmentImportModal: React.FC<EquipmentImportModalProps> = ({
                             style={{
                                 willChange: "opacity, transform"
                             }}
-                            className="px-6 px-safe pb-6 pb-safe overflow-auto max-h-[calc(90vh-40px)]"
+                            className="px-6  pb-6 pb-safe overflow-auto max-h-[calc(90vh-40px)]"
                         >
                             {/* 标题栏 */}
                             <div className="flex items-center justify-between py-4 mb-4">

@@ -805,7 +805,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                         </AnimatePresence>
 
                         {/* 步骤指示器 - 内部不再单独有动画 */}
-                        <div className="mx-6 px-safe mb-3">
+                        <div className="mx-6  mb-3">
                             <StepIndicator
                                 currentStep={activeBrewingStep}
                                 onStepClick={handleBrewingStepClick}

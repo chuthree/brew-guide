@@ -245,7 +245,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
                             style={{
                                 willChange: "opacity, transform"
                             }}
-                            className="px-6 px-safe pb-6 pb-safe overflow-auto max-h-[calc(85vh-40px)]"
+                            className="px-6  pb-6 pb-safe overflow-auto max-h-[calc(85vh-40px)]"
                         >
                             <AnimatePresence mode="wait">
                                 {!showNoteForm ? (

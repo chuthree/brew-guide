@@ -490,7 +490,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
     // 如果在倒计时期间，立即返回静态视图
     if (countdownTime !== null) {
         return (
-            <div className="relative w-full aspect-square max-w-[300px] mx-auto px-safe">
+            <div className="relative w-full aspect-square max-w-[300px] mx-auto ">
                 {/* 底部杯体 - 使用自定义SVG或图片 */}
                 {hasCustomSvg ? (
                     <div
@@ -532,7 +532,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
     // 如果不在运行中或阶段无效，也返回静态视图
     if (!isRunning || currentStage < 0) {
         return (
-            <div className="relative w-full aspect-square max-w-[300px] mx-auto px-safe">
+            <div className="relative w-full aspect-square max-w-[300px] mx-auto ">
                 {/* 底部杯体 - 使用自定义SVG或图片 */}
                 {hasCustomSvg ? (
                     <div
@@ -575,7 +575,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
     const currentStageData = stages[currentStage];
     if (!currentStageData) {
         return (
-            <div className="relative w-full aspect-square max-w-[300px] mx-auto px-safe">
+            <div className="relative w-full aspect-square max-w-[300px] mx-auto ">
                 {/* 底部杯体 - 使用自定义SVG或图片 */}
                 {hasCustomSvg ? (
                     <div
@@ -626,7 +626,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
 
     return (
         <motion.div 
-            className={`relative aspect-square w-full max-w-[300px] mx-auto px-safe overflow-hidden ${isRunning ? 'bg-transparent' : 'bg-neutral-900'} ${isPouring ? 'isPouring' : ''}`}
+            className={`relative aspect-square w-full max-w-[300px] mx-auto  overflow-hidden ${isRunning ? 'bg-transparent' : 'bg-neutral-900'} ${isPouring ? 'isPouring' : ''}`}
             variants={easterEggVariants}
             animate={controls}
             initial="normal"

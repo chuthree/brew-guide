@@ -293,7 +293,7 @@ stages数组中的每个阶段必须包含以下字段：
                             style={{
                                 willChange: "opacity, transform"
                             }}
-                            className="px-6 px-safe pb-6 pb-safe overflow-auto max-h-[calc(85vh-40px)]"
+                            className="px-6  pb-6 pb-safe overflow-auto max-h-[calc(85vh-40px)]"
                         >
                             <div className="flex flex-col">
                                 {/* 顶部标题 */}

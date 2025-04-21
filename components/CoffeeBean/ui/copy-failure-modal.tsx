@@ -63,7 +63,7 @@ const CopyFailureModal: React.FC<CopyFailureModalProps> = ({
                 duration: 0.265,
                 delay: 0.05,
               }}
-              className="px-6 px-safe pb-6 pb-safe"
+              className="px-6  pb-6 pb-safe"
             >
               <div className="flex flex-col space-y-4">
                 <h3 className="text-lg font-medium text-neutral-900 dark:text-neutral-100">

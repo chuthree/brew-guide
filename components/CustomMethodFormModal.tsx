@@ -218,7 +218,7 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
                                 style={{
                                     willChange: "opacity, transform"
                                 }}
-                                className="px-6 px-safe pb-6 pb-safe overflow-auto"
+                                className="px-6  pb-6 pb-safe overflow-auto"
                             >
                                 <CustomMethodForm
                                     onSave={handleSaveMethod}

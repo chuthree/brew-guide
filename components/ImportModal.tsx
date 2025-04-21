@@ -408,7 +408,7 @@ const ImportBeanModal: React.FC<ImportBeanModalProps> = ({
 
     // 渲染上传部分
     const renderUploadSection = () => (
-        <div className="p-3 border relative border-neutral-200 dark:border-neutral-700 rounded-md bg-neutral-50 dark:bg-neutral-800/50">
+        <div className="p-3 border relative border-neutral-200 dark:border-neutral-700 rounded-md bg-neutral-50 dark:bg-neutral-800">
             <button
                 onClick={toggleManualMode}
                 className="text-xs px-2 py-1 absolute right-0 top-0 rounded-bl bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300"
@@ -574,7 +574,7 @@ const ImportBeanModal: React.FC<ImportBeanModalProps> = ({
                             style={{
                                 willChange: "opacity, transform"
                             }}
-                            className="px-6 px-safe pb-6 pb-safe overflow-auto max-h-[calc(90vh-40px)]"
+                            className="px-6  pb-6 pb-safe overflow-auto max-h-[calc(90vh-40px)]"
                         >
                             <div className="flex flex-col">
                                 {/* 顶部标题 */}

@@ -933,7 +933,7 @@ stages数组中的每个阶段必须包含以下字段：
                         </div>
 
                         {optimizationPrompt && (
-                            <div className="space-y-4 mt-2 p-4 border border-neutral-200 dark:border-neutral-700 rounded-md bg-neutral-50 dark:bg-neutral-800/50">
+                            <div className="space-y-4 mt-2 p-4 border border-neutral-200 dark:border-neutral-700 rounded-md bg-neutral-50 dark:bg-neutral-800">
                                 <div className="flex justify-between items-center">
                                     <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
                                         将提示词复制给 AI(推荐 DeepSeek)

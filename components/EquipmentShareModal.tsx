@@ -198,7 +198,7 @@ const EquipmentShareModal: React.FC<EquipmentShareModalProps> = ({
                         </div>
 
                         {/* 内容 */}
-                        <div className="px-6 px-safe pb-6 pb-safe">
+                        <div className="px-6  pb-6 pb-safe">
                             {/* 标题栏 */}
                             <div className="flex items-center justify-between py-4 mb-2">
                                 <h3 className="text-base font-medium text-neutral-900 dark:text-neutral-100">

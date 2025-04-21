@@ -1192,7 +1192,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
             <div className="space-y-4">
                 {/* 基本信息区域 */}
                 <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 overflow-hidden">
-                    <div className="px-4 py-2.5 bg-neutral-50 dark:bg-neutral-800/50 border-b border-neutral-200 dark:border-neutral-700">
+                    <div className="px-4 py-2.5 bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
                         <h3 className="text-sm font-medium text-neutral-900 dark:text-neutral-100">基本信息</h3>
                     </div>
                     <div className="p-4 space-y-4">
@@ -1222,7 +1222,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
 
                 {/* 器具类型和杯型设置 */}
                 <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 overflow-hidden">
-                    <div className="px-4 py-2.5 bg-neutral-50 dark:bg-neutral-800/50 border-b border-neutral-200 dark:border-neutral-700">
+                    <div className="px-4 py-2.5 bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
                         <h3 className="text-sm font-medium text-neutral-900 dark:text-neutral-100">器具设置</h3>
                     </div>
                     <div className="divide-y divide-neutral-200 dark:divide-neutral-700">
@@ -1381,7 +1381,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                 {/* 注水方式管理 */}
                 {selectedPreset === 'custom' && (
                     <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 overflow-hidden">
-                        <div className="px-4 py-2.5 bg-neutral-50 dark:bg-neutral-800/50 border-b border-neutral-200 dark:border-neutral-700 flex justify-between items-center">
+                        <div className="px-4 py-2.5 bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 flex justify-between items-center">
                             <h3 className="text-sm font-medium text-neutral-900 dark:text-neutral-100">注水方式</h3>
                         </div>
                         <div className="p-4">

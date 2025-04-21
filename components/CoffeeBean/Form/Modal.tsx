@@ -121,7 +121,7 @@ const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
                             style={{
                                 willChange: "opacity, transform"
                             }}
-                            className={`px-6 px-safe pb-6 pb-safe overflow-auto max-h-[calc(85vh-40px)] modal-form-container ${isAndroid ? 'android-modal-container' : ''} ${isIOS ? 'ios-modal-container' : ''}`}
+                            className={`px-6  pb-6 pb-safe overflow-auto max-h-[calc(85vh-40px)] modal-form-container ${isAndroid ? 'android-modal-container' : ''} ${isIOS ? 'ios-modal-container' : ''}`}
                         >
                             <CoffeeBeanForm
                                 onSave={onSave}

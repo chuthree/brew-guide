@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 导入自定义透明度工具类 */
+@import './opacity-utils.css';
+
 /* 基础变量定义 */
 :root {
   --foreground: #000;
@@ -108,13 +111,6 @@ body,
   padding-bottom: constant(safe-area-inset-bottom);
   /* 增加Android底部导航栏的最小高度 */
   padding-bottom: max(env(safe-area-inset-bottom), 24px);
-}
-
-.px-safe {
-  padding-left: env(safe-area-inset-left);
-  padding-left: constant(safe-area-inset-left);
-  padding-right: env(safe-area-inset-right);
-  padding-right: constant(safe-area-inset-right);
 }
 
 /* 针对iOS状态栏的特殊处理 */
