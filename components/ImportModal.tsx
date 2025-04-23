@@ -535,7 +535,7 @@ const ImportBeanModal: React.FC<ImportBeanModalProps> = ({
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.265 }}
-                    className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
+                    className="fixed inset-0 z-50 bg-black bg-opacity-30 backdrop-blur-sm"
                     onClick={(e) => {
                         if (e.target === e.currentTarget) {
                             handleClose()
@@ -574,7 +574,7 @@ const ImportBeanModal: React.FC<ImportBeanModalProps> = ({
                             style={{
                                 willChange: "opacity, transform"
                             }}
-                            className="px-6  pb-6 pb-safe overflow-auto max-h-[calc(90vh-40px)]"
+                            className="px-6 pb-safe-bottom overflow-auto max-h-[calc(90vh-40px)]"
                         >
                             <div className="flex flex-col">
                                 {/* 顶部标题 */}

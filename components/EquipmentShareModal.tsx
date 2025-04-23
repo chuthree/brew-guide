@@ -24,8 +24,6 @@ const EquipmentShareModal: React.FC<EquipmentShareModalProps> = ({
     const [selectedMethods, setSelectedMethods] = useState<string[]>([]);
     const [isSharing, setIsSharing] = useState(false);
     const isNative = Capacitor.isNativePlatform();
-    const isIOS = Capacitor.getPlatform() === 'ios';
-    const isAndroid = Capacitor.getPlatform() === 'android';
 
     // Reset selected methods when modal opens
     useEffect(() => {
@@ -190,7 +188,7 @@ const EquipmentShareModal: React.FC<EquipmentShareModalProps> = ({
                         style={{
                             willChange: "transform"
                         }}
-                        className={`absolute inset-x-0 bottom-0 max-w-[500px] mx-auto max-h-[85vh] overflow-auto rounded-t-2xl bg-neutral-50 dark:bg-neutral-900 shadow-xl ${isAndroid ? 'android-modal' : ''} ${isIOS ? 'ios-modal' : ''}`}
+                        className={`absolute inset-x-0 bottom-0 max-w-[500px] mx-auto max-h-[85vh] overflow-auto rounded-t-2xl bg-neutral-50 dark:bg-neutral-900 shadow-xl`}
                     >
                         {/* 拖动条 */}
                         <div className="sticky top-0 z-10 flex justify-center py-2 bg-neutral-50 dark:bg-neutral-900">
@@ -198,7 +196,7 @@ const EquipmentShareModal: React.FC<EquipmentShareModalProps> = ({
                         </div>
 
                         {/* 内容 */}
-                        <div className="px-6  pb-6 pb-safe">
+                        <div className="px-6 pb-safe-bottom">
                             {/* 标题栏 */}
                             <div className="flex items-center justify-between py-4 mb-2">
                                 <h3 className="text-base font-medium text-neutral-900 dark:text-neutral-100">

@@ -28,8 +28,6 @@ const EquipmentImportModal: React.FC<EquipmentImportModalProps> = ({
     const dropZoneRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const isNative = Capacitor.isNativePlatform();
-    const isIOS = Capacitor.getPlatform() === 'ios';
-    const isAndroid = Capacitor.getPlatform() === 'android';
 
     // 监听showForm变化，当表单关闭时清除输入框内容
     useEffect(() => {
@@ -287,7 +285,7 @@ const EquipmentImportModal: React.FC<EquipmentImportModalProps> = ({
                         style={{
                             willChange: "transform"
                         }}
-                        className={`absolute inset-x-0 bottom-0 max-w-[500px] mx-auto max-h-[90vh] overflow-hidden rounded-t-2xl bg-neutral-50 dark:bg-neutral-900 shadow-xl ${isAndroid ? 'android-modal' : ''} ${isIOS ? 'ios-modal' : ''}`}
+                        className={`absolute inset-x-0 bottom-0 max-w-[500px] mx-auto max-h-[90vh] overflow-hidden rounded-t-2xl bg-neutral-50 dark:bg-neutral-900 shadow-xl`}
                     >
                         {/* 拖动条 */}
                         <div className="sticky top-0 z-10 flex justify-center py-2 bg-neutral-50 dark:bg-neutral-900">
@@ -307,7 +305,7 @@ const EquipmentImportModal: React.FC<EquipmentImportModalProps> = ({
                             style={{
                                 willChange: "opacity, transform"
                             }}
-                            className="px-6  pb-6 pb-safe overflow-auto max-h-[calc(90vh-40px)]"
+                            className="px-6  pb-safe-bottom overflow-auto max-h-[calc(90vh-40px)]"
                         >
                             {/* 标题栏 */}
                             <div className="flex items-center justify-between py-4 mb-4">

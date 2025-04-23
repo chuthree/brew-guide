@@ -20,7 +20,6 @@ const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
     onClose
 }) => {
     // 添加平台检测
-    const [isAndroid, setIsAndroid] = useState(false)
     const [isIOS, setIsIOS] = useState(false)
     
     // 添加对模态框的引用
@@ -30,7 +29,6 @@ const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
     useEffect(() => {
         if (Capacitor.isNativePlatform()) {
             const platform = Capacitor.getPlatform()
-            setIsAndroid(platform === 'android')
             setIsIOS(platform === 'ios')
         }
     }, [])
@@ -101,7 +99,7 @@ const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
                         style={{
                             willChange: "transform"
                         }}
-                        className={`absolute inset-x-0 bottom-0 max-w-[500px] mx-auto max-h-[85vh] overflow-auto rounded-t-2xl bg-neutral-50 dark:bg-neutral-900 shadow-xl ${isAndroid ? 'android-modal' : ''} ${isIOS ? 'ios-modal' : ''}`}
+                        className={`absolute inset-x-0 bottom-0 max-w-[500px] mx-auto max-h-[85vh] overflow-auto rounded-t-2xl bg-neutral-50 dark:bg-neutral-900 shadow-xl`}
                     >
                         {/* 拖动条 */}
                         <div className="sticky top-0 z-10 flex justify-center py-2 bg-neutral-50 dark:bg-neutral-900">
@@ -121,7 +119,7 @@ const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
                             style={{
                                 willChange: "opacity, transform"
                             }}
-                            className={`px-6  pb-6 pb-safe overflow-auto max-h-[calc(85vh-40px)] modal-form-container ${isAndroid ? 'android-modal-container' : ''} ${isIOS ? 'ios-modal-container' : ''}`}
+                            className={`px-6 overflow-auto max-h-[calc(85vh-40px)] modal-form-container`}
                         >
                             <CoffeeBeanForm
                                 onSave={onSave}

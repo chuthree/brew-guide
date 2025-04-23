@@ -612,8 +612,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
 
     return (
         <motion.div
-            className="sticky top-0 z-10 pt-safe bg-neutral-50/95 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800"
-            style={{ paddingTop: 'max(env(safe-area-inset-top), 24px)' }}
+            className="sticky top-0 z-10 pt-safe-top bg-neutral-50/95 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800"
             transition={{ duration: 0.3, ease: "easeInOut" }}
         >
             <style jsx global>{noScrollbarStyle}</style>

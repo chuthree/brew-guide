@@ -514,40 +514,38 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                 />
                 
                 {/* 内容区域 */}
-                <div className="flex-1 overflow-hidden">
-                    {viewMode === VIEW_OPTIONS.INVENTORY ? (
-                        // 库存视图
-                        <InventoryView 
-                            filteredBeans={filteredBeans}
-                            selectedVariety={selectedVariety}
-                            showEmptyBeans={showEmptyBeans}
-                            onVarietyClick={handleVarietyClick}
-                            onToggleShowEmptyBeans={toggleShowEmptyBeans}
-                            availableVarieties={availableVarieties}
-                            beans={beans}
-                            onEdit={handleEdit}
-                            onDelete={(bean) => handleDelete(bean)}
-                            onShare={(bean) => handleShare(bean, copyText)}
-                            _onRemainingUpdate={handleRemainingUpdate}
-                            onQuickDecrement={handleQuickDecrement}
+                {viewMode === VIEW_OPTIONS.INVENTORY ? (
+                    // 库存视图
+                    <InventoryView 
+                        filteredBeans={filteredBeans}
+                        selectedVariety={selectedVariety}
+                        showEmptyBeans={showEmptyBeans}
+                        onVarietyClick={handleVarietyClick}
+                        onToggleShowEmptyBeans={toggleShowEmptyBeans}
+                        availableVarieties={availableVarieties}
+                        beans={beans}
+                        onEdit={handleEdit}
+                        onDelete={(bean) => handleDelete(bean)}
+                        onShare={(bean) => handleShare(bean, copyText)}
+                        _onRemainingUpdate={handleRemainingUpdate}
+                        onQuickDecrement={handleQuickDecrement}
+                    />
+                ) : (
+                    // 榜单和博主榜单视图
+                    <div className="w-full h-full overflow-y-auto scroll-with-bottom-bar">
+                        <CoffeeBeanRanking
+                            isOpen={viewMode === VIEW_OPTIONS.RANKING || viewMode === VIEW_OPTIONS.BLOGGER}
+                            onShowRatingForm={handleShowRatingForm}
+                            sortOption={convertToRankingSortOption(sortOption, viewMode)}
+                            updatedBeanId={lastRatedBeanId}
+                            hideFilters={true}
+                            beanType={rankingBeanType}
+                            editMode={rankingEditMode}
+                            viewMode={viewMode === VIEW_OPTIONS.BLOGGER ? 'blogger' : 'personal'}
+                            year={viewMode === VIEW_OPTIONS.BLOGGER ? bloggerYear : undefined}
                         />
-                    ) : (
-                        // 榜单和博主榜单视图
-                        <div className="w-full h-full overflow-y-auto scroll-with-bottom-bar">
-                            <CoffeeBeanRanking
-                                isOpen={viewMode === VIEW_OPTIONS.RANKING || viewMode === VIEW_OPTIONS.BLOGGER}
-                                onShowRatingForm={handleShowRatingForm}
-                                sortOption={convertToRankingSortOption(sortOption, viewMode)}
-                                updatedBeanId={lastRatedBeanId}
-                                hideFilters={true}
-                                beanType={rankingBeanType}
-                                editMode={rankingEditMode}
-                                viewMode={viewMode === VIEW_OPTIONS.BLOGGER ? 'blogger' : 'personal'}
-                                year={viewMode === VIEW_OPTIONS.BLOGGER ? bloggerYear : undefined}
-                            />
-                        </div>
-                    )}
-                </div>
+                    </div>
+                )}
 
                 {/* 添加和导入按钮 - 仅在仓库视图显示 */}
                 {viewMode === VIEW_OPTIONS.INVENTORY && (

@@ -2,77 +2,36 @@
 @tailwind components;
 @tailwind utilities;
 
-/* 导入自定义透明度工具类 */
-@import './opacity-utils.css';
-
-/* 基础变量定义 */
+/* 变量定义 */
 :root {
   --foreground: #000;
   --background: #FAFAFA;
-  --rsbs-backdrop-bg: rgba(0, 0, 0, 0.3);
-  --rsbs-bg: var(--background);
-  --rsbs-handle-bg: rgba(0, 0, 0, 0.14);
-  --rsbs-max-w: 500px;
-  --rsbs-ml: auto;
-  --rsbs-mr: auto;
-  --rsbs-overlay-rounded: 16px;
   --font-sans: var(--font-noto-sans-sc), var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
   --font-timer: var(--font-timer);
   --keyboard-height: 0px;
-  /* SVG 基础颜色变量 */
   --custom-shape-color: #000000;
-  /* 添加更多基础颜色变量 */
-  --neutral-50: #fafafa;
-  --neutral-100: #f5f5f5;
-  --neutral-200: #e5e5e5;
-  --neutral-300: #d4d4d4;
-  --neutral-400: #a3a3a3;
-  --neutral-500: #737373;
-  --neutral-600: #525252;
-  --neutral-700: #404040;
-  --neutral-800: #262626;
-  --neutral-900: #171717;
 }
 
-/* 当系统偏好为暗黑模式时的样式 */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --foreground: #000;
-    --background: #FAFAFA;
-    --rsbs-backdrop-bg: rgba(0, 0, 0, 0.3);
-  }
-}
-
-/* 当手动设置为暗黑模式时的样式 */
+/* 暗黑模式 */
 .dark {
   --foreground: #fff;
   --background: #171717;
-  --rsbs-backdrop-bg: rgba(0, 0, 0, 0.5);
   --custom-shape-color: #ffffff;
 }
 
-/* 标准 SVG 图片深色模式处理 */
 .dark .dark\:invert {
   filter: invert(1);
-  -webkit-filter: invert(1);
 }
 
-/* 自定义 SVG 基础样式 */
+/* SVG 样式 */
 .custom-cup-shape svg *,
-.custom-shape-svg-container svg * {
-  stroke: var(--custom-shape-color) !important;
-  fill: none !important;
-  stroke-width: 1.5px !important;
-}
-
-/* 确保轮廓模式 */
+.custom-shape-svg-container svg *,
 .outline-only svg * {
-  fill: none !important;
   stroke: var(--custom-shape-color) !important;
+  fill: none !important;
   stroke-width: 1.5px !important;
 }
 
-/* 确保 SVG 尺寸和视口统一 */
 .custom-cup-shape svg,
 .custom-shape-svg-container svg {
   width: 300px !important;
@@ -81,135 +40,38 @@
   max-height: 100% !important;
 }
 
-/* 基础样式重置 */
+/* 基础样式 */
 * {
   -webkit-tap-highlight-color: transparent;
-  -webkit-touch-callout: none;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-html,
-body,
-#root {
-  height: -webkit-fill-available;
-  height: 100%;
-  min-height: -webkit-fill-available;
-  min-height: 100%;
-}
-
-/* 确保安全区域在 iOS 和 Android 设备上正常工作 */
-.pt-safe {
-  padding-top: env(safe-area-inset-top);
-  padding-top: constant(safe-area-inset-top);
-  /* 确保顶部状态栏有足够的高度 */
-  padding-top: max(env(safe-area-inset-top), 24px);
-}
-
-.pb-safe {
-  padding-bottom: env(safe-area-inset-bottom);
-  padding-bottom: constant(safe-area-inset-bottom);
-  /* 增加Android底部导航栏的最小高度 */
-  padding-bottom: max(env(safe-area-inset-bottom), 24px);
-}
-
-/* 针对iOS状态栏的特殊处理 */
-.ios-pt-safe {
-  padding-top: env(safe-area-inset-top);
-  padding-top: constant(safe-area-inset-top);
-}
-
-/* 针对Android状态栏的特殊处理 */
-.android-pt-safe {
-  padding-top: 24px;
-  /* Android状态栏的固定高度 */
-}
-
-/* 修复 iOS 和 Android 上的滚动问题 */
-.overflow-scroll {
-  -webkit-overflow-scrolling: touch;
-  overflow-y: auto;
-}
-
-/* 修复 iOS 上的弹性滚动 */
-.scroll-touch {
-  -webkit-overflow-scrolling: touch;
-}
-
-/* 修复 Android 上的滚动条样式 */
-::-webkit-scrollbar {
-  width: 0px;
-  background: transparent;
-}
-
-/* 修复 iOS 上的输入框样式 */
-input,
-textarea {
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  appearance: none;
-  border-radius: 0;
-}
-
-/* 修复 Android 上的输入框样式 */
-input[type="text"],
-input[type="number"],
-textarea {
-  -webkit-appearance: none;
-  background-color: transparent;
-}
-
-/* 修复 iOS 上的按钮样式 */
-button {
-  -webkit-appearance: none;
-  background: none;
-  border: none;
-  padding: 0;
-  font: inherit;
-  cursor: pointer;
 }
 
 html,
 body {
   color: var(--foreground);
   background: var(--background);
-  height: 100%;
-  overflow: hidden;
   position: fixed;
-  width: 100%;
+  inset: 0;
   touch-action: manipulation;
-  -webkit-overflow-scrolling: touch;
-  font-family: var(--font-sans);
-  /* 添加更多兼容性样式 */
   -webkit-text-size-adjust: 100%;
-  -moz-text-size-adjust: 100%;
   text-size-adjust: 100%;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* 允许内部容器滚动 */
-.overflow-y-auto {
-  -webkit-overflow-scrolling: touch;
-  overflow-y: auto;
-  height: 100%;
+/* 滚动条 */
+::-webkit-scrollbar {
+  width: 0;
+  background: transparent;
 }
 
-/* 需要底部操作栏间距的滚动容器 */
-.scroll-with-bottom-bar {
-  -webkit-overflow-scrolling: touch;
-  overflow-y: auto;
-  height: 100%;
-  padding-bottom: calc(max(env(safe-area-inset-bottom), 28px) + 100px);
-}
-
-/* 确保内容区域不会被底部操作栏遮挡 */
+/* 底部间距容器 */
+.scroll-with-bottom-bar,
 .content-area {
-  padding-bottom: calc(max(env(safe-area-inset-bottom), 28px) + 100px);
-  /* 增加底部内边距 */
+  padding-bottom: calc(env(safe-area-inset-bottom) + 100px);
 }
 
-/* 添加底部操作栏的固定定位样式 */
+/* 底部操作栏 */
 .bottom-action-bar {
   position: fixed;
   bottom: 0;
@@ -217,70 +79,31 @@ body {
   right: 0;
   z-index: 50;
   background: var(--background);
-  padding-bottom: max(env(safe-area-inset-bottom), 28px);
+  padding-bottom: env(safe-area-inset-bottom);
   box-shadow: 0 -1px 0 0 var(--background);
-  /* 添加顶部阴影，确保渐变效果 */
 }
 
-/* 冲煮页面滚动容器样式 */
-.brew-content-scroll {
-  -webkit-overflow-scrolling: touch;
-  overflow-y: auto;
-  height: 100%;
-  padding-bottom: calc(max(env(safe-area-inset-bottom), 28px) + 100px);
-}
-
-/* 可视化方案滚动容器样式 */
-.visualization-scroll {
-  -webkit-overflow-scrolling: touch;
-  overflow-y: auto;
-  height: 100%;
-  padding-bottom: 0 !important;
-}
-
-/* 键盘相关样式 - 只保留核心样式 */
+/* 键盘弹出时的焦点元素处理 */
 input:focus,
 textarea:focus,
 select:focus,
 [contenteditable]:focus {
   position: relative;
   z-index: 10;
-  /* 添加边距，确保滚动时有足够的空间 */
   scroll-margin-top: 100px;
   scroll-margin-bottom: 100px;
 }
 
-/* 针对iOS的聚焦处理 */
-.ios-device input:focus,
-.ios-device textarea:focus,
-.ios-device select:focus {
-  transform: translateZ(0);
-  /* 触发iOS的硬件加速 */
-}
-
-/* 确保模态框的内容在键盘弹出时仍然可见 */
-.ios-device .modal-form-container,
-.android-device .modal-form-container {
-  padding-bottom: 100px !important;
-  /* 确保模态框内容有足够的底部空间 */
-}
-
-/* 针对表单内容在iOS上的处理 */
-.ios-form {
-  padding-bottom: 60px !important;
-}
-
-/* 模态框底部按钮处理 */
+/* 模态框底部按钮 */
 .modal-bottom-button {
   position: sticky;
   bottom: 16px;
   z-index: 10;
   margin: 16px 0;
   transition: bottom 0.3s ease;
-  -webkit-transition: bottom 0.3s ease;
 }
 
-/* 键盘弹出时的模态框底部按钮处理 */
+/* 键盘弹出时底部按钮处理 */
 .keyboard-is-open .modal-bottom-button {
   position: fixed;
   bottom: var(--keyboard-height, 0px);
@@ -291,43 +114,10 @@ select:focus,
   margin: 0;
   z-index: 60;
   box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.05);
-  -webkit-box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.05);
 }
 
-/* 解决Android表单聚焦问题 */
-@media (max-width: 768px) {
-  @supports (-webkit-touch-callout: none) {
-    input,
-    textarea,
-    select {
-      /* 阻止iOS缩放但不改变字体大小 */
-      touch-action: manipulation;
-    }
-  }
-}
-
-/* 计时器数字字体 */
+/* 计时器字体 */
 .timer-font {
   font-family: var(--font-timer);
   font-feature-settings: "tnum" on, "lnum" on;
-  -webkit-font-feature-settings: "tnum" on, "lnum" on;
-  -moz-font-feature-settings: "tnum" on, "lnum" on;
-}
-
-/* 模态框容器样式 */
-.modal-container {
-  @apply fixed inset-0 z-50 flex items-center justify-center;
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
-}
-
-.modal-content {
-  @apply w-full max-w-[500px] mx-auto relative;
-  -webkit-transform: translateZ(0);
-  transform: translateZ(0);
-}
-
-/* 确保模态框内容不会超出屏幕 */
-.modal-content > div {
-  @apply max-h-[90vh] w-full;
 }

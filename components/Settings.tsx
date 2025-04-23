@@ -227,8 +227,7 @@ const Settings: React.FC<SettingsProps> = ({
         <div className="fixed inset-0 z-50 flex flex-col bg-neutral-50 dark:bg-neutral-900 max-w-[500px] mx-auto">
             {/* 头部导航栏 */}
             <div 
-                className="relative flex items-center justify-center py-4 pt-safe border-b border-neutral-200 dark:border-neutral-800"
-                style={{ paddingTop: 'max(env(safe-area-inset-top), 16px)' }}
+                className="relative flex items-center justify-center py-4 pt-safe-top border-b border-neutral-200 dark:border-neutral-800"
             >
                 <button
                     onClick={onClose}
@@ -253,7 +252,7 @@ const Settings: React.FC<SettingsProps> = ({
             </div>
 
             {/* 滚动内容区域 */}
-            <div className="flex-1 overflow-y-auto pb-safe">
+            <div className="flex-1 overflow-y-auto pb-safe-bottom">
                 {/* 设置分组 */}
                     {/* 通知设置 */}
                     <section className="px-6 py-4 border-b border-neutral-200 dark:border-neutral-800">

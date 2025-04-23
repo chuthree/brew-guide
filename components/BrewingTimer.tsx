@@ -1316,10 +1316,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
   return (
     <>
       <div
-        className="px-6 sticky bottom-0 bg-neutral-50 pt-6 dark:bg-neutral-900 pb-safe relative"
-        style={{
-          paddingBottom: "max(env(safe-area-inset-bottom), 28px)",
-        }}
+        className="px-6 sticky bottom-0 bg-neutral-50 pt-6 dark:bg-neutral-900 pb-safe-bottom relative"
       >
         {/* 添加设置点和边框 */}
         <div className="absolute top-0 left-0 right-0 flex items-center justify-center">

@@ -1747,18 +1747,16 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 </div>
             )}
             {activeMainTab === '笔记' && (
-                <div className="flex-1 overflow-auto">
-                    <BrewingHistory
-                        isOpen={true}
-                        onClose={() => {
-                            setActiveMainTab('冲煮');
-                            setShowHistory(false);
-                        }}
-                        onOptimizingChange={setIsOptimizing}
-                        onNavigateToBrewing={handleNavigateFromHistory}
-                        onAddNote={handleAddNote}
-                    />
-                </div>
+                <BrewingHistory
+                    isOpen={true}
+                    onClose={() => {
+                        setActiveMainTab('冲煮');
+                        setShowHistory(false);
+                    }}
+                    onOptimizingChange={setIsOptimizing}
+                    onNavigateToBrewing={handleNavigateFromHistory}
+                    onAddNote={handleAddNote}
+                />
             )}
             {activeMainTab === '咖啡豆' && (
                 <ErrorBoundary>
@@ -1773,87 +1771,85 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             )}
 
             {/* 底部工具栏 - 根据当前状态显示不同内容 */}
-            <div>
-                {/* 方案类型选择器 */}
-                {activeMainTab === '冲煮' && activeBrewingStep === 'method' && selectedEquipment && (
-                    <MethodTypeSelector
-                        methodType={methodType}
-                        settings={settings}
-                        onSelectMethodType={handleMethodTypeChange}
-                        hideSelector={customEquipments.some(
-                            e => (e.id === selectedEquipment || e.name === selectedEquipment) && e.animationType === 'custom'
-                        )}
-                    />
-                )}
+            {/* 方案类型选择器 */}
+            {activeMainTab === '冲煮' && activeBrewingStep === 'method' && selectedEquipment && (
+                <MethodTypeSelector
+                    methodType={methodType}
+                    settings={settings}
+                    onSelectMethodType={handleMethodTypeChange}
+                    hideSelector={customEquipments.some(
+                        e => (e.id === selectedEquipment || e.name === selectedEquipment) && e.animationType === 'custom'
+                    )}
+                />
+            )}
 
-                {/* 计时器 */}
-                {activeMainTab === '冲煮' && activeBrewingStep === 'brewing' && currentBrewingMethod && !showHistory && (
-                    <BrewingTimer
-                        currentBrewingMethod={currentBrewingMethod}
-                        onStatusChange={({ isRunning }) => {
-                            // 使用事件而不是直接更新状态
-                            const event = new CustomEvent('brewing:timerStatus', {
-                                detail: {
-                                    isRunning,
-                                    status: isRunning ? 'running' : 'stopped'
-                                }
-                            });
-                            window.dispatchEvent(event);
-                        }}
-                        onStageChange={({ currentStage, progress, isWaiting }) => {
-                            // 使用事件而不是直接更新状态
-                            const event = new CustomEvent('brewing:stageChange', {
-                                detail: {
-                                    currentStage,
-                                    stage: currentStage, // 兼容旧的处理方式
-                                    progress,
-                                    isWaiting
-                                }
-                            });
-                            window.dispatchEvent(event);
-                        }}
-                        onCountdownChange={(time) => {
-                            // 避免直接调用事件分发，改用 setTimeout
-                            setTimeout(() => {
-                                const event = new CustomEvent('brewing:countdownChange', {
-                                    detail: { remainingTime: time }
-                                });
-                                window.dispatchEvent(event);
-                            }, 0);
-                        }}
-                        onComplete={(isComplete) => {
-                            if (isComplete) {
-                                // 触发一个事件而不是直接更新状态
-                                const event = new CustomEvent('brewing:complete');
-                                window.dispatchEvent(event);
+            {/* 计时器 */}
+            {activeMainTab === '冲煮' && activeBrewingStep === 'brewing' && currentBrewingMethod && !showHistory && (
+                <BrewingTimer
+                    currentBrewingMethod={currentBrewingMethod}
+                    onStatusChange={({ isRunning }) => {
+                        // 使用事件而不是直接更新状态
+                        const event = new CustomEvent('brewing:timerStatus', {
+                            detail: {
+                                isRunning,
+                                status: isRunning ? 'running' : 'stopped'
                             }
-                        }}
-                        onTimerComplete={() => {
-                            // 冲煮完成后的处理，确保显示笔记表单
-                            // 这里不需要额外设置，因为BrewingTimer组件内部已经处理了显示笔记表单的逻辑
-                        }}
-                        onExpandedStagesChange={(stages) => {
-                            expandedStagesRef.current = stages;
-                        }}
-                        settings={settings}
-                        selectedEquipment={selectedEquipment}
-                        isCoffeeBrewed={isCoffeeBrewed}
-                        layoutSettings={settings.layoutSettings}
-                    />
-                )}
+                        });
+                        window.dispatchEvent(event);
+                    }}
+                    onStageChange={({ currentStage, progress, isWaiting }) => {
+                        // 使用事件而不是直接更新状态
+                        const event = new CustomEvent('brewing:stageChange', {
+                            detail: {
+                                currentStage,
+                                stage: currentStage, // 兼容旧的处理方式
+                                progress,
+                                isWaiting
+                            }
+                        });
+                        window.dispatchEvent(event);
+                    }}
+                    onCountdownChange={(time) => {
+                        // 避免直接调用事件分发，改用 setTimeout
+                        setTimeout(() => {
+                            const event = new CustomEvent('brewing:countdownChange', {
+                                detail: { remainingTime: time }
+                            });
+                            window.dispatchEvent(event);
+                        }, 0);
+                    }}
+                    onComplete={(isComplete) => {
+                        if (isComplete) {
+                            // 触发一个事件而不是直接更新状态
+                            const event = new CustomEvent('brewing:complete');
+                            window.dispatchEvent(event);
+                        }
+                    }}
+                    onTimerComplete={() => {
+                        // 冲煮完成后的处理，确保显示笔记表单
+                        // 这里不需要额外设置，因为BrewingTimer组件内部已经处理了显示笔记表单的逻辑
+                    }}
+                    onExpandedStagesChange={(stages) => {
+                        expandedStagesRef.current = stages;
+                    }}
+                    settings={settings}
+                    selectedEquipment={selectedEquipment}
+                    isCoffeeBrewed={isCoffeeBrewed}
+                    layoutSettings={settings.layoutSettings}
+                />
+            )}
 
-                {/* 添加滑动返回手势组件 */}
-                {activeMainTab === '冲煮' && (
-                    <SwipeBackGesture
-                        activeBrewingStep={activeBrewingStep}
-                        isTimerRunning={isTimerRunning}
-                        showComplete={showComplete}
-                        navigateToStep={navigateToStep}
-                        disabled={false}
-                        hasCoffeeBeans={hasCoffeeBeans}
-                    />
-                )}
-            </div>
+            {/* 添加滑动返回手势组件 */}
+            {activeMainTab === '冲煮' && (
+                <SwipeBackGesture
+                    activeBrewingStep={activeBrewingStep}
+                    isTimerRunning={isTimerRunning}
+                    showComplete={showComplete}
+                    navigateToStep={navigateToStep}
+                    disabled={false}
+                    hasCoffeeBeans={hasCoffeeBeans}
+                />
+            )}
 
             {/* 使用自定义方案表单模态框组件 */}
             <CustomMethodFormModal

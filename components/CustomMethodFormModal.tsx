@@ -198,12 +198,8 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
                             style={{
                                 willChange: "transform"
                             }}
-                            className="absolute inset-x-0 bottom-0 max-w-[500px] mx-auto h-full overflow-hidden rounded-t-2xl bg-neutral-50 dark:bg-neutral-900 shadow-xl"
+                            className="absolute inset-x-0 bottom-0 max-w-[500px] mx-auto h-full overflow-hidden  bg-neutral-50 dark:bg-neutral-900 shadow-xl pt-safe-top"
                         >
-                            {/* 拖动条 */}
-                            <div className="sticky top-0 z-10 flex justify-center py-2 bg-neutral-50 dark:bg-neutral-900">
-                                <div className="h-1.5 w-12 rounded-full bg-neutral-200 dark:bg-neutral-700" />
-                            </div>
 
                             {/* 表单内容 */}
                             <motion.div
@@ -218,7 +214,7 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
                                 style={{
                                     willChange: "opacity, transform"
                                 }}
-                                className="px-6  pb-6 pb-safe overflow-auto"
+                                className="px-6 overflow-auto"
                             >
                                 <CustomMethodForm
                                     onSave={handleSaveMethod}
