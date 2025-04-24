@@ -55,6 +55,7 @@
 		"geist": "^1.2.2",
 		"gsap": "^3.12.5",
 		"html-to-image": "^1.11.13",
+		"html2canvas": "^1.4.1",
 		"interactjs": "^1.10.27",
 		"lottie-web": "^5.12.2",
 		"lucide-react": "^0.479.0",

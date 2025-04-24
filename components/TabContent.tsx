@@ -9,12 +9,12 @@ import { CoffeeBean } from '@/app/types';
 import type { BrewingNoteData } from '@/app/types';
 import { CoffeeBeanManager } from '@/lib/coffeeBeanManager';
 import { v4 as _uuidv4 } from 'uuid';
-import { copyMethodToClipboard } from "@/lib/customMethods";
 import { showToast } from "@/components/ui/toast";
 import EquipmentShareModal from '@/components/EquipmentShareModal';
 import { getEquipmentName } from '@/lib/brewing/parameters';
 import BottomActionBar from '@/components/BottomActionBar';
 import CoffeeBeanList from '@/components/CoffeeBean/List/ListView';
+import MethodShareModal from '@/components/MethodShareModal';
 
 // 扩展Step类型，增加固定方案所需的字段
 interface Step extends BaseStep {
@@ -292,21 +292,23 @@ const TabContent: React.FC<TabContentProps> = ({
         }
     }, [showCustomForm, showImportForm, settings, isPourVisualizerPreloaded]);
 
+    // 添加新的状态
+    const [showMethodShareModal, setShowMethodShareModal] = useState(false);
+    const [sharingMethod, setSharingMethod] = useState<Method | null>(null);
+
     // 处理分享方案
     const handleShareMethod = async (method: Method) => {
         try {
             // 获取当前选中的自定义器具
-            const selectedCustomEquipment = getSelectedCustomEquipment();
-            await copyMethodToClipboard(method, selectedCustomEquipment);
-            showToast({
-                type: 'success',
-                title: '已复制到剪贴板',
-                duration: 2000
-            });
+            // 这里不再需要将selectedCustomEquipment存储为变量
+            
+            // 设置要分享的方案并显示分享模态框
+            setSharingMethod(method);
+            setShowMethodShareModal(true);
         } catch (_error) {
             showToast({
                 type: 'error',
-                title: '复制失败，请重试',
+                title: '准备分享失败，请重试',
                 duration: 2000
             });
         }
@@ -586,6 +588,15 @@ const TabContent: React.FC<TabContentProps> = ({
                     onClose={() => setShowShareModal(false)}
                     equipment={sharingEquipment}
                     methods={sharingMethods}
+                />
+            )}
+            {/* 方案分享模态框 */}
+            {sharingMethod && (
+                <MethodShareModal
+                    isOpen={showMethodShareModal}
+                    onClose={() => setShowMethodShareModal(false)}
+                    method={sharingMethod}
+                    customEquipment={getSelectedCustomEquipment()}
                 />
             )}
         </>
