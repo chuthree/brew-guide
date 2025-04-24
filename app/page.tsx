@@ -23,10 +23,8 @@ import CoffeeBeanFormModal from '@/components/CoffeeBean/Form/Modal'
 import ImportModal from '@/components/ImportModal'
 import { CoffeeBeanManager } from '@/lib/coffeeBeanManager'
 import textZoomUtils from '@/lib/textZoom'
-import { navigateFromHistoryToBrewing } from '@/lib/brewing/navigation'
-import type { BrewingNote } from '@/lib/config'
-import type { BrewingNoteData } from '@/app/types'
 import { BREWING_EVENTS } from '@/lib/brewing/constants'
+import type { BrewingNoteData } from '@/app/types'
 import { updateParameterInfo } from '@/lib/brewing/parameters'
 import BrewingNoteFormModalNew from '@/components/BrewingNoteFormModalNew'
 import ErrorBoundary from '@/components/ErrorBoundary'
@@ -179,7 +177,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         isNoteSaved, setIsNoteSaved,
         prevMainTabRef,
         resetBrewingState,
-        autoNavigateToBrewingAfterImport,
         handleEquipmentSelect,
         handleCoffeeBeanSelect,
         handleSaveCustomMethod,
@@ -1262,245 +1259,18 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 currentBrewingMethod,
                 lastNavigatedMethod
             });
-
-            // 确保已经加载了所有必要的数据后，再次导航到注水步骤
-            if (selectedEquipment && (selectedMethod || currentBrewingMethod)) {
-                // 延迟一点时间确保UI和数据都已准备好
-                setTimeout(() => {
-                    // 确保是在注水步骤
-                    if (activeBrewingStep !== 'brewing') {
-                        console.log("强制导航到注水步骤");
-                        navigateToStep('brewing', {
-                            force: true,
-                            resetParams: false,
-                            preserveStates: ["all"],
-                        });
-                    }
-
-                    // 确保处于注水标签
-                    if (activeTab !== '注水') {
-                        console.log("强制切换到注水标签");
-                        setActiveTab('注水');
-                    }
-
-                    // 双重保险：再次检查并强制状态
-                    setTimeout(() => {
-                        if (activeBrewingStep !== 'brewing' || activeTab !== '注水') {
-                            console.log("第二次强制导航到注水步骤");
-                            navigateToStep('brewing', {
-                                force: true,
-                                resetParams: false,
-                                preserveStates: ["all"],
-                            });
-                            setActiveTab('注水');
-                        }
-                    }, 500);
-                }, 800);
-            } else {
-                console.log("无法导航到注水步骤，缺少必要数据", {
-                    selectedEquipment,
-                    selectedMethod,
-                    currentBrewingMethod
-                });
-            }
         }
     }, [
-        activeMainTab,
-        selectedEquipment,
-        selectedMethod,
-        currentBrewingMethod,
-        activeBrewingStep,
-        activeTab,
         navigateToStep,
-        setActiveTab
-    ]);
-
-    // 添加从历史记录跳转到冲煮的处理函数
-    const handleNavigateFromHistory = useCallback((note: BrewingNote) => {
-        // 传递当前是否在笔记标签页
-        navigateFromHistoryToBrewing(note, activeMainTab === '笔记');
-    }, [activeMainTab]);
-
-    // 添加检查强制导航标记的逻辑
-    useEffect(() => {
-        // 检查是否有强制导航到冲煮页面的标记
-        const forceNavigate = localStorage.getItem('forceNavigateToBrewing');
-        const navigationStep = localStorage.getItem('navigationStep') || 'start';
-
-        if (forceNavigate === 'true') {
-            console.log("检测到强制导航标记，当前步骤:", navigationStep, {
-                activeMainTab,
-                activeBrewingStep,
-                selectedEquipment,
-                selectedMethod,
-                currentBrewingMethod
-            });
-
-            switch (navigationStep) {
-                case 'start':
-                    // 第一步：切换到冲煮标签页
-                    setActiveMainTab('冲煮');
-                    localStorage.setItem('navigationStep', 'selectEquipment');
-                    break;
-
-                case 'selectEquipment':
-                    // 第二步：选择设备（只有当成功切换到冲煮标签页后）
-                    if (activeMainTab === '冲煮') {
-                        const equipment = localStorage.getItem('forceNavigationEquipment');
-                        if (equipment) {
-                            console.log("选择设备:", equipment);
-                            handleEquipmentSelectWithName(equipment);
-                            localStorage.setItem('navigationStep', 'selectMethod');
-                        } else {
-                            // 如果没有设备信息，跳过这一步
-                            localStorage.setItem('navigationStep', 'selectMethod');
-                        }
-                    }
-                    break;
-
-                case 'selectMethod':
-                    // 第三步：选择方案（只有当设备已选择）
-                    if (selectedEquipment) {
-                        const method = localStorage.getItem('forceNavigationMethod');
-                        // 获取方案类型（默认为common）
-                        const forceMethodType = localStorage.getItem('forceNavigationMethodType') || 'common';
-
-                        console.log("方案选择过程:", {
-                            method,
-                            forceMethodType,
-                            currentMethodType: methodType,
-                            hasCustomMethods: customMethods[selectedEquipment]?.length > 0,
-                            customMethodsCount: customMethods[selectedEquipment]?.length || 0
-                        });
-
-                        if (method) {
-                            // 根据方案类型选择不同的方案列表
-                            console.log("尝试选择方案:", method, "类型:", forceMethodType);
-
-                            // 定义回退到通用方案的函数
-                            const fallbackToCommonMethod = () => {
-                                // 如果是通用方案，或者自定义方案未找到，尝试在通用方案中查找
-                                const allMethods = commonMethods[selectedEquipment] || [];
-                                console.log("可用通用方案:", allMethods.map(m => m.name));
-
-                                // 查找精确匹配的方案
-                                const methodIndex = allMethods.findIndex(m => m.name === method);
-
-                                if (methodIndex !== -1) {
-                                    // 如果找到通用方案，切换回通用方案模式
-                                    setMethodType('common');
-                                    console.log("找到通用方案，索引:", methodIndex, "名称:", allMethods[methodIndex].name);
-
-                                    // 确保类型切换生效后再选择方案
-                                    setTimeout(() => {
-                                        handleMethodSelectWrapper(methodIndex);
-                                        localStorage.setItem('navigationStep', 'navigateToBrewing');
-                                    }, 100);
-                                } else {
-                                    // 如果通用方案中也没找到，直接进入注水步骤
-                                    console.log("通用方案中也没找到匹配项，直接进入注水步骤");
-                                    localStorage.setItem('navigationStep', 'navigateToBrewing');
-                                }
-                            };
-
-                            if (forceMethodType === 'custom') {
-                                // 如果是自定义方案，先切换到自定义方案模式
-                                setMethodType('custom');
-                                console.log("已切换到自定义方案模式");
-
-                                // 确保方案类型应用后再执行方案选择
-                                setTimeout(() => {
-                                    // 查找匹配的自定义方案
-                                    if (customMethods[selectedEquipment] && customMethods[selectedEquipment].length > 0) {
-                                        const customMethodIndex = customMethods[selectedEquipment].findIndex(m =>
-                                            m.name === method
-                                        );
-
-                                        if (customMethodIndex !== -1) {
-                                            console.log("找到自定义方案，索引:", customMethodIndex, "名称:", customMethods[selectedEquipment][customMethodIndex].name);
-                                            handleMethodSelectWrapper(customMethodIndex);
-                                            localStorage.setItem('navigationStep', 'navigateToBrewing');
-                                        } else {
-                                            console.log("未找到匹配的自定义方案，尝试回退到通用方案");
-                                            console.log("可用自定义方案:", customMethods[selectedEquipment].map(m => m.name));
-
-                                            // 未找到自定义方案时，回退到通用方案
-                                            fallbackToCommonMethod();
-                                        }
-                                    } else {
-                                        console.log("该设备下没有自定义方案，尝试回退到通用方案");
-                                        fallbackToCommonMethod();
-                                    }
-                                }, 100);
-                            }
-                            // 仅在是通用方案时才直接检查通用方案
-                            else if (forceMethodType === 'common') {
-                                fallbackToCommonMethod();
-                            }
-                        }
-                    } else {
-                        console.log("设备未选择，无法选择方案");
-                        localStorage.setItem('navigationStep', 'navigateToBrewing');
-                    }
-                    break;
-
-                case 'navigateToBrewing':
-                    // 第四步：导航到注水步骤（只有当方案已选择）
-                    if (selectedEquipment && (selectedMethod || currentBrewingMethod)) {
-                        console.log("准备导航到注水步骤");
-                        // 导航到注水步骤
-                        navigateToStep('brewing', {
-                            force: true,
-                            resetParams: false,
-                            preserveStates: ["all"],
-                        });
-
-                        // 确保处于注水标签
-                        setActiveTab('注水');
-
-                        // 导航完成，清除标记
-                        localStorage.removeItem('forceNavigateToBrewing');
-                        localStorage.removeItem('navigationStep');
-                        localStorage.removeItem('forceNavigationEquipment');
-                        localStorage.removeItem('forceNavigationMethod');
-                        localStorage.removeItem('forceNavigationParams');
-
-                        console.log("导航完成");
-                    } else {
-                        console.log("方案未正确加载，无法导航到注水步骤");
-                        // 清除标记，避免循环
-                        localStorage.removeItem('forceNavigateToBrewing');
-                        localStorage.removeItem('navigationStep');
-                        localStorage.removeItem('forceNavigationEquipment');
-                        localStorage.removeItem('forceNavigationMethod');
-                        localStorage.removeItem('forceNavigationParams');
-                    }
-                    break;
-
-                default:
-                    // 未知状态，清除标记
-                    localStorage.removeItem('forceNavigateToBrewing');
-                    localStorage.removeItem('navigationStep');
-                    localStorage.removeItem('forceNavigationEquipment');
-                    localStorage.removeItem('forceNavigationMethod');
-                    localStorage.removeItem('forceNavigationParams');
-                    break;
-            }
-        }
-    }, [
-        activeMainTab,
-        activeBrewingStep,
-        selectedEquipment,
-        selectedMethod,
-        currentBrewingMethod,
+        handleCoffeeBeanSelect,
         handleEquipmentSelectWithName,
+        methodType,
+        selectedEquipment,
+        customMethods,
         handleMethodSelectWrapper,
-        navigateToStep,
         setActiveMainTab,
         setActiveTab,
-        customMethods,
-        setMethodType,
-        methodType
+        handleMethodTypeChange
     ]);
 
     // 添加冲煮笔记表单状态
@@ -1741,7 +1511,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                         setShowHistory(false);
                     }}
                     onOptimizingChange={setIsOptimizing}
-                    onNavigateToBrewing={handleNavigateFromHistory}
                     onAddNote={handleAddNote}
                 />
             )}

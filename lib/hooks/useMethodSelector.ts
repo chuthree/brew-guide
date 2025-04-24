@@ -130,22 +130,12 @@ export function useMethodSelector({
 						setActiveTab("注水");
 						setActiveBrewingStep("brewing");
 
-						// 设置标记，表示从方案选择进入注水步骤
-						localStorage.setItem("fromMethodToBrewing", "true");
-
 						// 重要：强制重置冲煮状态标志，确保可以正常导航
 						window.dispatchEvent(new CustomEvent("brewing:reset"));
 
 						// 设置短暂延迟，确保状态已更新
 						const updateParams = async () => {
 							try {
-								// 发送特殊事件，表示从方案选择到冲煮的转换
-								window.dispatchEvent(
-									new CustomEvent("brewing:methodToBrewing", {
-										detail: { fromMethod: true },
-									})
-								);
-
 								// 更新参数栏信息，转换params对象
 								const params: Record<
 									string,

@@ -14,7 +14,6 @@ import {
 } from '@/components/CoffeeBean/ui/select'
 import { CoffeeBeanManager } from '@/lib/coffeeBeanManager'
 import type { CoffeeBean } from '@/app/types'
-import type { Method } from '@/lib/config'
 import { equipmentList } from '@/lib/config'
 import { getEquipmentName as getEquipmentNameUtil } from '@/lib/brewing/parameters'
 
@@ -54,7 +53,6 @@ interface BrewingHistoryProps {
     isOpen: boolean
     onClose: () => void
     onOptimizingChange?: (isOptimizing: boolean) => void
-    onNavigateToBrewing?: (note: BrewingNote) => void
     onAddNote?: () => void
 }
 
@@ -193,7 +191,7 @@ const calculateTotalCost = async (notes: BrewingNote[]): Promise<number> => {
     return totalCost;
 };
 
-const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingChange, onNavigateToBrewing, onAddNote }) => {
+const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingChange, onAddNote }) => {
     const [notes, setNotes] = useState<BrewingNote[]>([])
     const [sortOption, setSortOption] = useState<SortOption>(SORT_OPTIONS.TIME_DESC)
     const [optimizingNote, setOptimizingNote] = useState<(Partial<BrewingNoteData> & { coffeeBean?: CoffeeBean | null }) | null>(null)
@@ -509,46 +507,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
         }
     }
 
-    // 处理点击方案名称跳转到冲煮页面
-    const handleMethodClick = (note: BrewingNote, e: React.MouseEvent) => {
-        e.stopPropagation(); // 防止冒泡
-
-        // 添加标记，表明是从方法点击
-        localStorage.setItem("clickedFromMethod", "true");
-
-        // 记录点击的方法名
-        localStorage.setItem("clickedMethodName", note.method || "");
-
-        // 从localStorage获取自定义方案数据
-        const customMethodsStr = localStorage.getItem("customMethods");
-        console.log("当前笔记方案信息:", {
-            method: note.method,
-            equipment: note.equipment
-        });
-
-        if (customMethodsStr) {
-            try {
-                const customMethods = JSON.parse(customMethodsStr);
-                console.log("当前设备自定义方案:", note.equipment ? customMethods[note.equipment] : "无");
-
-                // 如果是自定义方案，记录方案ID
-                if (note.equipment && customMethods[note.equipment]) {
-                    const customMethod = customMethods[note.equipment].find((m: Method) => m.name === note.method);
-                    if (customMethod && customMethod.id) {
-                        localStorage.setItem("clickedMethodId", customMethod.id);
-                    }
-                }
-            } catch {
-                // 忽略解析错误
-            }
-        }
-
-        // 跳转到冲煮页面
-        if (onNavigateToBrewing) {
-            onNavigateToBrewing(note);
-        }
-    }
-
     // 添加咖啡豆筛选处理函数
     const handleBeanClick = useCallback((beanName: string | null) => {
         setSelectedBean(beanName);
@@ -809,23 +767,13 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onOptimizingCha
                                                             <>
                                                                 {note.coffeeBeanInfo.name}
                                                                 <span className="text-neutral-600 dark:text-neutral-400 mx-1">·</span>
-                                                                <button
-                                                                    onClick={(e) => handleMethodClick(note, e)}
-                                                                    className="hover:text-neutral-800 dark:hover:text-neutral-100 transition-colors"
-                                                                >
-                                                                    {note.method}
-                                                                </button>
+                                                                <span className="text-neutral-600 dark:text-neutral-400">{note.method}</span>
                                                             </>
                                                         ) : (
                                                             <>
                                                                 {equipmentNames[note.equipment] || note.equipment}
                                                                 <span className="text-neutral-600 dark:text-neutral-400 mx-1">·</span>
-                                                                <button
-                                                                    onClick={(e) => handleMethodClick(note, e)}
-                                                                    className="hover:text-neutral-800 dark:hover:text-neutral-100 transition-colors"
-                                                                >
-                                                                    {note.method}
-                                                                </button>
+                                                                <span className="text-neutral-600 dark:text-neutral-400">{note.method}</span>
                                                             </>
                                                         )}
                                                     </div>
