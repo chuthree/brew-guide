@@ -33,7 +33,6 @@ export interface CoffeeBeansProps {
     isOpen: boolean
     showBeanForm?: (bean: ExtendedCoffeeBean | null) => void
     onShowImport?: () => void
-    onGenerateAIRecipe?: (bean: ExtendedCoffeeBean) => void
 }
 
 // 导出工具函数

@@ -22,7 +22,6 @@ import Onboarding from '@/components/Onboarding'
 import CoffeeBeanFormModal from '@/components/CoffeeBean/Form/Modal'
 import ImportModal from '@/components/ImportModal'
 import { CoffeeBeanManager } from '@/lib/coffeeBeanManager'
-// import AIRecipeModal from '@/components/AIRecipeModal'
 import textZoomUtils from '@/lib/textZoom'
 import { navigateFromHistoryToBrewing } from '@/lib/brewing/navigation'
 import type { BrewingNote } from '@/lib/config'
@@ -144,12 +143,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     const [beanListKey, setBeanListKey] = useState(0);
     // 导入咖啡豆状态
     const [showImportBeanForm, setShowImportBeanForm] = useState(false);
-
-    // AI方案生成器状态
-    // const [showAIRecipeModal, setShowAIRecipeModal] = useState(false);
-    // const [selectedBeanForAI, setSelectedBeanForAI] = useState<CoffeeBean | null>(null);
-    // 添加一个标志，跟踪是否是从AI方案跳转过来
-    const [isFromAIRecipe, setIsFromAIRecipe] = useState(false);
 
     // 添加一个状态来跟踪是否已经自动跳转过
     const [hasAutoNavigatedToNotes, setHasAutoNavigatedToNotes] = useState(false);
@@ -798,12 +791,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         setEditingBean(bean);
         setShowBeanForm(true);
     };
-
-    // 处理AI方案生成
-    // const handleGenerateAIRecipe = (bean: ExtendedCoffeeBean) => {
-    //     setSelectedBeanForAI(bean);
-    //     setShowAIRecipeModal(true);
-    // };
 
     // 完全重写checkCoffeeBeans函数，简化逻辑
     const checkCoffeeBeans = useCallback(async () => {
@@ -1765,7 +1752,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                         isOpen={activeMainTab === '咖啡豆'}
                         showBeanForm={handleBeanForm}
                         onShowImport={() => setShowImportBeanForm(true)}
-                        // onGenerateAIRecipe={handleGenerateAIRecipe}
                     />
                 </ErrorBoundary>
             )}
@@ -1861,22 +1847,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 onSaveCustomMethod={(method) => {
                     // 保存方法
                     handleSaveCustomMethod(method);
-
-                    // 如果是从AI方案导入的，自动跳转到注水步骤
-                    if (isFromAIRecipe) {
-                        // 确保方法有ID
-                        if (method.id) {
-                            // 等待保存完成后跳转
-                            setTimeout(() => {
-                                // 自动跳转到注水步骤（使用保存后的方法ID）
-                                autoNavigateToBrewingAfterImport(method.id);
-                                // 重置标志
-                                setIsFromAIRecipe(false);
-                            }, 100); // 减少延迟，确保更流畅的体验
-                        } else {
-                            setIsFromAIRecipe(false);
-                        }
-                    }
                 }}
                 onCloseCustomForm={() => {
                     setShowCustomForm(false);
@@ -1884,10 +1854,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 }}
                 onCloseImportForm={() => {
                     setShowImportForm(false);
-                    // 如果关闭导入表单但未导入，也重置标志
-                    if (isFromAIRecipe) {
-                        setIsFromAIRecipe(false);
-                    }
                 }}
                 _onEditMethod={() => {}}
                 _onDeleteMethod={() => {}}
@@ -1911,13 +1877,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 onImport={handleImportBean}
                 onClose={() => setShowImportBeanForm(false)}
             />
-
-            {/* AI 方案生成器模态框组件 */}
-            {/* <AIRecipeModal
-                showModal={showAIRecipeModal}
-                onClose={() => setShowAIRecipeModal(false)}
-                coffeeBean={selectedBeanForAI}
-            /> */}
 
             {/* 冲煮笔记表单模态框组件 */}
             <BrewingNoteFormModalNew

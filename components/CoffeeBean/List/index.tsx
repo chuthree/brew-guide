@@ -25,7 +25,7 @@ import { useBeanOperations } from './hooks/useBeanOperations'
 import ViewSwitcher from './components/ViewSwitcher'
 import InventoryView from './components/InventoryView'
 
-const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowImport, onGenerateAIRecipe: _onGenerateAIRecipe }) => {
+const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowImport }) => {
     const { copyText, showFailureModal, failureContent, closeFailureModal } = useCopy()
     
     // 基础状态
