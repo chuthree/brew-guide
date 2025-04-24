@@ -419,7 +419,7 @@ export const brewingMethods: BrewingMethods = {
 						pourTime: 7,
 						label: "绕圈注水 (2/2)",
 						water: "120g",
-						detail: "甜度控制，中心圆形注水",
+						detail: "甜度控制，大水流中心圆形注水",
 						pourType: "circle",
 					},
 					{
@@ -427,7 +427,7 @@ export const brewingMethods: BrewingMethods = {
 						pourTime: 4,
 						label: "绕圈注水 (1/3)",
 						water: "180g",
-						detail: "酸度控制，中心向外螺旋注水",
+						detail: "酸度控制，大水流中心向外螺旋注水",
 						pourType: "circle",
 					},
 					{
@@ -435,7 +435,7 @@ export const brewingMethods: BrewingMethods = {
 						pourTime: 4,
 						label: "绕圈注水 (2/3)",
 						water: "240g",
-						detail: "酸度控制，中心向外螺旋注水",
+						detail: "酸度控制，大水流中心向外螺旋注水",
 						pourType: "circle",
 					},
 					{
@@ -443,7 +443,7 @@ export const brewingMethods: BrewingMethods = {
 						pourTime: 4,
 						label: "绕圈注水 (3/3)",
 						water: "300g",
-						detail: "酸度控制，中心向外螺旋注水",
+						detail: "酸度控制，大水流中心向外螺旋注水",
 						pourType: "circle",
 					},
 				],
@@ -486,10 +486,10 @@ export const brewingMethods: BrewingMethods = {
 					},
 					{
 						time: 95,
-						pourTime: 25,
+						pourTime: 5,
 						label: "中心注水",
 						water: "240g",
-						detail: "中心定点注水，降低萃取率",
+						detail: "中心定点大水流注水",
 						pourType: "center",
 					},
 				],
