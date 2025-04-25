@@ -60,24 +60,63 @@ export const generateBeanTitle = (bean: ExtendedCoffeeBean): string => {
     // 收集需要添加的参数
     const additionalParams: string[] = [];
 
-    // 检查并添加烘焙度
-    if (bean.roastLevel && !isIncluded(bean.roastLevel)) {
-        additionalParams.push(bean.roastLevel);
-    }
+    // 如果是拼配咖啡且有拼配成分，将成分添加到标题中
+    if (bean.blendComponents && Array.isArray(bean.blendComponents) && bean.blendComponents.length > 0) {
+        // 拼配成分信息
+        const blendInfoArray = bean.blendComponents.map(component => {
+            if (!component || typeof component !== 'object') return '';
+            
+            // 使用类型断言处理可能的类型不匹配
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const comp = component as any;
+            
+            // 获取成分信息
+            const componentText = [
+                comp.origin || '',
+                comp.process || '',
+                comp.variety || ''
+            ].filter(Boolean).join(' ');
+            
+            // 检查是否有百分比且有多个成分
+            const hasPercentage = comp.percentage !== undefined && 
+                                comp.percentage !== null && 
+                                comp.percentage !== "";
+            
+            if (hasPercentage && bean.blendComponents && bean.blendComponents.length > 1) {
+                return `${componentText} (${comp.percentage}%)`;
+            }
+            
+            return componentText;
+        }).filter(Boolean);
+        
+        // 如果成分信息不为空且不已包含在名称中，添加到标题
+        if (blendInfoArray.length > 0) {
+            const blendInfo = blendInfoArray.join(' · ');
+            if (!isIncluded(blendInfo)) {
+                additionalParams.push(blendInfo);
+            }
+        }
+    } else {
+        // 单品咖啡的情况，保持原有逻辑
+        // 检查并添加烘焙度
+        if (bean.roastLevel && !isIncluded(bean.roastLevel)) {
+            additionalParams.push(bean.roastLevel);
+        }
 
-    // 检查并添加产地
-    if (bean.origin && !isIncluded(bean.origin)) {
-        additionalParams.push(bean.origin);
-    }
+        // 检查并添加产地
+        if (bean.origin && !isIncluded(bean.origin)) {
+            additionalParams.push(bean.origin);
+        }
 
-    // 检查并添加处理法
-    if (bean.process && !isIncluded(bean.process)) {
-        additionalParams.push(bean.process);
-    }
+        // 检查并添加处理法
+        if (bean.process && !isIncluded(bean.process)) {
+            additionalParams.push(bean.process);
+        }
 
-    // 检查并添加品种
-    if (bean.variety && !isIncluded(bean.variety)) {
-        additionalParams.push(bean.variety);
+        // 检查并添加品种
+        if (bean.variety && !isIncluded(bean.variety)) {
+            additionalParams.push(bean.variety);
+        }
     }
 
     // 如果有额外参数，将它们添加到名称后面

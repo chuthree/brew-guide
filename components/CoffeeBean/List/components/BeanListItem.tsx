@@ -157,51 +157,6 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                                 />
                             </div>
                         </div>
-
-                        <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400 break-words">
-                            {bean.blendComponents && Array.isArray(bean.blendComponents) && bean.blendComponents.length > 0 && (
-                                <>
-                                    {bean.blendComponents.map((component, idx) => {
-                                        // 确保component是有效对象
-                                        if (!component || typeof component !== 'object') {
-                                            return null;
-                                        }
-                                        
-                                        // 使用类型断言处理可能的类型不匹配
-                                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                        const comp = component as any;
-                                        
-                                        // 获取组件内容
-                                        const componentText = [
-                                            comp.origin || '',
-                                            comp.process || '',
-                                            comp.variety || ''
-                                        ].filter(Boolean).join('');
-                                        
-                                        // 检查是否有百分比
-                                        const hasPercentage = comp.percentage !== undefined && 
-                                                            comp.percentage !== null && 
-                                                            comp.percentage !== "";
-                                        
-                                        return (
-                                            <React.Fragment key={idx}>
-                                                {idx > 0 && <span className="opacity-50 mx-1">·</span>}
-                                                <span>
-                                                    {componentText}
-                                                    {hasPercentage && bean.blendComponents && bean.blendComponents.length > 1 && ` (${comp.percentage}%)`}
-                                                </span>
-                                            </React.Fragment>
-                                        );
-                                    })}
-                                </>
-                            )}
-                            {/* 显示咖啡豆类型（手冲/意式） */}
-                            {bean.beanType && (
-                                <span className="bg-neutral-100 dark:bg-neutral-800 rounded-full px-2 py-0.5 ml-1">
-                                    {bean.beanType === 'filter' ? '手冲' : '意式'}
-                                </span>
-                            )}
-                        </div>
                     </div>
                 </div>
 

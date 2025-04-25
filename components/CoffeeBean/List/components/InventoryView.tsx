@@ -6,6 +6,7 @@ import BeanListItem from './BeanListItem'
 import { generateBeanTitle } from '../types'
 import { AnimatePresence } from 'framer-motion'
 import RemainingEditor from './RemainingEditor'
+import { X } from 'lucide-react'
 
 interface InventoryViewProps {
     filteredBeans: ExtendedCoffeeBean[]
@@ -112,70 +113,147 @@ const InventoryView: React.FC<InventoryViewProps> = ({
         return beans.some(bean => bean.beanType === 'filter'); 
     }, [beans]);
 
+    // 添加搜索状态
+    const [isSearching, setIsSearching] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const searchInputRef = React.useRef<HTMLInputElement>(null);
+    
+    // 处理搜索图标点击
+    const handleSearchClick = () => {
+        setIsSearching(true);
+        // 聚焦搜索框
+        setTimeout(() => {
+            searchInputRef.current?.focus();
+        }, 50);
+    };
+    
+    // 处理搜索框关闭
+    const handleCloseSearch = () => {
+        setIsSearching(false);
+        setSearchQuery('');
+    };
+    
+    // 处理搜索输入变化
+    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setSearchQuery(e.target.value);
+    };
+    
+    // 处理搜索框键盘事件
+    const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Escape') {
+            handleCloseSearch();
+        }
+    };
+    
+    // 基于搜索条件过滤豆子
+    const searchFilteredBeans = React.useMemo(() => {
+        if (!searchQuery.trim()) return filteredBeans;
+        
+        const query = searchQuery.toLowerCase().trim();
+        return filteredBeans.filter(bean => {
+            const title = beanTitles[bean.id]?.toLowerCase() || '';
+            const name = bean.name?.toLowerCase() || '';
+            const origin = bean.origin?.toLowerCase() || '';
+            const process = bean.process?.toLowerCase() || '';
+            const variety = bean.variety?.toLowerCase() || '';
+            const notes = bean.notes?.toLowerCase() || '';
+            
+            return title.includes(query) || 
+                name.includes(query) || 
+                origin.includes(query) || 
+                process.includes(query) || 
+                variety.includes(query) || 
+                notes.includes(query);
+        });
+    }, [filteredBeans, searchQuery, beanTitles]);
+
     return (
         <div className="w-full h-full overflow-y-auto scroll-with-bottom-bar">
             {/* 品种标签筛选 */}
             <div className="relative">
                 <div className="border-b border-neutral-200 dark:border-neutral-800 px-6 relative">
-                    <div className="flex overflow-x-auto no-scrollbar pr-14">
-                        {/* 豆子类型筛选按钮 - 只在有对应类型豆子时显示 */}
-                        {hasEspressoBeans && (
-                            <button
-                                onClick={() => onBeanTypeChange('espresso')}
-                                className={`pb-1.5 mr-3 text-[11px] whitespace-nowrap relative ${selectedBeanType === 'espresso' ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
-                            >
-                                <span className="relative">意式豆</span>
-                                {selectedBeanType === 'espresso' && (
-                                    <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
-                                )}
-                            </button>
-                        )}
-                        
-                        {hasFilterBeans && (
-                            <button
-                                onClick={() => onBeanTypeChange('filter')}
-                                className={`pb-1.5 mr-3 text-[11px] whitespace-nowrap relative ${selectedBeanType === 'filter' ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
-                            >
-                                <span className="relative">手冲豆</span>
-                                {selectedBeanType === 'filter' && (
-                                    <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
-                                )}
-                            </button>
-                        )}
-                        
-                        {/* 只有当存在豆子类型按钮和存在品种按钮时才显示分隔符 */}
-                        {(hasEspressoBeans || hasFilterBeans) && (availableVarieties.length > 0 || true) && (
-                            <div className="h-6 mr-3 self-center border-l border-neutral-200 dark:border-neutral-700"></div>
-                        )}
-                        
-                        {/* 品种筛选按钮 */}
-                        <button
-                            onClick={() => onVarietyClick(null)}
-                            className={`pb-1.5 mr-3 text-[11px] whitespace-nowrap relative ${selectedVariety === null ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
-                        >
-                            <span className="relative">全部品种</span>
-                            {selectedVariety === null && (
-                                <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
+                    {!isSearching ? (
+                        <div className="flex overflow-x-auto no-scrollbar pr-28">
+                            {/* 豆子类型筛选按钮 - 只在有对应类型豆子时显示 */}
+                            {hasEspressoBeans && (
+                                <button
+                                    onClick={() => onBeanTypeChange('espresso')}
+                                    className={`pb-1.5 mr-3 text-[11px] whitespace-nowrap relative ${selectedBeanType === 'espresso' ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
+                                >
+                                    <span className="relative">意式豆</span>
+                                    {selectedBeanType === 'espresso' && (
+                                        <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
+                                    )}
+                                </button>
                             )}
-                        </button>
-                        
-                        {availableVarieties.map(variety => (
+                            
+                            {hasFilterBeans && (
+                                <button
+                                    onClick={() => onBeanTypeChange('filter')}
+                                    className={`pb-1.5 mr-3 text-[11px] whitespace-nowrap relative ${selectedBeanType === 'filter' ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
+                                >
+                                    <span className="relative">手冲豆</span>
+                                    {selectedBeanType === 'filter' && (
+                                        <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
+                                    )}
+                                </button>
+                            )}
+                            
+                            {/* 只有当存在豆子类型按钮和存在品种按钮时才显示分隔符 */}
+                            {(hasEspressoBeans || hasFilterBeans) && (availableVarieties.length > 0 || true) && (
+                                <div className="h-6 mr-3 self-center border-l border-neutral-200 dark:border-neutral-700"></div>
+                            )}
+                            
+                            {/* 品种筛选按钮 */}
                             <button
-                                key={variety}
-                                onClick={() => onVarietyClick(variety)}
-                                className={`pb-1.5 mx-3 text-[11px] whitespace-nowrap relative ${selectedVariety === variety ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
+                                onClick={() => onVarietyClick(null)}
+                                className={`pb-1.5 mr-3 text-[11px] whitespace-nowrap relative ${selectedVariety === null ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
                             >
-                                <span className="relative">{variety}</span>
-                                {selectedVariety === variety && (
+                                <span className="relative">全部品种</span>
+                                {selectedVariety === null && (
                                     <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
                                 )}
                             </button>
-                        ))}
-                    </div>
+                            
+                            {availableVarieties.map(variety => (
+                                <button
+                                    key={variety}
+                                    onClick={() => onVarietyClick(variety)}
+                                    className={`pb-1.5 mx-3 text-[11px] whitespace-nowrap relative ${selectedVariety === variety ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
+                                >
+                                    <span className="relative">{variety}</span>
+                                    {selectedVariety === variety && (
+                                        <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
+                                    )}
+                                </button>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="flex items-center pb-1.5 h-[24px]">
+                            <div className="flex-1 relative flex items-center">
+                                <input
+                                    ref={searchInputRef}
+                                    type="text"
+                                    value={searchQuery}
+                                    onChange={handleSearchChange}
+                                    onKeyDown={handleSearchKeyDown}
+                                    placeholder="输入咖啡豆名称..."
+                                    className="w-full pr-2 text-[11px] bg-transparent border-none outline-none text-neutral-800 dark:text-neutral-100 placeholder-neutral-400 dark:placeholder-neutral-500"
+                                    autoComplete="off"
+                                />
+                            </div>
+                            <button 
+                                onClick={handleCloseSearch}
+                                className="ml-1 text-neutral-500 dark:text-neutral-400 flex items-center "
+                            >
+                                <X size={14} />
+                            </button>
+                        </div>
+                    )}
 
-                    {/* 显示/隐藏已用完的咖啡豆 - 固定在右侧 */}
-                    {beans.length > 0 && (
-                        <div className="absolute right-6 top-0 bottom-0 flex items-center bg-gradient-to-l from-neutral-50 via-neutral-50 to-transparent dark:from-neutral-900 dark:via-neutral-900 pl-6">
+                    {/* 显示/隐藏已用完的咖啡豆和搜索按钮 - 固定在右侧 */}
+                    {beans.length > 0 && !isSearching && (
+                        <div className="absolute right-6 top-0 bottom-0 flex items-center bg-gradient-to-l from-neutral-50 via-neutral-50 to-transparent dark:from-neutral-900 dark:via-neutral-900 pl-16">
                             <button
                                 onClick={onToggleShowEmptyBeans}
                                 className={`pb-1.5 text-[11px] whitespace-nowrap relative ${showEmptyBeans ? 'text-neutral-800 dark:text-neutral-100 font-normal' : 'text-neutral-600 dark:text-neutral-400'}`}
@@ -185,33 +263,41 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                                     <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
                                 )}
                             </button>
+                            <button
+                                onClick={handleSearchClick}
+                                className="ml-3 pb-1.5 text-[11px] text-neutral-600 dark:text-neutral-400 flex items-center whitespace-nowrap"
+                            >
+                                <span className="relative">找豆子</span>
+                            </button>
                         </div>
                     )}
                 </div>
             </div>
 
             {/* 咖啡豆列表 */}
-            {filteredBeans.length === 0 ? (
+            {searchFilteredBeans.length === 0 ? (
                 <div
                     className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400"
                 >
-                    {selectedVariety ?
-                        `[ 没有${selectedVariety}品种的咖啡豆 ]` :
-                        selectedBeanType !== 'all' ?
-                            `[ 没有${selectedBeanType === 'espresso' ? '意式' : '手冲'}咖啡豆 ]` :
-                            beans.length > 0 ?
-                                (showEmptyBeans ? '[ 暂无咖啡豆 ]' : '[ 所有咖啡豆已用完，点击"已用完"查看 ]') :
-                                '[ 暂无咖啡豆 ]'
+                    {searchQuery.trim() ? 
+                        `[ 没有找到匹配"${searchQuery.trim()}"的咖啡豆 ]` :
+                        selectedVariety ?
+                            `[ 没有${selectedVariety}品种的咖啡豆 ]` :
+                            selectedBeanType !== 'all' ?
+                                `[ 没有${selectedBeanType === 'espresso' ? '意式' : '手冲'}咖啡豆 ]` :
+                                beans.length > 0 ?
+                                    (showEmptyBeans ? '[ 暂无咖啡豆 ]' : '[ 所有咖啡豆已用完，点击"已用完"查看 ]') :
+                                    '[ 暂无咖啡豆 ]'
                     }
                 </div>
             ) : (
                 <div className="pb-20">
-                    {filteredBeans.map((bean, index) => (
+                    {searchFilteredBeans.map((bean, index) => (
                         <BeanListItem
                             key={bean.id}
                             bean={bean}
                             title={beanTitles[bean.id]}
-                            isLast={index === filteredBeans.length - 1}
+                            isLast={index === searchFilteredBeans.length - 1}
                             onEdit={onEdit}
                             onDelete={onDelete}
                             onShare={onShare}
