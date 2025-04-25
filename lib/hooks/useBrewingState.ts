@@ -120,9 +120,6 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 	>({});
 	// 添加导入方案表单状态
 	const [showImportForm, setShowImportForm] = useState(false);
-	// 添加优化状态追踪
-	const [isOptimizing, setIsOptimizing] = useState(false);
-
 	// 添加笔记保存状态追踪
 	const [isNoteSaved, setIsNoteSaved] = useState(false);
 
@@ -536,133 +533,6 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 		[navigateToStep, selectedMethod, selectedEquipment, selectedCoffeeBean, customEquipments]
 	);
 
-	// 处理从笔记页面跳转到导入方案页面的函数
-	const _jumpToImport = useCallback(async () => {
-		try {
-			// 重置优化状态
-			if (isOptimizing) {
-				setIsOptimizing(false);
-			}
-
-			// 1. 获取当前优化笔记的器具信息
-			const notesStr = await Storage.get("brewingNotes");
-			if (!notesStr) return;
-
-			const notes = JSON.parse(notesStr);
-			// 获取最新的笔记（通常是刚刚保存的优化笔记）
-			const latestNote = notes[0];
-			if (!latestNote || !latestNote.equipment) return;
-
-			// 2. 切换到冲煮页面
-			setActiveMainTab("冲煮");
-			// 3. 隐藏历史记录
-			setShowHistory(false);
-
-			// 4. 查找对应的设备ID
-			const equipmentId =
-				equipmentList.find((e) => e.name === latestNote.equipment)
-					?.id || latestNote.equipment;
-
-			// 5. 使用setTimeout确保状态更新完成后再执行后续操作
-			setTimeout(() => {
-				// 6. 选择对应的器具
-				setSelectedEquipment(equipmentId);
-				// 7. 直接跳到方案步骤
-				navigateToStep("method", {
-					preserveEquipment: true,
-				});
-				// 8. 设置为自定义方案模式
-				setMethodType("custom");
-
-				// 9. 等待界面更新后显示导入表单
-				setTimeout(() => {
-					setShowImportForm(true);
-				}, 100);
-			}, 100);
-		} catch {
-			// 发生错误时的备用方案：直接跳转到冲煮页面
-			setActiveMainTab("冲煮");
-			setShowHistory(false);
-			setTimeout(() => {
-				setMethodType("custom");
-				setShowImportForm(true);
-			}, 100);
-		}
-	}, [
-		isOptimizing,
-		navigateToStep,
-		setActiveMainTab,
-		setMethodType,
-		setSelectedEquipment,
-		setShowHistory,
-		setShowImportForm,
-	]);
-
-	// 添加一个函数，在导入方案后自动跳转到注水步骤
-	const autoNavigateToBrewingAfterImport = useCallback(
-		(methodId?: string) => {
-			try {
-				// 1. 确保已经选择了方案（如果提供了ID）
-				if (methodId) {
-					// 定义查找和处理方法的函数
-					const processMethodSearch = (methods: Method[]) => {
-						const foundMethod = methods.find(
-							(m) => m.id === methodId
-						);
-						if (foundMethod) {
-							setSelectedMethod(foundMethod);
-							setCurrentBrewingMethod(foundMethod);
-
-							// 导航到注水步骤，保留所有状态
-							navigateToStep("brewing", {
-								preserveMethod: true,
-								preserveEquipment: true,
-								preserveCoffeeBean: true,
-							});
-						}
-					};
-
-					// 2. 分别在通用方案和自定义方案中查找
-					if (methodType === "common") {
-						if (selectedEquipment) {
-							// 使用commonMethods代替直接访问equipment.methods
-							const methods =
-								commonMethods[selectedEquipment] || [];
-							processMethodSearch(methods);
-						}
-					} else {
-						if (
-							selectedEquipment &&
-							customMethods &&
-							customMethods[selectedEquipment]
-						) {
-							processMethodSearch(
-								customMethods[selectedEquipment]
-							);
-						}
-					}
-				} else {
-				}
-			} catch (_error) {}
-		},
-		[
-			customMethods,
-			methodType,
-			navigateToStep,
-			selectedEquipment,
-			setCurrentBrewingMethod,
-			setSelectedMethod,
-		]
-	);
-
-	// 旧的处理步骤点击函数 - 仅作为备份，现在统一使用navigateToStep
-	const handleBrewingStepClick = useCallback(
-		(step: BrewingStep) => {
-			return navigateToStep(step);
-		},
-		[navigateToStep]
-	);
-
 	// 处理器具选择
 	const handleEquipmentSelect = useCallback(
 		(equipmentName: string) => {
@@ -1065,16 +935,12 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 		setActionMenuStates,
 		showImportForm,
 		setShowImportForm,
-		isOptimizing,
-		setIsOptimizing,
 		isNoteSaved,
 		setIsNoteSaved,
 		prevMainTabRef,
 		content,
 		setContent,
 		resetBrewingState,
-		autoNavigateToBrewingAfterImport,
-		handleBrewingStepClick,
 		handleEquipmentSelect,
 		handleCoffeeBeanSelect,
 		handleSaveNote,

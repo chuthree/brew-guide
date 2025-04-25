@@ -1,4 +1,4 @@
-import { type Method, type Stage, type CustomEquipment } from "@/lib/config";
+import { type Method, type CustomEquipment } from "@/lib/config";
 
 // 定义Stage类型的接口，用于解析JSON
 interface StageData {
@@ -83,63 +83,6 @@ interface ParsedStage {
 	detail: string;
 	pourType?: string;
 	valveStatus?: "open" | "closed";
-}
-
-/**
- * 将冲煮方案转换为优化用的JSON格式
- */
-export function generateOptimizationJson(
-	equipment: string,
-	method: string,
-	coffeeBeanInfo: {
-		name: string;
-		roastLevel: string;
-		roastDate?: string;
-	},
-	params: {
-		coffee: string;
-		water: string;
-		ratio: string;
-		grindSize: string;
-		temp: string;
-	},
-	stages: Stage[],
-	currentTaste: {
-		acidity: number;
-		sweetness: number;
-		bitterness: number;
-		body: number;
-	},
-	idealTaste: {
-		acidity: number;
-		sweetness: number;
-		bitterness: number;
-		body: number;
-	},
-	notes: string,
-	optimizationGoal: string
-) {
-	// 创建配置对象
-	const configObject = {
-		equipment,
-		method,
-		coffeeBeanInfo,
-		params: {
-			coffee: params.coffee,
-			water: params.water,
-			ratio: params.ratio,
-			grindSize: params.grindSize,
-			temp: params.temp,
-			stages: stages || [],
-		},
-		currentTaste,
-		idealTaste,
-		notes,
-		optimizationGoal,
-	};
-
-	// 返回格式化的JSON字符串
-	return JSON.stringify(configObject, null, 2);
 }
 
 /**

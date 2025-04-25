@@ -30,7 +30,7 @@ const PourVisualizer = dynamic(() => import('@/components/PourVisualizer'), {
 });
 
 // 动态导入笔记表单组件
-const BrewingNoteForm = dynamic(() => import('@/components/BrewingNoteForm'), {
+const BrewingNoteForm = dynamic(() => import('@/components/Notes').then(mod => ({ default: mod.BrewingNoteForm })), {
     ssr: false,
     loading: () => null
 });
@@ -361,6 +361,7 @@ const TabContent: React.FC<TabContentProps> = ({
                 isOpen={true}
                 onClose={handleCloseNoteForm}
                 onSave={handleSaveNote}
+                inBrewPage={true}
                 initialData={{
                     equipment: equipmentName || (selectedEquipment || ''),
                     method: currentBrewingMethod!.name,

@@ -61,9 +61,6 @@ export function KeyboardManager() {
         
         // 使用 CSS 设置全局样式 - 移除可能导致文字放大的设置
         keyboardStyle.innerHTML = `
-          .brewing-note-form {
-            padding-bottom: ${info.keyboardHeight + 60}px !important;
-          }
           
           /* 禁用所有嵌套容器的滚动 */
           .overflow-y-auto .overflow-y-auto,

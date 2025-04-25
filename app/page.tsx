@@ -26,7 +26,7 @@ import textZoomUtils from '@/lib/textZoom'
 import { BREWING_EVENTS } from '@/lib/brewing/constants'
 import type { BrewingNoteData } from '@/app/types'
 import { updateParameterInfo } from '@/lib/brewing/parameters'
-import BrewingNoteFormModalNew from '@/components/BrewingNoteFormModalNew'
+import { BrewingNoteFormModal } from '@/components/Notes'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import CoffeeBeans from '@/components/CoffeeBean/List'
 import SwipeBackGesture from '@/components/SwipeBackGesture'
@@ -55,7 +55,7 @@ interface ExtendedCoffeeBean extends CoffeeBean {
 
 // 动态导入客户端组件
 const BrewingTimer = dynamic(() => import('@/components/BrewingTimer'), { ssr: false, loading: () => null })
-const BrewingHistory = dynamic(() => import('@/components/BrewingHistory'), { ssr: false, loading: () => null })
+const BrewingHistory = dynamic(() => import('@/components/Notes/List'), { ssr: false, loading: () => null })
 
 // 添加一个静态加载器组件，处理初始化过程
 const AppLoader = ({ onInitialized }: { onInitialized: (params: { hasBeans: boolean }) => void }) => {
@@ -173,7 +173,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         editingMethod, setEditingMethod,
         actionMenuStates, setActionMenuStates,
         showImportForm, setShowImportForm,
-        setIsOptimizing,
         isNoteSaved, setIsNoteSaved,
         prevMainTabRef,
         resetBrewingState,
@@ -1519,7 +1518,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                         setActiveMainTab('冲煮');
                         setShowHistory(false);
                     }}
-                    onOptimizingChange={setIsOptimizing}
                     onAddNote={handleAddNote}
                 />
             )}
@@ -1657,7 +1655,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             />
 
             {/* 冲煮笔记表单模态框组件 */}
-            <BrewingNoteFormModalNew
+            <BrewingNoteFormModal
                 key="note-form-modal"
                 showForm={showNoteFormModal}
                 initialNote={currentEditingNote}
