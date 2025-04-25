@@ -738,9 +738,13 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                                 parseInt(comp.percentage, 10) : 
                                 (typeof comp.percentage === 'number' ? comp.percentage : 100)
                         }));
-                    } else if (bean.type === '拼配') {
-                        console.warn('拼配豆数据格式不正确，重置拼配成分');
-                        // 如果是拼配豆但没有有效的拼配成分，创建一个默认成分
+                        
+                        // 根据拼配成分数量设置豆子类型
+                        bean.type = bean.blendComponents.length > 1 ? '拼配' : '单品';
+                    } else {
+                        // 如果没有有效的拼配成分，创建一个默认成分
+                        console.warn('咖啡豆数据格式不完整，添加默认成分');
+                        bean.type = '单品';
                         bean.blendComponents = [{
                             percentage: 100,
                             origin: bean.origin || '',
@@ -748,6 +752,11 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                             variety: bean.variety || ''
                         }];
                     }
+                }
+
+                // 确保有beanType字段，默认为手冲
+                if (!bean.beanType) {
+                    bean.beanType = 'filter';
                 }
 
                 // 添加到数据库

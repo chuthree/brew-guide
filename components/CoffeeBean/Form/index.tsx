@@ -37,9 +37,20 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
 
     // 添加拼配成分状态
     const [blendComponents, setBlendComponents] = useState<BlendComponent[]>(() => {
-        if (initialBean && initialBean.type === '拼配' && initialBean.blendComponents) {
+        if (initialBean && initialBean.blendComponents && initialBean.blendComponents.length > 0) {
             return initialBean.blendComponents;
         }
+        
+        // 如果是单品且有传统的产地/处理法/品种属性，则使用这些属性创建一个成分
+        if (initialBean && (initialBean.origin || initialBean.process || initialBean.variety)) {
+            return [{
+                origin: initialBean.origin || '',
+                process: initialBean.process || '',
+                variety: initialBean.variety || ''
+            }];
+        }
+        
+        // 默认创建一个空成分
         return [{
             origin: '',
             process: '',
@@ -54,6 +65,11 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
 
             if (!beanData.roastLevel) {
                 beanData.roastLevel = '浅度烘焙';
+            }
+
+            // 确保有beanType字段，默认为手冲
+            if (!beanData.beanType) {
+                beanData.beanType = 'filter';
             }
 
             const needFlavorPeriodInit = !beanData.startDay && !beanData.endDay;
@@ -92,6 +108,7 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
             variety: '',
             price: '',
             type: '单品',
+            beanType: 'filter', // 默认为手冲
             notes: '',
             startDay: 0,
             endDay: 0,
@@ -295,14 +312,16 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
     const handleSubmit = () => {
         validateRemaining();
 
-        if (bean.type === '拼配') {
-            onSave({
-                ...bean,
-                blendComponents: blendComponents
-            });
-        } else {
-            onSave(bean);
-        }
+        // 根据blendComponents的数量自动判断是单品还是拼配
+        const isBlend = blendComponents.length > 1;
+        const beanType = isBlend ? '拼配' : '单品';
+
+        // 统一使用成分属性，不管是单品还是拼配
+        onSave({
+            ...bean,
+            type: beanType,
+            blendComponents: blendComponents
+        });
     };
 
     // 根据烘焙度自动设置赏味期参数
@@ -357,6 +376,12 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
         if (currentStep === 'basic') {
             return typeof bean.name === 'string' && bean.name.trim() !== '';
         }
+        
+        if (currentStep === 'detail') {
+            // 确保有选择beanType(手冲/意式)
+            return typeof bean.beanType === 'string' && (bean.beanType === 'filter' || bean.beanType === 'espresso');
+        }
+        
         return true;
     };
 

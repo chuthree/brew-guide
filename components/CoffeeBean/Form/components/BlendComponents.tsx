@@ -20,7 +20,7 @@ const BlendComponents: React.FC<BlendComponentsProps> = ({
         <div className="space-y-5 w-full">
             <div className="flex items-center justify-between">
                 <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                    拼配成分
+                    咖啡豆成分
                 </label>
                 <button
                     type="button"
@@ -56,15 +56,21 @@ const BlendComponents: React.FC<BlendComponentsProps> = ({
                             <label className="block text-xs text-neutral-500 dark:text-neutral-400">
                                 比例 (可选)
                             </label>
-                            <AutocompleteInput
-                                value={component.percentage !== undefined ? component.percentage.toString() : ''}
-                                onChange={(value) => onChange(index, 'percentage', value)}
-                                placeholder="0-100"
-                                unit="%"
-                                inputType="tel"
-                                clearable={true}
-                                suggestions={[]}
-                            />
+                            {components.length > 1 ? (
+                                <AutocompleteInput
+                                    value={component.percentage !== undefined ? component.percentage.toString() : ''}
+                                    onChange={(value) => onChange(index, 'percentage', value)}
+                                    placeholder="0-100"
+                                    unit="%"
+                                    inputType="tel"
+                                    clearable={true}
+                                    suggestions={[]}
+                                />
+                            ) : (
+                                <div className="text-xs text-neutral-500 dark:text-neutral-400 py-2">
+                                    单品咖啡豆无需设置比例
+                                </div>
+                            )}
                         </div>
 
                         <div className="grid grid-cols-3 gap-3">
@@ -100,7 +106,7 @@ const BlendComponents: React.FC<BlendComponentsProps> = ({
             </div>
 
             <div className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
-                <p>提示：比例为可选项，如需添加请确保各成分比例总和为100%</p>
+                <p>提示：单一成分为单品咖啡豆，多种成分为拼配咖啡豆。比例为可选项，如需添加请确保各成分比例总和为100%</p>
             </div>
         </div>
     );

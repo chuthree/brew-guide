@@ -111,6 +111,9 @@ export const DataManager = {
 					await Storage.set(key, value);
 				}
 			}
+			
+			// 修复拼配豆数据，确保所有豆子有正确的beanType和blendComponents
+			await this.fixBlendBeansData();
 
 			return {
 				success: true,
@@ -453,6 +456,9 @@ export const DataManager = {
 				}
 			}
 
+			// 修复拼配豆数据，确保所有豆子有正确的beanType和blendComponents
+			await this.fixBlendBeansData();
+
 			return {
 				success: true,
 				message: `数据合并成功，导出日期: ${
@@ -503,15 +509,35 @@ export const DataManager = {
 			// 遍历所有咖啡豆，查找并修复问题
 			const fixedBeans = beans.map(originalBean => {
 				const bean = originalBean as ExtendedCoffeeBean;
-				// 检查是否是拼配豆且有拼配成分
-				if (bean.type === "拼配" && bean.blendComponents) {
+				
+				// 设置默认beanType为filter（手冲）
+				if (!bean.beanType) {
+					fixedCount++;
+					hasChanges = true;
+					bean.beanType = 'filter';
+				}
+				
+				// 更新type字段以匹配blendComponents的长度
+				const isBlend = bean.blendComponents && Array.isArray(bean.blendComponents) && bean.blendComponents.length > 1;
+				const expectedType = isBlend ? "拼配" : "单品";
+				
+				// 如果type与预期不符，更新它
+				if (bean.type !== expectedType) {
+					fixedCount++;
+					hasChanges = true;
+					bean.type = expectedType;
+				}
+				
+				// 检查拼配成分是否正确
+				if (isBlend && bean.blendComponents) {
 					// 确保blendComponents是数组
-					if (!Array.isArray(bean.blendComponents) || bean.blendComponents.length === 0) {
-						// 创建默认拼配成分
+					if (!Array.isArray(bean.blendComponents) || bean.blendComponents.length <= 1) {
+						// 不应该发生，但可能有逻辑错误导致的情况
 						fixedCount++;
 						hasChanges = true;
 						return {
 							...bean,
+							type: "单品", // 改为单品
 							blendComponents: [{
 								percentage: 100,
 								origin: bean.origin || "",
@@ -604,34 +630,36 @@ export const DataManager = {
 							...bean,
 							blendComponents: validComponents
 						};
-					} else if (bean.origin) {
-						// 如果没有有效成分但有产地信息，创建一个默认成分
-						return {
-							...bean,
-							blendComponents: [{
-								percentage: 100,
-								origin: bean.origin || "",
-								process: bean.process || "",
-								variety: bean.variety || ""
-							}]
-						};
-					} else {
-						// 无法修复的情况，移除blendComponents
-						const { blendComponents: _unusedBlendComponents, ...restBean } = bean;
-						return {
-							...restBean,
-							type: "单品" // 改为单品
-						};
 					}
-				} else if (bean.type !== "拼配" && bean.blendComponents) {
-					// 非拼配豆不应该有blendComponents，移除它
+				} else if (bean.blendComponents && Array.isArray(bean.blendComponents) && bean.blendComponents.length === 1) {
+					// 单品豆，确保origin/process/variety同步
 					fixedCount++;
 					hasChanges = true;
-					const { blendComponents: _unusedBlendComponents, ...restBean } = bean;
-					return restBean;
+					const comp = bean.blendComponents[0];
+					return {
+						...bean,
+						type: "单品",
+						origin: comp.origin || bean.origin,
+						process: comp.process || bean.process,
+						variety: comp.variety || bean.variety
+					};
+				} else if (!bean.blendComponents || !Array.isArray(bean.blendComponents) || bean.blendComponents.length === 0) {
+					// 没有成分的豆子，添加一个默认成分
+					fixedCount++;
+					hasChanges = true;
+					return {
+						...bean,
+						type: "单品",
+						blendComponents: [{
+							percentage: 100,
+							origin: bean.origin || "",
+							process: bean.process || "",
+							variety: bean.variety || ""
+						}]
+					};
 				}
 				
-				// 没有问题或不是拼配豆，返回原样
+				// 没有问题，返回原样
 				return bean;
 			});
 

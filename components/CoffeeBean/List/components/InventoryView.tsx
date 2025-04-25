@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { ExtendedCoffeeBean } from '../types'
+import { ExtendedCoffeeBean, BeanType } from '../types'
 import BeanListItem from './BeanListItem'
 import { generateBeanTitle } from '../types'
 import { AnimatePresence } from 'framer-motion'
@@ -11,7 +11,9 @@ interface InventoryViewProps {
     filteredBeans: ExtendedCoffeeBean[]
     selectedVariety: string | null
     showEmptyBeans: boolean
+    selectedBeanType: BeanType
     onVarietyClick: (variety: string | null) => void
+    onBeanTypeChange: (type: BeanType) => void
     onToggleShowEmptyBeans: () => void
     availableVarieties: string[]
     beans: ExtendedCoffeeBean[]
@@ -26,7 +28,9 @@ const InventoryView: React.FC<InventoryViewProps> = ({
     filteredBeans,
     selectedVariety,
     showEmptyBeans,
+    selectedBeanType,
     onVarietyClick,
+    onBeanTypeChange,
     onToggleShowEmptyBeans,
     availableVarieties,
     beans,
@@ -99,21 +103,62 @@ const InventoryView: React.FC<InventoryViewProps> = ({
         setEditingRemaining(null);
     };
 
+    // 检查是否有特定类型的豆子存在
+    const hasEspressoBeans = React.useMemo(() => {
+        return beans.some(bean => bean.beanType === 'espresso');
+    }, [beans]);
+
+    const hasFilterBeans = React.useMemo(() => {
+        return beans.some(bean => bean.beanType === 'filter'); 
+    }, [beans]);
+
     return (
         <div className="w-full h-full overflow-y-auto scroll-with-bottom-bar">
             {/* 品种标签筛选 */}
             <div className="relative">
                 <div className="border-b border-neutral-200 dark:border-neutral-800 px-6 relative">
                     <div className="flex overflow-x-auto no-scrollbar pr-14">
+                        {/* 豆子类型筛选按钮 - 只在有对应类型豆子时显示 */}
+                        {hasEspressoBeans && (
+                            <button
+                                onClick={() => onBeanTypeChange('espresso')}
+                                className={`pb-1.5 mr-3 text-[11px] whitespace-nowrap relative ${selectedBeanType === 'espresso' ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
+                            >
+                                <span className="relative">意式豆</span>
+                                {selectedBeanType === 'espresso' && (
+                                    <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
+                                )}
+                            </button>
+                        )}
+                        
+                        {hasFilterBeans && (
+                            <button
+                                onClick={() => onBeanTypeChange('filter')}
+                                className={`pb-1.5 mr-3 text-[11px] whitespace-nowrap relative ${selectedBeanType === 'filter' ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
+                            >
+                                <span className="relative">手冲豆</span>
+                                {selectedBeanType === 'filter' && (
+                                    <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
+                                )}
+                            </button>
+                        )}
+                        
+                        {/* 只有当存在豆子类型按钮和存在品种按钮时才显示分隔符 */}
+                        {(hasEspressoBeans || hasFilterBeans) && (availableVarieties.length > 0 || true) && (
+                            <div className="h-6 mr-3 self-center border-l border-neutral-200 dark:border-neutral-700"></div>
+                        )}
+                        
+                        {/* 品种筛选按钮 */}
                         <button
                             onClick={() => onVarietyClick(null)}
                             className={`pb-1.5 mr-3 text-[11px] whitespace-nowrap relative ${selectedVariety === null ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
                         >
-                            <span className="relative">全部豆子</span>
+                            <span className="relative">全部品种</span>
                             {selectedVariety === null && (
                                 <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
                             )}
                         </button>
+                        
                         {availableVarieties.map(variety => (
                             <button
                                 key={variety}
@@ -152,9 +197,11 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                 >
                     {selectedVariety ?
                         `[ 没有${selectedVariety}品种的咖啡豆 ]` :
-                        beans.length > 0 ?
-                            (showEmptyBeans ? '[ 暂无咖啡豆 ]' : '[ 所有咖啡豆已用完，点击"已用完"查看 ]') :
-                            '[ 暂无咖啡豆 ]'
+                        selectedBeanType !== 'all' ?
+                            `[ 没有${selectedBeanType === 'espresso' ? '意式' : '手冲'}咖啡豆 ]` :
+                            beans.length > 0 ?
+                                (showEmptyBeans ? '[ 暂无咖啡豆 ]' : '[ 所有咖啡豆已用完，点击"已用完"查看 ]') :
+                                '[ 暂无咖啡豆 ]'
                     }
                 </div>
             ) : (

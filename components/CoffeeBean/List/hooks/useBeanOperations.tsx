@@ -211,11 +211,10 @@ export const useBeanOperations = () => {
     // 处理分享咖啡豆信息
     const handleShare = async (bean: ExtendedCoffeeBean, copyFunction: (text: string) => void) => {
         try {
-            // 创建可共享的咖啡豆对象
-            const shareableBean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'> = {
+            // 创建一个可分享的咖啡豆对象
+            const shareableBean: any = {
                 name: bean.name,
                 capacity: bean.capacity,
-                remaining: bean.remaining,
                 roastLevel: bean.roastLevel,
                 roastDate: bean.roastDate,
                 flavor: bean.flavor,
@@ -223,21 +222,22 @@ export const useBeanOperations = () => {
                 process: bean.process,
                 variety: bean.variety,
                 price: bean.price,
-                type: bean.type,
+                type: bean.blendComponents && bean.blendComponents.length > 1 ? '拼配' : '单品',
+                beanType: bean.beanType, // 添加beanType信息
                 notes: bean.notes,
                 startDay: bean.startDay,
                 endDay: bean.endDay
             };
 
-            // 如果是拼配豆，添加拼配成分信息
-            if (bean.type === '拼配' && bean.blendComponents && bean.blendComponents.length > 0) {
+            // 添加成分信息
+            if (bean.blendComponents && bean.blendComponents.length > 0) {
                 shareableBean.blendComponents = bean.blendComponents;
             }
 
             // 导入转换工具并生成可读文本
             try {
                 const { beanToReadableText } = await import('@/lib/jsonUtils');
-                // @ts-expect-error - 我们知道这个对象结构与函数期望的类型兼容
+                // 我们知道这个对象结构与函数期望的类型兼容
                 const readableText = beanToReadableText(shareableBean);
                 copyFunction(readableText);
                 return { success: true };

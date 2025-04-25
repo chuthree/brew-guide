@@ -4,7 +4,7 @@ import AutocompleteInput from '@/components/AutocompleteInput';
 import AutoResizeTextarea from '@/components/AutoResizeTextarea';
 import BlendComponents from './BlendComponents';
 import { ExtendedCoffeeBean, BlendComponent } from '../types';
-import { pageVariants, pageTransition, BEAN_TYPES, ORIGINS, PROCESSES, VARIETIES } from '../constants';
+import { pageVariants, pageTransition } from '../constants';
 
 interface DetailInfoProps {
     bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>;
@@ -17,6 +17,12 @@ interface DetailInfoProps {
     };
     autoSetFlavorPeriod: () => void;
 }
+
+// 咖啡豆类型选项
+const BEAN_TYPES = [
+    { value: 'filter', label: '手冲' },
+    { value: 'espresso', label: '意式' },
+];
 
 const DetailInfo: React.FC<DetailInfoProps> = ({
     bean,
@@ -38,31 +44,26 @@ const DetailInfo: React.FC<DetailInfoProps> = ({
             <div className="grid grid-cols-1 gap-6 w-full">
                 <div className="space-y-2">
                     <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                        类型
+                        咖啡豆类型
                     </label>
                     <div className="flex w-full border-b border-neutral-300 dark:border-neutral-700">
                         {BEAN_TYPES.map(type => (
                             <div
                                 key={type.value}
                                 className="w-1/2 relative py-2"
-                                onClick={() => {
-                                    if (bean.type === '拼配' && type.value === '单品') {
-                                        onBlendComponentsChange.remove(0);
-                                    }
-                                    onBeanChange('type')(type.value);
-                                }}
+                                onClick={() => onBeanChange('beanType')(type.value)}
                             >
                                 <button
                                     type="button"
                                     className={`w-full text-center transition-colors duration-200 ${
-                                        bean.type === type.value
+                                        bean.beanType === type.value
                                             ? 'text-neutral-800 dark:text-neutral-200'
                                             : 'text-neutral-500 dark:text-neutral-400'
                                     }`}
                                 >
                                     {type.label}
                                 </button>
-                                {bean.type === type.value && (
+                                {bean.beanType === type.value && (
                                     <div className="absolute bottom-[-1px] left-0 w-full h-[1px] bg-neutral-800 dark:bg-neutral-200"></div>
                                 )}
                             </div>
@@ -71,47 +72,12 @@ const DetailInfo: React.FC<DetailInfoProps> = ({
                 </div>
             </div>
 
-            {bean.type === '单品' ? (
-                <>
-                    <div className="grid grid-cols-2 gap-6 w-full">
-                        <AutocompleteInput
-                            label="产地"
-                            value={bean.origin || ''}
-                            onChange={onBeanChange('origin')}
-                            placeholder="例如：埃塞俄比亚"
-                            suggestions={ORIGINS}
-                            clearable
-                        />
-
-                        <AutocompleteInput
-                            label="处理法"
-                            value={bean.process || ''}
-                            onChange={onBeanChange('process')}
-                            placeholder="例如：水洗"
-                            suggestions={PROCESSES}
-                            clearable
-                        />
-                    </div>
-
-                    <div className="w-full">
-                        <AutocompleteInput
-                            label="品种"
-                            value={bean.variety || ''}
-                            onChange={onBeanChange('variety')}
-                            placeholder="例如：卡杜拉"
-                            suggestions={VARIETIES}
-                            clearable
-                        />
-                    </div>
-                </>
-            ) : (
-                <BlendComponents
-                    components={blendComponents}
-                    onAdd={onBlendComponentsChange.add}
-                    onRemove={onBlendComponentsChange.remove}
-                    onChange={onBlendComponentsChange.change}
-                />
-            )}
+            <BlendComponents
+                components={blendComponents}
+                onAdd={onBlendComponentsChange.add}
+                onRemove={onBlendComponentsChange.remove}
+                onChange={onBlendComponentsChange.change}
+            />
 
             <div className="space-y-4 w-full">
                 <div className="flex items-center justify-between">

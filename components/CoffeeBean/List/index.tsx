@@ -9,7 +9,7 @@ import { getBloggerBeans } from '@/lib/csvUtils'
 import BottomActionBar from '@/components/BottomActionBar'
 import { useCopy } from "@/lib/hooks/useCopy"
 import CopyFailureModal from "../ui/copy-failure-modal"
-import { SORT_OPTIONS, type SortOption, sortBeans, convertToRankingSortOption } from './SortSelector'
+import { type SortOption, sortBeans, convertToRankingSortOption } from './SortSelector'
 
 // 导入新创建的组件和类型
 import { 
@@ -20,10 +20,27 @@ import {
     VIEW_OPTIONS, 
     ViewOption 
 } from './types'
-import { globalCache, saveShowEmptyBeansPreference, isBeanEmpty } from './globalCache'
+import { 
+    globalCache, 
+    saveShowEmptyBeansPreference, 
+    saveSelectedVarietyPreference, 
+    saveSelectedBeanTypePreference, 
+    saveViewModePreference, 
+    saveSortOptionPreference, 
+    saveInventorySortOptionPreference,
+    saveRankingSortOptionPreference,
+    saveBloggerSortOptionPreference,
+    saveRankingBeanTypePreference,
+    saveRankingEditModePreference,
+    saveBloggerYearPreference,
+    isBeanEmpty 
+} from './globalCache'
 import { useBeanOperations } from './hooks/useBeanOperations'
 import ViewSwitcher from './components/ViewSwitcher'
 import InventoryView from './components/InventoryView'
+
+// 添加全局缓存中的beanType属性
+globalCache.selectedBeanType = globalCache.selectedBeanType || 'all';
 
 const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowImport }) => {
     const { copyText, showFailureModal, failureContent, closeFailureModal } = useCopy()
@@ -33,8 +50,12 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
     const [ratedBeans, setRatedBeans] = useState<ExtendedCoffeeBean[]>(globalCache.ratedBeans)
     const [showAddForm, setShowAddForm] = useState(false)
     const [editingBean, setEditingBean] = useState<ExtendedCoffeeBean | null>(null)
-    const [sortOption, setSortOption] = useState<SortOption>(SORT_OPTIONS.REMAINING_DAYS_ASC)
-    const [viewMode, setViewMode] = useState<ViewOption>(VIEW_OPTIONS.INVENTORY)
+    const [sortOption, setSortOption] = useState<SortOption>(globalCache.sortOption)
+    // 视图特定的排序选项
+    const [inventorySortOption, setInventorySortOption] = useState<SortOption>(globalCache.inventorySortOption)
+    const [rankingSortOption, setRankingSortOption] = useState<SortOption>(globalCache.rankingSortOption)
+    const [bloggerSortOption, setBloggerSortOption] = useState<SortOption>(globalCache.bloggerSortOption)
+    const [viewMode, setViewMode] = useState<ViewOption>(globalCache.viewMode)
     
     // 评分相关状态
     const [showRatingModal, setShowRatingModal] = useState(false)
@@ -45,13 +66,14 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
     // 过滤和显示控制状态
     const [availableVarieties, setAvailableVarieties] = useState<string[]>(globalCache.varieties)
     const [selectedVariety, setSelectedVariety] = useState<string | null>(globalCache.selectedVariety)
+    const [selectedBeanType, setSelectedBeanType] = useState<BeanType>(globalCache.selectedBeanType)
     const [filteredBeans, setFilteredBeans] = useState<ExtendedCoffeeBean[]>(globalCache.filteredBeans)
     const [showEmptyBeans, setShowEmptyBeans] = useState<boolean>(globalCache.showEmptyBeans)
     
     // 榜单视图状态
-    const [rankingBeanType, setRankingBeanType] = useState<BeanType>('all')
-    const [rankingEditMode, setRankingEditMode] = useState<boolean>(false)
-    const [bloggerYear, setBloggerYear] = useState<BloggerBeansYear>(2025)
+    const [rankingBeanType, setRankingBeanType] = useState<BeanType>(globalCache.rankingBeanType)
+    const [rankingEditMode, setRankingEditMode] = useState<boolean>(globalCache.rankingEditMode)
+    const [bloggerYear, setBloggerYear] = useState<BloggerBeansYear>(globalCache.bloggerYear)
     
     // 辅助引用和状态
     const [_isFirstLoad, setIsFirstLoad] = useState<boolean>(!globalCache.initialized)
@@ -104,18 +126,37 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
 
     // 更新过滤后的豆子和分类
     const updateFilteredBeansAndCategories = React.useCallback((beansToSort: ExtendedCoffeeBean[]) => {
-        // 提取可用的品种列表
-        const varieties = beansToSort.reduce((acc, bean) => {
+        // 先根据豆子类型过滤
+        let typeFilteredBeans = beansToSort;
+        if (selectedBeanType !== 'all') {
+            typeFilteredBeans = beansToSort.filter(bean => bean.beanType === selectedBeanType);
+        }
+        
+        // 然后根据是否显示已用完的豆子过滤用于提取品种的豆子
+        let beansForVarieties = typeFilteredBeans;
+        if (!showEmptyBeans) {
+            beansForVarieties = typeFilteredBeans.filter(bean => !isBeanEmpty(bean));
+        }
+        
+        // 从过滤后的豆子中提取可用的品种列表
+        const varieties = beansForVarieties.reduce((acc, bean) => {
             if (bean.variety && !acc.includes(bean.variety)) {
                 acc.push(bean.variety);
             }
             return acc;
         }, [] as string[]);
         
-        // 根据选择的品种过滤豆子
-        let filtered = beansToSort;
+        // 再根据选择的品种过滤豆子
+        let filtered = typeFilteredBeans;
         if (selectedVariety) {
-            filtered = beansToSort.filter(bean => bean.variety === selectedVariety);
+            filtered = filtered.filter(bean => {
+                // 如果选择的是"拼配豆"分类
+                if (selectedVariety === '拼配豆') {
+                    return bean.blendComponents && bean.blendComponents.length > 1;
+                }
+                // 否则按照常规品种筛选，但排除拼配豆
+                return (!bean.blendComponents || bean.blendComponents.length <= 1) && (bean.variety || '未分类') === selectedVariety;
+            });
         }
         
         // 根据"显示已用完"设置过滤
@@ -128,7 +169,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
         setFilteredBeans(filtered);
         globalCache.varieties = varieties;
         globalCache.filteredBeans = filtered;
-    }, [selectedVariety, showEmptyBeans]);
+    }, [selectedVariety, showEmptyBeans, selectedBeanType]);
 
     // 加载咖啡豆数据
     const loadBeans = React.useCallback(async () => {
@@ -264,19 +305,34 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
 
     // 视图切换时更新排序选项
     useEffect(() => {
-        // 根据视图模式设置默认排序
-        switch (viewMode) {
-            case VIEW_OPTIONS.INVENTORY:
-                setSortOption(SORT_OPTIONS.REMAINING_DAYS_ASC);
-                break;
-            case VIEW_OPTIONS.RANKING:
-                setSortOption(SORT_OPTIONS.RATING_DESC);
-                break;
-            case VIEW_OPTIONS.BLOGGER:
-                setSortOption(SORT_OPTIONS.ORIGINAL);
-                break;
+        if (globalCache.initialized) {
+            // 根据视图模式选择对应的排序选项
+            let newSortOption: SortOption;
+            
+            switch (viewMode) {
+                case VIEW_OPTIONS.INVENTORY:
+                    newSortOption = inventorySortOption;
+                    break;
+                case VIEW_OPTIONS.RANKING:
+                    newSortOption = rankingSortOption;
+                    break;
+                case VIEW_OPTIONS.BLOGGER:
+                    newSortOption = bloggerSortOption;
+                    break;
+                default:
+                    newSortOption = inventorySortOption;
+            }
+            
+            // 更新全局排序选项状态
+            setSortOption(newSortOption);
+            globalCache.sortOption = newSortOption;
+            saveSortOptionPreference(newSortOption);
+            
+            // 保存视图模式到本地存储
+            globalCache.viewMode = viewMode;
+            saveViewModePreference(viewMode);
         }
-    }, [viewMode]);
+    }, [viewMode, inventorySortOption, rankingSortOption, bloggerSortOption]);
 
     // 当排序选项改变时更新数据
     useEffect(() => {
@@ -318,29 +374,91 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
     // 处理品种标签点击
     const handleVarietyClick = (variety: string | null) => {
         setSelectedVariety(variety);
-        // 更新全局缓存
+        // 更新全局缓存并保存到本地存储
         globalCache.selectedVariety = variety;
+        saveSelectedVarietyPreference(variety);
         
-        // 立即更新过滤后的咖啡豆列表
+        // 先根据豆子类型过滤
+        let typeFilteredBeans = beans;
+        if (selectedBeanType !== 'all') {
+            typeFilteredBeans = beans.filter(bean => bean.beanType === selectedBeanType);
+        }
+        
+        // 再根据品种过滤
+        let filtered = typeFilteredBeans;
         if (variety) {
-            const filtered = beans.filter(bean => {
+            filtered = filtered.filter(bean => {
                 // 如果选择的是"拼配豆"分类
                 if (variety === '拼配豆') {
-                    return bean.type === '拼配' && (showEmptyBeans || !isBeanEmpty(bean));
+                    return bean.blendComponents && bean.blendComponents.length > 1;
                 }
                 // 否则按照常规品种筛选，但排除拼配豆
-                return bean.type !== '拼配' && (bean.variety || '未分类') === variety &&
-                    (showEmptyBeans || !isBeanEmpty(bean));
+                return (!bean.blendComponents || bean.blendComponents.length <= 1) && (bean.variety || '未分类') === variety;
             });
-            globalCache.filteredBeans = filtered;
-            setFilteredBeans(filtered);
-        } else {
-            const filtered = beans.filter(bean => 
-                (showEmptyBeans || !isBeanEmpty(bean))
-            );
-            globalCache.filteredBeans = filtered;
-            setFilteredBeans(filtered);
         }
+        
+        // 根据"显示已用完"设置过滤
+        if (!showEmptyBeans) {
+            filtered = filtered.filter(bean => !isBeanEmpty(bean));
+        }
+        
+        globalCache.filteredBeans = filtered;
+        setFilteredBeans(filtered);
+    };
+
+    // 处理豆子类型点击
+    const handleBeanTypeChange = (beanType: BeanType) => {
+        // 如果点击已选中的类型，则重置为全部
+        const newBeanType = beanType === selectedBeanType ? 'all' : beanType;
+        
+        setSelectedBeanType(newBeanType);
+        // 更新全局缓存并保存到本地存储
+        globalCache.selectedBeanType = newBeanType;
+        saveSelectedBeanTypePreference(newBeanType);
+        
+        // 根据新选择的豆子类型过滤
+        let typeFilteredBeans = beans;
+        if (newBeanType !== 'all') {
+            typeFilteredBeans = beans.filter(bean => bean.beanType === newBeanType);
+        }
+        
+        // 再根据选择的品种过滤
+        let filtered = typeFilteredBeans;
+        if (selectedVariety) {
+            filtered = filtered.filter(bean => {
+                // 如果选择的是"拼配豆"分类
+                if (selectedVariety === '拼配豆') {
+                    return bean.blendComponents && bean.blendComponents.length > 1;
+                }
+                // 否则按照常规品种筛选，但排除拼配豆
+                return (!bean.blendComponents || bean.blendComponents.length <= 1) && (bean.variety || '未分类') === selectedVariety;
+            });
+        }
+        
+        // 根据"显示已用完"设置过滤
+        if (!showEmptyBeans) {
+            filtered = filtered.filter(bean => !isBeanEmpty(bean));
+        }
+        
+        // 更新品种列表 - 切换豆子类型后需要重新计算可用品种
+        // 只有未用完的豆子才会被用于计算可用品种，除非showEmptyBeans为true
+        let beansForVarieties = typeFilteredBeans;
+        if (!showEmptyBeans) {
+            beansForVarieties = typeFilteredBeans.filter(bean => !isBeanEmpty(bean));
+        }
+        
+        // 从过滤后的豆子中提取可用的品种列表
+        const varieties = beansForVarieties.reduce((acc, bean) => {
+            if (bean.variety && !acc.includes(bean.variety)) {
+                acc.push(bean.variety);
+            }
+            return acc;
+        }, [] as string[]);
+        
+        setAvailableVarieties(varieties);
+        globalCache.varieties = varieties;
+        globalCache.filteredBeans = filtered;
+        setFilteredBeans(filtered);
     };
 
     // 处理编辑咖啡豆
@@ -427,30 +545,97 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
     const toggleShowEmptyBeans = () => {
         const newShowEmptyBeans = !showEmptyBeans;
         setShowEmptyBeans(newShowEmptyBeans);
-        // 更新全局缓存
+        // 更新全局缓存并保存到本地存储
         globalCache.showEmptyBeans = newShowEmptyBeans;
+        saveShowEmptyBeansPreference(newShowEmptyBeans);
         
-        // 重新应用过滤
+        // 根据豆子类型过滤
+        let typeFilteredBeans = beans;
+        if (selectedBeanType !== 'all') {
+            typeFilteredBeans = beans.filter(bean => bean.beanType === selectedBeanType);
+        }
+        
+        // 再根据品种过滤
+        let filtered = typeFilteredBeans;
         if (selectedVariety) {
-            const filtered = beans.filter(bean => {
+            filtered = filtered.filter(bean => {
                 // 如果选择的是"拼配豆"分类
                 if (selectedVariety === '拼配豆') {
-                    return bean.type === '拼配' && (newShowEmptyBeans || !isBeanEmpty(bean));
+                    return bean.blendComponents && bean.blendComponents.length > 1;
                 }
                 // 否则按照常规品种筛选，但排除拼配豆
-                return bean.type !== '拼配' && (bean.variety || '未分类') === selectedVariety &&
-                    (newShowEmptyBeans || !isBeanEmpty(bean));
+                return (!bean.blendComponents || bean.blendComponents.length <= 1) && (bean.variety || '未分类') === selectedVariety;
             });
-            globalCache.filteredBeans = filtered;
-            setFilteredBeans(filtered);
-        } else {
-            const filtered = beans.filter(bean => 
-                (newShowEmptyBeans || !isBeanEmpty(bean))
-            );
-            globalCache.filteredBeans = filtered;
-            setFilteredBeans(filtered);
         }
+        
+        // 根据新的"显示已用完"设置过滤
+        if (!newShowEmptyBeans) {
+            filtered = filtered.filter(bean => !isBeanEmpty(bean));
+        }
+        
+        // 更新品种列表 - 切换显示空豆子状态后需要重新计算可用品种
+        let beansForVarieties = typeFilteredBeans;
+        if (!newShowEmptyBeans) {
+            beansForVarieties = typeFilteredBeans.filter(bean => !isBeanEmpty(bean));
+        }
+        
+        // 从过滤后的豆子中提取可用的品种列表
+        const varieties = beansForVarieties.reduce((acc, bean) => {
+            if (bean.variety && !acc.includes(bean.variety)) {
+                acc.push(bean.variety);
+            }
+            return acc;
+        }, [] as string[]);
+        
+        setAvailableVarieties(varieties);
+        globalCache.varieties = varieties;
+        globalCache.filteredBeans = filtered;
+        setFilteredBeans(filtered);
     };
+
+    // 当榜单豆子类型变更时更新数据
+    useEffect(() => {
+        if (globalCache.initialized) {
+            if (viewMode === VIEW_OPTIONS.RANKING) {
+                loadRatedBeans();
+            } else if (viewMode === VIEW_OPTIONS.BLOGGER) {
+                loadBloggerBeans();
+            }
+        }
+    }, [rankingBeanType, loadRatedBeans, loadBloggerBeans, viewMode]);
+
+    // 当博主榜单年份变更时更新数据
+    useEffect(() => {
+        if (globalCache.initialized && viewMode === VIEW_OPTIONS.BLOGGER) {
+            loadBloggerBeans();
+        }
+    }, [bloggerYear, loadBloggerBeans, viewMode]);
+
+    // 组件加载后初始化各视图的排序选项
+    useEffect(() => {
+        if (isOpen && !isLoadingRef.current) {
+            // 初始化时根据当前视图设置全局排序选项
+            let currentSortOption: SortOption;
+            
+            switch (viewMode) {
+                case VIEW_OPTIONS.INVENTORY:
+                    currentSortOption = inventorySortOption;
+                    break;
+                case VIEW_OPTIONS.RANKING:
+                    currentSortOption = rankingSortOption;
+                    break;
+                case VIEW_OPTIONS.BLOGGER:
+                    currentSortOption = bloggerSortOption;
+                    break;
+                default:
+                    currentSortOption = inventorySortOption;
+            }
+            
+            // 设置当前排序选项
+            setSortOption(currentSortOption);
+            globalCache.sortOption = currentSortOption;
+        }
+    }, [isOpen, viewMode, inventorySortOption, rankingSortOption, bloggerSortOption]);
 
     if (!isOpen) return null;
 
@@ -492,10 +677,37 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
             >
                 {/* 视图切换器 */}
                 <ViewSwitcher
-                                    viewMode={viewMode}
-                    onViewChange={setViewMode}
-                                    sortOption={sortOption}
-                    onSortChange={setSortOption}
+                    viewMode={viewMode}
+                    onViewChange={(newViewMode) => {
+                        setViewMode(newViewMode);
+                        // 视图模式的保存在effect中处理
+                    }}
+                    sortOption={sortOption}
+                    onSortChange={(newSortOption) => {
+                        // 根据当前视图类型保存对应的排序选项
+                        switch (viewMode) {
+                            case VIEW_OPTIONS.INVENTORY:
+                                setInventorySortOption(newSortOption);
+                                globalCache.inventorySortOption = newSortOption;
+                                saveInventorySortOptionPreference(newSortOption);
+                                break;
+                            case VIEW_OPTIONS.RANKING:
+                                setRankingSortOption(newSortOption);
+                                globalCache.rankingSortOption = newSortOption;
+                                saveRankingSortOptionPreference(newSortOption);
+                                break;
+                            case VIEW_OPTIONS.BLOGGER:
+                                setBloggerSortOption(newSortOption);
+                                globalCache.bloggerSortOption = newSortOption;
+                                saveBloggerSortOptionPreference(newSortOption);
+                                break;
+                        }
+                        
+                        // 更新全局排序选项
+                        setSortOption(newSortOption);
+                        globalCache.sortOption = newSortOption;
+                        saveSortOptionPreference(newSortOption);
+                    }}
                     beansCount={
                         viewMode === VIEW_OPTIONS.INVENTORY 
                             ? filteredBeans.length 
@@ -506,11 +718,26 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                     totalBeans={viewMode === VIEW_OPTIONS.INVENTORY ? beans.length : undefined}
                     totalWeight={viewMode === VIEW_OPTIONS.INVENTORY ? calculateTotalWeight() : undefined}
                     rankingBeanType={rankingBeanType}
-                    onRankingBeanTypeChange={setRankingBeanType}
+                    onRankingBeanTypeChange={(newType) => {
+                        setRankingBeanType(newType);
+                        // 保存到本地存储
+                        globalCache.rankingBeanType = newType;
+                        saveRankingBeanTypePreference(newType);
+                    }}
                     bloggerYear={bloggerYear}
-                    onBloggerYearChange={setBloggerYear}
+                    onBloggerYearChange={(newYear) => {
+                        setBloggerYear(newYear);
+                        // 保存到本地存储
+                        globalCache.bloggerYear = newYear;
+                        saveBloggerYearPreference(newYear);
+                    }}
                     rankingEditMode={rankingEditMode}
-                    onRankingEditModeChange={setRankingEditMode}
+                    onRankingEditModeChange={(newMode) => {
+                        setRankingEditMode(newMode);
+                        // 保存到本地存储
+                        globalCache.rankingEditMode = newMode;
+                        saveRankingEditModePreference(newMode);
+                    }}
                 />
                 
                 {/* 内容区域 */}
@@ -520,7 +747,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                         filteredBeans={filteredBeans}
                         selectedVariety={selectedVariety}
                         showEmptyBeans={showEmptyBeans}
+                        selectedBeanType={selectedBeanType}
                         onVarietyClick={handleVarietyClick}
+                        onBeanTypeChange={handleBeanTypeChange}
                         onToggleShowEmptyBeans={toggleShowEmptyBeans}
                         availableVarieties={availableVarieties}
                         beans={beans}

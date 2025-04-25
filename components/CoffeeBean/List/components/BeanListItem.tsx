@@ -159,7 +159,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                         </div>
 
                         <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400 break-words">
-                            {bean.type === '拼配' && bean.blendComponents && Array.isArray(bean.blendComponents) && bean.blendComponents.length > 0 && (
+                            {bean.blendComponents && Array.isArray(bean.blendComponents) && bean.blendComponents.length > 0 && (
                                 <>
                                     {bean.blendComponents.map((component, idx) => {
                                         // 确保component是有效对象
@@ -172,7 +172,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                                         const comp = component as any;
                                         
                                         // 获取组件内容
-                                        const componentContent = [
+                                        const componentText = [
                                             comp.origin || '',
                                             comp.process || '',
                                             comp.variety || ''
@@ -187,13 +187,19 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                                             <React.Fragment key={idx}>
                                                 {idx > 0 && <span className="opacity-50 mx-1">·</span>}
                                                 <span>
-                                                    {componentContent}
-                                                    {hasPercentage && ` (${comp.percentage}%)`}
+                                                    {componentText}
+                                                    {hasPercentage && bean.blendComponents && bean.blendComponents.length > 1 && ` (${comp.percentage}%)`}
                                                 </span>
                                             </React.Fragment>
                                         );
                                     })}
                                 </>
+                            )}
+                            {/* 显示咖啡豆类型（手冲/意式） */}
+                            {bean.beanType && (
+                                <span className="bg-neutral-100 dark:bg-neutral-800 rounded-full px-2 py-0.5 ml-1">
+                                    {bean.beanType === 'filter' ? '手冲' : '意式'}
+                                </span>
                             )}
                         </div>
                     </div>

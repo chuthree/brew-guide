@@ -32,6 +32,7 @@ interface CoffeeBean {
 	blendComponents?: BlendComponent[] | undefined;
 	startDay?: number;
 	endDay?: number;
+	beanType?: string;
 }
 
 interface BrewingNote {
@@ -566,79 +567,92 @@ export function generateBeanTemplateJson() {
  * @returns 格式化的可读文本
  */
 export function beanToReadableText(bean: CoffeeBean): string {
-	// 在报错问题解决前，临时改为JSON字符串格式
-	// 创建对象的副本并直接返回JSON
-	// 不处理percentage字段，直接保持其原始类型
+	let text = `【咖啡豆信息】${bean.name}\n`;
 	
-	// 返回格式化的JSON字符串
-	return JSON.stringify(bean, null, 2);
-
-	// 原自然语言格式代码（暂时注释，待问题解决后可恢复）
-	/*
-	const {
-		name,
-		capacity,
-		remaining,
-		roastLevel,
-		roastDate,
-		flavor,
-		origin,
-		process,
-		variety,
-		price,
-		type,
-		notes,
-		blendComponents,
-		startDay,
-		endDay,
-	} = bean;
-
-	// 构建可读文本
-	let text = `【咖啡豆】${name}\n`;
-	text += `容量: ${remaining}/${capacity}g\n`;
-	text += `烘焙度: ${roastLevel || "未知"}\n`;
-
-	if (roastDate) text += `烘焙日期: ${roastDate}\n`;
-
-	// 如果是拼配豆，不输出顶级的产地、处理法、品种信息
-	if (type !== "拼配") {
-		if (origin) text += `产地: ${origin}\n`;
-		if (process) text += `处理法: ${process}\n`;
-		if (variety) text += `品种: ${variety}\n`;
-	}
-
-	if (type) text += `类型: ${type}\n`;
-	if (price) text += `价格: ${price}元\n`;
+	// 确定豆子类型（单品/拼配）
+	const isBlend = bean.blendComponents && Array.isArray(bean.blendComponents) && bean.blendComponents.length > 1;
+	const beanType = isBlend ? '拼配' : '单品';
 	
-	// 添加赏味期信息
-	if (startDay) text += `养豆期: ${startDay}天\n`;
-	if (endDay) text += `赏味期: ${endDay}天\n`;
-
-	if (flavor && flavor.length > 0) {
-		text += `风味标签: ${flavor.join(", ")}\n`;
+	text += `类型: ${beanType}\n`;
+	
+	// 如果有beanType字段（手冲/意式），添加用途信息
+	if (bean.beanType) {
+		text += `用途: ${bean.beanType === 'filter' ? '手冲' : '意式'}\n`;
 	}
-
-	if (blendComponents && Array.isArray(blendComponents)) {
-		text += "\n拼配成分:\n";
-		blendComponents.forEach((comp: BlendComponent, index: number) => {
-			const details = [];
-			if (comp.origin) details.push(comp.origin);
-			if (comp.process) details.push(comp.process);
-			if (comp.variety) details.push(comp.variety);
-
-			text += `  ${index + 1}. ${comp.percentage}% ${details.join(
-				" | "
-			)}\n`;
+	
+	// 原始咖啡豆属性
+	if (bean.price) {
+		text += `价格: ${bean.price}元\n`;
+	}
+	
+	if (bean.capacity) {
+		text += `容量: ${bean.capacity}g\n`;
+	}
+	
+	if (bean.roastLevel) {
+		text += `烘焙度: ${bean.roastLevel}\n`;
+	}
+	
+	if (bean.roastDate) {
+		text += `烘焙日期: ${bean.roastDate}\n`;
+	}
+	
+	if (!isBlend) {
+		// 单品豆特有信息
+		if (bean.origin) {
+			text += `产地: ${bean.origin}\n`;
+		}
+		
+		if (bean.process) {
+			text += `处理法: ${bean.process}\n`;
+		}
+		
+		if (bean.variety) {
+			text += `品种: ${bean.variety}\n`;
+		}
+	} else if (bean.blendComponents && Array.isArray(bean.blendComponents) && bean.blendComponents.length > 0) {
+		// 拼配豆成分信息
+		text += `拼配成分:\n`;
+		
+		bean.blendComponents.forEach((component, index) => {
+			const componentText = [
+				component.origin || "",
+				component.process || "",
+				component.variety || ""
+			]
+				.filter(v => v) // 过滤掉空值
+				.join(" | ");
+			
+			const percentageText = component.percentage 
+				? `${component.percentage}% ` 
+				: "";
+			
+			text += `${index + 1}. ${percentageText}${componentText}\n`;
 		});
 	}
-
-	if (notes) text += `\n备注: ${notes}\n`;
-
-	// 添加隐藏的序列化标识
-	text += `\n@DATA_TYPE:COFFEE_BEAN@`;
-
+	
+	// 风味和备注
+	if (bean.flavor && Array.isArray(bean.flavor) && bean.flavor.length) {
+		text += `风味标签: ${bean.flavor.join(", ")}\n`;
+	}
+	
+	if (bean.startDay || bean.endDay) {
+		if (bean.startDay) {
+			text += `养豆期: ${bean.startDay}天\n`;
+		}
+		
+		if (bean.endDay) {
+			text += `赏味期: ${bean.endDay}天\n`;
+		}
+	}
+	
+	if (bean.notes) {
+		text += `备注: ${bean.notes}\n`;
+	}
+	
+	// 元数据标记
+	text += "\n---\n@DATA_TYPE:COFFEE_BEAN@\n";
 	return text;
-	*/
 }
 
 // 获取自定义注水方式的名称
