@@ -17,48 +17,68 @@ const EquipmentSelector: React.FC<EquipmentSelectorProps> = ({
   onSelect
 }) => {
   return (
-    <div className="space-y-6 py-4">
-      <div className="space-y-2">
-        <label className="block text-sm text-neutral-700 dark:text-neutral-300">
+    <div className="py-3">
+      <div>
+        <label className="text-xs font-medium text-neutral-800 dark:text-neutral-200 mb-6 block">
           选择器具
         </label>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-5">
           {/* 标准器具列表 */}
           {equipmentList.map((equipment) => (
-            <button
+            <div 
               key={equipment.id}
-              type="button"
+              className="group relative text-neutral-500 dark:text-neutral-400"
               onClick={() => onSelect(equipment.id)}
-              className={`p-3 rounded-md text-sm text-left transition ${
-                selectedEquipment === equipment.id
-                  ? 'bg-neutral-800 dark:bg-neutral-200 text-neutral-100 dark:text-neutral-800'
-                  : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300'
-              }`}
             >
-              <div className="font-medium">{equipment.name}</div>
-              <div className="text-xs mt-1 line-clamp-1 opacity-80">
-                {equipment.description}
+              <div className={`group relative border-l ${selectedEquipment === equipment.id ? 'border-neutral-800 dark:border-white' : 'border-neutral-200 dark:border-neutral-800'} pl-6 cursor-pointer`}>
+                {selectedEquipment === equipment.id && (
+                  <div className="absolute -left-px top-0 h-full w-px bg-neutral-800 dark:bg-white"></div>
+                )}
+                <div className="cursor-pointer">
+                  <div className="flex items-baseline justify-between">
+                    <div className="flex items-baseline gap-3 min-w-0 overflow-hidden">
+                      <h3 className="text-xs font-normal tracking-wider truncate">
+                        {equipment.name}
+                      </h3>
+                    </div>
+                  </div>
+                  <div className="mt-2">
+                    <p className="text-xs font-light">
+                      {equipment.description}
+                    </p>
+                  </div>
+                </div>
               </div>
-            </button>
+            </div>
           ))}
           
           {/* 自定义器具列表 */}
           {customEquipments.map((equipment) => (
-            <button
+            <div 
               key={equipment.id}
-              type="button"
+              className="group relative text-neutral-500 dark:text-neutral-400"
               onClick={() => onSelect(equipment.id)}
-              className={`p-3 rounded-md text-sm text-left transition ${
-                selectedEquipment === equipment.id
-                  ? 'bg-neutral-800 dark:bg-neutral-200 text-neutral-100 dark:text-neutral-800'
-                  : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300'
-              }`}
             >
-              <div className="font-medium">{equipment.name}</div>
-              <div className="text-xs mt-1 line-clamp-1 opacity-80">
-                {equipment.description || '自定义器具'}
+              <div className={`group relative border-l ${selectedEquipment === equipment.id ? 'border-neutral-800 dark:border-white' : 'border-neutral-200 dark:border-neutral-800'} pl-6 cursor-pointer`}>
+                {selectedEquipment === equipment.id && (
+                  <div className="absolute -left-px top-0 h-full w-px bg-neutral-800 dark:bg-white"></div>
+                )}
+                <div className="cursor-pointer">
+                  <div className="flex items-baseline justify-between">
+                    <div className="flex items-baseline gap-3 min-w-0 overflow-hidden">
+                      <h3 className="text-xs font-normal tracking-wider truncate">
+                        {equipment.name}
+                      </h3>
+                    </div>
+                  </div>
+                  <div className="mt-2">
+                    <p className="text-xs font-light">
+                      {equipment.description || '自定义器具'}
+                    </p>
+                  </div>
+                </div>
               </div>
-            </button>
+            </div>
           ))}
         </div>
       </div>

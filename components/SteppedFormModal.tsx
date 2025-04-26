@@ -17,7 +17,6 @@ interface SteppedFormModalProps {
     onComplete: () => void
     steps: Step[]
     initialStep?: number
-    title?: string
     preserveState?: boolean
     onStepChange?: (index: number) => void
 }
@@ -28,7 +27,6 @@ const SteppedFormModal: React.FC<SteppedFormModalProps> = ({
     onComplete,
     steps,
     initialStep = 0,
-    title,
     preserveState = false,
     onStepChange
 }) => {
@@ -183,11 +181,6 @@ const SteppedFormModal: React.FC<SteppedFormModalProps> = ({
                                         {currentStepIndex + 1}/{steps.length}
                                     </div>
                                 </div>
-
-                                {/* 标题 (如果提供) */}
-                                {title && (
-                                    <h3 className="text-base font-medium text-center mb-6">{title}</h3>
-                                )}
 
                                 {/* 步骤内容 */}
                                 <div className="flex-1 overflow-y-auto pb-4">

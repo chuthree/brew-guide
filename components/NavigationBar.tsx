@@ -245,7 +245,7 @@ const EditableParameter = ({
 
     return (
         <span
-            className={`group relative inline-flex items-center ${className} cursor-pointer min-w-0 max-w-[40px]`}
+            className={`group relative inline-flex items-center ${className} cursor-pointer min-w-0`}
             onClick={() => setIsEditing(true)}
         >
             {prefix && <span className="flex-shrink-0">{prefix}</span>}
@@ -723,7 +723,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                         {parameterInfo.params && (
                                             <div className="absolute top-2 right-6 min-w-0 max-w-full text-right z-10">
                                                 {editableParams ? (
-                                                    <div className="flex items-center justify-end bg-neutral-100 dark:bg-neutral-800 space-x-1 sm:space-x-2 overflow-x-auto no-scrollbar pl-6">
+                                                    <div className="flex items-center justify-end bg-neutral-100 dark:bg-neutral-800 space-x-1 sm:space-x-2 overflow-x-auto no-scrollbar pl-3">
                                                         <EditableParameter
                                                             value={editableParams.coffee.replace('g', '')}
                                                             onChange={(v) => handleParamChange('coffee', v)}

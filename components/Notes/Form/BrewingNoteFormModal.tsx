@@ -268,14 +268,6 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
     }
   ]
 
-  // 获取表单标题
-  const getFormTitle = () => {
-    if (skipToLastStep) {
-      return initialNote?.id ? "编辑冲煮笔记" : "创建冲煮笔记"
-    }
-    return "创建冲煮笔记"
-  }
-
   return (
     <SteppedFormModal
       showForm={showForm}
@@ -283,7 +275,6 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
       onComplete={handleStepComplete}
       steps={steps}
       initialStep={skipToLastStep ? steps.length - 1 : 0}
-      title={getFormTitle()}
       preserveState={false}
     />
   )
