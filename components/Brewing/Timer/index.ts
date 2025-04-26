@@ -6,6 +6,8 @@ export type { LayoutSettings } from './Settings';
 export { default as TimerDisplay } from './TimerDisplay';
 export { default as TimerButtons } from './TimerButtons';
 export { default as SkipButton } from './SkipButton';
+export { default as ProgressBar } from './ProgressBar';
+export { default as StageInfo } from './StageInfo';
 
 // 导出工具函数
 export * from './utils';

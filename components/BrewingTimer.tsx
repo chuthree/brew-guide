@@ -1,17 +1,14 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef, useLayoutEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { BrewingNoteForm } from "@/components/Notes";
+import { AnimatePresence } from "framer-motion";
 import type { BrewingNoteData, CoffeeBean } from "@/app/types";
 import type { Method, Stage } from "@/lib/config";
 import type { SettingsOptions } from "@/components/Settings";
 import hapticsUtils from "@/lib/haptics";
 import { Storage } from "@/lib/storage";
-import { equipmentList } from "@/lib/config";
 import { 
   BrewingTimerSettings, 
-  formatTime, 
   handleScreenWake, 
   cleanupScreenWake,
   calculateTargetFlowRate,
@@ -23,7 +20,7 @@ import {
   // 阶段处理器
   createExpandedStages,
   getCurrentStageIndex,
-  getStageProgress,
+  getStageProgress as getStageProgressFunc,
   calculateCurrentWater,
   // 计时器控制器
   startMainTimer as startTimerController,
@@ -47,7 +44,7 @@ import type {
 // 保留布局设置接口的导出，但使用从Timer模块导入的定义
 export type { LayoutSettings } from "@/components/Brewing/Timer";
 // 导出这些在导入中被定义但未使用的函数，避免linter错误
-export { getStageProgress, calculateCurrentWater };
+export { getStageProgressFunc as getStageProgress, calculateCurrentWater };
 
 interface BrewingTimerProps {
   currentBrewingMethod: Method | null;
@@ -103,7 +100,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
   const [hasStartedOnce, setHasStartedOnce] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
   const [isHapticsSupported, setIsHapticsSupported] = useState(false);
-  const [isProgressBarReady, setIsProgressBarReady] = useState(false);
+  const [_isProgressBarReady, setIsProgressBarReady] = useState(false);
   const lastStageRef = useRef<number>(-1);
   // 添加一个引用来记录上一次的倒计时状态，避免重复触发事件
   const prevCountdownTimeRef = useRef<number | null>(null);
@@ -118,7 +115,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
   const audioState = useRef<AudioState>(createInitialAudioState());
 
   const methodStagesRef = useRef(currentBrewingMethod?.params.stages || []);
-  const [showNoteForm, setShowNoteForm] = useState(false);
+  const [_showNoteForm, setShowNoteForm] = useState(false);
 
   // 添加一个状态来保存笔记表单的初始内容
   const [noteFormInitialData, setNoteFormInitialData] = useState<
@@ -301,7 +298,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
   // 使用StageProcessor的getStageProgress函数
   const calculateStageProgress = useCallback(
     (stageIndex: number) => {
-      return getStageProgress(stageIndex, currentTime, expandedStagesRef.current);
+      return getStageProgressFunc(stageIndex, currentTime, expandedStagesRef.current);
     },
     [currentTime]
   );
@@ -519,7 +516,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
   }, [countdownTime, onCountdownChange]);
 
   // 修改保存笔记函数，添加保存成功反馈
-  const handleSaveNote = useCallback(async (note: BrewingNoteData) => {
+  const _handleSaveNote = useCallback(async (note: BrewingNoteData) => {
     try {
       // 从Storage获取现有笔记
       const existingNotesStr = await Storage.get("brewingNotes");
@@ -707,7 +704,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
   }, [isRunning, onStatusChange]);
 
   // 修改获取阶段进度的函数
-  const getStageProgress = useCallback(
+  const _getStageProgress = useCallback(
     (stageIndex: number) => {
       if (stageIndex < 0 || expandedStagesRef.current.length === 0) return 0;
 
@@ -1056,15 +1053,15 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
       ? expandedStagesRef.current[currentStageIndex]
       : null;
 
-  // 获取下一个扩展阶段
-  const nextStageIndex =
+  // 获取下一个扩展阶段 - 使用下划线前缀标记未使用变量
+  const _nextStageIndex =
     currentStageIndex >= 0 &&
     currentStageIndex < expandedStagesRef.current.length - 1
       ? currentStageIndex + 1
       : -1;
 
-  const nextStage =
-    nextStageIndex >= 0 ? expandedStagesRef.current[nextStageIndex] : null;
+  // 直接使用null而不是保存引用
+  // const nextStage = nextStageIndex >= 0 ? expandedStagesRef.current[nextStageIndex] : null;
 
   // 计算当前阶段的流速（无论是否正在运行）
   const currentFlowRateValue = currentStage?.type === "pour" 
