@@ -35,7 +35,6 @@ const BlendComponents: React.FC<BlendComponentsProps> = ({
                 {components.map((component, index) => (
                     <div
                         key={index}
-                        className="border-b border-neutral-200 dark:border-neutral-700 pb-4"
                     >
                         <div className="flex items-center justify-between mb-3">
                             <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
@@ -52,11 +51,11 @@ const BlendComponents: React.FC<BlendComponentsProps> = ({
                             )}
                         </div>
 
-                        <div className="space-y-1 mb-3">
-                            <label className="block text-xs text-neutral-500 dark:text-neutral-400">
-                                比例 (可选)
-                            </label>
-                            {components.length > 1 ? (
+                        {components.length > 1 && (
+                            <div className="space-y-1 mb-3">
+                                <label className="block text-xs text-neutral-500 dark:text-neutral-400">
+                                    比例 (可选)
+                                </label>
                                 <AutocompleteInput
                                     value={component.percentage !== undefined ? component.percentage.toString() : ''}
                                     onChange={(value) => onChange(index, 'percentage', value)}
@@ -66,12 +65,8 @@ const BlendComponents: React.FC<BlendComponentsProps> = ({
                                     clearable={true}
                                     suggestions={[]}
                                 />
-                            ) : (
-                                <div className="text-xs text-neutral-500 dark:text-neutral-400 py-2">
-                                    单品咖啡豆无需设置比例
-                                </div>
-                            )}
-                        </div>
+                            </div>
+                        )}
 
                         <div className="grid grid-cols-3 gap-3">
                             <AutocompleteInput
