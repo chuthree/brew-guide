@@ -66,7 +66,7 @@ export async function recognizeImage(formData: FormData): Promise<RecognitionRes
 
         // 检查响应格式
         if (!data.result) {
-            throw new RecognitionError('识别服务返回格式错误', 'SERVER_ERROR');
+            throw new RecognitionError('未识别到符合格式的关键信息', 'SERVER_ERROR');
         }
 
         return {
