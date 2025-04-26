@@ -14,6 +14,12 @@ export * from './StageProcessor';
 // 导出计时器控制器
 export * from './TimerController';
 
+// 导出倒计时控制器
+export * from './CountdownController';
+
+// 导出计时器管理器
+export * from './TimerManager';
+
 // 导出类型定义
 export * from './types';
 

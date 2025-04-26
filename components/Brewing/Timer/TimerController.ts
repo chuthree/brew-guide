@@ -129,41 +129,4 @@ export const startMainTimer = (
       return newTime;
     });
   }, 1000);
-};
-
-/**
- * 倒计时函数
- */
-export interface CountdownCallbacks {
-  onTick: (updater: (prev: number | null) => number | null) => void;
-  onComplete: () => void;
-}
-
-export const startCountdown = (
-  initialCountdown: number,
-  audioState: AudioState,
-  notificationSoundEnabled: boolean,
-  callbacks: CountdownCallbacks
-): NodeJS.Timeout => {
-  // 开始播放倒计时音效
-  playSound("start", audioState, notificationSoundEnabled);
-  
-  return setInterval(() => {
-    callbacks.onTick((prev: number | null) => {
-      if (prev === null || prev <= 0) {
-        return 0;
-      }
-      
-      const newCountdown = prev - 1;
-      
-      if (newCountdown === 0) {
-        // 倒计时结束，调用完成回调
-        setTimeout(() => {
-          callbacks.onComplete();
-        }, 0);
-      }
-      
-      return newCountdown;
-    });
-  }, 1000);
 }; 
