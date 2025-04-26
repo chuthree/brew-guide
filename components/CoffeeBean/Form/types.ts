@@ -22,7 +22,6 @@ export interface CoffeeBean {
     origin?: string;
     process?: string;
     variety?: string;
-    altitude?: string;
     acidity?: number;
     sweetness?: number;
     body?: number;

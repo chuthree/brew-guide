@@ -705,19 +705,49 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
         
         const query = searchQuery.toLowerCase().trim();
         return filteredBeans.filter(bean => {
-            const title = `${bean.name || ''} ${bean.origin || ''}`.toLowerCase();
+            // 基本信息搜索
             const name = bean.name?.toLowerCase() || '';
             const origin = bean.origin?.toLowerCase() || '';
             const process = bean.process?.toLowerCase() || '';
             const variety = bean.variety?.toLowerCase() || '';
             const notes = bean.notes?.toLowerCase() || '';
             
-            return title.includes(query) || 
-                name.includes(query) || 
+            // 额外信息搜索
+            const roastLevel = bean.roastLevel?.toLowerCase() || '';
+            const roastDate = bean.roastDate?.toLowerCase() || '';
+            const price = bean.price?.toLowerCase() || '';
+            const beanType = bean.beanType?.toLowerCase() || '';
+            
+            // 风味标签搜索 - 将数组转换为字符串进行搜索
+            const flavors = bean.flavor?.join(' ').toLowerCase() || '';
+            
+            // 拼配组件搜索
+            const blendComponentsText = bean.blendComponents?.map(comp => 
+                `${comp.percentage || ''} ${comp.origin || ''} ${comp.process || ''} ${comp.variety || ''}`
+            ).join(' ').toLowerCase() || '';
+            
+            // 计量信息搜索
+            const capacity = bean.capacity?.toLowerCase() || '';
+            const remaining = bean.remaining?.toLowerCase() || '';
+            
+            // 赏味期搜索 - 将赏味期信息转换为可搜索的文本
+            const flavorPeriod = `${bean.startDay || ''} ${bean.endDay || ''}`.toLowerCase();
+            
+            // 合并所有可搜索文本
+            return name.includes(query) || 
                 origin.includes(query) || 
                 process.includes(query) || 
                 variety.includes(query) || 
-                notes.includes(query);
+                notes.includes(query) ||
+                roastLevel.includes(query) ||
+                roastDate.includes(query) ||
+                price.includes(query) ||
+                beanType.includes(query) ||
+                flavors.includes(query) ||
+                blendComponentsText.includes(query) ||
+                capacity.includes(query) ||
+                remaining.includes(query) ||
+                flavorPeriod.includes(query);
         });
     }, [filteredBeans, searchQuery, isSearching]);
 
