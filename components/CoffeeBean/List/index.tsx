@@ -4,12 +4,12 @@ import React, { useState, useEffect, useRef } from 'react'
 import { CoffeeBeanManager } from '@/lib/coffeeBeanManager'
 import CoffeeBeanFormModal from '@/components/CoffeeBean/Form/Modal'
 import CoffeeBeanRatingModal from '../Rating/Modal'
-import CoffeeBeanRanking from '../Ranking'
+import _CoffeeBeanRanking from '../Ranking'
 import { getBloggerBeans } from '@/lib/csvUtils'
 import BottomActionBar from '@/components/BottomActionBar'
 import { useCopy } from "@/lib/hooks/useCopy"
 import CopyFailureModal from "../ui/copy-failure-modal"
-import { type SortOption, sortBeans, convertToRankingSortOption } from './SortSelector'
+import { type SortOption, sortBeans, convertToRankingSortOption as _convertToRankingSortOption } from './SortSelector'
 
 // 导入新创建的组件和类型
 import { 
@@ -47,7 +47,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
     
     // 基础状态
     const [beans, setBeans] = useState<ExtendedCoffeeBean[]>(globalCache.beans)
-    const [ratedBeans, setRatedBeans] = useState<ExtendedCoffeeBean[]>(globalCache.ratedBeans)
+    const [_ratedBeans, setRatedBeans] = useState<ExtendedCoffeeBean[]>(globalCache.ratedBeans)
     const [showAddForm, setShowAddForm] = useState(false)
     const [editingBean, setEditingBean] = useState<ExtendedCoffeeBean | null>(null)
     const [sortOption, setSortOption] = useState<SortOption>(globalCache.sortOption)
@@ -60,7 +60,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
     // 评分相关状态
     const [showRatingModal, setShowRatingModal] = useState(false)
     const [selectedBeanForRating, setSelectedBeanForRating] = useState<ExtendedCoffeeBean | null>(null)
-    const [lastRatedBeanId, setLastRatedBeanId] = useState<string | null>(null)
+    const [_lastRatedBeanId, setLastRatedBeanId] = useState<string | null>(null)
     const [ratingSavedCallback, setRatingSavedCallback] = useState<(() => void) | null>(null)
     
     // 过滤和显示控制状态
@@ -491,7 +491,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
     };
 
     // 处理咖啡豆评分
-    const handleShowRatingForm = (bean: ExtendedCoffeeBean, onRatingSaved?: () => void) => {
+    const _handleShowRatingForm = (bean: ExtendedCoffeeBean, onRatingSaved?: () => void) => {
         setSelectedBeanForRating(bean);
         setShowRatingModal(true);
 
@@ -637,6 +637,32 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
         }
     }, [isOpen, viewMode, inventorySortOption, rankingSortOption, bloggerSortOption]);
 
+    // 添加搜索状态
+    const [isSearching, setIsSearching] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+
+    // 搜索过滤逻辑
+    const searchFilteredBeans = React.useMemo(() => {
+        if (!searchQuery.trim() || !isSearching) return filteredBeans;
+        
+        const query = searchQuery.toLowerCase().trim();
+        return filteredBeans.filter(bean => {
+            const title = `${bean.name || ''} ${bean.origin || ''}`.toLowerCase();
+            const name = bean.name?.toLowerCase() || '';
+            const origin = bean.origin?.toLowerCase() || '';
+            const process = bean.process?.toLowerCase() || '';
+            const variety = bean.variety?.toLowerCase() || '';
+            const notes = bean.notes?.toLowerCase() || '';
+            
+            return title.includes(query) || 
+                name.includes(query) || 
+                origin.includes(query) || 
+                process.includes(query) || 
+                variety.includes(query) || 
+                notes.includes(query);
+        });
+    }, [filteredBeans, searchQuery, isSearching]);
+
     if (!isOpen) return null;
 
     return (
@@ -671,139 +697,130 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                 }}
             />
 
-            <div
-                ref={containerRef}
-                className="h-full flex flex-col"
-            >
-                {/* 视图切换器 */}
-                <ViewSwitcher
-                    viewMode={viewMode}
-                    onViewChange={(newViewMode) => {
-                        setViewMode(newViewMode);
-                        // 视图模式的保存在effect中处理
-                    }}
-                    sortOption={sortOption}
-                    onSortChange={(newSortOption) => {
-                        // 根据当前视图类型保存对应的排序选项
-                        switch (viewMode) {
-                            case VIEW_OPTIONS.INVENTORY:
-                                setInventorySortOption(newSortOption);
-                                globalCache.inventorySortOption = newSortOption;
-                                saveInventorySortOptionPreference(newSortOption);
-                                break;
-                            case VIEW_OPTIONS.RANKING:
-                                setRankingSortOption(newSortOption);
-                                globalCache.rankingSortOption = newSortOption;
-                                saveRankingSortOptionPreference(newSortOption);
-                                break;
-                            case VIEW_OPTIONS.BLOGGER:
-                                setBloggerSortOption(newSortOption);
-                                globalCache.bloggerSortOption = newSortOption;
-                                saveBloggerSortOptionPreference(newSortOption);
-                                break;
-                        }
-                        
-                        // 更新全局排序选项
-                        setSortOption(newSortOption);
-                        globalCache.sortOption = newSortOption;
-                        saveSortOptionPreference(newSortOption);
-                    }}
-                    beansCount={
-                        viewMode === VIEW_OPTIONS.INVENTORY 
-                            ? filteredBeans.length 
-                            : viewMode === VIEW_OPTIONS.BLOGGER 
-                                ? (globalCache.bloggerBeans[bloggerYear] || []).length 
-                                : ratedBeans.length
-                    }
-                    totalBeans={viewMode === VIEW_OPTIONS.INVENTORY ? beans.length : undefined}
-                    totalWeight={viewMode === VIEW_OPTIONS.INVENTORY ? calculateTotalWeight() : undefined}
-                    rankingBeanType={rankingBeanType}
-                    onRankingBeanTypeChange={(newType) => {
-                        setRankingBeanType(newType);
-                        // 保存到本地存储
-                        globalCache.rankingBeanType = newType;
-                        saveRankingBeanTypePreference(newType);
-                    }}
-                    bloggerYear={bloggerYear}
-                    onBloggerYearChange={(newYear) => {
-                        setBloggerYear(newYear);
-                        // 保存到本地存储
-                        globalCache.bloggerYear = newYear;
-                        saveBloggerYearPreference(newYear);
-                    }}
-                    rankingEditMode={rankingEditMode}
-                    onRankingEditModeChange={(newMode) => {
-                        setRankingEditMode(newMode);
-                        // 保存到本地存储
-                        globalCache.rankingEditMode = newMode;
-                        saveRankingEditModePreference(newMode);
-                    }}
-                />
-                
-                {/* 内容区域 */}
-                {viewMode === VIEW_OPTIONS.INVENTORY ? (
-                    // 库存视图
-                    <InventoryView 
-                        filteredBeans={filteredBeans}
-                        selectedVariety={selectedVariety}
-                        showEmptyBeans={showEmptyBeans}
+            <div className={`relative flex flex-col h-full ${isOpen ? 'block' : 'hidden'}`}>
+                <div className="w-full" ref={containerRef}>
+                    <ViewSwitcher
+                        viewMode={viewMode}
+                        onViewChange={(newViewMode) => {
+                            setViewMode(newViewMode);
+                            // 视图模式的保存在effect中处理
+                        }}
+                        sortOption={sortOption}
+                        onSortChange={(newSortOption) => {
+                            // 根据当前视图类型保存对应的排序选项
+                            switch (viewMode) {
+                                case VIEW_OPTIONS.INVENTORY:
+                                    setInventorySortOption(newSortOption);
+                                    globalCache.inventorySortOption = newSortOption;
+                                    saveInventorySortOptionPreference(newSortOption);
+                                    break;
+                                case VIEW_OPTIONS.RANKING:
+                                    setRankingSortOption(newSortOption);
+                                    globalCache.rankingSortOption = newSortOption;
+                                    saveRankingSortOptionPreference(newSortOption);
+                                    break;
+                                case VIEW_OPTIONS.BLOGGER:
+                                    setBloggerSortOption(newSortOption);
+                                    globalCache.bloggerSortOption = newSortOption;
+                                    saveBloggerSortOptionPreference(newSortOption);
+                                    break;
+                            }
+                            
+                            // 更新全局排序选项
+                            setSortOption(newSortOption);
+                            globalCache.sortOption = newSortOption;
+                            saveSortOptionPreference(newSortOption);
+                        }}
+                        beansCount={isSearching ? searchFilteredBeans.length : filteredBeans.length}
+                        totalBeans={beans.length}
+                        totalWeight={calculateTotalWeight()}
+                        rankingBeanType={rankingBeanType}
+                        onRankingBeanTypeChange={(newType) => {
+                            setRankingBeanType(newType);
+                            // 保存到本地存储
+                            globalCache.rankingBeanType = newType;
+                            saveRankingBeanTypePreference(newType);
+                        }}
+                        bloggerYear={bloggerYear}
+                        onBloggerYearChange={(newYear) => {
+                            setBloggerYear(newYear);
+                            // 保存到本地存储
+                            globalCache.bloggerYear = newYear;
+                            saveBloggerYearPreference(newYear);
+                        }}
+                        rankingEditMode={rankingEditMode}
+                        onRankingEditModeChange={(newMode) => {
+                            setRankingEditMode(newMode);
+                            // 保存到本地存储
+                            globalCache.rankingEditMode = newMode;
+                            saveRankingEditModePreference(newMode);
+                        }}
                         selectedBeanType={selectedBeanType}
-                        onVarietyClick={handleVarietyClick}
                         onBeanTypeChange={handleBeanTypeChange}
+                        selectedVariety={selectedVariety}
+                        onVarietyClick={handleVarietyClick}
+                        showEmptyBeans={showEmptyBeans}
                         onToggleShowEmptyBeans={toggleShowEmptyBeans}
                         availableVarieties={availableVarieties}
-                        beans={beans}
-                        onEdit={handleEdit}
-                        onDelete={(bean) => handleDelete(bean)}
-                        onShare={(bean) => handleShare(bean, copyText)}
-                        _onRemainingUpdate={handleRemainingUpdate}
-                        onQuickDecrement={handleQuickDecrement}
+                        isSearching={isSearching}
+                        setIsSearching={setIsSearching}
+                        searchQuery={searchQuery}
+                        setSearchQuery={setSearchQuery}
                     />
-                ) : (
-                    // 榜单和博主榜单视图
-                    <div className="w-full h-full overflow-y-auto scroll-with-bottom-bar">
-                        <CoffeeBeanRanking
-                            isOpen={viewMode === VIEW_OPTIONS.RANKING || viewMode === VIEW_OPTIONS.BLOGGER}
-                            onShowRatingForm={handleShowRatingForm}
-                            sortOption={convertToRankingSortOption(sortOption, viewMode)}
-                            updatedBeanId={lastRatedBeanId}
-                            hideFilters={true}
-                            beanType={rankingBeanType}
-                            editMode={rankingEditMode}
-                            viewMode={viewMode === VIEW_OPTIONS.BLOGGER ? 'blogger' : 'personal'}
-                            year={viewMode === VIEW_OPTIONS.BLOGGER ? bloggerYear : undefined}
+                </div>
+                
+                <div className="flex-1 overflow-hidden">
+                    {/* 根据视图模式显示不同内容 */}
+                    {viewMode === VIEW_OPTIONS.INVENTORY && (
+                        <InventoryView
+                            filteredBeans={isSearching ? searchFilteredBeans : filteredBeans}
+                            selectedVariety={selectedVariety}
+                            showEmptyBeans={showEmptyBeans}
+                            selectedBeanType={selectedBeanType}
+                            onVarietyClick={handleVarietyClick}
+                            onBeanTypeChange={handleBeanTypeChange}
+                            onToggleShowEmptyBeans={toggleShowEmptyBeans}
+                            availableVarieties={availableVarieties}
+                            beans={beans}
+                            onEdit={handleEdit}
+                            onDelete={handleDelete}
+                            onShare={(bean) => handleShare(bean, copyText)}
+                            _onRemainingUpdate={handleRemainingUpdate}
+                            onQuickDecrement={handleQuickDecrement}
+                            isSearching={isSearching}
+                            searchQuery={searchQuery}
                         />
-                    </div>
-                )}
-
-                {/* 添加和导入按钮 - 仅在仓库视图显示 */}
-                {viewMode === VIEW_OPTIONS.INVENTORY && (
-                    <BottomActionBar
-                        buttons={[
-                            {
-                                icon: '+',
-                                text: '添加咖啡豆',
-                                onClick: () => {
-                                    if (showBeanForm) {
-                                        showBeanForm(null);
-                                    } else {
-                                        setShowAddForm(true);
-                                    }
-                                },
-                                highlight: true
-                            },
-                            {
-                                icon: '↓',
-                                text: '导入咖啡豆',
-                                onClick: () => {
-                                    if (onShowImport) onShowImport();
-                                },
-                                highlight: true
-                            }
-                        ]}
-                    />
-                )}
+                    )}
+                </div>
             </div>
+            
+            {/* 添加和导入按钮 - 仅在仓库视图显示 */}
+            {viewMode === VIEW_OPTIONS.INVENTORY && (
+                <BottomActionBar
+                    buttons={[
+                        {
+                            icon: '+',
+                            text: '添加咖啡豆',
+                            onClick: () => {
+                                if (showBeanForm) {
+                                    showBeanForm(null);
+                                } else {
+                                    setShowAddForm(true);
+                                }
+                            },
+                            highlight: true
+                        },
+                        {
+                            icon: '↓',
+                            text: '导入咖啡豆',
+                            onClick: () => {
+                                if (onShowImport) onShowImport();
+                            },
+                            highlight: true
+                        }
+                    ]}
+                />
+            )}
             
             {/* 复制失败模态框 */}
             <CopyFailureModal
