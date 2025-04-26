@@ -5,7 +5,15 @@ import ActionMenu from '@/components/CoffeeBean/ui/action-menu'
 import { NoteItemProps } from '../types'
 import { formatDate, formatRating } from '../utils'
 
+// 优化笔记项组件以避免不必要的重渲染
 const NoteItem: React.FC<NoteItemProps> = ({ note, equipmentNames, onEdit, onDelete, unitPriceCache }) => {
+    // 预先计算一些条件，避免在JSX中重复计算
+    const hasTasteRatings = Object.values(note.taste).some(value => value > 0);
+    const hasNotes = Boolean(note.notes);
+    const equipmentName = equipmentNames[note.equipment] || note.equipment;
+    const beanName = note.coffeeBeanInfo?.name;
+    const beanUnitPrice = beanName ? (unitPriceCache[beanName] || 0) : 0;
+    
     return (
         <div className="group space-y-3 px-6 py-3 border-b border-neutral-200 dark:border-neutral-800 last:border-b-0">
             <div className="flex flex-col space-y-3">
@@ -13,15 +21,15 @@ const NoteItem: React.FC<NoteItemProps> = ({ note, equipmentNames, onEdit, onDel
                 <div className="flex justify-between items-start">
                     <div className="flex-1 min-w-0">
                         <div className="text-[11px] font-normal break-words text-neutral-800 dark:text-neutral-100 pr-2">
-                            {note.coffeeBeanInfo?.name ? (
+                            {beanName ? (
                                 <>
-                                    {note.coffeeBeanInfo.name}
+                                    {beanName}
                                     <span className="text-neutral-600 dark:text-neutral-400 mx-1">·</span>
                                     <span className="text-neutral-600 dark:text-neutral-400">{note.method}</span>
                                 </>
                             ) : (
                                 <>
-                                    {equipmentNames[note.equipment] || note.equipment}
+                                    {equipmentName}
                                     <span className="text-neutral-600 dark:text-neutral-400 mx-1">·</span>
                                     <span className="text-neutral-600 dark:text-neutral-400">{note.method}</span>
                                 </>
@@ -48,43 +56,41 @@ const NoteItem: React.FC<NoteItemProps> = ({ note, equipmentNames, onEdit, onDel
                 </div>
 
                 {/* 方案信息 - 修改参数显示，添加单位克价 */}
-                <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400 space-x-1">
-                    {note.coffeeBeanInfo?.name && (
-                        <>
-                            <span>{equipmentNames[note.equipment] || note.equipment}</span>
-                            <span>·</span>
-                        </>
-                    )}
-                    {note.params && (
-                        <>
-                            <span>
-                                {note.params.coffee}
-                                {note.coffeeBeanInfo?.name && unitPriceCache[note.coffeeBeanInfo.name] > 0 && (
-                                    <span className="ml-1">
-                                        ({unitPriceCache[note.coffeeBeanInfo.name].toFixed(2)}元/克)
-                                    </span>
-                                )}
-                            </span>
-                            <span>·</span>
-                            <span>{note.params.ratio}</span>
-
-                            {/* 合并显示研磨度和水温 */}
-                            {(note.params.grindSize || note.params.temp) && (
-                                <>
-                                    <span>·</span>
-                                    {note.params.grindSize && note.params.temp ? (
-                                        <span>{note.params.grindSize} · {note.params.temp}</span>
-                                    ) : (
-                                        <span>{note.params.grindSize || note.params.temp}</span>
-                                    )}
-                                </>
+                {note.params && (
+                    <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400 space-x-1">
+                        {beanName && (
+                            <>
+                                <span>{equipmentName}</span>
+                                <span>·</span>
+                            </>
+                        )}
+                        <span>
+                            {note.params.coffee}
+                            {beanName && beanUnitPrice > 0 && (
+                                <span className="ml-1">
+                                    ({beanUnitPrice.toFixed(2)}元/克)
+                                </span>
                             )}
-                        </>
-                    )}
-                </div>
+                        </span>
+                        <span>·</span>
+                        <span>{note.params.ratio}</span>
+
+                        {/* 合并显示研磨度和水温 */}
+                        {(note.params.grindSize || note.params.temp) && (
+                            <>
+                                <span>·</span>
+                                {note.params.grindSize && note.params.temp ? (
+                                    <span>{note.params.grindSize} · {note.params.temp}</span>
+                                ) : (
+                                    <span>{note.params.grindSize || note.params.temp}</span>
+                                )}
+                            </>
+                        )}
+                    </div>
+                )}
 
                 {/* 风味评分 - 只有当存在有效评分(大于0)时才显示 */}
-                {Object.values(note.taste).some(value => value > 0) ? (
+                {hasTasteRatings ? (
                     <div className="grid grid-cols-2 gap-4">
                         {Object.entries(note.taste)
                             .map(([key, value], _i) => (
@@ -122,7 +128,7 @@ const NoteItem: React.FC<NoteItemProps> = ({ note, equipmentNames, onEdit, onDel
                 ) : null}
 
                 {/* 时间和评分 */}
-                {Object.values(note.taste).some(value => value > 0) ? (
+                {hasTasteRatings ? (
                     <div className="flex items-baseline justify-between">
                         <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
                             {formatDate(note.timestamp)}
@@ -156,7 +162,7 @@ const NoteItem: React.FC<NoteItemProps> = ({ note, equipmentNames, onEdit, onDel
                 )}
 
                 {/* 备注信息 */}
-                {note.notes && (
+                {hasNotes && (
                     <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
                         {note.notes}
                     </div>

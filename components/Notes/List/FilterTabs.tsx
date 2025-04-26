@@ -1,9 +1,10 @@
 'use client'
 
-import React from 'react'
+import React, { memo } from 'react'
 import { FilterTabsProps } from '../types'
 
-const FilterTabs: React.FC<FilterTabsProps> = ({
+// 使用memo包装组件以避免不必要的重渲染
+const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
     filterMode,
     selectedEquipment,
     selectedBean,
@@ -13,7 +14,8 @@ const FilterTabs: React.FC<FilterTabsProps> = ({
     onFilterModeChange,
     onEquipmentClick,
     onBeanClick
-}) => {
+}) {
+    // 如果没有可筛选的设备或咖啡豆，不渲染任何内容
     if (availableEquipments.length === 0 && availableBeans.length === 0) return null;
     
     return (
@@ -84,6 +86,6 @@ const FilterTabs: React.FC<FilterTabsProps> = ({
             </div>
         </div>
     )
-}
+})
 
 export default FilterTabs 

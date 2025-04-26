@@ -21,7 +21,7 @@ export const formatRating = (rating: number): string => {
     return `[ ${rating}/5 ]`
 }
 
-// 获取设备名称的辅助函数
+// 获取设备名称的辅助函数 - 简化实现
 export const getEquipmentName = async (equipmentId: string): Promise<string> => {
     // 首先尝试在标准设备列表中查找
     const standardEquipment = equipmentList.find(e => e.id === equipmentId);
@@ -32,7 +32,11 @@ export const getEquipmentName = async (equipmentId: string): Promise<string> => 
         const { loadCustomEquipments } = await import('@/lib/customEquipments');
         const customEquipments = await loadCustomEquipments();
 
-        // 使用工具函数获取设备名称
+        // 先在自定义设备中按ID查找
+        const customEquipment = customEquipments.find(e => e.id === equipmentId);
+        if (customEquipment) return customEquipment.name;
+        
+        // 如果上面都没找到，尝试使用工具函数
         const equipmentName = getEquipmentNameUtil(equipmentId, equipmentList, customEquipments);
         return equipmentName || equipmentId;
     } catch (error) {
@@ -41,9 +45,9 @@ export const getEquipmentName = async (equipmentId: string): Promise<string> => 
     }
 };
 
-// 规范化器具ID的辅助函数
+// 规范化器具ID的辅助函数 - 简化实现
 export const normalizeEquipmentId = async (equipmentIdOrName: string): Promise<string> => {
-    // 首先，检查这是否是标准设备的ID
+    // 首先检查这是否是标准设备的ID
     const standardEquipmentById = equipmentList.find(e => e.id === equipmentIdOrName);
     if (standardEquipmentById) return standardEquipmentById.id;
 
@@ -51,23 +55,7 @@ export const normalizeEquipmentId = async (equipmentIdOrName: string): Promise<s
     const standardEquipmentByName = equipmentList.find(e => e.name === equipmentIdOrName);
     if (standardEquipmentByName) return standardEquipmentByName.id;
 
-    // 如果不是标准设备，加载自定义设备
-    try {
-        const { loadCustomEquipments } = await import('@/lib/customEquipments');
-        const customEquipments = await loadCustomEquipments();
-
-        // 检查是否是自定义设备的ID
-        const customEquipmentById = customEquipments.find(e => e.id === equipmentIdOrName);
-        if (customEquipmentById) return customEquipmentById.id;
-
-        // 检查是否是自定义设备的名称
-        const customEquipmentByName = customEquipments.find(e => e.name === equipmentIdOrName);
-        if (customEquipmentByName) return customEquipmentByName.id;
-    } catch (error) {
-        console.error('加载自定义设备失败:', error);
-    }
-
-    // 无法规范化，返回原始值
+    // 如果不是标准设备，返回原始值
     return equipmentIdOrName;
 };
 

@@ -17,9 +17,7 @@ import {
     calculateTotalCoffeeConsumption, 
     calculateTotalCost, 
     getCoffeeBeanUnitPrice, 
-    normalizeEquipmentId, 
-    getEquipmentName, 
-    asyncFilter 
+    getEquipmentName
 } from '../utils'
 
 // 为Window对象声明类型扩展
@@ -124,35 +122,33 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onClose: _onClo
             const sortedNotes = sortNotes(parsedNotes, sortOption)
             setNotes(sortedNotes)
 
-            // 收集所有设备ID和咖啡豆
-            const rawEquipmentIds = sortedNotes.map(note => note.equipment).filter(Boolean)
+            // 收集所有不重复的设备ID
+            const equipmentIds = Array.from(new Set(sortedNotes
+                .map(note => note.equipment)
+                .filter(Boolean) as string[]
+            ))
             
-            // 规范化所有设备ID
-            const normalizedEquipmentIdsPromises = rawEquipmentIds.map(id => 
-                id ? normalizeEquipmentId(id) : Promise.resolve('')
-            )
-            const normalizedEquipmentIds = await Promise.all(normalizedEquipmentIdsPromises)
+            // 直接获取所有设备名称
+            const namesMap: Record<string, string> = {}
+            for (const id of equipmentIds) {
+                const name = await getEquipmentName(id)
+                namesMap[id] = name
+            }
+            setEquipmentNames(namesMap)
             
-            // 过滤掉空值，并确保唯一性
-            const uniqueEquipmentIds = Array.from(new Set(normalizedEquipmentIds.filter(Boolean)))
-            
+            // 收集所有不重复的咖啡豆名称
             const beanNames = Array.from(new Set(sortedNotes
                 .map(note => note.coffeeBeanInfo?.name)
                 .filter((name): name is string => name !== undefined && name !== null && name !== '')
             ))
             
-            setAvailableEquipments(uniqueEquipmentIds)
+            setAvailableEquipments(equipmentIds)
             setAvailableBeans(beanNames)
 
-            // 重新调整筛选逻辑以匹配规范化后的ID
+            // 应用筛选
             let filtered = sortedNotes
             if (filterMode === 'equipment' && selectedEquipment) {
-                // 使用非严格匹配，以便可以匹配到不同形式的同一设备
-                filtered = await asyncFilter(sortedNotes, async (note) => {
-                    if (!note.equipment) return false
-                    const normalizedNoteEquipment = await normalizeEquipmentId(note.equipment)
-                    return normalizedNoteEquipment === selectedEquipment
-                })
+                filtered = sortedNotes.filter(note => note.equipment === selectedEquipment)
             } else if (filterMode === 'bean' && selectedBean) {
                 filtered = sortedNotes.filter(note => note.coffeeBeanInfo?.name === selectedBean)
             }
@@ -162,15 +158,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onClose: _onClo
             setCurrentPage(1)
             setDisplayedNotes(filtered.slice(0, PAGE_SIZE))
             setHasMore(filtered.length > PAGE_SIZE)
-
-            // 加载所有设备的名称
-            const namesMap: Record<string, string> = {}
-            for (const id of uniqueEquipmentIds) {
-                if (id) {
-                    namesMap[id] = await getEquipmentName(id)
-                }
-            }
-            setEquipmentNames(namesMap)
             
             // 计算总消耗量
             const consumption = calculateTotalCoffeeConsumption(filtered)
@@ -183,9 +170,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onClose: _onClo
             // 创建咖啡豆单位价格缓存
             const priceCache: Record<string, number> = {}
             for (const bean of beanNames) {
-                if (bean) {
-                    priceCache[bean] = await getCoffeeBeanUnitPrice(bean)
-                }
+                priceCache[bean] = await getCoffeeBeanUnitPrice(bean)
             }
             setUnitPriceCache(priceCache)
             setIsLoading(false);
@@ -211,13 +196,27 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onClose: _onClo
 
     // 强制刷新的效果
     useEffect(() => {
-        loadNotes()
+        if (forceRefreshKey > 0) {
+            loadNotes()
+        }
     }, [forceRefreshKey, loadNotes])
 
     // 添加本地存储变化监听
     useEffect(() => {
-        // 立即加载，不管是否显示
-        loadNotes()
+        // 只在组件挂载时加载一次，避免多余的加载
+        const loadInitialNotes = async () => {
+            try {
+                // 先检查存储中是否有笔记数据
+                const savedNotes = await Storage.get('brewingNotes')
+                if (savedNotes) {
+                    loadNotes()
+                }
+            } catch (error) {
+                console.error('加载初始笔记数据失败:', error)
+            }
+        }
+        
+        loadInitialNotes()
 
         // 监听其他标签页的存储变化（仅在 Web 平台有效）
         const handleStorageChange = (e: StorageEvent) => {
@@ -253,7 +252,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onClose: _onClo
             // 清理window上的引用
             delete window.refreshBrewingNotes
         }
-    }, [loadNotes])
+    }, [loadNotes]) // 只依赖loadNotes，确保不会在其他状态变化时重新添加监听器
 
     useEffect(() => {
         // 当排序选项变化时，重新排序笔记
@@ -268,32 +267,28 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onClose: _onClo
     // 更新筛选后的笔记
     const updateFilteredNotes = useCallback(async (notesToFilter: BrewingNote[]) => {
         if (filterMode === 'equipment' && selectedEquipment) {
-            // 使用异步过滤器来处理规范化ID
-            const filtered = await asyncFilter(notesToFilter, async (note) => {
-                if (!note.equipment) return false
-                const normalizedNoteEquipment = await normalizeEquipmentId(note.equipment)
-                return normalizedNoteEquipment === selectedEquipment
-            })
-            setFilteredNotes(filtered)
+            // 简化为直接按设备ID筛选
+            const filtered = notesToFilter.filter(note => note.equipment === selectedEquipment);
+            setFilteredNotes(filtered);
             // 重置分页
-            setCurrentPage(1)
-            setDisplayedNotes(filtered.slice(0, PAGE_SIZE))
-            setHasMore(filtered.length > PAGE_SIZE)
+            setCurrentPage(1);
+            setDisplayedNotes(filtered.slice(0, PAGE_SIZE));
+            setHasMore(filtered.length > PAGE_SIZE);
         } else if (filterMode === 'bean' && selectedBean) {
-            const filtered = notesToFilter.filter(note => note.coffeeBeanInfo?.name === selectedBean)
-            setFilteredNotes(filtered)
+            const filtered = notesToFilter.filter(note => note.coffeeBeanInfo?.name === selectedBean);
+            setFilteredNotes(filtered);
             // 重置分页
-            setCurrentPage(1)
-            setDisplayedNotes(filtered.slice(0, PAGE_SIZE))
-            setHasMore(filtered.length > PAGE_SIZE)
+            setCurrentPage(1);
+            setDisplayedNotes(filtered.slice(0, PAGE_SIZE));
+            setHasMore(filtered.length > PAGE_SIZE);
         } else {
-            setFilteredNotes(notesToFilter)
+            setFilteredNotes(notesToFilter);
             // 重置分页
-            setCurrentPage(1)
-            setDisplayedNotes(notesToFilter.slice(0, PAGE_SIZE))
-            setHasMore(notesToFilter.length > PAGE_SIZE)
+            setCurrentPage(1);
+            setDisplayedNotes(notesToFilter.slice(0, PAGE_SIZE));
+            setHasMore(notesToFilter.length > PAGE_SIZE);
         }
-    }, [selectedEquipment, selectedBean, filterMode])
+    }, [selectedEquipment, selectedBean, filterMode]);
 
     // 当选择的设备或咖啡豆变化时，更新筛选后的笔记
     useEffect(() => {
