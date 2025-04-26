@@ -290,11 +290,11 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                                 </button>
                                 
                                 {/* 分隔符 */}
-                                <div className="h-6 mr-3 self-center border-l border-neutral-200 dark:border-neutral-700"></div>
+                                <div className="h-6 mr-3 self-center border-l border-neutral-200 dark:border-neutral-800"></div>
                                 
                                 {/* 品种筛选按钮 */}
                                 <button
-                                    onClick={() => onVarietyClick?.(null)}
+                                    onClick={() => selectedVariety !== null && onVarietyClick?.(null)}
                                     className={`pb-1.5 mr-3 text-[11px] whitespace-nowrap relative ${selectedVariety === null ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
                                 >
                                     <span className="relative">全部品种</span>
