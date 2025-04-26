@@ -157,7 +157,7 @@ export function extractJsonFromText(
 		}
 
 		// 检查是否是咖啡豆文本格式
-		if (originalText.startsWith("【咖啡豆】")) {
+		if (originalText.startsWith("【咖啡豆】") || originalText.startsWith("【咖啡豆信息】")) {
 			console.log("检测到咖啡豆文本格式");
 			return parseCoffeeBeanText(originalText);
 		}
@@ -763,7 +763,7 @@ function parseCoffeeBeanText(text: string): CoffeeBean | null {
 	};
 
 	// 提取名称
-	const nameMatch = text.match(/【咖啡豆】(.*?)(?:\n|$)/);
+	const nameMatch = text.match(/【咖啡豆】(.*?)(?:\n|$)/) || text.match(/【咖啡豆信息】(.*?)(?:\n|$)/);
 	if (nameMatch && nameMatch[1]) {
 		bean.name = nameMatch[1].trim();
 	}
