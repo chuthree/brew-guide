@@ -128,7 +128,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
     const updateFilteredBeansAndCategories = React.useCallback((beansToSort: ExtendedCoffeeBean[]) => {
         // 先根据豆子类型过滤
         let typeFilteredBeans = beansToSort;
-        if (selectedBeanType !== 'all') {
+        if (selectedBeanType && selectedBeanType !== 'all') {
+            // 常规豆子类型筛选
             typeFilteredBeans = beansToSort.filter(bean => bean.beanType === selectedBeanType);
         }
         
@@ -143,6 +144,16 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
             if (bean.variety && !acc.includes(bean.variety)) {
                 acc.push(bean.variety);
             }
+            
+            // 从拼配豆中提取品种
+            if (bean.blendComponents && Array.isArray(bean.blendComponents) && bean.blendComponents.length > 0) {
+                bean.blendComponents.forEach(component => {
+                    if (component.variety && !acc.includes(component.variety)) {
+                        acc.push(component.variety);
+                    }
+                });
+            }
+            
             return acc;
         }, [] as string[]);
         
@@ -154,8 +165,14 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                 if (selectedVariety === '拼配豆') {
                     return bean.blendComponents && bean.blendComponents.length > 1;
                 }
-                // 否则按照常规品种筛选，但排除拼配豆
-                return (!bean.blendComponents || bean.blendComponents.length <= 1) && (bean.variety || '未分类') === selectedVariety;
+                
+                // 检查拼配豆中是否包含所选品种
+                if (bean.blendComponents && Array.isArray(bean.blendComponents) && bean.blendComponents.length > 0) {
+                    return bean.blendComponents.some(component => component.variety === selectedVariety);
+                }
+                
+                // 常规品种筛选
+                return (bean.variety || '未分类') === selectedVariety;
             });
         }
         
@@ -380,7 +397,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
         
         // 先根据豆子类型过滤
         let typeFilteredBeans = beans;
-        if (selectedBeanType !== 'all') {
+        if (selectedBeanType && selectedBeanType !== 'all') {
+            // 常规豆子类型筛选
             typeFilteredBeans = beans.filter(bean => bean.beanType === selectedBeanType);
         }
         
@@ -392,8 +410,14 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                 if (variety === '拼配豆') {
                     return bean.blendComponents && bean.blendComponents.length > 1;
                 }
-                // 否则按照常规品种筛选，但排除拼配豆
-                return (!bean.blendComponents || bean.blendComponents.length <= 1) && (bean.variety || '未分类') === variety;
+                
+                // 检查拼配豆中是否包含所选品种
+                if (bean.blendComponents && Array.isArray(bean.blendComponents) && bean.blendComponents.length > 0) {
+                    return bean.blendComponents.some(component => component.variety === variety);
+                }
+                
+                // 常规品种筛选
+                return (bean.variety || '未分类') === variety;
             });
         }
         
@@ -419,6 +443,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
         // 根据新选择的豆子类型过滤
         let typeFilteredBeans = beans;
         if (newBeanType !== 'all') {
+            // 常规豆子类型筛选
             typeFilteredBeans = beans.filter(bean => bean.beanType === newBeanType);
         }
         
@@ -430,8 +455,14 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                 if (selectedVariety === '拼配豆') {
                     return bean.blendComponents && bean.blendComponents.length > 1;
                 }
-                // 否则按照常规品种筛选，但排除拼配豆
-                return (!bean.blendComponents || bean.blendComponents.length <= 1) && (bean.variety || '未分类') === selectedVariety;
+                
+                // 检查拼配豆中是否包含所选品种
+                if (bean.blendComponents && Array.isArray(bean.blendComponents) && bean.blendComponents.length > 0) {
+                    return bean.blendComponents.some(component => component.variety === selectedVariety);
+                }
+                
+                // 常规品种筛选
+                return (bean.variety || '未分类') === selectedVariety;
             });
         }
         
@@ -452,6 +483,16 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
             if (bean.variety && !acc.includes(bean.variety)) {
                 acc.push(bean.variety);
             }
+            
+            // 从拼配豆中提取品种
+            if (bean.blendComponents && Array.isArray(bean.blendComponents) && bean.blendComponents.length > 0) {
+                bean.blendComponents.forEach(component => {
+                    if (component.variety && !acc.includes(component.variety)) {
+                        acc.push(component.variety);
+                    }
+                });
+            }
+            
             return acc;
         }, [] as string[]);
         
@@ -551,7 +592,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
         
         // 根据豆子类型过滤
         let typeFilteredBeans = beans;
-        if (selectedBeanType !== 'all') {
+        if (selectedBeanType && selectedBeanType !== 'all') {
+            // 常规豆子类型筛选
             typeFilteredBeans = beans.filter(bean => bean.beanType === selectedBeanType);
         }
         
@@ -563,8 +605,14 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                 if (selectedVariety === '拼配豆') {
                     return bean.blendComponents && bean.blendComponents.length > 1;
                 }
-                // 否则按照常规品种筛选，但排除拼配豆
-                return (!bean.blendComponents || bean.blendComponents.length <= 1) && (bean.variety || '未分类') === selectedVariety;
+                
+                // 检查拼配豆中是否包含所选品种
+                if (bean.blendComponents && Array.isArray(bean.blendComponents) && bean.blendComponents.length > 0) {
+                    return bean.blendComponents.some(component => component.variety === selectedVariety);
+                }
+                
+                // 常规品种筛选
+                return (bean.variety || '未分类') === selectedVariety;
             });
         }
         
@@ -584,6 +632,16 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
             if (bean.variety && !acc.includes(bean.variety)) {
                 acc.push(bean.variety);
             }
+            
+            // 从拼配豆中提取品种
+            if (bean.blendComponents && Array.isArray(bean.blendComponents) && bean.blendComponents.length > 0) {
+                bean.blendComponents.forEach(component => {
+                    if (component.variety && !acc.includes(component.variety)) {
+                        acc.push(component.variety);
+                    }
+                });
+            }
+            
             return acc;
         }, [] as string[]);
         
