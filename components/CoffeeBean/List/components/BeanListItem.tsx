@@ -219,7 +219,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                     </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-x-4">
+                <div className={`grid ${(!bean.capacity || !bean.remaining) && !bean.roastDate ? 'grid-cols-1' : (bean.capacity && bean.remaining && bean.roastDate ? 'grid-cols-2' : 'grid-cols-1')} gap-x-4`}>
                     {/* 剩余量进度条 - 仅当capacity和remaining都存在时显示 */}
                     {bean.capacity && bean.remaining && (
                         <div className="space-y-1">
