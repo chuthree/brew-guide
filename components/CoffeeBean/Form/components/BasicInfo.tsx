@@ -256,7 +256,6 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
                             type="date"
                             value={bean.roastDate || ''}
                             onChange={(e) => onBeanChange('roastDate')(e.target.value)}
-                            max={new Date().toISOString().split('T')[0]}
                             className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
                         />
                     </div>
