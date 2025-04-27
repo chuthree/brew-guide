@@ -7,12 +7,14 @@ interface RemainingEditorProps {
     position: { x: number, y: number } | null
     onQuickDecrement: (amount: number) => void
     onCancel: () => void
+    targetElement?: HTMLElement | null
 }
 
 const RemainingEditor: React.FC<RemainingEditorProps> = ({
     position,
     onQuickDecrement,
-    onCancel
+    onCancel,
+    targetElement
 }) => {
     // 添加ref引用弹出层DOM元素
     const popoverRef = useRef<HTMLDivElement>(null)
@@ -62,11 +64,10 @@ const RemainingEditor: React.FC<RemainingEditorProps> = ({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -5 }}
             transition={{ duration: 0.15 }}
-            className="fixed z-50 bg-white dark:bg-neutral-800 rounded-lg shadow-lg border border-neutral-200 dark:border-neutral-700 p-2"
+            className="absolute z-50 bg-white dark:bg-neutral-800 rounded-lg shadow-lg border border-neutral-200 dark:border-neutral-700 p-2"
             style={{ 
                 left: `${position.x}px`,
-                top: `${position.y + 5}px`,
-                transform: 'translateX(-50%)'
+                top: `${position.y}px`,
             }}
         >
             <div className="flex flex-col space-y-2">

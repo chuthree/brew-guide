@@ -71,21 +71,51 @@ const InventoryView: React.FC<InventoryViewProps> = ({
     const [editingRemaining, setEditingRemaining] = useState<{
         beanId: string,
         value: string,
-        position: { x: number, y: number } | null
+        position: { x: number, y: number } | null,
+        targetElement: HTMLElement | null
     } | null>(null);
 
     // 处理剩余量点击
     const handleRemainingClick = (bean: ExtendedCoffeeBean, event: React.MouseEvent) => {
         event.stopPropagation();
-        const rect = (event.target as HTMLElement).getBoundingClientRect();
-        setEditingRemaining({
-            beanId: bean.id,
-            value: bean.remaining || '',
-            position: {
-                x: rect.left,
-                y: rect.top + rect.height
+        const target = event.target as HTMLElement;
+        const rect = target.getBoundingClientRect();
+        
+        // 相对于容器元素计算位置
+        const containerElement = document.querySelector('.scroll-with-bottom-bar') as HTMLElement;
+        
+        if (containerElement) {
+            const containerRect = containerElement.getBoundingClientRect();
+            
+            // 计算组件应该显示的位置
+            // 获取右侧的安全距离，保证整个组件不会超出右边界
+            // 假设下拉组件宽度约为120px
+            const DROPDOWN_WIDTH = 120;
+            const rightBoundaryPadding = 10; // 右侧安全边距
+            
+            // 计算x位置，确保不会超出右边界
+            // 先尝试将组件放在元素正下方
+            let xPosition = rect.left - containerRect.left;
+            
+            // 检查是否会超出右边界
+            const rightEdge = xPosition + DROPDOWN_WIDTH;
+            const containerWidth = containerElement.clientWidth;
+            
+            if (rightEdge > containerWidth - rightBoundaryPadding) {
+                // 如果会超出右边界，则向左调整位置
+                xPosition = Math.max(rightBoundaryPadding, containerWidth - DROPDOWN_WIDTH - rightBoundaryPadding);
             }
-        });
+            
+            setEditingRemaining({
+                beanId: bean.id,
+                value: bean.remaining || '',
+                position: {
+                    x: xPosition,
+                    y: rect.bottom - containerRect.top
+                },
+                targetElement: target
+            });
+        }
     };
 
     // 处理快捷减量
@@ -192,7 +222,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
     }, [hasMore, loadMoreBeans]);
 
     return (
-        <div className="w-full h-full overflow-y-auto scroll-with-bottom-bar">
+        <div className="w-full h-full overflow-y-auto scroll-with-bottom-bar relative">
             {/* 搜索模式 - 现在可以移除 */}
 
             {/* 咖啡豆列表 */}
@@ -253,6 +283,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                         position={editingRemaining.position}
                         onCancel={handleRemainingCancel}
                         onQuickDecrement={handleQuickDecrement}
+                        targetElement={editingRemaining.targetElement}
                     />
                 )}
             </AnimatePresence>
