@@ -15,6 +15,7 @@ import { getEquipmentName } from '@/lib/brewing/parameters';
 import BottomActionBar from '@/components/BottomActionBar';
 import CoffeeBeanList from '@/components/CoffeeBean/List/ListView';
 import MethodShareModal from '@/components/MethodShareModal';
+import { saveCustomMethod } from '@/lib/customMethods';
 
 // 扩展Step类型，增加固定方案所需的字段
 interface Step extends BaseStep {
@@ -483,7 +484,6 @@ const TabContent: React.FC<TabContentProps> = ({
                                                 if (commonMethodsList && commonMethodsList[index]) {
                                                     const methodCopy = createEditableMethodFromCommon(commonMethodsList[index]);
                                                     // 将副本添加到自定义方案列表
-                                                    const { saveCustomMethod } = require('@/lib/customMethods');
                                                     saveCustomMethod(selectedEquipment, methodCopy)
                                                         .then(() => {
                                                             // 添加成功后切换到自定义方案列表并开始编辑
@@ -492,7 +492,6 @@ const TabContent: React.FC<TabContentProps> = ({
                                                             setTimeout(() => {
                                                                 onEditMethod(methodCopy);
                                                             }, 100);
-                                                            
                                                             showToast({
                                                                 type: 'success',
                                                                 title: '已复制通用方案到自定义列表',
