@@ -16,7 +16,6 @@ import BottomActionBar from '@/components/BottomActionBar';
 import CoffeeBeanList from '@/components/CoffeeBean/List/ListView';
 import MethodShareModal from '@/components/MethodShareModal';
 import { saveCustomMethod } from '@/lib/customMethods';
-import { Storage } from '@/lib/storage';
 
 // 扩展Step类型，增加固定方案所需的字段
 interface Step extends BaseStep {
@@ -195,6 +194,7 @@ const TabContent: React.FC<TabContentProps> = ({
     const handleSaveNote = async (note: BrewingNoteData) => {
         try {
             // 从Storage获取现有笔记
+            const Storage = (await import('@/lib/storage')).Storage;
             const existingNotesStr = await Storage.get('brewingNotes');
             const existingNotes = existingNotesStr ? JSON.parse(existingNotesStr) : [];
 
@@ -207,53 +207,9 @@ const TabContent: React.FC<TabContentProps> = ({
 
             // 将新笔记添加到列表开头
             const updatedNotes = [newNote, ...existingNotes];
-            
-            // 先将JSON字符串存储到临时变量
-            const updatedNotesJson = JSON.stringify(updatedNotes);
-            
-            try {
-                // 在localStorage中保存以检查是否有存储容量问题
-                localStorage.setItem('brewingNotes', updatedNotesJson);
-            } catch (localStorageError) {
-                // 显示详细错误信息
-                const errorDetail = localStorageError instanceof Error 
-                    ? localStorageError.message 
-                    : '本地存储错误';
-                    
-                showToast({
-                    type: 'error',
-                    title: `保存失败：本地存储空间不足 - ${errorDetail}`,
-                    duration: 5000
-                });
-                
-                // 显示可复制的错误详情
-                const errorMsg = `保存笔记失败 - 本地存储错误: ${errorDetail}\n数据大小: ${new Blob([updatedNotesJson]).size} 字节`;
-                showErrorDetails(errorMsg);
-                
-                throw new Error(`本地存储空间不足: ${errorDetail}`);
-            }
-            
-            // 存储更新后的笔记列表到Storage API
-            try {
-                await Storage.set('brewingNotes', updatedNotesJson);
-            } catch (storageError) {
-                // 显示详细错误信息
-                const errorDetail = storageError instanceof Error 
-                    ? storageError.message 
-                    : '存储API错误';
-                    
-                showToast({
-                    type: 'error',
-                    title: `保存失败：存储API错误 - ${errorDetail}`,
-                    duration: 5000
-                });
-                
-                // 显示可复制的错误详情
-                const errorMsg = `保存笔记失败 - Storage API错误: ${errorDetail}\n数据大小: ${new Blob([updatedNotesJson]).size} 字节`;
-                showErrorDetails(errorMsg);
-                
-                throw new Error(`存储API错误: ${errorDetail}`);
-            }
+
+            // 存储更新后的笔记列表
+            await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
 
             setNoteSaved(true);
 
@@ -264,8 +220,8 @@ const TabContent: React.FC<TabContentProps> = ({
                     if (!isNaN(coffeeAmount) && coffeeAmount > 0) {
                         await CoffeeBeanManager.updateBeanRemaining(selectedCoffeeBean, coffeeAmount);
                     }
-                } catch (_beanError) {
-                    // 静默处理咖啡豆更新错误
+                } catch {
+                    // 静默处理错误
                 }
             }
 
@@ -282,99 +238,9 @@ const TabContent: React.FC<TabContentProps> = ({
             }
 
             // 移除成功提示
-        } catch (error) {
-            // 主要catch块 - 处理其他未捕获的错误
-            const errorDetail = error instanceof Error ? error.message : '未知错误';
-            
-            showToast({
-                type: 'error',
-                title: `保存失败 - ${errorDetail}`,
-                duration: 5000
-            });
-            
-            // 显示可复制的错误详情
-            const errorMsg = `保存笔记失败 - 详细错误: ${errorDetail}`;
-            showErrorDetails(errorMsg);
+        } catch {
+            alert('保存失败，请重试');
         }
-    };
-    
-    // 显示错误详情的辅助函数
-    const showErrorDetails = (errorMsg: string) => {
-        // 创建错误弹窗元素
-        const errorDiv = document.createElement('div');
-        errorDiv.style.position = 'fixed';
-        errorDiv.style.top = '50%';
-        errorDiv.style.left = '50%';
-        errorDiv.style.transform = 'translate(-50%, -50%)';
-        errorDiv.style.backgroundColor = '#fff';
-        errorDiv.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-        errorDiv.style.borderRadius = '8px';
-        errorDiv.style.padding = '16px';
-        errorDiv.style.zIndex = '9999';
-        errorDiv.style.maxWidth = '90%';
-        errorDiv.style.width = '350px';
-        
-        // 创建标题
-        const title = document.createElement('div');
-        title.innerText = '保存错误 - 请截图或复制给开发者';
-        title.style.fontWeight = 'bold';
-        title.style.marginBottom = '12px';
-        title.style.color = '#e53e3e';
-        errorDiv.appendChild(title);
-        
-        // 创建错误文本区域
-        const textarea = document.createElement('textarea');
-        textarea.value = errorMsg;
-        textarea.readOnly = true;
-        textarea.style.width = '100%';
-        textarea.style.height = '120px';
-        textarea.style.marginBottom = '16px';
-        textarea.style.padding = '8px';
-        textarea.style.border = '1px solid #e2e8f0';
-        textarea.style.borderRadius = '4px';
-        textarea.style.resize = 'none';
-        errorDiv.appendChild(textarea);
-        
-        // 创建按钮容器
-        const buttonContainer = document.createElement('div');
-        buttonContainer.style.display = 'flex';
-        buttonContainer.style.justifyContent = 'space-between';
-        
-        // 创建复制按钮
-        const copyButton = document.createElement('button');
-        copyButton.innerText = '复制错误信息';
-        copyButton.style.padding = '8px 16px';
-        copyButton.style.backgroundColor = '#4a5568';
-        copyButton.style.color = 'white';
-        copyButton.style.border = 'none';
-        copyButton.style.borderRadius = '4px';
-        copyButton.style.cursor = 'pointer';
-        copyButton.onclick = () => {
-            textarea.select();
-            document.execCommand('copy');
-            copyButton.innerText = '已复制';
-            setTimeout(() => {
-                copyButton.innerText = '复制错误信息';
-            }, 2000);
-        };
-        buttonContainer.appendChild(copyButton);
-        
-        // 创建关闭按钮
-        const closeButton = document.createElement('button');
-        closeButton.innerText = '关闭';
-        closeButton.style.padding = '8px 16px';
-        closeButton.style.backgroundColor = '#e2e8f0';
-        closeButton.style.color = '#4a5568';
-        closeButton.style.border = 'none';
-        closeButton.style.borderRadius = '4px';
-        closeButton.style.cursor = 'pointer';
-        closeButton.onclick = () => {
-            document.body.removeChild(errorDiv);
-        };
-        buttonContainer.appendChild(closeButton);
-        
-        errorDiv.appendChild(buttonContainer);
-        document.body.appendChild(errorDiv);
     };
 
     // 处理关闭笔记表单
@@ -487,40 +353,6 @@ const TabContent: React.FC<TabContentProps> = ({
             loadEquipmentName();
         }, [selectedEquipment]);
 
-        // 准备笔记初始数据
-        const prepareInitialData = () => {
-            // 确保咖啡豆信息正确格式化
-            let coffeeBeanInfo = undefined;
-            if (selectedCoffeeBeanData) {
-                console.log('准备笔记 - 咖啡豆原始数据:', selectedCoffeeBeanData);
-                coffeeBeanInfo = {
-                    name: selectedCoffeeBeanData.name || '',
-                    roastLevel: selectedCoffeeBeanData.roastLevel || '中度烘焙',
-                    roastDate: selectedCoffeeBeanData.roastDate || ''
-                };
-            }
-
-            // 计算总时间
-            const totalTime = showComplete && currentBrewingMethod?.params.stages?.length 
-                ? currentBrewingMethod.params.stages[currentBrewingMethod.params.stages.length - 1].time
-                : 0;
-
-            console.log('准备笔记 - 设备名称:', equipmentName || (selectedEquipment || ''));
-            console.log('准备笔记 - 方案名称:', currentBrewingMethod?.name);
-            console.log('准备笔记 - 总时间:', totalTime);
-            
-            return {
-                equipment: equipmentName || (selectedEquipment || ''),
-                method: currentBrewingMethod!.name,
-                params: currentBrewingMethod!.params,
-                totalTime,
-                coffeeBean: selectedCoffeeBeanData,
-                coffeeBeanInfo  // 添加咖啡豆信息
-            };
-        };
-
-        const initialData = prepareInitialData();
-
         return (
             <BrewingNoteForm
                 id="brewingNoteForm"
@@ -528,7 +360,13 @@ const TabContent: React.FC<TabContentProps> = ({
                 onClose={handleCloseNoteForm}
                 onSave={handleSaveNote}
                 inBrewPage={true}
-                initialData={initialData}
+                initialData={{
+                    equipment: equipmentName || (selectedEquipment || ''),
+                    method: currentBrewingMethod!.name,
+                    params: currentBrewingMethod!.params,
+                    totalTime: showComplete ? currentBrewingMethod!.params.stages[currentBrewingMethod!.params.stages.length - 1].time : 0,
+                    coffeeBean: selectedCoffeeBeanData || undefined
+                }}
             />
         );
     };
