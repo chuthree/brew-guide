@@ -8,12 +8,8 @@ import { CoffeeBeanManager } from '@/lib/coffeeBeanManager'
 
 // 日期格式化函数
 export const formatDate = (timestamp: number): string => {
-    return new Date(timestamp).toLocaleDateString('zh-CN', {
-        month: 'numeric',
-        day: 'numeric',
-        hour: 'numeric',
-        minute: 'numeric',
-    })
+    const date = new Date(timestamp);
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
 // 评分格式化函数
