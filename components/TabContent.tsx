@@ -594,7 +594,6 @@ const TabContent: React.FC<TabContentProps> = ({
                                 }
                             ]}
                             customPresetMode={customEquipments.find(e => e.id === selectedEquipment)?.animationType === 'custom'}
-                            bottomHint={methodType === 'common' ? '点击方案右侧菜单可以复制到自定义列表或分享' : undefined}
                         />
                     )}
 
