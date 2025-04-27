@@ -211,7 +211,7 @@ const StageItem: React.FC<StageItemProps> = ({
                                 {step.detail}
                             </p>
                         )}
-                        {onEdit && onDelete && (
+                        {(onEdit || onDelete || onShare) && (
                             <div className="flex items-baseline ml-2 shrink-0">
                                 <ActionMenu
                                     items={actionMenuItems}

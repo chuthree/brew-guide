@@ -1,4 +1,3 @@
-
 export const APP_VERSION = "1.2.4";
 
 // Types
@@ -813,3 +812,18 @@ export const commonMethods: BrewingMethods = {
 	Kalita: brewingMethods.Kalita,
 	Origami: brewingMethods.Origami,
 };
+
+/**
+ * 从通用方案创建一个自定义方案副本
+ * @param method 通用方案
+ * @param equipmentId 设备ID
+ * @returns 可编辑的方案副本
+ */
+export function createEditableMethodFromCommon(method: Method, namePrefix: string = ""): Method {
+	return {
+		id: `method-${Date.now()}`,
+		name: namePrefix ? `${namePrefix}${method.name}` : `${method.name}(自定义)`,
+		params: JSON.parse(JSON.stringify(method.params)), // 深拷贝参数
+		timestamp: Date.now()
+	};
+}

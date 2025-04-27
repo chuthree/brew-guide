@@ -17,6 +17,7 @@ interface BottomActionBarProps {
   fixed?: boolean; // 是否固定在页面底部
   specialLayout?: boolean; // 特殊布局，用于方案选择器
   customPresetMode?: boolean; // 自定义预设模式，仅显示【新建方案】和【导入方案】按钮
+  bottomHint?: string; // 底部提示文本
 }
 
 /**
@@ -33,6 +34,7 @@ const BottomActionBar: React.FC<BottomActionBarProps> = ({
   fixed = true, // 默认固定在底部
   specialLayout = false, // 默认使用标准布局
   customPresetMode = false, // 默认非自定义预设模式
+  bottomHint,
 }) => {
   // 判断是否是按钮组数组
   const isGroupedButtons = Array.isArray(buttons[0]) && Array.isArray(buttons);
@@ -170,6 +172,11 @@ const BottomActionBar: React.FC<BottomActionBarProps> = ({
             </div>
           )}
         </div>
+        {bottomHint && (
+          <div className="text-center mt-2 mb-2">
+            <p className="text-[10px] text-neutral-500 dark:text-neutral-500">{bottomHint}</p>
+          </div>
+        )}
       </div>
     );
   }
@@ -190,6 +197,11 @@ const BottomActionBar: React.FC<BottomActionBarProps> = ({
           </button>
           <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
         </div>
+        {bottomHint && (
+          <div className="text-center mt-2 mb-2">
+            <p className="text-[10px] text-neutral-500 dark:text-neutral-500">{bottomHint}</p>
+          </div>
+        )}
       </div>
     );
   }
@@ -232,6 +244,11 @@ const BottomActionBar: React.FC<BottomActionBarProps> = ({
           </div>
           <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
         </div>
+        {bottomHint && (
+          <div className="text-center mt-2 mb-2">
+            <p className="text-[10px] text-neutral-500 dark:text-neutral-500">{bottomHint}</p>
+          </div>
+        )}
       </div>
     );
   }
@@ -248,11 +265,11 @@ const BottomActionBar: React.FC<BottomActionBarProps> = ({
               {groupIndex > 0 && (
                 <span className="mx-3 text-neutral-300 dark:text-neutral-600 text-xs">|</span>
               )}
-              <div className="flex items-center space-x-3 mx-3">
-                {buttonGroup.map((button, buttonIndex) => (
-                  <React.Fragment key={`button-${groupIndex}-${buttonIndex}`}>
-                    {buttonIndex > 0 && (
-                      <div className="flex-grow w-4 border-t border-neutral-200 dark:border-neutral-800"></div>
+              <div className="flex items-center space-x-3">
+                {buttonGroup.map((button, index) => (
+                  <React.Fragment key={`button-${groupIndex}-${index}`}>
+                    {index > 0 && (
+                      <div className="w-4 border-t border-neutral-200 dark:border-neutral-800"></div>
                     )}
                     <button
                       onClick={button.onClick}
@@ -281,6 +298,11 @@ const BottomActionBar: React.FC<BottomActionBarProps> = ({
         </div>
         <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
       </div>
+      {bottomHint && (
+        <div className="text-center mt-2 mb-2">
+          <p className="text-[10px] text-neutral-500 dark:text-neutral-500">{bottomHint}</p>
+        </div>
+      )}
     </div>
   );
 };

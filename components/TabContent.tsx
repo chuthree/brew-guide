@@ -1,6 +1,6 @@
 import React, { useCallback, useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { Method, equipmentList, CustomEquipment, commonMethods } from '@/lib/config';
+import { Method, equipmentList, CustomEquipment, commonMethods, createEditableMethodFromCommon } from '@/lib/config';
 import StageItem from '@/components/StageItem';
 import StageDivider from '@/components/StageDivider';
 import { SettingsOptions } from './Settings';
@@ -299,9 +299,6 @@ const TabContent: React.FC<TabContentProps> = ({
     // 处理分享方案
     const handleShareMethod = async (method: Method) => {
         try {
-            // 获取当前选中的自定义器具
-            // 这里不再需要将selectedCustomEquipment存储为变量
-            
             // 设置要分享的方案并显示分享模态框
             setSharingMethod(method);
             setShowMethodShareModal(true);
@@ -473,16 +470,54 @@ const TabContent: React.FC<TabContentProps> = ({
                                     activeTab={activeTab}
                                     selectedMethod={selectedMethod}
                                     currentStage={currentStage}
-                                    onEdit={activeTab === '方案' as TabType && methodType === 'custom' && customMethods[selectedEquipment!] ? () => {
-                                        const method = customMethods[selectedEquipment!][index];
-                                        onEditMethod(method);
-                                    } : step.isCustom ? () => {
-                                        const equipment = customEquipments.find(e => e.name === step.title);
-                                        if (equipment) {
-                                            setEditingEquipment(equipment);
-                                            setShowEquipmentForm(true);
-                                        }
-                                    } : undefined}
+                                    onEdit={activeTab === '方案' as TabType ? 
+                                        methodType === 'custom' && customMethods[selectedEquipment!] ? 
+                                            () => {
+                                                const method = customMethods[selectedEquipment!][index];
+                                                onEditMethod(method);
+                                            } 
+                                        : methodType === 'common' && selectedEquipment ? 
+                                            () => {
+                                                // 当编辑通用方案时，创建一个副本并添加到自定义方案列表
+                                                const commonMethodsList = commonMethods[selectedEquipment];
+                                                if (commonMethodsList && commonMethodsList[index]) {
+                                                    const methodCopy = createEditableMethodFromCommon(commonMethodsList[index]);
+                                                    // 将副本添加到自定义方案列表
+                                                    const { saveCustomMethod } = require('@/lib/customMethods');
+                                                    saveCustomMethod(selectedEquipment, methodCopy)
+                                                        .then(() => {
+                                                            // 添加成功后切换到自定义方案列表并开始编辑
+                                                            handleMethodTypeChange('custom');
+                                                            // 延迟一下，确保自定义方案列表已更新
+                                                            setTimeout(() => {
+                                                                onEditMethod(methodCopy);
+                                                            }, 100);
+                                                            
+                                                            showToast({
+                                                                type: 'success',
+                                                                title: '已复制通用方案到自定义列表',
+                                                                duration: 2000
+                                                            });
+                                                        })
+                                                        .catch(() => {
+                                                            showToast({
+                                                                type: 'error',
+                                                                title: '复制方案失败，请重试',
+                                                                duration: 2000
+                                                            });
+                                                        });
+                                                }
+                                            }
+                                        : undefined
+                                    : step.isCustom ? 
+                                        () => {
+                                            const equipment = customEquipments.find(e => e.name === step.title);
+                                            if (equipment) {
+                                                setEditingEquipment(equipment);
+                                                setShowEquipmentForm(true);
+                                            }
+                                        } 
+                                    : undefined}
                                     onDelete={activeTab === '方案' as TabType && methodType === 'custom' && customMethods[selectedEquipment!] ? () => {
                                         const method = customMethods[selectedEquipment!][index];
                                         onDeleteMethod(method);
@@ -493,13 +528,14 @@ const TabContent: React.FC<TabContentProps> = ({
                                         }
                                     } : undefined}
                                     onShare={activeTab === '方案' as TabType ? () => {
+                                        // 对于方案列表，无论是通用方案还是自定义方案都可以分享
                                         if (methodType === 'custom' && customMethods[selectedEquipment!]) {
                                             const method = customMethods[selectedEquipment!][index];
                                             handleShareMethod(method);
                                         } else if (methodType === 'common' && selectedEquipment) {
-                                            const method = commonMethods[selectedEquipment];
-                                            if (method && method[index]) {
-                                                handleShareMethod(method[index]);
+                                            const commonMethodsList = commonMethods[selectedEquipment];
+                                            if (commonMethodsList && commonMethodsList[index]) {
+                                                handleShareMethod(commonMethodsList[index]);
                                             }
                                         }
                                     } : step.isCustom ? () => {
@@ -558,6 +594,7 @@ const TabContent: React.FC<TabContentProps> = ({
                                 }
                             ]}
                             customPresetMode={customEquipments.find(e => e.id === selectedEquipment)?.animationType === 'custom'}
+                            bottomHint={methodType === 'common' ? '点击方案右侧菜单可以复制到自定义列表或分享' : undefined}
                         />
                     )}
 
