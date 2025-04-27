@@ -116,9 +116,9 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
             {/* 视图切换与筛选栏 - 统一布局 */}
             <div className="flex justify-between items-center mb-6 px-6">
                 <div className="flex items-center space-x-3">
-                    <div className="text-xs tracking-wide text-neutral-800 dark:text-neutral-100">
+                    <div className="text-xs tracking-wide text-neutral-800 dark:text-neutral-100 break-words">
                         {viewMode === VIEW_OPTIONS.INVENTORY
-                            ? `${totalBeans ? `${beansCount}/${totalBeans}` : beansCount} 款咖啡豆，总计 ${totalWeight || '0g'}`
+                            ? `${totalBeans ? `${beansCount}/${totalBeans}` : beansCount} 款咖啡豆${totalWeight ? `，共 ${totalWeight}` : ''}`
                             : viewMode === VIEW_OPTIONS.BLOGGER
                                 ? `${beansCount} 款 (${bloggerYear}) 咖啡豆`
                                 : `${beansCount} 款已评分咖啡豆`

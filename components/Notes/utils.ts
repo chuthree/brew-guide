@@ -158,6 +158,6 @@ export const formatConsumption = (amount: number): string => {
     if (amount < 1000) {
         return `${Math.round(amount)}g`;
     } else {
-        return `${(amount / 1000).toFixed(1)}kg`;
+        return `${(amount / 1000).toFixed(2)}kg`;
     }
 }; 

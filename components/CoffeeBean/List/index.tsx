@@ -581,7 +581,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
         if (totalWeight < 1000) {
             return `${Math.round(totalWeight)} g`;
         } else {
-            return `${(totalWeight / 1000).toFixed(1)} kg`;
+            return `${(totalWeight / 1000).toFixed(2)} kg`;
         }
     };
 

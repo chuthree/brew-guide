@@ -1,6 +1,7 @@
 import { BrewingNote } from '@/lib/config';
-import { SortOption, SORT_OPTIONS } from './types';
+import { SortOption, SORT_OPTIONS } from '../types';
 import { getStringState, saveStringState } from '@/lib/statePersistence';
+import { calculateTotalCoffeeConsumption as calculateConsumption, formatConsumption as formatConsumptionUtil } from '../utils';
 
 // 模块名称
 const MODULE_NAME = 'brewing-notes';
@@ -82,21 +83,6 @@ globalCache.selectedBean = getSelectedBeanPreference();
 globalCache.filterMode = getFilterModePreference();
 globalCache.sortOption = getSortOptionPreference();
 
-// 计算总咖啡消耗量
-export const calculateTotalCoffeeConsumption = (notes: BrewingNote[]): number => {
-    return notes.reduce((total, note) => {
-        // 根据BrewingNote实际定义，获取coffee消耗量
-        if (note.params?.coffee) {
-            const consumption = parseFloat(note.params.coffee);
-            if (!isNaN(consumption)) {
-                return total + consumption;
-            }
-        }
-        return total;
-    }, 0);
-};
-
-// 格式化咖啡消耗量
-export const formatConsumption = (consumption: number): string => {
-    return `${consumption.toFixed(1)}g`;
-}; 
+// 导出主utils文件的函数，保持兼容性
+export const calculateTotalCoffeeConsumption = calculateConsumption;
+export const formatConsumption = formatConsumptionUtil; 
