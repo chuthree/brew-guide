@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useCallback, useTransition } from 'react'
+import React, { useState, useEffect, useCallback, useTransition, useRef } from 'react'
 import { BrewingNote } from '@/lib/config'
 import { Storage } from '@/lib/storage'
 import { globalCache } from './globalCache'
@@ -28,14 +28,21 @@ const NotesListView: React.FC<NotesListViewProps> = ({
 }) => {
     const [_isPending, startTransition] = useTransition()
     const [notes, setNotes] = useState<BrewingNote[]>(globalCache.filteredNotes)
-    const [isLoading, setIsLoading] = useState(globalCache.filteredNotes.length === 0)
-    const [_equipmentNames, _setEquipmentNames] = useState<Record<string, string>>(globalCache.equipmentNames)
+    const [isFirstLoad, setIsFirstLoad] = useState<boolean>(!globalCache.initialized)
     const [unitPriceCache, _setUnitPriceCache] = useState<Record<string, number>>(globalCache.beanPrices)
+    const isLoadingRef = useRef<boolean>(false)
 
-    // 加载笔记数据
+    // 加载笔记数据 - 优化加载流程以避免不必要的加载状态显示
     const loadNotes = useCallback(async () => {
+        // 防止并发加载
+        if (isLoadingRef.current) return;
+        
         try {
-            setIsLoading(true);
+            // 只在首次加载或数据为空时显示加载状态
+            const shouldShowLoading = !globalCache.initialized || globalCache.notes.length === 0;
+            if (shouldShowLoading) {
+                isLoadingRef.current = true;
+            }
             
             // 从存储中加载数据
             const savedNotes = await Storage.get('brewingNotes');
@@ -59,20 +66,26 @@ const NotesListView: React.FC<NotesListViewProps> = ({
                 // 更新全局缓存
                 globalCache.notes = sortedNotes;
                 globalCache.filteredNotes = filteredNotes;
+                globalCache.initialized = true;
                 
                 // 更新本地状态
                 setNotes(filteredNotes);
-                setIsLoading(false);
+                setIsFirstLoad(false);
+                isLoadingRef.current = false;
             });
         } catch (error) {
             console.error("加载笔记数据失败:", error);
-            setIsLoading(false);
+            setIsFirstLoad(false);
+            isLoadingRef.current = false;
         }
     }, [sortOption, selectedEquipment, selectedBean, filterMode]);
 
     // 当过滤条件变化时重新加载数据
     useEffect(() => {
-        loadNotes();
+        // 使用setTimeout让UI可以先渲染出来
+        setTimeout(() => {
+            loadNotes();
+        }, 0);
     }, [loadNotes, sortOption, selectedEquipment, selectedBean, filterMode]);
 
     // 监听笔记更新事件
@@ -84,6 +97,7 @@ const NotesListView: React.FC<NotesListViewProps> = ({
 
         // 添加事件监听
         window.addEventListener('brewingNotesUpdated', handleNotesUpdated);
+        window.addEventListener('customStorageChange', handleNotesUpdated as EventListener);
         
         // 全局刷新函数
         window.refreshBrewingNotes = handleNotesUpdated;
@@ -91,11 +105,12 @@ const NotesListView: React.FC<NotesListViewProps> = ({
         // 清理函数
         return () => {
             window.removeEventListener('brewingNotesUpdated', handleNotesUpdated);
+            window.removeEventListener('customStorageChange', handleNotesUpdated as EventListener);
             delete window.refreshBrewingNotes;
         };
     }, [loadNotes]);
 
-    if (isLoading) {
+    if (isFirstLoad) {
         return (
             <div className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
                 加载中...

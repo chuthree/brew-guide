@@ -38,6 +38,9 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onClose: _onClo
     // 加载可用设备和咖啡豆列表
     const loadEquipmentsAndBeans = useCallback(async () => {
         try {
+            // 避免未打开状态下加载数据
+            if (!isOpen) return;
+            
             // 从存储中加载数据
             const savedNotes = await Storage.get('brewingNotes');
             const parsedNotes: BrewingNote[] = savedNotes ? JSON.parse(savedNotes) : [];
@@ -98,15 +101,22 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onClose: _onClo
             const totalConsumption = calculateTotalCoffeeConsumption(parsedNotes);
             setTotalCoffeeConsumption(totalConsumption);
             
+            // 触发brewingNotesUpdated事件，更新ListView组件
+            if (window.refreshBrewingNotes) {
+                window.refreshBrewingNotes();
+            }
         } catch (error) {
             console.error("加载设备和咖啡豆数据失败:", error);
         }
-    }, []);
+    }, [isOpen]);
     
     // 初始化
     useEffect(() => {
         if (isOpen) {
-            loadEquipmentsAndBeans();
+            // 使用setTimeout减轻加载对UI渲染的影响
+            setTimeout(() => {
+                loadEquipmentsAndBeans();
+            }, 0);
             
             // 从localStorage读取首选项
             setSortOption(getSortOptionPreference());
@@ -121,20 +131,12 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onClose: _onClo
         const handleStorageChange = (e: StorageEvent) => {
             if (e.key === 'brewingNotes' && e.newValue !== null) {
                 loadEquipmentsAndBeans();
-                
-                if (window.refreshBrewingNotes) {
-                    window.refreshBrewingNotes();
-                }
             }
         };
         
         const handleCustomStorageChange = (e: CustomEvent) => {
             if (e.detail?.key === 'brewingNotes') {
                 loadEquipmentsAndBeans();
-                
-                if (window.refreshBrewingNotes) {
-                    window.refreshBrewingNotes();
-                }
             }
         };
         
