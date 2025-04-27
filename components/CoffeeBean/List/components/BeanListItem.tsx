@@ -164,6 +164,29 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                                 <div className="text-[11px] font-normal break-words text-neutral-800 dark:text-neutral-100 pr-2">
                                     {title}
                                 </div>
+                                {/* 拼配豆信息显示 */}
+                                {bean.type === '拼配' && bean.blendComponents && bean.blendComponents.length > 1 && (
+                                    <div className="text-[10px] font-normal text-neutral-500 dark:text-neutral-400 pr-2 mt-0.5">
+                                        {bean.blendComponents.map((comp, index) => {
+                                            const componentText = [
+                                                comp.origin || '',
+                                                comp.process || '',
+                                                comp.variety || ''
+                                            ].filter(Boolean).join(' ');
+                                            
+                                            const hasPercentage = comp.percentage !== undefined && 
+                                                                comp.percentage !== null;
+                                            
+                                            return (
+                                                <span key={index}>
+                                                    {index > 0 && ' · '}
+                                                    {componentText}
+                                                    {hasPercentage && ` (${comp.percentage}%)`}
+                                                </span>
+                                            );
+                                        })}
+                                    </div>
+                                )}
                                 {isEmpty && (
                                     <div className="text-[10px] font-normal px-1.5 py-0.5 mt-1 inline-block rounded-full bg-neutral-200 text-neutral-600 dark:bg-neutral-700 dark:text-neutral-300 shrink-0">
                                         已用完
