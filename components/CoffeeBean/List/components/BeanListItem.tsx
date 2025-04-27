@@ -28,6 +28,8 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
 }) => {
     // 添加图片查看器状态
     const [imageViewerOpen, setImageViewerOpen] = useState(false);
+    const [imageLoading, setImageLoading] = useState(true);
+    const [imageError, setImageError] = useState(false);
 
     // 计算剩余的百分比
     const calculateRemainingPercentage = () => {
@@ -115,21 +117,38 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                     {/* 咖啡豆图片 - 只在有图片时显示 */}
                     {bean.image && (
                         <div 
-                            className="w-14 h-14 rounded-md overflow-hidden bg-neutral-100 dark:bg-neutral-800 flex-shrink-0 border border-neutral-200/50 dark:border-neutral-700/50 relative cursor-pointer"
-                            onClick={() => setImageViewerOpen(true)}
+                            className="w-14 h-14 rounded-md overflow-hidden flex-shrink-0 relative cursor-pointer"
+                            onClick={() => !imageError && setImageViewerOpen(true)}
                         >
-                            <Image
-                                src={bean.image}
-                                alt={bean.name}
-                                fill
-                                className="object-cover"
-                                sizes="50px"
-                            />
+                            {imageLoading && !imageError && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-neutral-100 dark:bg-neutral-800">
+                                    <div className="w-5 h-5 border-2 border-neutral-300 dark:border-neutral-600 border-t-neutral-800 dark:border-t-neutral-200 rounded-full animate-spin"></div>
+                                </div>
+                            )}
+                            
+                            {imageError ? (
+                                <div className="absolute inset-0 flex items-center justify-center bg-neutral-100 dark:bg-neutral-800 text-xs text-neutral-500 dark:text-neutral-400">
+                                    加载失败
+                                </div>
+                            ) : (
+                                <Image
+                                    src={bean.image}
+                                    alt={bean.name}
+                                    fill
+                                    className="object-contain"
+                                    sizes="50px"
+                                    onLoadingComplete={() => setImageLoading(false)}
+                                    onError={() => {
+                                        setImageLoading(false);
+                                        setImageError(true);
+                                    }}
+                                />
+                            )}
                         </div>
                     )}
 
                     {/* 图片查看器 */}
-                    {bean.image && (
+                    {bean.image && !imageError && (
                         <ImageViewer
                             isOpen={imageViewerOpen}
                             imageUrl={bean.image}

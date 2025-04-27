@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
+import { Crop } from 'lucide-react';
 import AutocompleteInput from '@/components/AutocompleteInput';
 import { ExtendedCoffeeBean } from '../types';
 import { pageVariants, pageTransition } from '../constants';
+import ImageBoundaryEditor from '@/components/ImageBoundaryEditor';
 
 interface BasicInfoProps {
     bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>;
@@ -20,6 +22,34 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
     editingRemaining,
     validateRemaining,
 }) => {
+    const [originalImage, setOriginalImage] = useState<string | undefined>(bean.image);
+    const [isEditingBoundary, setIsEditingBoundary] = useState(false);
+
+    // 处理直接选择文件上传
+    const handleFileSelect = (file: File) => {
+        try {
+            // 使用传入的onImageUpload函数处理文件
+            onImageUpload(file);
+            
+            // 先读取文件以显示原始图片
+            const reader = new FileReader();
+            reader.onload = () => {
+                if (typeof reader.result === 'string') {
+                    setOriginalImage(reader.result as string);
+                }
+            };
+            reader.readAsDataURL(file);
+        } catch (error) {
+            console.error('图片上传失败:', error);
+        }
+    };
+
+    // 保存边界编辑后的图片
+    const handleBoundaryEditSave = (processedImage: string) => {
+        setIsEditingBoundary(false);
+        onBeanChange('image')(processedImage);
+    };
+
     return (
         <motion.div
             key="basic-step"
@@ -30,54 +60,91 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
             transition={pageTransition}
             className="space-y-8 max-w-md mx-auto flex flex-col items-center justify-center h-full"
         >
-            <div className="space-y-2 w-full">
-                <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                    咖啡豆图片
-                </label>
-                <div className="relative aspect-square w-32 mx-auto">
-                    <div className="absolute inset-0 rounded-2xl border-2 border-dashed border-neutral-300 dark:border-neutral-700 overflow-hidden">
-                        {bean.image ? (
-                            <div className="relative w-full h-full">
-                                <Image
-                                    src={bean.image}
-                                    alt="咖啡豆图片"
-                                    fill
-                                    className="object-cover"
-                                />
-                                <button
-                                    type="button"
-                                    className="absolute top-2 right-2 p-1.5 bg-neutral-800/50 hover:bg-neutral-800/70 rounded-full text-neutral-100"
-                                    onClick={() => onBeanChange('image')('')}
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                                    </svg>
-                                </button>
-                            </div>
-                        ) : (
-                            <>
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={(e) => {
-                                        const file = e.target.files?.[0];
-                                        if (file) {
-                                            onImageUpload(file);
-                                        }
-                                    }}
-                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                                />
-                                <div className="absolute inset-0 flex flex-col items-center justify-center">
+            {isEditingBoundary && originalImage ? (
+                <ImageBoundaryEditor 
+                    image={originalImage}
+                    onSave={handleBoundaryEditSave}
+                    onCancel={() => setIsEditingBoundary(false)}
+                />
+            ) : (
+                <div className="space-y-2 w-full">
+                    <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                        咖啡豆图片
+                    </label>
+                    <div className="flex items-center justify-center relative">
+                        <div
+                            className="w-32 h-32 rounded-lg border-2 border-dashed border-neutral-300 dark:border-neutral-700 flex flex-col items-center justify-center cursor-pointer overflow-hidden relative"
+                            onClick={() => {
+                                const fileInput = document.createElement('input');
+                                fileInput.type = 'file';
+                                fileInput.accept = 'image/*';
+                                fileInput.onchange = (e) => {
+                                    const input = e.target as HTMLInputElement;
+                                    if (!input.files || input.files.length === 0) return;
+                                    handleFileSelect(input.files[0]);
+                                };
+                                fileInput.click();
+                            }}
+                        >
+                            {bean.image ? (
+                                <div className="relative w-full h-full">
+                                    <Image
+                                        src={bean.image}
+                                        alt="咖啡豆图片"
+                                        className="object-contain"
+                                        fill
+                                        sizes="(max-width: 768px) 100vw, 300px"
+                                    />
+                                    <div className="absolute inset-0 bg-black bg-opacity-30 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
+                                        <span className="text-white text-xs font-medium">点击更换</span>
+                                    </div>
+                                    {/* 操作按钮组 */}
+                                    <div className="absolute top-1 right-1 flex space-x-1">
+                                        {/* 编辑边界按钮 */}
+                                        <button
+                                            type="button"
+                                            className="w-6 h-6 bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-800 rounded-full flex items-center justify-center shadow-md hover:bg-blue-500 dark:hover:bg-blue-500 dark:hover:text-white transition-colors z-10"
+                                            onClick={(e) => {
+                                                e.stopPropagation(); // 阻止冒泡
+                                                if (originalImage || bean.image) {
+                                                    setIsEditingBoundary(true);
+                                                    // 如果没有原始图片，使用当前图片
+                                                    if (!originalImage) {
+                                                        setOriginalImage(bean.image);
+                                                    }
+                                                }
+                                            }}
+                                        >
+                                            <Crop className="h-3 w-3" />
+                                        </button>
+                                        {/* 删除按钮 */}
+                                        <button
+                                            type="button"
+                                            className="w-6 h-6 bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-800 rounded-full flex items-center justify-center shadow-md hover:bg-red-500 dark:hover:bg-red-500 dark:hover:text-white transition-colors z-10"
+                                            onClick={(e) => {
+                                                e.stopPropagation(); // 阻止冒泡
+                                                onBeanChange('image')('');
+                                                setOriginalImage(undefined);
+                                            }}
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <>
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-neutral-400 dark:text-neutral-600 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                     </svg>
                                     <span className="text-xs text-neutral-500 dark:text-neutral-400">点击上传图片</span>
-                                </div>
-                            </>
-                        )}
+                                </>
+                            )}
+                        </div>
                     </div>
                 </div>
-            </div>
+            )}
 
             <div className="space-y-2 w-full">
                 <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">

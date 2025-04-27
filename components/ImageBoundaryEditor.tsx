@@ -75,10 +75,8 @@ const ImageBoundaryEditor: React.FC<ImageBoundaryEditorProps> = ({
                 // 初始化绘图画布
                 const drawCtx = drawCanvas.getContext('2d');
                 if (drawCtx) {
-                    drawCtx.strokeStyle = 'rgba(255, 0, 0, 0.8)';
+                    drawCtx.strokeStyle = '#00AAFF';
                     drawCtx.lineWidth = 2;
-                    drawCtx.lineCap = 'round';
-                    drawCtx.lineJoin = 'round';
                     setDrawingContext(drawCtx);
                 }
                 
@@ -90,41 +88,9 @@ const ImageBoundaryEditor: React.FC<ImageBoundaryEditorProps> = ({
     
     // 绘制路径
     const drawPath = useCallback(() => {
-        if (!drawingContext || path.length === 0) return;
+        if (!drawingContext || path.length < 1) return;
         
         drawingContext.clearRect(0, 0, imageSize.width, imageSize.height);
-        
-        // 先绘制实际的图片边界指示 - 使用实线
-        drawingContext.strokeStyle = 'rgba(255, 255, 255, 0.8)';
-        drawingContext.lineWidth = 2;
-        drawingContext.strokeRect(0, 0, imageSize.width, imageSize.height);
-        
-        // 绘制最终生成图片边界的参考区域（考虑边框和阴影） - 使用虚线
-        const borderWidth = 10; // 与应用边框时相同
-        const padding = borderWidth + 5; // 与应用边框时相同
-        
-        // 内部区域边界 - 表示实际内容区域
-        drawingContext.setLineDash([4, 2]);
-        drawingContext.strokeStyle = 'rgba(255, 200, 50, 0.6)';
-        drawingContext.lineWidth = 1;
-        drawingContext.strokeRect(
-            padding, 
-            padding, 
-            imageSize.width - padding * 2, 
-            imageSize.height - padding * 2
-        );
-        
-        // 重置虚线设置
-        drawingContext.setLineDash([]);
-        
-        // 绘制路径提示文字
-        drawingContext.font = '10px sans-serif';
-        drawingContext.fillStyle = 'rgba(255, 255, 255, 0.8)';
-        drawingContext.fillText('边框和阴影区域', padding + 2, padding - 2);
-        
-        // 再绘制用户的路径
-        drawingContext.strokeStyle = 'rgba(255, 0, 0, 0.8)';
-        drawingContext.lineWidth = 2;
         drawingContext.beginPath();
         drawingContext.moveTo(path[0].x, path[0].y);
         
@@ -138,14 +104,6 @@ const ImageBoundaryEditor: React.FC<ImageBoundaryEditorProps> = ({
         }
         
         drawingContext.stroke();
-        
-        // 在路径的顶点上绘制小圆点，增强视觉反馈
-        drawingContext.fillStyle = 'rgba(255, 0, 0, 0.6)';
-        path.forEach(point => {
-            drawingContext.beginPath();
-            drawingContext.arc(point.x, point.y, 3, 0, Math.PI * 2);
-            drawingContext.fill();
-        });
     }, [drawingContext, path, imageSize]);
     
     // 监听路径变化时重绘
@@ -285,7 +243,7 @@ const ImageBoundaryEditor: React.FC<ImageBoundaryEditorProps> = ({
     
     // 处理鼠标/触摸事件
     const handlePointerDown = (e: React.PointerEvent) => {
-        if (!drawingRef.current || !imageLoaded) return;
+        if (!drawingRef.current) return;
         
         const rect = drawingRef.current.getBoundingClientRect();
         const x = e.clientX - rect.left;
@@ -304,7 +262,7 @@ const ImageBoundaryEditor: React.FC<ImageBoundaryEditorProps> = ({
     };
     
     const handlePointerMove = (e: React.PointerEvent) => {
-        if (!isDrawing || !drawingRef.current || !imageLoaded) return;
+        if (!isDrawing || !drawingRef.current) return;
         
         const rect = drawingRef.current.getBoundingClientRect();
         const x = e.clientX - rect.left;
