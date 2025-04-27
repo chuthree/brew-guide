@@ -6,7 +6,7 @@ import { NoteItemProps } from '../types'
 import { formatDate, formatRating } from '../utils'
 
 // 优化笔记项组件以避免不必要的重渲染
-const NoteItem: React.FC<NoteItemProps> = ({ note, equipmentNames, onEdit, onDelete, unitPriceCache }) => {
+const NoteItem: React.FC<NoteItemProps> = ({ note, equipmentNames, onEdit, onDelete, onShare, unitPriceCache }) => {
     // 预先计算一些条件，避免在JSX中重复计算
     const hasTasteRatings = Object.values(note.taste).some(value => value > 0);
     const hasNotes = Boolean(note.notes);
@@ -39,6 +39,11 @@ const NoteItem: React.FC<NoteItemProps> = ({ note, equipmentNames, onEdit, onDel
                     <div className="flex-shrink-0 ml-1 relative">
                         <ActionMenu
                             items={[
+                                {
+                                    id: 'share',
+                                    label: '分享',
+                                    onClick: () => onShare && onShare(note, equipmentName)
+                                },
                                 {
                                     id: 'edit',
                                     label: '编辑',

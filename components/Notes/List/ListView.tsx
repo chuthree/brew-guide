@@ -16,6 +16,7 @@ interface NotesListViewProps {
     filterMode: 'equipment' | 'bean';
     onNoteClick: (note: BrewingNote) => void;
     onDeleteNote: (noteId: string) => Promise<void>;
+    onShareNote: (note: BrewingNote, equipmentName: string) => void;
 }
 
 const NotesListView: React.FC<NotesListViewProps> = ({
@@ -24,14 +25,15 @@ const NotesListView: React.FC<NotesListViewProps> = ({
     selectedBean,
     filterMode,
     onNoteClick,
-    onDeleteNote
+    onDeleteNote,
+    onShareNote
 }) => {
     const [_isPending, startTransition] = useTransition()
     const [notes, setNotes] = useState<BrewingNote[]>(globalCache.filteredNotes)
     const [isFirstLoad, setIsFirstLoad] = useState<boolean>(!globalCache.initialized)
     const [unitPriceCache, _setUnitPriceCache] = useState<Record<string, number>>(globalCache.beanPrices)
     const isLoadingRef = useRef<boolean>(false)
-
+    
     // 加载笔记数据 - 优化加载流程以避免不必要的加载状态显示
     const loadNotes = useCallback(async () => {
         // 防止并发加载
@@ -139,6 +141,7 @@ const NotesListView: React.FC<NotesListViewProps> = ({
                     equipmentNames={globalCache.equipmentNames}
                     onEdit={onNoteClick}
                     onDelete={onDeleteNote}
+                    onShare={onShareNote}
                     unitPriceCache={unitPriceCache}
                 />
             ))}

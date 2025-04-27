@@ -13,6 +13,7 @@ import { BrewingNoteData } from '@/app/types'
 import { getEquipmentName, normalizeEquipmentId } from '../utils'
 import { globalCache, getSelectedEquipmentPreference, getSelectedBeanPreference, getFilterModePreference, getSortOptionPreference, saveSelectedEquipmentPreference, saveSelectedBeanPreference, saveFilterModePreference, saveSortOptionPreference, calculateTotalCoffeeConsumption, formatConsumption } from './globalCache'
 import ListView from './ListView'
+import NoteShareModal from '../Share/NoteShareModal'
 
 // 为Window对象声明类型扩展
 declare global {
@@ -35,6 +36,11 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onClose: _onClo
     // 统计状态 - 直接使用缓存中的值作为初始值
     const [totalCoffeeConsumption, setTotalCoffeeConsumption] = useState<number>(globalCache.totalConsumption || 0)
     
+    // 分享状态
+    const [showShareModal, setShowShareModal] = useState(false)
+    const [shareNote, setShareNote] = useState<BrewingNote | null>(null)
+    const [shareEquipmentName, setShareEquipmentName] = useState('')
+
     // 加载可用设备和咖啡豆列表
     const loadEquipmentsAndBeans = useCallback(async () => {
         try {
@@ -157,6 +163,19 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onClose: _onClo
             setToast(prev => ({ ...prev, visible: false }));
         }, 3000);
     };
+    
+    // 处理分享笔记
+    const handleShareNote = (note: BrewingNote, equipmentName: string) => {
+        setShareNote(note)
+        setShareEquipmentName(equipmentName)
+        setShowShareModal(true)
+    }
+
+    // 关闭分享模态框
+    const handleCloseShareModal = () => {
+        setShowShareModal(false)
+        setShareNote(null)
+    }
     
     // 处理删除笔记
     const handleDelete = async (noteId: string) => {
@@ -338,6 +357,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onClose: _onClo
                             filterMode={filterMode}
                             onNoteClick={handleNoteClick}
                             onDeleteNote={handleDelete}
+                            onShareNote={handleShareNote}
                         />
                     </div>
 
@@ -352,6 +372,16 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onClose: _onClo
                 message={toast.message}
                 type={toast.type}
             />
+            
+            {/* 分享模态框 */}
+            {shareNote && (
+                <NoteShareModal
+                    isOpen={showShareModal}
+                    onClose={handleCloseShareModal}
+                    note={shareNote}
+                    equipmentName={shareEquipmentName}
+                />
+            )}
         </div>
     );
 };
