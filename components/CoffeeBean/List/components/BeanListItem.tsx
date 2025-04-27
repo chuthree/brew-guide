@@ -1,10 +1,11 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import Image from 'next/image'
 import ActionMenu from '@/components/CoffeeBean/ui/action-menu'
 import { ExtendedCoffeeBean } from '../types'
 import { isBeanEmpty } from '../globalCache'
+import ImageViewer from '@/components/ui/ImageViewer'
 
 interface BeanListItemProps {
     bean: ExtendedCoffeeBean
@@ -25,6 +26,9 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
     onShare,
     onRemainingClick
 }) => {
+    // 添加图片查看器状态
+    const [imageViewerOpen, setImageViewerOpen] = useState(false);
+
     // 计算剩余的百分比
     const calculateRemainingPercentage = () => {
         if (!bean.capacity || !bean.remaining) return 0;
@@ -110,7 +114,10 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                 <div className="flex gap-4">
                     {/* 咖啡豆图片 - 只在有图片时显示 */}
                     {bean.image && (
-                        <div className="w-14 h-14 rounded-md overflow-hidden bg-neutral-100 dark:bg-neutral-800 flex-shrink-0 border border-neutral-200/50 dark:border-neutral-700/50 relative">
+                        <div 
+                            className="w-14 h-14 rounded-md overflow-hidden bg-neutral-100 dark:bg-neutral-800 flex-shrink-0 border border-neutral-200/50 dark:border-neutral-700/50 relative cursor-pointer"
+                            onClick={() => setImageViewerOpen(true)}
+                        >
                             <Image
                                 src={bean.image}
                                 alt={bean.name}
@@ -119,6 +126,16 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                                 sizes="50px"
                             />
                         </div>
+                    )}
+
+                    {/* 图片查看器 */}
+                    {bean.image && (
+                        <ImageViewer
+                            isOpen={imageViewerOpen}
+                            imageUrl={bean.image}
+                            alt={bean.name}
+                            onClose={() => setImageViewerOpen(false)}
+                        />
                     )}
 
                     {/* 名称和标签区域 */}
