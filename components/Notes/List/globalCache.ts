@@ -19,6 +19,7 @@ export const globalCache: {
     availableEquipments: string[];
     availableBeans: string[];
     initialized: boolean;
+    totalConsumption: number;
 } = {
     notes: [],
     filteredNotes: [],
@@ -30,7 +31,8 @@ export const globalCache: {
     sortOption: SORT_OPTIONS.TIME_DESC,
     availableEquipments: [],
     availableBeans: [],
-    initialized: false
+    initialized: false,
+    totalConsumption: 0
 };
 
 // 从localStorage读取选中的设备ID

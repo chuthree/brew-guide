@@ -32,8 +32,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onClose: _onClo
     const [selectedEquipment, setSelectedEquipment] = useState<string | null>(globalCache.selectedEquipment)
     const [selectedBean, setSelectedBean] = useState<string | null>(globalCache.selectedBean)
     
-    // 统计状态
-    const [totalCoffeeConsumption, setTotalCoffeeConsumption] = useState<number>(0)
+    // 统计状态 - 直接使用缓存中的值作为初始值
+    const [totalCoffeeConsumption, setTotalCoffeeConsumption] = useState<number>(globalCache.totalConsumption || 0)
     
     // 加载可用设备和咖啡豆列表
     const loadEquipmentsAndBeans = useCallback(async () => {
@@ -97,8 +97,9 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onClose: _onClo
             globalCache.availableEquipments = uniqueEquipmentIds;
             globalCache.availableBeans = beanNames;
             
-            // 计算总消耗量
+            // 计算总消耗量并更新全局缓存
             const totalConsumption = calculateTotalCoffeeConsumption(parsedNotes);
+            globalCache.totalConsumption = totalConsumption; // 更新全局缓存中的消耗量
             setTotalCoffeeConsumption(totalConsumption);
             
             // 触发brewingNotesUpdated事件，更新ListView组件
@@ -308,8 +309,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onClose: _onClo
                         <div className="flex justify-between items-center mb-6 px-6">
                             <div className="text-xs tracking-wide text-neutral-800 dark:text-neutral-100">
                                 {selectedEquipment || selectedBean
-                                    ? `${globalCache.filteredNotes.length}/${globalCache.notes.length} 条记录，已消耗 ${formatConsumption(totalCoffeeConsumption)}` 
-                                    : `${globalCache.notes.length} 条记录，已消耗 ${formatConsumption(totalCoffeeConsumption)}`}
+                                    ? `${globalCache.filteredNotes.length}/${globalCache.notes.length} 条记录，已消耗 ${formatConsumption(globalCache.totalConsumption || totalCoffeeConsumption)}` 
+                                    : `${globalCache.notes.length} 条记录，已消耗 ${formatConsumption(globalCache.totalConsumption || totalCoffeeConsumption)}`}
                             </div>
                             <SortSelector sortOption={sortOption} onSortChange={handleSortChange} />
                         </div>
