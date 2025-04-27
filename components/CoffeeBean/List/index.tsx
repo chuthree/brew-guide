@@ -39,6 +39,11 @@ import { useBeanOperations } from './hooks/useBeanOperations'
 import ViewSwitcher from './components/ViewSwitcher'
 import InventoryView from './components/InventoryView'
 
+// 重命名导入组件以避免混淆
+const CoffeeBeanRanking = _CoffeeBeanRanking;
+// 重命名函数以避免混淆
+const convertToRankingSortOption = _convertToRankingSortOption;
+
 // 添加全局缓存中的beanType属性
 globalCache.selectedBeanType = globalCache.selectedBeanType || 'all';
 
@@ -60,7 +65,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
     // 评分相关状态
     const [showRatingModal, setShowRatingModal] = useState(false)
     const [selectedBeanForRating, setSelectedBeanForRating] = useState<ExtendedCoffeeBean | null>(null)
-    const [_lastRatedBeanId, setLastRatedBeanId] = useState<string | null>(null)
+    const [lastRatedBeanId, setLastRatedBeanId] = useState<string | null>(null)
     const [ratingSavedCallback, setRatingSavedCallback] = useState<(() => void) | null>(null)
     
     // 过滤和显示控制状态
@@ -531,16 +536,14 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
         }
     };
 
-    // 处理咖啡豆评分
-    const _handleShowRatingForm = (bean: ExtendedCoffeeBean, onRatingSaved?: () => void) => {
+    // 用于打开评分表单的处理函数
+    const handleShowRatingForm = (bean: ExtendedCoffeeBean, onRatingSaved?: () => void) => {
         setSelectedBeanForRating(bean);
         setShowRatingModal(true);
-
-        // 存储回调函数
+        
+        // 如果提供了回调函数，存储它
         if (onRatingSaved) {
             setRatingSavedCallback(() => onRatingSaved);
-        } else {
-            setRatingSavedCallback(null);
         }
     };
 
@@ -878,6 +881,22 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                             isSearching={isSearching}
                             searchQuery={searchQuery}
                         />
+                    )}
+                    {/* 添加榜单和博主榜单视图 */}
+                    {(viewMode === VIEW_OPTIONS.RANKING || viewMode === VIEW_OPTIONS.BLOGGER) && (
+                        <div className="w-full h-full overflow-y-auto scroll-with-bottom-bar">
+                            <CoffeeBeanRanking
+                                isOpen={viewMode === VIEW_OPTIONS.RANKING || viewMode === VIEW_OPTIONS.BLOGGER}
+                                onShowRatingForm={handleShowRatingForm}
+                                sortOption={convertToRankingSortOption(sortOption, viewMode)}
+                                updatedBeanId={lastRatedBeanId}
+                                hideFilters={true}
+                                beanType={rankingBeanType}
+                                editMode={rankingEditMode}
+                                viewMode={viewMode === VIEW_OPTIONS.BLOGGER ? 'blogger' : 'personal'}
+                                year={viewMode === VIEW_OPTIONS.BLOGGER ? bloggerYear : undefined}
+                            />
+                        </div>
                     )}
                 </div>
             </div>
