@@ -51,13 +51,66 @@ export const Storage = {
 				await Preferences.set({ key, value });
 			} else {
 				// 在 Web 平台上使用 localStorage
-				localStorage.setItem(key, value);
+				// 先检查数据大小
+				const dataSize = new Blob([value]).size;
+				console.log(`[Storage] 设置 ${key} - 数据大小: ${dataSize} 字节`);
 				
-				// 验证保存是否成功
-				const saved = localStorage.getItem(key);
-				if (saved !== value) {
-					// 重试一次
+				// 对于大数据，尝试分段保存或提醒用户
+				if (dataSize > 4 * 1024 * 1024) { // 超过4MB的数据
+					console.warn(`[Storage] 警告：${key} 数据大小超过4MB，可能会影响性能或存储失败`);
+				}
+				
+				// 尝试保存数据并验证
+				try {
 					localStorage.setItem(key, value);
+					
+					// 验证保存是否成功
+					const saved = localStorage.getItem(key);
+					if (saved !== value) {
+						console.warn(`[Storage] 警告：${key} 验证失败，尝试重新保存`);
+						// 重试一次
+						localStorage.setItem(key, value);
+						
+						// 再次验证
+						const retryVerify = localStorage.getItem(key); 
+						if (retryVerify !== value) {
+							throw new Error(`数据验证失败，可能存储空间不足`);
+						}
+					}
+
+					// 对于笔记数据，进行特殊处理
+					if (key === 'brewingNotes') {
+						try {
+							// 解析JSON确保数据有效
+							JSON.parse(value);
+							
+							// 保存一个备份，以便恢复
+							const backupKey = `${key}_backup_${Date.now()}`;
+							localStorage.setItem(backupKey, value);
+							console.log(`[Storage] 已创建笔记数据备份: ${backupKey}`);
+							
+							// 仅保留最新的3个备份
+							const allKeys = Object.keys(localStorage);
+							const backupKeys = allKeys.filter(k => k.startsWith(`${key}_backup_`)).sort();
+							if (backupKeys.length > 3) {
+								// 删除旧备份
+								backupKeys.slice(0, backupKeys.length - 3).forEach(oldKey => {
+									localStorage.removeItem(oldKey);
+									console.log(`[Storage] 已删除旧备份: ${oldKey}`);
+								});
+							}
+						} catch (e) {
+							console.error(`[Storage] 笔记数据不是有效的JSON: ${e}`);
+							throw new Error(`笔记数据无效，请尝试清除缓存后重试`);
+						}
+					}
+				} catch (e) {
+					// 特殊处理 QUOTA_EXCEEDED_ERR 错误
+					if (e instanceof DOMException && (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED')) {
+						console.error(`[Storage] 存储空间不足: ${e}`);
+						throw new Error('存储空间不足，请删除部分历史数据或清理浏览器缓存后重试');
+					}
+					throw e; // 重新抛出其他错误
 				}
 
 				// 手动触发自定义存储变更事件
@@ -66,8 +119,9 @@ export const Storage = {
 				});
 				window.dispatchEvent(event);
 			}
-		} catch (_error) {
-			throw _error; // 重新抛出错误，让调用者知道存储失败
+		} catch (error) {
+			console.error(`[Storage] 设置 ${key} 时出错:`, error);
+			throw error; // 重新抛出错误，让调用者知道存储失败
 		}
 	},
 
