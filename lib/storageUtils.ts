@@ -45,9 +45,21 @@ export const StorageUtils = {
       // 初始化IndexedDB数据库
       await dbUtils.initialize();
       
-      // 尝试从localStorage迁移数据到IndexedDB
-      if (!Capacitor.isNativePlatform()) {
-        const migrationResult = await this.migrateFromLocalStorage();
+      let migrationResult = false;
+      
+      // 基于平台选择正确的迁移方法
+      if (Capacitor.isNativePlatform()) {
+        // 移动端：从Preferences迁移
+        console.log('检测到移动端环境，准备从Preferences迁移数据...');
+        migrationResult = await this.migrateFromPreferences();
+        if (migrationResult) {
+          console.log('移动端数据迁移成功，数据已保存到IndexedDB');
+          // 注意：暂时不清理Preferences中的数据，以防万一
+        }
+      } else {
+        // 网页端：从localStorage迁移
+        console.log('检测到网页端环境，准备从localStorage迁移数据...');
+        migrationResult = await this.migrateFromLocalStorage();
         if (migrationResult) {
           console.log('数据迁移成功，准备清理localStorage中的大数据...');
           await this.cleanupLocalStorage();
@@ -201,6 +213,135 @@ export const StorageUtils = {
       }
     } catch (error) {
       console.error('清理localStorage失败:', error);
+    }
+  },
+  
+  /**
+   * 从Capacitor Preferences迁移数据到IndexedDB
+   * @returns 迁移是否成功
+   */
+  async migrateFromPreferences(): Promise<boolean> {
+    try {
+      // 检查是否已迁移完成
+      const migrated = await db.settings.get('migrated');
+      if (migrated && migrated.value === 'true') {
+        // 验证数据是否实际存在
+        const beansCount = await db.coffeeBeans.count();
+        const notesCount = await db.brewingNotes.count();
+        
+        // 获取Preferences中的数据以检查是否有数据需要迁移
+        const hasPreferencesBeans = await this.hasPreferencesData('coffeeBeans');
+        const hasPreferencesNotes = await this.hasPreferencesData('brewingNotes');
+        
+        // 如果数据库为空但Preferences有数据，重置迁移标志强制重新迁移
+        if ((beansCount === 0 && hasPreferencesBeans) || (notesCount === 0 && hasPreferencesNotes)) {
+          console.log('虽然标记为已迁移，但数据似乎丢失，重新执行迁移...');
+          // 重置迁移标志
+          await db.settings.delete('migrated');
+        } else {
+          console.log('数据已迁移完成，无需重复迁移');
+          return true;
+        }
+      }
+      
+      console.log('开始从Preferences迁移数据到IndexedDB...');
+      let migrationSuccessful = true;
+      
+      // 从Preferences获取所有需要迁移到IndexedDB的大数据项
+      for (const key in STORAGE_TYPE_MAPPING) {
+        if (STORAGE_TYPE_MAPPING[key] === StorageType.INDEXED_DB) {
+          console.log(`检查Preferences是否有${key}数据...`);
+          const { value } = await Preferences.get({ key });
+          
+          if (value) {
+            console.log(`从Preferences中找到${key}数据，准备迁移...`);
+            if (key === 'brewingNotes') {
+              try {
+                console.log(`正在迁移 ${key} 数据...`);
+                const notes = JSON.parse(value);
+                if (notes.length > 0) {
+                  await db.brewingNotes.bulkPut(notes);
+                  // 验证迁移是否成功
+                  const migratedCount = await db.brewingNotes.count();
+                  if (migratedCount === notes.length) {
+                    console.log(`成功迁移 ${notes.length} 条${key}数据`);
+                  } else {
+                    console.error(`迁移失败：应有 ${notes.length} 条数据，但只迁移了 ${migratedCount} 条`);
+                    migrationSuccessful = false;
+                  }
+                } else {
+                  console.log(`${key}数据为空数组，无需迁移`);
+                }
+              } catch (e) {
+                console.error(`解析${key}数据失败:`, e);
+                migrationSuccessful = false;
+              }
+            } else if (key === 'coffeeBeans') {
+              try {
+                console.log(`正在迁移 ${key} 数据...`);
+                const beans = JSON.parse(value);
+                if (beans.length > 0) {
+                  await db.coffeeBeans.bulkPut(beans);
+                  // 验证迁移是否成功
+                  const migratedCount = await db.coffeeBeans.count();
+                  if (migratedCount === beans.length) {
+                    console.log(`成功迁移 ${beans.length} 条${key}数据`);
+                  } else {
+                    console.error(`迁移失败：应有 ${beans.length} 条数据，但只迁移了 ${migratedCount} 条`);
+                    migrationSuccessful = false;
+                  }
+                } else {
+                  console.log(`${key}数据为空数组，无需迁移`);
+                }
+              } catch (e) {
+                console.error(`解析${key}数据失败:`, e);
+                migrationSuccessful = false;
+              }
+            } else {
+              // 处理其他类型的大数据
+              await db.settings.put({ key, value });
+              console.log(`成功迁移${key}数据`);
+            }
+          } else {
+            console.log(`Preferences中没有找到${key}数据`);
+          }
+        }
+      }
+      
+      // 只有在所有数据成功迁移后才标记为已完成
+      if (migrationSuccessful) {
+        await db.settings.put({ key: 'migrated', value: 'true' });
+        await db.settings.put({ key: 'migratedAt', value: new Date().toISOString() });
+        console.log('数据迁移完成，已标记为已迁移');
+        return true;
+      } else {
+        console.error('数据迁移过程中发生错误，未标记为已迁移');
+        return false;
+      }
+    } catch (error) {
+      console.error('数据迁移失败:', error);
+      return false;
+    }
+  },
+  
+  /**
+   * 检查Preferences中是否存在指定键的数据
+   * @param key 键名
+   * @returns 是否存在数据
+   */
+  async hasPreferencesData(key: string): Promise<boolean> {
+    try {
+      const { value } = await Preferences.get({ key });
+      if (!value) return false;
+      
+      try {
+        const data = JSON.parse(value);
+        return Array.isArray(data) && data.length > 0;
+      } catch {
+        return false;
+      }
+    } catch {
+      return false;
     }
   },
   

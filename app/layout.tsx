@@ -17,6 +17,7 @@ import CapacitorInit from './CapacitorInit'
 import StorageInit from './StorageInit'
 import { Toast } from '@/components/ui/toast';
 import { TranslationsProvider } from '@/providers/TranslationsProvider'
+import DebugLogger from '@/components/DebugLogger'
 
 // 配置 Inter 字体
 const inter = Inter({
@@ -158,6 +159,7 @@ export default function RootLayout({
               </div>
               <PWAPrompt />
               <Toast />
+              <DebugLogger />
             </ToastProvider>
           </TranslationsProvider>
         </ThemeProvider>
