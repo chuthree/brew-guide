@@ -259,14 +259,15 @@ export function parseMethodFromJson(jsonString: string): Method | null {
 		// 解析JSON
 		const parsedData = JSON.parse(cleanedJsonString);
 
-		// 验证必要字段 - 更灵活地查找method字段
+		// 验证必要字段 - 优先使用name字段，其次是method字段
 		const methodName =
+			parsedData.name ||
 			parsedData.method ||
 			parsedData.coffeeBeanInfo?.method ||
 			`${parsedData.equipment}优化方案`;
 
 		if (!methodName && !parsedData.equipment) {
-			throw new Error("导入的JSON缺少必要字段 (method)");
+			throw new Error("导入的JSON缺少必要字段 (name或method)");
 		}
 
 		// 构建Method对象 - 始终生成新的ID，避免ID冲突

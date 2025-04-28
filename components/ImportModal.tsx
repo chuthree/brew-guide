@@ -427,11 +427,14 @@ const ImportBeanModal: React.FC<ImportBeanModalProps> = ({
                     <div className="space-y-3 py-1">
                         <div className="bg-neutral-100 dark:bg-neutral-800 p-3 rounded-md text-xs text-neutral-600 dark:text-neutral-400">
                             <p className="mb-2">使用《豆包》AI获取JSON数据：</p>
-                            <ol className="list-decimal pl-6 space-y-1">
-                                <li>准备好咖啡豆商品页截图（多豆批量导入需多次识别）</li>
+                            <ol className="list-decimal pl-6 space-y-1 mb-2">
+                                <li>准备好咖啡豆商品页截图</li>
                                 <li>打开《豆包》将提示词与截图一并发送</li>
-                                <li>将返回的 json 数据复制进来（多豆请使用[{},{}]格式）</li>
+                                <li>将返回的 json 数据复制进来</li>
                             </ol>
+                            <p className="text-xs text-neutral-600 dark:text-neutral-400">
+                                小提示：支持多咖啡豆批量导入（比如可以将excel发给豆包）
+                            </p>
                         </div>
                         <div className="bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 p-3 rounded-md text-xs">
                             <div className="flex justify-between mb-1">
