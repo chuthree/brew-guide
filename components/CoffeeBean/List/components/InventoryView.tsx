@@ -6,10 +6,9 @@ import BeanListItem from './BeanListItem'
 import { generateBeanTitle } from '../types'
 import { AnimatePresence } from 'framer-motion'
 import RemainingEditor from './RemainingEditor'
-import { X as _X } from 'lucide-react'
 
-// 每页加载的咖啡豆数量
-const PAGE_SIZE = 10;
+// 每页加载的咖啡豆数量 - 增大分页大小减少加载次数
+const PAGE_SIZE = 5;
 
 interface InventoryViewProps {
     filteredBeans: ExtendedCoffeeBean[]
@@ -35,38 +34,13 @@ const InventoryView: React.FC<InventoryViewProps> = ({
     selectedVariety,
     showEmptyBeans,
     selectedBeanType,
-    onVarietyClick: _onVarietyClick,
-    onBeanTypeChange: _onBeanTypeChange,
-    onToggleShowEmptyBeans: _onToggleShowEmptyBeans,
-    availableVarieties: _availableVarieties,
     beans,
     onEdit,
     onDelete,
     onShare,
-    _onRemainingUpdate,
     onQuickDecrement,
-    isSearching: _isSearching = false,
     searchQuery = ''
 }) => {
-    // 为所有豆子预计算标题并缓存
-    const beanTitles = React.useMemo(() => {
-        return filteredBeans.reduce((acc, bean) => {
-            try {
-                // 确保bean有name属性，否则使用默认名称
-                if (bean && typeof bean === 'object' && typeof bean.name === 'string') {
-                    acc[bean.id] = generateBeanTitle(bean);
-                } else {
-                    // 如果bean或bean.name不符合预期，使用安全的默认值
-                    acc[bean.id] = bean.name || '未命名咖啡豆';
-                }
-            } catch (_error) {
-                // 捕获生成标题过程中可能发生的错误，但不输出日志
-                acc[bean.id] = bean.name || '未命名咖啡豆';
-            }
-            return acc;
-        }, {} as Record<string, string>);
-    }, [filteredBeans]);
-
     // 添加剩余量编辑状态
     const [editingRemaining, setEditingRemaining] = useState<{
         beanId: string,
@@ -88,13 +62,10 @@ const InventoryView: React.FC<InventoryViewProps> = ({
             const containerRect = containerElement.getBoundingClientRect();
             
             // 计算组件应该显示的位置
-            // 获取右侧的安全距离，保证整个组件不会超出右边界
-            // 假设下拉组件宽度约为120px
             const DROPDOWN_WIDTH = 120;
             const rightBoundaryPadding = 10; // 右侧安全边距
             
             // 计算x位置，确保不会超出右边界
-            // 先尝试将组件放在元素正下方
             let xPosition = rect.left - containerRect.left;
             
             // 检查是否会超出右边界
@@ -141,18 +112,6 @@ const InventoryView: React.FC<InventoryViewProps> = ({
         setEditingRemaining(null);
     };
 
-    // 检查是否有特定类型的豆子存在
-    const _hasEspressoBeans = React.useMemo(() => {
-        return beans.some(bean => bean.beanType === 'espresso');
-    }, [beans]);
-
-    const _hasFilterBeans = React.useMemo(() => {
-        return beans.some(bean => bean.beanType === 'filter'); 
-    }, [beans]);
-
-    // 基于搜索条件过滤豆子 - 现在可以移除，因为过滤已经在父组件完成
-    const searchFilteredBeans = filteredBeans;
-
     // 分页状态
     const [displayedBeans, setDisplayedBeans] = useState<ExtendedCoffeeBean[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
@@ -164,40 +123,37 @@ const InventoryView: React.FC<InventoryViewProps> = ({
     useEffect(() => {
         // 每次筛选条件变化时，重置分页状态
         setCurrentPage(1);
-        const initialBeans = searchFilteredBeans.slice(0, PAGE_SIZE);
+        const initialBeans = filteredBeans.slice(0, PAGE_SIZE);
         setDisplayedBeans(initialBeans);
-        setHasMore(searchFilteredBeans.length > PAGE_SIZE);
-    }, [searchFilteredBeans]);
+        setHasMore(filteredBeans.length > PAGE_SIZE);
+    }, [filteredBeans]);
     
-    // 加载更多咖啡豆
+    // 加载更多咖啡豆 - 移除setTimeout，直接同步更新
     const loadMoreBeans = useCallback(() => {
         if (!hasMore || isLoading) return;
         
         setIsLoading(true);
         
-        // 使用setTimeout避免阻塞UI渲染
-        setTimeout(() => {
-            try {
-                // 计算下一页的咖啡豆
-                const nextPage = currentPage + 1;
-                const endIndex = nextPage * PAGE_SIZE;
-                
-                // 使用筛选后的咖啡豆作为数据源
-                const newDisplayedBeans = searchFilteredBeans.slice(0, endIndex);
-                
-                // 如果加载的数量和筛选后的总数一样，说明没有更多数据了
-                const noMoreBeans = newDisplayedBeans.length >= searchFilteredBeans.length;
-                
-                setDisplayedBeans(newDisplayedBeans);
-                setCurrentPage(nextPage);
-                setHasMore(!noMoreBeans);
-            } catch (error) {
-                console.error('加载更多咖啡豆失败:', error);
-            } finally {
-                setIsLoading(false);
-            }
-        }, 100);
-    }, [currentPage, searchFilteredBeans, hasMore, isLoading]);
+        try {
+            // 计算下一页的咖啡豆
+            const nextPage = currentPage + 1;
+            const endIndex = nextPage * PAGE_SIZE;
+            
+            // 使用筛选后的咖啡豆作为数据源
+            const newDisplayedBeans = filteredBeans.slice(0, endIndex);
+            
+            // 如果加载的数量和筛选后的总数一样，说明没有更多数据了
+            const noMoreBeans = newDisplayedBeans.length >= filteredBeans.length;
+            
+            setDisplayedBeans(newDisplayedBeans);
+            setCurrentPage(nextPage);
+            setHasMore(!noMoreBeans);
+        } catch (error) {
+            console.error('加载更多咖啡豆失败:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [currentPage, filteredBeans, hasMore, isLoading]);
     
     // 设置IntersectionObserver来监听加载更多的元素
     useEffect(() => {
@@ -209,7 +165,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                     loadMoreBeans();
                 }
             },
-            { threshold: 0.5 }
+            { threshold: 0.1 } // 降低阈值，提高加载触发敏感度
         );
         
         observer.observe(loaderRef.current);
@@ -223,10 +179,8 @@ const InventoryView: React.FC<InventoryViewProps> = ({
 
     return (
         <div className="w-full h-full overflow-y-auto scroll-with-bottom-bar relative">
-            {/* 搜索模式 - 现在可以移除 */}
-
             {/* 咖啡豆列表 */}
-            {searchFilteredBeans.length === 0 ? (
+            {filteredBeans.length === 0 ? (
                 <div
                     className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400"
                 >
@@ -247,7 +201,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                         <BeanListItem
                             key={bean.id}
                             bean={bean}
-                            title={beanTitles[bean.id]}
+                            title={generateBeanTitle(bean)} // 直接生成标题，无需useMemo缓存
                             isLast={index === displayedBeans.length - 1 && !hasMore}
                             onEdit={onEdit}
                             onDelete={onDelete}
@@ -256,21 +210,15 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                         />
                     ))}
                     
-                    {/* 加载更多指示器 */}
+                    {/* 加载更多指示器 - 简化加载提示 */}
                     {hasMore && (
                         <div 
                             ref={loaderRef} 
                             className="flex justify-center items-center py-4"
                         >
-                            {isLoading ? (
-                                <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
-                                    正在加载更多...
-                                </div>
-                            ) : (
-                                <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
-                                    上滑加载更多
-                                </div>
-                            )}
+                            <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
+                                {isLoading ? '正在加载...' : '上滑加载更多'}
+                            </div>
                         </div>
                     )}
                 </div>

@@ -193,7 +193,15 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
     // 处理咖啡豆关联
     if (selectedCoffeeBean?.id) {
       completeNote["beanId"] = selectedCoffeeBean.id
-      completeNote["coffeeBean"] = selectedCoffeeBean
+      // 移除保存完整咖啡豆对象的代码，只保留beanId
+      // 确保coffeeBeanInfo中有必要的信息
+      if (!completeNote.coffeeBeanInfo) {
+        completeNote.coffeeBeanInfo = {
+          name: selectedCoffeeBean.name || '',
+          roastLevel: selectedCoffeeBean.roastLevel || '中度烘焙',
+          roastDate: selectedCoffeeBean.roastDate
+        }
+      }
 
       // 减少咖啡豆剩余量
       const coffeeAmount = getCoffeeAmount()
@@ -262,6 +270,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
           onSave={handleSaveNote}
           initialData={getDefaultNote()}
           inBrewPage={true}
+          showSaveButton={false}
         />
       ),
       isValid: true

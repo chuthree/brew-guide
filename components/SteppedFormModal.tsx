@@ -94,25 +94,19 @@ const SteppedFormModal: React.FC<SteppedFormModalProps> = ({
     const pageVariants = {
         initial: {
             opacity: 0,
-            x: 20,
-            scale: 0.95,
         },
         in: {
             opacity: 1,
-            x: 0,
-            scale: 1,
         },
         out: {
             opacity: 0,
-            x: -20,
-            scale: 0.95,
         }
     }
 
     const pageTransition = {
         type: "tween",
-        ease: "anticipate",
-        duration: 0.26
+        ease: "easeInOut",
+        duration: 0.2
     }
 
     return (
@@ -150,19 +144,8 @@ const SteppedFormModal: React.FC<SteppedFormModalProps> = ({
                         </div>
 
                         {/* 表单内容 */}
-                        <motion.div
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{
-                                type: "tween",
-                                ease: "easeOut",
-                                duration: 0.265,
-                                delay: 0.05
-                            }}
-                            style={{
-                                willChange: "opacity, transform"
-                            }}
-                            className="px-6  pb-safe-bottom overflow-auto max-h-[calc(80vh-40px)]"
+                        <div
+                            className="px-6 pb-safe-bottom overflow-auto max-h-[calc(80vh-40px)]"
                         >
                             <div className="flex flex-col">
                                 {/* 顶部导航栏 */}
@@ -215,7 +198,7 @@ const SteppedFormModal: React.FC<SteppedFormModalProps> = ({
                       `}
                                     >
                                         {currentStepIndex === steps.length - 1 ? (
-                                            <span>完成</span>
+                                            <span>保存笔记</span>
                                         ) : (
                                             <div className="flex items-center relative">
                                                 <div className="w-24 h-0.5 bg-neutral-800 dark:bg-neutral-200"></div>
@@ -227,7 +210,7 @@ const SteppedFormModal: React.FC<SteppedFormModalProps> = ({
                                     </button>
                                 </div>
                             </div>
-                        </motion.div>
+                        </div>
                     </motion.div>
                 </motion.div>
             )}

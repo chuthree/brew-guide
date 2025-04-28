@@ -1,11 +1,16 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import Image from 'next/image'
-import ActionMenu from '@/components/CoffeeBean/ui/action-menu'
+import dynamic from 'next/dynamic'
+import ActionMenu, { ActionMenuItem } from '@/components/CoffeeBean/ui/action-menu'
 import { ExtendedCoffeeBean } from '../types'
 import { isBeanEmpty } from '../globalCache'
-import ImageViewer from '@/components/ui/ImageViewer'
+
+// 动态导入 ImageViewer 组件 - 移除加载占位符
+const ImageViewer = dynamic(() => import('@/components/ui/ImageViewer'), {
+    ssr: false
+})
 
 interface BeanListItemProps {
     bean: ExtendedCoffeeBean
@@ -26,22 +31,21 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
     onShare,
     onRemainingClick
 }) => {
-    // 添加图片查看器状态
+    // 图片查看器状态和错误状态
     const [imageViewerOpen, setImageViewerOpen] = useState(false);
-    const [imageLoading, setImageLoading] = useState(true);
     const [imageError, setImageError] = useState(false);
 
-    // 计算剩余的百分比
-    const calculateRemainingPercentage = () => {
+    // 计算剩余百分比
+    const remainingPercentage = useMemo(() => {
         if (!bean.capacity || !bean.remaining) return 0;
         const capacity = parseFloat(bean.capacity.replace('g', ''));
         const remaining = parseFloat(bean.remaining.replace('g', ''));
         if (isNaN(capacity) || isNaN(remaining) || capacity === 0) return 0;
         return (remaining / capacity) * 100;
-    };
+    }, [bean.capacity, bean.remaining]);
 
     // 计算赏味期信息
-    const calculateFlavorInfo = () => {
+    const flavorInfo = useMemo(() => {
         if (!bean.roastDate) return { 
             phase: '未知', 
             remainingDays: 0, 
@@ -100,10 +104,20 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
         }
 
         return { phase, remainingDays, progressPercent, preFlavorPercent, flavorPercent, status, daysSinceRoast, endDay };
-    };
+    }, [bean.roastDate, bean.startDay, bean.endDay, bean.roastLevel]);
 
-    const flavorInfo = calculateFlavorInfo();
+    // 计算豆子是否为空
     const isEmpty = isBeanEmpty(bean);
+
+    // 操作菜单项
+    const actionMenuItems: ActionMenuItem[] = [
+        { id: 'edit', label: '编辑', onClick: () => onEdit(bean) },
+        { id: 'share', label: '分享', onClick: () => onShare(bean) },
+        { id: 'delete', label: '删除', color: 'danger', onClick: () => onDelete(bean) }
+    ];
+
+    // 网格布局类名
+    const gridClassName = `grid ${(!bean.capacity || !bean.remaining) && !bean.roastDate ? 'grid-cols-1' : (bean.capacity && bean.remaining && bean.roastDate ? 'grid-cols-2' : 'grid-cols-1')} gap-x-4`;
 
     return (
         <div
@@ -117,42 +131,34 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                     {/* 咖啡豆图片 - 只在有图片时显示 */}
                     {bean.image && (
                         <div 
-                            className="w-14 h-14 rounded-md overflow-hidden flex-shrink-0 relative cursor-pointer"
+                            className="w-14 h-14 rounded-md overflow-hidden flex-shrink-0 relative cursor-pointer bg-neutral-100 dark:bg-neutral-800"
                             onClick={() => !imageError && setImageViewerOpen(true)}
                         >
-                            {imageLoading && !imageError && (
-                                <div className="absolute inset-0 flex items-center justify-center bg-neutral-100 dark:bg-neutral-800">
-                                    <div className="w-5 h-5 border-2 border-neutral-300 dark:border-neutral-600 border-t-neutral-800 dark:border-t-neutral-200 rounded-full animate-spin"></div>
-                                </div>
-                            )}
-                            
                             {imageError ? (
-                                <div className="absolute inset-0 flex items-center justify-center bg-neutral-100 dark:bg-neutral-800 text-xs text-neutral-500 dark:text-neutral-400">
+                                <div className="absolute inset-0 flex items-center justify-center text-xs text-neutral-500 dark:text-neutral-400">
                                     加载失败
                                 </div>
                             ) : (
                                 <Image
                                     src={bean.image}
-                                    alt={bean.name}
+                                    alt={bean.name || '咖啡豆图片'}
                                     fill
                                     className="object-contain"
-                                    sizes="50px"
-                                    onLoadingComplete={() => setImageLoading(false)}
-                                    onError={() => {
-                                        setImageLoading(false);
-                                        setImageError(true);
-                                    }}
+                                    sizes="56px"
+                                    priority={false}
+                                    loading="lazy"
+                                    onError={() => setImageError(true)}
                                 />
                             )}
                         </div>
                     )}
 
-                    {/* 图片查看器 */}
-                    {bean.image && !imageError && (
+                    {/* 图片查看器 - 只有当需要显示时才渲染 */}
+                    {bean.image && !imageError && imageViewerOpen && (
                         <ImageViewer
                             isOpen={imageViewerOpen}
                             imageUrl={bean.image}
-                            alt={bean.name}
+                            alt={bean.name || '咖啡豆图片'}
                             onClose={() => setImageViewerOpen(false)}
                         />
                     )}
@@ -194,32 +200,13 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                                 )}
                             </div>
                             <div className="flex-shrink-0 ml-1 relative">
-                                <ActionMenu
-                                    items={[
-                                        {
-                                            id: 'edit',
-                                            label: '编辑',
-                                            onClick: () => onEdit(bean)
-                                        },
-                                        {
-                                            id: 'share',
-                                            label: '分享',
-                                            onClick: () => onShare(bean)
-                                        },
-                                        {
-                                            id: 'delete',
-                                            label: '删除',
-                                            color: 'danger',
-                                            onClick: () => onDelete(bean)
-                                        }
-                                    ]}
-                                />
+                                <ActionMenu items={actionMenuItems} />
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div className={`grid ${(!bean.capacity || !bean.remaining) && !bean.roastDate ? 'grid-cols-1' : (bean.capacity && bean.remaining && bean.roastDate ? 'grid-cols-2' : 'grid-cols-1')} gap-x-4`}>
+                <div className={gridClassName}>
                     {/* 剩余量进度条 - 仅当capacity和remaining都存在时显示 */}
                     {bean.capacity && bean.remaining && (
                         <div className="space-y-1">
@@ -243,7 +230,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                             >
                                 <div
                                     style={{ 
-                                        width: `${calculateRemainingPercentage()}%` 
+                                        width: `${remainingPercentage}%` 
                                     }}
                                     className="h-full bg-neutral-800 dark:bg-neutral-100"
                                 />
@@ -345,4 +332,5 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
     )
 }
 
-export default BeanListItem 
+// 使用 React.memo 包装组件以避免不必要的重新渲染
+export default React.memo(BeanListItem) 

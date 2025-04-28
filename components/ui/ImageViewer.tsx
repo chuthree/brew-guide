@@ -17,13 +17,11 @@ const ImageViewer: React.FC<ImageViewerProps> = ({
     alt,
     onClose
 }) => {
-    const [isImageLoading, setIsImageLoading] = useState(true);
     const [hasError, setHasError] = useState(false);
 
-    // 重置状态当弹窗打开时
+    // 重置错误状态当弹窗打开时
     React.useEffect(() => {
         if (isOpen) {
-            setIsImageLoading(true);
             setHasError(false);
         }
     }, [isOpen]);
@@ -48,12 +46,6 @@ const ImageViewer: React.FC<ImageViewerProps> = ({
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="relative flex items-center justify-center min-w-[280px] min-h-[280px]">
-                            {isImageLoading && !hasError && (
-                                <div className="absolute inset-0 flex items-center justify-center">
-                                    <div className="w-10 h-10 border-4 border-neutral-300 border-t-white rounded-full animate-spin"></div>
-                                </div>
-                            )}
-                            
                             {hasError ? (
                                 <div className="text-white text-center p-4">
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto mb-2 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -65,18 +57,14 @@ const ImageViewer: React.FC<ImageViewerProps> = ({
                                 <Image
                                     src={imageUrl}
                                     alt={alt}
-                                    className={`max-w-full max-h-[80vh] object-contain transition-opacity duration-300 ${isImageLoading ? 'opacity-0' : 'opacity-100'}`}
+                                    className="max-w-full max-h-[80vh] object-contain"
                                     width={1000}
                                     height={1000}
                                     style={{ 
                                         objectFit: 'contain',
                                         background: 'transparent'
                                     }}
-                                    onLoadingComplete={() => setIsImageLoading(false)}
-                                    onError={() => {
-                                        setIsImageLoading(false);
-                                        setHasError(true);
-                                    }}
+                                    onError={() => setHasError(true)}
                                     priority
                                 />
                             )}

@@ -14,6 +14,7 @@ import './globals.css'
 import KeyboardManager from '@/components/KeyboardManager'
 import { Suspense } from 'react'
 import CapacitorInit from './CapacitorInit'
+import StorageInit from './StorageInit'
 import { Toast } from '@/components/ui/toast';
 import { TranslationsProvider } from '@/providers/TranslationsProvider'
 
@@ -149,6 +150,7 @@ export default function RootLayout({
             <ToastProvider>
               <Suspense>
                 <CapacitorInit />
+                <StorageInit />
                 <KeyboardManager />
               </Suspense>
               <div className="h-full w-full overflow-hidden max-w-[500px] mx-auto">

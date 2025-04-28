@@ -56,13 +56,28 @@ bun dev
 欢迎加微信交流群～
 ![CleanShot 2025-04-21 at 22 18 11](https://github.com/user-attachments/assets/dd7c9bc1-1b10-427f-8ac3-3a764fab313e)
 
+## 数据存储
 
+本应用使用IndexedDB存储大容量数据（如冲煮笔记和咖啡豆信息），小型配置数据则使用localStorage或Capacitor Preferences API保存。这种混合存储方式解决了Web存储空间限制的问题。
 
+### 存储实现
+
+- **大数据存储**: 使用IndexedDB（通过Dexie.js实现）
+  - 冲煮笔记 (brewingNotes)
+  - 咖啡豆数据 (coffeeBeans)
+  
+- **小型配置数据**: 使用localStorage或Capacitor Preferences API
+  - 界面首选项
+  - 用户设置
+  - 其他小型配置数据
+
+### 迁移说明
+
+应用会自动将localStorage中的大容量数据迁移到IndexedDB。首次运行使用新存储系统时会自动进行迁移，无需用户干预。
 
 ## 贡献
 
 欢迎提交问题和功能请求！如果您想贡献代码，请先开一个 issue 讨论您想要更改的内容。
-
 
 ## 许可
 

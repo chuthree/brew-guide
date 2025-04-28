@@ -39,14 +39,7 @@ const CoffeeBeanRatingModal: React.FC<CoffeeBeanRatingModalProps> = ({
         const ratings: Partial<CoffeeBean> = {
             beanType,
             overallRating,
-            ratingNotes: ratingNotes.trim() || undefined,
-            // 清空所有其他评分字段
-            ratingEspresso: 0,
-            ratingMilkBased: 0,
-            ratingAroma: 0,
-            ratingFlavor: 0,
-            ratingAftertaste: 0,
-            purchaseChannel: undefined
+            ratingNotes: ratingNotes.trim() || undefined
         }
 
         try {

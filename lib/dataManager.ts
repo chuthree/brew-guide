@@ -1,6 +1,6 @@
 import { Storage } from "@/lib/storage";
 import { Method } from "@/lib/config";
-import { CoffeeBean, ExtendedCoffeeBean } from "@/app/types";
+import { CoffeeBean, BlendComponent } from "@/app/types";
 
 // 定义导出数据的接口
 interface ExportData {
@@ -68,11 +68,53 @@ export const DataManager = {
 					try {
 						// 尝试解析JSON
 						exportData.data[key] = JSON.parse(value);
+						
+						// 如果是冲煮笔记数据，清理冗余的咖啡豆信息
+						if (key === "brewingNotes" && Array.isArray(exportData.data[key])) {
+							exportData.data[key] = this.cleanBrewingNotesForExport(exportData.data[key] as BrewingNote[]);
+						}
 					} catch {
 						// 如果不是JSON，直接存储字符串
 						exportData.data[key] = value;
 					}
 				}
+			}
+
+			// 获取所有自定义方案
+			try {
+				// 获取所有存储键
+				const allKeys = await Storage.keys();
+				
+				// 过滤出自定义方案键
+				const methodKeys = allKeys.filter(key => key.startsWith("customMethods_"));
+				
+				// 如果有自定义方案，将它们添加到导出数据中
+				if (methodKeys.length > 0) {
+					// 初始化自定义方案存储结构
+					exportData.data.customMethodsByEquipment = {};
+					
+					// 处理每个器具的自定义方案
+					for (const key of methodKeys) {
+						// 提取器具ID
+						const equipmentId = key.replace("customMethods_", "");
+						
+						// 加载该器具的方案
+						const methodsJson = await Storage.get(key);
+						if (methodsJson) {
+							try {
+								const methods = JSON.parse(methodsJson);
+								// 将当前器具的所有方案添加到导出数据中
+								(exportData.data.customMethodsByEquipment as Record<string, unknown>)[equipmentId] = methods;
+							} catch {
+								// 如果JSON解析失败，跳过
+								console.error(`解析自定义方案数据失败: ${key}`);
+							}
+						}
+					}
+				}
+			} catch (error) {
+				console.error("导出自定义方案失败:", error);
+				// 错误处理：即使自定义方案导出失败，也继续导出其他数据
 			}
 
 			return JSON.stringify(exportData, null, 2);
@@ -112,9 +154,20 @@ export const DataManager = {
 				}
 			}
 			
-			// 修复拼配豆数据，确保所有豆子有正确的beanType和blendComponents
-			await this.fixBlendBeansData();
-
+			// 导入自定义方案数据
+			if (importData.data.customMethodsByEquipment && typeof importData.data.customMethodsByEquipment === 'object') {
+				// 遍历所有器具的方案
+				const customMethodsByEquipment = importData.data.customMethodsByEquipment as Record<string, unknown>;
+				for (const equipmentId of Object.keys(customMethodsByEquipment)) {
+					const methods = customMethodsByEquipment[equipmentId];
+					if (Array.isArray(methods)) {
+						// 保存该器具的所有方案
+						const storageKey = `customMethods_${equipmentId}`;
+						await Storage.set(storageKey, JSON.stringify(methods));
+					}
+				}
+			}
+			
 			return {
 				success: true,
 				message: `数据导入成功，导出日期: ${
@@ -456,8 +509,50 @@ export const DataManager = {
 				}
 			}
 
-			// 修复拼配豆数据，确保所有豆子有正确的beanType和blendComponents
-			await this.fixBlendBeansData();
+			// 合并自定义方案数据
+			if (importData.data.customMethodsByEquipment && typeof importData.data.customMethodsByEquipment === 'object') {
+				// 遍历所有器具的方案
+				const customMethodsByEquipment = importData.data.customMethodsByEquipment as Record<string, Method[]>;
+				for (const equipmentId of Object.keys(customMethodsByEquipment)) {
+					const importedMethods = customMethodsByEquipment[equipmentId];
+					
+					// 读取现有的方案数据
+					const storageKey = `customMethods_${equipmentId}`;
+					const existingMethodsStr = await Storage.get(storageKey);
+					let existingMethods: Method[] = [];
+					
+					try {
+						if (existingMethodsStr) {
+							existingMethods = JSON.parse(existingMethodsStr);
+						}
+					} catch {
+						// 如果解析失败，使用空数组
+						existingMethods = [];
+					}
+					
+					// 合并方案：保留现有方案，添加不重复的导入方案
+					const mergedMethods = [...existingMethods];
+					
+					// 遍历导入的方案
+					for (const importedMethod of importedMethods) {
+						// 检查是否存在同ID或同名方案
+						const existsById = mergedMethods.some(m => m.id === importedMethod.id);
+						const existsByName = mergedMethods.some(m => m.name === importedMethod.name);
+						
+						if (!existsById && !existsByName) {
+							// 为新方案生成新ID，避免ID冲突
+							const methodWithNewId = {
+								...importedMethod,
+								id: importedMethod.id || `method-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+							};
+							mergedMethods.push(methodWithNewId);
+						}
+					}
+					
+					// 保存合并后的方案
+					await Storage.set(storageKey, JSON.stringify(mergedMethods));
+				}
+			}
 
 			return {
 				success: true,
@@ -477,213 +572,116 @@ export const DataManager = {
 
 	/**
 	 * 修复拼配豆数据问题
-	 * 处理无效百分比和不合规的拼配成分数据
-	 * @returns {Promise<{success: boolean, message: string, fixedCount: number}>} 修复结果
+	 * 处理可能存在问题的拼配豆数据，确保类型和blendComponents字段正确
+	 * @returns 修复结果，包含修复数量
 	 */
-	async fixBlendBeansData(): Promise<{ success: boolean; message: string; fixedCount: number }> {
+	async fixBlendBeansData(): Promise<{ success: boolean; fixedCount: number }> {
 		try {
 			// 获取所有咖啡豆数据
-			const beansData = await Storage.get("coffeeBeans");
-			if (!beansData) {
-				return {
-					success: true,
-					message: "没有发现咖啡豆数据",
-					fixedCount: 0
-				};
+			const beansStr = await Storage.get('coffeeBeans');
+			if (!beansStr) {
+				return { success: true, fixedCount: 0 };
 			}
 
-			let beans: CoffeeBean[] = [];
-			try {
-				beans = JSON.parse(beansData);
-			} catch (_error) {
-				return {
-					success: false,
-					message: "解析咖啡豆数据失败",
-					fixedCount: 0
-				};
+			// 解析咖啡豆数据
+			const beans = JSON.parse(beansStr);
+			if (!Array.isArray(beans)) {
+				return { success: false, fixedCount: 0 };
 			}
 
 			let fixedCount = 0;
-			let hasChanges = false;
 
-			// 遍历所有咖啡豆，查找并修复问题
-			const fixedBeans = beans.map(originalBean => {
-				const bean = originalBean as ExtendedCoffeeBean;
-				
-				// 设置默认beanType为filter（手冲）
-				if (!bean.beanType) {
+			// 处理每个咖啡豆
+			const fixedBeans = beans.map((bean) => {
+				// 检查是否有类型字段
+				if (!bean.type) {
+					bean.type = '单品';
 					fixedCount++;
-					hasChanges = true;
-					bean.beanType = 'filter';
 				}
-				
-				// 更新type字段以匹配blendComponents的长度
-				const isBlend = bean.blendComponents && Array.isArray(bean.blendComponents) && bean.blendComponents.length > 1;
-				const expectedType = isBlend ? "拼配" : "单品";
-				
-				// 如果type与预期不符，更新它
-				if (bean.type !== expectedType) {
-					fixedCount++;
-					hasChanges = true;
-					bean.type = expectedType;
-				}
-				
-				// 检查拼配成分是否正确
-				if (isBlend && bean.blendComponents) {
-					// 确保blendComponents是数组
-					if (!Array.isArray(bean.blendComponents) || bean.blendComponents.length <= 1) {
-						// 不应该发生，但可能有逻辑错误导致的情况
-						fixedCount++;
-						hasChanges = true;
-						return {
-							...bean,
-							type: "单品", // 改为单品
-							blendComponents: [{
-								percentage: 100,
-								origin: bean.origin || "",
-								process: bean.process || "",
-								variety: bean.variety || ""
-							}]
-						};
-					}
-					
-					// 检查是否有空百分比或非法数据的问题
-					const hasInvalidData = bean.blendComponents.some(
-						comp => {
-							// 检查组件是否是有效对象
-							if (!comp || typeof comp !== 'object') return true;
-							
-							// 如果percentage字段未定义，不再视为无效数据
-							// 因为新版本中percentage是可选的
-							if (comp.percentage === undefined || comp.percentage === null) return false;
-							
-							// 处理字符串类型的百分比
-							if (typeof comp.percentage === 'string') {
-								return comp.percentage === "";
-							}
-							
-							// 不再检查undefined，因为它是有效值
-							return false;
-						}
-					);
 
-					if (hasInvalidData) {
-						// 需要修复
-						fixedCount++;
-						hasChanges = true;
-
-						// 过滤出有效成分，必须有percentage字段
-						const validComponents = bean.blendComponents
-							.filter(comp => 
-								comp && typeof comp === "object" && 
-								(comp.percentage !== undefined && comp.percentage !== null)
-							)
-							.map(comp => {
-								// 确保percentage是数字
-								return {
-									...comp,
-									percentage: typeof comp.percentage === 'string' 
-										? parseFloat(comp.percentage) || 0 
-										: comp.percentage
-								};
-							});
-
-						// 重新分配百分比，确保总和为100%
-						const totalPercentage = validComponents.reduce(
-							(sum, comp) => sum + (typeof comp.percentage === 'number' ? comp.percentage : 0), 
-							0
-						);
-						
-						if (Math.abs(totalPercentage - 100) > 0.1) { // 允许0.1%的误差
-							const fixedComponents = validComponents.map((comp, index) => {
-								if (totalPercentage > 0) {
-									// 按比例调整
-									const adjustedPercentage = Math.round((comp.percentage! / totalPercentage) * 100 * 10) / 10;
-									return {
-										...comp,
-										percentage: index === validComponents.length - 1 
-											? 100 - validComponents.slice(0, -1).reduce((sum, c) => sum + (c.percentage || 0), 0) 
-											: adjustedPercentage
-									};
-								} else {
-									// 如果总和为0，平均分配
-									const perComponent = Math.floor(100 / validComponents.length);
-									const remainder = 100 - (perComponent * validComponents.length);
-									
-									return {
-										...comp,
-										percentage: index === validComponents.length - 1 
-											? perComponent + remainder 
-											: perComponent
-									};
-								}
-							});
-							
-							return {
-								...bean,
-								blendComponents: fixedComponents
-							};
-						}
-						
-						// 总和接近100%，使用有效组件
-						return {
-							...bean,
-							blendComponents: validComponents
-						};
-					}
-				} else if (bean.blendComponents && Array.isArray(bean.blendComponents) && bean.blendComponents.length === 1) {
-					// 单品豆，确保origin/process/variety同步
-					fixedCount++;
-					hasChanges = true;
-					const comp = bean.blendComponents[0];
-					return {
-						...bean,
-						type: "单品",
-						origin: comp.origin || bean.origin,
-						process: comp.process || bean.process,
-						variety: comp.variety || bean.variety
-					};
-				} else if (!bean.blendComponents || !Array.isArray(bean.blendComponents) || bean.blendComponents.length === 0) {
-					// 没有成分的豆子，添加一个默认成分
-					fixedCount++;
-					hasChanges = true;
-					return {
-						...bean,
-						type: "单品",
-						blendComponents: [{
+				// 处理拼配豆
+				if (bean.type === '拼配') {
+					// 如果标记为拼配豆但没有拼配成分，添加默认拼配成分
+					if (!bean.blendComponents || !Array.isArray(bean.blendComponents) || bean.blendComponents.length === 0) {
+						bean.blendComponents = [{
 							percentage: 100,
-							origin: bean.origin || "",
-							process: bean.process || "",
-							variety: bean.variety || ""
-						}]
-					};
+							origin: bean.origin || '',
+							process: bean.process || '',
+							variety: bean.variety || ''
+						}];
+						fixedCount++;
+					}
+					// 如果拼配成分只有一个，确保类型是单品
+					else if (bean.blendComponents.length === 1) {
+						bean.type = '单品';
+						fixedCount++;
+					}
 				}
-				
-				// 没有问题，返回原样
+				// 处理单品豆
+				else if (bean.type === '单品') {
+					// 如果是单品但拼配成分长度不对，修复
+					if (bean.blendComponents && Array.isArray(bean.blendComponents)) {
+						if (bean.blendComponents.length > 1) {
+							bean.type = '拼配';
+							fixedCount++;
+						}
+					}
+					// 确保单品也有blendComponents字段，用于统一处理
+					else {
+						bean.blendComponents = [{
+							percentage: 100,
+							origin: bean.origin || '',
+							process: bean.process || '',
+							variety: bean.variety || ''
+						}];
+						fixedCount++;
+					}
+				}
+
+				// 确保所有拼配成分都有正确的属性
+				if (bean.blendComponents && Array.isArray(bean.blendComponents)) {
+					bean.blendComponents = bean.blendComponents.map((comp: BlendComponent) => {
+						// 确保percentage存在且在合理范围内
+						if (typeof comp.percentage !== 'number' || comp.percentage < 1 || comp.percentage > 100) {
+							comp.percentage = 100;
+							fixedCount++;
+						}
+						return comp;
+					});
+				}
+
 				return bean;
 			});
 
-			// 如果有变更，保存修复后的数据
-			if (hasChanges) {
-				await Storage.set("coffeeBeans", JSON.stringify(fixedBeans));
-				return {
-					success: true,
-					message: `成功修复了${fixedCount}个拼配豆数据`,
-					fixedCount
-				};
+			// 如果有修复，更新存储
+			if (fixedCount > 0) {
+				await Storage.set('coffeeBeans', JSON.stringify(fixedBeans));
 			}
 
-			return {
-				success: true,
-				message: "未发现需要修复的拼配豆数据",
-				fixedCount: 0
-			};
+			return { success: true, fixedCount };
 		} catch (error) {
-			return {
-				success: false,
-				message: `修复拼配豆数据失败: ${(error as Error).message}`,
-				fixedCount: 0
-			};
+			console.error('修复拼配豆数据失败:', error);
+			return { success: false, fixedCount: 0 };
 		}
+	},
+
+	/**
+	 * 清理冲煮笔记中的冗余咖啡豆数据
+	 * 移除每个笔记中的完整coffeeBean对象，只保留必要的beanId和coffeeBeanInfo
+	 * @param notes 冲煮笔记数组
+	 * @returns 清理后的冲煮笔记数组
+	 */
+	cleanBrewingNotesForExport(notes: BrewingNote[]): BrewingNote[] {
+		return notes.map(note => {
+			// 创建笔记的浅拷贝
+			const cleanedNote = { ...note };
+			
+			// 删除coffeeBean字段，它包含完整的咖啡豆对象
+			if ('coffeeBean' in cleanedNote) {
+				delete cleanedNote.coffeeBean;
+			}
+			
+			return cleanedNote;
+		});
 	},
 };

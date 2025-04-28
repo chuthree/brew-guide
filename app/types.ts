@@ -15,42 +15,44 @@ export interface BlendComponent {
 	variety?: string;    // 品种
 }
 
-// 咖啡豆数据模型
+// 咖啡豆数据模型 - 重构优化版
 export interface CoffeeBean {
-	id: string;
-	timestamp: number;
-	name: string;
-	type: '单品' | '拼配';
-	image?: string;
-	capacity?: string;
-	remaining?: string;
-	price?: string;
-	roastLevel?: string;
-	roastDate?: string;
-	origin?: string;
-	process?: string;
-	variety?: string;
-	acidity?: number;
-	sweetness?: number;
-	body?: number;
-	aftertaste?: number;
-	flavor?: string[];
-	aroma?: number;
-	balance?: number;
-	clean?: number;
-	notes?: string;
-	startDay?: number;
-	endDay?: number;
-	// 榜单相关字段
+	// 核心标识
+	id: string;           // 唯一标识
+	timestamp: number;    // 时间戳
+	name: string;         // 咖啡豆名称
+	type: '单品' | '拼配';  // 咖啡豆类型
+	
+	// 基本信息
+	image?: string;       // 图片
+	capacity?: string;    // 容量
+	remaining?: string;   // 剩余量
+	price?: string;       // 价格
+	
+	// 产品特性
+	roastLevel?: string;  // 烘焙度
+	roastDate?: string;   // 烘焙日期
+	origin?: string;      // 产地
+	process?: string;     // 处理法
+	variety?: string;     // 品种
+	flavor?: string[];    // 风味描述
+	notes?: string;       // 备注
+	
+	// 时间管理
+	startDay?: number;    // 开始使用天数
+	endDay?: number;      // 结束使用天数
+	
+	// 分类标签
 	beanType?: "espresso" | "filter"; // 豆子类型：意式/手冲
-	overallRating?: number; // 总体评分/喜好星值 (1-5)
-	ratingEspresso?: number; // 美式评分 (意式豆)
-	ratingMilkBased?: number; // 奶咖评分 (意式豆)
-	ratingAroma?: number; // 香气评分 (手冲豆)
-	ratingFlavor?: number; // 风味评分 (手冲豆)
-	ratingAftertaste?: number; // 余韵评分 (手冲豆)
-	purchaseChannel?: string; // 购买渠道
-	ratingNotes?: string; // 评价备注
+	
+	// 评分相关字段 (榜单功能使用)
+	overallRating?: number;       // 总体评分/喜好星值 (1-5)
+	ratingNotes?: string;         // 评价备注
+	
+	// 博主榜单专用字段
+	ratingEspresso?: number;      // 美式评分 (博主榜单 - 意式豆)
+	ratingMilkBased?: number;     // 奶咖评分 (博主榜单 - 意式豆)
+	purchaseChannel?: string;     // 购买渠道 (博主榜单)
 }
 
 // 扩展CoffeeBean类型以支持拼配成分

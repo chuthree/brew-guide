@@ -22,10 +22,8 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
     const [isExporting, setIsExporting] = useState(false)
     const [isImporting, setIsImporting] = useState(false)
     const [isResetting, setIsResetting] = useState(false)
-    const [isFixingBlendBeans, setIsFixingBlendBeans] = useState(false)
     const [showConfirmReset, setShowConfirmReset] = useState(false)
-    const [importMode, setImportMode] = useState<'replace' | 'merge'>('merge')
-    const [isCompleteReset, setIsCompleteReset] = useState(false)
+    const [importMode, setImportMode] = useState<'merge' | 'replace'>('merge')
     const fileInputRef = useRef<HTMLInputElement>(null)
 
     const isNative = Capacitor.isNativePlatform()
@@ -164,7 +162,7 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
             setIsResetting(true)
             setStatus({ type: 'info', message: '正在重置数据...' })
 
-            const result = await DataManagerUtil.resetAllData(isCompleteReset)
+            const result = await DataManagerUtil.resetAllData(true)
 
             if (result.success) {
                 setStatus({ type: 'success', message: result.message })
@@ -180,39 +178,8 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
         } finally {
             setIsResetting(false)
             setShowConfirmReset(false)
-            setIsCompleteReset(false)
         }
     }
-
-    const handleFixBlendBeans = async () => {
-        try {
-            setIsFixingBlendBeans(true);
-            setStatus({ type: 'info', message: '正在修复拼配豆数据...' });
-
-            const result = await DataManagerUtil.fixBlendBeansData();
-
-            if (result.success) {
-                setStatus({ 
-                    type: 'success', 
-                    message: result.fixedCount > 0 
-                        ? `${result.message}，请重启应用确保正常运行` 
-                        : result.message 
-                });
-                
-                if (result.fixedCount > 0 && onDataChange) {
-                    setTimeout(() => {
-                        onDataChange();
-                    }, 1500);
-                }
-            } else {
-                setStatus({ type: 'error', message: result.message });
-            }
-        } catch (_error) {
-            setStatus({ type: 'error', message: `修复失败: ${(_error as Error).message}` });
-        } finally {
-            setIsFixingBlendBeans(false);
-        }
-    };
 
     if (!isOpen) return null
 
@@ -352,19 +319,6 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
                         </div>
 
                         <div>
-                            <button
-                                onClick={handleFixBlendBeans}
-                                disabled={isFixingBlendBeans}
-                                className="w-full rounded-md bg-amber-50 px-4 py-2 text-sm font-medium text-amber-800 transition-colors hover:bg-amber-100 disabled:opacity-50 dark:bg-amber-900/20 dark:text-amber-400 dark:hover:bg-amber-900/30"
-                            >
-                                {isFixingBlendBeans ? '修复中...' : '修复拼配豆数据'}
-                            </button>
-                            <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-                                修复可能导致应用崩溃的拼配豆数据问题
-                            </p>
-                        </div>
-
-                        <div>
                             {!showConfirmReset ? (
                                 <button
                                     onClick={() => setShowConfirmReset(true)}
@@ -396,23 +350,10 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
                                             此操作无法撤销，所有数据将被删除。建议在重置前先导出备份。
                                         </p>
                                         
-                                        <div className="mb-4">
-                                            <label className="flex items-center">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={isCompleteReset}
-                                                    onChange={(e) => setIsCompleteReset(e.target.checked)}
-                                                    className="h-4 w-4 text-red-600 rounded border-neutral-300 focus:ring-red-500"
-                                                />
-                                                <span className="ml-2 text-sm text-red-700 dark:text-red-300">
-                                                    完全重置（包括所有设置和缓存）
-                                                </span>
-                                            </label>
-                                            <p className="mt-1 text-xs text-red-500 dark:text-red-400 ml-6">
-                                                将彻底重置所有数据，包括自定义器具、应用设置和导航状态
-                                            </p>
-                                        </div>
-
+                                        <p className="text-xs text-red-600 dark:text-red-400 mb-4">
+                                            将彻底重置所有数据，包括自定义器具、应用设置和导航状态。
+                                        </p>
+                                        
                                         <div className="flex space-x-2 justify-end">
                                             <button
                                                 type="button"
@@ -434,7 +375,7 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
                                 </div>
                             )}
                             <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-                                删除所有数据并恢复到初始状态
+                                完全删除所有数据并恢复到初始状态，包括设置和缓存
                             </p>
                         </div>
                     </div>

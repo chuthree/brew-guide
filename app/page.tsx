@@ -1334,8 +1334,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 updatedNotes = [newNote, ...existingNotes];
             }
             
-            // 使用localStorage和Storage API保存
-            localStorage.setItem('brewingNotes', JSON.stringify(updatedNotes));
+            // 使用Storage API保存
             await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
             
             // 触发自定义事件通知
@@ -1343,6 +1342,12 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 detail: { key: 'brewingNotes', id: newNoteId } 
             });
             window.dispatchEvent(dataChangeEvent);
+            
+            // 同时触发customStorageChange事件，确保所有组件都能收到通知
+            const customEvent = new CustomEvent('customStorageChange', {
+                detail: { key: 'brewingNotes' }
+            });
+            window.dispatchEvent(customEvent);
             
             // 如果window上有刷新方法，调用它
             if (window.refreshBrewingNotes) {

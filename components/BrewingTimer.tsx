@@ -518,18 +518,35 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         ? JSON.parse(existingNotesStr)
         : [];
 
-      // 创建新笔记
+      // 创建新笔记 - 确保不保存完整的coffeeBean对象
       const newNote = {
         ...note,
         id: Date.now().toString(),
         timestamp: Date.now(),
       };
+      
+      // 如果存在coffeeBean字段，移除它
+      if ('coffeeBean' in newNote) {
+        delete newNote.coffeeBean;
+      }
 
       // 将新笔记添加到列表开头
       const updatedNotes = [newNote, ...existingNotes];
 
       // 存储更新后的笔记列表
       await Storage.set("brewingNotes", JSON.stringify(updatedNotes));
+
+      // 触发自定义事件通知数据变更
+      const storageEvent = new CustomEvent('storage:changed', {
+        detail: { key: 'brewingNotes', id: newNote.id }
+      });
+      window.dispatchEvent(storageEvent);
+      
+      // 同时触发customStorageChange事件，确保所有组件都能收到通知
+      const customEvent = new CustomEvent('customStorageChange', {
+        detail: { key: 'brewingNotes' }
+      });
+      window.dispatchEvent(customEvent);
 
       // 设置笔记已保存标记
       localStorage.setItem("brewingNoteInProgress", "false");
@@ -749,10 +766,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
 
         // 更新咖啡豆信息
         if (e.detail.coffeeBean) {
-          updatedData.coffeeBean = {
-            ...e.detail.coffeeBean,
-            roastLevel: normalizeRoastLevel(e.detail.coffeeBean.roastLevel),
-          };
+          // 移除完整咖啡豆对象的保存，只保留必要的信息
           updatedData.coffeeBeanInfo = {
             name: e.detail.coffeeBean.name || "",
             roastLevel: normalizeRoastLevel(e.detail.coffeeBean.roastLevel),

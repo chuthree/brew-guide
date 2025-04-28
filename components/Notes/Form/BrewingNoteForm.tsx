@@ -31,6 +31,7 @@ interface BrewingNoteFormProps {
         coffeeBean?: CoffeeBean | null;
     };
     inBrewPage?: boolean; // 添加属性，标识是否在冲煮页面中
+    showSaveButton?: boolean; // 是否显示保存按钮
 }
 
 const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
@@ -40,6 +41,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     onSave,
     initialData,
     inBrewPage = false, // 默认不在冲煮页面
+    showSaveButton = true, // 默认显示保存按钮
 }) => {
     // 处理咖啡豆数据，如果有提供coffeeBean则使用，否则使用coffeeBeanInfo
     const initialCoffeeBeanInfo = initialData.coffeeBean
@@ -307,12 +309,14 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                             [ 返回 ]
                         </button>
                     )}
-                    <button
-                        type="submit"
-                        className="text-[10px] tracking-widest text-emerald-600 transition-colors dark:text-emerald-500 font-medium"
-                    >
-                        [ 保存 ]
-                    </button>
+                    {showSaveButton && (
+                        <button
+                            type="submit"
+                            className="text-[10px] tracking-widest text-emerald-600 transition-colors dark:text-emerald-500 font-medium"
+                        >
+                            [ 保存 ]
+                        </button>
+                    )}
                 </div>
             </div>
 

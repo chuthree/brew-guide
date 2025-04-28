@@ -1,8 +1,10 @@
 import { Capacitor } from "@capacitor/core";
 import { Preferences } from "@capacitor/preferences";
+import { StorageUtils } from "./storageUtils";
 
 /**
- * 统一的存储接口，同时支持 Capacitor Preferences API 和 localStorage
+ * 统一的存储接口，支持 IndexedDB、Capacitor Preferences API 和 localStorage
+ * 更新支持大容量数据存储
  */
 export const Storage = {
 	/**
@@ -12,29 +14,10 @@ export const Storage = {
 	 */
 	async get(key: string): Promise<string | null> {
 		try {
-			let result: string | null = null;
-			
-			if (Capacitor.isNativePlatform()) {
-				// 在原生平台上使用 Capacitor Preferences API
-				const { value } = await Preferences.get({ key });
-				result = value;
-			} else {
-				// 在 Web 平台上使用 localStorage
-				result = localStorage.getItem(key);
-				
-				// 对于特殊键brewingNotes，如果获取到的数据不是有效的JSON，重新初始化为空数组
-				if (key === 'brewingNotes' && result !== null) {
-					try {
-						JSON.parse(result);
-					} catch (_err) {
-						result = '[]';
-						localStorage.setItem(key, result);
-					}
-				}
-			}
-			
-			return result;
+			// 使用新的StorageUtils获取数据
+			return await StorageUtils.getData(key);
 		} catch (_error) {
+			console.error(`获取存储数据失败 [${key}]:`, _error);
 			return null;
 		}
 	},
@@ -46,27 +29,10 @@ export const Storage = {
 	 */
 	async set(key: string, value: string): Promise<void> {
 		try {
-			if (Capacitor.isNativePlatform()) {
-				// 在原生平台上使用 Capacitor Preferences API
-				await Preferences.set({ key, value });
-			} else {
-				// 在 Web 平台上使用 localStorage
-				localStorage.setItem(key, value);
-				
-				// 验证保存是否成功
-				const saved = localStorage.getItem(key);
-				if (saved !== value) {
-					// 重试一次
-					localStorage.setItem(key, value);
-				}
-
-				// 手动触发自定义存储变更事件
-				const event = new CustomEvent('storage:changed', {
-					detail: { key, source: 'internal' }
-				});
-				window.dispatchEvent(event);
-			}
+			// 使用新的StorageUtils保存数据
+			await StorageUtils.saveData(key, value);
 		} catch (_error) {
+			console.error(`保存数据失败 [${key}]:`, _error);
 			throw _error; // 重新抛出错误，让调用者知道存储失败
 		}
 	},
@@ -77,14 +43,10 @@ export const Storage = {
 	 */
 	async remove(key: string): Promise<void> {
 		try {
-			if (Capacitor.isNativePlatform()) {
-				// 在原生平台上使用 Capacitor Preferences API
-				await Preferences.remove({ key });
-			} else {
-				// 在 Web 平台上使用 localStorage
-				localStorage.removeItem(key);
-			}
+			// 使用新的StorageUtils删除数据
+			await StorageUtils.removeData(key);
 		} catch (_error) {
+			console.error(`删除数据失败 [${key}]:`, _error);
 			// 错误处理
 		}
 	},
@@ -94,14 +56,10 @@ export const Storage = {
 	 */
 	async clear(): Promise<void> {
 		try {
-			if (Capacitor.isNativePlatform()) {
-				// 在原生平台上使用 Capacitor Preferences API
-				await Preferences.clear();
-			} else {
-				// 在 Web 平台上使用 localStorage
-				localStorage.clear();
-			}
+			// 使用新的StorageUtils清除所有数据
+			await StorageUtils.clearAllData();
 		} catch (_error) {
+			console.error('清除所有数据失败:', _error);
 			// 错误处理
 		}
 	},
@@ -121,6 +79,7 @@ export const Storage = {
 				return Object.keys(localStorage);
 			}
 		} catch (_error) {
+			console.error('获取所有键失败:', _error);
 			return [];
 		}
 	},
@@ -134,6 +93,7 @@ export const Storage = {
 		try {
 			return localStorage.getItem(key);
 		} catch (_error) {
+			console.error(`同步获取数据失败 [${key}]:`, _error);
 			return null;
 		}
 	},
@@ -147,7 +107,21 @@ export const Storage = {
 		try {
 			localStorage.setItem(key, value);
 		} catch (_error) {
+			console.error(`同步保存数据失败 [${key}]:`, _error);
 			// 错误处理
 		}
 	},
+	
+	/**
+	 * 初始化存储系统
+	 * 应用启动时调用一次
+	 */
+	async initialize(): Promise<void> {
+		try {
+			await StorageUtils.initialize();
+			console.log('存储系统初始化完成');
+		} catch (error) {
+			console.error('存储系统初始化失败:', error);
+		}
+	}
 };
