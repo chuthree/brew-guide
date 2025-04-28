@@ -231,7 +231,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                         position={editingRemaining.position}
                         onCancel={handleRemainingCancel}
                         onQuickDecrement={handleQuickDecrement}
-                        targetElement={editingRemaining.targetElement}
+                        _targetElement={editingRemaining.targetElement}
                     />
                 )}
             </AnimatePresence>

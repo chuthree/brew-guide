@@ -7,14 +7,14 @@ interface RemainingEditorProps {
     position: { x: number, y: number } | null
     onQuickDecrement: (amount: number) => void
     onCancel: () => void
-    targetElement?: HTMLElement | null
+    _targetElement?: HTMLElement | null
 }
 
 const RemainingEditor: React.FC<RemainingEditorProps> = ({
     position,
     onQuickDecrement,
     onCancel,
-    targetElement
+    _targetElement
 }) => {
     // 添加ref引用弹出层DOM元素
     const popoverRef = useRef<HTMLDivElement>(null)
