@@ -1,6 +1,7 @@
 import { Storage } from "@/lib/storage";
 import { Method } from "@/lib/config";
 import { CoffeeBean, BlendComponent } from "@/app/types";
+import { APP_VERSION } from "@/lib/config";
 
 // 定义导出数据的接口
 interface ExportData {
@@ -57,7 +58,7 @@ export const DataManager = {
 		try {
 			const exportData: ExportData = {
 				exportDate: new Date().toISOString(),
-				appVersion: process.env.NEXT_PUBLIC_APP_VERSION || "unknown",
+				appVersion: APP_VERSION,
 				data: {},
 			};
 
