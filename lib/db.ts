@@ -46,6 +46,23 @@ export const dbUtils = {
       await db.open();
       console.log('数据库初始化成功');
       
+      // 验证迁移状态与数据一致性
+      const migrated = await db.settings.get('migrated');
+      if (migrated && migrated.value === 'true') {
+        // 检查数据是否实际存在
+        const beansCount = await db.coffeeBeans.count();
+        const notesCount = await db.brewingNotes.count();
+        
+        // 如果localStorage有数据但IndexedDB为空，可能是迁移失败了
+        const hasLocalBeans = localStorage.getItem('coffeeBeans') !== null;
+        const hasLocalNotes = localStorage.getItem('brewingNotes') !== null;
+        
+        if ((beansCount === 0 && hasLocalBeans) || (notesCount === 0 && hasLocalNotes)) {
+          console.warn('检测到数据不一致：IndexedDB为空但localStorage有数据，将重置迁移状态');
+          await db.settings.delete('migrated');
+        }
+      }
+      
       // 输出存储信息，用于调试
       setTimeout(() => this.logStorageInfo(), 1000);
     } catch (error) {
@@ -63,8 +80,22 @@ export const dbUtils = {
       // 检查是否已迁移
       const migrated = await db.settings.get('migrated');
       if (migrated && migrated.value === 'true') {
-        return true; // 已经迁移完成
+        // 验证数据是否实际存在
+        const beansCount = await db.coffeeBeans.count();
+        const notesCount = await db.brewingNotes.count();
+        
+        // 如果数据库为空但localStorage有数据，重置迁移标志强制重新迁移
+        if ((beansCount === 0 || notesCount === 0) && 
+            (localStorage.getItem('coffeeBeans') || localStorage.getItem('brewingNotes'))) {
+          console.log('虽然标记为已迁移，但数据似乎丢失，重新执行迁移...');
+          // 重置迁移标志
+          await db.settings.delete('migrated');
+        } else {
+          return true; // 已经迁移完成
+        }
       }
+
+      let migrationSuccessful = true;
 
       // 迁移冲煮笔记
       const brewingNotesJson = localStorage.getItem('brewingNotes');
@@ -74,10 +105,18 @@ export const dbUtils = {
           if (brewingNotes.length > 0) {
             // 使用批量添加以提高性能
             await db.brewingNotes.bulkPut(brewingNotes);
-            console.log(`已迁移 ${brewingNotes.length} 条冲煮笔记`);
+            // 验证迁移是否成功
+            const migratedCount = await db.brewingNotes.count();
+            if (migratedCount === brewingNotes.length) {
+              console.log(`已迁移 ${brewingNotes.length} 条冲煮笔记`);
+            } else {
+              console.error(`迁移失败：应有 ${brewingNotes.length} 条笔记，但只迁移了 ${migratedCount} 条`);
+              migrationSuccessful = false;
+            }
           }
         } catch (e) {
           console.error('解析冲煮笔记数据失败:', e);
+          migrationSuccessful = false;
         }
       }
 
@@ -89,16 +128,30 @@ export const dbUtils = {
           if (coffeeBeans.length > 0) {
             // 使用批量添加以提高性能
             await db.coffeeBeans.bulkPut(coffeeBeans);
-            console.log(`已迁移 ${coffeeBeans.length} 条咖啡豆数据`);
+            // 验证迁移是否成功
+            const migratedCount = await db.coffeeBeans.count();
+            if (migratedCount === coffeeBeans.length) {
+              console.log(`已迁移 ${coffeeBeans.length} 条咖啡豆数据`);
+            } else {
+              console.error(`迁移失败：应有 ${coffeeBeans.length} 条咖啡豆数据，但只迁移了 ${migratedCount} 条`);
+              migrationSuccessful = false;
+            }
           }
         } catch (e) {
           console.error('解析咖啡豆数据失败:', e);
+          migrationSuccessful = false;
         }
       }
 
-      // 标记为已迁移
-      await db.settings.put({ key: 'migrated', value: 'true' });
-      return true;
+      // 只有在所有数据成功迁移后才标记为已完成
+      if (migrationSuccessful) {
+        // or db.settings.put({ key: 'migrated', value: 'true' });
+        await db.settings.put({ key: 'migrated', value: 'true' });
+        return true;
+      } else {
+        console.error('数据迁移过程中发生错误，未标记为已迁移');
+        return false;
+      }
     } catch (error) {
       console.error('数据迁移失败:', error);
       return false;

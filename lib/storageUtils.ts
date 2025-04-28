@@ -70,11 +70,24 @@ export const StorageUtils = {
       // 检查是否已迁移完成
       const migrated = await db.settings.get('migrated');
       if (migrated && migrated.value === 'true') {
-        console.log('数据已迁移完成，无需重复迁移');
-        return true;
+        // 验证数据是否实际存在
+        const beansCount = await db.coffeeBeans.count();
+        const notesCount = await db.brewingNotes.count();
+        
+        // 如果数据库为空但localStorage有数据，重置迁移标志强制重新迁移
+        if ((beansCount === 0 || notesCount === 0) && 
+            (localStorage.getItem('coffeeBeans') || localStorage.getItem('brewingNotes'))) {
+          console.log('虽然标记为已迁移，但数据似乎丢失，重新执行迁移...');
+          // 重置迁移标志
+          await db.settings.delete('migrated');
+        } else {
+          console.log('数据已迁移完成，无需重复迁移');
+          return true;
+        }
       }
       
       console.log('开始数据迁移...');
+      let migrationSuccessful = true;
       
       // 从localStorage获取所有需要迁移到IndexedDB的大数据项
       for (const key in STORAGE_TYPE_MAPPING) {
@@ -87,10 +100,18 @@ export const StorageUtils = {
                 const notes = JSON.parse(value);
                 if (notes.length > 0) {
                   await db.brewingNotes.bulkPut(notes);
-                  console.log(`成功迁移 ${notes.length} 条${key}数据`);
+                  // 验证迁移是否成功
+                  const migratedCount = await db.brewingNotes.count();
+                  if (migratedCount === notes.length) {
+                    console.log(`成功迁移 ${notes.length} 条${key}数据`);
+                  } else {
+                    console.error(`迁移失败：应有 ${notes.length} 条数据，但只迁移了 ${migratedCount} 条`);
+                    migrationSuccessful = false;
+                  }
                 }
               } catch (e) {
                 console.error(`解析${key}数据失败:`, e);
+                migrationSuccessful = false;
               }
             } else if (key === 'coffeeBeans') {
               try {
@@ -98,10 +119,18 @@ export const StorageUtils = {
                 const beans = JSON.parse(value);
                 if (beans.length > 0) {
                   await db.coffeeBeans.bulkPut(beans);
-                  console.log(`成功迁移 ${beans.length} 条${key}数据`);
+                  // 验证迁移是否成功
+                  const migratedCount = await db.coffeeBeans.count();
+                  if (migratedCount === beans.length) {
+                    console.log(`成功迁移 ${beans.length} 条${key}数据`);
+                  } else {
+                    console.error(`迁移失败：应有 ${beans.length} 条数据，但只迁移了 ${migratedCount} 条`);
+                    migrationSuccessful = false;
+                  }
                 }
               } catch (e) {
                 console.error(`解析${key}数据失败:`, e);
+                migrationSuccessful = false;
               }
             } else {
               // 处理其他类型的大数据
@@ -112,12 +141,16 @@ export const StorageUtils = {
         }
       }
       
-      // 标记为已完成迁移
-      await db.settings.put({ key: 'migrated', value: 'true' });
-      await db.settings.put({ key: 'migratedAt', value: new Date().toISOString() });
-      console.log('数据迁移完成，已标记为已迁移');
-      
-      return true;
+      // 只有在所有数据成功迁移后才标记为已完成
+      if (migrationSuccessful) {
+        await db.settings.put({ key: 'migrated', value: 'true' });
+        await db.settings.put({ key: 'migratedAt', value: new Date().toISOString() });
+        console.log('数据迁移完成，已标记为已迁移');
+        return true;
+      } else {
+        console.error('数据迁移过程中发生错误，未标记为已迁移');
+        return false;
+      }
     } catch (error) {
       console.error('数据迁移失败:', error);
       return false;
@@ -139,23 +172,27 @@ export const StorageUtils = {
           // 检查数据是否已成功迁移到IndexedDB
           if (key === 'brewingNotes') {
             const count = await db.brewingNotes.count();
-            if (count > 0) {
+            // 只有在IndexedDB中确实有数据，且localStorage中也有此数据时才清除
+            const localData = localStorage.getItem(key);
+            if (count > 0 && localData) {
               localStorage.removeItem(key);
               console.log(`已从localStorage中清除${key}数据`);
             } else {
-              console.log(`IndexedDB中${key}数据为空，不清除localStorage`);
+              console.log(`IndexedDB中${key}数据为空或localStorage无此数据，不清除localStorage`);
             }
           } else if (key === 'coffeeBeans') {
             const count = await db.coffeeBeans.count();
-            if (count > 0) {
+            // 只有在IndexedDB中确实有数据，且localStorage中也有此数据时才清除
+            const localData = localStorage.getItem(key);
+            if (count > 0 && localData) {
               localStorage.removeItem(key);
               console.log(`已从localStorage中清除${key}数据`);
             } else {
-              console.log(`IndexedDB中${key}数据为空，不清除localStorage`);
+              console.log(`IndexedDB中${key}数据为空或localStorage无此数据，不清除localStorage`);
             }
           } else {
             const item = await db.settings.get(key);
-            if (item) {
+            if (item && localStorage.getItem(key)) {
               localStorage.removeItem(key);
               console.log(`已从localStorage中清除${key}数据`);
             }

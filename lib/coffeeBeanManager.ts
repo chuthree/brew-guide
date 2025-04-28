@@ -57,9 +57,21 @@ export const CoffeeBeanManager = {
 				timestamp: Date.now(),
 			};
 			beans.push(newBean);
+			
+			// 保存到存储
 			await Storage.set("coffeeBeans", JSON.stringify(beans));
+			
+			// 验证保存是否成功
+			const savedBeans = await this.getAllBeans();
+			const savedBean = savedBeans.find(b => b.id === newBean.id);
+			if (!savedBean) {
+				console.error('咖啡豆保存失败：无法在存储中找到新添加的咖啡豆');
+				throw new Error('添加咖啡豆失败：保存后未能验证数据');
+			}
+			
 			return newBean;
-		} catch {
+		} catch (error) {
+			console.error('添加咖啡豆失败:', error);
 			throw new Error("添加咖啡豆失败");
 		}
 	},
@@ -87,9 +99,32 @@ export const CoffeeBeanManager = {
 				...validUpdates,
 			};
 
+			// 保存更新后的数据
 			await Storage.set("coffeeBeans", JSON.stringify(beans));
-			return beans[index];
-		} catch {
+			
+			// 验证更新是否成功
+			const updatedBeans = await this.getAllBeans();
+			const updatedBean = updatedBeans.find(b => b.id === id);
+			if (!updatedBean) {
+				console.error('咖啡豆更新失败：无法在存储中找到更新后的咖啡豆');
+				return null;
+			}
+			
+			// 简单验证几个关键字段是否正确更新
+			for (const key in validUpdates) {
+				// 使用类型断言确保TypeScript理解这里的类型关系
+				const updateKey = key as keyof typeof validUpdates;
+				const beanKey = key as keyof typeof updatedBean;
+				
+				// 跳过可能的undefined值比较
+				if (validUpdates[updateKey] !== undefined && updatedBean[beanKey] !== validUpdates[updateKey]) {
+					console.warn(`咖啡豆字段 ${key} 更新可能不成功`);
+				}
+			}
+			
+			return updatedBean;
+		} catch (error) {
+			console.error('更新咖啡豆失败:', error);
 			throw new Error("更新咖啡豆失败");
 		}
 	},
