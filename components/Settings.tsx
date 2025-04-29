@@ -33,7 +33,7 @@ export const defaultSettings: SettingsOptions = {
         stageInfoReversed: false,
         progressBarHeight: 4,
         controlsReversed: false,
-        alwaysShowTimerInfo: false, // 默认不显示计时器信息
+        alwaysShowTimerInfo: true, // 默认显示计时器信息
         showStageDivider: true // 默认显示阶段分隔线
     },
     language: 'zh', // 默认使用中文
