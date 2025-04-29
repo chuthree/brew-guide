@@ -39,7 +39,6 @@ export interface NoteItemProps {
     equipmentNames: Record<string, string>
     onEdit: (note: BrewingNote) => void
     onDelete: (noteId: string) => void
-    onShare?: (note: BrewingNote, equipmentName: string) => void
     unitPriceCache: Record<string, number>
 }
 

@@ -1,9 +1,9 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { Storage } from '@/lib/storage'
 import { BrewingNote } from '@/lib/config'
-import { BrewingHistoryProps, EditingNoteData, ToastState } from '../types'
+import { BrewingHistoryProps } from '../types'
 import SortSelector from './SortSelector'
 import FilterTabs from './FilterTabs'
 import AddNoteButton from './AddNoteButton'
@@ -13,7 +13,8 @@ import { BrewingNoteData } from '@/app/types'
 import { getEquipmentName, normalizeEquipmentId } from '../utils'
 import { globalCache, getSelectedEquipmentPreference, getSelectedBeanPreference, getFilterModePreference, getSortOptionPreference, saveSelectedEquipmentPreference, saveSelectedBeanPreference, saveFilterModePreference, saveSortOptionPreference, calculateTotalCoffeeConsumption, formatConsumption } from './globalCache'
 import ListView from './ListView'
-import NoteShareModal from '../Share/NoteShareModal'
+// 导入排序选项类型
+import { SortOption } from '../types'
 
 // 为Window对象声明类型扩展
 declare global {
@@ -23,24 +24,23 @@ declare global {
 }
 
 const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onClose: _onClose, onAddNote }) => {
-    // 基本状态
-    const [sortOption, setSortOption] = useState(globalCache.sortOption)
-    const [editingNote, setEditingNote] = useState<EditingNoteData | null>(null)
-    const [toast, setToast] = useState<ToastState>({ visible: false, message: '', type: 'info' })
-    
-    // 过滤状态
+    // 用于跟踪用户选择
+    const [sortOption, setSortOption] = useState<SortOption>(globalCache.sortOption)
     const [filterMode, setFilterMode] = useState<'equipment' | 'bean'>(globalCache.filterMode)
     const [selectedEquipment, setSelectedEquipment] = useState<string | null>(globalCache.selectedEquipment)
     const [selectedBean, setSelectedBean] = useState<string | null>(globalCache.selectedBean)
+    const [editingNote, setEditingNote] = useState<BrewingNoteData | null>(null)
     
-    // 统计状态 - 直接使用缓存中的值作为初始值
-    const [totalCoffeeConsumption, setTotalCoffeeConsumption] = useState<number>(globalCache.totalConsumption || 0)
+    // Toast消息状态
+    const [toast, setToast] = useState({
+        visible: false,
+        message: '',
+        type: 'info' as 'success' | 'error' | 'info'
+    })
     
-    // 分享状态
-    const [showShareModal, setShowShareModal] = useState(false)
-    const [shareNote, setShareNote] = useState<BrewingNote | null>(null)
-    const [shareEquipmentName, setShareEquipmentName] = useState('')
-
+    // 计算总咖啡消耗量
+    const totalCoffeeConsumption = useRef(0)
+    
     // 加载可用设备和咖啡豆列表
     const loadEquipmentsAndBeans = useCallback(async () => {
         try {
@@ -106,7 +106,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onClose: _onClo
             // 计算总消耗量并更新全局缓存
             const totalConsumption = calculateTotalCoffeeConsumption(parsedNotes);
             globalCache.totalConsumption = totalConsumption; // 更新全局缓存中的消耗量
-            setTotalCoffeeConsumption(totalConsumption);
+            totalCoffeeConsumption.current = totalConsumption;
             
             // 触发brewingNotesUpdated事件，更新ListView组件
             if (window.refreshBrewingNotes) {
@@ -164,19 +164,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onClose: _onClo
         }, 3000);
     };
     
-    // 处理分享笔记
-    const handleShareNote = (note: BrewingNote, equipmentName: string) => {
-        setShareNote(note)
-        setShareEquipmentName(equipmentName)
-        setShowShareModal(true)
-    }
-
-    // 关闭分享模态框
-    const handleCloseShareModal = () => {
-        setShowShareModal(false)
-        setShareNote(null)
-    }
-    
     // 处理删除笔记
     const handleDelete = async (noteId: string) => {
         try {
@@ -213,7 +200,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onClose: _onClo
             const updatedNotes = notes.map(note => {
                 if (note.id === editingNote.id) {
                     updated = true;
-                    return {
+                    // 创建更新后的笔记
+                    const updatedNote: BrewingNote = {
                         ...note,
                         equipment: updatedData.equipment || note.equipment,
                         method: updatedData.method || note.method,
@@ -224,18 +212,22 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onClose: _onClo
                             grindSize: updatedData.params?.grindSize || note.params.grindSize,
                             temp: updatedData.params?.temp || note.params.temp
                         },
-                        coffeeBeanInfo: updatedData.coffeeBeanInfo 
-                            ? {
-                                name: updatedData.coffeeBeanInfo.name,
-                                roastLevel: updatedData.coffeeBeanInfo.roastLevel,
-                                roastDate: updatedData.coffeeBeanInfo.roastDate
-                            } 
-                            : note.coffeeBeanInfo,
                         rating: updatedData.rating !== undefined ? updatedData.rating : note.rating,
                         taste: updatedData.taste || note.taste,
                         notes: updatedData.notes || note.notes,
                         totalTime: updatedData.totalTime || note.totalTime
                     };
+                    
+                    // 单独处理 coffeeBeanInfo
+                    if (updatedData.coffeeBeanInfo) {
+                        updatedNote.coffeeBeanInfo = {
+                            name: updatedData.coffeeBeanInfo.name,
+                            roastLevel: updatedData.coffeeBeanInfo.roastLevel,
+                            roastDate: updatedData.coffeeBeanInfo.roastDate
+                        };
+                    }
+                    
+                    return updatedNote;
                 }
                 return note;
             });
@@ -266,7 +258,10 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onClose: _onClo
             equipment: note.equipment,
             method: note.method,
             params: note.params,
-            coffeeBeanInfo: note.coffeeBeanInfo,
+            coffeeBeanInfo: note.coffeeBeanInfo || {
+                name: '', // 提供默认值
+                roastLevel: ''
+            },
             rating: note.rating,
             taste: note.taste,
             notes: note.notes,
@@ -328,8 +323,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onClose: _onClo
                         <div className="flex justify-between items-center mb-6 px-6">
                             <div className="text-xs tracking-wide text-neutral-800 dark:text-neutral-100">
                                 {selectedEquipment || selectedBean
-                                    ? `${globalCache.filteredNotes.length}/${globalCache.notes.length} 条记录，已消耗 ${formatConsumption(globalCache.totalConsumption || totalCoffeeConsumption)}` 
-                                    : `${globalCache.notes.length} 条记录，已消耗 ${formatConsumption(globalCache.totalConsumption || totalCoffeeConsumption)}`}
+                                    ? `${globalCache.filteredNotes.length}/${globalCache.notes.length} 条记录，已消耗 ${formatConsumption(globalCache.totalConsumption || totalCoffeeConsumption.current)}` 
+                                    : `${globalCache.notes.length} 条记录，已消耗 ${formatConsumption(globalCache.totalConsumption || totalCoffeeConsumption.current)}`}
                             </div>
                             <SortSelector sortOption={sortOption} onSortChange={handleSortChange} />
                         </div>
@@ -357,7 +352,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onClose: _onClo
                             filterMode={filterMode}
                             onNoteClick={handleNoteClick}
                             onDeleteNote={handleDelete}
-                            onShareNote={handleShareNote}
                         />
                     </div>
 
@@ -372,16 +366,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onClose: _onClo
                 message={toast.message}
                 type={toast.type}
             />
-            
-            {/* 分享模态框 */}
-            {shareNote && (
-                <NoteShareModal
-                    isOpen={showShareModal}
-                    onClose={handleCloseShareModal}
-                    note={shareNote}
-                    equipmentName={shareEquipmentName}
-                />
-            )}
         </div>
     );
 };

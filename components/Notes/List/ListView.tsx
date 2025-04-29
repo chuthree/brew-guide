@@ -16,7 +16,6 @@ interface NotesListViewProps {
     filterMode: 'equipment' | 'bean';
     onNoteClick: (note: BrewingNote) => void;
     onDeleteNote: (noteId: string) => Promise<void>;
-    onShareNote: (note: BrewingNote, equipmentName: string) => void;
 }
 
 const NotesListView: React.FC<NotesListViewProps> = ({
@@ -25,8 +24,7 @@ const NotesListView: React.FC<NotesListViewProps> = ({
     selectedBean,
     filterMode,
     onNoteClick,
-    onDeleteNote,
-    onShareNote
+    onDeleteNote
 }) => {
     const [_isPending, startTransition] = useTransition()
     const [notes, setNotes] = useState<BrewingNote[]>(globalCache.filteredNotes)
@@ -141,7 +139,6 @@ const NotesListView: React.FC<NotesListViewProps> = ({
                     equipmentNames={globalCache.equipmentNames}
                     onEdit={onNoteClick}
                     onDelete={onDeleteNote}
-                    onShare={onShareNote}
                     unitPriceCache={unitPriceCache}
                 />
             ))}
