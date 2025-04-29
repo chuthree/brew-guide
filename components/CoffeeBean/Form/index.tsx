@@ -3,12 +3,42 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
-import imageCompression from 'browser-image-compression'
 import { ExtendedCoffeeBean, BlendComponent, Step, StepConfig } from './types'
 import BasicInfo from './components/BasicInfo'
 import DetailInfo from './components/DetailInfo'
 import FlavorInfo from './components/FlavorInfo'
 import Complete from './components/Complete'
+
+// 二次压缩函数：将base64图片再次压缩
+function compressBase64(base64: string, quality = 0.7, maxWidth = 800): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.src = base64;
+    img.onload = () => {
+      let width = img.width;
+      let height = img.height;
+
+      // 缩放尺寸
+      if (width > maxWidth) {
+        height = height * (maxWidth / width);
+        width = maxWidth;
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        throw new Error('无法获取canvas上下文');
+      }
+      ctx.drawImage(img, 0, 0, width, height);
+
+      // 转换成新的Base64
+      const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+      resolve(compressedBase64);
+    };
+  });
+}
 
 interface CoffeeBeanFormProps {
     onSave: (bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>) => void
@@ -350,24 +380,32 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
     // 处理图片上传
     const handleImageUpload = async (file: File) => {
         try {
-            const options = {
-                maxSizeMB: 1,
-                maxWidthOrHeight: 1024,
-                useWebWorker: true
-            };
-
-            const compressedFile = await imageCompression(file, options);
-            
+            // 直接读取文件为base64
             const reader = new FileReader();
-            reader.onloadend = () => {
-                setBean(prev => ({
-                    ...prev,
-                    image: reader.result as string
-                }));
+            reader.onloadend = async () => {
+                try {
+                    const originalBase64 = reader.result as string;
+                    
+                    // 使用canvas方法进行压缩
+                    const compressedBase64 = await compressBase64(originalBase64, 0.5, 800);
+                    
+                    // 更新状态
+                    setBean(prev => ({
+                        ...prev,
+                        image: compressedBase64
+                    }));
+                } catch (error) {
+                    console.error('图片压缩失败:', error);
+                    // 如果压缩失败，使用原始图片
+                    setBean(prev => ({
+                        ...prev,
+                        image: reader.result as string
+                    }));
+                }
             };
-            reader.readAsDataURL(compressedFile);
+            reader.readAsDataURL(file);
         } catch (error) {
-            console.error('图片压缩失败:', error);
+            console.error('图片处理失败:', error);
         }
     };
 
