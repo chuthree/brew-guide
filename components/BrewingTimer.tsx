@@ -309,9 +309,16 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
   }, [currentBrewingMethod]);
 
   const clearTimerAndStates = useCallback(() => {
+    // 清除主计时器
     if (timerId) {
       clearInterval(timerId);
       setTimerId(null);
+    }
+    
+    // 同时清除倒计时计时器
+    if (countdownTimerRef.current) {
+      clearInterval(countdownTimerRef.current);
+      countdownTimerRef.current = null;
     }
   }, [timerId]);
 
@@ -436,6 +443,14 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
   const startCountdown = useCallback((seconds: number) => {
     // 播放开始音效
     playSoundEffect("start");
+    // 触发触感反馈
+    triggerHaptic("medium");
+    
+    // 首先清除可能存在的倒计时计时器
+    if (countdownTimerRef.current) {
+      clearInterval(countdownTimerRef.current);
+      countdownTimerRef.current = null;
+    }
     
     // 设置倒计时时间
     setCountdownTime(seconds);
@@ -444,14 +459,25 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     const countdownId = setInterval(() => {
       setCountdownTime((prev) => {
         if (prev === null) return null;
+        
+        // 从3倒数到1的每一秒都触发声音和震动
+        if (prev > 1 && prev <= 3) {
+          playSoundEffect("start");
+          triggerHaptic("medium");
+        }
+        
         if (prev <= 1) {
           // 倒计时结束时清除
           clearInterval(countdownId);
+          countdownTimerRef.current = null;
           
           // 倒计时结束
           setTimeout(() => {
             setCountdownTime(null);
             playSoundEffect("ding");
+            triggerHaptic("vibrateMultiple");
+            // 确保清理所有旧的计时器，然后再开始新的
+            clearTimerAndStates();
             startMainTimer();
           }, 0);
           
@@ -470,7 +496,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         countdownTimerRef.current = null;
       }
     };
-  }, [playSoundEffect, startMainTimer]);
+  }, [playSoundEffect, triggerHaptic, startMainTimer, clearTimerAndStates]);
 
   // 添加倒计时ref
   const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -631,9 +657,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
 
         // 延迟启动计时器，确保状态已完全重置
         setTimeout(() => {
-          triggerHaptic("medium");
           setIsRunning(true);
-
           // 启动倒计时
           startCountdown(3);
           setHasStartedOnce(true);
@@ -643,7 +667,6 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
       }
 
       // 常规启动逻辑
-      triggerHaptic("medium");
       setIsRunning(true);
 
       if (!hasStartedOnce || currentTime === 0) {
@@ -651,6 +674,8 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         startCountdown(3);
         setHasStartedOnce(true);
       } else {
+        // 确保在开始主计时器前清理任何现有的计时器
+        clearTimerAndStates();
         startMainTimer();
       }
     }
@@ -659,8 +684,8 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     currentBrewingMethod,
     hasStartedOnce,
     startMainTimer,
+    clearTimerAndStates,
     currentTime,
-    triggerHaptic,
     showComplete,
     isCompleted,
     isCoffeeBrewed,
@@ -882,13 +907,6 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
       );
     };
   }, [isRunning, resetTimer, processExpansion]);
-
-  // 在倒计时结束时添加触感反馈
-  useEffect(() => {
-    if (countdownTime === 0 && isRunning) {
-      triggerHaptic("vibrateMultiple");
-    }
-  }, [countdownTime, isRunning, triggerHaptic]);
 
   // 在组件挂载后，同步外部冲煮状态到内部状态
   useEffect(() => {
