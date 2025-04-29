@@ -306,7 +306,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                                 {availableVarieties?.map((variety: string) => (
                                     <button
                                         key={variety}
-                                        onClick={() => onVarietyClick?.(variety)}
+                                        onClick={() => selectedVariety !== variety && onVarietyClick?.(variety)}
                                         className={`pb-1.5 mx-3 text-[11px] whitespace-nowrap relative ${selectedVariety === variety ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
                                     >
                                         <span className="relative">{variety}</span>
