@@ -11,32 +11,81 @@ import Complete from './components/Complete'
 
 // 二次压缩函数：将base64图片再次压缩
 function compressBase64(base64: string, quality = 0.7, maxWidth = 800): Promise<string> {
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.src = base64;
-    img.onload = () => {
-      let width = img.width;
-      let height = img.height;
+  return new Promise((resolve, reject) => {
+    try {
+      console.log('compressBase64开始, quality:', quality, 'maxWidth:', maxWidth);
+      
+      const img = new Image();
+      
+      // 添加错误处理
+      img.onerror = (err) => {
+        console.error('图片加载失败:', err);
+        reject(new Error('图片加载失败'));
+      };
+      
+      // 设置图片加载超时
+      const imgLoadTimeout = setTimeout(() => {
+        console.warn('图片加载超时');
+        reject(new Error('图片加载超时'));
+      }, 10000); // 10秒超时
+      
+      img.onload = () => {
+        clearTimeout(imgLoadTimeout);
+        console.log('图片加载成功, 原始尺寸:', img.width, 'x', img.height);
+        
+        try {
+          let width = img.width;
+          let height = img.height;
 
-      // 缩放尺寸
-      if (width > maxWidth) {
-        height = height * (maxWidth / width);
-        width = maxWidth;
+          // 缩放尺寸
+          if (width > maxWidth) {
+            height = height * (maxWidth / width);
+            width = maxWidth;
+          }
+          
+          console.log('缩放后尺寸:', width, 'x', height);
+
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            console.error('无法获取canvas上下文');
+            throw new Error('无法获取canvas上下文');
+          }
+          
+          // 绘制图片到Canvas
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // 转换成新的Base64，使用较低的质量以确保在移动设备上也能运行良好
+          try {
+            const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+            console.log('压缩成功, 原始base64长度:', base64.length, '压缩后长度:', compressedBase64.length);
+            resolve(compressedBase64);
+          } catch (toDataURLError) {
+            console.error('toDataURL失败:', toDataURLError);
+            reject(toDataURLError);
+          }
+        } catch (canvasError) {
+          console.error('Canvas处理失败:', canvasError);
+          reject(canvasError);
+        }
+      };
+      
+      // 设置图片源并开始加载
+      console.log('设置图片源...');
+      img.src = base64;
+      
+      // 对于已经缓存的图片，onload可能不会触发，所以检查complete属性
+      if (img.complete) {
+        console.log('图片已缓存，立即处理');
+        clearTimeout(imgLoadTimeout);
+        img.onload?.(new Event('load'));
       }
-
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) {
-        throw new Error('无法获取canvas上下文');
-      }
-      ctx.drawImage(img, 0, 0, width, height);
-
-      // 转换成新的Base64
-      const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
-      resolve(compressedBase64);
-    };
+    } catch (error) {
+      console.error('compressBase64整体错误:', error);
+      reject(error);
+    }
   });
 }
 
@@ -380,32 +429,105 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
     // 处理图片上传
     const handleImageUpload = async (file: File) => {
         try {
+            console.log('开始处理图片上传:', file.name, file.type, file.size);
+            
+            // 检查文件类型
+            if (!file.type.startsWith('image/')) {
+                console.error('文件类型不是图片:', file.type);
+                return;
+            }
+            
             // 直接读取文件为base64
             const reader = new FileReader();
-            reader.onloadend = async () => {
+            
+            // 设置超时处理，防止移动设备上FileReader挂起
+            const readerTimeout = setTimeout(() => {
+                console.warn('FileReader读取超时，可能是移动设备兼容性问题');
+                // 尝试使用URL.createObjectURL作为备选方案
                 try {
+                    const objectUrl = URL.createObjectURL(file);
+                    setBean(prev => ({
+                        ...prev,
+                        image: objectUrl
+                    }));
+                    // 清理URL对象
+                    setTimeout(() => URL.revokeObjectURL(objectUrl), 30000);
+                } catch (urlError) {
+                    console.error('备选方案也失败了:', urlError);
+                }
+            }, 5000);
+            
+            reader.onloadend = async () => {
+                clearTimeout(readerTimeout);
+                try {
+                    console.log('FileReader加载完成');
                     const originalBase64 = reader.result as string;
                     
-                    // 使用canvas方法进行压缩
-                    const compressedBase64 = await compressBase64(originalBase64, 0.5, 800);
+                    if (!originalBase64 || typeof originalBase64 !== 'string') {
+                        console.error('FileReader读取结果无效:', originalBase64);
+                        return;
+                    }
                     
-                    // 更新状态
-                    setBean(prev => ({
-                        ...prev,
-                        image: compressedBase64
-                    }));
+                    console.log('读取到base64数据，长度:', originalBase64.length);
+                    
+                    try {
+                        // 使用canvas方法进行压缩
+                        console.log('开始压缩图片...');
+                        const compressedBase64 = await compressBase64(originalBase64, 0.5, 800);
+                        console.log('图片压缩完成，新base64长度:', compressedBase64.length);
+                        
+                        // 更新状态
+                        setBean(prev => ({
+                            ...prev,
+                            image: compressedBase64
+                        }));
+                    } catch (compressError) {
+                        console.error('图片压缩失败:', compressError);
+                        // 如果压缩失败，使用原始图片
+                        console.log('使用原始图片作为备选');
+                        setBean(prev => ({
+                            ...prev,
+                            image: originalBase64
+                        }));
+                    }
                 } catch (error) {
-                    console.error('图片压缩失败:', error);
-                    // 如果压缩失败，使用原始图片
-                    setBean(prev => ({
-                        ...prev,
-                        image: reader.result as string
-                    }));
+                    console.error('onloadend回调中处理失败:', error);
+                    // 如果处理失败，尝试使用URL.createObjectURL
+                    try {
+                        const objectUrl = URL.createObjectURL(file);
+                        setBean(prev => ({
+                            ...prev,
+                            image: objectUrl
+                        }));
+                        // 清理URL对象
+                        setTimeout(() => URL.revokeObjectURL(objectUrl), 30000);
+                    } catch (urlError) {
+                        console.error('URL.createObjectURL也失败了:', urlError);
+                    }
                 }
             };
+            
+            reader.onerror = (error) => {
+                clearTimeout(readerTimeout);
+                console.error('FileReader读取出错:', error);
+                // 如果读取出错，尝试使用URL.createObjectURL
+                try {
+                    const objectUrl = URL.createObjectURL(file);
+                    setBean(prev => ({
+                        ...prev,
+                        image: objectUrl
+                    }));
+                    // 清理URL对象
+                    setTimeout(() => URL.revokeObjectURL(objectUrl), 30000);
+                } catch (urlError) {
+                    console.error('URL.createObjectURL也失败了:', urlError);
+                }
+            };
+            
+            console.log('开始调用readAsDataURL...');
             reader.readAsDataURL(file);
         } catch (error) {
-            console.error('图片处理失败:', error);
+            console.error('图片处理整体失败:', error);
         }
     };
 

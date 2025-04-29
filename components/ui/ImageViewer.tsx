@@ -42,10 +42,10 @@ const ImageViewer: React.FC<ImageViewerProps> = ({
                         animate={{ scale: 1 }}
                         exit={{ scale: 0.9 }}
                         transition={{ duration: 0.2 }}
-                        className="relative max-w-[90vw] max-h-[90vh] overflow-hidden"
+                        className="relative max-h-[90vh] overflow-hidden"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div className="relative flex items-center justify-center min-w-[280px] min-h-[280px]">
+                        <div className="relative flex items-center justify-center min-h-[280px]">
                             {hasError ? (
                                 <div className="text-white text-center p-4">
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto mb-2 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -57,11 +57,10 @@ const ImageViewer: React.FC<ImageViewerProps> = ({
                                 <Image
                                     src={imageUrl}
                                     alt={alt}
-                                    className="max-w-full max-h-[80vh] object-contain"
-                                    width={1000}
+                                    className="max-h-[80vh] w-auto"
+                                    width={0}
                                     height={1000}
                                     style={{ 
-                                        objectFit: 'contain',
                                         background: 'transparent'
                                     }}
                                     onError={() => setHasError(true)}
