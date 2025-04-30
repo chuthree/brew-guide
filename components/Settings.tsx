@@ -568,7 +568,7 @@ const Settings: React.FC<SettingsProps> = ({
                                         <p className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-2">
                                             基础研磨度:
                                         </p>
-                                        <div className="grid grid-cols-2 gap-y-2">
+                                        <div className="grid grid-cols-2 gap-x-6 gap-y-2">
                                             {Object.entries(basicGrindSizes).map(([key, value]) => (
                                                 <div key={key} className="flex justify-between text-sm text-neutral-700 dark:text-neutral-300">
                                                     <span className="font-medium">{key}</span>
@@ -584,7 +584,7 @@ const Settings: React.FC<SettingsProps> = ({
                                             <p className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-2">
                                                 特定应用研磨度:
                                             </p>
-                                            <div className="grid grid-cols-2 gap-y-2">
+                                            <div className="grid grid-cols-2 gap-x-6 gap-y-2">
                                                 {Object.entries(applicationGrindSizes).map(([key, value]) => (
                                                     <div key={key} className="flex justify-between text-sm text-neutral-700 dark:text-neutral-300">
                                                         <span className="font-medium">{key}</span>
