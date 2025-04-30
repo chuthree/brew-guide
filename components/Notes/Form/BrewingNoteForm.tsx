@@ -465,7 +465,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                                                     acidity: '酸度',
                                                     sweetness: '甜度',
                                                     bitterness: '苦度',
-                                                    body: '醇度',
+                                                    body: '口感',
                                                 }[key]
                                             }
                                         </div>

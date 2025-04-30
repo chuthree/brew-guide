@@ -148,7 +148,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
                                                     case 'bitterness':
                                                         return '苦度';
                                                     case 'body':
-                                                        return '醇度';
+                                                        return '口感';
                                                     default:
                                                         return key;
                                                 }

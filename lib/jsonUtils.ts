@@ -407,7 +407,7 @@ export function getExampleJson() {
     "body": 4
   },
   "notes": "",
-  "optimizationGoal": "希望增加甜度和醇度，减少苦味，保持适中的酸度"
+  "optimizationGoal": "希望增加甜度和口感，减少苦味，保持适中的酸度"
 }`;
 }
 
