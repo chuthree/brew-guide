@@ -442,115 +442,122 @@ const TabContent: React.FC<TabContentProps> = ({
                     {/* 列表内容容器，添加适当的底部padding */}
                     <div className="space-y-4 content-area">
                         {/* 常规方案列表 */}
-                        {content[activeTab]?.steps.map((step: Step, index: number) => {
-                            // 如果是注水标签，检查originalIndex变化来添加阶段分隔线
-                            const showStageDivider = activeTab === '注水' as TabType && 
-                                index > 0 && 
-                                step.originalIndex !== undefined && 
-                                content[activeTab]?.steps[index-1]?.originalIndex !== undefined &&
-                                step.originalIndex !== content[activeTab]?.steps[index-1]?.originalIndex &&
-                                (settings?.layoutSettings?.showStageDivider !== false); // 根据设置决定是否显示分隔线
+                        {activeTab === '方案' as TabType && methodType === 'custom' && 
+                         selectedEquipment && (!customMethods[selectedEquipment] || customMethods[selectedEquipment].length === 0) ? (
+                            <div className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
+                                [ 当前器具暂无自定义方案，请点击下方按钮添加 ]
+                            </div>
+                        ) : (
+                            content[activeTab]?.steps.map((step: Step, index: number) => {
+                                // 如果是注水标签，检查originalIndex变化来添加阶段分隔线
+                                const showStageDivider = activeTab === '注水' as TabType && 
+                                    index > 0 && 
+                                    step.originalIndex !== undefined && 
+                                    content[activeTab]?.steps[index-1]?.originalIndex !== undefined &&
+                                    step.originalIndex !== content[activeTab]?.steps[index-1]?.originalIndex &&
+                                    (settings?.layoutSettings?.showStageDivider !== false); // 根据设置决定是否显示分隔线
 
-                            return (
-                            <React.Fragment key={step.methodId ? `${step.methodId}-${index}` : `${step.title}-${index}`}>
-                                {/* 在注水标签页中，检测originalIndex变化添加分隔线 */}
-                                {showStageDivider && (
-                                    <StageDivider stageNumber={step.originalIndex! + 1} key={`divider-${index}`} />
-                                )}
-                                <StageItem
-                                    step={step}
-                                    index={index}
-                                    onClick={() => {
-                                        if (activeTab === '器具' as TabType) {
-                                            onEquipmentSelect(step.title);
-                                        } else if (activeTab === '方案' as TabType) {
-                                            // 传递完整的 step 对象给 onMethodSelect 方法
-                                            onMethodSelect(index, step);
-                                        }
-                                    }}
-                                    activeTab={activeTab}
-                                    selectedMethod={selectedMethod}
-                                    currentStage={currentStage}
-                                    onEdit={activeTab === '方案' as TabType ? 
-                                        methodType === 'custom' && customMethods[selectedEquipment!] ? 
-                                            () => {
-                                                const method = customMethods[selectedEquipment!][index];
-                                                onEditMethod(method);
-                                            } 
-                                        : methodType === 'common' && selectedEquipment ? 
-                                            () => {
-                                                // 当编辑通用方案时，创建一个副本并添加到自定义方案列表
-                                                const commonMethodsList = commonMethods[selectedEquipment];
-                                                if (commonMethodsList && commonMethodsList[index]) {
-                                                    const methodCopy = createEditableMethodFromCommon(commonMethodsList[index]);
-                                                    // 将副本添加到自定义方案列表
-                                                    saveCustomMethod(selectedEquipment, methodCopy)
-                                                        .then(() => {
-                                                            // 添加成功后切换到自定义方案列表并开始编辑
-                                                            handleMethodTypeChange('custom');
-                                                            // 延迟一下，确保自定义方案列表已更新
-                                                            setTimeout(() => {
-                                                                onEditMethod(methodCopy);
-                                                            }, 100);
-                                                            showToast({
-                                                                type: 'success',
-                                                                title: '已复制通用方案到自定义列表',
-                                                                duration: 2000
-                                                            });
-                                                        })
-                                                        .catch(() => {
-                                                            showToast({
-                                                                type: 'error',
-                                                                title: '复制方案失败，请重试',
-                                                                duration: 2000
-                                                            });
-                                                        });
-                                                }
+                                return (
+                                <React.Fragment key={step.methodId ? `${step.methodId}-${index}` : `${step.title}-${index}`}>
+                                    {/* 在注水标签页中，检测originalIndex变化添加分隔线 */}
+                                    {showStageDivider && (
+                                        <StageDivider stageNumber={step.originalIndex! + 1} key={`divider-${index}`} />
+                                    )}
+                                    <StageItem
+                                        step={step}
+                                        index={index}
+                                        onClick={() => {
+                                            if (activeTab === '器具' as TabType) {
+                                                onEquipmentSelect(step.title);
+                                            } else if (activeTab === '方案' as TabType) {
+                                                // 传递完整的 step 对象给 onMethodSelect 方法
+                                                onMethodSelect(index, step);
                                             }
-                                        : undefined
-                                    : step.isCustom ? 
-                                        () => {
+                                        }}
+                                        activeTab={activeTab}
+                                        selectedMethod={selectedMethod}
+                                        currentStage={currentStage}
+                                        onEdit={activeTab === '方案' as TabType ? 
+                                            methodType === 'custom' && customMethods[selectedEquipment!] ? 
+                                                () => {
+                                                    const method = customMethods[selectedEquipment!][index];
+                                                    onEditMethod(method);
+                                                } 
+                                            : methodType === 'common' && selectedEquipment ? 
+                                                () => {
+                                                    // 当编辑通用方案时，创建一个副本并添加到自定义方案列表
+                                                    const commonMethodsList = commonMethods[selectedEquipment];
+                                                    if (commonMethodsList && commonMethodsList[index]) {
+                                                        const methodCopy = createEditableMethodFromCommon(commonMethodsList[index]);
+                                                        // 将副本添加到自定义方案列表
+                                                        saveCustomMethod(selectedEquipment, methodCopy)
+                                                            .then(() => {
+                                                                // 添加成功后切换到自定义方案列表并开始编辑
+                                                                handleMethodTypeChange('custom');
+                                                                // 延迟一下，确保自定义方案列表已更新
+                                                                setTimeout(() => {
+                                                                    onEditMethod(methodCopy);
+                                                                }, 100);
+                                                                showToast({
+                                                                    type: 'success',
+                                                                    title: '已复制通用方案到自定义列表',
+                                                                    duration: 2000
+                                                                });
+                                                            })
+                                                            .catch(() => {
+                                                                showToast({
+                                                                    type: 'error',
+                                                                    title: '复制方案失败，请重试',
+                                                                    duration: 2000
+                                                                });
+                                                            });
+                                                    }
+                                                }
+                                            : undefined
+                                        : step.isCustom ? 
+                                            () => {
+                                                const equipment = customEquipments.find(e => e.name === step.title);
+                                                if (equipment) {
+                                                    setEditingEquipment(equipment);
+                                                    setShowEquipmentForm(true);
+                                                }
+                                            } 
+                                        : undefined}
+                                        onDelete={activeTab === '方案' as TabType && methodType === 'custom' && customMethods[selectedEquipment!] ? () => {
+                                            const method = customMethods[selectedEquipment!][index];
+                                            onDeleteMethod(method);
+                                        } : step.isCustom ? () => {
                                             const equipment = customEquipments.find(e => e.name === step.title);
                                             if (equipment) {
-                                                setEditingEquipment(equipment);
-                                                setShowEquipmentForm(true);
+                                                handleDeleteEquipment(equipment);
                                             }
-                                        } 
-                                    : undefined}
-                                    onDelete={activeTab === '方案' as TabType && methodType === 'custom' && customMethods[selectedEquipment!] ? () => {
-                                        const method = customMethods[selectedEquipment!][index];
-                                        onDeleteMethod(method);
-                                    } : step.isCustom ? () => {
-                                        const equipment = customEquipments.find(e => e.name === step.title);
-                                        if (equipment) {
-                                            handleDeleteEquipment(equipment);
-                                        }
-                                    } : undefined}
-                                    onShare={activeTab === '方案' as TabType ? () => {
-                                        // 对于方案列表，无论是通用方案还是自定义方案都可以分享
-                                        if (methodType === 'custom' && customMethods[selectedEquipment!]) {
-                                            const method = customMethods[selectedEquipment!][index];
-                                            handleShareMethod(method);
-                                        } else if (methodType === 'common' && selectedEquipment) {
-                                            const commonMethodsList = commonMethods[selectedEquipment];
-                                            if (commonMethodsList && commonMethodsList[index]) {
-                                                handleShareMethod(commonMethodsList[index]);
+                                        } : undefined}
+                                        onShare={activeTab === '方案' as TabType ? () => {
+                                            // 对于方案列表，无论是通用方案还是自定义方案都可以分享
+                                            if (methodType === 'custom' && customMethods[selectedEquipment!]) {
+                                                const method = customMethods[selectedEquipment!][index];
+                                                handleShareMethod(method);
+                                            } else if (methodType === 'common' && selectedEquipment) {
+                                                const commonMethodsList = commonMethods[selectedEquipment];
+                                                if (commonMethodsList && commonMethodsList[index]) {
+                                                    handleShareMethod(commonMethodsList[index]);
+                                                }
                                             }
-                                        }
-                                    } : step.isCustom ? () => {
-                                        const equipment = customEquipments.find(e => e.name === step.title);
-                                        if (equipment) {
-                                            handleShareEquipment(equipment);
-                                        }
-                                    } : undefined}
-                                    actionMenuStates={actionMenuStates}
-                                    setActionMenuStates={setActionMenuStates}
-                                    showFlowRate={localShowFlowRate}
-                                    allSteps={content[activeTab]?.steps || []}
-                                />
-                            </React.Fragment>
-                            );
-                        })}
+                                        } : step.isCustom ? () => {
+                                            const equipment = customEquipments.find(e => e.name === step.title);
+                                            if (equipment) {
+                                                handleShareEquipment(equipment);
+                                            }
+                                        } : undefined}
+                                        actionMenuStates={actionMenuStates}
+                                        setActionMenuStates={setActionMenuStates}
+                                        showFlowRate={localShowFlowRate}
+                                        allSteps={content[activeTab]?.steps || []}
+                                    />
+                                </React.Fragment>
+                                );
+                            })
+                        )}
                     </div>
 
                     {/* 方案标签底部操作栏 - 特殊布局 */}
