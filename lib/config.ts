@@ -855,4 +855,6 @@ export const sponsorsList = [
 	"Loki",
 	"🥠",
 	"火羽飘飘",
+	"Atom Heart",
+	"梁炜东",
 ];
