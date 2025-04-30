@@ -19,6 +19,8 @@ interface SteppedFormModalProps {
     initialStep?: number
     preserveState?: boolean
     onStepChange?: (index: number) => void
+    currentStep?: number
+    setCurrentStep?: React.Dispatch<React.SetStateAction<number>>
 }
 
 const SteppedFormModal: React.FC<SteppedFormModalProps> = ({
@@ -28,26 +30,32 @@ const SteppedFormModal: React.FC<SteppedFormModalProps> = ({
     steps,
     initialStep = 0,
     preserveState = false,
-    onStepChange
+    onStepChange,
+    currentStep,
+    setCurrentStep
 }) => {
-    const [currentStepIndex, setCurrentStepIndex] = useState(initialStep)
+    const [internalStepIndex, setInternalStepIndex] = useState(initialStep)
+    
+    // 使用外部或内部状态控制当前步骤
+    const currentStepIndex = currentStep !== undefined ? currentStep : internalStepIndex
+    const setCurrentStepIndex = setCurrentStep || setInternalStepIndex
 
     // 当initialStep变化时更新当前步骤
     useEffect(() => {
         if (showForm) {
             setCurrentStepIndex(initialStep);
         }
-    }, [showForm, initialStep]);
+    }, [showForm, initialStep, setCurrentStepIndex]);
 
     // 当不显示表单且不保持状态时，重置为初始步骤
     useEffect(() => {
         if (!showForm && !preserveState) {
             setCurrentStepIndex(initialStep);
         }
-    }, [showForm, preserveState, initialStep]);
+    }, [showForm, preserveState, initialStep, setCurrentStepIndex]);
 
     // 获取当前步骤
-    const currentStep = steps[currentStepIndex]
+    const currentStepContent = steps[currentStepIndex]
 
     // 计算进度
     const progress = ((currentStepIndex + 1) / steps.length) * 100
@@ -169,7 +177,7 @@ const SteppedFormModal: React.FC<SteppedFormModalProps> = ({
                                 <div className="flex-1 overflow-y-auto pb-4">
                                     <AnimatePresence mode="wait">
                                         <motion.div
-                                            key={currentStep.id}
+                                            key={currentStepContent.id}
                                             initial="initial"
                                             animate="in"
                                             exit="out"
@@ -177,7 +185,7 @@ const SteppedFormModal: React.FC<SteppedFormModalProps> = ({
                                             transition={pageTransition}
                                             className="space-y-6"
                                         >
-                                            {currentStep.content}
+                                            {currentStepContent.content}
                                         </motion.div>
                                     </AnimatePresence>
                                 </div>
@@ -187,10 +195,10 @@ const SteppedFormModal: React.FC<SteppedFormModalProps> = ({
                                     <button
                                         type="button"
                                         onClick={handleNext}
-                                        disabled={currentStep.isValid === false}
+                                        disabled={currentStepContent.isValid === false}
                                         className={`
                         flex items-center justify-center rounded-full
-                        ${currentStep.isValid === false ? 'opacity-50 cursor-not-allowed' : ''}
+                        ${currentStepContent.isValid === false ? 'opacity-50 cursor-not-allowed' : ''}
                         ${currentStepIndex === steps.length - 1
                                                 ? 'bg-neutral-800 dark:bg-neutral-200 text-neutral-100 dark:text-neutral-800 px-6 py-3 text-sm font-medium'
                                                 : 'p-4 bg-neutral-50/80 dark:bg-neutral-900/80 backdrop-blur-md'

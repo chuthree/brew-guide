@@ -13,7 +13,7 @@ interface EquipmentSelectorProps {
 const EquipmentSelector: React.FC<EquipmentSelectorProps> = ({
   equipmentList,
   customEquipments,
-  selectedEquipment,
+  selectedEquipment: _selectedEquipment,
   onSelect
 }) => {
   return (
@@ -30,10 +30,7 @@ const EquipmentSelector: React.FC<EquipmentSelectorProps> = ({
               className="group relative text-neutral-500 dark:text-neutral-400"
               onClick={() => onSelect(equipment.id)}
             >
-              <div className={`group relative border-l ${selectedEquipment === equipment.id ? 'border-neutral-800 dark:border-white' : 'border-neutral-200 dark:border-neutral-800'} pl-6 cursor-pointer`}>
-                {selectedEquipment === equipment.id && (
-                  <div className="absolute -left-px top-0 h-full w-px bg-neutral-800 dark:bg-white"></div>
-                )}
+              <div className="group relative border-l border-neutral-200 dark:border-neutral-800 pl-6 cursor-pointer">
                 <div className="cursor-pointer">
                   <div className="flex items-baseline justify-between">
                     <div className="flex items-baseline gap-3 min-w-0 overflow-hidden">
@@ -59,10 +56,7 @@ const EquipmentSelector: React.FC<EquipmentSelectorProps> = ({
               className="group relative text-neutral-500 dark:text-neutral-400"
               onClick={() => onSelect(equipment.id)}
             >
-              <div className={`group relative border-l ${selectedEquipment === equipment.id ? 'border-neutral-800 dark:border-white' : 'border-neutral-200 dark:border-neutral-800'} pl-6 cursor-pointer`}>
-                {selectedEquipment === equipment.id && (
-                  <div className="absolute -left-px top-0 h-full w-px bg-neutral-800 dark:bg-white"></div>
-                )}
+              <div className="group relative border-l border-neutral-200 dark:border-neutral-800 pl-6 cursor-pointer">
                 <div className="cursor-pointer">
                   <div className="flex items-baseline justify-between">
                     <div className="flex items-baseline gap-3 min-w-0 overflow-hidden">

@@ -62,7 +62,7 @@ const getPhaseValue = (phase: string): number => {
 
 const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
   coffeeBeans,
-  selectedCoffeeBean,
+  selectedCoffeeBean: _selectedCoffeeBean,
   onSelect
 }) => {
   // 过滤出未用完的咖啡豆，并按赏味期排序
@@ -122,10 +122,7 @@ const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
             className="group relative text-neutral-500 dark:text-neutral-400"
             onClick={() => onSelect(null)}
           >
-            <div className={`group relative border-l ${selectedCoffeeBean === null ? 'border-neutral-800 dark:border-white' : 'border-neutral-200 dark:border-neutral-800'} pl-6 cursor-pointer`}>
-              {selectedCoffeeBean === null && (
-                <div className="absolute -left-px top-0 h-full w-px bg-neutral-800 dark:bg-white"></div>
-              )}
+            <div className="group relative border-l border-neutral-200 dark:border-neutral-800 pl-6 cursor-pointer">
               <div className="cursor-pointer">
                 <div className="flex items-baseline justify-between">
                   <div className="flex items-baseline gap-3 min-w-0 overflow-hidden">
@@ -190,10 +187,7 @@ const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
                   className="group relative text-neutral-500 dark:text-neutral-400"
                   onClick={() => onSelect(bean)}
                 >
-                  <div className={`group relative border-l ${selectedCoffeeBean?.id === bean.id ? 'border-neutral-800 dark:border-white' : 'border-neutral-200 dark:border-neutral-800'} pl-6 cursor-pointer`}>
-                    {selectedCoffeeBean?.id === bean.id && (
-                      <div className="absolute -left-px top-0 h-full w-px bg-neutral-800 dark:bg-white"></div>
-                    )}
+                  <div className="group relative border-l border-neutral-200 dark:border-neutral-800 pl-6 cursor-pointer">
                     <div className="cursor-pointer">
                       <div className="flex items-baseline justify-between">
                         <div className="flex items-baseline gap-3 min-w-0 overflow-hidden">

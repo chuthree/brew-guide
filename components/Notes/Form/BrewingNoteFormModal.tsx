@@ -37,6 +37,9 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
   const [selectedEquipment, setSelectedEquipment] = useState<string>(initialNote?.equipment || '')
   const [customEquipments, setCustomEquipments] = useState<CustomEquipment[]>([])
 
+  // 步骤控制
+  const [currentStep, setCurrentStep] = useState<number>(0)
+
   // 使用方法管理Hook
   const {
     methodType,
@@ -62,10 +65,16 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
   useEffect(() => {
     if (showForm) {
       CoffeeBeanManager.getAllBeans()
-        .then(beans => setCoffeeBeans(beans))
+        .then(beans => {
+          setCoffeeBeans(beans)
+          // 如果没有咖啡豆，自动跳过咖啡豆步骤
+          if (beans.length === 0 && currentStep === 0) {
+            setCurrentStep(1)
+          }
+        })
         .catch(error => console.error('加载咖啡豆失败:', error))
     }
-  }, [showForm])
+  }, [showForm, currentStep])
 
   // 加载自定义器具列表
   useEffect(() => {
@@ -80,6 +89,17 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
   const handleEquipmentSelect = (equipmentId: string) => {
     if (equipmentId === selectedEquipment) return
     setSelectedEquipment(equipmentId)
+    // 选择器具后自动进入下一步
+    setCurrentStep(2)
+  }
+
+  // 处理咖啡豆选择
+  const handleCoffeeBeanSelect = (bean: CoffeeBean | null) => {
+    setSelectedCoffeeBean(bean)
+    // 选择咖啡豆后自动进入下一步（只有当选择了咖啡豆才跳转）
+    if (bean) {
+      setCurrentStep(1)
+    }
   }
 
   // 处理方法参数变化
@@ -225,7 +245,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
         <CoffeeBeanSelector
           coffeeBeans={coffeeBeans}
           selectedCoffeeBean={selectedCoffeeBean}
-          onSelect={setSelectedCoffeeBean}
+          onSelect={handleCoffeeBeanSelect}
         />
       ),
       isValid: true // 咖啡豆选择为可选
@@ -283,8 +303,10 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
       onClose={handleClose}
       onComplete={handleStepComplete}
       steps={steps}
-      initialStep={skipToLastStep ? steps.length - 1 : 0}
+      initialStep={skipToLastStep ? steps.length - 1 : (coffeeBeans.length === 0 ? 1 : 0)}
       preserveState={false}
+      currentStep={currentStep}
+      setCurrentStep={setCurrentStep}
     />
   )
 }
