@@ -394,71 +394,8 @@ export function getExampleJson() {
       }
     ]
   },
-  "currentTaste": {
-    "acidity": 3,
-    "sweetness": 3,
-    "bitterness": 3,
-    "body": 3
-  },
-  "idealTaste": {
-    "acidity": 4,
-    "sweetness": 4,
-    "bitterness": 2,
-    "body": 4
-  },
-  "notes": "",
-  "optimizationGoal": "希望增加甜度和口感，减少苦味，保持适中的酸度"
+  "notes": ""
 }`;
-}
-
-/**
- * 清理JSON数据，移除不必要的字段
- */
-export function cleanJsonForOptimization(jsonString: string): string {
-	try {
-		const data = JSON.parse(jsonString);
-
-		// 定义Stage类型，用于类型安全
-		interface CleanStage {
-			time?: number;
-			pourTime?: number;
-			label?: string;
-			water?: string;
-			detail?: string;
-			pourType?: string;
-			valveStatus?: string;
-		}
-
-		// 保留必要的字段
-		const cleanedData = {
-			equipment: data.equipment,
-			method: data.method,
-			params: {
-				coffee: data.params?.coffee,
-				water: data.params?.water,
-				ratio: data.params?.ratio,
-				grindSize: data.params?.grindSize,
-				temp: data.params?.temp,
-				stages: data.params?.stages?.map((stage: CleanStage) => ({
-					time: stage.time,
-					pourTime: stage.pourTime,
-					label: stage.label,
-					water: stage.water,
-					detail: stage.detail,
-					pourType: stage.pourType,
-					valveStatus: stage.valveStatus,
-				})),
-			},
-			currentTaste: data.currentTaste,
-			idealTaste: data.idealTaste,
-			notes: data.notes,
-			optimizationGoal: data.optimizationGoal,
-		};
-
-		return JSON.stringify(cleanedData, null, 2);
-	} catch (_err) {
-		return jsonString;
-	}
 }
 
 /**
