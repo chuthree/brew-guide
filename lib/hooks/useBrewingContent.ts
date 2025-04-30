@@ -112,26 +112,13 @@ export function useBrewingContent({
 				// 首先检查传入的customMethods中是否有当前器具的方法
 				const methodsFromProps = customMethods[selectedEquipment] || [];
 				
-				console.log('[useBrewingContent] 从props获取的自定义方法:', {
-					equipmentId: selectedEquipment,
-					methodCount: methodsFromProps.length,
-					methodsIds: methodsFromProps.map(m => m.id)
-				});
-				
 				if (methodsFromProps.length > 0) {
 					// 如果传入的customMethods中有数据，优先使用它
-					console.log('[useBrewingContent] 使用从props获取的自定义方法');
 					setCurrentEquipmentCustomMethods(methodsFromProps);
 				} else {
 					// 如果传入的customMethods中没有数据，才从存储中加载
 					try {
-						console.log('[useBrewingContent] 从存储加载自定义方法:', selectedEquipment);
 						const methods = await loadCustomMethodsForEquipment(selectedEquipment);
-						console.log('[useBrewingContent] 已加载当前设备的自定义方法:', {
-							equipmentId: selectedEquipment,
-							methodCount: methods.length,
-							methodsIds: methods.map(m => m.id)
-						});
 						setCurrentEquipmentCustomMethods(methods);
 					} catch (error) {
 						console.error('[useBrewingContent] 加载自定义方法失败:', error);
@@ -147,12 +134,6 @@ export function useBrewingContent({
 	// 更新方案列表内容
 	useEffect(() => {
 		if (selectedEquipment) {
-			console.log('[useBrewingContent] 更新方案列表内容:', {
-				selectedEquipment,
-				methodType,
-				currentEquipmentCustomMethodsCount: currentEquipmentCustomMethods.length
-			});
-			
 			setContent((prev) => {
 				// 首先，尝试通过ID查找自定义器具（优先使用ID匹配）
 				const customEquipmentById = customEquipments?.find(e => e.id === selectedEquipment);
@@ -171,15 +152,6 @@ export function useBrewingContent({
 				// 检查是否是自定义预设器具（animationType === 'custom'）
 				const isCustomPresetEquipment = customEquipment?.animationType === 'custom';
 				
-				// 为调试目的记录信息
-				console.log('选中的器具:', selectedEquipment);
-				console.log('通过ID找到的自定义器具:', customEquipmentById?.name);
-				console.log('通过名称找到的自定义器具:', customEquipmentByName?.name);
-				console.log('最终使用的自定义器具:', customEquipment?.name);
-				console.log('是否是自定义器具:', isCustomEquipment);
-				console.log('是否是自定义预设器具:', isCustomPresetEquipment);
-				console.log('当前方案类型:', methodType);
-				
 				// 获取对应的方案列表
 				let methodsForEquipment: Method[] = [];
 				
@@ -187,23 +159,19 @@ export function useBrewingContent({
 				if (isCustomPresetEquipment) {
 					// 强制使用当前设备的自定义方法
 					methodsForEquipment = currentEquipmentCustomMethods;
-					console.log('自定义预设器具: 只显示自定义方案, 方案数量:', methodsForEquipment.length);
 				}
 				// 其他情况按原有逻辑处理
 				else if (methodType === 'custom') {
 					// 使用当前设备的自定义方法
 					methodsForEquipment = currentEquipmentCustomMethods;
-					console.log('当前设备的自定义方案:', methodsForEquipment);
 				} else {
 					// 如果是自定义器具，根据其 animationType 使用对应的通用方案
 					if (isCustomEquipment) {
 						// 尝试通过 ID 或名称查找自定义器具
 						if (customEquipment) {
-							console.log('找到的自定义器具:', customEquipment);
 							// 根据 animationType 获取对应的通用方案 ID
 							let baseEquipmentId = '';
 							const animationType = customEquipment.animationType.toLowerCase();
-							console.log('动画类型:', animationType);
 							
 							switch (animationType) {
 								case 'v60':
@@ -219,14 +187,10 @@ export function useBrewingContent({
 									baseEquipmentId = 'CleverDripper';
 									break;
 								default:
-									console.warn('未知的动画类型:', animationType);
 									baseEquipmentId = 'V60'; // 默认使用 V60 的方案
 							}
-							console.log('基础器具ID:', baseEquipmentId);
-							console.log('可用的通用方案:', Object.keys(commonMethods));
 							// 使用基础器具的通用方案
 							methodsForEquipment = commonMethods[baseEquipmentId] || [];
-							console.log('获取到的通用方案:', methodsForEquipment);
 						}
 					} else {
 						// 对于预定义器具，直接使用其通用方案
@@ -250,12 +214,9 @@ export function useBrewingContent({
 							
 							// 如果识别出基础器具类型，使用对应的通用方法
 							if (baseEquipmentId && commonMethods[baseEquipmentId]) {
-								console.log(`使用${baseEquipmentId}的通用方法列表`);
 								methodsForEquipment = commonMethods[baseEquipmentId] || [];
 							}
 						}
-						
-						console.log('预定义器具的通用方案:', methodsForEquipment);
 					}
 				}
 
@@ -303,8 +264,6 @@ export function useBrewingContent({
 								note: "",
 							};
 					  });
-					  
-				console.log('[useBrewingContent] 更新方案列表步骤:', steps.length);
 				
 				const result = {
 					...prev,

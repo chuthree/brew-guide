@@ -263,7 +263,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
             )}
 
             {/* 库存视图的品种标签筛选 - 仅在库存视图中显示 */}
-            {viewMode === VIEW_OPTIONS.INVENTORY && (
+            {(viewMode === VIEW_OPTIONS.INVENTORY && totalBeans && totalBeans > 0) ? (
                 <div className="relative">
                     <div className="border-b border-neutral-200 dark:border-neutral-800 px-6 relative">
                         {!isSearching ? (
@@ -361,7 +361,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                         )}
                     </div>
                 </div>
-            )}
+            ) : null}
         </div>
     )
 }
