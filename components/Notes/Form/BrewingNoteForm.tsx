@@ -78,41 +78,6 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     // 添加表单ref
     const formRef = useRef<HTMLFormElement>(null)
 
-    // 监听输入框聚焦，确保滚动到可见区域
-    useEffect(() => {
-        if (!isOpen) return
-        
-        const form = formRef.current
-        if (!form) return
-        
-        const handleInputFocus = (e: Event) => {
-            const target = e.target as HTMLElement
-            
-            // 确定是否为输入元素
-            if (
-                target && 
-                (target.tagName === 'INPUT' || 
-                 target.tagName === 'TEXTAREA' || 
-                 target.tagName === 'SELECT')
-            ) {
-                // 为所有平台添加自动滚动
-                setTimeout(() => {
-                    target.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'center'
-                    })
-                }, 300)
-            }
-        }
-        
-        // 监听表单内的聚焦事件
-        form.addEventListener('focusin', handleInputFocus)
-        
-        return () => {
-            form.removeEventListener('focusin', handleInputFocus)
-        }
-    }, [isOpen])
-
     // Update form data when initialData changes
     useEffect(() => {
         if (initialData) {
@@ -280,7 +245,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     if (!isOpen) return null
 
     // 动态设置容器 padding，在冲煮页面时不需要额外 padding
-    const containerClassName = `relative flex h-full flex-col space-y-8 ${!inBrewPage ? 'p-6' : ''}`;
+    const containerClassName = `relative flex h-full flex-col space-y-4 ${!inBrewPage ? 'p-6 pt-4' : ''} overflow-auto`;
 
     return (
         <form 
@@ -290,7 +255,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
             className={containerClassName}
         >
             {/* Header with timestamp */}
-            <div className="flex items-baseline justify-between">
+            <div className="flex items-baseline justify-between bg-neutral-50 dark:bg-neutral-900 py-2 z-10">
                 <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
                     {`${initialData?.id ? '编辑记录' : '新建记录'} · ${new Date().toLocaleString('zh-CN', {
                         month: 'numeric',
@@ -321,7 +286,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
             </div>
 
             {/* Form content */}
-            <div className="flex-1 space-y-8 overflow-auto pb-8">
+            <div className="flex-1 space-y-6 pb-6">
                 {/* 咖啡豆信息 */}
                 <div className="space-y-4">
                     <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
