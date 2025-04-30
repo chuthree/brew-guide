@@ -837,6 +837,7 @@ export const sponsorsList = [
 	"Wang王",
 	"Winsun月餅",
 	"ZhAOZzzzz",
+	"Liquor",
 	"五彩野牛",
 	"云峰",
 	"凡千百",
