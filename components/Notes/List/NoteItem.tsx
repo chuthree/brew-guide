@@ -67,7 +67,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
                                     if (onToggleSelect) onToggleSelect(note.id);
                                 }}
                                 onClick={(e) => e.stopPropagation()}
-                                className="h-[16.5] w-4 rounded border-neutral-300 dark:border-neutral-700"
+                                className="appearance-none h-4 w-4 rounded border border-neutral-300 dark:border-neutral-700 checked:bg-neutral-800 dark:checked:bg-neutral-200 relative checked:after:absolute checked:after:left-1/2 checked:after:top-1/2 checked:after:-translate-x-1/2 checked:after:-translate-y-1/2 checked:after:content-['✓'] checked:after:text-white dark:checked:after:text-black text-xs"
                             />
                         ) : (
                             <ActionMenu
@@ -205,7 +205,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
 
                 {/* 备注信息 */}
                 {hasNotes && (
-                    <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
+                    <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400 whitespace-pre-line leading-tight">
                         {note.notes}
                     </div>
                 )}
