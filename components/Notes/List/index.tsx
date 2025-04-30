@@ -11,7 +11,7 @@ import Toast from '../ui/Toast'
 import { BrewingNoteForm } from '@/components/Notes'
 import { BrewingNoteData } from '@/app/types'
 import { getEquipmentName, normalizeEquipmentId } from '../utils'
-import { globalCache, getSelectedEquipmentPreference, getSelectedBeanPreference, getFilterModePreference, getSortOptionPreference, saveSelectedEquipmentPreference, saveSelectedBeanPreference, saveFilterModePreference, saveSortOptionPreference, calculateTotalCoffeeConsumption, formatConsumption } from './globalCache'
+import { globalCache, getSelectedEquipmentPreference, getSelectedBeanPreference, getFilterModePreference, getSortOptionPreference, saveSelectedEquipmentPreference, saveSelectedBeanPreference, saveFilterModePreference, saveSortOptionPreference, calculateTotalCoffeeConsumption, formatConsumption, initializeGlobalCache } from './globalCache'
 import ListView from './ListView'
 import { SortOption } from '../types'
 import { exportSelectedNotes } from '../Share/NotesExporter'
@@ -47,7 +47,13 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onClose: _onClo
     })
     
     // 计算总咖啡消耗量
-    const totalCoffeeConsumption = useRef(0)
+    const totalCoffeeConsumption = useRef(globalCache.totalConsumption || 0)
+    const [forceUpdate, setForceUpdate] = useState(0)
+
+    // 强制组件重新渲染的函数
+    const triggerRerender = useCallback(() => {
+        setForceUpdate(prev => prev + 1);
+    }, []);
     
     // 加载可用设备和咖啡豆列表
     const loadEquipmentsAndBeans = useCallback(async () => {
@@ -110,11 +116,29 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onClose: _onClo
             globalCache.equipmentNames = namesMap;
             globalCache.availableEquipments = uniqueEquipmentIds;
             globalCache.availableBeans = beanNames;
+            globalCache.notes = parsedNotes; // 确保全局缓存中有最新的笔记数据
             
             // 计算总消耗量并更新全局缓存
             const totalConsumption = calculateTotalCoffeeConsumption(parsedNotes);
             globalCache.totalConsumption = totalConsumption; // 更新全局缓存中的消耗量
             totalCoffeeConsumption.current = totalConsumption;
+            
+            // 根据当前筛选条件更新过滤后的笔记列表
+            let filteredNotes = parsedNotes;
+            if (filterMode === 'equipment' && selectedEquipment) {
+                filteredNotes = parsedNotes.filter(note => note.equipment === selectedEquipment);
+            } else if (filterMode === 'bean' && selectedBean) {
+                filteredNotes = parsedNotes.filter(note => 
+                    note.coffeeBeanInfo?.name === selectedBean
+                );
+            }
+            globalCache.filteredNotes = filteredNotes;
+            
+            // 确保globalCache.initialized设置为true
+            globalCache.initialized = true;
+            
+            // 触发重新渲染以更新显示
+            triggerRerender();
             
             // 触发brewingNotesUpdated事件，更新ListView组件
             if (window.refreshBrewingNotes) {
@@ -123,23 +147,32 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onClose: _onClo
         } catch (error) {
             console.error("加载设备和咖啡豆数据失败:", error);
         }
-    }, [isOpen]);
+    }, [isOpen, filterMode, selectedEquipment, selectedBean, triggerRerender]);
     
-    // 初始化
+    // 初始化 - 确保在组件挂载时正确初始化数据
     useEffect(() => {
         if (isOpen) {
-            // 使用setTimeout减轻加载对UI渲染的影响
-            setTimeout(() => {
+            // 确保全局缓存已初始化
+            (async () => {
+                if (!globalCache.initialized) {
+                    await initializeGlobalCache();
+                    
+                    // 从全局缓存更新状态
+                    setSortOption(globalCache.sortOption);
+                    setFilterMode(globalCache.filterMode);
+                    setSelectedEquipment(globalCache.selectedEquipment);
+                    setSelectedBean(globalCache.selectedBean);
+                    totalCoffeeConsumption.current = globalCache.totalConsumption;
+                    
+                    // 触发重新渲染
+                    triggerRerender();
+                }
+                
+                // 无论全局缓存是否已初始化，都重新加载数据以确保最新
                 loadEquipmentsAndBeans();
-            }, 0);
-            
-            // 从localStorage读取首选项
-            setSortOption(getSortOptionPreference());
-            setFilterMode(getFilterModePreference());
-            setSelectedEquipment(getSelectedEquipmentPreference());
-            setSelectedBean(getSelectedBeanPreference());
+            })();
         }
-    }, [isOpen, loadEquipmentsAndBeans]);
+    }, [isOpen, loadEquipmentsAndBeans, triggerRerender]);
     
     // 监听存储变化
     useEffect(() => {

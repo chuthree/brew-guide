@@ -48,6 +48,7 @@ const NotesListView: React.FC<NotesListViewProps> = ({
             const shouldShowLoading = !globalCache.initialized || globalCache.notes.length === 0;
             if (shouldShowLoading) {
                 isLoadingRef.current = true;
+                setIsFirstLoad(true);
             }
             
             // 从存储中加载数据
@@ -67,13 +68,13 @@ const NotesListView: React.FC<NotesListViewProps> = ({
                 );
             }
             
+            // 更新全局缓存
+            globalCache.notes = sortedNotes;
+            globalCache.filteredNotes = filteredNotes;
+            globalCache.initialized = true;
+                
             // 使用 useTransition 包裹状态更新，避免界面闪烁
             startTransition(() => {
-                // 更新全局缓存
-                globalCache.notes = sortedNotes;
-                globalCache.filteredNotes = filteredNotes;
-                globalCache.initialized = true;
-                
                 // 更新本地状态
                 setNotes(filteredNotes);
                 setIsFirstLoad(false);
@@ -88,11 +89,21 @@ const NotesListView: React.FC<NotesListViewProps> = ({
 
     // 当过滤条件变化时重新加载数据
     useEffect(() => {
-        // 使用setTimeout让UI可以先渲染出来
-        setTimeout(() => {
-            loadNotes();
-        }, 0);
+        // 立即加载数据，不使用setTimeout延迟
+        loadNotes();
     }, [loadNotes, sortOption, selectedEquipment, selectedBean, filterMode]);
+
+    // 确保在组件挂载时立即初始化数据
+    useEffect(() => {
+        // 如果全局缓存中已有数据，立即使用
+        if (globalCache.filteredNotes.length > 0) {
+            setNotes(globalCache.filteredNotes);
+            setIsFirstLoad(false);
+        } else {
+            // 否则加载新数据
+            loadNotes();
+        }
+    }, []);
 
     // 监听笔记更新事件
     useEffect(() => {

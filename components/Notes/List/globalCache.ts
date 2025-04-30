@@ -2,6 +2,7 @@ import { BrewingNote } from '@/lib/config';
 import { SortOption, SORT_OPTIONS } from '../types';
 import { getStringState, saveStringState } from '@/lib/statePersistence';
 import { calculateTotalCoffeeConsumption as calculateConsumption, formatConsumption as formatConsumptionUtil } from '../utils';
+import { Storage } from '@/lib/storage';
 
 // 模块名称
 const MODULE_NAME = 'brewing-notes';
@@ -20,6 +21,7 @@ export const globalCache: {
     availableBeans: string[];
     initialized: boolean;
     totalConsumption: number;
+    isLoading: boolean;
 } = {
     notes: [],
     filteredNotes: [],
@@ -32,7 +34,8 @@ export const globalCache: {
     availableEquipments: [],
     availableBeans: [],
     initialized: false,
-    totalConsumption: 0
+    totalConsumption: 0,
+    isLoading: false
 };
 
 // 从localStorage读取选中的设备ID
@@ -78,6 +81,50 @@ export const getSortOptionPreference = (): SortOption => {
 export const saveSortOptionPreference = (value: SortOption): void => {
     saveStringState(MODULE_NAME, 'sortOption', value);
 };
+
+// 初始化全局缓存数据
+export const initializeGlobalCache = async (): Promise<void> => {
+    if (globalCache.initialized || globalCache.isLoading) return;
+    
+    try {
+        globalCache.isLoading = true;
+        
+        // 初始化首选项
+        globalCache.selectedEquipment = getSelectedEquipmentPreference();
+        globalCache.selectedBean = getSelectedBeanPreference();
+        globalCache.filterMode = getFilterModePreference();
+        globalCache.sortOption = getSortOptionPreference();
+        
+        // 加载笔记数据
+        const savedNotes = await Storage.get('brewingNotes');
+        const parsedNotes: BrewingNote[] = savedNotes ? JSON.parse(savedNotes) : [];
+        globalCache.notes = parsedNotes;
+        
+        // 计算总消耗量
+        const totalConsumption = calculateConsumption(parsedNotes);
+        globalCache.totalConsumption = totalConsumption;
+        
+        // 应用过滤器设置过滤后的笔记
+        let filteredNotes = parsedNotes;
+        if (globalCache.filterMode === 'equipment' && globalCache.selectedEquipment) {
+            filteredNotes = parsedNotes.filter(note => note.equipment === globalCache.selectedEquipment);
+        } else if (globalCache.filterMode === 'bean' && globalCache.selectedBean) {
+            filteredNotes = parsedNotes.filter(note => 
+                note.coffeeBeanInfo?.name === globalCache.selectedBean
+            );
+        }
+        globalCache.filteredNotes = filteredNotes;
+        
+        globalCache.initialized = true;
+    } catch (error) {
+        console.error("初始化全局缓存失败:", error);
+    } finally {
+        globalCache.isLoading = false;
+    }
+};
+
+// 立即尝试初始化全局缓存
+initializeGlobalCache();
 
 // 初始化全局缓存的状态
 globalCache.selectedEquipment = getSelectedEquipmentPreference();
