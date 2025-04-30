@@ -38,6 +38,7 @@ import {
 import { useBeanOperations } from './hooks/useBeanOperations'
 import ViewSwitcher from './components/ViewSwitcher'
 import InventoryView from './components/InventoryView'
+import StatsView from './components/StatsView'
 
 // 重命名导入组件以避免混淆
 const CoffeeBeanRanking = _CoffeeBeanRanking;
@@ -881,6 +882,15 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                             isSearching={isSearching}
                             searchQuery={searchQuery}
                         />
+                    )}
+                    {/* 添加统计视图 */}
+                    {viewMode === VIEW_OPTIONS.STATS && (
+                        <div className="w-full h-full overflow-y-auto scroll-with-bottom-bar">
+                            <StatsView 
+                                beans={beans}
+                                showEmptyBeans={showEmptyBeans}
+                            />
+                        </div>
                     )}
                     {/* 添加榜单和博主榜单视图 */}
                     {(viewMode === VIEW_OPTIONS.RANKING || viewMode === VIEW_OPTIONS.BLOGGER) && (

@@ -241,7 +241,7 @@ export const sortBeans = (beansToSort: ExtendedCoffeeBean[], option: SortOption)
 };
 
 // 转换仓库排序选项到榜单排序选项
-export const convertToRankingSortOption = (option: SortOption, viewMode: 'inventory' | 'ranking' | 'blogger'): RankingSortOption => {
+export const convertToRankingSortOption = (option: SortOption, viewMode: 'inventory' | 'ranking' | 'blogger' | 'stats'): RankingSortOption => {
     if (viewMode === 'blogger') {
         // 博主榜单视图的特殊处理
         switch (option) {
@@ -518,7 +518,7 @@ const getSortOrdersForType = (type: SortType): SortOrder[] => {
 };
 
 interface SortSelectorProps {
-    viewMode: 'inventory' | 'ranking' | 'blogger';
+    viewMode: 'inventory' | 'ranking' | 'blogger' | 'stats';
     sortOption: SortOption;
     onSortChange: (value: SortOption) => void;
     showSelector?: boolean;
@@ -550,7 +550,7 @@ export const SortSelector: React.FC<SortSelectorProps> = ({
     };
 
     // 根据视图模式获取可用的排序方式
-    const getAvailableSortTypes = (viewMode: 'inventory' | 'ranking' | 'blogger') => {
+    const getAvailableSortTypes = (viewMode: 'inventory' | 'ranking' | 'blogger' | 'stats') => {
         switch (viewMode) {
             case 'inventory':
                 return [
@@ -564,6 +564,8 @@ export const SortSelector: React.FC<SortSelectorProps> = ({
                 return [SORT_TYPES.RATING, SORT_TYPES.NAME];
             case 'blogger':
                 return [SORT_TYPES.ORIGINAL, SORT_TYPES.RATING, SORT_TYPES.PRICE, SORT_TYPES.NAME];
+            case 'stats':
+                return [SORT_TYPES.REMAINING_DAYS, SORT_TYPES.REMAINING_AMOUNT, SORT_TYPES.ROAST_DATE, SORT_TYPES.PRICE];
             default:
                 return [SORT_TYPES.REMAINING_DAYS, SORT_TYPES.NAME];
         }

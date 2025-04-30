@@ -18,6 +18,7 @@ export const VIEW_OPTIONS = {
     INVENTORY: 'inventory',
     RANKING: 'ranking',
     BLOGGER: 'blogger', // 新增博主榜单视图
+    STATS: 'stats', // 新增统计视图
 } as const;
 
 export type ViewOption = typeof VIEW_OPTIONS[keyof typeof VIEW_OPTIONS];
@@ -27,6 +28,7 @@ export const VIEW_LABELS: Record<ViewOption, string> = {
     [VIEW_OPTIONS.INVENTORY]: '咖啡豆仓库',
     [VIEW_OPTIONS.RANKING]: '个人榜单',
     [VIEW_OPTIONS.BLOGGER]: '博主榜单',
+    [VIEW_OPTIONS.STATS]: '统计视图',
 };
 
 export interface CoffeeBeansProps {

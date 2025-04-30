@@ -121,7 +121,9 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                             ? `${totalBeans ? `${beansCount}/${totalBeans}` : beansCount} 款咖啡豆${totalWeight ? `，共 ${totalWeight}` : ''}`
                             : viewMode === VIEW_OPTIONS.BLOGGER
                                 ? `${beansCount} 款 (${bloggerYear}) 咖啡豆`
-                                : `${beansCount} 款已评分咖啡豆`
+                                : viewMode === VIEW_OPTIONS.STATS
+                                    ? `${totalBeans || beansCount} 款咖啡豆统计数据`
+                                    : `${beansCount} 款已评分咖啡豆`
                         }
                     </div>
                 </div>
@@ -174,7 +176,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                     </Select>
 
                     {/* 排序组件 */}
-                    {beansCount > 0 && (
+                    {beansCount > 0 && viewMode !== VIEW_OPTIONS.STATS && (
                         <SortSelector
                             viewMode={viewMode}
                             sortOption={sortOption}
