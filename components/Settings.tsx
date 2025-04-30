@@ -372,7 +372,7 @@ const Settings: React.FC<SettingsProps> = ({
                         {/* 语言选择 */}
                         <div className="flex items-center justify-between">
                             <div className="text-sm text-neutral-800 dark:text-neutral-200">
-                                语言
+                                语言(Beta)
                             </div>
                             <div className="text-sm text-neutral-400 dark:text-neutral-500">
                                 <div className="inline-flex rounded-lg bg-neutral-100 p-1 dark:bg-neutral-800">
@@ -741,7 +741,7 @@ const Settings: React.FC<SettingsProps> = ({
                                 进度条高度
                             </div>
                             <div className="text-sm text-neutral-400 dark:text-neutral-500">
-                                {settings.layoutSettings?.progressBarHeight || 4}px
+                                {settings.layoutSettings?.progressBarHeight || 4}px (默认 4px)
                             </div>
                         </div>
                         <div className="px-1 mb-3">
@@ -762,18 +762,6 @@ const Settings: React.FC<SettingsProps> = ({
                             />
                             <div className="flex justify-between mt-1 text-xs text-neutral-500">
                                 <span>细</span>
-                                <span 
-                                    className={`px-2 py-0.5 rounded ${(settings.layoutSettings?.progressBarHeight || 4) === 4 ? 'bg-neutral-800 text-neutral-100 dark:bg-neutral-200 dark:text-neutral-900' : ''}`}
-                                    onClick={() => {
-                                        const newLayoutSettings = {
-                                            ...settings.layoutSettings,
-                                            progressBarHeight: 4
-                                        };
-                                        handleChange('layoutSettings', newLayoutSettings);
-                                    }}
-                                >
-                                    标准
-                                </span>
                                 <span>粗</span>
                             </div>
                         </div>
