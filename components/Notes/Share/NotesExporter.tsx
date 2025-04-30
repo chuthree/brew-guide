@@ -44,7 +44,6 @@ export async function exportSelectedNotes({
     
     // 设置样式
     tempContainer.style.backgroundColor = backgroundColor;
-    tempContainer.style.padding = '12px 12px';
     tempContainer.style.maxWidth = '100%';
     tempContainer.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
     
