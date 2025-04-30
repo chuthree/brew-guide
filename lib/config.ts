@@ -857,4 +857,5 @@ export const sponsorsList = [
 	"火羽飘飘",
 	"Atom Heart",
 	"梁炜东",
+	"Mr.Wrong",
 ];
