@@ -827,3 +827,29 @@ export function createEditableMethodFromCommon(method: Method, namePrefix: strin
 		timestamp: Date.now()
 	};
 }
+
+// 赞助者列表
+export const sponsorsList = [
+	"Asura",
+	"dio 哒哒哒的",
+	"H.M.S Cheshire",
+	"Peter",
+	"Wang王",
+	"Winsun月餅",
+	"ZhAOZzzzz",
+	"五彩野牛",
+	"云峰",
+	"凡千百",
+	"叫我彩笔就好了",
+	"大只赖克宝",
+	"忙",
+	"橘橘橘です",
+	"空青",
+	"胡子哥",
+	"莫",
+	"陈杰",
+	"qwq",
+	"洛",
+	"💩",
+	"🥠",
+];
