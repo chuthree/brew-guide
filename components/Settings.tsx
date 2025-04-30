@@ -595,12 +595,6 @@ const Settings: React.FC<SettingsProps> = ({
                                         </div>
                                     )}
                                     
-                                    {settings.grindType === 'phanci_pro' && (
-                                        <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-2">
-                                            手冲中细常用建议：8-9格
-                                        </p>
-                                    )}
-                                    
                                     {/* 数据来源和用户调研信息 */}
                                     <div className="mt-3 pt-3 border-t border-neutral-200 dark:border-neutral-700">
                                         <p className="text-xs text-neutral-500 dark:text-neutral-400">
