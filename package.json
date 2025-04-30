@@ -15,6 +15,7 @@
 	},
 	"dependencies": {
 		"@capacitor-community/keep-awake": "^7.0.0",
+		"@capacitor-community/media": "^8.0.1",
 		"@capacitor/android": "^7.1.0",
 		"@capacitor/camera": "^7.0.0",
 		"@capacitor/cli": "^7.1.0",
