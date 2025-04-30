@@ -16,6 +16,9 @@ interface NotesListViewProps {
     filterMode: 'equipment' | 'bean';
     onNoteClick: (note: BrewingNote) => void;
     onDeleteNote: (noteId: string) => Promise<void>;
+    isShareMode?: boolean;
+    selectedNotes?: string[];
+    onToggleSelect?: (noteId: string, enterShareMode?: boolean) => void;
 }
 
 const NotesListView: React.FC<NotesListViewProps> = ({
@@ -24,7 +27,10 @@ const NotesListView: React.FC<NotesListViewProps> = ({
     selectedBean,
     filterMode,
     onNoteClick,
-    onDeleteNote
+    onDeleteNote,
+    isShareMode = false,
+    selectedNotes = [],
+    onToggleSelect
 }) => {
     const [_isPending, startTransition] = useTransition()
     const [notes, setNotes] = useState<BrewingNote[]>(globalCache.filteredNotes)
@@ -110,6 +116,13 @@ const NotesListView: React.FC<NotesListViewProps> = ({
         };
     }, [loadNotes]);
 
+    // 处理笔记选择
+    const handleToggleSelect = useCallback((noteId: string, enterShareMode?: boolean) => {
+        if (onToggleSelect) {
+            onToggleSelect(noteId, enterShareMode);
+        }
+    }, [onToggleSelect]);
+
     if (isFirstLoad) {
         return (
             <div className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
@@ -140,6 +153,9 @@ const NotesListView: React.FC<NotesListViewProps> = ({
                     onEdit={onNoteClick}
                     onDelete={onDeleteNote}
                     unitPriceCache={unitPriceCache}
+                    isShareMode={isShareMode}
+                    isSelected={selectedNotes.includes(note.id)}
+                    onToggleSelect={handleToggleSelect}
                 />
             ))}
         </div>

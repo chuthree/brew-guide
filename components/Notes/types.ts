@@ -40,6 +40,9 @@ export interface NoteItemProps {
     onEdit: (note: BrewingNote) => void
     onDelete: (noteId: string) => void
     unitPriceCache: Record<string, number>
+    isShareMode?: boolean
+    isSelected?: boolean
+    onToggleSelect?: (noteId: string, enterShareMode?: boolean) => void
 }
 
 // 排序选择器属性
@@ -64,6 +67,13 @@ export interface FilterTabsProps {
 // 添加笔记按钮属性
 export interface AddNoteButtonProps {
     onAddNote: () => void
+}
+
+// 分享笔记按钮属性
+export interface ShareButtonsProps {
+    selectedNotes: BrewingNote[]
+    onCancel: () => void
+    onSave: () => void
 }
 
 // 消息提示组件属性

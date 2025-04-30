@@ -13,8 +13,8 @@ import { BrewingNoteData } from '@/app/types'
 import { getEquipmentName, normalizeEquipmentId } from '../utils'
 import { globalCache, getSelectedEquipmentPreference, getSelectedBeanPreference, getFilterModePreference, getSortOptionPreference, saveSelectedEquipmentPreference, saveSelectedBeanPreference, saveFilterModePreference, saveSortOptionPreference, calculateTotalCoffeeConsumption, formatConsumption } from './globalCache'
 import ListView from './ListView'
-// 导入排序选项类型
 import { SortOption } from '../types'
+import { exportSelectedNotes } from '../Share/NotesExporter'
 
 // 为Window对象声明类型扩展
 declare global {
@@ -30,6 +30,14 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onClose: _onClo
     const [selectedEquipment, setSelectedEquipment] = useState<string | null>(globalCache.selectedEquipment)
     const [selectedBean, setSelectedBean] = useState<string | null>(globalCache.selectedBean)
     const [editingNote, setEditingNote] = useState<BrewingNoteData | null>(null)
+    
+    // 分享模式状态
+    const [isShareMode, setIsShareMode] = useState(false)
+    const [selectedNotes, setSelectedNotes] = useState<string[]>([])
+    const [isSaving, setIsSaving] = useState(false)
+    
+    // 预览容器引用
+    const notesContainerRef = useRef<HTMLDivElement>(null)
     
     // Toast消息状态
     const [toast, setToast] = useState({
@@ -304,6 +312,56 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onClose: _onClo
         globalCache.selectedBean = bean;
     };
     
+    // 处理笔记选择/取消选择
+    const handleToggleSelect = (noteId: string, enterShareMode = false) => {
+        // 如果需要进入分享模式
+        if (enterShareMode && !isShareMode) {
+            setIsShareMode(true);
+            setSelectedNotes([noteId]);
+            return;
+        }
+        
+        // 在已有选择中切换选中状态
+        setSelectedNotes(prev => {
+            if (prev.includes(noteId)) {
+                return prev.filter(id => id !== noteId);
+            } else {
+                return [...prev, noteId];
+            }
+        });
+    };
+    
+    // 取消分享模式
+    const handleCancelShare = () => {
+        setIsShareMode(false);
+        setSelectedNotes([]);
+    };
+    
+    // 保存并分享笔记截图
+    const handleSaveNotes = async () => {
+        if (selectedNotes.length === 0 || isSaving) return;
+        
+        setIsSaving(true);
+        
+        try {
+            // 调用导出组件函数
+            await exportSelectedNotes({
+                selectedNotes,
+                notesContainerRef,
+                onSuccess: (message) => showToast(message, 'success'),
+                onError: (message) => showToast(message, 'error'),
+                onComplete: () => {
+                    setIsSaving(false);
+                    handleCancelShare();
+                }
+            });
+        } catch (error) {
+            console.error('导出笔记失败:', error);
+            showToast('导出笔记失败', 'error');
+            setIsSaving(false);
+        }
+    };
+    
     if (!isOpen) return null;
     
     return (
@@ -343,7 +401,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onClose: _onClo
                         />
                     </div>
 
-                    <div className="w-full h-full overflow-y-auto scroll-with-bottom-bar">
+                    <div className="w-full h-full overflow-y-auto scroll-with-bottom-bar" ref={notesContainerRef}>
                         {/* 笔记列表视图 */}
                         <ListView
                             sortOption={sortOption}
@@ -352,11 +410,41 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onClose: _onClo
                             filterMode={filterMode}
                             onNoteClick={handleNoteClick}
                             onDeleteNote={handleDelete}
+                            isShareMode={isShareMode}
+                            selectedNotes={selectedNotes}
+                            onToggleSelect={handleToggleSelect}
                         />
                     </div>
 
-                    {/* 添加笔记按钮 */}
-                    <AddNoteButton onAddNote={handleAddNote} />
+                    {/* 底部操作栏 - 分享模式下显示保存和取消按钮 */}
+                    {isShareMode ? (
+                        <div className="bottom-action-bar">
+                            <div className="absolute bottom-full left-0 right-0 h-12 bg-gradient-to-t from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none"></div>
+                            <div className="relative max-w-[500px] mx-auto flex items-center bg-neutral-50 dark:bg-neutral-900 py-6">
+                                <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
+                                <button
+                                    onClick={handleCancelShare}
+                                    className="flex items-center justify-center text-[11px] text-neutral-800 dark:text-neutral-100 hover:opacity-80 mx-3"
+                                >
+                                    取消
+                                </button>
+                                <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
+                                <button
+                                    onClick={handleSaveNotes}
+                                    disabled={selectedNotes.length === 0 || isSaving}
+                                    className={`flex items-center justify-center text-[11px] text-neutral-800 dark:text-neutral-100 hover:opacity-80 mx-3 ${
+                                        (selectedNotes.length === 0 || isSaving) ? 'opacity-50 cursor-not-allowed' : ''
+                                    }`}
+                                >
+                                    {isSaving ? '生成中...' : `保存为图片 (${selectedNotes.length})`}
+                                </button>
+                                <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
+                            </div>
+                        </div>
+                        
+                    ) : (
+                        <AddNoteButton onAddNote={handleAddNote} />
+                    )}
                 </>
             )}
 

@@ -6,7 +6,16 @@ import { NoteItemProps } from '../types'
 import { formatDate, formatRating } from '../utils'
 
 // 优化笔记项组件以避免不必要的重渲染
-const NoteItem: React.FC<NoteItemProps> = ({ note, equipmentNames, onEdit, onDelete, unitPriceCache }) => {
+const NoteItem: React.FC<NoteItemProps> = ({ 
+    note, 
+    equipmentNames, 
+    onEdit, 
+    onDelete, 
+    unitPriceCache,
+    isShareMode = false,
+    isSelected = false,
+    onToggleSelect
+}) => {
     // 预先计算一些条件，避免在JSX中重复计算
     const hasTasteRatings = Object.values(note.taste).some(value => value > 0);
     const hasNotes = Boolean(note.notes);
@@ -14,8 +23,21 @@ const NoteItem: React.FC<NoteItemProps> = ({ note, equipmentNames, onEdit, onDel
     const beanName = note.coffeeBeanInfo?.name;
     const beanUnitPrice = beanName ? (unitPriceCache[beanName] || 0) : 0;
     
+    // 处理笔记点击事件
+    const handleNoteClick = () => {
+        if (isShareMode && onToggleSelect) {
+            onToggleSelect(note.id);
+        } else if (onEdit) {
+            onEdit(note);
+        }
+    };
+    
     return (
-        <div className="group space-y-3 px-6 py-3 border-b border-neutral-200 dark:border-neutral-800 last:border-b-0">
+        <div 
+            className={`group space-y-3 px-6 py-3 border-b border-neutral-200 dark:border-neutral-800 last:border-b-0 ${isShareMode ? 'cursor-pointer' : ''} note-item`}
+            onClick={isShareMode ? handleNoteClick : undefined}
+            data-note-id={note.id}
+        >
             <div className="flex flex-col space-y-3">
                 {/* 标题和操作菜单 */}
                 <div className="flex justify-between items-start">
@@ -36,23 +58,43 @@ const NoteItem: React.FC<NoteItemProps> = ({ note, equipmentNames, onEdit, onDel
                             )}
                         </div>
                     </div>
-                    <div className="flex-shrink-0 ml-1 relative">
-                        <ActionMenu
-                            items={[
-                                {
-                                    id: 'edit',
-                                    label: '编辑',
-                                    onClick: () => onEdit(note)
-                                },
-                                {
-                                    id: 'delete',
-                                    label: '删除',
-                                    onClick: () => onDelete(note.id),
-                                    color: 'danger'
-                                }
-                            ]}
-                        />
-                    </div>
+                        {isShareMode ? (
+                            <input 
+                                type="checkbox" 
+                                checked={isSelected}
+                                onChange={(e) => {
+                                    e.stopPropagation();
+                                    if (onToggleSelect) onToggleSelect(note.id);
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                                className="h-[16.5] w-4 rounded border-neutral-300 dark:border-neutral-700"
+                            />
+                        ) : (
+                            <ActionMenu
+                                items={[
+                                    {
+                                        id: 'edit',
+                                        label: '编辑',
+                                        onClick: () => onEdit(note)
+                                    },
+                                    {
+                                        id: 'delete',
+                                        label: '删除',
+                                        onClick: () => onDelete(note.id),
+                                        color: 'danger'
+                                    },
+                                    {
+                                        id: 'share',
+                                        label: '分享',
+                                        onClick: () => {
+                                            if (onToggleSelect) {
+                                                onToggleSelect(note.id, true);
+                                            }
+                                        }
+                                    }
+                                ]}
+                            />
+                        )}
                 </div>
 
                 {/* 方案信息 - 修改参数显示，添加单位克价 */}

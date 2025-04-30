@@ -194,7 +194,7 @@ const ActionMenu: React.FC<ActionMenuProps> = ({
   }
 
   return (
-    <div className={cn("relative", className)}>
+    <div className={cn("relative action-menu-container", className)}>
       {showAnimation ? (
         <AnimatePresence mode="wait">
           {open ? renderMenuContent() : null}
