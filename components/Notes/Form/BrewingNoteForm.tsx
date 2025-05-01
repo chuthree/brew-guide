@@ -89,6 +89,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                 if (roastLevel.endsWith('烘焙')) return roastLevel;
                 
                 // 否则添加"烘焙"后缀
+                if (roastLevel === '极浅') return '极浅烘焙';
                 if (roastLevel === '浅度') return '浅度烘焙';
                 if (roastLevel === '中浅') return '中浅烘焙';
                 if (roastLevel === '中度') return '中度烘焙';
@@ -96,6 +97,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                 if (roastLevel === '深度') return '深度烘焙';
                 
                 // 尝试匹配部分字符串
+                if (roastLevel.includes('极浅')) return '极浅烘焙';
                 if (roastLevel.includes('浅')) return '浅度烘焙';
                 if (roastLevel.includes('中浅')) return '中浅烘焙';
                 if (roastLevel.includes('中深')) return '中深烘焙';
@@ -325,6 +327,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                                     }
                                     className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 text-neutral-800 dark:text-neutral-300"
                                 >
+                                    <option value="极浅烘焙">极浅烘焙</option>
                                     <option value="浅度烘焙">浅度烘焙</option>
                                     <option value="中浅烘焙">中浅烘焙</option>
                                     <option value="中度烘焙">中度烘焙</option>

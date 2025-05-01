@@ -128,7 +128,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                             : viewMode === VIEW_OPTIONS.BLOGGER
                                 ? `${bloggerBeansCount || 0} 款 (${bloggerYear}) 咖啡豆`
                                 : viewMode === VIEW_OPTIONS.STATS
-                                    ? `${totalBeans || beansCount} 款咖啡豆统计数据`
+                                    ? ``
                                     : `${rankingBeansCount || 0} 款已评分咖啡豆`
                         }
                     </div>

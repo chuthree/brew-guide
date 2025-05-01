@@ -747,6 +747,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
           if (roastLevel.endsWith("烘焙")) return roastLevel;
 
           // 否则添加"烘焙"后缀
+          if (roastLevel === "极浅") return "极浅烘焙";
           if (roastLevel === "浅度") return "浅度烘焙";
           if (roastLevel === "中浅") return "中浅烘焙";
           if (roastLevel === "中度") return "中度烘焙";
@@ -754,6 +755,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
           if (roastLevel === "深度") return "深度烘焙";
 
           // 尝试匹配部分字符串
+          if (roastLevel.includes("极浅")) return "极浅烘焙";
           if (roastLevel.includes("浅")) return "浅度烘焙";
           if (roastLevel.includes("中浅")) return "中浅烘焙";
           if (roastLevel.includes("中深")) return "中深烘焙";

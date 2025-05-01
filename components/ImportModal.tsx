@@ -178,7 +178,7 @@ const ImportBeanModal: React.FC<ImportBeanModalProps> = ({
 - capacity: 总容量，纯数字
 - remaining: 剩余容量，纯数字（若无标注则与capacity相同）
 - price: 价格，纯数字
-- roastLevel: 烘焙度（浅度烘焙/中浅烘焙/中度烘焙/中深烘焙/深度烘焙）
+- roastLevel: 烘焙度（极浅烘焙/浅度烘焙/中浅烘焙/中度烘焙/中深烘焙/深度烘焙）
 - roastDate: 烘焙日期，格式YYYY-MM-DD
 - flavor: 风味描述标签数组
 - origin: 产地

@@ -268,6 +268,7 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
                         onChange={(e) => onBeanChange('roastLevel')(e.target.value)}
                         className="w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400 appearance-none"
                     >
+                        <option value="极浅烘焙">极浅烘焙</option>
                         <option value="浅度烘焙">浅度烘焙</option>
                         <option value="中浅烘焙">中浅烘焙</option>
                         <option value="中度烘焙">中度烘焙</option>
