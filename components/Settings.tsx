@@ -71,6 +71,8 @@ const Settings: React.FC<SettingsProps> = ({
 
     // 添加二维码显示状态
     const [showQRCodes, setShowQRCodes] = useState(false)
+    // 添加显示哪种二维码的状态
+    const [qrCodeType, setQrCodeType] = useState<'appreciation' | 'group' | null>(null)
 
     // 添加主题颜色更新的 Effect
     useEffect(() => {
@@ -263,51 +265,108 @@ const Settings: React.FC<SettingsProps> = ({
                     <h3 className="text-sm uppercase font-medium tracking-wider text-neutral-500 dark:text-neutral-400 mb-3">
                         支持 & 交流
                     </h3>
-                    <button
-                        onClick={() => setShowQRCodes(!showQRCodes)}
-                        className="w-full flex items-center justify-between py-3 px-4 text-sm font-medium text-neutral-800 bg-neutral-100 rounded-lg transition-colors hover:bg-neutral-200 dark:text-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700"
-                    >
-                        <span>{showQRCodes ? '收起二维码' : '点击展开二维码'}</span>
-                        <svg 
-                            xmlns="http://www.w3.org/2000/svg" 
-                            className={`h-4 w-4 ml-2 text-neutral-600 dark:text-neutral-400 transition-transform ${showQRCodes ? 'rotate-180' : ''}`}
-                            fill="none" 
-                            viewBox="0 0 24 24" 
-                            stroke="currentColor"
+                    <div className="grid grid-cols-2 gap-4">
+                        <button
+                            onClick={() => {
+                                if (qrCodeType === 'appreciation') {
+                                    setQrCodeType(null);
+                                    setShowQRCodes(false);
+                                } else {
+                                    setQrCodeType('appreciation');
+                                    setShowQRCodes(true);
+                                }
+                            }}
+                            className="flex items-center justify-between py-3 px-4 text-sm font-medium text-neutral-800 bg-neutral-100 rounded-lg transition-colors hover:bg-neutral-200 dark:text-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700"
                         >
-                            <path 
-                                strokeLinecap="round" 
-                                strokeLinejoin="round" 
-                                strokeWidth={1.5} 
-                                d="M19 9l-7 7-7-7" 
-                            />
-                        </svg>
-                    </button>
+                            <span>{qrCodeType === 'appreciation' ? '收起二维码' : '赞赏码'}</span>
+                            <svg 
+                                xmlns="http://www.w3.org/2000/svg" 
+                                className={`h-4 w-4 ml-2 text-neutral-600 dark:text-neutral-400 transition-transform ${qrCodeType === 'appreciation' ? 'rotate-180' : ''}`}
+                                fill="none" 
+                                viewBox="0 0 24 24" 
+                                stroke="currentColor"
+                            >
+                                <path 
+                                    strokeLinecap="round" 
+                                    strokeLinejoin="round" 
+                                    strokeWidth={1.5} 
+                                    d="M19 9l-7 7-7-7" 
+                                />
+                            </svg>
+                        </button>
+                        <button
+                            onClick={() => {
+                                if (qrCodeType === 'group') {
+                                    setQrCodeType(null);
+                                    setShowQRCodes(false);
+                                } else {
+                                    setQrCodeType('group');
+                                    setShowQRCodes(true);
+                                }
+                            }}
+                            className="flex items-center justify-between py-3 px-4 text-sm font-medium text-neutral-800 bg-neutral-100 rounded-lg transition-colors hover:bg-neutral-200 dark:text-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700"
+                        >
+                            <span>{qrCodeType === 'group' ? '收起二维码' : '交流群'}</span>
+                            <svg 
+                                xmlns="http://www.w3.org/2000/svg" 
+                                className={`h-4 w-4 ml-2 text-neutral-600 dark:text-neutral-400 transition-transform ${qrCodeType === 'group' ? 'rotate-180' : ''}`}
+                                fill="none" 
+                                viewBox="0 0 24 24" 
+                                stroke="currentColor"
+                            >
+                                <path 
+                                    strokeLinecap="round" 
+                                    strokeLinejoin="round" 
+                                    strokeWidth={1.5} 
+                                    d="M19 9l-7 7-7-7" 
+                                />
+                            </svg>
+                        </button>
+                    </div>
                     
                     {showQRCodes && (
                         <div className="mt-4 grid grid-cols-2 gap-4">
-                            <div className="flex flex-col items-center">
-                                <div className="w-full aspect-square relative rounded-lg overflow-hidden">
-                                    <Image 
-                                        src="/appreciationCode.jpg" 
-                                        alt="赞赏码" 
-                                        fill
-                                        className="object-cover"
-                                    />
-                                </div>
-                                <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">赞赏码</p>
-                            </div>
-                            <div className="flex flex-col items-center">
-                                <div className="w-full aspect-square relative rounded-lg overflow-hidden">
-                                    <Image 
-                                        src="/groupCode.jpg" 
-                                        alt="交流群" 
-                                        fill
-                                        className="object-cover"
-                                    />
-                                </div>
-                                <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">交流群</p>
-                            </div>
+                            {qrCodeType === 'appreciation' ? (
+                                <>
+                                    <div className="flex flex-col items-center">
+                                        <div className="w-full aspect-square relative rounded-lg overflow-hidden">
+                                            <Image 
+                                                src="/appreciationCode.jpg" 
+                                                alt="赞赏码" 
+                                                fill
+                                                className="object-cover"
+                                            />
+                                        </div>
+                                        <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">赞赏码</p>
+                                    </div>
+                                    <div className="flex flex-col items-center opacity-0">
+                                        <div className="w-full aspect-square relative rounded-lg overflow-hidden invisible">
+                                            <div className="w-full h-full" />
+                                        </div>
+                                        <p className="mt-2 text-xs invisible">占位</p>
+                                    </div>
+                                </>
+                            ) : qrCodeType === 'group' ? (
+                                <>
+                                    <div className="flex flex-col items-center opacity-0">
+                                        <div className="w-full aspect-square relative rounded-lg overflow-hidden invisible">
+                                            <div className="w-full h-full" />
+                                        </div>
+                                        <p className="mt-2 text-xs invisible">占位</p>
+                                    </div>
+                                    <div className="flex flex-col items-center">
+                                        <div className="w-full aspect-square relative rounded-lg overflow-hidden">
+                                            <Image 
+                                                src="/groupCode.jpg" 
+                                                alt="交流群" 
+                                                fill
+                                                className="object-cover"
+                                            />
+                                        </div>
+                                        <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">交流群</p>
+                                    </div>
+                                </>
+                            ) : null}
                         </div>
                     )}
                 </div>
