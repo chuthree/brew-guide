@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import { equipmentList, APP_VERSION, commonMethods, CustomEquipment, type Method } from '@/lib/config'
 import { Storage } from '@/lib/storage'
-import { initCapacitor } from './capacitor'
+import { initCapacitor } from '@/app/capacitor'
 // 只导入需要的类型
 import type { CoffeeBean } from '@/app/types'
 import { useBrewingState, MainTabType, BrewingStep, Step } from '@/lib/hooks/useBrewingState'

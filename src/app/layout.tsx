@@ -13,8 +13,8 @@ import { ToastProvider } from '@/components/GlobalToast'
 import './globals.css'
 import KeyboardManager from '@/components/KeyboardManager'
 import { Suspense } from 'react'
-import CapacitorInit from './CapacitorInit'
-import StorageInit from './StorageInit'
+import CapacitorInit from '@/app/CapacitorInit'
+import StorageInit from '@/app/StorageInit'
 import { Toast } from '@/components/ui/toast';
 import { TranslationsProvider } from '@/providers/TranslationsProvider'
 

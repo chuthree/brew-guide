@@ -99,6 +99,7 @@
 		"csv-loader": "^3.0.5",
 		"eslint": "^9.22.0",
 		"eslint-config-next": "15.2.3",
+		"glob": "^11.0.2",
 		"postcss": "^8.4.38",
 		"tailwindcss": "^3.4.3",
 		"typescript": "^5.8.2"
