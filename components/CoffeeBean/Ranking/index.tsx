@@ -303,7 +303,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
     if (!isOpen) return null;
 
     return (
-        <div className="pb-3">
+        <div className="pb-16 coffee-bean-ranking-container">
             {/* 头部 - 只在hideFilters为false时显示 */}
             {!hideFilters && (
                 <div className="mb-1">
@@ -367,103 +367,101 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                             key={bean.id}
                             className={`border-b border-neutral-200/60 dark:border-neutral-800/40 last:border-none transition-colors ${updatedBeanId === bean.id ? 'bg-neutral-100/50 dark:bg-neutral-800' : ''}`}
                         >
-                            <div className="flex justify-between items-start px-6 py-2.5">
-                                <div className="flex items-start">
-                                    {/* 序号 - 极简风格 */}
-                                    <div className="text-[11px] text-neutral-600 dark:text-neutral-400 w-4 mr-2">
-                                        {index + 1}
-                                    </div>
+                            <div className="flex items-start px-6 py-2.5">
+                                {/* 序号 - 极简风格 */}
+                                <div className="text-[11px] text-neutral-600 dark:text-neutral-400 w-4 mr-2 flex-shrink-0">
+                                    {index + 1}
+                                </div>
 
-                                    {/* 咖啡豆信息 */}
-                                    <div className="cursor-pointer">
-                                        <div className="flex items-center">
-                                            <div className="text-[11px] text-neutral-800 dark:text-neutral-100">{bean.name}</div>
-                                            <div className="ml-2 text-[11px] text-neutral-800 dark:text-neutral-100">
-                                                +{bean.overallRating !== undefined ? bean.overallRating : 0}
-                                            </div>
+                                {/* 咖啡豆信息 */}
+                                <div className="cursor-pointer flex-1 min-w-0">
+                                    <div className="flex items-center">
+                                        <div className="text-[11px] text-neutral-800 dark:text-neutral-100 truncate">{bean.name}</div>
+                                        <div className="ml-2 text-[11px] text-neutral-800 dark:text-neutral-100 flex-shrink-0">
+                                            +{bean.overallRating !== undefined ? bean.overallRating : 0}
                                         </div>
-                                        <div className="text-[10px] text-neutral-600 dark:text-neutral-400 mt-1">
-                                            {(() => {
-                                                // 显示信息数组
-                                                const infoArray: (React.ReactNode | string)[] = [];
+                                    </div>
+                                    <div className="text-[10px] text-neutral-600 dark:text-neutral-400 mt-1">
+                                        {(() => {
+                                            // 显示信息数组
+                                            const infoArray: (React.ReactNode | string)[] = [];
+                                            
+                                            // 豆子类型 - 只有在"全部豆子"视图下显示
+                                            if (beanType === 'all') {
+                                                infoArray.push(bean.beanType === 'espresso' ? '意式豆' : '手冲豆');
+                                            }
+                                            
+                                            // Roast Level - Conditionally display
+                                            if (bean.roastLevel && bean.roastLevel !== '未知') {
+                                                infoArray.push(bean.roastLevel);
+                                            }
+                                            
+                                            // 视频期数 - 博主榜单模式下显示
+                                            if (viewMode === 'blogger' && (bean as BloggerBean).videoEpisode) {
+                                                const episode = (bean as BloggerBean).videoEpisode;
+                                                // Extract brand and bean name from the full bean name (e.g., "Joker 摆脱冷气")
+                                                const nameParts = bean.name.split(' ');
+                                                const brand = nameParts[0]; // Assuming first part is brand
+                                                const beanNameOnly = nameParts.slice(1).join(' '); // Rest is bean name
                                                 
-                                                // 豆子类型 - 只有在"全部豆子"视图下显示
-                                                if (beanType === 'all') {
-                                                    infoArray.push(bean.beanType === 'espresso' ? '意式豆' : '手冲豆');
+                                                const videoUrl = getVideoUrlFromEpisode(episode, brand, beanNameOnly);
+                                                
+                                                if (videoUrl) {
+                                                    // 有视频链接时，添加可点击的元素
+                                                    infoArray.push(
+                                                        <span 
+                                                            key={`video-${bean.id}`}
+                                                            className="inline-flex items-center cursor-pointer underline"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                openLink(videoUrl);
+                                                            }}
+                                                        >
+                                                            第{episode}期
+                                                        </span>
+                                                    );
+                                                } else {
+                                                    // 没有视频链接时，仍显示期数但不可点击
+                                                    infoArray.push(`第${episode}期`);
                                                 }
-                                                
-                                                // Roast Level - Conditionally display
-                                                if (bean.roastLevel && bean.roastLevel !== '未知') {
-                                                    infoArray.push(bean.roastLevel);
+                                            }
+                                            
+                                            // 每克价格
+                                            const pricePerGram = calculatePricePerGram(bean);
+                                            if (pricePerGram) {
+                                                infoArray.push(`${pricePerGram}元/克`);
+                                            }
+                                            
+                                            // 意式豆特有信息 - 美式分数和奶咖分数 (Only for 2025 data)
+                                            if (bean.beanType === 'espresso' && viewMode === 'blogger' && (bean as BloggerBean).year === 2025) {
+                                                const bloggerBean = bean as BloggerBean;
+                                                if (bloggerBean.ratingEspresso !== undefined && bloggerBean.ratingMilkBased !== undefined) {
+                                                    infoArray.push(`美式/奶咖:${bloggerBean.ratingEspresso}/${bloggerBean.ratingMilkBased}`);
+                                                } else if (bloggerBean.ratingEspresso !== undefined) {
+                                                    infoArray.push(`美式:${bloggerBean.ratingEspresso}`);
+                                                } else if (bloggerBean.ratingMilkBased !== undefined) {
+                                                    infoArray.push(`奶咖:${bloggerBean.ratingMilkBased}`);
                                                 }
-                                                
-                                                // 视频期数 - 博主榜单模式下显示
-                                                if (viewMode === 'blogger' && (bean as BloggerBean).videoEpisode) {
-                                                    const episode = (bean as BloggerBean).videoEpisode;
-                                                    // Extract brand and bean name from the full bean name (e.g., "Joker 摆脱冷气")
-                                                    const nameParts = bean.name.split(' ');
-                                                    const brand = nameParts[0]; // Assuming first part is brand
-                                                    const beanNameOnly = nameParts.slice(1).join(' '); // Rest is bean name
-                                                    
-                                                    const videoUrl = getVideoUrlFromEpisode(episode, brand, beanNameOnly);
-                                                    
-                                                    if (videoUrl) {
-                                                        // 有视频链接时，添加可点击的元素
-                                                        infoArray.push(
-                                                            <span 
-                                                                key={`video-${bean.id}`}
-                                                                className="inline-flex items-center cursor-pointer underline"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    openLink(videoUrl);
-                                                                }}
-                                                            >
-                                                                第{episode}期
-                                                            </span>
-                                                        );
-                                                    } else {
-                                                        // 没有视频链接时，仍显示期数但不可点击
-                                                        infoArray.push(`第${episode}期`);
-                                                    }
-                                                }
-                                                
-                                                // 每克价格
-                                                const pricePerGram = calculatePricePerGram(bean);
-                                                if (pricePerGram) {
-                                                    infoArray.push(`${pricePerGram}元/克`);
-                                                }
-                                                
-                                                // 意式豆特有信息 - 美式分数和奶咖分数 (Only for 2025 data)
-                                                if (bean.beanType === 'espresso' && viewMode === 'blogger' && (bean as BloggerBean).year === 2025) {
-                                                    const bloggerBean = bean as BloggerBean;
-                                                    if (bloggerBean.ratingEspresso !== undefined && bloggerBean.ratingMilkBased !== undefined) {
-                                                        infoArray.push(`美式/奶咖:${bloggerBean.ratingEspresso}/${bloggerBean.ratingMilkBased}`);
-                                                    } else if (bloggerBean.ratingEspresso !== undefined) {
-                                                        infoArray.push(`美式:${bloggerBean.ratingEspresso}`);
-                                                    } else if (bloggerBean.ratingMilkBased !== undefined) {
-                                                        infoArray.push(`奶咖:${bloggerBean.ratingMilkBased}`);
-                                                    }
-                                                }
-                                                
-                                                // 购买渠道 - 博主榜单模式下显示 (Only for 2025 data)
-                                                if (viewMode === 'blogger' && bean.purchaseChannel && (bean as BloggerBean).year === 2025) {
-                                                    infoArray.push(bean.purchaseChannel);
-                                                }
-                                                
-                                                // 评价备注 - 如果存在且不是博主模式
-                                                if (viewMode !== 'blogger' && bean.ratingNotes) {
-                                                    infoArray.push(bean.ratingNotes);
-                                                }
-                                                
-                                                // 渲染信息数组，在元素之间添加分隔点
-                                                return infoArray.map((info, index) => (
-                                                    <React.Fragment key={index}>
-                                                        {index > 0 && <span className="mx-1">·</span>}
-                                                        {info}
-                                                    </React.Fragment>
-                                                ));
-                                            })()}
-                                        </div>
+                                            }
+                                            
+                                            // 购买渠道 - 博主榜单模式下显示 (Only for 2025 data)
+                                            if (viewMode === 'blogger' && bean.purchaseChannel && (bean as BloggerBean).year === 2025) {
+                                                infoArray.push(bean.purchaseChannel);
+                                            }
+                                            
+                                            // 评价备注 - 如果存在且不是博主模式
+                                            if (viewMode !== 'blogger' && bean.ratingNotes) {
+                                                infoArray.push(bean.ratingNotes);
+                                            }
+                                            
+                                            // 渲染信息数组，在元素之间添加分隔点
+                                            return infoArray.map((info, index) => (
+                                                <React.Fragment key={index}>
+                                                    {index > 0 && <span className="mx-1">·</span>}
+                                                    {info}
+                                                </React.Fragment>
+                                            ));
+                                        })()}
                                     </div>
                                 </div>
 

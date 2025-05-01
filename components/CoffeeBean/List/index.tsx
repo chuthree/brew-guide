@@ -39,6 +39,13 @@ import { useBeanOperations } from './hooks/useBeanOperations'
 import ViewSwitcher from './components/ViewSwitcher'
 import InventoryView from './components/InventoryView'
 import StatsView from './components/StatsView'
+import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
+import { Share } from '@capacitor/share'
+import { Filesystem, Directory } from '@capacitor/filesystem'
+import { Capacitor } from '@capacitor/core'
+import { toPng } from 'html-to-image'
+import { useToast } from '@/components/GlobalToast'
 
 // 重命名导入组件以避免混淆
 const CoffeeBeanRanking = _CoffeeBeanRanking;
@@ -221,6 +228,10 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
         }
     }, [updateFilteredBeansAndCategories]);
 
+    // 添加榜单和博主榜单的豆子数量状态
+    const [rankingBeansCount, setRankingBeansCount] = useState<number>(0);
+    const [bloggerBeansCount, setBloggerBeansCount] = useState<number>(0);
+
     // 加载已评分的咖啡豆
     const loadRatedBeans = React.useCallback(async () => {
         if (viewMode !== VIEW_OPTIONS.RANKING) return;
@@ -235,6 +246,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
             }
             
             setRatedBeans(filteredRatedBeans);
+            // 更新榜单豆子数量
+            setRankingBeansCount(filteredRatedBeans.length);
             globalCache.ratedBeans = filteredRatedBeans;
         } catch (error) {
             console.error("加载评分咖啡豆失败:", error);
@@ -248,6 +261,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
         try {
             // 直接调用csvUtils中的函数，传入选定的年份
             const bloggerBeansData = getBloggerBeans(rankingBeanType, bloggerYear);
+            
+            // 更新博主榜单豆子数量
+            setBloggerBeansCount(bloggerBeansData.length);
             
             // 更新全局缓存中指定年份的数据
             globalCache.bloggerBeans[bloggerYear] = bloggerBeansData;
@@ -314,6 +330,15 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
             loadRatedBeans();
         }
     }, [viewMode, loadBloggerBeans, loadRatedBeans]);
+
+    // 确保在榜单beanType或年份变化时更新计数
+    useEffect(() => {
+        if (viewMode === VIEW_OPTIONS.RANKING) {
+            loadRatedBeans();
+        } else if (viewMode === VIEW_OPTIONS.BLOGGER) {
+            loadBloggerBeans();
+        }
+    }, [rankingBeanType, bloggerYear, viewMode, loadRatedBeans, loadBloggerBeans]);
 
     // 当显示空豆子设置改变时更新过滤和全局缓存
     useEffect(() => {
@@ -755,6 +780,155 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
         });
     }, [filteredBeans, searchQuery, isSearching]);
 
+    const [isExportingRanking, setIsExportingRanking] = useState(false);
+    const rankingContainerRef = useRef<HTMLDivElement>(null);
+    const toast = useToast();
+    
+    // 处理榜单分享
+    const handleRankingShare = async () => {
+        // 找到榜单容器
+        const rankingContainer = document.querySelector('.coffee-bean-ranking-container');
+        if (!rankingContainer) {
+            toast.showToast({
+                type: 'error',
+                title: '无法找到榜单数据容器'
+            });
+            return;
+        }
+        
+        setIsExportingRanking(true);
+        
+        try {
+            // 创建一个临时容器用于导出
+            const tempContainer = document.createElement('div');
+            const isDarkMode = document.documentElement.classList.contains('dark');
+            const backgroundColor = isDarkMode ? '#171717' : '#fafafa';
+            
+            // 设置样式
+            tempContainer.style.backgroundColor = backgroundColor;
+            tempContainer.style.maxWidth = '100%';
+            tempContainer.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+            
+            if (isDarkMode) {
+                tempContainer.classList.add('dark');
+            }
+            
+            // 复制榜单内容到临时容器
+            const clone = rankingContainer.cloneNode(true) as HTMLElement;
+            
+            // 移除未评分咖啡豆部分
+            const unratedSection = clone.querySelector('.mt-4');
+            if (unratedSection) {
+                unratedSection.remove();
+            }
+            
+            // 调整克隆内容的样式，移除多余的内边距
+            clone.style.padding = '0';
+            clone.style.paddingTop = '0';
+            clone.style.paddingBottom = '0';
+            
+            // 调整榜单内部元素的内边距
+            const listItems = clone.querySelectorAll('[class*="py-2"]');
+            listItems.forEach(item => {
+                (item as HTMLElement).style.paddingTop = '4px';
+                (item as HTMLElement).style.paddingBottom = '4px';
+            });
+            
+            // 移除底部额外的内边距
+            if (clone.classList.contains('pb-16')) {
+                clone.classList.remove('pb-16');
+                clone.style.paddingBottom = '0';
+            }
+            
+            // 添加标题
+            const title = document.createElement('h2');
+            title.innerText = '个人咖啡豆榜单';
+            title.style.textAlign = 'left';
+            title.style.marginBottom = '8px';
+            title.style.fontSize = '12px';
+            title.style.color = isDarkMode ? '#f5f5f5' : '#262626';
+            title.style.padding = '24px';
+            
+            tempContainer.appendChild(title);
+            tempContainer.appendChild(clone);
+            
+            // 添加底部标记
+            const footer = document.createElement('p');
+            footer.innerText = '—— Brew Guide';
+            footer.style.textAlign = 'left';
+            footer.style.marginTop = '8px';
+            footer.style.fontSize = '11px';
+            footer.style.color = isDarkMode ? '#a3a3a3' : '#525252';
+            footer.style.padding = '24px';
+            
+            tempContainer.appendChild(footer);
+            
+            // 添加到文档以便能够导出
+            document.body.appendChild(tempContainer);
+            
+            // 使用html-to-image生成PNG
+            const imageData = await toPng(tempContainer, {
+                quality: 1,
+                pixelRatio: 5,
+                backgroundColor: backgroundColor,
+            });
+            
+            // 删除临时容器
+            document.body.removeChild(tempContainer);
+            
+            // 在移动设备上使用Capacitor分享
+            if (Capacitor.isNativePlatform()) {
+                // 保存到文件
+                const timestamp = new Date().getTime();
+                const fileName = `coffee-ranking-${timestamp}.png`;
+                
+                // 确保正确处理base64数据
+                const base64Data = imageData.split(',')[1];
+                
+                // 写入文件
+                await Filesystem.writeFile({
+                    path: fileName,
+                    data: base64Data,
+                    directory: Directory.Cache,
+                    recursive: true
+                });
+                
+                // 获取文件URI
+                const uriResult = await Filesystem.getUri({
+                    path: fileName,
+                    directory: Directory.Cache
+                });
+                
+                // 分享文件
+                await Share.share({
+                    title: '我的咖啡豆个人榜单',
+                    text: '我的咖啡豆个人榜单',
+                    files: [uriResult.uri],
+                    dialogTitle: '分享我的咖啡豆个人榜单'
+                });
+            } else {
+                // 在网页上下载图片
+                const link = document.createElement('a');
+                link.download = `coffee-ranking-${new Date().getTime()}.png`;
+                link.href = imageData;
+                link.click();
+            }
+            
+            toast.showToast({
+                type: 'success',
+                title: '个人榜单已保存为图片'
+            });
+        } catch (error) {
+            console.error('生成个人榜单图片失败', error);
+            toast.showToast({
+                type: 'error',
+                title: '生成图片失败'
+            });
+        } finally {
+            setIsExportingRanking(false);
+        }
+    };
+
     if (!isOpen) return null;
 
     return (
@@ -847,6 +1021,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                             globalCache.rankingEditMode = newMode;
                             saveRankingEditModePreference(newMode);
                         }}
+                        onRankingShare={handleRankingShare}
                         selectedBeanType={selectedBeanType}
                         onBeanTypeChange={handleBeanTypeChange}
                         selectedVariety={selectedVariety}
@@ -858,6 +1033,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                         setIsSearching={setIsSearching}
                         searchQuery={searchQuery}
                         setSearchQuery={setSearchQuery}
+                        rankingBeansCount={rankingBeansCount}
+                        bloggerBeansCount={bloggerBeansCount}
                     />
                 </div>
                 

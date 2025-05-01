@@ -10,7 +10,7 @@ import {
     SelectValue,
 } from '@/components/CoffeeBean/ui/select'
 import { SortSelector, SortOption } from '../SortSelector'
-import { X } from 'lucide-react'
+import { X, ArrowUpRight } from 'lucide-react'
 
 interface ViewSwitcherProps {
     viewMode: ViewOption
@@ -26,6 +26,7 @@ interface ViewSwitcherProps {
     onBloggerYearChange?: (year: BloggerBeansYear) => void
     rankingEditMode?: boolean
     onRankingEditModeChange?: (edit: boolean) => void
+    onRankingShare?: () => void
     selectedBeanType?: BeanType
     onBeanTypeChange?: (type: BeanType) => void
     selectedVariety?: string | null
@@ -40,6 +41,8 @@ interface ViewSwitcherProps {
     setSearchQuery?: (value: string) => void
     onSearchKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void
     onSearchChange?: (e: React.ChangeEvent<HTMLInputElement>) => void
+    rankingBeansCount?: number
+    bloggerBeansCount?: number
 }
 
 const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
@@ -56,6 +59,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
     onBloggerYearChange,
     rankingEditMode = false,
     onRankingEditModeChange,
+    onRankingShare,
     selectedBeanType,
     onBeanTypeChange,
     selectedVariety,
@@ -70,6 +74,8 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
     setSearchQuery,
     onSearchKeyDown,
     onSearchChange,
+    rankingBeansCount,
+    bloggerBeansCount,
 }) => {
     // 搜索相关逻辑
     const searchInputRef = useRef<HTMLInputElement>(null);
@@ -120,10 +126,10 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                         {viewMode === VIEW_OPTIONS.INVENTORY
                             ? `${totalBeans ? `${beansCount}/${totalBeans}` : beansCount} 款咖啡豆${totalWeight ? `，共 ${totalWeight}` : ''}`
                             : viewMode === VIEW_OPTIONS.BLOGGER
-                                ? `${beansCount} 款 (${bloggerYear}) 咖啡豆`
+                                ? `${bloggerBeansCount || 0} 款 (${bloggerYear}) 咖啡豆`
                                 : viewMode === VIEW_OPTIONS.STATS
                                     ? `${totalBeans || beansCount} 款咖啡豆统计数据`
-                                    : `${beansCount} 款已评分咖啡豆`
+                                    : `${rankingBeansCount || 0} 款已评分咖啡豆`
                         }
                     </div>
                 </div>
@@ -251,12 +257,23 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                             {viewMode === VIEW_OPTIONS.RANKING && onRankingEditModeChange && (
                                 <button
                                     onClick={() => onRankingEditModeChange(!rankingEditMode)}
-                                    className={`pb-1.5 text-[11px] relative ${rankingEditMode ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
+                                    className={`pb-1.5 text-[11px] relative ${rankingEditMode ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'} mr-3`}
                                 >
                                     <span className="relative">{rankingEditMode ? '完成' : '编辑'}</span>
                                     {rankingEditMode && (
                                         <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
                                     )}
+                                </button>
+                            )}
+                            
+                            {/* 分享按钮 - 仅在个人榜单视图中显示 */}
+                            {viewMode === VIEW_OPTIONS.RANKING && onRankingShare && (
+                                <button
+                                    onClick={onRankingShare}
+                                    className="pb-1.5 text-[11px] relative text-neutral-600 dark:text-neutral-400"
+                                >
+                                    <span className="relative underline underline-offset-2 decoration-sky-500">分享</span>
+                                    <ArrowUpRight className="inline-block ml-1 w-3 h-3" />
                                 </button>
                             )}
                         </div>
