@@ -185,7 +185,8 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         grindType: 'generic',
         textZoomLevel: 1,
         language: 'zh',
-        showFlowRate: true
+        showFlowRate: true,
+        username: ''
     });
 
     // 加载设置
