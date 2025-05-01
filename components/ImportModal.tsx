@@ -20,6 +20,72 @@ interface ImportedBean {
     [key: string]: unknown;
 }
 
+// 添加图片压缩函数
+const compressImage = async (file: File, maxSizeMB: number = 2): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target?.result as string;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+                
+                // 如果图片尺寸太大，先缩小尺寸
+                const maxDimension = 2048; // 最大尺寸
+                if (width > maxDimension || height > maxDimension) {
+                    if (width > height) {
+                        height = Math.round((height * maxDimension) / width);
+                        width = maxDimension;
+                    } else {
+                        width = Math.round((width * maxDimension) / height);
+                        height = maxDimension;
+                    }
+                }
+                
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                if (!ctx) {
+                    reject(new Error('无法创建canvas上下文'));
+                    return;
+                }
+                
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                // 压缩图片质量
+                let quality = 0.9;
+                const compress = () => {
+                    canvas.toBlob(
+                        (blob) => {
+                            if (!blob) {
+                                reject(new Error('压缩失败'));
+                                return;
+                            }
+                            
+                            // 检查大小
+                            if (blob.size > maxSizeMB * 1024 * 1024 && quality > 0.1) {
+                                quality -= 0.1;
+                                compress();
+                            } else {
+                                resolve(blob);
+                            }
+                        },
+                        'image/jpeg',
+                        quality
+                    );
+                };
+                
+                compress();
+            };
+            img.onerror = () => reject(new Error('图片加载失败'));
+        };
+        reader.onerror = () => reject(new Error('文件读取失败'));
+    });
+};
+
 const ImportBeanModal: React.FC<ImportBeanModalProps> = ({
     showForm,
     onImport,
@@ -341,21 +407,7 @@ const ImportBeanModal: React.FC<ImportBeanModalProps> = ({
             if (file) {
                 const reader = new FileReader();
                 reader.onload = () => {
-                    // 创建一个新的图片对象来获取实际尺寸
-                    const img = new Image();
-                    img.onload = () => {
-                        setSelectedImage(img.src);
-                        setShowCropper(true);
-                        // 根据图片实际尺寸设置初始裁剪区域
-                        setCrop({
-                            unit: '%',
-                            width: 90,
-                            height: 90,
-                            x: 5,
-                            y: 5
-                        });
-                    };
-                    img.src = reader.result as string;
+                    setSelectedImage(reader.result as string);
                 };
                 reader.readAsDataURL(file);
             }
@@ -366,17 +418,23 @@ const ImportBeanModal: React.FC<ImportBeanModalProps> = ({
 
     // Function to handle image recognition process
     const handleImageRecognition = async () => {
-        if (!croppedImage) return;
+        if (!selectedImage) return;
 
         setIsUploading(true);
         clearMessages();
 
         try {
-            const response = await fetch(croppedImage);
-            const blob = await response.blob();
+            // 将 base64 转换为 Blob
+            const response = await fetch(selectedImage);
+            const originalBlob = await response.blob();
+            
+            // 压缩图片
+            const compressedBlob = await compressImage(
+                new File([originalBlob], 'coffee-bean.jpg', { type: 'image/jpeg' })
+            );
 
             const formData = new FormData();
-            formData.append('file', blob, 'coffee-bean.jpg');
+            formData.append('file', compressedBlob, 'coffee-bean.jpg');
 
             const data = await recognizeImage(formData);
 
@@ -394,9 +452,7 @@ const ImportBeanModal: React.FC<ImportBeanModalProps> = ({
             }
         } finally {
             setIsUploading(false);
-            setShowCropper(false);
             setSelectedImage(null);
-            setCroppedImage(null);
         }
     };
 
@@ -420,7 +476,6 @@ const ImportBeanModal: React.FC<ImportBeanModalProps> = ({
                     <p className="text-xs text-neutral-600 dark:text-neutral-400">
                         {manualMode ? '手动填写咖啡豆信息' : '上传咖啡豆包装图片，自动识别信息'}
                     </p>
-
                 </div>
 
                 {manualMode ? (
@@ -454,27 +509,20 @@ const ImportBeanModal: React.FC<ImportBeanModalProps> = ({
                             </p>
                         </div>
                     </div>
-                ) : showCropper && selectedImage ? (
+                ) : selectedImage ? (
                     <div className="space-y-3">
-                        <ReactCrop
-                            crop={crop}
-                            onChange={c => setCrop(c)}
-                            onComplete={handleCropComplete}
-                        >
+                        <div className="relative">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
-                                ref={imgRef}
                                 src={selectedImage}
                                 alt="Upload preview"
-                                style={{ maxHeight: '60vh' }} // 限制图片显示高度，避免过大图片导致性能问题
+                                className="w-full rounded-md"
+                                style={{ maxHeight: '60vh', objectFit: 'contain' }}
                             />
-                        </ReactCrop>
+                        </div>
                         <div className="flex justify-end space-x-2">
                             <button
-                                onClick={() => {
-                                    setShowCropper(false);
-                                    setSelectedImage(null);
-                                }}
+                                onClick={() => setSelectedImage(null)}
                                 className="px-3 py-1 text-sm border border-neutral-300 dark:border-neutral-600 rounded"
                             >
                                 取消
@@ -483,11 +531,11 @@ const ImportBeanModal: React.FC<ImportBeanModalProps> = ({
                                 onClick={handleImageRecognition}
                                 className="px-3 py-1 text-sm bg-neutral-800 dark:bg-neutral-200 text-neutral-100 dark:text-neutral-800 rounded"
                             >
-                                确认裁剪并识别
+                                识别
                             </button>
                         </div>
                     </div>
-                ) : !manualMode && (
+                ) : (
                     <div className="flex space-x-2">
                         <button
                             onClick={() => handleImageSelect('camera')}
@@ -523,7 +571,7 @@ const ImportBeanModal: React.FC<ImportBeanModalProps> = ({
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                         </svg>
-                        <span className="text-sm">处理中...</span>
+                        <span className="text-sm">识别中...</span>
                     </div>
                 )}
             </div>
