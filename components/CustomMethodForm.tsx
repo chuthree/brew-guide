@@ -186,7 +186,8 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         textZoomLevel: 1,
         language: 'zh',
         showFlowRate: true,
-        username: ''
+        username: '',
+        decrementPresets: [15, 16, 18] // 添加默认的库存扣除量预设值
     });
 
     // 加载设置
