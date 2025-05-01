@@ -24,6 +24,7 @@ export interface SettingsOptions {
     language: string // 添加语言设置
     showFlowRate: boolean // 添加显示流速选项
     username: string // 添加用户名
+    decrementPresets: number[] // 添加咖啡豆库存快捷扣除量预设值
 }
 
 // 默认设置
@@ -41,7 +42,8 @@ export const defaultSettings: SettingsOptions = {
     },
     language: 'zh', // 默认使用中文
     showFlowRate: false, // 默认不显示流速
-    username: '' // 默认用户名为空
+    username: '', // 默认用户名为空
+    decrementPresets: [15, 16, 18] // 默认的库存扣除量预设值
 }
 
 interface SettingsProps {
@@ -75,6 +77,12 @@ const Settings: React.FC<SettingsProps> = ({
     const [showQRCodes, setShowQRCodes] = useState(false)
     // 添加显示哪种二维码的状态
     const [qrCodeType, setQrCodeType] = useState<'appreciation' | 'group' | null>(null)
+
+    // 新增用于编辑扣除量预设的状态
+    const [decrementValue, setDecrementValue] = useState<string>('')
+    const [decrementPresets, setDecrementPresets] = useState<number[]>(
+        settings.decrementPresets || defaultSettings.decrementPresets
+    )
 
     // 添加主题颜色更新的 Effect
     useEffect(() => {
@@ -226,6 +234,37 @@ const Settings: React.FC<SettingsProps> = ({
         // 触发震动反馈
         if (settings.hapticFeedback) {
             hapticsUtils.light();
+        }
+    }
+
+    // 添加预设值函数
+    const addDecrementPreset = () => {
+        const value = parseInt(decrementValue)
+        if (!isNaN(value) && value > 0) {
+            // 检查是否已经存在该预设值
+            if (!decrementPresets.includes(value)) {
+                const newPresets = [...decrementPresets, value].sort((a, b) => a - b)
+                setDecrementPresets(newPresets)
+                handleChange('decrementPresets', newPresets)
+                setDecrementValue('')
+                
+                // 提供触感反馈
+                if (settings.hapticFeedback) {
+                    hapticsUtils.light()
+                }
+            }
+        }
+    }
+
+    // 删除预设值函数
+    const removeDecrementPreset = (value: number) => {
+        const newPresets = decrementPresets.filter(v => v !== value)
+        setDecrementPresets(newPresets)
+        handleChange('decrementPresets', newPresets)
+        
+        // 提供触感反馈
+        if (settings.hapticFeedback) {
+            hapticsUtils.light()
         }
     }
 
@@ -700,6 +739,48 @@ const Settings: React.FC<SettingsProps> = ({
                         }
                         return null;
                     })()}
+                </div>
+
+                {/* 库存扣除量预设值设置组 */}
+                <div className="px-6 py-4">
+                    <h3 className="text-sm uppercase font-medium tracking-wider text-neutral-500 dark:text-neutral-400 mb-3">
+                        库存扣除预设值
+                    </h3>
+                    
+                    <div className="flex gap-2 mb-3 flex-wrap">
+                        {decrementPresets.map((value) => (
+                            <button
+                                key={value}
+                                onClick={() => removeDecrementPreset(value)}
+                                className="px-3 py-1.5 bg-neutral-100 dark:bg-neutral-800 rounded-lg text-sm text-neutral-800 dark:text-neutral-200 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+                            >
+                                -{value}g ×
+                            </button>
+                        ))}
+                        
+                        <div className="flex h-9">
+                            <input
+                                type="number"
+                                value={decrementValue}
+                                onChange={(e) => setDecrementValue(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault()
+                                        addDecrementPreset()
+                                    }
+                                }}
+                                placeholder="克数"
+                                className="w-16 py-1.5 px-2 text-sm bg-neutral-100 dark:bg-neutral-800 border-y border-l border-neutral-200 dark:border-neutral-700 rounded-l-lg focus:outline-none focus:ring-1 focus:ring-neutral-500"
+                            />
+                            <button
+                                onClick={addDecrementPreset}
+                                disabled={!decrementValue || isNaN(parseInt(decrementValue)) || parseInt(decrementValue) <= 0}
+                                className="py-1.5 px-2 bg-neutral-700 dark:bg-neutral-600 text-white rounded-r-lg disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                            >
+                                +
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 {/* 计时器布局设置组 */}

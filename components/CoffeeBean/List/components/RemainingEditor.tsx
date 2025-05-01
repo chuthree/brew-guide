@@ -2,6 +2,8 @@
 
 import React, { useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
+import { Storage } from '@/lib/storage'
+import { defaultSettings, SettingsOptions } from '@/components/Settings'
 
 interface RemainingEditorProps {
     position: { x: number, y: number } | null
@@ -18,6 +20,30 @@ const RemainingEditor: React.FC<RemainingEditorProps> = ({
 }) => {
     // 添加ref引用弹出层DOM元素
     const popoverRef = useRef<HTMLDivElement>(null)
+    
+    // 加载设置中的预设值
+    const [decrementValues, setDecrementValues] = React.useState<number[]>(
+        defaultSettings.decrementPresets
+    )
+    
+    // 初始化时加载设置中的预设值
+    React.useEffect(() => {
+        const loadPresets = async () => {
+            try {
+                const settingsStr = await Storage.get('brewGuideSettings')
+                if (settingsStr) {
+                    const settings = JSON.parse(settingsStr) as SettingsOptions
+                    if (settings.decrementPresets && Array.isArray(settings.decrementPresets) && settings.decrementPresets.length > 0) {
+                        setDecrementValues(settings.decrementPresets)
+                    }
+                }
+            } catch (error) {
+                console.error('加载库存扣除预设值失败:', error)
+            }
+        }
+        
+        loadPresets()
+    }, [])
 
     // 添加键盘事件处理
     useEffect(() => {
@@ -52,9 +78,6 @@ const RemainingEditor: React.FC<RemainingEditorProps> = ({
         }
     }, [onCancel])
 
-    // 快捷减量值数组
-    const decrementValues = [15, 16, 18]
-
     if (!position) return null
 
     return (
@@ -72,7 +95,7 @@ const RemainingEditor: React.FC<RemainingEditorProps> = ({
         >
             <div className="flex flex-col space-y-2">
                 {/* 快捷按钮组 */}
-                <div className="flex space-x-1">
+                <div className={`flex ${decrementValues.length > 3 ? 'flex-wrap gap-1' : 'space-x-1'}`}>
                     {decrementValues.map((value) => (
                         <button
                             key={value}
