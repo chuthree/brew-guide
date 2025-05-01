@@ -3,10 +3,10 @@
 		"iconBackground": "#ffffff",
 		"splashBackground": "#ffffff",
 		"icon": {
-			"source": "public/images/logos/logo.svg"
+			"source": "/images/logos/logo.svg"
 		},
 		"splash": {
-			"source": "public/images/logos/logo.svg",
+			"source": "/images/logos/logo.svg",
 			"backgroundColor": "#ffffff"
 		}
 	},
@@ -14,13 +14,13 @@
 		"iconBackground": "#ffffff",
 		"splashBackground": "#ffffff",
 		"icon": {
-			"source": "public/images/logos/logo.svg",
+			"source": "/images/logos/logo.svg",
 			"foreground": {
-				"source": "public/images/logos/logo.svg"
+				"source": "/images/logos/logo.svg"
 			}
 		},
 		"splash": {
-			"source": "public/images/logos/logo.svg",
+			"source": "/images/logos/logo.svg",
 			"backgroundColor": "#ffffff"
 		}
 	}

@@ -944,7 +944,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                             setHasDrawn(true);
                         }}
                         showReference={showReference}
-                        referenceSvgUrl="/images/v60-base.svg"
+                        referenceSvgUrl="/images/icons/ui/v60-base.svg"
                     />
                 )}
             </div>
@@ -1062,7 +1062,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                             : equipment.customValveSvg      // 如果当前是绘制开启状态，则显示关闭状态作为参考
                         }
                         // 如果没有自定义器具，使用默认V60器具作为底图
-                        referenceSvgUrl={!equipment.customShapeSvg ? "/images/v60-base.svg" : undefined}
+                        referenceSvgUrl={!equipment.customShapeSvg ? "/images/icons/ui/v60-base.svg" : undefined}
                     />
                 )}
             </div>
@@ -1293,7 +1293,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                                                 <div className="w-3/4 h-3/4 relative">
                                                     {/* 默认杯型始终显示默认图像，不管customShapeSvg是否存在 */}
                                                     <Image
-                                                        src="/images/v60-base.svg"
+                                                        src="/images/icons/ui/v60-base.svg"
                                                         alt="杯型背景"
                                                         fill
                                                         className="object-contain invert-0 dark:invert"
@@ -1302,7 +1302,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                                                     />
                                                     {equipment.hasValve && (
                                                         <Image
-                                                            src="/images/valve-closed.svg"
+                                                            src="/images/icons/ui/valve-closed.svg"
                                                             alt="阀门背景"
                                                             fill
                                                             className="object-contain invert-0 dark:invert"
@@ -1440,7 +1440,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                                                         <div className="w-full h-full flex items-center justify-center">
                                                             <div className="w-full h-full relative">
                                                                 <Image
-                                                                    src="/images/v60-base.svg"
+                                                                    src="/images/icons/ui/v60-base.svg"
                                                                     alt="杯型背景"
                                                                     fill
                                                                     className="object-contain invert-0 dark:invert"
@@ -1449,7 +1449,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                                                                 />
                                                                 {equipment.hasValve && (
                                                                     <Image
-                                                                        src="/images/valve-closed.svg"
+                                                                        src="/images/icons/ui/valve-closed.svg"
                                                                         alt="阀门背景"
                                                                         fill
                                                                         className="object-contain invert-0 dark:invert"
@@ -1551,7 +1551,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                                                     <div className="w-full h-full flex items-center justify-center">
                                                         <div className="w-3/4 h-3/4 relative">
                                                             <Image
-                                                                src="/images/v60-base.svg"
+                                                                src="/images/icons/ui/v60-base.svg"
                                                                 alt="杯型背景"
                                                                 fill
                                                                 className="object-contain invert-0 dark:invert"
@@ -1560,7 +1560,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                                                             />
                                                             {equipment.hasValve && (
                                                                 <Image
-                                                                    src="/images/valve-closed.svg"
+                                                                    src="/images/icons/ui/valve-closed.svg"
                                                                     alt="阀门背景"
                                                                     fill
                                                                     className="object-contain invert-0 dark:invert"

@@ -113,12 +113,12 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
             // 如果是自定义器具，使用对应的基础动画类型
             if (customEquipment && customEquipment.animationType) {
                 const type = customEquipment.animationType.toLowerCase();
-                return `/images/${type}-base.svg`;
+                return `/images/icons/ui/${type}-base.svg`;
             }
 
             // 当设备ID为CleverDripper时，使用v60的图片
             if (equipmentId === 'CleverDripper') {
-                return '/images/v60-base.svg';
+                return '/images/icons/ui/v60-base.svg';
             }
 
             // 检查equipmentId是否是预定义器具ID
@@ -127,13 +127,13 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
 
             if (isStandardEquipment) {
                 // 对于标准器具，使用小写ID作为图片名
-                return `/images/${equipmentId.toLowerCase()}-base.svg`;
+                return `/images/icons/ui/${equipmentId.toLowerCase()}-base.svg`;
             }
 
             // 如果是自定义器具但找不到animationType，使用默认V60图片
-            return '/images/v60-base.svg';
+            return '/images/icons/ui/v60-base.svg';
         } catch (_error) {
-            return '/images/v60-base.svg';
+            return '/images/icons/ui/v60-base.svg';
         }
     }
 
@@ -146,10 +146,10 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
             if (!hasValveSupport) return null;
 
             return valveStatus === 'open'
-                ? '/images/valve-open.svg'
-                : '/images/valve-closed.svg';
+                ? '/images/icons/ui/valve-open.svg'
+                : '/images/icons/ui/valve-closed.svg';
         } catch (_error) {
-            return '/images/valve-closed.svg'; // 默认返回关闭阀门图片
+            return '/images/icons/ui/valve-closed.svg'; // 默认返回关闭阀门图片
         }
     }
 
@@ -215,28 +215,28 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
     const imagesToPreload = useMemo(() => {
         // 基础设备图片
         const baseImages = [
-            '/images/v60-base.svg',
-            '/images/kalita-base.svg',
-            '/images/origami-base.svg',
+            '/images/icons/ui/v60-base.svg',
+            '/images/icons/ui/kalita-base.svg',
+            '/images/icons/ui/origami-base.svg',
         ];
 
         // 聪明杯相关图片（阀门控制）
         const valveImages = [
-            '/images/valve-open.svg',
-            '/images/valve-closed.svg',
+            '/images/icons/ui/valve-open.svg',
+            '/images/icons/ui/valve-closed.svg',
         ];
 
         // 动画类型图片
         const animationImages = [
             // center 动画图片
             ...Array.from({ length: availableAnimations.center.maxIndex },
-                (_, i) => `/images/pour-center-motion-${i + 1}.svg`),
+                (_, i) => `/images/icons/ui/pour-center-motion-${i + 1}.svg`),
             // circle 动画图片
             ...Array.from({ length: availableAnimations.circle.maxIndex },
-                (_, i) => `/images/pour-circle-motion-${i + 1}.svg`),
+                (_, i) => `/images/icons/ui/pour-circle-motion-${i + 1}.svg`),
             // ice 动画图片
             ...Array.from({ length: availableAnimations.ice.maxIndex },
-                (_, i) => `/images/pour-ice-motion-${i + 1}.svg`),
+                (_, i) => `/images/icons/ui/pour-ice-motion-${i + 1}.svg`),
         ];
 
         return [...baseImages, ...valveImages, ...animationImages];
@@ -418,7 +418,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                 }
             }
 
-            return `/images/pour-${pourType}-motion-${currentMotionIndex}.svg`;
+            return `/images/icons/ui/pour-${pourType}-motion-${currentMotionIndex}.svg`;
         } catch (_error) {
             return null;
         }
@@ -501,7 +501,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                     />
                 ) : (
                     <Image
-                        src={equipmentImageSrc || '/images/v60-base.svg'}
+                        src={equipmentImageSrc || '/images/icons/ui/v60-base.svg'}
                         alt={equipmentId}
                         fill
                         className={`object-contain invert-0 dark:invert ${equipmentOpacity} transition-opacity duration-300`}
@@ -543,7 +543,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                     />
                 ) : (
                     <Image
-                        src={equipmentImageSrc || '/images/v60-base.svg'}
+                        src={equipmentImageSrc || '/images/icons/ui/v60-base.svg'}
                         alt={equipmentId}
                         fill
                         className={`object-contain invert-0 dark:invert ${equipmentOpacity} transition-opacity duration-300`}
@@ -586,7 +586,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                     />
                 ) : (
                     <Image
-                        src={equipmentImageSrc || '/images/v60-base.svg'}
+                        src={equipmentImageSrc || '/images/icons/ui/v60-base.svg'}
                         alt={equipmentId}
                         fill
                         className={`object-contain invert-0 dark:invert ${equipmentOpacity} transition-opacity duration-300`}
@@ -649,7 +649,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                     {!customEquipment?.customShapeSvg ? (
                         // 标准SVG图像文件
                         <Image
-                            src={equipmentImageSrc || '/images/v60-base.svg'}
+                            src={equipmentImageSrc || '/images/icons/ui/v60-base.svg'}
                             alt={equipmentId || 'V60'}
                             fill
                             className={`object-contain invert-0 dark:invert ${equipmentOpacity}`}
@@ -732,7 +732,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                                 className="absolute inset-0"
                             >
                                 <Image
-                                    src={`/images/pour-ice-motion-${index}.svg`}
+                                    src={`/images/icons/ui/pour-ice-motion-${index}.svg`}
                                     alt={`Ice cube ${index}`}
                                     fill
                                     className="object-contain invert-0 dark:invert"

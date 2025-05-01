@@ -240,7 +240,7 @@ brew-guide/
 ### 1. 图片目录结构
 
 ```
-public/images/
+/images/
 ├── icons/              # 图标资源
 │   ├── app/           # 应用图标（favicon, PWA 图标等）
 │   └── ui/            # UI 图标（按钮、菜单等）
@@ -311,7 +311,7 @@ import Image from 'next/image'
 1. 使用路径别名
 ```tsx
 // 使用 @public 别名
-import logo from '@public/images/logos/logo.png'
+import logo from '@/images/logos/logo.png'
 ```
 
 2. 类型定义

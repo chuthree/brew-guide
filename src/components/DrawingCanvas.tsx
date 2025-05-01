@@ -48,7 +48,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
   height = 300,
   defaultSvg,
   onDrawingComplete,
-  referenceSvgUrl = '/images/v60-base.svg',
+  referenceSvgUrl = '/images/icons/ui/v60-base.svg',
   referenceSvg,
   strokeColor,
   showReference = true,

@@ -372,7 +372,7 @@ const Settings: React.FC<SettingsProps> = ({
                                     <div className="flex flex-col items-center">
                                         <div className="w-full aspect-square relative rounded-lg overflow-hidden">
                                             <Image 
-                                                src="/appreciationCode.jpg" 
+                                                src="/images/content/appreciation-code.jpg" 
                                                 alt="赞赏码" 
                                                 fill
                                                 className="object-cover"
@@ -398,7 +398,7 @@ const Settings: React.FC<SettingsProps> = ({
                                     <div className="flex flex-col items-center">
                                         <div className="w-full aspect-square relative rounded-lg overflow-hidden">
                                             <Image 
-                                                src="/groupCode.jpg" 
+                                                src="/images/content/group-code.jpg" 
                                                 alt="交流群" 
                                                 fill
                                                 className="object-cover"

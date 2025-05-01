@@ -20,7 +20,8 @@
 		],
 		"paths": {
 			"@/*": ["./src/*"],
-			"@public/*": ["./public/*"]
+			"@public/*": ["./public/*"],
+			"@images/*": ["./public/images/*"]
 		},
 		"baseUrl": "."
 	},
