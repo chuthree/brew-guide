@@ -4,6 +4,7 @@ import { Capacitor } from '@capacitor/core'
 import { Share } from '@capacitor/share'
 import { Filesystem, Directory } from '@capacitor/filesystem'
 import { toPng } from 'html-to-image'
+import { Storage } from '@/lib/storage'
 
 interface NotesExporterProps {
   selectedNotes: string[]
@@ -51,56 +52,117 @@ export async function exportSelectedNotes({
       tempContainer.classList.add('dark');
     }
     
+    // 添加标题
+    const title = document.createElement('h2');
+    title.innerText = `${selectedNotes.length}条咖啡冲煮笔记`;
+    title.style.textAlign = 'left';
+    title.style.marginBottom = '8px';
+    title.style.fontSize = '12px';
+    title.style.color = isDarkMode ? '#f5f5f5' : '#262626';
+    title.style.padding = '24px 24px 0 24px';
+    
+    tempContainer.appendChild(title);
+    
     // 复制选中的笔记到临时容器
+    const selectedNoteElements: HTMLElement[] = [];
+    
+    // 首先收集所有选中的笔记元素
     allNoteElements.forEach((el) => {
       const noteId = el.getAttribute('data-note-id');
       if (noteId && selectedNotes.includes(noteId)) {
-        const clone = el.cloneNode(true) as HTMLElement;
-        
-        // 移除复选框 - 保留其父级div避免影响布局
-        const checkbox = clone.querySelector('input[type="checkbox"]');
-        if (checkbox) {
-          checkbox.remove();
-        }
-        
-        // 移除操作按钮 - 替代原来的直接移除父元素的方式
-        const actionMenu = clone.querySelector('.action-menu-container');
-        if (actionMenu) {
-          // 保留操作按钮所在的元素位置，只移除内部内容
-          actionMenu.innerHTML = '';
-          (actionMenu as HTMLElement).style.display = 'none';
-        }
-        
-        // 确保深色模式下的文本颜色正确
-        if (isDarkMode) {
-          const textElements = clone.querySelectorAll('p, h1, h2, h3, h4, h5, span, div');
-          textElements.forEach((el) => {
-            if (el.classList.contains('text-neutral-800')) {
-              el.classList.remove('text-neutral-800');
-              el.classList.add('text-neutral-100');
-            } else if (el.classList.contains('text-neutral-600')) {
-              el.classList.remove('text-neutral-600');
-              el.classList.add('text-neutral-400');
-            }
-          });
-          
-          // 处理进度条颜色
-          const progressBars = clone.querySelectorAll('.bg-neutral-800');
-          progressBars.forEach((el) => {
-            el.classList.remove('bg-neutral-800');
-            el.classList.add('bg-neutral-100');
-          });
-          
-          const progressBackgrounds = clone.querySelectorAll('.bg-neutral-200\\/50');
-          progressBackgrounds.forEach((el) => {
-            el.classList.remove('bg-neutral-200/50');
-            el.classList.add('bg-neutral-800');
-          });
-        }
-        
-        tempContainer.appendChild(clone);
+        selectedNoteElements.push(el.cloneNode(true) as HTMLElement);
       }
     });
+    
+    // 然后处理每个笔记元素并添加到临时容器
+    selectedNoteElements.forEach((clone, index) => {
+      // 移除复选框 - 保留其父级div避免影响布局
+      const checkbox = clone.querySelector('input[type="checkbox"]');
+      if (checkbox) {
+        checkbox.remove();
+      }
+      
+      // 移除操作按钮 - 替代原来的直接移除父元素的方式
+      const actionMenu = clone.querySelector('.action-menu-container');
+      if (actionMenu) {
+        // 保留操作按钮所在的元素位置，只移除内部内容
+        actionMenu.innerHTML = '';
+        (actionMenu as HTMLElement).style.display = 'none';
+      }
+      
+      // 如果是最后一条笔记，移除下边框
+      if (index === selectedNoteElements.length - 1) {
+        clone.style.borderBottom = 'none';
+      }
+      
+      // 确保深色模式下的文本颜色正确
+      if (isDarkMode) {
+        const textElements = clone.querySelectorAll('p, h1, h2, h3, h4, h5, span, div');
+        textElements.forEach((el) => {
+          if (el.classList.contains('text-neutral-800')) {
+            el.classList.remove('text-neutral-800');
+            el.classList.add('text-neutral-100');
+          } else if (el.classList.contains('text-neutral-600')) {
+            el.classList.remove('text-neutral-600');
+            el.classList.add('text-neutral-400');
+          }
+        });
+        
+        // 处理进度条颜色
+        const progressBars = clone.querySelectorAll('.bg-neutral-800');
+        progressBars.forEach((el) => {
+          el.classList.remove('bg-neutral-800');
+          el.classList.add('bg-neutral-100');
+        });
+        
+        const progressBackgrounds = clone.querySelectorAll('.bg-neutral-200\\/50');
+        progressBackgrounds.forEach((el) => {
+          el.classList.remove('bg-neutral-200/50');
+          el.classList.add('bg-neutral-800');
+        });
+      }
+      
+      tempContainer.appendChild(clone);
+    });
+    
+    // 获取用户名
+    const settingsStr = await Storage.get('brewGuideSettings');
+    let username = '';
+    if (settingsStr) {
+      try {
+        const settings = JSON.parse(settingsStr);
+        username = settings.username?.trim() || '';
+      } catch (e) {
+        console.error('解析用户设置失败', e);
+      }
+    }
+    
+    // 添加底部标记
+    const footer = document.createElement('p');
+    footer.style.textAlign = 'left';
+    footer.style.marginTop = '16px';
+    footer.style.fontSize = '11px';
+    footer.style.color = isDarkMode ? '#a3a3a3' : '#525252';
+    footer.style.display = 'flex';
+    footer.style.justifyContent = 'space-between';
+    footer.style.padding = '0 24px 24px 24px';
+    
+    if (username) {
+      // 如果有用户名，将用户名放在左边，Brew Guide放在右边
+      const usernameSpan = document.createElement('span');
+      usernameSpan.innerText = `@${username}`;
+      
+      const appNameSpan = document.createElement('span');
+      appNameSpan.innerText = '—— Brew Guide';
+      
+      footer.appendChild(usernameSpan);
+      footer.appendChild(appNameSpan);
+    } else {
+      // 如果没有用户名，保持原样
+      footer.innerText = '—— Brew Guide';
+    }
+    
+    tempContainer.appendChild(footer);
     
     // 添加到文档以便能够导出
     document.body.appendChild(tempContainer);

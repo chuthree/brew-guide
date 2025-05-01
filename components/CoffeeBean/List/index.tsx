@@ -46,6 +46,7 @@ import { Filesystem, Directory } from '@capacitor/filesystem'
 import { Capacitor } from '@capacitor/core'
 import { toPng } from 'html-to-image'
 import { useToast } from '@/components/GlobalToast'
+import { Storage } from '@/lib/storage'
 
 // 重命名导入组件以避免混淆
 const CoffeeBeanRanking = _CoffeeBeanRanking;
@@ -852,14 +853,42 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
             tempContainer.appendChild(title);
             tempContainer.appendChild(clone);
             
+            // 获取用户名
+            const settingsStr = await Storage.get('brewGuideSettings');
+            let username = '';
+            if (settingsStr) {
+                try {
+                    const settings = JSON.parse(settingsStr);
+                    username = settings.username?.trim() || '';
+                } catch (e) {
+                    console.error('解析用户设置失败', e);
+                }
+            }
+            
             // 添加底部标记
             const footer = document.createElement('p');
-            footer.innerText = '—— Brew Guide';
             footer.style.textAlign = 'left';
             footer.style.marginTop = '8px';
             footer.style.fontSize = '11px';
             footer.style.color = isDarkMode ? '#a3a3a3' : '#525252';
             footer.style.padding = '24px';
+            footer.style.display = 'flex';
+            footer.style.justifyContent = 'space-between';
+            
+            if (username) {
+                // 如果有用户名，将用户名放在左边，Brew Guide放在右边
+                const usernameSpan = document.createElement('span');
+                usernameSpan.innerText = `@${username}`;
+                
+                const appNameSpan = document.createElement('span');
+                appNameSpan.innerText = '—— Brew Guide';
+                
+                footer.appendChild(usernameSpan);
+                footer.appendChild(appNameSpan);
+            } else {
+                // 如果没有用户名，保持原样
+                footer.innerText = '—— Brew Guide';
+            }
             
             tempContainer.appendChild(footer);
             
