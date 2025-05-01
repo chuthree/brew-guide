@@ -23,6 +23,7 @@ export interface SettingsOptions {
     layoutSettings?: LayoutSettings // 添加布局设置
     language: string // 添加语言设置
     showFlowRate: boolean // 添加显示流速选项
+    username: string // 添加用户名
 }
 
 // 默认设置
@@ -39,7 +40,8 @@ export const defaultSettings: SettingsOptions = {
         showStageDivider: true // 默认显示阶段分隔线
     },
     language: 'zh', // 默认使用中文
-    showFlowRate: false // 默认不显示流速
+    showFlowRate: false, // 默认不显示流速
+    username: '' // 默认用户名为空
 }
 
 interface SettingsProps {
@@ -369,6 +371,29 @@ const Settings: React.FC<SettingsProps> = ({
                             ) : null}
                         </div>
                     )}
+                </div>
+
+                {/* 个人信息设置组 */}
+                <div className="px-6 py-4">                  
+                    <div className="space-y-4">
+                        {/* 用户名 */}
+                        <div>
+                            <label htmlFor="username" className="block text-sm font-medium text-neutral-800 dark:text-neutral-200 mb-2">
+                                用户名
+                            </label>
+                            <input
+                                type="text"
+                                id="username"
+                                value={settings.username}
+                                onChange={(e) => handleChange('username', e.target.value)}
+                                placeholder="请输入您的用户名"
+                                className="w-full py-2 px-3 text-sm font-medium rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 appearance-none focus:outline-none focus:ring-2 focus:ring-neutral-500"
+                            />
+                            <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
+                                用于在分享时显示签名
+                            </p>
+                        </div>
+                    </div>
                 </div>
 
                 {/* 时间框架设置组 */}

@@ -194,7 +194,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
                                         />
                                     </div>
                                 </div>
-                                
+
                                 {/* 磨豆机选择 */}
                                 <div id="onboarding-grinder-select-wrapper" className="bg-neutral-50 dark:bg-neutral-900 p-4 rounded-xl">
                                     <label className="text-sm font-medium text-neutral-900 dark:text-neutral-100 mb-1 block">
@@ -260,6 +260,23 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
                                     </div>
                                 )}
                             </div>
+                            
+                            {/* 用户名输入 */}
+                            <div className="bg-neutral-50 dark:bg-neutral-900 p-4 rounded-xl">
+                                    <label className="text-sm font-medium text-neutral-900 dark:text-neutral-100 mb-1 block">
+                                        用户名
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={settings.username}
+                                        onChange={(e) => handleSettingChange('username', e.target.value)}
+                                        placeholder="请输入您的用户名"
+                                        className="w-full py-2 px-3 mt-1 text-sm font-medium rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 appearance-none focus:outline-none focus:ring-2 focus:ring-neutral-500"
+                                    />
+                                    <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-2">
+                                        用于个性化您的体验
+                                    </p>
+                                </div>
 
                             {/* 底部按钮 */}
                             <div className="mt-8">
