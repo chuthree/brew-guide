@@ -45,7 +45,6 @@ const InventoryView: React.FC<InventoryViewProps> = ({
     const [editingRemaining, setEditingRemaining] = useState<{
         beanId: string,
         value: string,
-        position: { x: number, y: number } | null,
         targetElement: HTMLElement | null
     } | null>(null);
 
@@ -53,40 +52,12 @@ const InventoryView: React.FC<InventoryViewProps> = ({
     const handleRemainingClick = (bean: ExtendedCoffeeBean, event: React.MouseEvent) => {
         event.stopPropagation();
         const target = event.target as HTMLElement;
-        const rect = target.getBoundingClientRect();
         
-        // 相对于容器元素计算位置
-        const containerElement = document.querySelector('.scroll-with-bottom-bar') as HTMLElement;
-        
-        if (containerElement) {
-            const containerRect = containerElement.getBoundingClientRect();
-            
-            // 计算组件应该显示的位置
-            const DROPDOWN_WIDTH = 120;
-            const rightBoundaryPadding = 10; // 右侧安全边距
-            
-            // 计算x位置，确保不会超出右边界
-            let xPosition = rect.left - containerRect.left;
-            
-            // 检查是否会超出右边界
-            const rightEdge = xPosition + DROPDOWN_WIDTH;
-            const containerWidth = containerElement.clientWidth;
-            
-            if (rightEdge > containerWidth - rightBoundaryPadding) {
-                // 如果会超出右边界，则向左调整位置
-                xPosition = Math.max(rightBoundaryPadding, containerWidth - DROPDOWN_WIDTH - rightBoundaryPadding);
-            }
-            
-            setEditingRemaining({
-                beanId: bean.id,
-                value: bean.remaining || '',
-                position: {
-                    x: xPosition,
-                    y: rect.bottom - containerRect.top
-                },
-                targetElement: target
-            });
-        }
+        setEditingRemaining({
+            beanId: bean.id,
+            value: bean.remaining || '',
+            targetElement: target
+        });
     };
 
     // 处理快捷减量
@@ -225,16 +196,13 @@ const InventoryView: React.FC<InventoryViewProps> = ({
             )}
 
             {/* 剩余量编辑弹出层 */}
-            <AnimatePresence>
-                {editingRemaining && (
-                    <RemainingEditor
-                        position={editingRemaining.position}
-                        onCancel={handleRemainingCancel}
-                        onQuickDecrement={handleQuickDecrement}
-                        _targetElement={editingRemaining.targetElement}
-                    />
-                )}
-            </AnimatePresence>
+            <RemainingEditor
+                targetElement={editingRemaining?.targetElement || null}
+                isOpen={!!editingRemaining}
+                onOpenChange={(open) => !open && setEditingRemaining(null)}
+                onCancel={handleRemainingCancel}
+                onQuickDecrement={handleQuickDecrement}
+            />
         </div>
     );
 };
