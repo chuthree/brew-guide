@@ -4,7 +4,7 @@ import { BeanImageGalleryProps } from './types'
 
 const BeanImageGallery: React.FC<BeanImageGalleryProps> = ({ beansWithImages, imagesLoaded }) => {
     return (
-        <div className="relative w-full flex justify-center pt-4 pb-2">
+        <div className="relative w-full flex justify-center pt-8 pb-2">
             <div className="flex justify-center items-center relative w-full h-28">
                 {beansWithImages.map((bean, index) => {
                     // 如果没有图片，跳过渲染

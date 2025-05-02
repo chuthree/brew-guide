@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useRef } from 'react'
 import { isBeanEmpty } from '../../globalCache'
 import { StatsData, AnimationStyles } from './types'
 import { formatNumber } from './utils'
@@ -19,6 +19,7 @@ const StatsCategories: React.FC<StatsCategoriesProps> = ({
     todayCost, 
     styles 
 }) => {
+
     return (
         <div className="flex flex-col gap-8">
             <div className="grid grid-cols-1 gap-8">
@@ -47,7 +48,7 @@ const StatsCategories: React.FC<StatsCategoriesProps> = ({
                 </StatCategory>
                 
                 {/* 编号03 - 费用数据 */}
-                {/* <StatCategory 
+                <StatCategory 
                     number={3} 
                     title="费用数据" 
                     animStyle={styles.statsAnimStyle(2)}
@@ -55,14 +56,14 @@ const StatsCategories: React.FC<StatsCategoriesProps> = ({
                     <StatItem label="总花费" value={`${formatNumber(stats.totalCost)}`} unit="元" />
                     <StatItem label="剩余咖啡价值" value={`${formatNumber(stats.remainingWeight * stats.averageGramPrice)}`} unit="元" />
                     <StatItem label="已消耗咖啡价值" value={`${formatNumber(stats.consumedWeight * stats.averageGramPrice)}`} unit="元" />
-                    <StatItem label="今日花费" value={`${formatNumber(todayCost)}`} unit="元" />
                     <StatItem label="平均每豆价格" value={`${formatNumber(stats.averageBeanPrice)}`} unit="元" />
                     <StatItem label="每克平均价格" value={`${formatNumber(stats.averageGramPrice)}`} unit="元/克" />
-                </StatCategory> */}
+                    <StatItem label="今日花费" value={`${formatNumber(todayCost)}`} unit="元" />
+                </StatCategory>
                 
                 {/* 编号04 - 豆子分类 */}
                 <StatCategory 
-                    number={3} 
+                    number={4} 
                     title="分类" 
                     animStyle={styles.statsAnimStyle(2)}
                 >
@@ -106,7 +107,7 @@ const StatsCategories: React.FC<StatsCategoriesProps> = ({
                 
                 {/* 编号05 - 赏味期状态 */}
                 <StatCategory 
-                    number={4} 
+                    number={5} 
                     title="赏味期" 
                     animStyle={styles.statsAnimStyle(3)}
                 >
@@ -118,7 +119,7 @@ const StatsCategories: React.FC<StatsCategoriesProps> = ({
                 
                 {/* 编号06 - 烘焙度分布 */}
                 <StatCategory 
-                    number={5} 
+                    number={6} 
                     title="烘焙度" 
                     animStyle={styles.statsAnimStyle(4)}
                 >
@@ -127,7 +128,7 @@ const StatsCategories: React.FC<StatsCategoriesProps> = ({
                 
                 {/* 编号07 - 产地分布 */}
                 <StatCategory 
-                    number={6} 
+                    number={7} 
                     title="产地" 
                     animStyle={styles.statsAnimStyle(5)}
                 >
@@ -136,7 +137,7 @@ const StatsCategories: React.FC<StatsCategoriesProps> = ({
                 
                 {/* 编号08 - 处理法分布 */}
                 <StatCategory 
-                    number={7} 
+                    number={8} 
                     title="处理法" 
                     animStyle={styles.statsAnimStyle(6)}
                 >
@@ -145,7 +146,7 @@ const StatsCategories: React.FC<StatsCategoriesProps> = ({
                 
                 {/* 编号09 - 品种分布 */}
                 <StatCategory 
-                    number={8} 
+                    number={9} 
                     title="品种" 
                     animStyle={styles.statsAnimStyle(7)}
                 >
@@ -154,25 +155,12 @@ const StatsCategories: React.FC<StatsCategoriesProps> = ({
                 
                 {/* 编号10 - 风味标签分布 */}
                 <StatCategory 
-                    number={9} 
+                    number={10} 
                     title="风味" 
                     animStyle={styles.statsAnimStyle(8)}
                 >
                     {renderStatsRows(stats.topFlavors, '次')}
                 </StatCategory>
-            </div>
-            
-            {/* 底部附加项，可选显示 */}
-            <div 
-                className="mt-8 mb-4 text-[10px] text-center text-neutral-500 dark:text-neutral-400 flex flex-col space-y-1"
-                style={{
-                    ...styles.infoAnimStyle,
-                    transitionDelay: '1200ms'
-                }}
-            >
-                <div className="flex justify-center">
-                    <span className="px-2">—— Brew Guide</span>
-                </div>
             </div>
         </div>
     )
