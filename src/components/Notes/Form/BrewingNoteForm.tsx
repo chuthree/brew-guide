@@ -549,43 +549,6 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                         </div>
                     </div>
                     <div className="relative py-3">
-                        {/* 竖线刻度和数字 */}
-                        <div className="flex justify-between items-end mb-4" style={{ height: '40px' }}>
-                            {[...Array(9)].map((_, i) => {
-                                const value = 1 + i * 0.5;
-                                const isInteger = value % 1 === 0;
-                                const isSelected = value === formData.rating;
-                                
-                                // 计算竖线高度，整数更高，靠近当前选中值的更高
-                                let height = isInteger ? 16 : 10;
-                                if (isSelected) height = 20;
-                                
-                                return (
-                                    <div key={i} className="flex flex-col items-center">
-                                        <div 
-                                            className={`w-[1px] mb-1 transition-all duration-200 ${
-                                                isSelected 
-                                                ? 'bg-neutral-800 dark:bg-neutral-200' 
-                                                : isInteger
-                                                  ? 'bg-neutral-400 dark:bg-neutral-500'
-                                                  : 'bg-neutral-300 dark:bg-neutral-600'
-                                            }`}
-                                            style={{ height: `${height}px` }}
-                                        ></div>
-                                        <span 
-                                            className={`text-[9px] ${
-                                                isSelected 
-                                                ? 'text-neutral-800 dark:text-neutral-200 font-medium' 
-                                                : 'text-neutral-400 dark:text-neutral-500'
-                                            }`}
-                                        >
-                                            {value.toFixed(1)}
-                                        </span>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                        
                         {/* 滑块 - 参考风味评分的滑块实现 */}
                         <div className="relative py-4 -my-4" ref={sliderRef}>
                             <input
