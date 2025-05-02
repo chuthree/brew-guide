@@ -78,7 +78,7 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
 3. 步骤的time值必须按递增顺序排列
 4. 确保JSON格式有效，数值字段不包含单位
 
-提示：一般焖蒸注水方式是center，label就是“焖蒸(绕圈注水)”，
+提示：一般焖蒸注水方式是center，label就是"焖蒸(绕圈注水)"，
 `;
     })();
 
@@ -212,31 +212,44 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
     // 渲染上传部分
     const renderUploadSection = () => (
         <div className="p-3 border border-neutral-200 dark:border-neutral-700 rounded-md bg-neutral-50 dark:bg-neutral-800">
-            <div className="space-y-3 py-1">
-                <div className="bg-neutral-100 dark:bg-neutral-800 p-3 rounded-md text-xs text-neutral-600 dark:text-neutral-400">
-                    <p className="mb-2">使用《豆包》AI获取冲煮方案JSON数据：</p>
-                    <ol className="list-decimal pl-6 space-y-1">
-                        <li>把冲煮方案说明或截图发送给AI</li>
-                        <li>将下方提示词与图片一并发送</li>
-                        <li>将返回的JSON数据复制到下方文本框</li>
-                    </ol>
-                </div>
-                <div className="bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 p-3 rounded-md text-xs">
-                    <div className="flex justify-between mb-1">
-                        <span className="text-neutral-500 dark:text-neutral-400">提示词：</span>
-                        <button
-                            onClick={() => {
-                                clearMessages();
-                                _copyTextToClipboard(_templatePrompt);
-                            }}
-                            className="text-neutral-500 dark:text-neutral-400 px-1.5 py-0.5 rounded text-[10px] border border-neutral-300 dark:border-neutral-700"
+            <div className="space-y-4 py-1">
+                <div className="bg-neutral-100 dark:bg-neutral-800 p-4 rounded-lg text-xs text-neutral-600 dark:text-neutral-400">
+                    <ol className="list-decimal pl-5 space-y-1 text-[11px]">
+                        <li>准备好咖啡冲煮方案说明或截图</li>
+                        <li>发送至<a 
+                            href="https://doubao.com/bot/duJYQEFd" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="pb-1.5 text-[11px] relative text-neutral-600 dark:text-neutral-400"
                         >
-                            复制
-                        </button>
-                    </div>
-                    <p className="text-neutral-800 dark:text-neutral-200 text-[10px] line-clamp-2">
-                        提取咖啡冲煮方案数据，返回JSON格式。包含方案名称、参数和冲煮步骤...
-                    </p>
+                            <span className="relative underline underline-offset-2 decoration-sky-600 ml-1">豆包定制智能体</span>
+                            <svg viewBox="0 0 24 24" className="inline-block ml-1 w-3 h-3" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor">
+                                <path d="M7 17L17 7M17 7H7M17 7V17" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                        </a></li>
+                        <li>将返回的 JSON 数据粘贴到下方文本框</li>
+                    </ol>
+                    
+                    <details className="mt-3 p-2 bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-200 dark:border-neutral-700 rounded-md text-[10px]">
+                        <summary className="text-neutral-500 dark:text-neutral-400 cursor-pointer">提示词（点击展开）</summary>
+                        <textarea
+                            readOnly
+                            value={_templatePrompt}
+                            className="w-full text-neutral-700 dark:text-neutral-300 text-[10px] p-2 mt-2 bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-200 dark:border-neutral-700 rounded-md h-20 overflow-auto"
+                            onFocus={(e) => e.target.select()}
+                        />
+                        <div className="flex justify-end mt-1">
+                            <button
+                                onClick={() => {
+                                    clearMessages();
+                                    _copyTextToClipboard(_templatePrompt);
+                                }}
+                                className="text-neutral-500 dark:text-neutral-400 px-2 py-0.5 rounded text-[10px] bg-neutral-200/80 dark:bg-neutral-800/80 hover:bg-neutral-300 dark:hover:bg-neutral-700 transition-colors"
+                            >
+                                复制
+                            </button>
+                        </div>
+                    </details>
                 </div>
             </div>
         </div>
@@ -323,9 +336,9 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
                                 {/* 表单内容 */}
                                 <div className="space-y-4 mt-2">
                                     {renderUploadSection()}
-                                    <div className="flex flex-col space-y-2">
-                                        <p className="text-xs text-neutral-500 dark:text-neutral-500">
-                                            粘贴冲煮方案（支持分享的文本格式或JSON格式）：
+                                    <div className="flex items-center mb-1">
+                                        <p className="text-xs text-neutral-500 dark:text-neutral-400 flex-1">
+                                            JSON 数据
                                         </p>
                                     </div>
                                     <textarea
