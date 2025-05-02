@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { CoffeeBeanManager } from '@/lib/coffeeBeanManager'
 import CoffeeBeanFormModal from '@/components/CoffeeBean/Form/Modal'
 import CoffeeBeanRatingModal from '../Rating/Modal'
@@ -47,6 +47,7 @@ import { Capacitor } from '@capacitor/core'
 import { toPng } from 'html-to-image'
 import { useToast } from '@/components/GlobalToast'
 import { Storage } from '@/lib/storage'
+import { exportStatsView } from './components/StatsView/StatsExporter'
 
 // 重命名导入组件以避免混淆
 const CoffeeBeanRanking = _CoffeeBeanRanking;
@@ -958,6 +959,55 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
         }
     };
 
+    // 添加统计数据分享状态
+    const [isExportingStats, setIsExportingStats] = useState(false)
+    
+    // 处理统计数据分享
+    const handleStatsShare = async () => {
+        if (isExportingStats) return;
+        
+        // 找到统计数据容器
+        const statsContainer = document.querySelector('.coffee-bean-stats-container');
+        if (!statsContainer) {
+            toast.showToast({
+                type: 'error',
+                title: '无法找到统计数据容器'
+            });
+            return;
+        }
+        
+        setIsExportingStats(true);
+        
+        try {
+            // 使用StatsExporter处理导出
+            await exportStatsView({
+                statsContainerRef: { current: statsContainer as HTMLDivElement },
+                onSuccess: (message) => {
+                    toast.showToast({
+                        type: 'success',
+                        title: message
+                    });
+                },
+                onError: (message) => {
+                    toast.showToast({
+                        type: 'error',
+                        title: message
+                    });
+                },
+                onComplete: () => {
+                    setIsExportingStats(false);
+                }
+            });
+        } catch (error) {
+            console.error('导出统计数据时出错:', error);
+            toast.showToast({
+                type: 'error',
+                title: '生成图片失败'
+            });
+            setIsExportingStats(false);
+        }
+    };
+
     if (!isOpen) return null;
 
     return (
@@ -1095,6 +1145,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                             <StatsView 
                                 beans={beans}
                                 showEmptyBeans={showEmptyBeans}
+                                onStatsShare={handleStatsShare}
                             />
                         </div>
                     )}

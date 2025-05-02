@@ -1,9 +1,9 @@
 import { ExtendedCoffeeBean } from '../../types'
-import { RefObject } from 'react'
 
 export interface StatsViewProps {
     beans: ExtendedCoffeeBean[]
     showEmptyBeans: boolean
+    onStatsShare?: () => void
 }
 
 export interface StatsData {

@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useMemo, useRef, useState, useEffect } from 'react'
-import { showToast } from '@/components/ui/toast'
 import { StatsViewProps } from './types'
 import { calculateStats, stardomFontStyle } from './utils'
 import BeanImageGallery from './BeanImageGallery'
@@ -10,8 +9,9 @@ import StatsCategories from './StatsCategories'
 import { useAnimation } from './useAnimation'
 import { useConsumption } from './useConsumption'
 import { Storage } from '@/lib/storage'
+import { ArrowUpRight } from 'lucide-react'
 
-const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
+const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsShare }) => {
     const statsContainerRef = useRef<HTMLDivElement>(null)
     const [username, setUsername] = useState<string>('')
     
@@ -49,7 +49,7 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
     }, []);
 
     return (
-        <div className="bg-neutral-50 dark:bg-neutral-900 overflow-x-hidden">
+        <div className="bg-neutral-50 dark:bg-neutral-900 overflow-x-hidden coffee-bean-stats-container">
             {/* 添加字体定义 */}
             <style jsx global>{`
                 @font-face {
@@ -87,7 +87,7 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
                     </div>
                     
                     <div 
-                        className="w-full flex justify-between items-center space-x-2 text-[10px] uppercase tracking-widest mb-8"
+                        className="w-full flex justify-between items-center space-x-2 text-[10px] uppercase tracking-widest"
                         style={styles.infoAnimStyle}
                     >
                         <div className="">✦</div>
@@ -95,6 +95,20 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
                         <div className="">✦</div>
                     </div>
                 </div>
+
+                {/* 这里添加一个剩余容量信息百分比，有个圆形图，先由线条画一个圆圈， */}
+                {/* <div 
+                    className="p-4 max-w-xs mx-auto"
+                    style={styles.statsAnimStyle(0)}
+                >
+                    <div className="w-full flex justify-start">
+                        <CapacityCircle 
+                            remainingPercentage={stats.totalWeight > 0 
+                                ? (stats.remainingWeight / stats.totalWeight) * 100 
+                                : 100}
+                        />
+                    </div>
+                </div> */}
                 
                 {/* 这些数据只是用于编写代码时参考 */}
                 <div className="p-4 max-w-xs mx-auto">
@@ -106,6 +120,18 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
                         styles={styles}
                     />
                 </div>
+
+                
+            </div>
+            {/* 分享按钮 */}
+            <div className="p-4 max-w-xs mx-auto text-center">
+                <button
+                    onClick={onStatsShare}
+                    className="mx-auto text-center pb-1.5 text-[11px] relative text-neutral-600 dark:text-neutral-400"
+            >
+                <span className="relative underline underline-offset-2 decoration-sky-500">分享 (不包含费用数据)</span>
+                    <ArrowUpRight className="inline-block ml-1 w-3 h-3" />
+                </button>
             </div>
         </div>
     )
