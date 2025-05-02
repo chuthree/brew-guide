@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import ReactCrop, { Crop } from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
 import { recognizeImage, RecognitionError } from '@/services/recognition'
 import { debounce } from 'lodash'
@@ -98,15 +97,15 @@ const ImportBeanModal: React.FC<ImportBeanModalProps> = ({
     const [isUploading, setIsUploading] = useState(false);
     const _fileInputRef = useRef<HTMLInputElement>(null);
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
-    const [crop, setCrop] = useState<Crop>({
+    const [crop, _setCrop] = useState<Crop>({
         unit: '%',
         width: 90,
         height: 90,
         x: 5,
         y: 5
     });
-    const [croppedImage, setCroppedImage] = useState<string | null>(null);
-    const [showCropper, setShowCropper] = useState(false);
+    const [_croppedImage, setCroppedImage] = useState<string | null>(null);
+    const [showCropper, _setShowCropper] = useState(false);
     const imgRef = useRef<HTMLImageElement>(null);
 
     // 添加手动模式状态

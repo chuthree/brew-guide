@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react'
 import BrewingNoteForm from './BrewingNoteForm'
-import { MethodSelector, CoffeeBeanSelector, EquipmentSelector } from '@/components/Notes/Form'
-import { useMethodManagement } from '@/components/Notes/Form/hooks/useMethodManagement'
+import { MethodSelector, CoffeeBeanSelector, EquipmentSelector } from '@/components/notes/Form'
+import { useMethodManagement } from '@/components/notes/Form/hooks/useMethodManagement'
 import type { BrewingNoteData, CoffeeBean } from '@/types/app'
 import { equipmentList } from '@/lib/config'
 import SteppedFormModal, { Step } from '@/components/SteppedFormModal'

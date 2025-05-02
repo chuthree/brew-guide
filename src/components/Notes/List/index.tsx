@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+import React, { useState, useEffect, useRef, useCallback, useReducer } from 'react'
 import { Storage } from '@/lib/storage'
 import { BrewingNote } from '@/lib/config'
 import { BrewingHistoryProps } from '../types'
@@ -8,10 +8,10 @@ import SortSelector from './SortSelector'
 import FilterTabs from './FilterTabs'
 import AddNoteButton from './AddNoteButton'
 import Toast from '../ui/Toast'
-import { BrewingNoteForm } from '@/components/Notes'
+import { BrewingNoteForm } from '@/components/notes'
 import { BrewingNoteData } from '@/types/app'
 import { getEquipmentName, normalizeEquipmentId } from '../utils'
-import { globalCache, getSelectedEquipmentPreference, getSelectedBeanPreference, getFilterModePreference, getSortOptionPreference, saveSelectedEquipmentPreference, saveSelectedBeanPreference, saveFilterModePreference, saveSortOptionPreference, calculateTotalCoffeeConsumption, formatConsumption, initializeGlobalCache } from './globalCache'
+import { globalCache, saveSelectedEquipmentPreference, saveSelectedBeanPreference, saveFilterModePreference, saveSortOptionPreference, calculateTotalCoffeeConsumption, formatConsumption, initializeGlobalCache } from './globalCache'
 import ListView from './ListView'
 import { SortOption } from '../types'
 import { exportSelectedNotes } from '../Share/NotesExporter'
@@ -48,12 +48,12 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onClose: _onClo
     
     // 计算总咖啡消耗量
     const totalCoffeeConsumption = useRef(globalCache.totalConsumption || 0)
-    const [forceUpdate, setForceUpdate] = useState(0)
+    const [, _forceUpdate] = useReducer(x => x + 1, 0)
 
     // 强制组件重新渲染的函数
     const triggerRerender = useCallback(() => {
-        setForceUpdate(prev => prev + 1);
-    }, []);
+        _forceUpdate()
+    }, [])
     
     // 加载可用设备和咖啡豆列表
     const loadEquipmentsAndBeans = useCallback(async () => {

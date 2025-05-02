@@ -9,13 +9,12 @@ import Script from 'next/script'
 import { Inter } from 'next/font/google'
 import { Noto_Sans_SC } from 'next/font/google'
 import { GeistMono } from 'geist/font'
-import { ToastProvider } from '@/components/GlobalToast'
+import { ToastProvider } from '@/components/common/feedback/GlobalToast'
 import '@/styles/base/globals.css'
 import KeyboardManager from '@/components/layout/KeyboardManager'
 import { Suspense } from 'react'
 import CapacitorInit from '@/providers/CapacitorProvider'
 import StorageInit from '@/providers/StorageProvider'
-import { Toast } from '@/components/ui/toast';
 import { TranslationsProvider } from '@/providers/TranslationsProvider'
 
 // 配置 Inter 字体
@@ -157,7 +156,6 @@ export default function RootLayout({
                 {children}
               </div>
               <PWAPrompt />
-              <Toast />
             </ToastProvider>
           </TranslationsProvider>
         </ThemeProvider>

@@ -7,7 +7,7 @@ import {
 } from "@/lib/config";
 import { Content } from "./useBrewingState";
 import { formatGrindSize } from "@/lib/grindUtils";
-import { SettingsOptions } from "@/components/Settings";
+import { SettingsOptions } from "@/components/settings/Settings";
 import { loadCustomMethodsForEquipment } from "@/lib/customMethods";
 
 // 格式化时间工具函数

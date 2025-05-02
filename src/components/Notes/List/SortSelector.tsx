@@ -6,7 +6,7 @@ import {
     SelectContent,
     SelectItem,
     SelectTrigger,
-} from '@/components/CoffeeBean/ui/select'
+} from '@/components/coffee-bean/ui/select'
 import { SortSelectorProps, SORT_OPTIONS, SORT_LABELS } from '../types'
 
 const SortSelector: React.FC<SortSelectorProps> = ({ sortOption, onSortChange }) => {

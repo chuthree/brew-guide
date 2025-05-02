@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { copyToClipboard } from "@/lib/exportUtils"
-import { showToast } from "@/components/ui/toast"
+import { showToast } from "@/components/common/feedback/GlobalToast"
 
 interface UseCopyResult {
   copyText: (text: string) => Promise<void>

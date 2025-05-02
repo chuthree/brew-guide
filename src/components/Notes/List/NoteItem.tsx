@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import ActionMenu from '@/components/CoffeeBean/ui/action-menu'
+import ActionMenu from '@/components/coffee-bean/ui/action-menu'
 import { NoteItemProps } from '../types'
 import { formatDate, formatRating } from '../utils'
 

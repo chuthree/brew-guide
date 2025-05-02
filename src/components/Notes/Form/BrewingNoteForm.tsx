@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 
 import type { BrewingNoteData, CoffeeBean } from '@/types/app'
-import AutoResizeTextarea from '@/components/AutoResizeTextarea'
+import AutoResizeTextarea from '@/components/common/forms/AutoResizeTextarea'
 
 interface TasteRatings {
     acidity: number;

@@ -1,20 +1,20 @@
 import React, { useCallback, useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { Method, equipmentList, CustomEquipment, commonMethods, createEditableMethodFromCommon } from '@/lib/config';
-import StageItem from '@/components/StageItem';
-import StageDivider from '@/components/StageDivider';
-import { SettingsOptions } from './Settings';
+import StageItem from '@/components/brewing/stages/StageItem';
+import StageDivider from '@/components/brewing/stages/StageDivider';
+import { SettingsOptions } from './settings/Settings';
 import { TabType, MainTabType, Content, Step as BaseStep } from '@/lib/hooks/useBrewingState';
 import { CoffeeBean } from '@/types/app';
 import type { BrewingNoteData } from '@/types/app';
 import { CoffeeBeanManager } from '@/lib/coffeeBeanManager';
 import { v4 as _uuidv4 } from 'uuid';
-import { showToast } from "@/components/ui/toast";
-import EquipmentShareModal from '@/components/EquipmentShareModal';
+import { showToast } from "@/components/common/feedback/GlobalToast";
+import EquipmentShareModal from '@/components/equipment/share/EquipmentShareModal';
 import { getEquipmentName } from '@/lib/brewing/parameters';
 import BottomActionBar from '@/components/BottomActionBar';
-import CoffeeBeanList from '@/components/CoffeeBean/List/ListView';
-import MethodShareModal from '@/components/MethodShareModal';
+import CoffeeBeanList from '@/components/coffee-bean/List/ListView';
+import MethodShareModal from '@/components/method/share/MethodShareModal';
 import { saveCustomMethod } from '@/lib/customMethods';
 
 // 扩展Step类型，增加固定方案所需的字段
@@ -25,13 +25,13 @@ interface Step extends BaseStep {
 }
 
 // 动态导入客户端组件
-const PourVisualizer = dynamic(() => import('@/components/PourVisualizer'), {
+const PourVisualizer = dynamic(() => import('@/components/brewing/PourVisualizer'), {
     ssr: false,
     loading: () => null
 });
 
 // 动态导入笔记表单组件
-const BrewingNoteForm = dynamic(() => import('@/components/Notes').then(mod => ({ default: mod.BrewingNoteForm })), {
+const BrewingNoteForm = dynamic(() => import('@/components/notes').then(mod => ({ default: mod.BrewingNoteForm })), {
     ssr: false,
     loading: () => null
 });

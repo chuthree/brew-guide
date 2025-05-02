@@ -88,7 +88,7 @@ export function usePersistedState<T>(
         saveState(value);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   return [value, setAndPersistValue];

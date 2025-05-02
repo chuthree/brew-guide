@@ -13,26 +13,26 @@ import { useBrewingParameters } from '@/lib/hooks/useBrewingParameters'
 import { useBrewingContent } from '@/lib/hooks/useBrewingContent'
 import { useMethodSelector } from '@/lib/hooks/useMethodSelector'
 import { EditableParams } from '@/lib/hooks/useBrewingParameters'
-import CustomMethodFormModal from '@/components/CustomMethodFormModal'
+import CustomMethodFormModal from '@/components/method/forms/CustomMethodFormModal'
 import NavigationBar from '@/components/NavigationBar'
-import Settings, { SettingsOptions, defaultSettings } from '@/components/Settings'
+import Settings, { SettingsOptions, defaultSettings } from '@/components/settings/Settings'
 import TabContent from '@/components/TabContent'
-import MethodTypeSelector from '@/components/MethodTypeSelector'
-import Onboarding from '@/components/Onboarding'
-import CoffeeBeanFormModal from '@/components/CoffeeBean/Form/Modal'
+import MethodTypeSelector from '@/components/method/forms/MethodTypeSelector'
+import Onboarding from '@/components/onboarding/Onboarding'
+import CoffeeBeanFormModal from '@/components/coffee-bean/Form/Modal'
 import ImportModal from '@/components/ImportModal'
 import { CoffeeBeanManager } from '@/lib/coffeeBeanManager'
 import textZoomUtils from '@/lib/textZoom'
 import { BREWING_EVENTS } from '@/lib/brewing/constants'
 import type { BrewingNoteData } from '@/types/app'
 import { updateParameterInfo } from '@/lib/brewing/parameters'
-import { BrewingNoteFormModal } from '@/components/Notes'
+import { BrewingNoteFormModal } from '@/components/notes'
 import ErrorBoundary from '@/components/ErrorBoundary'
-import CoffeeBeans from '@/components/CoffeeBean/List'
+import CoffeeBeans from '@/components/coffee-bean/List'
 import SwipeBackGesture from '@/components/SwipeBackGesture'
 import { loadCustomEquipments, saveCustomEquipment, deleteCustomEquipment } from '@/lib/customEquipments'
-import CustomEquipmentFormModal from '@/components/CustomEquipmentFormModal'
-import EquipmentImportModal from '@/components/EquipmentImportModal'
+import CustomEquipmentFormModal from '@/components/equipment/forms/CustomEquipmentFormModal'
+import EquipmentImportModal from '@/components/equipment/import/EquipmentImportModal'
 
 // 为Window对象声明类型扩展
 declare global {
@@ -54,8 +54,8 @@ interface ExtendedCoffeeBean extends CoffeeBean {
 }
 
 // 动态导入客户端组件
-const BrewingTimer = dynamic(() => import('@/components/BrewingTimer'), { ssr: false, loading: () => null })
-const BrewingHistory = dynamic(() => import('@/components/Notes/List'), { ssr: false, loading: () => null })
+const BrewingTimer = dynamic(() => import('@/components/brewing/BrewingTimer'), { ssr: false, loading: () => null })
+const BrewingHistory = dynamic(() => import('@/components/notes/List'), { ssr: false, loading: () => null })
 
 // 添加一个静态加载器组件，处理初始化过程
 const AppLoader = ({ onInitialized }: { onInitialized: (params: { hasBeans: boolean }) => void }) => {
