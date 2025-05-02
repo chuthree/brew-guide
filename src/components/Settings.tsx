@@ -372,7 +372,7 @@ const Settings: React.FC<SettingsProps> = ({
                                     <div className="flex flex-col items-center">
                                         <div className="w-full aspect-square relative rounded-lg overflow-hidden">
                                             <Image 
-                                                src="/images/content/appreciation-code.jpg" 
+                                                src="/appreciationCode.jpg" 
                                                 alt="赞赏码" 
                                                 fill
                                                 className="object-cover"
@@ -398,7 +398,7 @@ const Settings: React.FC<SettingsProps> = ({
                                     <div className="flex flex-col items-center">
                                         <div className="w-full aspect-square relative rounded-lg overflow-hidden">
                                             <Image 
-                                                src="/images/content/group-code.jpg" 
+                                                src="/groupCode.jpg" 
                                                 alt="交流群" 
                                                 fill
                                                 className="object-cover"
@@ -770,7 +770,7 @@ const Settings: React.FC<SettingsProps> = ({
                                     }
                                 }}
                                 placeholder="克数"
-                                className="w-16 py-1.5 px-2 text-sm bg-neutral-100 dark:bg-neutral-800 border-y border-l border-neutral-200 dark:border-neutral-700 rounded-l-lg focus:outline-none focus:ring-1 focus:ring-neutral-500"
+                                className="w-16 py-1.5 px-2 text-sm bg-neutral-100 dark:bg-neutral-800 border-y border-l border-neutral-200/50 dark:border-neutral-700 rounded-l-lg rounded-r-none focus:outline-none focus:ring-1 focus:ring-neutral-500"
                             />
                             <button
                                 onClick={addDecrementPreset}

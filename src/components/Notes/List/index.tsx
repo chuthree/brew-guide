@@ -414,7 +414,9 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onClose: _onClo
                         <div className="flex justify-between items-center mb-6 px-6">
                             <div className="text-xs tracking-wide text-neutral-800 dark:text-neutral-100">
                                 {selectedEquipment || selectedBean
-                                    ? `${globalCache.filteredNotes.length}/${globalCache.notes.length} 条记录，已消耗 ${formatConsumption(globalCache.totalConsumption || totalCoffeeConsumption.current)}` 
+                                    ? (globalCache.filteredNotes.length === globalCache.notes.length
+                                        ? `${globalCache.notes.length} 条记录，已消耗 ${formatConsumption(globalCache.totalConsumption || totalCoffeeConsumption.current)}`
+                                        : `${globalCache.filteredNotes.length}/${globalCache.notes.length} 条记录，已消耗 ${formatConsumption(globalCache.totalConsumption || totalCoffeeConsumption.current)}`)
                                     : `${globalCache.notes.length} 条记录，已消耗 ${formatConsumption(globalCache.totalConsumption || totalCoffeeConsumption.current)}`}
                             </div>
                             <SortSelector sortOption={sortOption} onSortChange={handleSortChange} />

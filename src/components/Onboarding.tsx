@@ -259,10 +259,9 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
                                         </div>
                                     </div>
                                 )}
-                            </div>
-                            
-                            {/* 用户名输入 */}
-                            <div className="bg-neutral-50 dark:bg-neutral-900 p-4 rounded-xl">
+
+                                {/* 用户名输入 */}
+                                <div className="bg-neutral-50 dark:bg-neutral-900 p-4 rounded-xl">
                                     <label className="text-sm font-medium text-neutral-900 dark:text-neutral-100 mb-1 block">
                                         用户名
                                     </label>
@@ -277,6 +276,9 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
                                         用于个性化您的体验
                                     </p>
                                 </div>
+                            </div>
+                            
+                                
 
                             {/* 底部按钮 */}
                             <div className="mt-8">
