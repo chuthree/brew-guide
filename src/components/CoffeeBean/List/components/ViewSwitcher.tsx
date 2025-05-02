@@ -124,7 +124,11 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                 <div className="flex items-center space-x-3">
                     <div className="text-xs tracking-wide text-neutral-800 dark:text-neutral-100 break-words">
                         {viewMode === VIEW_OPTIONS.INVENTORY
-                            ? `${totalBeans ? `${beansCount}/${totalBeans}` : beansCount} 款咖啡豆${totalWeight ? `，共 ${totalWeight}` : ''}`
+                            ? `${totalBeans 
+                                ? (beansCount === totalBeans 
+                                   ? `${beansCount}` 
+                                   : `${beansCount}/${totalBeans}`)
+                                : beansCount} 款咖啡豆${totalWeight ? `，共 ${totalWeight}` : ''}`
                             : viewMode === VIEW_OPTIONS.BLOGGER
                                 ? `${bloggerBeansCount || 0} 款 (${bloggerYear}) 咖啡豆`
                                 : viewMode === VIEW_OPTIONS.STATS
@@ -288,9 +292,10 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                         {!isSearching ? (
                             <div className="flex overflow-x-auto no-scrollbar pr-28">
                                 {/* 豆子类型筛选按钮 */}
+                                
                                 <button
                                     onClick={() => onBeanTypeChange?.('espresso')}
-                                    className={`pb-1.5 mr-3 text-[11px] whitespace-nowrap relative ${selectedBeanType === 'espresso' ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
+                                    className={`pb-1.5 mr-2 text-[11px] whitespace-nowrap relative ${selectedBeanType === 'espresso' ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
                                 >
                                     <span className="relative">意式豆</span>
                                     {selectedBeanType === 'espresso' && (
@@ -300,33 +305,31 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                                 
                                 <button
                                     onClick={() => onBeanTypeChange?.('filter')}
-                                    className={`pb-1.5 mr-3 text-[11px] whitespace-nowrap relative ${selectedBeanType === 'filter' ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
+                                    className={`pb-1.5 mx-2 text-[11px] whitespace-nowrap relative ${selectedBeanType === 'filter' ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
                                 >
                                     <span className="relative">手冲豆</span>
                                     {selectedBeanType === 'filter' && (
                                         <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
                                     )}
                                 </button>
-                                
-                                {/* 分隔符 */}
-                                <div className="h-6 mr-3 self-center border-l border-neutral-200 dark:border-neutral-800"></div>
-                                
-                                {/* 品种筛选按钮 */}
+
                                 <button
                                     onClick={() => selectedVariety !== null && onVarietyClick?.(null)}
-                                    className={`pb-1.5 mr-3 text-[11px] whitespace-nowrap relative ${selectedVariety === null ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
+                                    className={`pb-1.5 mx-2 text-[11px] whitespace-nowrap relative ${selectedVariety === null ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
                                 >
-                                    <span className="relative">全部品种</span>
+                                    <span className="relative">全部豆种</span>
                                     {selectedVariety === null && (
                                         <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
                                     )}
                                 </button>
                                 
+                                
+                                {/* 品种筛选按钮 */}
                                 {availableVarieties?.map((variety: string) => (
                                     <button
                                         key={variety}
                                         onClick={() => selectedVariety !== variety && onVarietyClick?.(variety)}
-                                        className={`pb-1.5 mx-3 text-[11px] whitespace-nowrap relative ${selectedVariety === variety ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
+                                        className={`pb-1.5 mx-2 text-[11px] whitespace-nowrap relative ${selectedVariety === variety ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
                                     >
                                         <span className="relative">{variety}</span>
                                         {selectedVariety === variety && (
@@ -360,7 +363,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
 
                         {/* 操作按钮 - 右侧固定 */}
                         {!isSearching && (
-                            <div className="absolute right-6 top-0 bottom-0 flex items-center bg-neutral-50 dark:bg-neutral-900 pl-1 before:content-[''] before:absolute before:left-[-20px] before:top-0 before:bottom-0 before:w-5 before:bg-gradient-to-r before:from-transparent before:to-neutral-50 dark:before:to-neutral-900">
+                            <div className="absolute right-6 top-0 bottom-0 flex items-center bg-neutral-50 dark:bg-neutral-900 pl-1 before:content-[''] before:absolute before:left-[-20px] before:top-0 before:bottom-0 before:w-5 before:bg-gradient-to-r before:from-transparent before:to-neutral-50 dark:before:to-neutral-900 before:pointer-events-none">
                                 <button
                                     onClick={onToggleShowEmptyBeans}
                                     className={`pb-1.5 text-[11px] whitespace-nowrap relative ${showEmptyBeans ? 'text-neutral-800 dark:text-neutral-100 font-normal' : 'text-neutral-600 dark:text-neutral-400'}`}
