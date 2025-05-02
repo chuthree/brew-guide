@@ -1,6 +1,6 @@
 import { Storage } from "@/lib/storage";
 import { Method } from "@/lib/config";
-import { CoffeeBean, BlendComponent } from "@/app/types";
+import { CoffeeBean, BlendComponent } from "@/types/app";
 import { APP_VERSION } from "@/lib/config";
 
 // 定义导出数据的接口

@@ -1,6 +1,6 @@
 import type { Method } from "@/lib/config";
 import type { SettingsOptions } from "@/components/Settings";
-import type { BrewingNoteData, CoffeeBean } from "@/app/types";
+import type { BrewingNoteData, CoffeeBean } from "@/types/app";
 import { LayoutSettings } from "./Settings";
 
 // 扩展阶段类型

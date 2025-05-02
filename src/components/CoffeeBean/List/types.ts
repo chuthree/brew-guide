@@ -1,4 +1,4 @@
-import { CoffeeBean } from '@/app/types'
+import { CoffeeBean } from '@/types/app'
 
 // 添加BlendComponent类型
 export interface BlendComponent {

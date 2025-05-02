@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { Method, equipmentList, Stage, commonMethods, CustomEquipment } from "@/lib/config";
 import { Storage } from "@/lib/storage";
-import { BrewingNoteData, CoffeeBean } from "@/app/types";
+import { BrewingNoteData, CoffeeBean } from "@/types/app";
 import {
 	loadCustomMethods,
 	saveCustomMethod as apiSaveCustomMethod,

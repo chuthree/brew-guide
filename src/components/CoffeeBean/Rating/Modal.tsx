@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { CoffeeBean } from '@/app/types'
+import { CoffeeBean } from '@/types/app'
 import StarRating from '../ui/StarRating'
 
 interface CoffeeBeanRatingModalProps {

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useTransition, useCallback } from 'react'
-import { CoffeeBean } from '@/app/types'
+import { CoffeeBean } from '@/types/app'
 import { CoffeeBeanManager } from '@/lib/coffeeBeanManager'
 
 // 定义组件属性接口

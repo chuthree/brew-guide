@@ -1,5 +1,5 @@
 import { Storage } from "@/lib/storage";
-import { CoffeeBean } from "@/app/types";
+import { CoffeeBean } from "@/types/app";
 import { nanoid } from "nanoid";
 
 /**

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useMemo } from 'react'
-import type { CoffeeBean } from '@/app/types'
+import type { CoffeeBean } from '@/types/app'
 
 interface CoffeeBeanSelectorProps {
   coffeeBeans: CoffeeBean[]

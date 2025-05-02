@@ -1,5 +1,5 @@
 import type { BrewingNote } from '@/lib/config'
-import type { BrewingNoteData, CoffeeBean } from '@/app/types'
+import type { BrewingNoteData, CoffeeBean } from '@/types/app'
 
 // 排序类型定义
 export const SORT_OPTIONS = {

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 
-import type { BrewingNoteData, CoffeeBean } from '@/app/types'
+import type { BrewingNoteData, CoffeeBean } from '@/types/app'
 import AutoResizeTextarea from '@/components/AutoResizeTextarea'
 
 interface TasteRatings {

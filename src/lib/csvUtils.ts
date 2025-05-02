@@ -1,4 +1,4 @@
-import { CoffeeBean } from '@/app/types';
+import { CoffeeBean } from '@/types/app';
 // Import 2025 data (assuming these are the current files)
 import filterBeans2025CSV from '@public/data/filter-beans.csv';
 import espressoBeans2025CSV from '@public/data/espresso-beans.csv';

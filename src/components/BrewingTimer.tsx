@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef, useLayoutEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { BrewingNoteForm } from "@/components/Notes";
-import type { BrewingNoteData, CoffeeBean } from "@/app/types";
+import type { BrewingNoteData, CoffeeBean } from "@/types/app";
 import type { Method, Stage } from "@/lib/config";
 import type { SettingsOptions } from "@/components/Settings";
 import hapticsUtils from "@/lib/haptics";

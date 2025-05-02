@@ -1,5 +1,5 @@
 import React from 'react';
-import { ExtendedCoffeeBean } from '@/app/types';
+import { ExtendedCoffeeBean } from '@/types/app';
 import { cn } from '@/lib/utils';
 import {
     Select,

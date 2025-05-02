@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
-import { CoffeeBean } from '@/app/types'
+import { CoffeeBean } from '@/types/app'
 import { CoffeeBeanManager } from '@/lib/coffeeBeanManager'
 import { getBloggerBeans, BloggerBean, getVideoUrlFromEpisode } from '@/lib/csvUtils'
 

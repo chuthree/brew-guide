@@ -1,6 +1,6 @@
 import Dexie from 'dexie';
 import { BrewingNote } from './config';
-import { CoffeeBean } from '@/app/types';
+import { CoffeeBean } from '@/types/app';
 
 /**
  * 应用数据库类 - 使用Dexie.js包装IndexedDB
