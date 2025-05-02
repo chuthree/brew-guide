@@ -1,8 +1,8 @@
 'use client'
 
 import React, { useState, useRef, useEffect, useCallback } from 'react'
-import { AnimatePresence } from 'framer-motion'
-import { ArrowLeft, ArrowRight } from 'lucide-react'
+import { AnimatePresence, motion } from 'framer-motion'
+import { ArrowLeft, ArrowRight, Check } from 'lucide-react'
 import { ExtendedCoffeeBean, BlendComponent, Step, StepConfig } from './types'
 import BasicInfo from './components/BasicInfo'
 import DetailInfo from './components/DetailInfo'
@@ -618,33 +618,73 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
     const renderNextButton = () => {
         const isLastStep = getCurrentStepIndex() === steps.length - 1;
         const valid = isStepValid();
+        const canSave = valid && (currentStep === 'basic' || currentStep === 'detail' || currentStep === 'flavor');
 
         return (
             <div className="modal-bottom-button flex items-center justify-center">
-                <button
-                    type="button"
-                    onClick={handleNextStep}
-                    disabled={!valid}
-                    className={`
-                        flex items-center justify-center rounded-full
-                        ${!valid ? 'opacity-50 cursor-not-allowed' : ''}
-                        ${isLastStep
-                            ? 'bg-neutral-800 dark:bg-neutral-200 text-neutral-100 dark:text-neutral-800 px-6 py-3'
-                            : 'p-4 bg-neutral-50/80 dark:bg-neutral-900/80 backdrop-blur-md'
-                        }
-                    `}
-                >
-                    {isLastStep ? (
-                        <span className="font-medium">完成</span>
-                    ) : (
-                        <div className="flex items-center relative">
-                            <div className="w-24 h-0.5 bg-neutral-800 dark:bg-neutral-200"></div>
-                            <div className="absolute -right-1 transform translate-x-0">
-                                <ArrowRight className="w-5 h-5 text-neutral-800 dark:text-neutral-200" />
+                <div className="flex items-center justify-center gap-2">
+                    <AnimatePresence mode="popLayout">
+                        {canSave && (
+                            <motion.button
+                                key="save-button"
+                                type="button"
+                                onClick={handleSubmit}
+                                className="bg-neutral-800 dark:bg-neutral-200 text-neutral-100 dark:text-neutral-800 rounded-full p-2 flex-shrink-0"
+                                title="快速保存"
+                                initial={{ scale: 0, opacity: 0, x: 30 }}
+                                animate={{ scale: 1, opacity: 1, x: 0 }}
+                                exit={{ scale: 0, opacity: 0, x: 30 }}
+                                transition={{
+                                    type: "spring",
+                                    stiffness: 500,
+                                    damping: 25
+                                }}
+                            >
+                                <Check className="w-4 h-4" strokeWidth="3" />
+                            </motion.button>
+                        )}
+                    </AnimatePresence>
+                    <motion.button
+                        layout
+                        type="button"
+                        onClick={handleNextStep}
+                        disabled={!valid}
+                        transition={{
+                            type: "spring",
+                            stiffness: 500,
+                            damping: 25
+                        }}
+                        className={`
+                            flex items-center justify-center rounded-full
+                            ${!valid ? 'opacity-0 cursor-not-allowed' : ''}
+                            ${isLastStep
+                                ? 'bg-neutral-800 dark:bg-neutral-200 text-neutral-100 dark:text-neutral-800 px-6 py-3'
+                                : 'bg-neutral-800 dark:bg-neutral-200 text-neutral-100 dark:text-neutral-800 p-4'
+                            }
+                        `}
+                    >
+                        {isLastStep ? (
+                            <span className="font-medium">完成</span>
+                        ) : (
+                            <div className="flex items-center relative">
+                                <motion.div 
+                                    className="h-0.5 bg-neutral-200 dark:bg-neutral-800"
+                                    animate={{ 
+                                        width: canSave ? "3.5rem" : "5.5rem" 
+                                    }}
+                                    transition={{
+                                        type: "spring",
+                                        stiffness: 500,
+                                        damping: 25
+                                    }}
+                                ></motion.div>
+                                <div className="absolute -right-1 transform translate-x-0">
+                                    <ArrowRight className="w-5 h-5 text-neutral-200 dark:text-neutral-800" />
+                                </div>
                             </div>
-                        </div>
-                    )}
-                </button>
+                        )}
+                    </motion.button>
+                </div>
             </div>
         );
     };
