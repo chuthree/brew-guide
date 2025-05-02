@@ -17,7 +17,7 @@ const SortSelector: React.FC<SortSelectorProps> = ({ sortOption, onSortChange })
         >
             <SelectTrigger
                 variant="minimal"
-                className="w-auto min-w-[65px] tracking-wide text-neutral-800 dark:text-neutral-100 transition-colors hover:opacity-80 text-right"
+                className="w-auto tracking-wide text-neutral-800 dark:text-neutral-100 transition-colors hover:opacity-80 text-right"
             >
                 <div className="flex items-center justify-end w-full">
                     {SORT_LABELS[sortOption]}
