@@ -1,0 +1,27 @@
+---
+description: 设计风格以及颜色规范
+globs: 
+alwaysApply: false
+---
+- 极简主义设计风格，避免卡片式设计，避免过度设计，并且符合人机交互逻辑。
+- 设计语言高度统一。
+- 目前页面背景的颜色是bg-neutral-50 dark:bg-neutral-900
+- 目标群体都是手机用户
+- 颜色规范
+文本颜色：
+主要文本（标题/选中文本）：text-neutral-800 dark:text-white
+次要文本/说明文本：text-neutral-600 dark:text-neutral-400
+菜单项悬停效果：使用hover:opacity-80而不是颜色变化
+边框和分隔线：
+标准边框：border-neutral-200 dark:border-neutral-800
+选中状态下划线：bg-neutral-800 dark:bg-white
+背景色：
+页面背景：bg-neutral-50 dark:bg-neutral-900
+弹出菜单背景：bg-white/95 dark:bg-neutral-900/95
+选中项背景/高亮：bg-neutral-100/60 dark:bg-neutral-800/30
+交互元素：
+按钮/选择器：统一使用相同的文本颜色和悬停效果
+下拉列表项高亮：data-[highlighted]:opacity-80代替颜色变化
+进度条：
+背景：bg-neutral-200/50 dark:bg-neutral-800
+前景：bg-neutral-800 dark:bg-neutral-100

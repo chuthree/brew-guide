@@ -1,0 +1,9 @@
+---
+description: Unified icon library
+globs: 
+alwaysApply: false
+---
+
+# Your rule content
+
+- [lucide 图标库](mdc:https:/lucide.dev/icons) 需要图标时统一使用该图标库
