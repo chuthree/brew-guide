@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { equipmentList, Method } from '@/lib/config'
-import hapticsUtils from '@/lib/haptics'
+import { equipmentList, Method } from '@/lib/core/config'
+import hapticsUtils from '@/lib/ui/haptics'
 import { SettingsOptions } from '@/components/settings/Settings'
-import { formatGrindSize } from '@/lib/grindUtils'
+import { formatGrindSize } from '@/lib/utils/grindUtils'
 import { BREWING_EVENTS } from '@/lib/brewing/constants'
 import { listenToEvent } from '@/lib/brewing/events'
 import { updateParameterInfo } from '@/lib/brewing/parameters'
@@ -522,7 +522,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
 
                 try {
                     // 加载自定义设备并更新参数栏
-                    const { loadCustomEquipments } = await import('@/lib/customEquipments');
+                    const { loadCustomEquipments } = await import('@/lib/managers/customEquipments');
                     const customEquipments = await loadCustomEquipments();
                     updateParameterInfo(detail.step, selectedEquipment, methodForUpdate, equipmentList, customEquipments);
                 } catch (error) {
@@ -533,7 +533,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
             } else {
                 try {
                     // 即使没有选择方案，也需要加载自定义设备以正确显示器具名称
-                    const { loadCustomEquipments } = await import('@/lib/customEquipments');
+                    const { loadCustomEquipments } = await import('@/lib/managers/customEquipments');
                     const customEquipments = await loadCustomEquipments();
                     updateParameterInfo(detail.step, selectedEquipment, null, equipmentList, customEquipments);
                 } catch (error) {

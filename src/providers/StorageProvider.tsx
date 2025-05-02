@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Storage } from '@/lib/storage'
+import { Storage } from '@/lib/core/storage'
 
 /**
  * 存储系统初始化组件

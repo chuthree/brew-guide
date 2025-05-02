@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Method } from '@/lib/config'
+import { Method } from '@/lib/core/config'
 
 interface MethodSelectorProps {
   selectedEquipment: string

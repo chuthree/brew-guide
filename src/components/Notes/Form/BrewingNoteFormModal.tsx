@@ -5,11 +5,11 @@ import BrewingNoteForm from './BrewingNoteForm'
 import { MethodSelector, CoffeeBeanSelector, EquipmentSelector } from '@/components/notes/Form'
 import { useMethodManagement } from '@/components/notes/Form/hooks/useMethodManagement'
 import type { BrewingNoteData, CoffeeBean } from '@/types/app'
-import { equipmentList } from '@/lib/config'
+import { equipmentList } from '@/lib/core/config'
 import SteppedFormModal, { Step } from '@/components/common/modals/SteppedFormModal'
-import { type Method, type CustomEquipment } from '@/lib/config'
-import { CoffeeBeanManager } from '@/lib/coffeeBeanManager'
-import { loadCustomEquipments } from '@/lib/customEquipments'
+import { type Method, type CustomEquipment } from '@/lib/core/config'
+import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager'
+import { loadCustomEquipments } from '@/lib/managers/customEquipments'
 
 interface BrewingNoteFormModalProps {
   showForm: boolean

@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import Image from 'next/image'
 import { motion, AnimatePresence, useAnimation } from 'framer-motion'
-import { Stage } from '@/lib/config'
+import { Stage } from '@/lib/core/config'
 import { AnimationFrame } from './AnimationEditor'
 
 // 定义扩展阶段类型

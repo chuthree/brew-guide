@@ -330,7 +330,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
 
         try {
             // 尝试从文本中提取数据
-            import('@/lib/jsonUtils').then(async ({ extractJsonFromText }) => {
+            import('@/lib/utils/jsonUtils').then(async ({ extractJsonFromText }) => {
                 setError(null);
                 const beanData = extractJsonFromText(importData);
 

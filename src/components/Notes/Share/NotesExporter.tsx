@@ -4,7 +4,7 @@ import { Capacitor } from '@capacitor/core'
 import { Share } from '@capacitor/share'
 import { Filesystem, Directory } from '@capacitor/filesystem'
 import { toPng } from 'html-to-image'
-import { Storage } from '@/lib/storage'
+import { Storage } from '@/lib/core/storage'
 
 interface NotesExporterProps {
   selectedNotes: string[]

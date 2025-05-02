@@ -1,8 +1,8 @@
-import { BrewingNote } from '@/lib/config';
+import { BrewingNote } from '@/lib/core/config';
 import { SortOption, SORT_OPTIONS } from '../types';
-import { getStringState, saveStringState } from '@/lib/statePersistence';
+import { getStringState, saveStringState } from '@/lib/core/statePersistence';
 import { calculateTotalCoffeeConsumption as calculateConsumption, formatConsumption as formatConsumptionUtil } from '../utils';
-import { Storage } from '@/lib/storage';
+import { Storage } from '@/lib/core/storage';
 
 // 模块名称
 const MODULE_NAME = 'brewing-notes';

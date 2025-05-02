@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import type { BrewingStep } from '@/lib/hooks/useBrewingState';
-import hapticsUtils from '@/lib/haptics';
+import hapticsUtils from '@/lib/ui/haptics';
 
 interface SwipeBackGestureProps {
   activeBrewingStep: BrewingStep;

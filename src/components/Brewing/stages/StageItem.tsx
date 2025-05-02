@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react'
 import { motion } from 'framer-motion'
-import { Method } from '@/lib/config'
+import { Method } from '@/lib/core/config'
 import ActionMenu from '@/components/coffee-bean/ui/action-menu'
 import { Step } from '@/lib/hooks/useBrewingState'
 

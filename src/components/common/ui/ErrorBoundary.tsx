@@ -50,7 +50,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     // 尝试自动修复数据问题
     async tryFixData() {
         try {
-            const { DataManager } = await import('@/lib/dataManager')
+            const { DataManager } = await import('@/lib/core/dataManager')
             const result = await DataManager.fixBlendBeansData()
             
             if (result.fixedCount > 0) {

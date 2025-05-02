@@ -4,11 +4,11 @@ import React, { useState, useEffect, useCallback, useRef, useLayoutEffect } from
 import { motion, AnimatePresence } from "framer-motion";
 import { BrewingNoteForm } from "@/components/notes";
 import type { BrewingNoteData, CoffeeBean } from "@/types/app";
-import type { Method, Stage } from "@/lib/config";
+import type { Method, Stage } from "@/lib/core/config";
 import type { SettingsOptions } from "@/components/settings/Settings";
-import hapticsUtils from "@/lib/haptics";
-import { Storage } from "@/lib/storage";
-import { equipmentList } from "@/lib/config";
+import hapticsUtils from "@/lib/ui/haptics";
+import { Storage } from "@/lib/core/storage";
+import { equipmentList } from "@/lib/core/config";
 import { 
   BrewingTimerSettings, 
   formatTime, 

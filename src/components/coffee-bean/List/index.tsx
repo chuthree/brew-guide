@@ -1,11 +1,11 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
-import { CoffeeBeanManager } from '@/lib/coffeeBeanManager'
+import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager'
 import CoffeeBeanFormModal from '@/components/coffee-bean/Form/Modal'
 import CoffeeBeanRatingModal from '../Rating/Modal'
 import _CoffeeBeanRanking from '../Ranking'
-import { getBloggerBeans } from '@/lib/csvUtils'
+import { getBloggerBeans } from '@/lib/utils/csvUtils'
 import BottomActionBar from '@/components/layout/BottomActionBar'
 import { useCopy } from "@/lib/hooks/useCopy"
 import CopyFailureModal from "../ui/copy-failure-modal"
@@ -44,7 +44,7 @@ import { Filesystem, Directory } from '@capacitor/filesystem'
 import { Capacitor } from '@capacitor/core'
 import { toPng } from 'html-to-image'
 import { useToast } from '@/components/common/feedback/GlobalToast'
-import { Storage } from '@/lib/storage'
+import { Storage } from '@/lib/core/storage'
 import { exportStatsView } from './components/StatsView/StatsExporter'
 
 // 重命名导入组件以避免混淆

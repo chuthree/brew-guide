@@ -1,4 +1,4 @@
-import { Method } from "../config";
+import { Method } from "../core/config";
 import { BrewingStep } from "../hooks/useBrewingState";
 import { ParameterInfo } from "./constants";
 import { emitEvent } from "./events";

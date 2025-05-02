@@ -2,8 +2,8 @@
 
 import React, { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { DataManager as DataManagerUtil } from '@/lib/dataManager'
-import { APP_VERSION } from '@/lib/config'
+import { DataManager as DataManagerUtil } from '@/lib/core/dataManager'
+import { APP_VERSION } from '@/lib/core/config'
 import { Capacitor } from '@capacitor/core'
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem'
 import { Share } from '@capacitor/share'

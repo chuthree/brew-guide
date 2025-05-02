@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 import { CoffeeBean } from '@/types/app'
-import { CoffeeBeanManager } from '@/lib/coffeeBeanManager'
-import { getBloggerBeans, BloggerBean, getVideoUrlFromEpisode } from '@/lib/csvUtils'
+import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager'
+import { getBloggerBeans, BloggerBean, getVideoUrlFromEpisode } from '@/lib/utils/csvUtils'
 
 // 用于检测当前运行环境
 const isMobileApp = typeof window !== 'undefined' && 

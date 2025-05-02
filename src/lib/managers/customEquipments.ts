@@ -1,6 +1,6 @@
-import { type CustomEquipment, type Method } from "@/lib/config";
-import { saveCustomMethod, loadCustomMethodsForEquipment } from "@/lib/customMethods";
-import { Storage } from "@/lib/storage";
+import { type CustomEquipment, type Method } from "@/lib/core/config";
+import { saveCustomMethod, loadCustomMethodsForEquipment } from "@/lib/managers/customMethods";
+import { Storage } from "@/lib/core/storage";
 
 const STORAGE_KEY = "customEquipments";
 

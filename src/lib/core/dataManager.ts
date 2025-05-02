@@ -1,7 +1,7 @@
-import { Storage } from "@/lib/storage";
-import { Method } from "@/lib/config";
+import { Storage } from "@/lib/core/storage";
+import { Method } from "@/lib/core/config";
 import { CoffeeBean, BlendComponent } from "@/types/app";
-import { APP_VERSION } from "@/lib/config";
+import { APP_VERSION } from "@/lib/core/config";
 
 // 定义导出数据的接口
 interface ExportData {

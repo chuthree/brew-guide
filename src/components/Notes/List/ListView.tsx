@@ -1,8 +1,8 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useTransition, useRef } from 'react'
-import { BrewingNote } from '@/lib/config'
-import { Storage } from '@/lib/storage'
+import { BrewingNote } from '@/lib/core/config'
+import { Storage } from '@/lib/core/storage'
 import { globalCache } from './globalCache'
 import NoteItem from './NoteItem'
 import { sortNotes } from '../utils'

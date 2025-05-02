@@ -1,4 +1,4 @@
-import type { Stage } from "@/lib/config";
+import type { Stage } from "@/lib/core/config";
 import type { ExpandedStage } from "./types";
 
 /**

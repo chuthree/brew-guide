@@ -1,10 +1,10 @@
 'use client'
 
-import { equipmentList } from '@/lib/config'
+import { equipmentList } from '@/lib/core/config'
 import { getEquipmentName as getEquipmentNameUtil } from '@/lib/brewing/parameters'
-import type { BrewingNote } from '@/lib/config'
+import type { BrewingNote } from '@/lib/core/config'
 import { SortOption, SORT_OPTIONS } from './types'
-import { CoffeeBeanManager } from '@/lib/coffeeBeanManager'
+import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager'
 
 // 日期格式化函数
 export const formatDate = (timestamp: number): string => {
@@ -25,7 +25,7 @@ export const getEquipmentName = async (equipmentId: string): Promise<string> => 
 
     // 如果没找到，加载自定义设备列表并查找
     try {
-        const { loadCustomEquipments } = await import('@/lib/customEquipments');
+        const { loadCustomEquipments } = await import('@/lib/managers/customEquipments');
         const customEquipments = await loadCustomEquipments();
 
         // 先在自定义设备中按ID查找

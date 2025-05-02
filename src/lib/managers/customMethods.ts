@@ -1,6 +1,6 @@
-import { type Method, type CustomEquipment } from "@/lib/config";
-import { methodToReadableText } from "@/lib/jsonUtils";
-import { Storage } from "@/lib/storage";
+import { type Method, type CustomEquipment } from "@/lib/core/config";
+import { methodToReadableText } from "@/lib/utils/jsonUtils";
+import { Storage } from "@/lib/core/storage";
 import { v4 as uuidv4 } from "uuid";
 
 /**

@@ -8,7 +8,7 @@ import {
   saveNumberState,
   getObjectState,
   saveObjectState
-} from '../statePersistence';
+} from '../core/statePersistence';
 
 /**
  * 通用持久化状态Hook，自动从localStorage加载并保存状态

@@ -1,13 +1,13 @@
 import React, { useCallback, useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { Method, equipmentList, CustomEquipment, commonMethods, createEditableMethodFromCommon } from '@/lib/config';
+import { Method, equipmentList, CustomEquipment, commonMethods, createEditableMethodFromCommon } from '@/lib/core/config';
 import StageItem from '@/components/brewing/stages/StageItem';
 import StageDivider from '@/components/brewing/stages/StageDivider';
 import { SettingsOptions } from '../settings/Settings';
 import { TabType, MainTabType, Content, Step as BaseStep } from '@/lib/hooks/useBrewingState';
 import { CoffeeBean } from '@/types/app';
 import type { BrewingNoteData } from '@/types/app';
-import { CoffeeBeanManager } from '@/lib/coffeeBeanManager';
+import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager';
 import { v4 as _uuidv4 } from 'uuid';
 import { showToast } from "@/components/common/feedback/GlobalToast";
 import EquipmentShareModal from '@/components/equipment/share/EquipmentShareModal';
@@ -15,7 +15,7 @@ import { getEquipmentName } from '@/lib/brewing/parameters';
 import BottomActionBar from '@/components/layout/BottomActionBar';
 import CoffeeBeanList from '@/components/coffee-bean/List/ListView';
 import MethodShareModal from '@/components/method/share/MethodShareModal';
-import { saveCustomMethod } from '@/lib/customMethods';
+import { saveCustomMethod } from '@/lib/managers/customMethods';
 
 // 扩展Step类型，增加固定方案所需的字段
 interface Step extends BaseStep {
@@ -177,7 +177,7 @@ const TabContent: React.FC<TabContentProps> = ({
     const handleMethodTypeChange = (type: 'common' | 'custom') => {
         if (settings?.hapticFeedback) {
             (async () => {
-                const hapticsUtils = await import('@/lib/haptics');
+                const hapticsUtils = await import('@/lib/ui/haptics');
                 hapticsUtils.default.light(); 
             })();
         }
@@ -194,7 +194,7 @@ const TabContent: React.FC<TabContentProps> = ({
     const handleSaveNote = async (note: BrewingNoteData) => {
         try {
             // 从Storage获取现有笔记
-            const Storage = (await import('@/lib/storage')).Storage;
+            const Storage = (await import('@/lib/core/storage')).Storage;
             const existingNotesStr = await Storage.get('brewingNotes');
             const existingNotes = existingNotesStr ? JSON.parse(existingNotesStr) : [];
 
@@ -320,7 +320,7 @@ const TabContent: React.FC<TabContentProps> = ({
 
         // 如果没找到，加载自定义设备列表并查找
         try {
-            const { loadCustomEquipments } = await import('@/lib/customEquipments');
+            const { loadCustomEquipments } = await import('@/lib/managers/customEquipments');
             const customEquipments = await loadCustomEquipments();
 
             // 使用工具函数获取设备名称

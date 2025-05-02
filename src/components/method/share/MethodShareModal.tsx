@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Method, CustomEquipment } from '@/lib/config'
-import { copyMethodToClipboard } from '@/lib/customMethods'
+import { Method, CustomEquipment } from '@/lib/core/config'
+import { copyMethodToClipboard } from '@/lib/managers/customMethods'
 import { showToast } from '../../common/feedback/GlobalToast'
 
 interface MethodShareModalProps {

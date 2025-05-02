@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { copyToClipboard } from "@/lib/exportUtils"
+import { copyToClipboard } from "@/lib/utils/exportUtils"
 import { showToast } from "@/components/common/feedback/GlobalToast"
 
 interface UseCopyResult {

@@ -3,7 +3,7 @@
 import * as React from "react"
 import * as SelectPrimitive from "@radix-ui/react-select"
 import { cva } from "class-variance-authority"
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils/classNameUtils"
 
 const Select = SelectPrimitive.Root
 

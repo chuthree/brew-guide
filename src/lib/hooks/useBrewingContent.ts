@@ -4,11 +4,11 @@ import {
 	brewingMethods as commonMethods,
 	equipmentList,
 	CustomEquipment,
-} from "@/lib/config";
+} from "@/lib/core/config";
 import { Content } from "./useBrewingState";
-import { formatGrindSize } from "@/lib/grindUtils";
+import { formatGrindSize } from "@/lib/utils/grindUtils";
 import { SettingsOptions } from "@/components/settings/Settings";
-import { loadCustomMethodsForEquipment } from "@/lib/customMethods";
+import { loadCustomMethodsForEquipment } from "@/lib/managers/customMethods";
 
 // 格式化时间工具函数
 export const formatTime = (seconds: number, compact: boolean = false) => {

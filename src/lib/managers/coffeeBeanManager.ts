@@ -1,4 +1,4 @@
-import { Storage } from "@/lib/storage";
+import { Storage } from "@/lib/core/storage";
 import { CoffeeBean } from "@/types/app";
 import { nanoid } from "nanoid";
 

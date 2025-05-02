@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { ExtendedCoffeeBean } from '../types'
-import { CoffeeBeanManager } from '@/lib/coffeeBeanManager'
+import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager'
 import { globalCache } from '../globalCache'
 
 export const useBeanOperations = () => {
@@ -236,7 +236,7 @@ export const useBeanOperations = () => {
 
             // 导入转换工具并生成可读文本
             try {
-                const { beanToReadableText } = await import('@/lib/jsonUtils');
+                const { beanToReadableText } = await import('@/lib/utils/jsonUtils');
                 // 我们知道这个对象结构与函数期望的类型兼容
                 const readableText = beanToReadableText(shareableBean);
                 copyFunction(readableText);

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { initCapacitor } from '@/lib/capacitor';
+import { initCapacitor } from '@/lib/app/capacitor';
 
 export default function CapacitorInit() {
     useEffect(() => {

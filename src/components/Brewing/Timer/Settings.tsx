@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Storage } from "@/lib/storage";
+import { Storage } from "@/lib/core/storage";
 
 // 布局设置接口
 export interface LayoutSettings {

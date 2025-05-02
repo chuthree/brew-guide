@@ -2,7 +2,7 @@
 
 import { NextIntlClientProvider } from 'next-intl'
 import { ReactNode, useEffect, useState } from 'react'
-import { Storage } from '@/lib/storage'
+import { Storage } from '@/lib/core/storage'
 
 // 导入翻译文件
 import zhMessages from '@/locales/zh/common.json'

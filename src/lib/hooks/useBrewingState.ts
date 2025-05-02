@@ -1,14 +1,14 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { Method, equipmentList, Stage, commonMethods, CustomEquipment } from "@/lib/config";
-import { Storage } from "@/lib/storage";
+import { Method, equipmentList, Stage, commonMethods, CustomEquipment } from "@/lib/core/config";
+import { Storage } from "@/lib/core/storage";
 import { BrewingNoteData, CoffeeBean } from "@/types/app";
 import {
 	loadCustomMethods,
 	saveCustomMethod as apiSaveCustomMethod,
 	deleteCustomMethod as apiDeleteCustomMethod,
-} from "@/lib/customMethods";
-import { loadCustomEquipments } from "@/lib/customEquipments";
-import { CoffeeBeanManager } from "@/lib/coffeeBeanManager";
+} from "@/lib/managers/customMethods";
+import { loadCustomEquipments } from "@/lib/managers/customEquipments";
+import { CoffeeBeanManager } from "@/lib/managers/coffeeBeanManager";
 import {
 	BREWING_EVENTS,
 	NavigationOptions,

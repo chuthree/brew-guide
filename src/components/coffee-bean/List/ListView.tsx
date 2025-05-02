@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useTransition, useCallback } from 'react'
 import { CoffeeBean } from '@/types/app'
-import { CoffeeBeanManager } from '@/lib/coffeeBeanManager'
+import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager'
 
 // 定义组件属性接口
 interface CoffeeBeanListProps {

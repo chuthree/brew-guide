@@ -1,4 +1,4 @@
-import type { Method } from "@/lib/config";
+import type { Method } from "@/lib/core/config";
 import type { SettingsOptions } from "@/components/settings/Settings";
 import type { BrewingNoteData, CoffeeBean } from "@/types/app";
 import { LayoutSettings } from "./Settings";

@@ -83,7 +83,7 @@
 
 import React, { useState, useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react';
 import DrawingCanvas, { DrawingCanvasRef } from '../common/ui/DrawingCanvas';
-import hapticsUtils from '@/lib/haptics';
+import hapticsUtils from '@/lib/ui/haptics';
 import Image from 'next/image';
 
 // 定义单帧数据结构

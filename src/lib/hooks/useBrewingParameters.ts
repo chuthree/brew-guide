@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { Method, Stage } from "@/lib/config";
+import { Method, Stage } from "@/lib/core/config";
 
 // 参数显示接口
 export interface ParameterInfo {

@@ -1,4 +1,4 @@
-import { availableGrinders } from './config';
+import { availableGrinders } from '../core/config';
 
 // 幻刺研磨度转换映射表
 // const phanciGrindSizes: Record<string, string> = { // Removed unused variable

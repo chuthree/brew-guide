@@ -1,8 +1,8 @@
 'use client'
 
 import React, { useState, useEffect, useRef, useCallback, useReducer } from 'react'
-import { Storage } from '@/lib/storage'
-import { BrewingNote } from '@/lib/config'
+import { Storage } from '@/lib/core/storage'
+import { BrewingNote } from '@/lib/core/config'
 import { BrewingHistoryProps } from '../types'
 import SortSelector from './SortSelector'
 import FilterTabs from './FilterTabs'

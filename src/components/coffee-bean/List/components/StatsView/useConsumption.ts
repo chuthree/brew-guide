@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { ExtendedCoffeeBean } from '../../types'
-import { Storage } from '@/lib/storage'
+import { Storage } from '@/lib/core/storage'
 import { TodayConsumptionData } from './types'
 
 export const useConsumption = (beans: ExtendedCoffeeBean[]): TodayConsumptionData => {

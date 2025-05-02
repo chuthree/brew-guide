@@ -3,9 +3,9 @@
 // 导入React和必要的hooks
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import dynamic from 'next/dynamic'
-import { equipmentList, APP_VERSION, commonMethods, CustomEquipment, type Method } from '@/lib/config'
-import { Storage } from '@/lib/storage'
-import { initCapacitor } from '@/lib/capacitor'
+import { equipmentList, APP_VERSION, commonMethods, CustomEquipment, type Method } from '@/lib/core/config'
+import { Storage } from '@/lib/core/storage'
+import { initCapacitor } from '@/lib/app/capacitor'
 // 只导入需要的类型
 import type { CoffeeBean } from '@/types/app'
 import { useBrewingState, MainTabType, BrewingStep, Step } from '@/lib/hooks/useBrewingState'
@@ -21,8 +21,8 @@ import MethodTypeSelector from '@/components/method/forms/MethodTypeSelector'
 import Onboarding from '@/components/onboarding/Onboarding'
 import CoffeeBeanFormModal from '@/components/coffee-bean/Form/Modal'
 import ImportModal from '@/components/common/modals/BeanImportModal'
-import { CoffeeBeanManager } from '@/lib/coffeeBeanManager'
-import textZoomUtils from '@/lib/textZoom'
+import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager'
+import textZoomUtils from '@/lib/utils/textZoomUtils'
 import { BREWING_EVENTS } from '@/lib/brewing/constants'
 import type { BrewingNoteData } from '@/types/app'
 import { updateParameterInfo } from '@/lib/brewing/parameters'
@@ -30,7 +30,7 @@ import { BrewingNoteFormModal } from '@/components/notes'
 import ErrorBoundary from '@/components/common/ui/ErrorBoundary'
 import CoffeeBeans from '@/components/coffee-bean/List'
 import SwipeBackGesture from '@/components/app/SwipeBackGesture'
-import { loadCustomEquipments, saveCustomEquipment, deleteCustomEquipment } from '@/lib/customEquipments'
+import { loadCustomEquipments, saveCustomEquipment, deleteCustomEquipment } from '@/lib/managers/customEquipments'
 import CustomEquipmentFormModal from '@/components/equipment/forms/CustomEquipmentFormModal'
 import EquipmentImportModal from '@/components/equipment/import/EquipmentImportModal'
 
@@ -256,7 +256,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 // 首先修复现有方案数据关联
                 try {
                     console.log('检查并修复方案关联...');
-                    const methodsModule = await import('@/lib/customMethods');
+                    const methodsModule = await import('@/lib/managers/customMethods');
                     await methodsModule.repairMethodsAssociation();
                     console.log('方案修复完成');
                 } catch (error) {
@@ -280,7 +280,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 // 0. 自动修复可能存在的数据问题
                 try {
                     // 导入数据管理工具
-                    const { DataManager } = await import('@/lib/dataManager');
+                    const { DataManager } = await import('@/lib/core/dataManager');
                     // 自动修复拼配豆数据
                     const fixResult = await DataManager.fixBlendBeansData();
                     if (fixResult.fixedCount > 0) {
@@ -667,7 +667,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     const handleImportBean = async (jsonData: string) => {
         try {
             // 尝试从文本中提取数据
-            const extractedData = await import('@/lib/jsonUtils').then(
+            const extractedData = await import('@/lib/utils/jsonUtils').then(
                 ({ extractJsonFromText }) => extractJsonFromText(jsonData)
             );
 
@@ -1098,7 +1098,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
         try {
             // 重新加载自定义方案
-            const methods = await import('@/lib/customMethods').then(({ loadCustomMethods }) => {
+            const methods = await import('@/lib/managers/customMethods').then(({ loadCustomMethods }) => {
                 return loadCustomMethods();
             });
             setCustomMethods(methods);

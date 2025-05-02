@@ -1,11 +1,11 @@
 'use client'
 
 import React, { useState, useRef, useEffect } from 'react'
-import { Storage } from '@/lib/storage'
+import { Storage } from '@/lib/core/storage'
 import { SettingsOptions, defaultSettings } from '@/components/settings/Settings'
-import textZoomUtils from '@/lib/textZoom'
+import textZoomUtils from '@/lib/utils/textZoomUtils'
 import confetti from 'canvas-confetti'
-import { availableGrinders } from '@/lib/config'
+import { availableGrinders } from '@/lib/core/config'
 
 // 设置页面界面属性
 interface OnboardingProps {

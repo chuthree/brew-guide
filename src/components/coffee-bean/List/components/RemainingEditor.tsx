@@ -2,9 +2,9 @@
 
 import React, { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Storage } from '@/lib/storage'
+import { Storage } from '@/lib/core/storage'
 import { defaultSettings, SettingsOptions } from '@/components/settings/Settings'
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils/classNameUtils'
 
 interface RemainingEditorProps {
     position?: { x: number, y: number } | null

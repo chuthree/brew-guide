@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { type Method, type CustomEquipment } from '@/lib/config'
+import { type Method, type CustomEquipment } from '@/lib/core/config'
 
 interface MethodImportModalProps {
     showForm: boolean
@@ -134,7 +134,7 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
 
         try {
             // 尝试从文本中提取数据
-            import('@/lib/jsonUtils').then(async ({ extractJsonFromText }) => {
+            import('@/lib/utils/jsonUtils').then(async ({ extractJsonFromText }) => {
                 setError(null);
                 // 解析导入数据，传递自定义器具配置
                 const method = extractJsonFromText(importData, customEquipment) as Method;

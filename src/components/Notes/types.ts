@@ -1,4 +1,4 @@
-import type { BrewingNote } from '@/lib/config'
+import type { BrewingNote } from '@/lib/core/config'
 import type { BrewingNoteData, CoffeeBean } from '@/types/app'
 
 // 排序类型定义

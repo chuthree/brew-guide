@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useRef, useEffect, ReactNode } from "react"
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils/classNameUtils"
 import { AnimatePresence, motion } from "framer-motion"
 
 export interface ActionMenuItem {

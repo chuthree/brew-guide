@@ -11,6 +11,9 @@
    - 使用类型推断时确保类型安全
 
 2. 命名规范
+   - 使用小驼峰命名法（camelCase）
+   - 接口和类型别名使用大驼峰命名法（PascalCase）
+   - 枚举值使用大驼峰命名法（PascalCase）
    ```typescript
    // 接口命名
    interface UserProfile {
@@ -26,6 +29,12 @@
      Active = 'active',
      Inactive = 'inactive'
    }
+
+   // 变量和函数命名
+   const userName = 'John';
+   const getUserProfile = (id: string): UserProfile => {
+     // ...
+   };
    ```
 
 ### React 组件规范

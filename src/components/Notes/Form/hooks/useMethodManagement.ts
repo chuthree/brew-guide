@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { type Method, type CustomEquipment, brewingMethods } from '@/lib/config'
-import { Storage } from '@/lib/storage'
+import { type Method, type CustomEquipment, brewingMethods } from '@/lib/core/config'
+import { Storage } from '@/lib/core/storage'
 
 interface UseMethodManagementProps {
   selectedEquipment: string
@@ -74,7 +74,7 @@ export function useMethodManagement({
         if (selectedEquipment) {
           // 新版API尝试加载
           try {
-            const methodsModule = await import('@/lib/customMethods')
+            const methodsModule = await import('@/lib/managers/customMethods')
             const methods = await methodsModule.loadCustomMethodsForEquipment(selectedEquipment)
             if (methods && methods.length > 0) {
               setCustomMethods(methods)

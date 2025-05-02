@@ -1,8 +1,8 @@
 'use client'
 
 import React, { useState, useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react';
-import { linesToSvgPath, svgToLines } from '@/lib/svgUtils';
-import hapticsUtils from '@/lib/haptics';
+import { linesToSvgPath, svgToLines } from '@/lib/utils/svgUtils';
+import hapticsUtils from '@/lib/ui/haptics';
 
 interface Point {
   x: number;

@@ -4,11 +4,11 @@ import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import CustomMethodForm from '@/components/method/forms/CustomMethodForm'
 import MethodImportModal from '@/components/method/import/MethodImportModal'
-import { Method, CustomEquipment } from '@/lib/config'
-import { loadCustomEquipments } from '@/lib/customEquipments'
+import { Method, CustomEquipment } from '@/lib/core/config'
+import { loadCustomEquipments } from '@/lib/managers/customEquipments'
 import { SettingsOptions } from '@/components/settings/Settings'
 import { v4 as uuidv4 } from 'uuid'
-import { exportMethod, copyToClipboard } from '@/lib/exportUtils'
+import { exportMethod, copyToClipboard } from '@/lib/utils/exportUtils'
 
 // Use SettingsOptions as SettingsType
 type SettingsType = SettingsOptions;

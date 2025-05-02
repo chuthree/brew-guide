@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { Method, equipmentList, Stage, commonMethods } from "@/lib/config";
+import { Method, equipmentList, Stage, commonMethods } from "@/lib/core/config";
 import { EditableParams } from "./useBrewingParameters";
 import { TabType, BrewingStep } from "./useBrewingState";
 
@@ -83,7 +83,7 @@ export function useMethodSelector({
 								// 如果不是标准设备，尝试加载自定义设备
 								try {
 									const { loadCustomEquipments } =
-										await import("@/lib/customEquipments");
+										await import("@/lib/managers/customEquipments");
 									const { getEquipmentName } = await import(
 										"@/lib/brewing/parameters"
 									);
@@ -167,7 +167,7 @@ export function useMethodSelector({
 										try {
 											const { loadCustomEquipments } =
 												await import(
-													"@/lib/customEquipments"
+													"@/lib/managers/customEquipments"
 												);
 											const { getEquipmentName } =
 												await import(

@@ -1,6 +1,6 @@
 'use client'
 
-import { type Method, type CustomEquipment } from './config'
+import { type Method, type CustomEquipment } from '../core/config'
 
 /**
  * 导出器具数据为文本

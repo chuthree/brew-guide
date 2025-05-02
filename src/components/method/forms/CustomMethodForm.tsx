@@ -2,12 +2,12 @@
 
 import React, { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { type Method, CustomEquipment, availableGrinders, Grinder } from '@/lib/config'
+import { type Method, CustomEquipment, availableGrinders, Grinder } from '@/lib/core/config'
 import { ArrowLeft, ArrowRight, Check } from 'lucide-react'
 import AutoResizeTextarea from '../../common/forms/AutoResizeTextarea'
-import { formatGrindSize } from '@/lib/grindUtils'
+import { formatGrindSize } from '@/lib/utils/grindUtils'
 import { SettingsOptions, defaultSettings } from '@/components/settings/Settings'
-import { Storage } from '@/lib/storage'
+import { Storage } from '@/lib/core/storage'
 
 // 自定义注水动画类型
 interface _CustomPourAnimation {

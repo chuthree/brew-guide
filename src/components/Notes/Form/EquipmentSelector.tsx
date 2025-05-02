@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { type CustomEquipment } from '@/lib/config'
+import { type CustomEquipment } from '@/lib/core/config'
 
 interface EquipmentSelectorProps {
   equipmentList: { id: string; name: string; description: string }[]

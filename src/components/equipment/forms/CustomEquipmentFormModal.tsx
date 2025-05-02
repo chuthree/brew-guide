@@ -1,8 +1,8 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CustomEquipment } from '@/lib/config';
+import { CustomEquipment } from '@/lib/core/config';
 import CustomEquipmentForm from './CustomEquipmentForm';
-import { exportEquipment, copyToClipboard } from '@/lib/exportUtils'
+import { exportEquipment, copyToClipboard } from '@/lib/utils/exportUtils'
 
 interface CustomEquipmentFormModalProps {
     showForm: boolean;

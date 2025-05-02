@@ -8,7 +8,7 @@ import StatsSummary from './StatsSummary'
 import StatsCategories from './StatsCategories'
 import { useAnimation } from './useAnimation'
 import { useConsumption } from './useConsumption'
-import { Storage } from '@/lib/storage'
+import { Storage } from '@/lib/core/storage'
 import { ArrowUpRight } from 'lucide-react'
 
 const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsShare }) => {

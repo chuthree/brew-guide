@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { type CustomEquipment, type Method } from '@/lib/config'
+import { type CustomEquipment, type Method } from '@/lib/core/config'
 import { Capacitor } from '@capacitor/core'
 import { FilePicker } from '@capawesome/capacitor-file-picker'
 import { showToast } from '../../common/feedback/GlobalToast'
@@ -177,7 +177,7 @@ const EquipmentImportModal: React.FC<EquipmentImportModalProps> = ({
         try {
             setIsImporting(true);
             // 尝试从文本中提取数据
-            import('@/lib/jsonUtils').then(async ({ extractJsonFromText }) => {
+            import('@/lib/utils/jsonUtils').then(async ({ extractJsonFromText }) => {
                 setError(null);
                 try {
                     // 解析导入数据

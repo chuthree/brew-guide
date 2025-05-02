@@ -1,4 +1,4 @@
-import { Stage } from "@/lib/config";
+import { Stage } from "@/lib/core/config";
 
 export interface TasteRatings {
 	acidity: number;

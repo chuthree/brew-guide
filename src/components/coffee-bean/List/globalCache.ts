@@ -1,5 +1,5 @@
 import { ExtendedCoffeeBean, BeanType, ViewOption, BloggerBeansYear } from './types';
-import { getBooleanState, saveBooleanState, getStringState, saveStringState, getNumberState, saveNumberState } from '@/lib/statePersistence';
+import { getBooleanState, saveBooleanState, getStringState, saveStringState, getNumberState, saveNumberState } from '@/lib/core/statePersistence';
 import { SortOption } from './SortSelector';
 
 // 模块名称

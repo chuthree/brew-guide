@@ -1,5 +1,5 @@
 import React from 'react'
-import { Method, CustomEquipment } from '@/lib/config'
+import { Method, CustomEquipment } from '@/lib/core/config'
 
 interface MethodPreviewCardProps {
     method: Method

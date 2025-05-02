@@ -1,4 +1,4 @@
-import { type Method, type CustomEquipment } from "@/lib/config";
+import { type Method, type CustomEquipment } from "@/lib/core/config";
 
 // 定义Stage类型的接口，用于解析JSON
 interface StageData {
