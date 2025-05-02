@@ -82,7 +82,7 @@
 'use client'
 
 import React, { useState, useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react';
-import DrawingCanvas, { DrawingCanvasRef } from './DrawingCanvas';
+import DrawingCanvas, { DrawingCanvasRef } from '../common/ui/DrawingCanvas';
 import hapticsUtils from '@/lib/haptics';
 import Image from 'next/image';
 

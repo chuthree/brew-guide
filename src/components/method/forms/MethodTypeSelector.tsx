@@ -1,7 +1,7 @@
 import React from 'react';
 import { SettingsOptions } from '../../settings/Settings';
 import hapticsUtils from '@/lib/haptics';
-import BottomActionBar from '../../BottomActionBar';
+import BottomActionBar from '../../layout/BottomActionBar';
 
 interface MethodTypeSelectorProps {
     methodType: 'common' | 'custom';

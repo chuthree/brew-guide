@@ -6,7 +6,7 @@ import CoffeeBeanFormModal from '@/components/coffee-bean/Form/Modal'
 import CoffeeBeanRatingModal from '../Rating/Modal'
 import _CoffeeBeanRanking from '../Ranking'
 import { getBloggerBeans } from '@/lib/csvUtils'
-import BottomActionBar from '@/components/BottomActionBar'
+import BottomActionBar from '@/components/layout/BottomActionBar'
 import { useCopy } from "@/lib/hooks/useCopy"
 import CopyFailureModal from "../ui/copy-failure-modal"
 import { type SortOption, sortBeans, convertToRankingSortOption as _convertToRankingSortOption } from './SortSelector'

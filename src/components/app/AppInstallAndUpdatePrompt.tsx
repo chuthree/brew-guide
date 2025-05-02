@@ -24,7 +24,7 @@ declare global {
     }
 }
 
-export default function PWAPrompt() {
+export default function AppInstallAndUpdatePrompt() {
     const [showInstallPrompt, setShowInstallPrompt] = useState(false)
     const [showUpdatePrompt, setShowUpdatePrompt] = useState(false)
     const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)

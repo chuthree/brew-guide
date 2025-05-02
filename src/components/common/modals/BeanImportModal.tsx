@@ -6,7 +6,7 @@ import 'react-image-crop/dist/ReactCrop.css'
 import { recognizeImage, RecognitionError } from '@/services/recognition'
 import { debounce } from 'lodash'
 
-interface ImportBeanModalProps {
+interface BeanImportModalProps {
     showForm: boolean
     onImport: (jsonData: string) => Promise<void>
     onClose: () => void
@@ -85,7 +85,7 @@ const compressImage = async (file: File, maxSizeMB: number = 2): Promise<Blob> =
     });
 };
 
-const ImportBeanModal: React.FC<ImportBeanModalProps> = ({
+const BeanImportModal: React.FC<BeanImportModalProps> = ({
     showForm,
     onImport,
     onClose
@@ -718,4 +718,4 @@ const ImportBeanModal: React.FC<ImportBeanModalProps> = ({
     )
 }
 
-export default ImportBeanModal 
+export default BeanImportModal 

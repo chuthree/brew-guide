@@ -6,7 +6,7 @@ import { MethodSelector, CoffeeBeanSelector, EquipmentSelector } from '@/compone
 import { useMethodManagement } from '@/components/notes/Form/hooks/useMethodManagement'
 import type { BrewingNoteData, CoffeeBean } from '@/types/app'
 import { equipmentList } from '@/lib/config'
-import SteppedFormModal, { Step } from '@/components/SteppedFormModal'
+import SteppedFormModal, { Step } from '@/components/common/modals/SteppedFormModal'
 import { type Method, type CustomEquipment } from '@/lib/config'
 import { CoffeeBeanManager } from '@/lib/coffeeBeanManager'
 import { loadCustomEquipments } from '@/lib/customEquipments'
