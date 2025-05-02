@@ -78,6 +78,56 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     // 添加表单ref
     const formRef = useRef<HTMLFormElement>(null)
 
+    // 移除之前的滑动按钮相关函数和状态
+    const sliderRef = useRef<HTMLDivElement>(null);
+    
+    // 处理总体评分的滑动
+    const [ratingCurrentValue, setRatingCurrentValue] = useState<number | null>(null);
+    
+    const handleRatingTouchStart = (value: number) => (e: React.TouchEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setRatingCurrentValue(value);
+    }
+    
+    const handleRatingTouchMove = (e: React.TouchEvent) => {
+        if (ratingCurrentValue === null) return;
+        
+        const touch = e.touches[0];
+        const target = e.currentTarget as HTMLInputElement;
+        const rect = target.getBoundingClientRect();
+        const width = rect.width;
+        const x = touch.clientX - rect.left;
+        const percentage = Math.max(0, Math.min(1, x / width));
+        
+        // 计算0.5步进的评分值
+        const newValue = 1 + Math.round(percentage * 8) / 2;
+        
+        if (newValue !== formData.rating) {
+            setFormData({
+                ...formData,
+                rating: newValue,
+            });
+            setRatingCurrentValue(newValue);
+        }
+    }
+    
+    const handleRatingTouchEnd = () => {
+        setRatingCurrentValue(null);
+    }
+    
+    // 更新effect钩子，添加总体评分的触摸事件处理
+    useEffect(() => {
+        // 添加全局触摸事件处理
+        document.addEventListener('touchend', handleTouchEnd);
+        document.addEventListener('touchend', handleRatingTouchEnd);
+        
+        return () => {
+            document.removeEventListener('touchend', handleTouchEnd);
+            document.removeEventListener('touchend', handleRatingTouchEnd);
+        }
+    }, []);
+
     // Update form data when initialData changes
     useEffect(() => {
         if (initialData) {
@@ -460,7 +510,26 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                                             onTouchStart={handleTouchStart(key, value)}
                                             onTouchMove={handleTouchMove(key)}
                                             onTouchEnd={handleTouchEnd}
-                                            className="relative h-[1px] w-full appearance-none bg-neutral-300 dark:bg-neutral-600 cursor-pointer touch-none [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-0 [&::-webkit-slider-thumb]:bg-neutral-800 dark:[&::-webkit-slider-thumb]:bg-white [&::-moz-range-thumb]:h-3 [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-neutral-800 dark:[&::-moz-range-thumb]:bg-white"
+                                            className="relative h-[1px] w-full appearance-none bg-neutral-300 dark:bg-neutral-600 cursor-pointer touch-none 
+                                            [&::-webkit-slider-thumb]:h-3.5 
+                                            [&::-webkit-slider-thumb]:w-3.5 
+                                            [&::-webkit-slider-thumb]:appearance-none 
+                                            [&::-webkit-slider-thumb]:rounded-full 
+                                            [&::-webkit-slider-thumb]:border 
+                                            [&::-webkit-slider-thumb]:border-white
+                                            [&::-webkit-slider-thumb]:bg-neutral-700 
+                                            dark:[&::-webkit-slider-thumb]:border-neutral-800
+                                            dark:[&::-webkit-slider-thumb]:bg-neutral-300
+                                            
+                                            [&::-moz-range-thumb]:h-3.5 
+                                            [&::-moz-range-thumb]:w-3.5 
+                                            [&::-moz-range-thumb]:appearance-none 
+                                            [&::-moz-range-thumb]:rounded-full 
+                                            [&::-moz-range-thumb]:border 
+                                            [&::-moz-range-thumb]:border-white
+                                            [&::-moz-range-thumb]:bg-neutral-700
+                                            dark:[&::-moz-range-thumb]:border-neutral-800
+                                            dark:[&::-moz-range-thumb]:bg-neutral-300"
                                         />
                                     </div>
                                 </div>
@@ -471,28 +540,91 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
 
                 {/* 总体评分 */}
                 <div className="space-y-4">
-                    <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
-                        总体评分
+                    <div className="flex items-center justify-between">
+                        <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
+                            总体评分
+                        </div>
+                        <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
+                            [ {formData.rating.toFixed(1)} ]
+                        </div>
                     </div>
-                    <div className="flex items-center space-x-6">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                            <button
-                                key={star}
-                                type="button"
-                                onClick={() =>
+                    <div className="relative py-3">
+                        {/* 竖线刻度和数字 */}
+                        <div className="flex justify-between items-end mb-4" style={{ height: '40px' }}>
+                            {[...Array(9)].map((_, i) => {
+                                const value = 1 + i * 0.5;
+                                const isInteger = value % 1 === 0;
+                                const isSelected = value === formData.rating;
+                                
+                                // 计算竖线高度，整数更高，靠近当前选中值的更高
+                                let height = isInteger ? 16 : 10;
+                                if (isSelected) height = 20;
+                                
+                                return (
+                                    <div key={i} className="flex flex-col items-center">
+                                        <div 
+                                            className={`w-[1px] mb-1 transition-all duration-200 ${
+                                                isSelected 
+                                                ? 'bg-neutral-800 dark:bg-neutral-200' 
+                                                : isInteger
+                                                  ? 'bg-neutral-400 dark:bg-neutral-500'
+                                                  : 'bg-neutral-300 dark:bg-neutral-600'
+                                            }`}
+                                            style={{ height: `${height}px` }}
+                                        ></div>
+                                        <span 
+                                            className={`text-[9px] ${
+                                                isSelected 
+                                                ? 'text-neutral-800 dark:text-neutral-200 font-medium' 
+                                                : 'text-neutral-400 dark:text-neutral-500'
+                                            }`}
+                                        >
+                                            {value.toFixed(1)}
+                                        </span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        
+                        {/* 滑块 - 参考风味评分的滑块实现 */}
+                        <div className="relative py-4 -my-4" ref={sliderRef}>
+                            <input
+                                type="range"
+                                min="1"
+                                max="5"
+                                step="0.5"
+                                value={formData.rating}
+                                onChange={(e) =>
                                     setFormData({
                                         ...formData,
-                                        rating: star,
+                                        rating: parseFloat(e.target.value),
                                     })
                                 }
-                                className={`text-[10px] tracking-widest transition-colors ${star <= formData.rating
-                                    ? 'text-neutral-600 dark:text-neutral-300'
-                                    : 'text-neutral-300 dark:text-neutral-600'
-                                    }`}
-                            >
-                                [ {star} ]
-                            </button>
-                        ))}
+                                onTouchStart={handleRatingTouchStart(formData.rating)}
+                                onTouchMove={handleRatingTouchMove}
+                                onTouchEnd={handleRatingTouchEnd}
+                                className="relative h-[1px] w-full appearance-none bg-neutral-300 dark:bg-neutral-600 cursor-pointer touch-none 
+                                [&::-webkit-slider-thumb]:h-3.5 
+                                [&::-webkit-slider-thumb]:w-3.5 
+                                [&::-webkit-slider-thumb]:appearance-none 
+                                [&::-webkit-slider-thumb]:rounded-full 
+                                [&::-webkit-slider-thumb]:border 
+                                [&::-webkit-slider-thumb]:border-white
+                                [&::-webkit-slider-thumb]:bg-neutral-700 
+                                dark:[&::-webkit-slider-thumb]:border-neutral-800
+                                dark:[&::-webkit-slider-thumb]:bg-neutral-300
+                                
+                                [&::-moz-range-thumb]:h-3.5 
+                                [&::-moz-range-thumb]:w-3.5 
+                                [&::-moz-range-thumb]:appearance-none 
+                                [&::-moz-range-thumb]:rounded-full 
+                                [&::-moz-range-thumb]:border 
+                                [&::-moz-range-thumb]:border-white
+                                [&::-moz-range-thumb]:bg-neutral-700
+                                dark:[&::-moz-range-thumb]:border-neutral-800
+                                dark:[&::-moz-range-thumb]:bg-neutral-300"
+                            />
+                        </div>
                     </div>
                 </div>
 

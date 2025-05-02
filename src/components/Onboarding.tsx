@@ -276,10 +276,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
                                         用于个性化您的体验
                                     </p>
                                 </div>
-                            </div>
-                            
-                                
-
+                            </div> 
                             {/* 底部按钮 */}
                             <div className="mt-8">
                                 <button
