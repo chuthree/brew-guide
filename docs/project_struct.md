@@ -132,10 +132,37 @@ brew-guide/
 - 包含单元测试
 
 #### lib/
-- 工具函数
-- 常量定义
-- 通用类型
-- 第三方库封装
+- 工具函数和通用库
+  - `core/` - 核心功能模块
+  - `utils/` - 工具函数
+  - `managers/` - 管理器
+  - `ui/` - UI 相关
+  - `platform/` - 平台相关
+  - `hooks/` - 自定义 Hooks
+  - `brewing/` - 冲煮相关功能
+
+工具函数组织规范：
+1. 按功能分类到不同的文件中
+2. 文件名应该以 `Utils` 结尾
+3. 每个工具函数文件应该专注于单一功能领域
+4. 工具函数应该有完整的 JSDoc 注释
+5. 避免使用通用的 `utils.ts` 文件
+
+示例：
+```typescript
+// utils/classNameUtils.ts
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+/**
+ * 合并 Tailwind 类名
+ * @param inputs - 要合并的类名数组
+ * @returns 合并后的类名字符串
+ */
+export function cn(...inputs: ClassValue[]): string {
+  return twMerge(clsx(inputs));
+}
+```
 
 #### locales/
 - 按语言分类的翻译文件

@@ -37,6 +37,26 @@
    };
    ```
 
+3. 工具函数组织规范
+   - 工具函数应该按功能分类到不同的文件中
+   - 文件名应该以 `Utils` 结尾，例如：`classNameUtils.ts`
+   - 每个工具函数文件应该专注于单一功能领域
+   - 工具函数应该有完整的 JSDoc 注释
+   ```typescript
+   // 示例：classNameUtils.ts
+   import { clsx, type ClassValue } from "clsx";
+   import { twMerge } from "tailwind-merge";
+
+   /**
+    * 合并 Tailwind 类名
+    * @param inputs - 要合并的类名数组
+    * @returns 合并后的类名字符串
+    */
+   export function cn(...inputs: ClassValue[]): string {
+     return twMerge(clsx(inputs));
+   }
+   ```
+
 ### React 组件规范
 
 1. 组件结构
