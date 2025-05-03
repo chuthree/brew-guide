@@ -2,6 +2,8 @@ import { Storage } from "@/lib/core/storage";
 import { Method } from "@/lib/core/config";
 import { CoffeeBean, BlendComponent } from "@/types/app";
 import { APP_VERSION } from "@/lib/core/config";
+import { SettingsOptions } from "@/components/settings/Settings";
+import { LayoutSettings } from "@/components/brewing/Timer/Settings";
 
 // 检查是否在浏览器环境中
 const isBrowser = typeof window !== 'undefined';
@@ -381,6 +383,33 @@ export const DataManager = {
 
 						await Storage.set(key, JSON.stringify(mergedMethods));
 					} else if (
+						key === "brewGuideSettings" &&
+						existingData &&
+						importData.data[key]
+					) {
+						// 合并应用设置
+						const existingSettings = typeof existingData === 'object'
+							? existingData as SettingsOptions
+							: {} as SettingsOptions;
+						const importedSettings = typeof importData.data[key] === 'object'
+							? importData.data[key] as SettingsOptions
+							: {} as SettingsOptions;
+
+						// 为设置项创建一个深合并
+						const mergedSettings: SettingsOptions = {
+							...existingSettings,
+							...importedSettings,
+							// 特殊处理预设值，确保不会丢失
+							decrementPresets: importedSettings.decrementPresets || existingSettings.decrementPresets,
+							// 保留任何其他特殊需要保持的设置
+							layoutSettings: {
+								...(existingSettings.layoutSettings || {}),
+								...(importedSettings.layoutSettings || {})
+							} as LayoutSettings
+						};
+
+						await Storage.set(key, JSON.stringify(mergedSettings));
+					} else if (
 						key === "brewingNotes" &&
 						existingData &&
 						importData.data[key]
@@ -427,21 +456,7 @@ export const DataManager = {
 						);
 
 						await Storage.set(key, JSON.stringify(mergedNotes));
-					} else if (key === "brewGuideSettings") {
-						// 保留用户现有设置，不覆盖
-						if (!existingData) {
-							await Storage.set(
-								key,
-								typeof importData.data[key] === "object"
-									? JSON.stringify(importData.data[key])
-									: String(importData.data[key])
-							);
-						}
-					} else if (
-						key === "coffeeBeans" &&
-						existingData &&
-						importData.data[key]
-					) {
+					} else if (key === "coffeeBeans") {
 						// 合并咖啡豆数据
 						const existingBeans = Array.isArray(existingData)
 							? (existingData as CoffeeBean[])
