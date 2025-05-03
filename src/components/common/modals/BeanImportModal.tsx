@@ -98,15 +98,17 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
     const [isUploading, setIsUploading] = useState(false);
     const _fileInputRef = useRef<HTMLInputElement>(null);
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
-    const [crop, _setCrop] = useState<Crop>({
+    const [crop, setCrop] = useState<Crop>({
         unit: '%',
-        width: 90,
-        height: 90,
-        x: 5,
-        y: 5
+        width: 0,
+        height: 0,
+        x: 0,
+        y: 0
     });
-    const [_croppedImage, setCroppedImage] = useState<string | null>(null);
-    const [showCropper, _setShowCropper] = useState(false);
+    const [croppedImage, setCroppedImage] = useState<string | null>(null);
+    const [showCropper, setShowCropper] = useState(false);
+    // 添加状态标记用户是否进行了裁剪操作
+    const [isCropActive, setIsCropActive] = useState(false);
     const imgRef = useRef<HTMLImageElement>(null);
 
     // 添加手动模式状态
@@ -115,7 +117,13 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
     // Function to handle crop complete - 移到前面并使用useCallback并添加防抖处理
     const handleCropComplete = useCallback(
         debounce(async (crop: Crop) => {
-            if (!selectedImage || !imgRef.current) return;
+            if (!selectedImage || !imgRef.current || !isCropActive) return;
+
+            // 检查用户是否实际进行了裁剪
+            if (crop.width === 0 || crop.height === 0) {
+                setCroppedImage(null);
+                return;
+            }
 
             const image = new Image();
             image.src = selectedImage;
@@ -193,12 +201,23 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
             const croppedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
             setCroppedImage(croppedDataUrl);
         }, 150), // 150毫秒的防抖延迟
-        [selectedImage]
+        [selectedImage, isCropActive]
     );
+
+    // 用户开始裁剪时激活裁剪状态
+    const handleCropStart = () => {
+        setIsCropActive(true);
+    };
+
+    // 用户修改裁剪区域时
+    const handleCropChange = (newCrop: Crop) => {
+        setCrop(newCrop);
+        setIsCropActive(true); // 确保裁剪状态激活
+    };
 
     // Automatically trigger crop complete when cropper is shown
     useEffect(() => {
-        if (showCropper && selectedImage && crop.width && crop.height) {
+        if (selectedImage && isCropActive && crop.width && crop.height) {
             const imageElement = imgRef.current;
             if (imageElement && imageElement.complete) {
                 handleCropComplete(crop);
@@ -206,7 +225,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                 imageElement.onload = () => handleCropComplete(crop);
             }
         }
-    }, [showCropper, selectedImage, crop, handleCropComplete]);
+    }, [selectedImage, crop, handleCropComplete, isCropActive]);
 
     // 清除所有状态消息
     const clearMessages = () => {
@@ -409,6 +428,16 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                 const reader = new FileReader();
                 reader.onload = () => {
                     setSelectedImage(reader.result as string);
+                    // 重置裁剪状态
+                    setIsCropActive(false);
+                    setCroppedImage(null);
+                    setCrop({
+                        unit: '%',
+                        width: 0,
+                        height: 0,
+                        x: 0,
+                        y: 0
+                    });
                 };
                 reader.readAsDataURL(file);
             }
@@ -425,8 +454,11 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
         clearMessages();
 
         try {
+            // 仅当用户进行了裁剪操作且裁剪图片存在时使用裁剪图片
+            const imageToUse = (isCropActive && croppedImage) ? croppedImage : selectedImage;
+            
             // 将 base64 转换为 Blob
-            const response = await fetch(selectedImage);
+            const response = await fetch(imageToUse);
             const originalBlob = await response.blob();
             
             // 压缩图片
@@ -454,6 +486,9 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
         } finally {
             setIsUploading(false);
             setSelectedImage(null);
+            setCroppedImage(null);
+            setShowCropper(false);
+            setIsCropActive(false);
         }
     };
 
@@ -524,18 +559,60 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                     </div>
                 ) : selectedImage ? (
                     <div className="space-y-3">
-                        <div className="relative">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                                src={selectedImage}
-                                alt="Upload preview"
-                                className="w-full rounded-md"
-                                style={{ maxHeight: '60vh', objectFit: 'contain' }}
-                            />
+                        <div className="relative w-full flex flex-col items-center">
+                            <div className="w-full">
+                                <ReactCrop
+                                    crop={crop}
+                                    onChange={handleCropChange}
+                                    onComplete={handleCropComplete}
+                                    onDragStart={handleCropStart}
+                                    aspect={undefined}
+                                    className="w-full flex justify-center"
+                                >
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img
+                                        ref={imgRef}
+                                        src={selectedImage}
+                                        alt="Upload preview"
+                                        className="rounded-md max-h-[60vh] w-auto"
+                                        style={{ 
+                                            objectFit: 'contain',
+                                            maxWidth: '100%'
+                                        }}
+                                    />
+                                </ReactCrop>
+                            </div>
+                            <div className="w-full flex items-center justify-between mt-2">
+                                <p className="text-[10px] text-neutral-500 dark:text-neutral-400">
+                                    {isCropActive ? "已框选区域进行精确识别" : "可在图片上框选区域进行精确识别"}
+                                </p>
+                                {isCropActive && (
+                                    <button
+                                        onClick={() => {
+                                            setIsCropActive(false);
+                                            setCroppedImage(null);
+                                            setCrop({
+                                                unit: '%',
+                                                width: 0,
+                                                height: 0,
+                                                x: 0,
+                                                y: 0
+                                            });
+                                        }}
+                                        className="text-[10px] px-2 py-0.5 bg-neutral-200 dark:bg-neutral-700 rounded text-neutral-700 dark:text-neutral-300"
+                                    >
+                                        取消框选
+                                    </button>
+                                )}
+                            </div>
                         </div>
                         <div className="flex justify-end space-x-2">
                             <button
-                                onClick={() => setSelectedImage(null)}
+                                onClick={() => {
+                                    setSelectedImage(null);
+                                    setCroppedImage(null);
+                                    setIsCropActive(false);
+                                }}
                                 className="px-3 py-1 text-sm border border-neutral-300 dark:border-neutral-600 rounded"
                             >
                                 取消
