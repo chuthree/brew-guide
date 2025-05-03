@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic'
 import ActionMenu, { ActionMenuItem } from '@/components/coffee-bean/ui/action-menu'
 import { ExtendedCoffeeBean } from '../types'
 import { isBeanEmpty } from '../globalCache'
+import { formatDate, parseDateToTimestamp } from '@/lib/utils/dateUtils'
 
 // 动态导入 ImageViewer 组件 - 移除加载占位符
 const ImageViewer = dynamic(() => import('@/components/common/ui/ImageViewer'), {
@@ -58,7 +59,9 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
         };
 
         const today = new Date();
-        const roastDate = new Date(bean.roastDate);
+        // 使用日期工具函数解析日期
+        const roastTimestamp = parseDateToTimestamp(bean.roastDate);
+        const roastDate = new Date(roastTimestamp);
         const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
         const roastDateOnly = new Date(roastDate.getFullYear(), roastDate.getMonth(), roastDate.getDate());
         const daysSinceRoast = Math.ceil((todayDate.getTime() - roastDateOnly.getTime()) / (1000 * 60 * 60 * 24));
@@ -306,7 +309,9 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                 {/* 底部信息布局优化 */}
                 <div className="flex items-baseline justify-between text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
                     <div>
-                        {bean.roastDate && <span>烘焙于 {bean.roastDate}</span>}
+                        {bean.roastDate && (
+                            <span>烘焙于 {formatDate(bean.roastDate)}</span>
+                        )}
                     </div>
                     <div>
                         {bean.price && (

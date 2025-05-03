@@ -301,7 +301,22 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
                             id="bean-roast-date"
                             type="date"
                             value={bean.roastDate || ''}
-                            onChange={(e) => onBeanChange('roastDate')(e.target.value)}
+                            onChange={(e) => {
+                                // 确保以标准格式 YYYY-MM-DD 保存
+                                const value = e.target.value;
+                                if (value) {
+                                    // 将日期转换为标准格式
+                                    const date = new Date(value);
+                                    if (!isNaN(date.getTime())) {
+                                        const standardFormat = date.toISOString().split('T')[0]; // YYYY-MM-DD 格式
+                                        onBeanChange('roastDate')(standardFormat);
+                                    } else {
+                                        onBeanChange('roastDate')(value);
+                                    }
+                                } else {
+                                    onBeanChange('roastDate')('');
+                                }
+                            }}
                             className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
                         />
                     </div>

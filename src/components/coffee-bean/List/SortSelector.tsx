@@ -1,6 +1,7 @@
 import React from 'react';
 import { ExtendedCoffeeBean } from '@/types/app';
 import { cn } from '@/lib/utils/classNameUtils';
+import { parseDateToTimestamp } from '@/lib/utils/dateUtils';
 import {
     Select,
     SelectContent,
@@ -210,16 +211,40 @@ export const sortBeans = (beansToSort: ExtendedCoffeeBean[], option: SortOption)
         case SORT_OPTIONS.ROAST_DATE_ASC:
             return sorted.sort((a, b) => {
                 // 烘焙日期从早到晚排序
-                const dateA = a.roastDate ? new Date(a.roastDate).getTime() : 0;
-                const dateB = b.roastDate ? new Date(b.roastDate).getTime() : 0;
-                return dateA - dateB;
+                // 处理无日期的情况
+                if (!a.roastDate && !b.roastDate) return 0;
+                if (!a.roastDate) return 1; // 无日期的排在后面
+                if (!b.roastDate) return -1; // 无日期的排在后面
+                
+                // 使用日期工具函数解析日期
+                const timeA = parseDateToTimestamp(a.roastDate);
+                const timeB = parseDateToTimestamp(b.roastDate);
+                
+                // 检查解析结果是否有效
+                if (isNaN(timeA) && isNaN(timeB)) return 0;
+                if (isNaN(timeA)) return 1; // 无效日期排在后面
+                if (isNaN(timeB)) return -1; // 无效日期排在后面
+                
+                return timeA - timeB;
             });
         case SORT_OPTIONS.ROAST_DATE_DESC:
             return sorted.sort((a, b) => {
                 // 烘焙日期从晚到早排序
-                const dateA = a.roastDate ? new Date(a.roastDate).getTime() : 0;
-                const dateB = b.roastDate ? new Date(b.roastDate).getTime() : 0;
-                return dateB - dateA;
+                // 处理无日期的情况
+                if (!a.roastDate && !b.roastDate) return 0;
+                if (!a.roastDate) return 1; // 无日期的排在后面
+                if (!b.roastDate) return -1; // 无日期的排在后面
+                
+                // 使用日期工具函数解析日期
+                const timeA = parseDateToTimestamp(a.roastDate);
+                const timeB = parseDateToTimestamp(b.roastDate);
+                
+                // 检查解析结果是否有效
+                if (isNaN(timeA) && isNaN(timeB)) return 0;
+                if (isNaN(timeA)) return 1; // 无效日期排在后面
+                if (isNaN(timeB)) return -1; // 无效日期排在后面
+                
+                return timeB - timeA;
             });
         case SORT_OPTIONS.PRICE_ASC:
             return sorted.sort((a, b) => {
