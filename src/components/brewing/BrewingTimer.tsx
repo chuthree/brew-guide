@@ -27,16 +27,16 @@ import {
   calculateCurrentWater,
   // 计时器控制器
   startMainTimer as startTimerController,
-} from "@/components/Brewing/Timer";
+} from "@/components/brewing/Timer";
 import type { 
   ExpandedStage, 
   LayoutSettings,
   AudioState,
   TimerCallbacks,
-} from "@/components/Brewing/Timer";
+} from "@/components/brewing/Timer";
 
 // 保留布局设置接口的导出，但使用从Timer模块导入的定义
-export type { LayoutSettings } from "@/components/Brewing/Timer";
+export type { LayoutSettings } from "@/components/brewing/Timer";
 // 导出这些在导入中被定义但未使用的函数，避免linter错误
 export { getStageProgress, calculateCurrentWater };
 

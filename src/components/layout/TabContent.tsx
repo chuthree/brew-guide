@@ -1,8 +1,8 @@
 import React, { useCallback, useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { Method, equipmentList, CustomEquipment, commonMethods, createEditableMethodFromCommon } from '@/lib/core/config';
-import StageItem from '@/components/Brewing/stages/StageItem';
-import StageDivider from '@/components/Brewing/stages/StageDivider';
+import StageItem from '@/components/brewing/stages/StageItem';
+import StageDivider from '@/components/brewing/stages/StageDivider';
 import { SettingsOptions } from '../settings/Settings';
 import { TabType, MainTabType, Content, Step as BaseStep } from '@/lib/hooks/useBrewingState';
 import { CoffeeBean } from '@/types/app';
@@ -25,7 +25,7 @@ interface Step extends BaseStep {
 }
 
 // 动态导入客户端组件
-const PourVisualizer = dynamic(() => import('@/components/Brewing/PourVisualizer'), {
+const PourVisualizer = dynamic(() => import('@/components/brewing/PourVisualizer'), {
     ssr: false,
     loading: () => null
 });
