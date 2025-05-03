@@ -23,7 +23,6 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
     const [isImporting, setIsImporting] = useState(false)
     const [isResetting, setIsResetting] = useState(false)
     const [showConfirmReset, setShowConfirmReset] = useState(false)
-    const [importMode, setImportMode] = useState<'merge' | 'replace'>('merge')
     const fileInputRef = useRef<HTMLInputElement>(null)
 
     const isNative = Capacitor.isNativePlatform()
@@ -116,13 +115,7 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
             reader.onload = async (event) => {
                 try {
                     const jsonString = event.target?.result as string
-
-                    let result
-                    if (importMode === 'replace') {
-                        result = await DataManagerUtil.importAllData(jsonString)
-                    } else {
-                        result = await DataManagerUtil.mergeData(jsonString)
-                    }
+                    const result = await DataManagerUtil.importAllData(jsonString)
 
                     if (result.success) {
                         setStatus({ type: 'success', message: result.message })
@@ -133,7 +126,6 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
                         setStatus({ type: 'error', message: result.message })
                     }
                 } catch (_error) {
-
                     setStatus({ type: 'error', message: `导入失败: ${(_error as Error).message}` })
                 } finally {
                     setIsImporting(false)
@@ -151,7 +143,6 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
 
             reader.readAsText(file)
         } catch (_error) {
-
             setStatus({ type: 'error', message: `导入失败: ${(_error as Error).message}` })
             setIsImporting(false)
         }
@@ -173,7 +164,6 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
                 setStatus({ type: 'error', message: result.message })
             }
         } catch (_error) {
-
             setStatus({ type: 'error', message: `重置失败: ${(_error as Error).message}` })
         } finally {
             setIsResetting(false)
@@ -260,49 +250,12 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
                         </div>
 
                         <div>
-                            <div className="mb-2 flex items-center space-x-4">
-                                <div className="flex items-center">
-                                    <input
-                                        type="radio"
-                                        id="merge"
-                                        name="importMode"
-                                        value="merge"
-                                        checked={importMode === 'merge'}
-                                        onChange={() => setImportMode('merge')}
-                                        className="h-4 w-4 text-neutral-600 focus:ring-neutral-500 dark:text-neutral-400"
-                                    />
-                                    <label
-                                        htmlFor="merge"
-                                        className="ml-2 text-sm text-neutral-700 dark:text-neutral-300"
-                                    >
-                                        合并数据
-                                    </label>
-                                </div>
-                                <div className="flex items-center">
-                                    <input
-                                        type="radio"
-                                        id="replace"
-                                        name="importMode"
-                                        value="replace"
-                                        checked={importMode === 'replace'}
-                                        onChange={() => setImportMode('replace')}
-                                        className="h-4 w-4 text-neutral-600 focus:ring-neutral-500 dark:text-neutral-400"
-                                    />
-                                    <label
-                                        htmlFor="replace"
-                                        className="ml-2 text-sm text-neutral-700 dark:text-neutral-300"
-                                    >
-                                        替换数据
-                                    </label>
-                                </div>
-                            </div>
-
                             <button
                                 onClick={handleImportClick}
                                 disabled={isImporting}
                                 className="w-full rounded-md bg-neutral-100 px-4 py-2 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 disabled:opacity-50 dark:bg-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-600"
                             >
-                                {isImporting ? '导入中...' : '导入数据'}
+                                {isImporting ? '导入中...' : '导入数据（替换）'}
                             </button>
                             <input
                                 ref={fileInputRef}
@@ -312,9 +265,7 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
                                 className="hidden"
                             />
                             <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-                                {importMode === 'merge'
-                                    ? '将导入的数据与现有数据合并'
-                                    : '用导入的数据替换所有现有数据'}
+                                导入数据将替换所有现有数据
                             </p>
                         </div>
 
