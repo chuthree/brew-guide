@@ -20,6 +20,9 @@ interface AutocompleteInputProps {
     inputType?: 'text' | 'number' | 'tel' | 'email' // 新增输入框类型属性
     disabled?: boolean // 添加禁用属性
     maxValue?: number // 添加最大值属性，用于限制数字输入
+    // 新增：自定义预设标记和预设删除功能
+    isCustomPreset?: (value: string) => boolean
+    onRemovePreset?: (value: string) => void
 }
 
 const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
@@ -37,7 +40,10 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
     containerClassName,
     inputType = 'text', // 默认为text类型
     disabled = false, // 默认为不禁用
-    maxValue
+    maxValue,
+    // 新增：自定义预设标记和预设删除功能
+    isCustomPreset = () => false,
+    onRemovePreset
 }) => {
     const [open, setOpen] = useState(false)
     const [inputValue, setInputValue] = useState(value)
@@ -219,6 +225,21 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
         handleSelectSuggestion(suggestion)
     }
 
+    // 新增：处理删除预设
+    const handleRemovePreset = (suggestion: string, e: React.MouseEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+        
+        // 如果当前值等于要删除的预设值，清空输入框
+        if (inputValue === suggestion) {
+            setInputValue('')
+            onChange('')
+        }
+        
+        // 调用外部删除函数
+        onRemovePreset?.(suggestion)
+    }
+
     return (
         <div
             ref={containerRef}
@@ -283,11 +304,25 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
                             {filteredSuggestions.map((suggestion, index) => (
                                 <li
                                     key={index}
-                                    className="px-3 py-3 text-sm cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800 active:bg-neutral-200 dark:active:bg-neutral-700"
+                                    className="px-3 py-3 text-sm cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800 active:bg-neutral-200 dark:active:bg-neutral-700 flex justify-between items-center"
                                     onClick={(e) => handleItemClick(suggestion, e)}
                                     onTouchStart={(e) => e.stopPropagation()}
                                 >
-                                    {suggestion}
+                                    <span>{suggestion}</span>
+                                    
+                                    {/* 如果是自定义预设且提供了删除函数，显示删除按钮 */}
+                                    {isCustomPreset(suggestion) && onRemovePreset && (
+                                        <button 
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation(); // 阻止点击事件冒泡到li元素
+                                                handleRemovePreset(suggestion, e);
+                                            }}
+                                            className="ml-2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 p-1"
+                                        >
+                                            <X className="h-3 w-3" />
+                                        </button>
+                                    )}
                                 </li>
                             ))}
                         </ul>

@@ -1,7 +1,14 @@
 import React from 'react';
 import AutocompleteInput from '@/components/common/forms/AutocompleteInput';
 import { BlendComponent } from '../types';
-import { ORIGINS, PROCESSES, VARIETIES } from '../constants';
+import { 
+    ORIGINS, 
+    PROCESSES, 
+    VARIETIES, 
+    isCustomPreset, 
+    removeCustomPreset,
+    getFullPresets
+} from '../constants';
 
 interface BlendComponentsProps {
     components: BlendComponent[];
@@ -34,6 +41,26 @@ const BlendComponents: React.FC<BlendComponentsProps> = ({
     
     // 检查是否可以添加更多成分
     const canAddMoreComponents = totalPercentage < 100;
+    
+    // 判断值是否为自定义预设
+    const checkIsCustomPreset = (key: 'origins' | 'processes' | 'varieties', value: string): boolean => {
+        return isCustomPreset(key, value);
+    };
+    
+    // 处理删除自定义预设
+    const handleRemovePreset = (key: 'origins' | 'processes' | 'varieties', value: string): void => {
+        removeCustomPreset(key, value);
+        // 强制重新渲染
+        setForceUpdate(prev => prev + 1);
+    };
+    
+    // 添加forceUpdate状态以在删除预设时触发重新渲染
+    const [forceUpdate, setForceUpdate] = React.useState(0);
+    
+    // 每次在渲染时获取最新的预设列表
+    const currentOrigins = getFullPresets('origins');
+    const currentProcesses = getFullPresets('processes');
+    const currentVarieties = getFullPresets('varieties');
         
     return (
         <div className="space-y-5 w-full">
@@ -109,8 +136,10 @@ const BlendComponents: React.FC<BlendComponentsProps> = ({
                                     value={component.origin || ''}
                                     onChange={(value) => onChange(index, 'origin', value)}
                                     placeholder="产地"
-                                    suggestions={ORIGINS}
+                                    suggestions={currentOrigins}
                                     clearable
+                                    isCustomPreset={(value) => checkIsCustomPreset('origins', value)}
+                                    onRemovePreset={(value) => handleRemovePreset('origins', value)}
                                 />
 
                                 <AutocompleteInput
@@ -118,8 +147,10 @@ const BlendComponents: React.FC<BlendComponentsProps> = ({
                                     value={component.process || ''}
                                     onChange={(value) => onChange(index, 'process', value)}
                                     placeholder="处理法"
-                                    suggestions={PROCESSES}
+                                    suggestions={currentProcesses}
                                     clearable
+                                    isCustomPreset={(value) => checkIsCustomPreset('processes', value)}
+                                    onRemovePreset={(value) => handleRemovePreset('processes', value)}
                                 />
 
                                 <AutocompleteInput
@@ -127,8 +158,10 @@ const BlendComponents: React.FC<BlendComponentsProps> = ({
                                     value={component.variety || ''}
                                     onChange={(value) => onChange(index, 'variety', value)}
                                     placeholder="品种"
-                                    suggestions={VARIETIES}
+                                    suggestions={currentVarieties}
                                     clearable
+                                    isCustomPreset={(value) => checkIsCustomPreset('varieties', value)}
+                                    onRemovePreset={(value) => handleRemovePreset('varieties', value)}
                                 />
                             </div>
                         </div>

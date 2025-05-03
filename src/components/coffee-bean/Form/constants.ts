@@ -1,5 +1,5 @@
 // 预设选项
-export const ORIGINS = [
+export const DEFAULT_ORIGINS = [
     '埃塞俄比亚',
     '巴西',
     '哥伦比亚',
@@ -20,7 +20,7 @@ export const ORIGINS = [
     '云南保山',
 ];
 
-export const PROCESSES = [
+export const DEFAULT_PROCESSES = [
     '水洗',
     '日晒',
     '蜜处理',
@@ -36,7 +36,7 @@ export const PROCESSES = [
     '湿刷处理'
 ];
 
-export const VARIETIES = [
+export const DEFAULT_VARIETIES = [
     '铁皮卡',
     '卡杜拉',
     '卡图拉',
@@ -56,6 +56,77 @@ export const VARIETIES = [
     '芒多当新',
     '巴西天然种'
 ];
+
+// 检查是否在浏览器环境中
+const isBrowser = typeof window !== 'undefined';
+
+// 从本地存储获取自定义预设
+const getCustomPresets = (key: string): string[] => {
+    if (!isBrowser) return []; // 服务器端渲染时返回空数组
+    
+    try {
+        const stored = localStorage.getItem(`brew-guide:custom-presets:${key}`);
+        return stored ? JSON.parse(stored) : [];
+    } catch (e) {
+        console.error(`获取自定义${key}失败:`, e);
+        return [];
+    }
+};
+
+// 保存自定义预设到本地存储
+const saveCustomPresets = (key: string, presets: string[]): void => {
+    if (!isBrowser) return; // 服务器端渲染时不执行
+    
+    try {
+        localStorage.setItem(`brew-guide:custom-presets:${key}`, JSON.stringify(presets));
+    } catch (e) {
+        console.error(`保存自定义${key}失败:`, e);
+    }
+};
+
+// 添加自定义预设
+export const addCustomPreset = (key: 'origins' | 'processes' | 'varieties', value: string): void => {
+    if (!isBrowser || !value.trim()) return;
+    
+    const presets = getCustomPresets(key);
+    if (!presets.includes(value)) {
+        presets.push(value);
+        saveCustomPresets(key, presets);
+    }
+};
+
+// 删除自定义预设
+export const removeCustomPreset = (key: 'origins' | 'processes' | 'varieties', value: string): void => {
+    if (!isBrowser) return;
+    
+    const presets = getCustomPresets(key);
+    const index = presets.indexOf(value);
+    if (index !== -1) {
+        presets.splice(index, 1);
+        saveCustomPresets(key, presets);
+    }
+};
+
+// 检查是否为自定义预设
+export const isCustomPreset = (key: 'origins' | 'processes' | 'varieties', value: string): boolean => {
+    if (!isBrowser) return false;
+    return getCustomPresets(key).includes(value);
+};
+
+// 获取完整预设列表（默认+自定义）
+export const getFullPresets = (key: 'origins' | 'processes' | 'varieties'): string[] => {
+    const defaults = {
+        'origins': DEFAULT_ORIGINS,
+        'processes': DEFAULT_PROCESSES,
+        'varieties': DEFAULT_VARIETIES
+    };
+    return [...defaults[key], ...getCustomPresets(key)];
+};
+
+// 导出合并后的预设（向后兼容）
+export const ORIGINS = getFullPresets('origins');
+export const PROCESSES = getFullPresets('processes');
+export const VARIETIES = getFullPresets('varieties');
 
 // 预设风味标签
 export const FLAVOR_TAGS = [

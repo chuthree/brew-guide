@@ -8,6 +8,7 @@ import BasicInfo from './components/BasicInfo'
 import DetailInfo from './components/DetailInfo'
 import FlavorInfo from './components/FlavorInfo'
 import Complete from './components/Complete'
+import { addCustomPreset, DEFAULT_ORIGINS, DEFAULT_PROCESSES, DEFAULT_VARIETIES } from './constants'
 
 // 二次压缩函数：将base64图片再次压缩
 function compressBase64(base64: string, quality = 0.7, maxWidth = 800): Promise<string> {
@@ -409,6 +410,24 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
         // 根据blendComponents的数量自动判断是单品还是拼配
         const isBlend = blendComponents.length > 1;
         const beanType = isBlend ? '拼配' : '单品';
+
+        // 保存自定义的预设值
+        blendComponents.forEach(component => {
+            // 检查产地是否是自定义值
+            if (component.origin && !DEFAULT_ORIGINS.includes(component.origin)) {
+                addCustomPreset('origins', component.origin);
+            }
+            
+            // 检查处理法是否是自定义值
+            if (component.process && !DEFAULT_PROCESSES.includes(component.process)) {
+                addCustomPreset('processes', component.process);
+            }
+            
+            // 检查品种是否是自定义值
+            if (component.variety && !DEFAULT_VARIETIES.includes(component.variety)) {
+                addCustomPreset('varieties', component.variety);
+            }
+        });
 
         // 统一使用成分属性，不管是单品还是拼配
         onSave({

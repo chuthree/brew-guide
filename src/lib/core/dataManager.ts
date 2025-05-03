@@ -3,6 +3,9 @@ import { Method } from "@/lib/core/config";
 import { CoffeeBean, BlendComponent } from "@/types/app";
 import { APP_VERSION } from "@/lib/core/config";
 
+// 检查是否在浏览器环境中
+const isBrowser = typeof window !== 'undefined';
+
 // 定义导出数据的接口
 interface ExportData {
 	exportDate: string;
@@ -44,6 +47,20 @@ export const APP_DATA_KEYS = [
 	"coffeeBeans", // 咖啡豆数据
 	"customEquipments", // 自定义器具
 	"onboardingCompleted", // 引导完成标记
+];
+
+/**
+ * 自定义预设键名前缀
+ */
+const CUSTOM_PRESETS_PREFIX = "brew-guide:custom-presets:";
+
+/**
+ * 自定义预设键名列表
+ */
+const CUSTOM_PRESETS_KEYS = [
+	"origins", // 产地
+	"processes", // 处理法
+	"varieties", // 品种
 ];
 
 /**
@@ -118,6 +135,34 @@ export const DataManager = {
 				// 错误处理：即使自定义方案导出失败，也继续导出其他数据
 			}
 
+			// 导出自定义预设数据
+			try {
+				if (isBrowser) {
+					// 初始化自定义预设存储结构
+					exportData.data.customPresets = {};
+
+					// 处理每个自定义预设类型
+					for (const key of CUSTOM_PRESETS_KEYS) {
+						const storageKey = `${CUSTOM_PRESETS_PREFIX}${key}`;
+						const presetJson = localStorage.getItem(storageKey);
+						
+						if (presetJson) {
+							try {
+								const presets = JSON.parse(presetJson);
+								// 将当前类型的所有自定义预设添加到导出数据中
+								(exportData.data.customPresets as Record<string, unknown>)[key] = presets;
+							} catch {
+								// 如果JSON解析失败，跳过
+								console.error(`解析自定义预设数据失败: ${key}`);
+							}
+						}
+					}
+				}
+			} catch (error) {
+				console.error("导出自定义预设失败:", error);
+				// 错误处理：即使自定义预设导出失败，也继续导出其他数据
+			}
+
 			return JSON.stringify(exportData, null, 2);
 		} catch {
 			throw new Error("导出数据失败");
@@ -169,6 +214,22 @@ export const DataManager = {
 				}
 			}
 			
+			// 导入自定义预设数据
+			if (isBrowser && importData.data.customPresets && typeof importData.data.customPresets === 'object') {
+				// 遍历所有自定义预设类型
+				const customPresets = importData.data.customPresets as Record<string, unknown>;
+				for (const presetType of Object.keys(customPresets)) {
+					if (CUSTOM_PRESETS_KEYS.includes(presetType)) {
+						const presets = customPresets[presetType];
+						if (Array.isArray(presets)) {
+							// 保存该类型的所有自定义预设
+							const storageKey = `${CUSTOM_PRESETS_PREFIX}${presetType}`;
+							localStorage.setItem(storageKey, JSON.stringify(presets));
+						}
+					}
+				}
+			}
+			
 			return {
 				success: true,
 				message: `数据导入成功，导出日期: ${
@@ -199,43 +260,35 @@ export const DataManager = {
 				await Storage.remove(key);
 			}
 
-			// 如果是完全重置，则清除所有数据
+			// 如果是完全重置，还需要清除其他数据
 			if (completeReset) {
-				await Storage.clear();
-			} else {
-				// 额外清除一些可能的导航状态
-				const navigationKeys = [
-					"fromNotesToBrewing",
-					"brewingNoteInProgress",
-					"fromMethodToBrewing",
-					"directToBrewing",
-					"shouldStartFromCoffeeBeanStep",
-					"brew-guide:showEmptyBeans",
-					"clickedFromMethod",
-					"clickedMethodName",
-					"forceNavigationMethodType",
-					"methodType",
-					"forceNavigateToBrewing",
-					"forceNavigationEquipment",
-					"forceNavigationMethod",
-					"forceNavigationParams",
-					"navigationStep",
-					"lastNavigatedMethod",
-				];
+				// 获取所有存储键
+				const allKeys = await Storage.keys();
 				
-				for (const key of navigationKeys) {
+				// 清除所有自定义方案
+				const methodKeys = allKeys.filter(key => key.startsWith("customMethods_"));
+				for (const key of methodKeys) {
 					await Storage.remove(key);
+				}
+				
+				// 清除所有自定义预设
+				if (isBrowser) {
+					for (const key of CUSTOM_PRESETS_KEYS) {
+						localStorage.removeItem(`${CUSTOM_PRESETS_PREFIX}${key}`);
+					}
 				}
 			}
 
 			return {
 				success: true,
-				message: completeReset ? "所有数据已彻底重置" : "主要数据已重置",
+				message: completeReset
+					? "已完全重置所有数据和设置"
+					: "已重置主要数据",
 			};
 		} catch (_error) {
 			return {
 				success: false,
-				message: `重置数据失败: ${(_error as Error).message}`,
+				message: "重置数据失败",
 			};
 		}
 	},
