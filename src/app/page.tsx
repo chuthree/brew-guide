@@ -26,7 +26,7 @@ import textZoomUtils from '@/lib/utils/textZoomUtils'
 import { BREWING_EVENTS } from '@/lib/brewing/constants'
 import type { BrewingNoteData } from '@/types/app'
 import { updateParameterInfo } from '@/lib/brewing/parameters'
-import { BrewingNoteFormModal } from '@/components/notes'
+import BrewingNoteFormModal from '@/components/notes/Form/BrewingNoteFormModal'
 import ErrorBoundary from '@/components/common/ui/ErrorBoundary'
 import CoffeeBeans from '@/components/coffee-bean/List'
 import SwipeBackGesture from '@/components/app/SwipeBackGesture'
@@ -54,7 +54,7 @@ interface ExtendedCoffeeBean extends CoffeeBean {
 }
 
 // 动态导入客户端组件
-const BrewingTimer = dynamic(() => import('@/components/brewing/BrewingTimer'), { ssr: false, loading: () => null })
+const BrewingTimer = dynamic(() => import('@/components/Brewing/BrewingTimer'), { ssr: false, loading: () => null })
 const BrewingHistory = dynamic(() => import('@/components/notes/List'), { ssr: false, loading: () => null })
 
 // 添加一个静态加载器组件，处理初始化过程

@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import Image from 'next/image'
 import { motion, AnimatePresence, useAnimation } from 'framer-motion'
 import { Stage } from '@/lib/core/config'
-import { AnimationFrame } from './AnimationEditor'
+import { AnimationFrame } from '../Brewing/AnimationEditor'
 
 // 定义扩展阶段类型
 interface ExtendedStage extends Partial<Stage> {

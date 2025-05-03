@@ -2,7 +2,7 @@ import React from 'react'
 import { formatNumber } from './utils'
 import { StatsSummaryProps } from './types'
 
-const StatsSummary: React.FC<StatsSummaryProps> = ({ stats, _todayConsumption }) => {
+const StatsSummary: React.FC<StatsSummaryProps> = ({ stats, todayConsumption }) => {
     return (
         <div className="p-4 text-justify text-sm font-medium max-w-xs mx-auto">
             目前已用{formatNumber(stats.consumedWeight)}克，

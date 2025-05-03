@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { CustomEquipment } from '@/lib/core/config';
 import { isEquipmentNameAvailable } from '@/lib/managers/customEquipments';
 import DrawingCanvas, { DrawingCanvasRef } from '../../common/ui/DrawingCanvas';
-import AnimationEditor, { AnimationEditorRef, AnimationFrame } from '../../brewing/AnimationEditor';
+import AnimationEditor, { AnimationEditorRef, AnimationFrame } from '../../Brewing/AnimationEditor';
 import hapticsUtils from '@/lib/ui/haptics';
 import { AnimatePresence } from 'framer-motion';
 import Image from 'next/image';

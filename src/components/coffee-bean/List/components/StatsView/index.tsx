@@ -22,7 +22,7 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
     const { consumption: todayConsumption, cost: todayCost } = useConsumption(beans)
     
     // 动画控制
-    const { imagesLoaded, _textLoaded, styles } = useAnimation()
+    const { imagesLoaded, textLoaded, styles } = useAnimation()
 
     // 获取具有图片的咖啡豆，用于渲染半圆图片
     const beansWithImages = useMemo(() => {
