@@ -91,12 +91,14 @@ export const CoffeeBeanManager = {
 			const index = beans.findIndex((bean) => bean.id === id);
 			if (index === -1) return null;
 
-			// 不允许修改id和timestamp
-			const { id: _id, timestamp: _timestamp, ...validUpdates } = updates;
+			// 不允许直接修改id，但允许更新timestamp为当前时间以反映修改时间
+			const { id: _id, ...validUpdates } = updates;
 
 			beans[index] = {
 				...beans[index],
 				...validUpdates,
+				// 更新timestamp为当前时间，反映最后修改时间
+				timestamp: Date.now()
 			};
 
 			// 保存更新后的数据
@@ -193,7 +195,7 @@ export const CoffeeBeanManager = {
 			// 格式化结果
 			const formattedNewRemaining = this.formatNumber(newRemaining);
 
-			// 更新咖啡豆剩余量
+			// 更新咖啡豆剩余量（timestamp会在updateBean中自动更新）
 			const result = await this.updateBean(id, {
 				remaining: formattedNewRemaining,
 			});

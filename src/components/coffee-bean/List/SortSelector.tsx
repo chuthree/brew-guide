@@ -43,6 +43,8 @@ export const SORT_OPTIONS = {
     ROAST_DATE_DESC: 'roast_date_desc', // 烘焙日期从晚到早（降序）
     PRICE_ASC: 'price_asc', // 每克价格从低到高（升序）
     PRICE_DESC: 'price_desc', // 每克价格从高到低（降序）
+    LAST_MODIFIED_DESC: 'last_modified_desc', // 最近变动（降序）
+    LAST_MODIFIED_ASC: 'last_modified_asc', // 最早变动（升序）
 } as const;
 
 export type SortOption = typeof SORT_OPTIONS[keyof typeof SORT_OPTIONS];
@@ -124,6 +126,20 @@ const calculatePricePerGram = (bean: ExtendedCoffeeBean): number => {
 export const sortBeans = (beansToSort: ExtendedCoffeeBean[], option: SortOption): ExtendedCoffeeBean[] => {
     const sorted = [...beansToSort];
     switch (option) {
+        case SORT_OPTIONS.LAST_MODIFIED_DESC:
+            // 最近变动排序（降序，最新的排在前面）
+            return sorted.sort((a, b) => {
+                // 使用 timestamp 字段作为最后修改时间
+                // timestamp 越大，表示豆子越新
+                return b.timestamp - a.timestamp;
+            });
+        case SORT_OPTIONS.LAST_MODIFIED_ASC:
+            // 最早变动排序（升序，最早的排在前面）
+            return sorted.sort((a, b) => {
+                // 使用 timestamp 字段作为最后修改时间
+                // timestamp 越小，表示豆子越早
+                return a.timestamp - b.timestamp;
+            });
         case SORT_OPTIONS.REMAINING_DAYS_ASC:
             return sorted.sort((a, b) => {
                 const { phase: phaseA, remainingDays: daysA } = getFlavorInfo(a);
@@ -288,6 +304,10 @@ export const convertToRankingSortOption = (option: SortOption, viewMode: 'invent
                 return RANKING_SORT_OPTIONS.PRICE_ASC;
             case SORT_OPTIONS.PRICE_DESC:
                 return RANKING_SORT_OPTIONS.PRICE_DESC;
+            case SORT_OPTIONS.LAST_MODIFIED_ASC:
+                return RANKING_SORT_OPTIONS.ORIGINAL; // 最近变动升序，返回原始排序
+            case SORT_OPTIONS.LAST_MODIFIED_DESC:
+                return RANKING_SORT_OPTIONS.ORIGINAL; // 最近变动降序，返回原始排序
             case SORT_OPTIONS.REMAINING_AMOUNT_ASC:
             case SORT_OPTIONS.REMAINING_AMOUNT_DESC:
             case SORT_OPTIONS.ROAST_DATE_ASC:
@@ -319,6 +339,10 @@ export const convertToRankingSortOption = (option: SortOption, viewMode: 'invent
                 return RANKING_SORT_OPTIONS.RATING_DESC;
             case SORT_OPTIONS.PRICE_DESC:
                 return RANKING_SORT_OPTIONS.RATING_ASC;
+            case SORT_OPTIONS.LAST_MODIFIED_ASC:
+                return RANKING_SORT_OPTIONS.RATING_DESC; // 最近变动升序，返回评分降序
+            case SORT_OPTIONS.LAST_MODIFIED_DESC:
+                return RANKING_SORT_OPTIONS.RATING_ASC; // 最近变动降序，返回评分升序
             case SORT_OPTIONS.ORIGINAL:
                 return RANKING_SORT_OPTIONS.ORIGINAL;
             default:
@@ -342,6 +366,8 @@ export const SORT_LABELS: Record<SortOption, string> = {
     [SORT_OPTIONS.ROAST_DATE_DESC]: '烘焙日期',
     [SORT_OPTIONS.PRICE_ASC]: '克价',
     [SORT_OPTIONS.PRICE_DESC]: '克价',
+    [SORT_OPTIONS.LAST_MODIFIED_ASC]: '最近变动',
+    [SORT_OPTIONS.LAST_MODIFIED_DESC]: '最近变动',
 };
 
 // 排序图标定义
@@ -385,6 +411,7 @@ export const SORT_TYPES = {
     REMAINING_AMOUNT: 'remaining_amount', // 剩余量
     ROAST_DATE: 'roast_date', // 烘焙日期
     PRICE: 'price', // 克价
+    LAST_MODIFIED: 'last_modified', // 最近变动
 } as const;
 
 type SortType = typeof SORT_TYPES[keyof typeof SORT_TYPES];
@@ -406,6 +433,7 @@ const SORT_TYPE_LABELS: Record<SortType, string> = {
     [SORT_TYPES.REMAINING_AMOUNT]: '剩余量',
     [SORT_TYPES.ROAST_DATE]: '烘焙日期',
     [SORT_TYPES.PRICE]: '克价',
+    [SORT_TYPES.LAST_MODIFIED]: '最近变动',
 };
 
 // 排序顺序的显示名称和图标
@@ -460,6 +488,10 @@ const getSortTypeAndOrder = (option: SortOption): { type: SortType, order: SortO
             return { type: SORT_TYPES.PRICE, order: SORT_ORDERS.ASC };
         case SORT_OPTIONS.PRICE_DESC:
             return { type: SORT_TYPES.PRICE, order: SORT_ORDERS.DESC };
+        case SORT_OPTIONS.LAST_MODIFIED_ASC:
+            return { type: SORT_TYPES.LAST_MODIFIED, order: SORT_ORDERS.ASC };
+        case SORT_OPTIONS.LAST_MODIFIED_DESC:
+            return { type: SORT_TYPES.LAST_MODIFIED, order: SORT_ORDERS.DESC };
         default:
             return { type: SORT_TYPES.REMAINING_DAYS, order: SORT_ORDERS.ASC };
     }
@@ -482,6 +514,8 @@ const getSortOption = (type: SortType, order: SortOrder): SortOption => {
             return order === SORT_ORDERS.ASC ? SORT_OPTIONS.ROAST_DATE_ASC : SORT_OPTIONS.ROAST_DATE_DESC;
         case SORT_TYPES.PRICE:
             return order === SORT_ORDERS.ASC ? SORT_OPTIONS.PRICE_ASC : SORT_OPTIONS.PRICE_DESC;
+        case SORT_TYPES.LAST_MODIFIED:
+            return order === SORT_ORDERS.ASC ? SORT_OPTIONS.LAST_MODIFIED_ASC : SORT_OPTIONS.LAST_MODIFIED_DESC;
         default:
             return SORT_OPTIONS.REMAINING_DAYS_ASC;
     }
@@ -507,6 +541,9 @@ const getSortOrderLabel = (type: SortType, order: SortOrder): string => {
     } else if (type === SORT_TYPES.PRICE) {
         // 价格对应的排序顺序标签
         return order === SORT_ORDERS.ASC ? '从低到高' : '从高到低';
+    } else if (type === SORT_TYPES.LAST_MODIFIED) {
+        // 最近变动对应的排序顺序标签
+        return order === SORT_ORDERS.ASC ? '从早到晚' : '从晚到早';
     }
     // 默认标签
     return order === SORT_ORDERS.ASC ? '升序' : '降序';
@@ -532,6 +569,10 @@ const getSortOrdersForType = (type: SortType): SortOrder[] => {
     }
     // 对于克价，从高到低（DESC）更符合直觉（通常先看更贵的豆子）
     else if (type === SORT_TYPES.PRICE) {
+        return [SORT_ORDERS.DESC, SORT_ORDERS.ASC];
+    }
+    // 对于最近变动，从晚到早（DESC）更符合直觉（最近变动的豆子先显示）
+    else if (type === SORT_TYPES.LAST_MODIFIED) {
         return [SORT_ORDERS.DESC, SORT_ORDERS.ASC];
     }
     // 对于名称，按字母顺序显示（A-Z为ASC，但图标使用向上箭头）
@@ -579,6 +620,7 @@ export const SortSelector: React.FC<SortSelectorProps> = ({
         switch (viewMode) {
             case 'inventory':
                 return [
+                    SORT_TYPES.LAST_MODIFIED, // 添加最近变动排序
                     SORT_TYPES.ROAST_DATE, 
                     SORT_TYPES.REMAINING_DAYS,
                     SORT_TYPES.REMAINING_AMOUNT,
@@ -586,13 +628,13 @@ export const SortSelector: React.FC<SortSelectorProps> = ({
                     SORT_TYPES.NAME
                 ];
             case 'ranking':
-                return [SORT_TYPES.RATING, SORT_TYPES.NAME];
+                return [SORT_TYPES.RATING, SORT_TYPES.NAME, SORT_TYPES.LAST_MODIFIED];
             case 'blogger':
-                return [SORT_TYPES.ORIGINAL, SORT_TYPES.RATING, SORT_TYPES.PRICE, SORT_TYPES.NAME];
+                return [SORT_TYPES.ORIGINAL, SORT_TYPES.RATING, SORT_TYPES.PRICE, SORT_TYPES.NAME, SORT_TYPES.LAST_MODIFIED];
             case 'stats':
-                return [SORT_TYPES.REMAINING_DAYS, SORT_TYPES.REMAINING_AMOUNT, SORT_TYPES.ROAST_DATE, SORT_TYPES.PRICE];
+                return [SORT_TYPES.REMAINING_DAYS, SORT_TYPES.REMAINING_AMOUNT, SORT_TYPES.ROAST_DATE, SORT_TYPES.PRICE, SORT_TYPES.LAST_MODIFIED];
             default:
-                return [SORT_TYPES.REMAINING_DAYS, SORT_TYPES.NAME];
+                return [SORT_TYPES.REMAINING_DAYS, SORT_TYPES.NAME, SORT_TYPES.LAST_MODIFIED];
         }
     };
 
