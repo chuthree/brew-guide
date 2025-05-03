@@ -96,10 +96,8 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
   // 处理咖啡豆选择
   const handleCoffeeBeanSelect = (bean: CoffeeBean | null) => {
     setSelectedCoffeeBean(bean)
-    // 选择咖啡豆后自动进入下一步（只有当选择了咖啡豆才跳转）
-    if (bean) {
-      setCurrentStep(1)
-    }
+    // 选择咖啡豆后自动进入下一步（无论是选择豆子还是不选择都跳转）
+    setCurrentStep(1)
   }
 
   // 处理方法参数变化
