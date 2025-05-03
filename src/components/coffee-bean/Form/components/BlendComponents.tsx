@@ -16,6 +16,25 @@ const BlendComponents: React.FC<BlendComponentsProps> = ({
     onRemove,
     onChange,
 }) => {
+    // 计算总百分比
+    const totalPercentage = components.reduce((sum, component) => 
+        component.percentage ? sum + component.percentage : sum, 0);
+    
+    // 计算百分比状态
+    const percentageStatus = totalPercentage === 100 
+        ? 'text-green-600 dark:text-green-400' 
+        : (totalPercentage > 100 ? 'text-red-600 dark:text-red-400' : 'text-neutral-500 dark:text-neutral-400');
+    
+    // 计算特定成分可用的最大百分比
+    const calculateMaxAllowed = (index: number): number => {
+        const totalOtherPercentage = components.reduce((sum, comp, i) => 
+            i !== index && comp.percentage ? sum + comp.percentage : sum, 0);
+        return 100 - totalOtherPercentage;
+    };
+    
+    // 检查是否可以添加更多成分
+    const canAddMoreComponents = totalPercentage < 100;
+        
     return (
         <div className="space-y-5 w-full">
             <div className="flex items-center justify-between">
@@ -25,84 +44,106 @@ const BlendComponents: React.FC<BlendComponentsProps> = ({
                 <button
                     type="button"
                     onClick={onAdd}
-                    className="text-xs px-3 py-1 rounded-full bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-300 dark:hover:bg-neutral-600 transition-colors"
+                    disabled={!canAddMoreComponents && components.length > 1}
+                    className={`text-xs px-3 py-1 rounded-full transition-colors ${
+                        (!canAddMoreComponents && components.length > 1) 
+                            ? 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-600 cursor-not-allowed' 
+                            : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-300 dark:hover:bg-neutral-600'
+                    }`}
                 >
                     添加成分
                 </button>
             </div>
 
             <div className="space-y-4">
-                {components.map((component, index) => (
-                    <div
-                        key={index}
-                    >
-                        <div className="flex items-center justify-between mb-3">
-                            <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
-                                成分 #{index + 1}
-                            </span>
-                            {components.length > 1 && (
-                                <button
-                                    type="button"
-                                    onClick={() => onRemove(index)}
-                                    className="text-xs text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
-                                >
-                                    移除
-                                </button>
-                            )}
-                        </div>
+                {components.map((component, index) => {
+                    // 计算当前成分的最大允许百分比
+                    const maxAllowed = calculateMaxAllowed(index);
+                    
+                    return (
+                        <div key={index}>
+                            <div className="flex items-center justify-between mb-3">
+                                {components.length > 1 && (
+                                    <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                                        成分 #{index + 1}
+                                    </span>
+                                )}
+                                {components.length > 1 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => onRemove(index)}
+                                        className="text-xs text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
+                                    >
+                                        移除
+                                    </button>
+                                )}
+                            </div>
 
-                        {components.length > 1 && (
-                            <div className="space-y-1 mb-3">
-                                <label className="block text-xs text-neutral-500 dark:text-neutral-400">
-                                    比例 (可选)
-                                </label>
+                            {components.length > 1 && (
+                                <div className="space-y-1 mb-3">
+                                    <label className="block text-xs text-neutral-500 dark:text-neutral-400">
+                                        比例 (可选)
+                                        {maxAllowed === 0 && (
+                                            <span className="ml-1 text-amber-600 dark:text-amber-400">
+                                                (已达100%)
+                                            </span>
+                                        )}
+                                    </label>
+                                    <AutocompleteInput
+                                        value={component.percentage !== undefined ? component.percentage.toString() : ''}
+                                        onChange={(value) => onChange(index, 'percentage', value)}
+                                        placeholder={maxAllowed > 0 ? `0-${maxAllowed}` : "0"}
+                                        unit="%"
+                                        inputType="tel"
+                                        clearable={true}
+                                        suggestions={[]}
+                                        maxValue={maxAllowed} // 动态计算当前成分可用的最大百分比
+                                        disabled={maxAllowed === 0 && !component.percentage}
+                                    />
+                                </div>
+                            )}
+
+                            <div className="grid grid-cols-3 gap-3">
                                 <AutocompleteInput
-                                    value={component.percentage !== undefined ? component.percentage.toString() : ''}
-                                    onChange={(value) => onChange(index, 'percentage', value)}
-                                    placeholder="0-100"
-                                    unit="%"
-                                    inputType="tel"
-                                    clearable={true}
-                                    suggestions={[]}
+                                    label="产地"
+                                    value={component.origin || ''}
+                                    onChange={(value) => onChange(index, 'origin', value)}
+                                    placeholder="产地"
+                                    suggestions={ORIGINS}
+                                    clearable
+                                />
+
+                                <AutocompleteInput
+                                    label="处理法"
+                                    value={component.process || ''}
+                                    onChange={(value) => onChange(index, 'process', value)}
+                                    placeholder="处理法"
+                                    suggestions={PROCESSES}
+                                    clearable
+                                />
+
+                                <AutocompleteInput
+                                    label="品种"
+                                    value={component.variety || ''}
+                                    onChange={(value) => onChange(index, 'variety', value)}
+                                    placeholder="品种"
+                                    suggestions={VARIETIES}
+                                    clearable
                                 />
                             </div>
-                        )}
-
-                        <div className="grid grid-cols-3 gap-3">
-                            <AutocompleteInput
-                                label="产地"
-                                value={component.origin || ''}
-                                onChange={(value) => onChange(index, 'origin', value)}
-                                placeholder="产地"
-                                suggestions={ORIGINS}
-                                clearable
-                            />
-
-                            <AutocompleteInput
-                                label="处理法"
-                                value={component.process || ''}
-                                onChange={(value) => onChange(index, 'process', value)}
-                                placeholder="处理法"
-                                suggestions={PROCESSES}
-                                clearable
-                            />
-
-                            <AutocompleteInput
-                                label="品种"
-                                value={component.variety || ''}
-                                onChange={(value) => onChange(index, 'variety', value)}
-                                placeholder="品种"
-                                suggestions={VARIETIES}
-                                clearable
-                            />
                         </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
 
-            <div className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
-                <p>提示：单一成分为单品咖啡豆，多种成分为拼配咖啡豆。比例为可选项，如需添加请确保各成分比例总和为100%</p>
-            </div>
+            {components.length > 1 && (
+                <div className={`text-xs ${percentageStatus} flex items-center justify-between mt-1`}>
+                    <span>当前总比例：{totalPercentage}%</span>
+                    {totalPercentage !== 100 && (
+                        <span>{totalPercentage < 100 ? `还差 ${100 - totalPercentage}%` : `超出 ${totalPercentage - 100}%`}</span>
+                    )}
+                </div>
+            )}
         </div>
     );
 };

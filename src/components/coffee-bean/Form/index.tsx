@@ -354,6 +354,17 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
 
     // 添加拼配成分处理函数
     const handleAddBlendComponent = () => {
+        // 计算当前总百分比
+        const totalPercentage = blendComponents.reduce(
+            (sum, comp) => (comp.percentage ? sum + comp.percentage : sum), 
+            0
+        );
+        
+        // 如果总百分比已经达到100%，则不允许添加更多成分
+        if (totalPercentage >= 100) {
+            return;
+        }
+        
         setBlendComponents([
             ...blendComponents,
             {
@@ -373,12 +384,16 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
 
     const handleBlendComponentChange = (index: number, field: keyof BlendComponent, value: string | number) => {
         const newComponents = [...blendComponents];
+        
         if (field === 'percentage') {
             if (value === '' || value === null || value === undefined) {
                 delete newComponents[index].percentage;
             } else {
+                // 将输入值转换为数字
                 const numValue = typeof value === 'string' ? parseInt(value) || 0 : value;
-                newComponents[index].percentage = Math.max(0, Math.min(100, numValue));
+                
+                // 直接设置值，AutocompleteInput组件的maxValue属性会负责限制最大值
+                newComponents[index].percentage = numValue;
             }
         } else {
             newComponents[index][field] = value as string;

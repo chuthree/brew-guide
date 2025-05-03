@@ -19,6 +19,7 @@ interface AutocompleteInputProps {
     containerClassName?: string
     inputType?: 'text' | 'number' | 'tel' | 'email' // 新增输入框类型属性
     disabled?: boolean // 添加禁用属性
+    maxValue?: number // 添加最大值属性，用于限制数字输入
 }
 
 const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
@@ -35,7 +36,8 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
     onBlur,
     containerClassName,
     inputType = 'text', // 默认为text类型
-    disabled = false // 默认为不禁用
+    disabled = false, // 默认为不禁用
+    maxValue
 }) => {
     const [open, setOpen] = useState(false)
     const [inputValue, setInputValue] = useState(value)
@@ -94,7 +96,26 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
 
     // 处理输入变化
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const newValue = e.target.value;
+        let newValue = e.target.value;
+        
+        // 对数字类型输入进行处理
+        if (inputType === 'tel' || inputType === 'number') {
+            // 如果是数字输入，只保留数字字符
+            const numericValue = newValue.replace(/[^0-9]/g, '');
+            
+            // 如果设置了maxValue，限制输入的最大值
+            if (maxValue !== undefined && numericValue !== '') {
+                const numValue = parseInt(numericValue);
+                if (numValue > maxValue) {
+                    newValue = maxValue.toString();
+                } else {
+                    newValue = numericValue;
+                }
+            } else {
+                newValue = numericValue;
+            }
+        }
+        
         setInputValue(newValue);
         setJustSelected(false); // 用户输入时，重置选择状态
 
