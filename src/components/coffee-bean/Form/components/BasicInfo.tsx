@@ -161,7 +161,7 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
                                         type="button"
                                         onClick={() => handleImageSelect('camera')}
                                         disabled={isUploading}
-                                        className="flex-1 py-1 text-xs text-neutral-600 dark:text-neutral-400 border-t border-r border-neutral-300 dark:border-neutral-700"
+                                        className="flex-1 py-1 text-xs text-neutral-600 dark:text-neutral-400 border-t-2 border-r-2 border-dashed border-neutral-300 dark:border-neutral-700"
                                     >
                                         <span className="flex items-center justify-center">
                                             <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -175,7 +175,7 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
                                         type="button"
                                         onClick={() => handleImageSelect('gallery')}
                                         disabled={isUploading}
-                                        className="flex-1 py-1 text-xs text-neutral-600 dark:text-neutral-400 border-t border-neutral-300 dark:border-neutral-700"
+                                        className="flex-1 py-1 text-xs text-neutral-600 dark:text-neutral-400 border-t-2 border-dashed border-neutral-300 dark:border-neutral-700"
                                     >
                                         <span className="flex items-center justify-center">
                                             <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
