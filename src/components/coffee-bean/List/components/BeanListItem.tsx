@@ -176,7 +176,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                                 </div>
                                 {/* 拼配豆信息显示 */}
                                 {bean.type === '拼配' && bean.blendComponents && bean.blendComponents.length > 1 && (
-                                    <div className="text-[10px] font-normal text-neutral-500 dark:text-neutral-400 pr-2 mt-0.5 flex flex-wrap gap-1">
+                                    <div className="text-[10px] font-normal text-neutral-500 dark:text-neutral-400 pr-2 mt-0.5 flex flex-col">
                                         {bean.blendComponents.map((comp, index) => {
                                             const componentText = [
                                                 comp.origin || '',
@@ -188,8 +188,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                                                                 comp.percentage !== null;
                                             
                                             return (
-                                                <span key={index} className="inline-block whitespace-nowrap">
-                                                    {index > 0 }
+                                                <span key={index} className="whitespace-nowrap">
                                                     {componentText}
                                                     {hasPercentage && ` (${comp.percentage}%)`}
                                                 </span>
