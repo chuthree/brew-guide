@@ -324,7 +324,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
 
                 {/* 备注信息 */}
                 {bean.notes && (
-                    <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
+                    <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400 whitespace-pre-line leading-tight">
                         {bean.notes}
                     </div>
                 )}

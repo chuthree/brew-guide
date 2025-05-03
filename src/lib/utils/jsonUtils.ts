@@ -528,7 +528,7 @@ export function beanToReadableText(bean: CoffeeBean): string {
 	}
 	
 	if (bean.notes) {
-		text += `备注: ${bean.notes}\n`;
+		text += `备注信息:\n${bean.notes}\n`;
 	}
 	
 	// 元数据标记
@@ -763,16 +763,20 @@ function parseCoffeeBeanText(text: string): CoffeeBean | null {
 		bean.type = typeMatch[1].trim();
 	}
 
-	// 提取价格
-	const priceMatch = text.match(/价格:\s*(\d+)元\/g/);
+	// 提取用途
+	const usageMatch = text.match(/用途:\s*(.*?)(?:\n|$)/);
+	if (usageMatch && usageMatch[1]) {
+		if (usageMatch[1].includes('手冲')) {
+			bean.beanType = 'filter';
+		} else if (usageMatch[1].includes('意式')) {
+			bean.beanType = 'espresso';
+		}
+	}
+
+	// 提取价格 - 改进价格提取逻辑
+	const priceMatch = text.match(/价格:\s*(\d+(?:\.\d+)?)元(?:\/g)?/);
 	if (priceMatch && priceMatch[1]) {
 		bean.price = priceMatch[1];
-	} else {
-		// 兼容新格式
-		const newPriceMatch = text.match(/价格:\s*(\d+)元/);
-		if (newPriceMatch && newPriceMatch[1]) {
-			bean.price = newPriceMatch[1];
-		}
 	}
 
 	// 提取养豆期
@@ -793,17 +797,43 @@ function parseCoffeeBeanText(text: string): CoffeeBean | null {
 		bean.flavor = flavorMatch[1].split(",").map((f: string) => f.trim());
 	}
 
-	// 提取备注
-	const notesMatch = text.match(/备注:\s*(.*?)(?:\n|$)/);
-	if (notesMatch && notesMatch[1]) {
-		bean.notes = notesMatch[1].trim();
+	// 提取备注（支持多行）
+	if (text.includes("备注信息:")) {
+		// 备注信息可能是多行的，获取备注信息部分直到下一个区域标识符
+		const notesSection = text.split("备注信息:")[1];
+		// 截取到 "---" 或文档结尾
+		const endIndex = notesSection.indexOf("\n---");
+		const noteContent = endIndex !== -1 ? 
+			notesSection.substring(0, endIndex).trim() : 
+			notesSection.trim();
+		bean.notes = noteContent;
+	} else {
+		// 兼容旧格式的单行备注
+		const notesMatch = text.match(/备注:\s*(.*?)(?:\n|$)/);
+		if (notesMatch && notesMatch[1]) {
+			bean.notes = notesMatch[1].trim();
+		}
 	}
 
 	// 提取拼配成分（如果有）
 	if (text.includes("拼配成分:")) {
 		bean.blendComponents = [];
-		const blendSection = text.split("拼配成分:")[1].split("\n---")[0];
-		const componentLines = blendSection
+		const blendSection = text.split("拼配成分:")[1];
+		// 找到拼配成分部分的结束位置（下一个主要部分或文档结尾）
+		const endIndex = Math.min(
+			...[
+				blendSection.indexOf("\n风味标签:"),
+				blendSection.indexOf("\n备注信息:"),
+				blendSection.indexOf("\n备注:"),
+				blendSection.indexOf("\n---")
+			].filter(idx => idx !== -1)
+		);
+		
+		const blendContent = endIndex !== Infinity ? 
+			blendSection.substring(0, endIndex) : 
+			blendSection.split("\n---")[0];
+			
+		const componentLines = blendContent
 			.split("\n")
 			.map((line) => line.trim())
 			.filter((line) => line.length > 0);
