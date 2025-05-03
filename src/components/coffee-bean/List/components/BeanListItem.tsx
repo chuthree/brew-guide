@@ -186,7 +186,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                                             
                                             return (
                                                 <span key={index} className="inline-block whitespace-nowrap">
-                                                    {index > 0 && ' · '}
+                                                    {index > 0 }
                                                     {componentText}
                                                     {hasPercentage && ` (${comp.percentage}%)`}
                                                 </span>
