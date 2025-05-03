@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import AutocompleteInput from '@/components/common/forms/AutocompleteInput';
 import { ExtendedCoffeeBean } from '../types';
 import { pageVariants, pageTransition } from '../constants';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/coffee-bean/ui/select';
 
 interface BasicInfoProps {
     bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>;
@@ -263,18 +264,26 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
                     <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
                         烘焙度
                     </label>
-                    <select
+                    <Select
                         value={bean.roastLevel || '浅度烘焙'}
-                        onChange={(e) => onBeanChange('roastLevel')(e.target.value)}
-                        className="w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400 appearance-none"
+                        onValueChange={(value) => onBeanChange('roastLevel')(value)}
                     >
-                        <option value="极浅烘焙">极浅烘焙</option>
-                        <option value="浅度烘焙">浅度烘焙</option>
-                        <option value="中浅烘焙">中浅烘焙</option>
-                        <option value="中度烘焙">中度烘焙</option>
-                        <option value="中深烘焙">中深烘焙</option>
-                        <option value="深度烘焙">深度烘焙</option>
-                    </select>
+                        <SelectTrigger 
+                            className="w-full py-2 bg-transparent border-0 border-b border-neutral-300 dark:border-neutral-700 focus-within:border-neutral-800 dark:focus-within:border-neutral-400 shadow-none rounded-none h-auto"
+                        >
+                            <SelectValue placeholder="选择烘焙度" />
+                        </SelectTrigger>
+                        <SelectContent 
+                            className="max-h-[40vh] overflow-y-auto border-neutral-200/70 dark:border-neutral-800/70 shadow-lg backdrop-blur-sm bg-white/95 dark:bg-neutral-900/95 rounded-lg"
+                        >
+                            <SelectItem value="极浅烘焙">极浅烘焙</SelectItem>
+                            <SelectItem value="浅度烘焙">浅度烘焙</SelectItem>
+                            <SelectItem value="中浅烘焙">中浅烘焙</SelectItem>
+                            <SelectItem value="中度烘焙">中度烘焙</SelectItem>
+                            <SelectItem value="中深烘焙">中深烘焙</SelectItem>
+                            <SelectItem value="深度烘焙">深度烘焙</SelectItem>
+                        </SelectContent>
+                    </Select>
                 </div>
 
                 <div className="space-y-2">
