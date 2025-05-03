@@ -84,6 +84,13 @@ const Settings: React.FC<SettingsProps> = ({
         settings.decrementPresets || defaultSettings.decrementPresets
     )
 
+    // 当settings发生变化时更新decrementPresets状态
+    useEffect(() => {
+        if (settings.decrementPresets) {
+            setDecrementPresets(settings.decrementPresets);
+        }
+    }, [settings.decrementPresets]);
+
     // 添加主题颜色更新的 Effect
     useEffect(() => {
         const updateThemeColor = () => {
