@@ -56,7 +56,7 @@ const StatsCategories: React.FC<StatsCategoriesProps> = ({
                     <StatItem label="总花费" value={`${formatNumber(stats.totalCost)}`} unit="元" />
                     <StatItem label="剩余咖啡价值" value={`${formatNumber(stats.remainingWeight * stats.averageGramPrice)}`} unit="元" />
                     <StatItem label="已消耗咖啡价值" value={`${formatNumber(stats.consumedWeight * stats.averageGramPrice)}`} unit="元" />
-                    <StatItem label="平均每豆价格" value={`${formatNumber(stats.averageBeanPrice)}`} unit="元" />
+                    <StatItem label="平均每包价格" value={`${formatNumber(stats.averageBeanPrice)}`} unit="元" />
                     <StatItem label="每克平均价格" value={`${formatNumber(stats.averageGramPrice)}`} unit="元/克" />
                     <StatItem label="今日花费" value={`${formatNumber(todayCost)}`} unit="元" />
                 </StatCategory>
