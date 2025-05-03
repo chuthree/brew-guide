@@ -1,12 +1,13 @@
 'use client'
 
-import React, { useMemo } from 'react'
+import React, { useMemo, useState } from 'react'
 import type { CoffeeBean } from '@/types/app'
 
 interface CoffeeBeanSelectorProps {
   coffeeBeans: CoffeeBean[]
   selectedCoffeeBean: CoffeeBean | null
   onSelect: (bean: CoffeeBean | null) => void
+  searchQuery?: string
 }
 
 // 计算咖啡豆的赏味期阶段和剩余天数
@@ -63,7 +64,8 @@ const getPhaseValue = (phase: string): number => {
 const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
   coffeeBeans,
   selectedCoffeeBean: _selectedCoffeeBean,
-  onSelect
+  onSelect,
+  searchQuery = ''
 }) => {
   // 过滤出未用完的咖啡豆，并按赏味期排序
   const availableBeans = useMemo(() => {
@@ -110,6 +112,16 @@ const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
     });
   }, [coffeeBeans]);
 
+  // 搜索过滤
+  const filteredBeans = useMemo(() => {
+    if (!searchQuery?.trim()) return availableBeans;
+    
+    const query = searchQuery.toLowerCase().trim();
+    return availableBeans.filter(bean => 
+      bean.name?.toLowerCase().includes(query)
+    );
+  }, [availableBeans, searchQuery]);
+
   return (
     <div className="py-3">
       <div>
@@ -140,8 +152,8 @@ const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
             </div>
           </div>
 
-          {availableBeans.length > 0 ? (
-            availableBeans.map((bean) => {
+          {filteredBeans.length > 0 ? (
+            filteredBeans.map((bean) => {
               // 获取赏味期状态
               let freshStatus = "";
               let statusClass = "text-neutral-500 dark:text-neutral-400";
@@ -212,7 +224,10 @@ const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
             })
           ) : (
             <div className="text-xs text-neutral-500 dark:text-neutral-400 border-l border-neutral-200 dark:border-neutral-800 pl-6">
-              没有可用的咖啡豆，请先添加咖啡豆
+              {searchQuery.trim() 
+                ? `没有找到匹配"${searchQuery.trim()}"的咖啡豆`
+                : "没有可用的咖啡豆，请先添加咖啡豆"
+              }
             </div>
           )}
         </div>

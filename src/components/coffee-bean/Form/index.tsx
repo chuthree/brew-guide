@@ -652,69 +652,61 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
     const renderNextButton = () => {
         const isLastStep = getCurrentStepIndex() === steps.length - 1;
         const valid = isStepValid();
-        const canSave = valid && (currentStep === 'basic' || currentStep === 'detail' || currentStep === 'flavor');
+        const canSave = valid && ['basic', 'detail', 'flavor'].includes(currentStep);
+        
+        const springTransition = {
+            type: "spring",
+            stiffness: 500,
+            damping: 25
+        };
+
+        const buttonBaseClass = "rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100";
 
         return (
             <div className="modal-bottom-button flex items-center justify-center">
                 <div className="flex items-center justify-center gap-2">
+                    {/* 保存按钮 */}
                     <AnimatePresence mode="popLayout">
                         {canSave && (
                             <motion.button
                                 key="save-button"
                                 type="button"
                                 onClick={handleSubmit}
-                                className="bg-neutral-800 dark:bg-neutral-200 text-neutral-100 dark:text-neutral-800 rounded-full p-2 flex-shrink-0"
+                                className={`${buttonBaseClass} p-4 flex-shrink-0`}
                                 title="快速保存"
-                                initial={{ scale: 0, opacity: 0, x: 30 }}
+                                initial={{ scale: 0.8, opacity: 0, x: 15 }}
                                 animate={{ scale: 1, opacity: 1, x: 0 }}
-                                exit={{ scale: 0, opacity: 0, x: 30 }}
-                                transition={{
-                                    type: "spring",
-                                    stiffness: 500,
-                                    damping: 25
-                                }}
+                                exit={{ scale: 0.8, opacity: 0, x: 15 }}
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                transition={springTransition}
                             >
                                 <Check className="w-4 h-4" strokeWidth="3" />
                             </motion.button>
                         )}
                     </AnimatePresence>
+
+                    {/* 下一步/完成按钮 */}
                     <motion.button
                         layout
                         type="button"
                         onClick={handleNextStep}
                         disabled={!valid}
-                        transition={{
-                            type: "spring",
-                            stiffness: 500,
-                            damping: 25
-                        }}
+                        transition={springTransition}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
                         className={`
-                            flex items-center justify-center rounded-full
+                            ${buttonBaseClass} flex items-center justify-center
                             ${!valid ? 'opacity-0 cursor-not-allowed' : ''}
-                            ${isLastStep
-                                ? 'bg-neutral-800 dark:bg-neutral-200 text-neutral-100 dark:text-neutral-800 px-6 py-3'
-                                : 'bg-neutral-800 dark:bg-neutral-200 text-neutral-100 dark:text-neutral-800 p-4'
-                            }
+                            ${isLastStep ? 'px-6 py-3' : 'px-5 py-3'}
                         `}
                     >
                         {isLastStep ? (
                             <span className="font-medium">完成</span>
                         ) : (
-                            <div className="flex items-center relative">
-                                <motion.div 
-                                    className="h-0.5 bg-neutral-200 dark:bg-neutral-800"
-                                    animate={{ 
-                                        width: canSave ? "3.5rem" : "5.5rem" 
-                                    }}
-                                    transition={{
-                                        type: "spring",
-                                        stiffness: 500,
-                                        damping: 25
-                                    }}
-                                ></motion.div>
-                                <div className="absolute -right-1 transform translate-x-0">
-                                    <ArrowRight className="w-5 h-5 text-neutral-200 dark:text-neutral-800" />
-                                </div>
+                            <div className="flex items-center gap-2">
+                                <span className="font-medium">下一步</span>
+                                <ArrowRight className="w-4 h-4" strokeWidth="3" />
                             </div>
                         )}
                     </motion.button>
