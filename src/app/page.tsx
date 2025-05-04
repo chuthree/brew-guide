@@ -733,9 +733,12 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                             origin: comp.origin || '',
                             process: comp.process || '',
                             variety: comp.variety || '',
-                            percentage: typeof comp.percentage === 'string' ? 
-                                parseInt(comp.percentage, 10) : 
-                                (typeof comp.percentage === 'number' ? comp.percentage : 100)
+                            // 只在明确有百分比时才设置百分比值，否则保持为undefined
+                            ...(comp.percentage !== undefined ? {
+                                percentage: typeof comp.percentage === 'string' ? 
+                                    parseInt(comp.percentage, 10) : 
+                                    (typeof comp.percentage === 'number' ? comp.percentage : undefined)
+                            } : {})
                         }));
                         
                         // 根据拼配成分数量设置豆子类型

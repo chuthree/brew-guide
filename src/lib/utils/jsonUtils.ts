@@ -839,11 +839,15 @@ function parseCoffeeBeanText(text: string): CoffeeBean | null {
 			.filter((line) => line.length > 0);
 
 		for (const line of componentLines) {
-			// 匹配形如 "1. 50% 哥伦比亚 | 水洗 | 卡杜拉" 的行
-			const match = line.match(/\d+\.\s*(\d+)%\s*(.*)/);
-			if (match) {
-				const percentage = match[1];
-				const detailsText = match[2].trim();
+			// 尝试匹配有百分比的行，例如 "1. 50% 哥伦比亚 | 水洗 | 卡杜拉"
+			const matchWithPercentage = line.match(/\d+\.\s*(\d+)%\s*(.*)/);
+			// 尝试匹配没有百分比的行，例如 "1. 肯尼亚 | 日晒 | SL28"
+			const matchWithoutPercentage = line.match(/\d+\.\s*(.*)/);
+			
+			if (matchWithPercentage) {
+				// 处理有百分比的情况
+				const percentage = matchWithPercentage[1];
+				const detailsText = matchWithPercentage[2].trim();
 
 				// 分割详情字段（以 | 分隔）
 				const details = detailsText
@@ -851,7 +855,7 @@ function parseCoffeeBeanText(text: string): CoffeeBean | null {
 					.map((part) => part.trim());
 
 				const component: BlendComponent = {
-					percentage: parseInt(percentage, 10).toString(),
+					percentage: parseInt(percentage, 10),
 				};
 
 				// 根据分割的详情字段数量分配到相应属性
@@ -862,6 +866,26 @@ function parseCoffeeBeanText(text: string): CoffeeBean | null {
 				if (details.length >= 3 && details[2])
 					component.variety = details[2];
 
+				bean.blendComponents.push(component);
+			} else if (matchWithoutPercentage) {
+				// 处理没有百分比的情况
+				const detailsText = matchWithoutPercentage[1].trim();
+				
+				// 分割详情字段（以 | 分隔）
+				const details = detailsText
+					.split("|")
+					.map((part) => part.trim());
+				
+				const component: BlendComponent = {};
+				
+				// 根据分割的详情字段数量分配到相应属性
+				if (details.length >= 1 && details[0])
+					component.origin = details[0];
+				if (details.length >= 2 && details[1])
+					component.process = details[1];
+				if (details.length >= 3 && details[2])
+					component.variety = details[2];
+				
 				bean.blendComponents.push(component);
 			}
 		}
