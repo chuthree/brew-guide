@@ -1,9 +1,13 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import ActionMenu from '@/components/coffee-bean/ui/action-menu'
 import { NoteItemProps } from '../types'
 import { formatDate, formatRating } from '../utils'
+import { Storage } from '@/lib/core/storage'
+import { SettingsOptions, defaultSettings } from '@/components/settings/Settings'
+import { formatGrindSize } from '@/lib/utils/grindUtils'
+import { availableGrinders } from '@/lib/core/config'
 
 // 优化笔记项组件以避免不必要的重渲染
 const NoteItem: React.FC<NoteItemProps> = ({ 
@@ -16,12 +20,41 @@ const NoteItem: React.FC<NoteItemProps> = ({
     isSelected = false,
     onToggleSelect
 }) => {
+    // 添加用户设置状态
+    const [settings, setSettings] = useState<SettingsOptions>(defaultSettings);
+    const [grinderName, setGrinderName] = useState<string>("");
+
     // 预先计算一些条件，避免在JSX中重复计算
     const hasTasteRatings = Object.values(note.taste).some(value => value > 0);
     const hasNotes = Boolean(note.notes);
     const equipmentName = equipmentNames[note.equipment] || note.equipment;
     const beanName = note.coffeeBeanInfo?.name;
     const beanUnitPrice = beanName ? (unitPriceCache[beanName] || 0) : 0;
+    
+    // 获取用户设置
+    useEffect(() => {
+        const loadSettings = async () => {
+            try {
+                const settingsStr = await Storage.get('brewGuideSettings');
+                if (settingsStr) {
+                    const parsedSettings = JSON.parse(settingsStr) as SettingsOptions;
+                    setSettings(parsedSettings);
+                    
+                    // 获取磨豆机名称
+                    if (parsedSettings.grindType !== 'generic') {
+                        const grinder = availableGrinders.find(g => g.id === parsedSettings.grindType);
+                        if (grinder) {
+                            setGrinderName(grinder.name);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('加载用户设置失败', error);
+            }
+        };
+        
+        loadSettings();
+    }, []);
     
     // 处理笔记点击事件
     const handleNoteClick = () => {
@@ -122,9 +155,30 @@ const NoteItem: React.FC<NoteItemProps> = ({
                             <>
                                 <span>·</span>
                                 {note.params.grindSize && note.params.temp ? (
-                                    <span>{note.params.grindSize} · {note.params.temp}</span>
+                                    <span>
+                                        {isShareMode && settings.grindType !== 'generic' && grinderName ? (
+                                            // 在分享模式下显示磨豆机名称 + 研磨度
+                                            <>{grinderName} {formatGrindSize(note.params.grindSize, settings.grindType)} · {note.params.temp}</>
+                                        ) : (
+                                            // 普通显示
+                                            <>{note.params.grindSize} · {note.params.temp}</>
+                                        )}
+                                    </span>
                                 ) : (
-                                    <span>{note.params.grindSize || note.params.temp}</span>
+                                    <span>
+                                        {note.params.grindSize ? (
+                                            isShareMode && settings.grindType !== 'generic' && grinderName ? (
+                                                // 在分享模式下只显示研磨度
+                                                <>{grinderName} {formatGrindSize(note.params.grindSize, settings.grindType)}</>
+                                            ) : (
+                                                // 普通显示
+                                                <>{note.params.grindSize}</>
+                                            )
+                                        ) : (
+                                            // 只有水温
+                                            <>{note.params.temp}</>
+                                        )}
+                                    </span>
                                 )}
                             </>
                         )}
