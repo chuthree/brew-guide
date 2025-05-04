@@ -361,8 +361,8 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
             0
         );
         
-        // 如果总百分比已经达到100%，则不允许添加更多成分
-        if (totalPercentage >= 100) {
+        // 如果不是第一个成分且总百分比已经达到100%，则不允许添加更多成分
+        if (blendComponents.length > 1 && totalPercentage >= 100) {
             return;
         }
         

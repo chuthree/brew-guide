@@ -40,7 +40,8 @@ const BlendComponents: React.FC<BlendComponentsProps> = ({
     };
     
     // 检查是否可以添加更多成分
-    const canAddMoreComponents = totalPercentage < 100;
+    // 只有当组件数量大于1（拼配咖啡）时才考虑百分比限制
+    const canAddMoreComponents = components.length === 1 || totalPercentage < 100;
     
     // 判断值是否为自定义预设
     const checkIsCustomPreset = (key: 'origins' | 'processes' | 'varieties', value: string): boolean => {
@@ -71,9 +72,9 @@ const BlendComponents: React.FC<BlendComponentsProps> = ({
                 <button
                     type="button"
                     onClick={onAdd}
-                    disabled={!canAddMoreComponents && components.length > 1}
+                    disabled={!canAddMoreComponents}
                     className={`text-xs px-3 py-1 rounded-full transition-colors ${
-                        (!canAddMoreComponents && components.length > 1) 
+                        !canAddMoreComponents 
                             ? 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-600 cursor-not-allowed' 
                             : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-300 dark:hover:bg-neutral-600'
                     }`}
