@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { Method, equipmentList, CustomEquipment, commonMethods, createEditableMethodFromCommon } from '@/lib/core/config';
 import StageItem from '@/components/brewing/stages/StageItem';
@@ -16,6 +16,8 @@ import BottomActionBar from '@/components/layout/BottomActionBar';
 import CoffeeBeanList from '@/components/coffee-bean/List/ListView';
 import MethodShareModal from '@/components/method/share/MethodShareModal';
 import { saveCustomMethod } from '@/lib/managers/customMethods';
+import { ArrowRight, Search, X } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
 
 // 扩展Step类型，增加固定方案所需的字段
 interface Step extends BaseStep {
@@ -402,6 +404,53 @@ const TabContent: React.FC<TabContentProps> = ({
         }
     };
 
+    // 添加搜索相关状态
+    const [isSearching, setIsSearching] = useState<boolean>(false);
+    const [searchQuery, setSearchQuery] = useState<string>('');
+    const searchInputRef = useRef<HTMLInputElement>(null);
+
+    // 通用按钮基础样式
+    const buttonBaseClass = "rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100";
+    
+    // 动画过渡属性
+    const springTransition = {
+        type: "spring",
+        stiffness: 500,
+        damping: 25
+    };
+
+    // 处理搜索按钮点击
+    const handleSearchClick = () => {
+        // 触感反馈
+        if (settings?.hapticFeedback) {
+            (async () => {
+                const hapticsUtils = await import('@/lib/ui/haptics');
+                hapticsUtils.default.light();
+            })();
+        }
+
+        setIsSearching(true);
+        setTimeout(() => {
+            searchInputRef.current?.focus();
+        }, 100);
+    };
+    
+    // 处理关闭搜索
+    const handleCloseSearch = (e?: React.MouseEvent) => {
+        e?.stopPropagation();
+
+        // 触感反馈
+        if (settings?.hapticFeedback) {
+            (async () => {
+                const hapticsUtils = await import('@/lib/ui/haptics');
+                hapticsUtils.default.light();
+            })();
+        }
+
+        setIsSearching(false);
+        setSearchQuery('');
+    };
+
     // 如果不是在冲煮主Tab，显示占位内容
     if (activeMainTab !== '冲煮') {
         return null; // 直接返回null，让父组件处理显示内容
@@ -412,11 +461,64 @@ const TabContent: React.FC<TabContentProps> = ({
         <>
             {/* 添加咖啡豆步骤 */}
             {activeTab === ('咖啡豆' as TabType) ? (
-                <CoffeeBeanList
-                    onSelect={(beanId: string | null, bean: CoffeeBean | null) => {
-                        if (onCoffeeBeanSelect) onCoffeeBeanSelect(beanId!, bean!);
-                    }}
-                />
+                <div className="relative">
+                    <CoffeeBeanList
+                        onSelect={(beanId: string | null, bean: CoffeeBean | null) => {
+                            if (onCoffeeBeanSelect) onCoffeeBeanSelect(beanId!, bean!);
+                        }}
+                        searchQuery={searchQuery}
+                    />
+                    
+                    {/* 底部搜索工具栏 */}
+                    <div className="fixed bottom-0 left-0 right-0 p-6 flex justify-end items-center z-10 max-w-[500px] mx-auto pb-safe-bottom">
+                        <div className="flex items-center justify-center gap-2">
+                            {/* 搜索输入框 - 当isSearching为true时显示 */}
+                            <AnimatePresence mode="popLayout">
+                                {isSearching && (
+                                    <motion.div
+                                        key="search-input-container"
+                                        initial={{ scale: 0.95, opacity: 0}}
+                                        animate={{ scale: 1, opacity: 1 }}
+                                        exit={{ scale: 0.95, opacity: 0}}
+                                        transition={springTransition}
+                                        className="flex items-center overflow-hidden"
+                                    >
+                                        <input
+                                            ref={searchInputRef}
+                                            type="text"
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            placeholder="搜索咖啡豆名称..."
+                                            className="w-48 text-sm bg-neutral-100 dark:bg-neutral-800 rounded-full py-[14px] px-5 border-none outline-none text-neutral-800 dark:text-neutral-100 placeholder-neutral-400 dark:placeholder-neutral-500"
+                                            autoComplete="off"
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Escape') {
+                                                    handleCloseSearch();
+                                                }
+                                            }}
+                                        />
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+
+                            {/* 搜索按钮 - 根据状态显示不同图标 */}
+                            <motion.button
+                                type="button"
+                                onClick={isSearching ? handleCloseSearch : handleSearchClick}
+                                transition={springTransition}
+                                className={`${buttonBaseClass} p-4 flex items-center justify-center`}
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                            >
+                                {isSearching ? (
+                                    <X className="w-4 h-4" strokeWidth="3" />
+                                ) : (
+                                    <Search className="w-4 h-4" strokeWidth="3" />
+                                )}
+                            </motion.button>
+                        </div>
+                    </div>
+                </div>
             ) : activeTab === ('记录' as TabType) && currentBrewingMethod ? (
                 <NoteFormWrapper />
 

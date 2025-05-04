@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useTransition, useCallback } from 'react'
+import React, { useState, useEffect, useTransition, useCallback, useMemo } from 'react'
 import { CoffeeBean } from '@/types/app'
 import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager'
 
@@ -8,6 +8,7 @@ import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager'
 interface CoffeeBeanListProps {
     onSelect: (beanId: string | null, bean: CoffeeBean | null) => void
     isOpen?: boolean
+    searchQuery?: string  // 添加搜索查询参数
 }
 
 // 用于缓存咖啡豆数据
@@ -15,7 +16,8 @@ let cachedBeans: CoffeeBean[] | null = null;
 
 const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
     onSelect,
-    isOpen = true
+    isOpen = true,
+    searchQuery = ''  // 添加搜索查询参数默认值
 }) => {
     const [beans, setBeans] = useState<CoffeeBean[]>(cachedBeans || [])
     const [_isPending, startTransition] = useTransition()
@@ -200,6 +202,16 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
         }
     }
 
+    // 搜索过滤的咖啡豆
+    const filteredBeans = useMemo(() => {
+        if (!searchQuery?.trim()) return beans;
+        
+        const query = searchQuery.toLowerCase().trim();
+        return beans.filter(bean => 
+            bean.name?.toLowerCase().includes(query)
+        );
+    }, [beans, searchQuery]);
+
     // 使用isFirstLoad替代原来的loading状态
     if (isFirstLoad) {
         return (
@@ -210,7 +222,7 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
     }
 
     return (
-        <div className="space-y-5 pb-12">
+        <div className="space-y-5 pb-20">
             {/* 添加"不选择咖啡豆"选项 */}
             <div
                 className={`group relative border-l border-neutral-200 dark:border-neutral-800 pl-6 cursor-pointer text-neutral-500 dark:text-neutral-400`}
@@ -230,7 +242,14 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
                 </div>
             </div>
 
-            {beans.map((bean) => {
+            {/* 显示无搜索结果的提示 */}
+            {filteredBeans.length === 0 && searchQuery.trim() !== '' && (
+                <div className="text-xs text-neutral-500 dark:text-neutral-400 border-l border-neutral-200 dark:border-neutral-800 pl-6">
+                    没有找到匹配"{searchQuery.trim()}"的咖啡豆
+                </div>
+            )}
+
+            {filteredBeans.map((bean) => {
                 // 获取赏味期状态（添加到咖啡豆名称后面）
                 let freshStatus = "";
                 let statusClass = "text-rose-500 dark:text-rose-400";

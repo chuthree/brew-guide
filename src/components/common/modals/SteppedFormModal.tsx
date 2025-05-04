@@ -166,9 +166,9 @@ const SteppedFormModal: React.FC<SteppedFormModalProps> = ({
                             <motion.div
                                 key="search-input-container"
                                 layout
-                                initial={{ scale: 0.8, opacity: 0, x: 15 }}
+                                initial={{ scale: 0.95, opacity: 0, x: 15 }}
                                 animate={{ scale: 1, opacity: 1, x: 0 }}
-                                exit={{ scale: 0.8, opacity: 0, x: 15 }}
+                                exit={{ scale: 0.95, opacity: 0, x: 15 }}
                                 transition={springTransition}
                                 className="flex items-center gap-2"
                             >
@@ -193,7 +193,7 @@ const SteppedFormModal: React.FC<SteppedFormModalProps> = ({
                                     whileHover={{ scale: 1.05 }}
                                     whileTap={{ scale: 0.95 }}
                                 >
-                                    <X className="w-4 h-4" />
+                                    <X className="w-4 h-4" strokeWidth="3" />
                                 </motion.button>
                             </motion.div>
                         )}
@@ -207,7 +207,7 @@ const SteppedFormModal: React.FC<SteppedFormModalProps> = ({
                             type="button"
                             onClick={isCoffeeBeanStep ? handleSearchClick : handleNext}
                             transition={springTransition}
-                            initial={{ scale: 0.8, opacity: 0, x: 15 }}
+                            initial={{ scale: 0.95, opacity: 0, x: 15 }}
                             animate={{ scale: 1, opacity: 1, x: 0 }}
                             className={`
                                 ${buttonBaseClass} flex items-center justify-center
