@@ -217,6 +217,11 @@ const Settings: React.FC<SettingsProps> = ({
         setSettings(newSettings)
         await Storage.set('brewGuideSettings', JSON.stringify(newSettings))
 
+        // 触发自定义事件通知其他组件设置已更改
+        window.dispatchEvent(new CustomEvent('storageChange', {
+            detail: { key: 'brewGuideSettings' }
+        }))
+
         // 当语言设置改变时，触发自定义事件
         if (key === 'language') {
             notifyLanguageChange()

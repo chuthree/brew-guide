@@ -50,7 +50,7 @@ const RemainingEditor: React.FC<RemainingEditorProps> = ({
         }
     }
     
-    // 初始化时加载设置中的预设值
+    // 初始化时加载设置中的预设值，并添加自定义事件监听
     React.useEffect(() => {
         const loadPresets = async () => {
             try {
@@ -67,6 +67,20 @@ const RemainingEditor: React.FC<RemainingEditorProps> = ({
         }
         
         loadPresets()
+        
+        // 添加设置变更事件监听
+        const handleSettingsChange = (e: CustomEvent) => {
+            if (e.detail?.key === 'brewGuideSettings') {
+                loadPresets()
+            }
+        }
+        
+        // 监听自定义事件
+        window.addEventListener('storageChange', handleSettingsChange as EventListener)
+        
+        return () => {
+            window.removeEventListener('storageChange', handleSettingsChange as EventListener)
+        }
     }, [])
 
     // 添加键盘事件处理

@@ -188,14 +188,14 @@ export const useBeanOperations = () => {
                 return b;
             });
             
+            // 强制立即刷新UI
+            setForceRefreshKey(prev => prev + 1);
+            
             // 异步更新数据库
             await CoffeeBeanManager.updateBean(beanId, { remaining: newValue.toString() });
             
             // 触发自定义事件以通知其他组件更新
             window.dispatchEvent(new CustomEvent('coffeeBeansUpdated'));
-            
-            // 强制刷新
-            setForceRefreshKey(prev => prev + 1);
             
             return { 
                 success: true, 

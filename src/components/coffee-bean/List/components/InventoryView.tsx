@@ -69,7 +69,21 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                 decrementAmount
             );
             if (result.success) {
+                // 关闭扣除面板
                 setEditingRemaining(null);
+                
+                // 强制更新筛选后的咖啡豆列表，确保UI显示正确
+                // 现在我们依赖全局的事件更新机制
+                const updatedBean = filteredBeans.find(bean => bean.id === editingRemaining.beanId);
+                if (updatedBean) {
+                    updatedBean.remaining = result.value || "0";
+                    
+                    // 刷新当前显示的咖啡豆
+                    const updatedDisplayedBeans = displayedBeans.map(bean => 
+                        bean.id === editingRemaining.beanId ? {...bean, remaining: result.value || "0"} : bean
+                    );
+                    setDisplayedBeans(updatedDisplayedBeans);
+                }
             }
         } catch (error) {
             console.error('快捷减量失败:', error);
