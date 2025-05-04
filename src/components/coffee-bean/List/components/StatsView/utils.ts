@@ -26,11 +26,6 @@ export const stardomFontStyle = {
 
 // 计算统计数据
 export const calculateStats = (beans: ExtendedCoffeeBean[], showEmptyBeans: boolean): StatsData => {
-    // 过滤掉已用完的豆子（如果showEmptyBeans为false）
-    const filteredBeans = showEmptyBeans 
-        ? beans 
-        : beans.filter(bean => !isBeanEmpty(bean))
-    
     // 计算咖啡豆总数
     const totalBeans = beans.length
 
@@ -38,16 +33,16 @@ export const calculateStats = (beans: ExtendedCoffeeBean[], showEmptyBeans: bool
     const emptyBeans = beans.filter(bean => isBeanEmpty(bean)).length
 
     // 计算正在使用的咖啡豆数量
-    const activeBeans = beans.length - emptyBeans
+    const activeBeans = totalBeans - emptyBeans
 
-    // 计算总重量（克）
-    const totalWeight = filteredBeans.reduce((sum, bean) => {
+    // 计算总重量（克）- 使用所有豆子计算，不受showEmptyBeans影响
+    const totalWeight = beans.reduce((sum, bean) => {
         const capacity = bean.capacity ? parseFloat(bean.capacity) : 0
         return sum + capacity
     }, 0)
     
-    // 计算剩余重量（克）
-    const remainingWeight = filteredBeans.reduce((sum, bean) => {
+    // 计算剩余重量（克）- 使用所有豆子计算，不受showEmptyBeans影响
+    const remainingWeight = beans.reduce((sum, bean) => {
         const remaining = bean.remaining ? parseFloat(bean.remaining) : 0
         return sum + remaining
     }, 0)
@@ -55,8 +50,8 @@ export const calculateStats = (beans: ExtendedCoffeeBean[], showEmptyBeans: bool
     // 计算已消耗重量（克）
     const consumedWeight = totalWeight - remainingWeight
     
-    // 计算总花费（元）
-    const totalCost = filteredBeans.reduce((sum, bean) => {
+    // 计算总花费（元）- 使用所有豆子计算，不受showEmptyBeans影响
+    const totalCost = beans.reduce((sum, bean) => {
         const price = bean.price ? parseFloat(bean.price) : 0
         return sum + price
     }, 0)
@@ -66,6 +61,12 @@ export const calculateStats = (beans: ExtendedCoffeeBean[], showEmptyBeans: bool
     
     // 计算平均每克价格（元/克）
     const averageGramPrice = totalWeight > 0 ? totalCost / totalWeight : 0
+    
+    // 为了详细分类统计，我们需要根据showEmptyBeans过滤豆子
+    // 这样可以在图表和分类数据中反映用户的过滤选择
+    const filteredBeans = showEmptyBeans 
+        ? beans 
+        : beans.filter(bean => !isBeanEmpty(bean))
     
     // 根据烘焙度统计
     const roastLevelCount: Record<string, number> = {}
