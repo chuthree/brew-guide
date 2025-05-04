@@ -329,7 +329,6 @@ export const DataManager = {
 					// 如果标记为拼配豆但没有拼配成分，添加默认拼配成分
 					if (!bean.blendComponents || !Array.isArray(bean.blendComponents) || bean.blendComponents.length === 0) {
 						bean.blendComponents = [{
-							percentage: 100,
 							origin: bean.origin || '',
 							process: bean.process || '',
 							variety: bean.variety || ''
@@ -354,7 +353,6 @@ export const DataManager = {
 					// 确保单品也有blendComponents字段，用于统一处理
 					else {
 						bean.blendComponents = [{
-							percentage: 100,
 							origin: bean.origin || '',
 							process: bean.process || '',
 							variety: bean.variety || ''
@@ -366,11 +364,32 @@ export const DataManager = {
 				// 确保所有拼配成分都有正确的属性
 				if (bean.blendComponents && Array.isArray(bean.blendComponents)) {
 					bean.blendComponents = bean.blendComponents.map((comp: BlendComponent) => {
-						// 确保percentage存在且在合理范围内
-						if (typeof comp.percentage !== 'number' || comp.percentage < 1 || comp.percentage > 100) {
-							comp.percentage = 100;
-							fixedCount++;
+						// 只修复无效的百分比值，而不是强制设置所有未定义的百分比
+						if (comp.percentage !== undefined) {
+							// 仅当百分比是无效值时修复
+							if (typeof comp.percentage === 'number' && (comp.percentage < 1 || comp.percentage > 100)) {
+								// 如果百分比值无效，将其约束在1-100范围内
+								comp.percentage = Math.min(Math.max(1, comp.percentage), 100);
+								fixedCount++;
+							} else if (typeof comp.percentage !== 'number') {
+								// 如果不是数字类型，尝试转换为数字
+								try {
+									const numValue = Number(comp.percentage);
+									if (!isNaN(numValue)) {
+										comp.percentage = Math.min(Math.max(1, numValue), 100);
+									} else {
+										// 如果无法转换为有效数字，移除百分比属性
+										delete comp.percentage;
+									}
+									fixedCount++;
+								} catch {
+									// 转换失败，移除百分比属性
+									delete comp.percentage;
+									fixedCount++;
+								}
+							}
 						}
+						// 如果百分比为undefined，保持原样，不进行修复
 						return comp;
 					});
 				}
