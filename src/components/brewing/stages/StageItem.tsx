@@ -9,6 +9,8 @@ interface StageItemProps {
         customParams?: Record<string, string | number | boolean>;
         icon?: string;
         isPinned?: boolean;
+        isDivider?: boolean;
+        dividerText?: string;
     }
     index: number
     onClick: () => void
@@ -164,6 +166,18 @@ const StageItem: React.FC<StageItemProps> = ({
 
     // 渲染阶段内容
     const renderStageContent = () => {
+        if (step.isDivider) {
+            return (
+                <div className="flex items-center justify-center my-4">
+                    <div className="flex-grow h-px bg-neutral-200 dark:bg-neutral-700"></div>
+                    <span className="px-3 text-xs text-neutral-500 dark:text-neutral-400">
+                        {step.dividerText || ''}
+                    </span>
+                    <div className="flex-grow h-px bg-neutral-200 dark:bg-neutral-700"></div>
+                </div>
+            );
+        }
+
         return (
             <div className={`group relative border-l ${isWaitingStage ? 'border-dashed' : ''} border-neutral-200 pl-6 dark:border-neutral-800 ${textStyle}`}>
                 {isCurrentStage && (

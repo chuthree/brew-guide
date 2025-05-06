@@ -441,11 +441,11 @@ const TabContent: React.FC<TabContentProps> = ({
         );
     }
 
-    // 显示无自定义方案的提示
+    // 处理方案为空的情况
     const showEmptyMethodsMessage = activeTab === '方案' && 
-                                    methodType === 'custom' && 
                                     selectedEquipment && 
-                                    (!customMethods[selectedEquipment] || customMethods[selectedEquipment].length === 0);
+                                    (!customMethods[selectedEquipment] || customMethods[selectedEquipment].length === 0) &&
+                                    (!commonMethods[selectedEquipment] || commonMethods[selectedEquipment].length === 0);
     
     // 渲染默认列表内容
     return (
@@ -468,16 +468,27 @@ const TabContent: React.FC<TabContentProps> = ({
                         // 计算编辑方案的处理函数
                         let editHandler;
                         if (activeTab === '方案') {
-                            if (methodType === 'custom' && customMethods[selectedEquipment!]) {
-                                editHandler = () => onEditMethod(customMethods[selectedEquipment!][index]);
-                            } else if (methodType === 'common' && selectedEquipment) {
+                            // 判断是否为自定义方案
+                            const isCustomMethod = step.isCustom;
+                            
+                            if (isCustomMethod && customMethods[selectedEquipment!]) {
+                                // 自定义方案可以直接编辑
+                                const methodIndex = customMethods[selectedEquipment!].findIndex(m => 
+                                    m.id === step.methodId || m.name === step.title);
+                                if (methodIndex !== -1) {
+                                    editHandler = () => onEditMethod(customMethods[selectedEquipment!][methodIndex]);
+                                }
+                            } else if (!isCustomMethod && selectedEquipment) {
+                                // 通用方案需要先复制到自定义列表
                                 editHandler = () => {
                                     const commonMethodsList = commonMethods[selectedEquipment];
-                                    if (commonMethodsList && commonMethodsList[index]) {
-                                        const methodCopy = createEditableMethodFromCommon(commonMethodsList[index]);
+                                    const commonMethodIndex = commonMethodsList?.findIndex(m => 
+                                        m.id === step.methodId || m.name === step.title);
+                                        
+                                    if (commonMethodsList && commonMethodIndex !== undefined && commonMethodIndex !== -1) {
+                                        const methodCopy = createEditableMethodFromCommon(commonMethodsList[commonMethodIndex]);
                                         saveCustomMethod(selectedEquipment, methodCopy)
                                             .then(() => {
-                                                handleMethodTypeChange('custom');
                                                 setTimeout(() => onEditMethod(methodCopy), 100);
                                                 showToast({
                                                     type: 'success',
@@ -501,8 +512,13 @@ const TabContent: React.FC<TabContentProps> = ({
 
                         // 计算删除方案的处理函数
                         let deleteHandler;
-                        if (activeTab === '方案' && methodType === 'custom' && customMethods[selectedEquipment!]) {
-                            deleteHandler = () => onDeleteMethod(customMethods[selectedEquipment!][index]);
+                        if (activeTab === '方案' && step.isCustom && customMethods[selectedEquipment!]) {
+                            // 找到匹配的自定义方案
+                            const methodIndex = customMethods[selectedEquipment!].findIndex(m => 
+                                m.id === step.methodId || m.name === step.title);
+                            if (methodIndex !== -1) {
+                                deleteHandler = () => onDeleteMethod(customMethods[selectedEquipment!][methodIndex]);
+                            }
                         } else if (step.isCustom) {
                             deleteHandler = getDeleteEquipmentHandler(step);
                         }
@@ -511,12 +527,21 @@ const TabContent: React.FC<TabContentProps> = ({
                         let shareHandler;
                         if (activeTab === '方案') {
                             shareHandler = () => {
-                                if (methodType === 'custom' && customMethods[selectedEquipment!]) {
-                                    handleShareMethod(customMethods[selectedEquipment!][index]);
-                                } else if (methodType === 'common' && selectedEquipment) {
+                                // 判断是自定义方案还是通用方案
+                                if (step.isCustom && customMethods[selectedEquipment!]) {
+                                    // 查找匹配的自定义方案
+                                    const methodIndex = customMethods[selectedEquipment!].findIndex(m => 
+                                        m.id === step.methodId || m.name === step.title);
+                                    if (methodIndex !== -1) {
+                                        handleShareMethod(customMethods[selectedEquipment!][methodIndex]);
+                                    }
+                                } else if (!step.isCustom && selectedEquipment) {
+                                    // 查找匹配的通用方案
                                     const commonMethodsList = commonMethods[selectedEquipment];
-                                    if (commonMethodsList && commonMethodsList[index]) {
-                                        handleShareMethod(commonMethodsList[index]);
+                                    const commonMethodIndex = commonMethodsList?.findIndex(m => 
+                                        m.id === step.methodId || m.name === step.title);
+                                    if (commonMethodsList && commonMethodIndex !== undefined && commonMethodIndex !== -1) {
+                                        handleShareMethod(commonMethodsList[commonMethodIndex]);
                                     }
                                 }
                             };
@@ -560,34 +585,18 @@ const TabContent: React.FC<TabContentProps> = ({
             {activeTab === '方案' && (
                 <BottomActionBar
                     buttons={[
-                        { 
-                            text: '通用方案',
-                            onClick: () => handleMethodTypeChange('common'),
-                            active: methodType === 'common',
-                            highlight: true,
-                            id: 'common'
-                        },
-                        { 
-                            text: '自定义方案',
-                            onClick: () => handleMethodTypeChange('custom'),
-                            active: methodType === 'custom',
-                            highlight: true,
-                            id: 'custom'
-                        },
                         {
                             icon: '+',
                             text: '新建方案',
-                            onClick: methodType === 'custom' ? () => setShowCustomForm(true) : () => {},
-                            highlight: methodType === 'custom',
-                            className: methodType !== 'custom' ? 'opacity-30 pointer-events-none' : '',
+                            onClick: () => setShowCustomForm(true),
+                            highlight: true,
                             id: 'new'
                         },
                         {
                             icon: '↓',
                             text: '导入方案',
-                            onClick: methodType === 'custom' ? () => setShowImportForm(true) : () => {},
-                            highlight: methodType === 'custom',
-                            className: methodType !== 'custom' ? 'opacity-30 pointer-events-none' : '',
+                            onClick: () => setShowImportForm(true),
+                            highlight: true,
                             id: 'import'
                         }
                     ]}

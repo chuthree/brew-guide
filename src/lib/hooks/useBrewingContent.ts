@@ -152,56 +152,49 @@ export function useBrewingContent({
 				// 检查是否是自定义预设器具（animationType === 'custom'）
 				const isCustomPresetEquipment = customEquipment?.animationType === 'custom';
 				
-				// 获取对应的方案列表
-				let methodsForEquipment: Method[] = [];
+				// 现在我们将获取两种方案列表
+				let customMethodsForEquipment: Method[] = [];
+				let commonMethodsForEquipment: Method[] = [];
 				
-				// 如果是自定义预设器具，只使用自定义方案（无论methodType是什么）
+				// 如果是自定义预设器具，只获取自定义方案
 				if (isCustomPresetEquipment) {
-					// 强制使用当前设备的自定义方法
-					methodsForEquipment = currentEquipmentCustomMethods;
-				}
-				// 其他情况按原有逻辑处理
-				else if (methodType === 'custom') {
-					// 使用当前设备的自定义方法
-					methodsForEquipment = currentEquipmentCustomMethods;
+					customMethodsForEquipment = currentEquipmentCustomMethods;
 				} else {
-					// 如果是自定义器具，根据其 animationType 使用对应的通用方案
-					if (isCustomEquipment) {
-						// 尝试通过 ID 或名称查找自定义器具
-						if (customEquipment) {
-							// 根据 animationType 获取对应的通用方案 ID
-							let baseEquipmentId = '';
-							const animationType = customEquipment.animationType.toLowerCase();
-							
-							switch (animationType) {
-								case 'v60':
-									baseEquipmentId = 'V60';
-									break;
-								case 'kalita':
-									baseEquipmentId = 'Kalita';
-									break;
-								case 'origami':
-									baseEquipmentId = 'Origami';
-									break;
-								case 'clever':
-									baseEquipmentId = 'CleverDripper';
-									break;
-								default:
-									baseEquipmentId = 'V60'; // 默认使用 V60 的方案
-							}
-							// 使用基础器具的通用方案
-							methodsForEquipment = commonMethods[baseEquipmentId] || [];
-						}
-					} else {
-						// 对于预定义器具，直接使用其通用方案
-						methodsForEquipment = commonMethods[selectedEquipment as keyof typeof commonMethods] || [];
+					// 总是获取自定义方案
+					customMethodsForEquipment = currentEquipmentCustomMethods;
+					
+					// 获取通用方案
+					if (isCustomEquipment && customEquipment) {
+						// 自定义器具，根据animationType获取对应的通用方案
+						let baseEquipmentId = '';
+						const animationType = customEquipment.animationType.toLowerCase();
 						
-						// 如果未找到方法但是使用自定义器具ID，尝试从ID推断基础器具类型
-						if (methodsForEquipment.length === 0 && selectedEquipment && selectedEquipment.startsWith('custom-')) {
-							// 尝试解析自定义器具类型
+						switch (animationType) {
+							case 'v60':
+								baseEquipmentId = 'V60';
+								break;
+							case 'kalita':
+								baseEquipmentId = 'Kalita';
+								break;
+							case 'origami':
+								baseEquipmentId = 'Origami';
+								break;
+							case 'clever':
+								baseEquipmentId = 'CleverDripper';
+								break;
+							default:
+								baseEquipmentId = 'V60'; // 默认使用 V60 的方案
+						}
+						
+						commonMethodsForEquipment = commonMethods[baseEquipmentId] || [];
+					} else {
+						// 预定义器具，直接使用其通用方案
+						commonMethodsForEquipment = commonMethods[selectedEquipment as keyof typeof commonMethods] || [];
+						
+						// 从ID推断器具类型的逻辑保持不变
+						if (commonMethodsForEquipment.length === 0 && selectedEquipment && selectedEquipment.startsWith('custom-')) {
 							let baseEquipmentId = '';
 							
-							// 从自定义器具ID中识别其基础类型
 							if (selectedEquipment.includes('-v60-')) {
 								baseEquipmentId = 'V60';
 							} else if (selectedEquipment.includes('-clever-')) {
@@ -212,63 +205,70 @@ export function useBrewingContent({
 								baseEquipmentId = 'Origami';
 							}
 							
-							// 如果识别出基础器具类型，使用对应的通用方法
 							if (baseEquipmentId && commonMethods[baseEquipmentId]) {
-								methodsForEquipment = commonMethods[baseEquipmentId] || [];
+								commonMethodsForEquipment = commonMethods[baseEquipmentId] || [];
 							}
 						}
 					}
 				}
 
-				const steps = (isCustomPresetEquipment || methodType === "custom")
-					? methodsForEquipment.map((method) => ({
-							title: method.name,
-							methodId: method.id,
-							items: [
-								`水粉比 ${method.params.ratio}`,
-								`总时长 ${formatTime(
-									method.params.stages[
-										method.params.stages
-											.length - 1
-									].time,
-									true
-								)}`,
-								`研磨度 ${formatGrindSize(
-									method.params.grindSize,
-									settings.grindType
-								)}`,
-							],
-							note: "",
-					  }))
-					: methodsForEquipment.map((method, methodIndex) => {
-							const totalTime =
-								method.params.stages[
-									method.params.stages.length - 1
-								].time;
-							return {
-								title: method.name,
-								methodId: method.id,
-								isCommonMethod: true,
-								methodIndex: methodIndex,
-								items: [
-									`水粉比 ${method.params.ratio}`,
-									`总时长 ${formatTime(
-										totalTime,
-										true
-									)}`,
-									`研磨度 ${formatGrindSize(
-										method.params.grindSize,
-										settings.grindType
-									)}`,
-								],
-								note: "",
-							};
-					  });
+				// 准备两个方案列表
+				const customMethodSteps = customMethodsForEquipment.map(method => ({
+					title: method.name,
+					methodId: method.id,
+					items: [
+						`水粉比 ${method.params.ratio}`,
+						`总时长 ${formatTime(
+							method.params.stages[method.params.stages.length - 1].time,
+							true
+						)}`,
+						`研磨度 ${formatGrindSize(
+							method.params.grindSize,
+							settings.grindType
+						)}`,
+					],
+					note: "",
+					isCustom: true, // 标记为自定义方案
+				}));
+				
+				// 通用方案列表（如果不是自定义预设器具）
+				const commonMethodSteps = !isCustomPresetEquipment ? commonMethodsForEquipment.map((method, methodIndex) => {
+					const totalTime = method.params.stages[method.params.stages.length - 1].time;
+					return {
+						title: method.name,
+						methodId: method.id,
+						isCommonMethod: true, // 标记为通用方案
+						methodIndex: methodIndex,
+						items: [
+							`水粉比 ${method.params.ratio}`,
+							`总时长 ${formatTime(totalTime, true)}`,
+							`研磨度 ${formatGrindSize(method.params.grindSize, settings.grindType)}`,
+						],
+						note: "",
+					};
+				}) : [];
+				
+				// 添加分隔符（只有当两个列表都有内容时）
+				const dividerStep = (customMethodSteps.length > 0 && commonMethodSteps.length > 0) ? [{
+					title: "",
+					items: [],
+					note: "",
+					isDivider: true,
+					dividerText: "通用方案",
+				}] : [];
+				
+				// 合并所有步骤
+				const steps = [
+					...customMethodSteps,  // 先显示自定义方案
+					...dividerStep,        // 添加分隔符
+					...commonMethodSteps   // 再显示通用方案
+				];
 				
 				const result = {
 					...prev,
 					方案: {
-						// 如果是自定义预设器具，总是显示为自定义方案类型
+						// 由于已经合并了两种方案，这里的type不再那么重要
+						// 但为了兼容性，保留此属性
 						type: isCustomPresetEquipment ? 'custom' : methodType,
 						steps: steps
 					},
