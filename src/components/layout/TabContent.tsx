@@ -497,11 +497,12 @@ const TabContent: React.FC<TabContentProps> = ({
                                 // 通用方案需要先复制到自定义列表
                                 editHandler = () => {
                                     const commonMethodsList = commonMethods[selectedEquipment];
-                                    const commonMethodIndex = commonMethodsList?.findIndex(m => 
-                                        m.id === step.methodId || m.name === step.title);
-                                        
-                                    if (commonMethodsList && commonMethodIndex !== undefined && commonMethodIndex !== -1) {
-                                        const methodCopy = createEditableMethodFromCommon(commonMethodsList[commonMethodIndex]);
+                                    
+                                    // 直接使用step.methodIndex获取正确的方案索引
+                                    if (commonMethodsList && step.methodIndex !== undefined && step.methodIndex >= 0 && 
+                                        step.methodIndex < commonMethodsList.length) {
+                                        console.log('使用methodIndex编辑通用方案:', step.methodIndex, commonMethodsList[step.methodIndex].name);
+                                        const methodCopy = createEditableMethodFromCommon(commonMethodsList[step.methodIndex]);
                                         saveCustomMethod(selectedEquipment, methodCopy)
                                             .then(() => {
                                                 setTimeout(() => onEditMethod(methodCopy), 100);
@@ -518,6 +519,31 @@ const TabContent: React.FC<TabContentProps> = ({
                                                     duration: 2000
                                                 });
                                             });
+                                    } else {
+                                        // 回退到原来的查找方式，作为备用措施
+                                        const commonMethodIndex = commonMethodsList?.findIndex(m => 
+                                            m.id === step.methodId || m.name === step.title);
+                                            
+                                        if (commonMethodsList && commonMethodIndex !== undefined && commonMethodIndex !== -1) {
+                                            console.log('回退查找编辑通用方案:', commonMethodIndex, commonMethodsList[commonMethodIndex].name);
+                                            const methodCopy = createEditableMethodFromCommon(commonMethodsList[commonMethodIndex]);
+                                            saveCustomMethod(selectedEquipment, methodCopy)
+                                                .then(() => {
+                                                    setTimeout(() => onEditMethod(methodCopy), 100);
+                                                    showToast({
+                                                        type: 'success',
+                                                        title: '已复制通用方案到自定义列表',
+                                                        duration: 2000
+                                                    });
+                                                })
+                                                .catch(() => {
+                                                    showToast({
+                                                        type: 'error',
+                                                        title: '复制方案失败，请重试',
+                                                        duration: 2000
+                                                    });
+                                                });
+                                        }
                                     }
                                 };
                             }
@@ -548,15 +574,26 @@ const TabContent: React.FC<TabContentProps> = ({
                                     const methodIndex = customMethods[selectedEquipment!].findIndex(m => 
                                         m.id === step.methodId || m.name === step.title);
                                     if (methodIndex !== -1) {
+                                        console.log('使用methodIndex分享自定义方案:', methodIndex, customMethods[selectedEquipment!][methodIndex].name);
                                         handleShareMethod(customMethods[selectedEquipment!][methodIndex]);
                                     }
                                 } else if (!step.isCustom && selectedEquipment) {
-                                    // 查找匹配的通用方案
+                                    // 使用通用方案的methodIndex
                                     const commonMethodsList = commonMethods[selectedEquipment];
-                                    const commonMethodIndex = commonMethodsList?.findIndex(m => 
-                                        m.id === step.methodId || m.name === step.title);
-                                    if (commonMethodsList && commonMethodIndex !== undefined && commonMethodIndex !== -1) {
-                                        handleShareMethod(commonMethodsList[commonMethodIndex]);
+                                    
+                                    // 直接使用step.methodIndex获取正确的方案索引
+                                    if (commonMethodsList && step.methodIndex !== undefined && step.methodIndex >= 0 && 
+                                        step.methodIndex < commonMethodsList.length) {
+                                        console.log('使用methodIndex分享通用方案:', step.methodIndex, commonMethodsList[step.methodIndex].name);
+                                        handleShareMethod(commonMethodsList[step.methodIndex]);
+                                    } else {
+                                        // 回退到原来的查找方式
+                                        const commonMethodIndex = commonMethodsList?.findIndex(m => 
+                                            m.id === step.methodId || m.name === step.title);
+                                        if (commonMethodsList && commonMethodIndex !== undefined && commonMethodIndex !== -1) {
+                                            console.log('回退查找分享通用方案:', commonMethodIndex, commonMethodsList[commonMethodIndex].name);
+                                            handleShareMethod(commonMethodsList[commonMethodIndex]);
+                                        }
                                     }
                                 }
                             };
