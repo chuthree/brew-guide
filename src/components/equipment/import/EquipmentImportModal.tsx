@@ -267,11 +267,6 @@ const EquipmentImportModal: React.FC<EquipmentImportModalProps> = ({
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.265 }}
                     className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
-                    onClick={(e) => {
-                        if (e.target === e.currentTarget) {
-                            handleClose();
-                        }
-                    }}
                 >
                     <motion.div
                         initial={{ y: '100%' }}

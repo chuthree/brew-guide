@@ -180,11 +180,6 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.265 }}
                         className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
-                        onClick={(e) => {
-                            if (e.target === e.currentTarget) {
-                                onCloseCustomForm();
-                            }
-                        }}
                     >
                         <motion.div
                             initial={{ y: '100%' }}
@@ -257,11 +252,6 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.265 }}
                         className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm flex items-center justify-center"
-                        onClick={(e) => {
-                            if (e.target === e.currentTarget) {
-                                onCloseCustomForm();
-                            }
-                        }}
                     >
                         <motion.div
                             initial={{ scale: 0.95 }}
