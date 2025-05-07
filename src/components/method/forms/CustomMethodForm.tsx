@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { type Method, CustomEquipment, availableGrinders, Grinder } from '@/lib/core/config'
-import { ArrowLeft, ArrowRight, Check } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, Info } from 'lucide-react'
 import AutoResizeTextarea from '../../common/forms/AutoResizeTextarea'
 import { formatGrindSize } from '@/lib/utils/grindUtils'
 import { SettingsOptions, defaultSettings } from '@/components/settings/Settings'
@@ -146,6 +146,8 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     const [editingCumulativeTime, setEditingCumulativeTime] = useState<{ index: number, value: string } | null>(null)
     // 添加一个状态来跟踪正在编辑的累计水量输入
     const [editingCumulativeWater, setEditingCumulativeWater] = useState<{ index: number, value: string } | null>(null)
+    // 添加一个状态来跟踪水量输入提示的显示
+    const [showWaterTooltip, setShowWaterTooltip] = useState<number | null>(null)
 
     const [method, setMethod] = useState<_Method>(() => {
         // 如果有初始方法，对其进行规范化处理后使用
@@ -1380,8 +1382,43 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                                                 />
                                             </div>
                                             <div className="space-y-2">
-                                                <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                                                    累计水量(可带 %)
+                                                <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400 flex items-center">
+                                                    累计水量
+                                                    <button 
+                                                        type="button"
+                                                        className="ml-1 flex items-center justify-center text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 focus:outline-none relative" 
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            e.stopPropagation();
+                                                            // 切换提示的显示状态
+                                                            if (showWaterTooltip === index) {
+                                                                setShowWaterTooltip(null);
+                                                            } else {
+                                                                setShowWaterTooltip(index);
+                                                                // 5秒后自动关闭提示
+                                                                setTimeout(() => {
+                                                                    setShowWaterTooltip(null);
+                                                                }, 5000);
+                                                            }
+                                                        }}
+                                                        onMouseEnter={() => setShowWaterTooltip(index)}
+                                                        onMouseLeave={() => setShowWaterTooltip(null)}
+                                                        aria-label="水量输入格式说明"
+                                                    >
+                                                        <Info className="w-[12px] h-[12px]" />
+                                                        {/* 悬浮提示 */}
+                                                        {showWaterTooltip === index && (
+                                                            <div className="absolute z-10 -right-1 -translate-y-full -top-3 w-[110px] p-2 bg-white dark:bg-neutral-800 shadow-lg rounded text-xs text-neutral-700 dark:text-neutral-300">
+                                                                <p className="font-medium mb-1">带后缀自动转换:</p>
+                                                                <ul className="space-y-1">
+                                                                    <li>% : 水量百分比</li>
+                                                                    <li>倍, x : 粉量倍数</li>
+                                                                </ul>
+                                                                {/* 小三角形箭头 */}
+                                                                <div className="absolute right-1 bottom-[-6px] w-3 h-3 rotate-45 bg-white dark:bg-neutral-800"></div>
+                                                            </div>
+                                                        )}
+                                                    </button>
                                                 </label>
                                                 <div className="relative">
                                                     <input
@@ -1474,7 +1511,30 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                                                                 return;
                                                             }
 
-                                                            // 如果不是百分比，按原有逻辑处理
+                                                            // 检查是否是倍数输入 (例如 "2倍"、"2x"、"x2"等)
+                                                            // 匹配：数字+倍、数字+x/X、x/X+数字 格式
+                                                            const multipleMatch = value.match(/^(\d+(\.\d+)?)(倍|[xX])$/) || 
+                                                                                 value.match(/^(\d+(\.\d+)?)[\s]*(倍|[xX])[\s]*$/) || 
+                                                                                 value.match(/^[xX][\s]*(\d+(\.\d+)?)[\s]*$/);
+                                                            if (multipleMatch) {
+                                                                // 提取倍数值 - 根据匹配组的位置确定数值在哪个捕获组
+                                                                const multipleValue = parseFloat(multipleMatch[1]);
+                                                                
+                                                                // 获取咖啡粉量(去掉单位g)
+                                                                const coffeeAmount = parseInt(method.params.coffee.replace('g', ''));
+                                                                
+                                                                // 计算实际克数 (倍数 * 咖啡粉量)
+                                                                const calculatedWater = Math.round(multipleValue * coffeeAmount);
+                                                                
+                                                                // 确保计算的水量不超过总水量
+                                                                const finalWater = Math.min(calculatedWater, totalWater);
+                                                                
+                                                                // 更新水量
+                                                                handleStageChange(index, 'water', `${finalWater}`);
+                                                                return;
+                                                            }
+
+                                                            // 如果不是百分比或倍数，按原有逻辑处理
                                                             // 直接使用用户输入的值
                                                             let water;
                                                             if (value.includes('.')) {
