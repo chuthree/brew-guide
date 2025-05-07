@@ -20,6 +20,8 @@ interface AutocompleteInputProps {
     inputType?: 'text' | 'number' | 'tel' | 'email' // 新增输入框类型属性
     disabled?: boolean // 添加禁用属性
     maxValue?: number // 添加最大值属性，用于限制数字输入
+    allowDecimal?: boolean // 新增：是否允许小数点输入
+    maxDecimalPlaces?: number // 新增：小数点后最多允许的位数
     // 新增：自定义预设标记和预设删除功能
     isCustomPreset?: (value: string) => boolean
     onRemovePreset?: (value: string) => void
@@ -41,6 +43,8 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
     inputType = 'text', // 默认为text类型
     disabled = false, // 默认为不禁用
     maxValue,
+    allowDecimal = false, // 新增：默认不允许小数点
+    maxDecimalPlaces = 2, // 新增：默认小数点后最多2位
     // 新增：自定义预设标记和预设删除功能
     isCustomPreset = () => false,
     onRemovePreset
@@ -106,19 +110,54 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
         
         // 对数字类型输入进行处理
         if (inputType === 'tel' || inputType === 'number') {
-            // 如果是数字输入，只保留数字字符
-            const numericValue = newValue.replace(/[^0-9]/g, '');
-            
-            // 如果设置了maxValue，限制输入的最大值
-            if (maxValue !== undefined && numericValue !== '') {
-                const numValue = parseInt(numericValue);
-                if (numValue > maxValue) {
-                    newValue = maxValue.toString();
+            if (allowDecimal) {
+                // 允许小数点的情况
+                // 1. 移除所有非数字和非小数点字符
+                let filteredValue = newValue.replace(/[^0-9.]/g, '');
+                
+                // 2. 确保只有一个小数点
+                const dotIndex = filteredValue.indexOf('.');
+                if (dotIndex !== -1) {
+                    const beforeDot = filteredValue.substring(0, dotIndex + 1);
+                    const afterDot = filteredValue.substring(dotIndex + 1).replace(/\./g, '');
+                    
+                    // 3. 限制小数点后位数
+                    const limitedAfterDot = maxDecimalPlaces > 0 
+                        ? afterDot.substring(0, maxDecimalPlaces) 
+                        : afterDot;
+                    
+                    filteredValue = beforeDot + limitedAfterDot;
+                }
+                
+                // 4. 如果设置了maxValue，限制输入的最大值
+                if (maxValue !== undefined && filteredValue !== '' && filteredValue !== '.') {
+                    const numValue = parseFloat(filteredValue);
+                    if (numValue > maxValue) {
+                        newValue = maxValue.toString();
+                    } else {
+                        newValue = filteredValue;
+                    }
+                } else {
+                    // 5. 如果只输入了小数点，自动补充为"0."
+                    if (filteredValue === '.') {
+                        filteredValue = '0.';
+                    }
+                    newValue = filteredValue;
+                }
+            } else {
+                // 原有逻辑：不允许小数点的情况
+                const numericValue = newValue.replace(/[^0-9]/g, '');
+                
+                if (maxValue !== undefined && numericValue !== '') {
+                    const numValue = parseInt(numericValue);
+                    if (numValue > maxValue) {
+                        newValue = maxValue.toString();
+                    } else {
+                        newValue = numericValue;
+                    }
                 } else {
                     newValue = numericValue;
                 }
-            } else {
-                newValue = numericValue;
             }
         }
         
