@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useRef } from 'react';
+import React, { useCallback, useState, useRef, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { Method, equipmentList, CustomEquipment, commonMethods, createEditableMethodFromCommon } from '@/lib/core/config';
 import StageItem from '@/components/brewing/stages/StageItem';
@@ -358,6 +358,9 @@ const TabContent: React.FC<TabContentProps> = ({
         };
     };
 
+    // 添加通用方案折叠状态
+    const [isCommonMethodsCollapsed, setIsCommonMethodsCollapsed] = useState(false);
+
     // 如果不是在冲煮主Tab，不显示内容
     if (activeMainTab !== '冲煮') return null;
 
@@ -460,6 +463,15 @@ const TabContent: React.FC<TabContentProps> = ({
                     </div>
                 ) : (
                     content[activeTab]?.steps.map((step: Step, index: number) => {
+                        // 如果是通用方案分隔符之后的项目，且折叠状态为true，则不显示
+                        const isDividerFound = content[activeTab]?.steps.findIndex((s: Step) => s.isDivider) !== -1;
+                        const dividerIndex = content[activeTab]?.steps.findIndex((s: Step) => s.isDivider);
+                        
+                        // 如果通用方案被折叠，且当前项在分隔符之后，则跳过渲染
+                        if (isDividerFound && dividerIndex !== -1 && index > dividerIndex && isCommonMethodsCollapsed) {
+                            return null;
+                        }
+                        
                         // 如果是注水标签，检查originalIndex变化来添加阶段分隔线
                         const showStageDivider = activeTab === '注水' && 
                                 index > 0 && 
@@ -558,7 +570,7 @@ const TabContent: React.FC<TabContentProps> = ({
                                     <StageDivider stageNumber={step.originalIndex! + 1} key={`divider-${index}`} />
                                 )}
                                 <StageItem
-                                    step={step}
+                                    step={step.isDivider ? {...step, onToggleCollapse: setIsCommonMethodsCollapsed} : step}
                                     index={index}
                                     onClick={() => {
                                         if (activeTab === '器具') {

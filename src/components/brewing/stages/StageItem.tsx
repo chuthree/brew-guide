@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Method } from '@/lib/core/config'
 import ActionMenu from '@/components/coffee-bean/ui/action-menu'
@@ -11,6 +11,7 @@ interface StageItemProps {
         isPinned?: boolean;
         isDivider?: boolean;
         dividerText?: string;
+        onToggleCollapse?: (isCollapsed: boolean) => void;
     }
     index: number
     onClick: () => void
@@ -119,6 +120,17 @@ const StageItem: React.FC<StageItemProps> = ({
     showFlowRate = false,
     allSteps = []
 }) => {
+    // 添加用于管理分隔符折叠状态的 state
+    const [isCommonSectionCollapsed, setIsCommonSectionCollapsed] = useState(false);
+    
+    // 向父组件传递折叠状态的效果
+    useEffect(() => {
+        // 如果是分隔符且父组件提供了设置折叠状态的回调，则调用它
+        if (step.isDivider && step.onToggleCollapse) {
+            step.onToggleCollapse(isCommonSectionCollapsed);
+        }
+    }, [isCommonSectionCollapsed, step]);
+
     // 判断是否为等待阶段
     const isWaitingStage = step.type === 'wait';
 
@@ -133,10 +145,11 @@ const StageItem: React.FC<StageItemProps> = ({
         [isCurrentStage]
     );
 
-    // 处理点击事件，如果是分隔符则不触发onClick
+    // 处理点击事件，如果是分隔符则切换折叠状态
     const handleClick = (e: React.MouseEvent) => {
         if (step.isDivider) {
             e.stopPropagation();
+            setIsCommonSectionCollapsed(!isCommonSectionCollapsed);
             return;
         }
         onClick();
@@ -177,12 +190,23 @@ const StageItem: React.FC<StageItemProps> = ({
     const renderStageContent = () => {
         if (step.isDivider) {
             return (
-                <div className="flex items-center justify-center my-4 cursor-default select-none">
-                    <div className="flex-grow h-px bg-neutral-200 dark:bg-neutral-700"></div>
-                    <span className="px-3 text-xs text-neutral-500 dark:text-neutral-400">
+                <div 
+                    className="relative flex items-center mb-4 cursor-pointer"
+                    onClick={handleClick}
+                >
+                    <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
+                    <button className="flex items-center justify-center mx-3 text-[10px] text-neutral-600 dark:text-neutral-400">
                         {step.dividerText || ''}
-                    </span>
-                    <div className="flex-grow h-px bg-neutral-200 dark:bg-neutral-700"></div>
+                        <svg
+                            className={`ml-1 w-3 h-3 transition-transform duration-200 ${isCommonSectionCollapsed ? 'rotate-180' : ''}`}
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            xmlns="http://www.w3.org/2000/svg"
+                        >
+                            <path d="M6 9L12 15L18 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                    </button>
+                    <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
                 </div>
             );
         }
