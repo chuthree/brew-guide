@@ -1385,9 +1385,10 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                                                 </label>
                                                 <div className="relative">
                                                     <input
-                                                        type="number"
+                                                        type="text"
                                                         min="0"
                                                         step="1"
+                                                        placeholder="可带 %"
                                                         value={
                                                             editingCumulativeWater && editingCumulativeWater.index === index
                                                                 ? editingCumulativeWater.value
@@ -1410,8 +1411,22 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                                                                 return;
                                                             }
 
+                                                            // 检查是否是百分比输入格式
+                                                            if (e.target.value.endsWith('%')) {
+                                                                // 在输入过程中保持原始输入值，不进行转换
+                                                                // 转换将在onBlur时进行
+                                                                return;
+                                                            }
+
+                                                            // 如果不是百分比，按原有逻辑处理
                                                             // 直接使用用户输入的值
-                                                            const water = parseInt(e.target.value);
+                                                            let water;
+                                                            if (e.target.value.includes('.')) {
+                                                                // 处理小数点输入，并四舍五入到整数
+                                                                water = Math.round(parseFloat(e.target.value));
+                                                            } else {
+                                                                water = parseInt(e.target.value) || 0;
+                                                            }
 
                                                             // 确保累计水量不超过总水量
                                                             const totalWater = typeof method.params.water === 'number' 
@@ -1437,14 +1452,39 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                                                                 return;
                                                             }
 
-                                                            // 直接使用用户输入的值
-                                                            const water = parseInt(value) || 0;
-
-                                                            // 确保累计水量不超过总水量
+                                                            // 获取总水量（用于计算和验证）
                                                             const totalWater = typeof method.params.water === 'number' 
                                                                 ? method.params.water 
-                                                                : parseInt(method.params.water || '0');
+                                                                : parseInt(method.params.water?.replace('g', '') || '0');
+
+                                                            // 检查是否是百分比输入 (例如 "50%")
+                                                            const percentMatch = value.match(/^(\d+(\.\d+)?)%$/);
+                                                            if (percentMatch) {
+                                                                // 提取百分比值
+                                                                const percentValue = parseFloat(percentMatch[1]);
                                                                 
+                                                                // 计算实际克数 (百分比 * 总水量)
+                                                                const calculatedWater = Math.round((percentValue / 100) * totalWater);
+                                                                
+                                                                // 确保计算的水量不超过总水量
+                                                                const finalWater = Math.min(calculatedWater, totalWater);
+                                                                
+                                                                // 更新水量
+                                                                handleStageChange(index, 'water', `${finalWater}`);
+                                                                return;
+                                                            }
+
+                                                            // 如果不是百分比，按原有逻辑处理
+                                                            // 直接使用用户输入的值
+                                                            let water;
+                                                            if (value.includes('.')) {
+                                                                // 处理小数点输入，并四舍五入到整数
+                                                                water = Math.round(parseFloat(value));
+                                                            } else {
+                                                                water = parseInt(value) || 0;
+                                                            }
+
+                                                            // 确保累计水量不超过总水量
                                                             if (water > totalWater) {
                                                                 handleStageChange(index, 'water', `${totalWater}`);
                                                             } else {
