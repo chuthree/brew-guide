@@ -9,6 +9,74 @@ import { formatGrindSize } from '@/lib/utils/grindUtils'
 import { SettingsOptions, defaultSettings } from '@/components/settings/Settings'
 import { Storage } from '@/lib/core/storage'
 
+// 数据规范化辅助函数
+const normalizeMethodData = (method: any): _Method => {
+    const normalizedMethod = { ...method };
+    
+    // 确保params存在
+    if (!normalizedMethod.params) {
+        normalizedMethod.params = {
+            coffee: '',
+            water: '',
+            ratio: '',
+            grindSize: '',
+            temp: '',
+            videoUrl: '',
+            stages: []
+        };
+    } else {
+        // 规范化params对象
+        normalizedMethod.params = { ...normalizedMethod.params };
+        
+        // 确保水量是字符串格式
+        if (normalizedMethod.params.water !== undefined) {
+            if (typeof normalizedMethod.params.water === 'number') {
+                normalizedMethod.params.water = `${normalizedMethod.params.water}g`;
+            } else if (typeof normalizedMethod.params.water === 'string' && !normalizedMethod.params.water.endsWith('g')) {
+                normalizedMethod.params.water = `${normalizedMethod.params.water}g`;
+            }
+        }
+        
+        // 确保咖啡粉量是字符串格式
+        if (normalizedMethod.params.coffee !== undefined) {
+            if (typeof normalizedMethod.params.coffee === 'number') {
+                normalizedMethod.params.coffee = `${normalizedMethod.params.coffee}g`;
+            } else if (typeof normalizedMethod.params.coffee === 'string' && !normalizedMethod.params.coffee.endsWith('g')) {
+                normalizedMethod.params.coffee = `${normalizedMethod.params.coffee}g`;
+            }
+        }
+        
+        // 确保温度是字符串格式
+        if (normalizedMethod.params.temp !== undefined) {
+            if (typeof normalizedMethod.params.temp === 'number') {
+                normalizedMethod.params.temp = `${normalizedMethod.params.temp}°C`;
+            } else if (typeof normalizedMethod.params.temp === 'string' && !normalizedMethod.params.temp.endsWith('°C')) {
+                normalizedMethod.params.temp = `${normalizedMethod.params.temp}°C`;
+            }
+        }
+        
+        // 规范化每个阶段的水量
+        if (Array.isArray(normalizedMethod.params.stages)) {
+            normalizedMethod.params.stages = normalizedMethod.params.stages.map((stage: Record<string, any>) => {
+                const normalizedStage = { ...stage };
+                
+                // 规范化水量为字符串
+                if (normalizedStage.water !== undefined) {
+                    if (typeof normalizedStage.water === 'number') {
+                        normalizedStage.water = `${normalizedStage.water}g`;
+                    } else if (typeof normalizedStage.water === 'string' && !normalizedStage.water.endsWith('g')) {
+                        normalizedStage.water = `${normalizedStage.water}g`;
+                    }
+                }
+                
+                return normalizedStage;
+            });
+        }
+    }
+    
+    return normalizedMethod as _Method;
+};
+
 // 自定义注水动画类型
 interface _CustomPourAnimation {
     id: string;
@@ -80,19 +148,20 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     const [editingCumulativeWater, setEditingCumulativeWater] = useState<{ index: number, value: string } | null>(null)
 
     const [method, setMethod] = useState<_Method>(() => {
-        // 如果有初始方法，直接使用
+        // 如果有初始方法，对其进行规范化处理后使用
         if (initialMethod) {
+            // 规范化数据，确保water属性是字符串格式
+            const normalizedMethod = normalizeMethodData(initialMethod);
+            
             // 如果是聪明杯，确保从标签中移除阀门状态标记
-            if (customEquipment.hasValve && initialMethod.params.stages) {
-                const cleanedMethod = { ...initialMethod };
-                cleanedMethod.params = { ...initialMethod.params };
-                cleanedMethod.params.stages = initialMethod.params.stages.map(stage => ({
+            if (customEquipment.hasValve && normalizedMethod.params.stages) {
+                normalizedMethod.params.stages = normalizedMethod.params.stages.map(stage => ({
                     ...stage,
                     label: stage.label.replace(/\s*\[开阀\]|\s*\[关阀\]/g, '').trim()
                 }));
-                return cleanedMethod;
             }
-            return initialMethod;
+            
+            return normalizedMethod;
         }
 
         // 检查是否是自定义预设类型
@@ -619,8 +688,13 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     }
 
     // 格式化水量显示
-    const formatWater = (water: string | undefined) => {
-        if (!water) return '0g';
+    const formatWater = (water: string | number | undefined) => {
+        if (water === undefined || water === null || water === '') return '0g';
+        
+        if (typeof water === 'number') {
+            return `${water}g`;
+        }
+        
         return water.endsWith('g') ? water : `${water}g`;
     }
 
@@ -774,7 +848,12 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         for (let i = method.params.stages.length - 1; i >= 0; i--) {
             const stage = method.params.stages[i];
             if (stage.water) {
-                return parseInt(stage.water.replace('g', ''));
+                // 增加类型检查以提高健壮性
+                if (typeof stage.water === 'number') {
+                    return stage.water;
+                } else if (typeof stage.water === 'string') {
+                    return parseInt(stage.water.replace('g', ''));
+                }
             }
         }
 
@@ -1312,7 +1391,11 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                                                         value={
                                                             editingCumulativeWater && editingCumulativeWater.index === index
                                                                 ? editingCumulativeWater.value
-                                                                : stage.water ? parseInt(stage.water.replace('g', '')).toString() : ''
+                                                                : stage.water 
+                                                                  ? (typeof stage.water === 'number' 
+                                                                     ? String(stage.water) 
+                                                                     : String(parseInt((stage.water as string).replace('g', ''))))
+                                                                  : ''
                                                         }
                                                         onChange={(e) => {
                                                             // 更新本地编辑状态
@@ -1331,7 +1414,10 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                                                             const water = parseInt(e.target.value);
 
                                                             // 确保累计水量不超过总水量
-                                                            const totalWater = parseInt(method.params.water || '0');
+                                                            const totalWater = typeof method.params.water === 'number' 
+                                                                ? method.params.water 
+                                                                : parseInt(method.params.water || '0');
+                                                                
                                                             if (water > totalWater) {
                                                                 handleStageChange(index, 'water', `${totalWater}`);
                                                             } else {
@@ -1355,7 +1441,10 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                                                             const water = parseInt(value) || 0;
 
                                                             // 确保累计水量不超过总水量
-                                                            const totalWater = parseInt(method.params.water || '0');
+                                                            const totalWater = typeof method.params.water === 'number' 
+                                                                ? method.params.water 
+                                                                : parseInt(method.params.water || '0');
+                                                                
                                                             if (water > totalWater) {
                                                                 handleStageChange(index, 'water', `${totalWater}`);
                                                             } else {
