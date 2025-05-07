@@ -152,19 +152,20 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
             beansForVarieties = typeFilteredBeans.filter(bean => !isBeanEmpty(bean));
         }
         
-        // 从过滤后的豆子中提取可用的品种列表
+        // 从过滤后的豆子中提取可用的品种列表 - 只使用 blendComponents 中的品种信息
         const varieties = beansForVarieties.reduce((acc, bean) => {
-            if (bean.variety && !acc.includes(bean.variety)) {
-                acc.push(bean.variety);
-            }
+            // 不再从顶层 variety 字段提取品种
             
-            // 从拼配豆中提取品种
+            // 从拼配豆/单品豆的成分中提取品种
             if (bean.blendComponents && Array.isArray(bean.blendComponents) && bean.blendComponents.length > 0) {
                 bean.blendComponents.forEach(component => {
                     if (component.variety && !acc.includes(component.variety)) {
                         acc.push(component.variety);
                     }
                 });
+            } else if (!acc.includes('未分类')) {
+                // 如果没有 blendComponents，添加"未分类"
+                acc.push('未分类');
             }
             
             return acc;
@@ -179,13 +180,13 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                     return bean.blendComponents && bean.blendComponents.length > 1;
                 }
                 
-                // 检查拼配豆中是否包含所选品种
+                // 只检查拼配豆/单品豆中是否包含所选品种
                 if (bean.blendComponents && Array.isArray(bean.blendComponents) && bean.blendComponents.length > 0) {
                     return bean.blendComponents.some(component => component.variety === selectedVariety);
                 }
                 
-                // 常规品种筛选
-                return (bean.variety || '未分类') === selectedVariety;
+                // 如果没有 blendComponents 且选择了"未分类"
+                return selectedVariety === '未分类';
             });
         }
         
@@ -442,13 +443,13 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                     return bean.blendComponents && bean.blendComponents.length > 1;
                 }
                 
-                // 检查拼配豆中是否包含所选品种
+                // 只检查拼配豆/单品豆中是否包含所选品种
                 if (bean.blendComponents && Array.isArray(bean.blendComponents) && bean.blendComponents.length > 0) {
                     return bean.blendComponents.some(component => component.variety === variety);
                 }
                 
-                // 常规品种筛选
-                return (bean.variety || '未分类') === variety;
+                // 如果没有 blendComponents 且选择了"未分类"
+                return variety === '未分类';
             });
         }
         
@@ -487,13 +488,13 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                     return bean.blendComponents && bean.blendComponents.length > 1;
                 }
                 
-                // 检查拼配豆中是否包含所选品种
+                // 只检查拼配豆/单品豆中是否包含所选品种
                 if (bean.blendComponents && Array.isArray(bean.blendComponents) && bean.blendComponents.length > 0) {
                     return bean.blendComponents.some(component => component.variety === selectedVariety);
                 }
                 
-                // 常规品种筛选
-                return (bean.variety || '未分类') === selectedVariety;
+                // 如果没有 blendComponents 且选择了"未分类"
+                return selectedVariety === '未分类';
             });
         }
         
@@ -509,19 +510,20 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
             beansForVarieties = typeFilteredBeans.filter(bean => !isBeanEmpty(bean));
         }
         
-        // 从过滤后的豆子中提取可用的品种列表
+        // 从过滤后的豆子中提取可用的品种列表 - 只使用 blendComponents 中的品种信息
         const varieties = beansForVarieties.reduce((acc, bean) => {
-            if (bean.variety && !acc.includes(bean.variety)) {
-                acc.push(bean.variety);
-            }
+            // 不再从顶层 variety 字段提取品种
             
-            // 从拼配豆中提取品种
+            // 从拼配豆/单品豆的成分中提取品种
             if (bean.blendComponents && Array.isArray(bean.blendComponents) && bean.blendComponents.length > 0) {
                 bean.blendComponents.forEach(component => {
                     if (component.variety && !acc.includes(component.variety)) {
                         acc.push(component.variety);
                     }
                 });
+            } else if (!acc.includes('未分类')) {
+                // 如果没有 blendComponents，添加"未分类"
+                acc.push('未分类');
             }
             
             return acc;
@@ -635,13 +637,13 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                     return bean.blendComponents && bean.blendComponents.length > 1;
                 }
                 
-                // 检查拼配豆中是否包含所选品种
+                // 只检查拼配豆/单品豆中是否包含所选品种
                 if (bean.blendComponents && Array.isArray(bean.blendComponents) && bean.blendComponents.length > 0) {
                     return bean.blendComponents.some(component => component.variety === selectedVariety);
                 }
                 
-                // 常规品种筛选
-                return (bean.variety || '未分类') === selectedVariety;
+                // 如果没有 blendComponents 且选择了"未分类"
+                return selectedVariety === '未分类';
             });
         }
         
@@ -656,19 +658,20 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
             beansForVarieties = typeFilteredBeans.filter(bean => !isBeanEmpty(bean));
         }
         
-        // 从过滤后的豆子中提取可用的品种列表
+        // 从过滤后的豆子中提取可用的品种列表 - 只使用 blendComponents 中的品种信息
         const varieties = beansForVarieties.reduce((acc, bean) => {
-            if (bean.variety && !acc.includes(bean.variety)) {
-                acc.push(bean.variety);
-            }
+            // 不再从顶层 variety 字段提取品种
             
-            // 从拼配豆中提取品种
+            // 从拼配豆/单品豆的成分中提取品种
             if (bean.blendComponents && Array.isArray(bean.blendComponents) && bean.blendComponents.length > 0) {
                 bean.blendComponents.forEach(component => {
                     if (component.variety && !acc.includes(component.variety)) {
                         acc.push(component.variety);
                     }
                 });
+            } else if (!acc.includes('未分类')) {
+                // 如果没有 blendComponents，添加"未分类"
+                acc.push('未分类');
             }
             
             return acc;
@@ -738,7 +741,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
             const name = bean.name?.toLowerCase() || '';
             const origin = bean.origin?.toLowerCase() || '';
             const process = bean.process?.toLowerCase() || '';
-            const variety = bean.variety?.toLowerCase() || '';
+            // 不再从顶层 variety 字段搜索品种
             const notes = bean.notes?.toLowerCase() || '';
             
             // 额外信息搜索
@@ -750,7 +753,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
             // 风味标签搜索 - 将数组转换为字符串进行搜索
             const flavors = bean.flavor?.join(' ').toLowerCase() || '';
             
-            // 拼配组件搜索
+            // 拼配组件搜索 - 包含成分中的品种信息
             const blendComponentsText = bean.blendComponents?.map(comp => 
                 `${comp.percentage || ''} ${comp.origin || ''} ${comp.process || ''} ${comp.variety || ''}`
             ).join(' ').toLowerCase() || '';
@@ -762,11 +765,10 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
             // 赏味期搜索 - 将赏味期信息转换为可搜索的文本
             const flavorPeriod = `${bean.startDay || ''} ${bean.endDay || ''}`.toLowerCase();
             
-            // 合并所有可搜索文本
+            // 合并所有可搜索文本 - 移除对顶层 variety 字段的搜索
             return name.includes(query) || 
                 origin.includes(query) || 
                 process.includes(query) || 
-                variety.includes(query) || 
                 notes.includes(query) ||
                 roastLevel.includes(query) ||
                 roastDate.includes(query) ||

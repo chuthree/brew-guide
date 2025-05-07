@@ -131,20 +131,20 @@ export const calculateStats = (beans: ExtendedCoffeeBean[], showEmptyBeans: bool
     // 根据品种统计
     const varietyCount: Record<string, number> = {}
     filteredBeans.forEach(bean => {
-        // 先处理单品豆的品种
-        if (bean.variety) {
-            const variety = bean.variety
-            varietyCount[variety] = (varietyCount[variety] || 0) + 1
-        }
+        // 不再处理顶层的 variety 字段
         
-        // 然后处理拼配豆的成分品种
-        if (bean.blendComponents && Array.isArray(bean.blendComponents)) {
+        // 只处理 blendComponents 中的品种信息
+        if (bean.blendComponents && Array.isArray(bean.blendComponents) && bean.blendComponents.length > 0) {
             bean.blendComponents.forEach(comp => {
                 if (comp.variety) {
                     const variety = comp.variety
                     varietyCount[variety] = (varietyCount[variety] || 0) + 1
                 }
             })
+        } else {
+            // 如果没有 blendComponents 或者其中没有品种信息，则归为"未分类"
+            const variety = '未分类'
+            varietyCount[variety] = (varietyCount[variety] || 0) + 1
         }
     })
     
