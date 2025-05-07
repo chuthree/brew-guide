@@ -6,6 +6,7 @@ import { SettingsOptions, defaultSettings } from '@/components/settings/Settings
 import textZoomUtils from '@/lib/utils/textZoomUtils'
 import confetti from 'canvas-confetti'
 import { availableGrinders } from '@/lib/core/config'
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/coffee-bean/ui/select'
 
 // 设置页面界面属性
 interface OnboardingProps {
@@ -90,12 +91,12 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
     }
 
     return (
-        <div className="fixed inset-0 z-50 flex flex-col justify-end">
+        <div className="z-50 w-full">
             {/* 半透明背景 */}
             <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" />
 
             {/* 设置内容卡片 */}
-            <div className="relative w-full bg-white dark:bg-black rounded-t-2xl pb-safe-bottom">
+            <div className="relative max-w-[500px] mx-auto bg-white dark:bg-black rounded-t-2xl pb-safe-bottom">
                 {/* 内容容器 */}
                 <div className="relative flex flex-col pt-4 pb-6 px-5">
                     {/* 上方把手示意 */}
@@ -162,20 +163,35 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
                                         磨豆机类型
                                     </label>
                                     <div className="relative">
-                                        <select
+                                        <Select
                                             value={settings.grindType}
-                                            onChange={(e) => handleSettingChange('grindType', e.target.value)}
-                                            className="w-full py-2 px-3 text-sm font-medium rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 appearance-none focus:outline-none focus:ring-2 focus:ring-neutral-500"
+                                            onValueChange={(value) => handleSettingChange('grindType', value)}
                                         >
-                                            {availableGrinders.map((grinder) => (
-                                                <option key={grinder.id} value={grinder.id}>
-                                                    {grinder.name}
-                                                </option>
-                                            ))}
-                                        </select>
-                                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-neutral-700 dark:text-neutral-300">
-                                            <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
-                                        </div>
+                                            <SelectTrigger 
+                                                variant="minimal"
+                                                className="w-full py-2 px-3 text-sm font-medium rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-neutral-500 border border-neutral-200 dark:border-neutral-700"
+                                            >
+                                                <SelectValue placeholder="选择磨豆机" />
+                                                <svg 
+                                                    className="h-4 w-4 ml-1 text-neutral-500" 
+                                                    xmlns="http://www.w3.org/2000/svg" 
+                                                    viewBox="0 0 20 20"
+                                                    fill="currentColor"
+                                                >
+                                                    <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                                                </svg>
+                                            </SelectTrigger>
+                                            <SelectContent className="max-h-[40vh] overflow-y-auto">
+                                                {availableGrinders.map((grinder) => (
+                                                    <SelectItem
+                                                        key={grinder.id}
+                                                        value={grinder.id}
+                                                    >
+                                                        {grinder.name}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                     </div>
                                     <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-2">
                                         选择你的磨豆机，方便查看研磨度参考
@@ -203,7 +219,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
                             <div className="mt-8">
                                 <button
                                     onClick={handleComplete}
-                                    className="w-full py-3 px-4 bg-neutral-900 dark:bg-white text-neutral-100 dark:text-black rounded-xl font-medium hover:bg-neutral-800 dark:hover:bg-neutral-100 transition-colors"
+                                    className="w-full py-2 px-4 bg-neutral-900 dark:bg-neutral-100 text-neutral-100 dark:text-black rounded-xl font-medium hover:bg-neutral-800 dark:hover:bg-neutral-100 transition-colors"
                                 >
                                     开始使用
                                 </button>
