@@ -15,22 +15,39 @@ brew-guide/
 │   ├── components/       # 共享组件
 │   │   ├── common/      # 通用组件
 │   │   ├── equipment/   # 器具相关组件
+│   │   │   ├── forms/   # 器具表单
+│   │   │   ├── import/  # 器具导入功能
+│   │   │   └── share/   # 器具分享功能
 │   │   ├── method/      # 冲煮方法相关组件
+│   │   │   ├── forms/   # 方法表单
+│   │   │   ├── import/  # 方法导入功能
+│   │   │   └── share/   # 方法分享功能
 │   │   ├── brewing/     # 冲煮过程相关组件
+│   │   │   ├── stages/  # 冲煮阶段组件
+│   │   │   └── Timer/   # 计时器及相关功能
 │   │   ├── onboarding/   # 引导相关组件
 │   │   ├── settings/    # 设置相关组件
 │   │   ├── notes/       # 笔记相关组件
+│   │   │   ├── Form/    # 笔记表单
+│   │   │   ├── List/    # 笔记列表
+│   │   │   └── Share/   # 笔记分享功能
 │   │   ├── layout/      # 布局相关组件
-│   │   ├── modals/      # 模态框相关组件
 │   │   └── coffee-bean/ # 咖啡豆相关组件
-│   │
-│   ├── features/        # 功能模块
-│   │   ├── auth/        # 认证功能
-│   │   ├── recognition/ # 识别功能
-│   │   └── settings/    # 设置功能
+│   │       ├── Form/    # 咖啡豆表单
+│   │       ├── List/    # 咖啡豆列表
+│   │       └── import/  # 咖啡豆导入功能
 │   │
 │   ├── hooks/           # 自定义 Hooks
 │   ├── lib/             # 工具函数和通用库
+│   │   ├── core/        # 核心功能
+│   │   ├── utils/       # 工具函数
+│   │   │   ├── jsonUtils.ts  # JSON处理和数据转换工具
+│   │   │   └── exportUtils.ts # 数据导出相关工具
+│   │   ├── managers/    # 管理器
+│   │   │   ├── customMethods.ts  # 自定义方法管理
+│   │   │   └── coffeeBeans.ts    # 咖啡豆数据管理
+│   │   ├── brewing/     # 冲煮相关功能
+│   │   └── app/         # 应用程序相关功能
 │   ├── locales/         # 国际化文件
 │   │   ├── en/         # 英文翻译
 │   │   └── zh/         # 中文翻译
@@ -88,58 +105,87 @@ brew-guide/
   - 器具列表
   - 器具表单
   - 器具导入导出
+    - `EquipmentImportModal.tsx` - 导入器具的模态框
+    - `EquipmentShareModal.tsx` - 分享器具的模态框
 - `method/`: 冲煮方法相关组件
   - 方法选择器
   - 方法表单
   - 方法导入导出
+    - `MethodImportModal.tsx` - 导入方法的模态框
+    - `MethodShareModal.tsx` - 分享方法的模态框
+    - 支持文本和JSON格式的数据交换
+    - 与AI助手集成的导入提示词
 - `brewing/`: 冲煮过程相关组件
   - 计时器
+    - `Timer/StageProcessor.ts` - 处理冲煮阶段的扩展和计算
+    - `Timer/types.ts` - 定义计时器相关类型
+    - `Timer/utils.ts` - 计时器辅助函数
   - 动画编辑器
   - 冲煮步骤
+    - `stages/StageItem.tsx` - 单个冲煮步骤的展示
+    - 支持注水方式、水量和时间的可视化
 - `onboarding/`: 引导相关组件
   - 引导流程
   - 引导页面
 - `settings/`: 设置相关组件
-  - 设置表单
-  - 设置选项
+  - 使用单一Settings组件管理所有应用程序设置
+  - 支持声音、触感反馈、研磨器类型、文本缩放、界面布局、语言等设置
+  - 支持暗色/亮色主题切换
+  - 库存扣除量预设管理
 - `notes/`: 笔记相关组件
   - 笔记列表
   - 笔记表单
   - 笔记详情
+  - 笔记分享功能
+    - `Share/NoteShareModal.tsx` - 分享笔记的模态框
+    - 支持文本和图片格式分享
 - `layout/`: 布局相关组件
   - 导航栏
   - 底部操作栏
   - 标签页内容
   - 其他布局组件
-- `modals/`: 模态框相关组件
-  - 各种模态框组件
 - `coffee-bean/`: 咖啡豆相关组件
   - 咖啡豆列表
   - 咖啡豆表单
   - 咖啡豆导入导出
-
-#### features/
-按功能模块组织的代码，每个模块包含：
-- 组件
-- 状态管理
-- 类型定义
-- 工具函数
-- 测试文件
+    - `import/BeanImportModal.tsx` - 导入咖啡豆的模态框
+    - `share/BeanShareModal.tsx` - 分享咖啡豆的模态框
 
 #### hooks/
 - 自定义 React Hooks
 - 按功能分类组织
 - 包含单元测试
+- `useBrewingState.ts` - 冲煮状态管理Hook
+- `useBrewingParameters.ts` - 冲煮参数管理Hook
+- `useMethodSelector.ts` - 方法选择器Hook
 
 #### lib/
 - 工具函数和通用库
   - `core/` - 核心功能模块
+    - `config.ts` - 应用程序配置和数据结构定义
+    - `storage.ts` - 存储工具
+    - `constants.ts` - 应用程序常量
   - `utils/` - 工具函数
+    - `jsonUtils.ts` - JSON处理和数据转换工具
+      - 数据文本化 - 将结构化数据转换为易读文本
+      - 数据解析 - 从文本中提取结构化数据
+      - JSON清理 - 处理和格式化JSON字符串
+    - `formatUtils.ts` - 格式化工具
+    - `validationUtils.ts` - 验证工具
   - `managers/` - 管理器
+    - `customMethods.ts` - 冲煮方法管理
+      - 加载、保存、删除、复制和分享方法
+    - `coffeeBeans.ts` - 咖啡豆数据管理
+    - `brewingNotes.ts` - 冲煮笔记管理
   - `ui/` - UI 相关
   - `platform/` - 平台相关
   - `hooks/` - 自定义 Hooks
   - `brewing/` - 冲煮相关功能
+    - `constants.ts` - 冲煮常量
+    - `events.ts` - 冲煮事件系统
+    - `parameters.ts` - 冲煮参数处理
+    - `analysis.ts` - 冲煮数据分析工具
+  - `app/` - 应用程序相关功能
 
 工具函数组织规范：
 1. 按功能分类到不同的文件中
@@ -476,4 +522,70 @@ export default {
     e.currentTarget.src = '/images/fallback.jpg'
   }}
 />
-``` 
+```
+
+## 数据导入导出规范
+
+### 1. 数据格式
+
+1. JSON 格式
+   - 用于数据交换和导入导出
+   - 结构化数据，便于程序处理
+   - 支持完整数据模型
+
+2. 文本格式
+   - 用于人类可读的分享
+   - 结构化文本，便于复制粘贴
+   - 支持主要字段的摘要
+
+### 2. 导入导出流程
+
+1. 导出流程
+   ```
+   数据对象 → JSON转换 → (可选)文本化处理 → 复制到剪贴板/保存文件
+   ```
+
+2. 导入流程
+   ```
+   文本输入 → JSON提取 → 数据验证 → 类型转换 → 保存到存储
+   ```
+
+### 3. 数据转换工具
+
+1. `jsonUtils.ts` - 包含核心转换功能
+   - `extractJsonFromText` - 从文本中提取JSON
+   - `methodToReadableText` - 方法转可读文本
+   - `parseMethodFromJson` - 从JSON解析方法
+   - `brewingNoteToReadableText` - 冲煮笔记转可读文本
+
+2. 导入验证和处理
+   - 验证必要字段
+   - 补充默认值
+   - 添加唯一ID
+   - 处理兼容性问题
+
+### 4. 导入导出组件
+
+1. 导入组件
+   - 模态框设计
+   - 文本输入区域
+   - 验证反馈
+   - AI助手集成
+
+2. 导出/分享组件
+   - 模态框设计
+   - 文本和图片格式选项
+   - 复制到剪贴板功能
+   - 社交分享功能
+
+### 5. AI助手集成
+
+1. 提示词模板
+   - 为冲煮方法导入提供结构化提示词
+   - 定义JSON格式和字段要求
+   - 提供数据转换指导
+
+2. 数据处理
+   - 支持从自然语言描述中提取结构化数据
+   - 处理不同格式的输入
+   - 转换为应用可用的数据结构
