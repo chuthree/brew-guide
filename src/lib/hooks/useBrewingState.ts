@@ -787,7 +787,7 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 
 	// 处理咖啡豆选择
 	const handleCoffeeBeanSelect = useCallback(
-		(beanId: string, bean: CoffeeBean) => {
+		(beanId: string | null, bean: CoffeeBean | null) => {
 			// 检查冲煮是否已完成，如果是则重置状态
 			if (showComplete) {
 				resetBrewingState(true);
@@ -799,7 +799,7 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 			setSelectedCoffeeBean(beanId);
 			setSelectedCoffeeBeanData(bean);
 
-			// 当选择了咖啡豆后，引导用户进入下一步（器具选择）
+			// 当选择了咖啡豆后（或者选择了"不使用咖啡豆"），引导用户进入下一步（器具选择）
 			setActiveBrewingStep("equipment");
 			setActiveTab("器具");
 		},

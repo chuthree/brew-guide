@@ -23,6 +23,9 @@ interface Step extends BaseStep {
     customParams?: Record<string, string | number | boolean>;
     icon?: string;
     isPinned?: boolean;
+    isDivider?: boolean;
+    dividerText?: string;
+    explicitMethodType?: 'common' | 'custom';
 }
 
 // 动态导入客户端组件
@@ -63,7 +66,7 @@ interface TabContentProps {
     settings: SettingsOptions;
     onEquipmentSelect: (name: string) => void;
     onMethodSelect: (index: number, step?: Step) => void;
-    onCoffeeBeanSelect?: (beanId: string, bean: CoffeeBean) => void;
+    onCoffeeBeanSelect?: (beanId: string | null, bean: CoffeeBean | null) => void;
     onEditMethod: (method: Method) => void;
     onDeleteMethod: (method: Method) => void;
     setActiveMainTab?: (tab: MainTabType) => void;
@@ -364,7 +367,7 @@ const TabContent: React.FC<TabContentProps> = ({
             <div className="relative">
                 <CoffeeBeanList
                     onSelect={(beanId, bean) => {
-                        if (onCoffeeBeanSelect && beanId && bean) onCoffeeBeanSelect(beanId, bean);
+                        if (onCoffeeBeanSelect) onCoffeeBeanSelect(beanId, bean);
                     }}
                     searchQuery={searchQuery}
                 />
@@ -561,6 +564,38 @@ const TabContent: React.FC<TabContentProps> = ({
                                         if (activeTab === '器具') {
                                             onEquipmentSelect(step.title);
                                         } else if (activeTab === '方案') {
+                                            // 如果是分隔符，不处理点击事件
+                                            if (step.isDivider) {
+                                                return;
+                                            }
+                                            
+                                            // 根据方案类型确定正确的索引
+                                            if (step.isCustom) {
+                                                // 自定义方案：在customMethods中查找匹配的方案
+                                                const methodId = step.methodId;
+                                                if (methodId && selectedEquipment && customMethods[selectedEquipment]) {
+                                                    const methodIndex = customMethods[selectedEquipment].findIndex(m => 
+                                                        m.id === methodId || m.name === step.title);
+                                                    if (methodIndex !== -1) {
+                                                        // 使用找到的自定义方案索引，并明确传递"custom"类型
+                                                        onMethodSelect(methodIndex, {
+                                                            ...step,
+                                                            explicitMethodType: 'custom'
+                                                        });
+                                                        return;
+                                                    }
+                                                }
+                                            } else if (step.isCommonMethod && step.methodIndex !== undefined) {
+                                                // 通用方案：使用预先存储的methodIndex，并明确传递"common"类型
+                                                onMethodSelect(step.methodIndex, {
+                                                    ...step,
+                                                    explicitMethodType: 'common'
+                                                });
+                                                return;
+                                            }
+                                            
+                                            // 如果不能确定特定类型，使用传统的索引方式
+                                            // 默认根据当前类型传递
                                             onMethodSelect(index, step);
                                         }
                                     }}

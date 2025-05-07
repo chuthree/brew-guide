@@ -133,6 +133,15 @@ const StageItem: React.FC<StageItemProps> = ({
         [isCurrentStage]
     );
 
+    // 处理点击事件，如果是分隔符则不触发onClick
+    const handleClick = (e: React.MouseEvent) => {
+        if (step.isDivider) {
+            e.stopPropagation();
+            return;
+        }
+        onClick();
+    };
+
     // 获取操作菜单项
     const actionMenuItems = useMemo(() => {
         const items = [];
@@ -168,7 +177,7 @@ const StageItem: React.FC<StageItemProps> = ({
     const renderStageContent = () => {
         if (step.isDivider) {
             return (
-                <div className="flex items-center justify-center my-4">
+                <div className="flex items-center justify-center my-4 cursor-default select-none">
                     <div className="flex-grow h-px bg-neutral-200 dark:bg-neutral-700"></div>
                     <span className="px-3 text-xs text-neutral-500 dark:text-neutral-400">
                         {step.dividerText || ''}
@@ -188,7 +197,7 @@ const StageItem: React.FC<StageItemProps> = ({
                         transition={{ duration: 0.26, ease: 'linear' }}
                     />
                 )}
-                <div className={activeTab !== '注水' ? 'cursor-pointer' : ''} onClick={onClick}>
+                <div className={activeTab !== '注水' ? 'cursor-pointer' : ''} onClick={handleClick}>
                     <div className="flex items-baseline justify-between">
                         <div className="flex items-baseline gap-3 min-w-0 overflow-hidden">
                             {step.icon && (
@@ -260,7 +269,7 @@ const StageItem: React.FC<StageItemProps> = ({
                     ? 'text-neutral-800 dark:text-neutral-100'
                     : 'text-neutral-600 dark:text-neutral-400'
             }`}
-            onClick={onClick}
+            onClick={handleClick}
         >
             {renderStageContent()}
         </div>

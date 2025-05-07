@@ -41,6 +41,11 @@ declare global {
     }
 }
 
+// 扩展Step类型，添加explicitMethodType属性
+interface ExtendedStep extends Step {
+    explicitMethodType?: 'common' | 'custom';
+}
+
 // 添加ExtendedCoffeeBean类型
 interface BlendComponent {
     percentage?: number;  // 百分比 (1-100)，改为可选
@@ -610,8 +615,13 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             setIsCoffeeBrewed(false);
         }
 
+        // 确定使用哪种方法类型：
+        // 1. 优先使用step中明确指定的方法类型（使用类型断言访问explicitMethodType）
+        // 2. 如果没有明确指定，则使用全局methodType状态
+        const effectiveMethodType = (step as ExtendedStep)?.explicitMethodType || methodType;
+
         // 将正确的参数传递给 handleMethodSelect
-        await handleMethodSelect(selectedEquipment || "", index, methodType, step);
+        await handleMethodSelect(selectedEquipment || "", index, effectiveMethodType, step);
     }, [handleMethodSelect, isCoffeeBrewed, setIsCoffeeBrewed, selectedEquipment, methodType]);
 
     // 处理冲煮完成后自动切换到笔记页面
