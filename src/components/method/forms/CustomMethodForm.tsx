@@ -1375,20 +1375,20 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                                                             handleStageChange(index, 'pourTime', stageTime);
                                                         }
                                                     }}
-                                                    placeholder="可选"
+                                                    placeholder="默认全部"
                                                     className="w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
                                                 />
                                             </div>
                                             <div className="space-y-2">
                                                 <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                                                    累计水量
+                                                    累计水量(可带 %)
                                                 </label>
                                                 <div className="relative">
                                                     <input
                                                         type="text"
                                                         min="0"
                                                         step="1"
-                                                        placeholder="可带 %"
+                                                        placeholder=""
                                                         value={
                                                             editingCumulativeWater && editingCumulativeWater.index === index
                                                                 ? editingCumulativeWater.value
