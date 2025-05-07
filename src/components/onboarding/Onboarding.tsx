@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Storage } from '@/lib/core/storage'
 import { SettingsOptions, defaultSettings } from '@/components/settings/Settings'
 import textZoomUtils from '@/lib/utils/textZoomUtils'
@@ -17,23 +17,13 @@ interface OnboardingProps {
 const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete }) => {
     // 设置选项
     const [settings, setSettings] = useState<SettingsOptions>(defaultSettings)
-    // 音频上下文
-    const audioContext = useRef<AudioContext | null>(null)
     // 检查TextZoom功能是否可用
     const [isTextZoomEnabled, setIsTextZoomEnabled] = useState(false)
 
-    // 初始化音频环境
+    // 初始化
     useEffect(() => {
-        if (typeof window !== 'undefined' && 'AudioContext' in window) {
-            audioContext.current = new AudioContext()
-        }
-
         // 检查文本缩放功能是否可用
         setIsTextZoomEnabled(textZoomUtils.isAvailable());
-
-        return () => {
-            audioContext.current?.close()
-        }
     }, [])
 
     // 触发彩带特效
