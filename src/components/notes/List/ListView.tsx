@@ -21,6 +21,7 @@ interface NotesListViewProps {
     onToggleSelect?: (noteId: string, enterShareMode?: boolean) => void;
     searchQuery?: string;
     isSearching?: boolean;
+    preFilteredNotes?: BrewingNote[];
 }
 
 const NotesListView: React.FC<NotesListViewProps> = ({
@@ -34,7 +35,8 @@ const NotesListView: React.FC<NotesListViewProps> = ({
     selectedNotes = [],
     onToggleSelect,
     searchQuery = '',
-    isSearching = false
+    isSearching = false,
+    preFilteredNotes
 }) => {
     const [_isPending, startTransition] = useTransition()
     const [notes, setNotes] = useState<BrewingNote[]>(globalCache.filteredNotes)
@@ -48,6 +50,15 @@ const NotesListView: React.FC<NotesListViewProps> = ({
         if (isLoadingRef.current) return;
         
         try {
+            // 如果已经有预过滤的笔记列表，则直接使用
+            if (preFilteredNotes) {
+                startTransition(() => {
+                    setNotes(preFilteredNotes);
+                    setIsFirstLoad(false);
+                });
+                return;
+            }
+            
             // 只在首次加载或数据为空时显示加载状态
             const shouldShowLoading = !globalCache.initialized || globalCache.notes.length === 0;
             if (shouldShowLoading) {
@@ -72,105 +83,6 @@ const NotesListView: React.FC<NotesListViewProps> = ({
                 );
             }
             
-            // 搜索过滤
-            if (isSearching && searchQuery.trim()) {
-                const query = searchQuery.toLowerCase().trim();
-                
-                // 将查询拆分为多个关键词，移除空字符串
-                const queryTerms = query.split(/\s+/).filter(term => term.length > 0);
-                
-                // 给每个笔记计算匹配分数
-                const notesWithScores = filteredNotes.map(note => {
-                    // 预处理各个字段，转化为小写并确保有值
-                    const equipment = note.equipment?.toLowerCase() || '';
-                    const method = note.method?.toLowerCase() || '';
-                    const beanName = note.coffeeBeanInfo?.name?.toLowerCase() || '';
-                    const roastLevel = note.coffeeBeanInfo?.roastLevel?.toLowerCase() || '';
-                    const notes = note.notes?.toLowerCase() || '';
-                    
-                    // 处理参数信息
-                    const coffee = note.params?.coffee?.toLowerCase() || '';
-                    const water = note.params?.water?.toLowerCase() || '';
-                    const ratio = note.params?.ratio?.toLowerCase() || '';
-                    const grindSize = note.params?.grindSize?.toLowerCase() || '';
-                    const temp = note.params?.temp?.toLowerCase() || '';
-                    
-                    // 处理口味评分信息
-                    const tasteInfo = `酸度${note.taste?.acidity || 0} 甜度${note.taste?.sweetness || 0} 苦度${note.taste?.bitterness || 0} 醇厚度${note.taste?.body || 0}`.toLowerCase();
-                    
-                    // 处理时间信息
-                    const dateInfo = note.timestamp ? new Date(note.timestamp).toLocaleDateString() : '';
-                    const totalTime = note.totalTime ? `${note.totalTime}秒` : '';
-                    
-                    // 将评分转换为可搜索文本，如"评分4"、"4分"、"4星"
-                    const ratingText = note.rating ? `评分${note.rating} ${note.rating}分 ${note.rating}星`.toLowerCase() : '';
-                    
-                    // 组合所有可搜索文本到一个数组，为不同字段分配权重
-                    const searchableTexts = [
-                        { text: beanName, weight: 3 },          // 豆子名称权重最高
-                        { text: equipment, weight: 2 },         // 设备名称权重较高
-                        { text: method, weight: 2 },            // 冲煮方法权重较高
-                        { text: notes, weight: 2 },             // 笔记内容权重较高
-                        { text: roastLevel, weight: 1 },        // 烘焙度权重一般
-                        { text: coffee, weight: 1 },            // 咖啡粉量权重一般
-                        { text: water, weight: 1 },             // 水量权重一般
-                        { text: ratio, weight: 1 },             // 比例权重一般
-                        { text: grindSize, weight: 1 },         // 研磨度权重一般
-                        { text: temp, weight: 1 },              // 水温权重一般
-                        { text: tasteInfo, weight: 1 },         // 口味信息权重一般
-                        { text: dateInfo, weight: 1 },          // 日期信息权重一般
-                        { text: totalTime, weight: 1 },         // 总时间权重一般
-                        { text: ratingText, weight: 1 }         // 评分文本权重一般
-                    ];
-                    
-                    // 计算匹配分数 - 所有匹配关键词的权重总和
-                    let score = 0;
-                    let allTermsMatch = true;
-                    
-                    for (const term of queryTerms) {
-                        // 检查当前关键词是否至少匹配一个字段
-                        const termMatches = searchableTexts.some(({ text }) => text.includes(term));
-                        
-                        if (!termMatches) {
-                            allTermsMatch = false;
-                            break;
-                        }
-                        
-                        // 累加匹配到的权重
-                        for (const { text, weight } of searchableTexts) {
-                            if (text.includes(term)) {
-                                score += weight;
-                                
-                                // 精确匹配整个字段给予额外加分
-                                if (text === term) {
-                                    score += weight * 2;
-                                }
-                                
-                                // 匹配字段开头给予额外加分
-                                if (text.startsWith(term)) {
-                                    score += weight;
-                                }
-                            }
-                        }
-                    }
-                    
-                    return {
-                        note,
-                        score,
-                        matches: allTermsMatch
-                    };
-                });
-                
-                // 过滤掉不匹配所有关键词的笔记
-                const matchingNotes = notesWithScores.filter(item => item.matches);
-                
-                // 根据分数排序，分数高的在前面
-                matchingNotes.sort((a, b) => b.score - a.score);
-                
-                // 返回排序后的笔记列表
-                filteredNotes = matchingNotes.map(item => item.note);
-            }
-            
             // 更新全局缓存
             globalCache.notes = sortedNotes;
             globalCache.filteredNotes = filteredNotes;
@@ -188,13 +100,13 @@ const NotesListView: React.FC<NotesListViewProps> = ({
             setIsFirstLoad(false);
             isLoadingRef.current = false;
         }
-    }, [sortOption, selectedEquipment, selectedBean, filterMode, searchQuery, isSearching]);
+    }, [sortOption, selectedEquipment, selectedBean, filterMode, preFilteredNotes]);
 
-    // 当过滤条件变化时重新加载数据
+    // 当过滤条件变化或预过滤笔记列表更新时重新加载数据
     useEffect(() => {
         // 立即加载数据，不使用setTimeout延迟
         loadNotes();
-    }, [loadNotes, sortOption, selectedEquipment, selectedBean, filterMode, searchQuery, isSearching]);
+    }, [loadNotes, sortOption, selectedEquipment, selectedBean, filterMode, preFilteredNotes]);
 
     // 确保在组件挂载时立即初始化数据
     useEffect(() => {
