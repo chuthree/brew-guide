@@ -91,12 +91,12 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
     }
 
     return (
-        <div className="z-50 w-full">
+        <div className="fixed inset-0 z-50 flex flex-col justify-end">
             {/* 半透明背景 */}
-            <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" />
+            <div className="absolute inset-0 bg-neutral-900/30 backdrop-blur-sm" />
 
             {/* 设置内容卡片 */}
-            <div className="relative max-w-[500px] mx-auto bg-white dark:bg-black rounded-t-2xl pb-safe-bottom">
+            <div className="relative w-full bg-neutral-50 dark:bg-neutral-950 rounded-t-2xl pb-safe-bottom">
                 {/* 内容容器 */}
                 <div className="relative flex flex-col pt-4 pb-6 px-5">
                     {/* 上方把手示意 */}
@@ -108,7 +108,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
                     <div className="relative">
                         <div className="flex flex-col w-full">
                             <div className="text-center mb-6">
-                                <h2 className="text-xl font-bold text-neutral-900 dark:text-neutral-100">
+                                <h2 className="text-xl font-bold text-neutral-800 dark:text-neutral-200">
                                     欢迎使用
                                 </h2>
                                 <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-2">
@@ -120,9 +120,9 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
 
                                 {/* 文本缩放选项 - 仅在可用时显示 */}
                                 {isTextZoomEnabled && (
-                                    <div className="flex items-center justify-between bg-neutral-50 dark:bg-neutral-900 p-4 rounded-xl">
+                                    <div className="flex items-center justify-between bg-neutral-100 dark:bg-neutral-900 p-4 rounded-xl">
                                         <div className="flex flex-col">
-                                            <label className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
+                                            <label className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
                                                 文本大小
                                             </label>
                                             <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
@@ -140,7 +140,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
                                             <button
                                                 onClick={() => handleSettingChange('textZoomLevel', 1.0)}
                                                 className={`px-2 py-1 text-xs rounded-md transition-colors ${Math.abs(settings.textZoomLevel - 1.0) < 0.05
-                                                    ? 'bg-neutral-900 dark:bg-white text-neutral-100 dark:text-black'
+                                                    ? 'bg-neutral-800 dark:bg-neutral-50 text-neutral-100 dark:text-neutral-900'
                                                     : 'bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300'
                                                     }`}
                                             >
@@ -158,8 +158,8 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
                                 )}
 
                                 {/* 磨豆机选择 */}
-                                <div id="onboarding-grinder-select-wrapper" className="bg-neutral-50 dark:bg-neutral-900 p-4 rounded-xl">
-                                    <label className="text-sm font-medium text-neutral-900 dark:text-neutral-100 mb-1 block">
+                                <div id="onboarding-grinder-select-wrapper" className="bg-neutral-100 dark:bg-neutral-900 p-4 rounded-xl">
+                                    <label className="text-sm font-medium text-neutral-800 dark:text-neutral-200 mb-1 block">
                                         磨豆机类型
                                     </label>
                                     <div className="relative">
@@ -169,7 +169,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
                                         >
                                             <SelectTrigger 
                                                 variant="minimal"
-                                                className="w-full py-2 px-3 text-sm font-medium rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-neutral-500 border border-neutral-200 dark:border-neutral-700"
+                                                className="w-full py-2 px-3 text-sm font-medium rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-neutral-500 border border-neutral-200 dark:border-neutral-700"
                                             >
                                                 <SelectValue placeholder="选择磨豆机" />
                                                 <svg 
@@ -199,8 +199,8 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
                                 </div>
 
                                 {/* 用户名输入 */}
-                                <div className="bg-neutral-50 dark:bg-neutral-900 p-4 rounded-xl">
-                                    <label className="text-sm font-medium text-neutral-900 dark:text-neutral-100 mb-1 block">
+                                <div className="bg-neutral-100 dark:bg-neutral-900 p-4 rounded-xl">
+                                    <label className="text-sm font-medium text-neutral-800 dark:text-neutral-200 mb-1 block">
                                         用户名
                                     </label>
                                     <input
@@ -208,7 +208,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
                                         value={settings.username}
                                         onChange={(e) => handleSettingChange('username', e.target.value)}
                                         placeholder="请输入您的用户名"
-                                        className="w-full py-2 px-3 mt-1 text-sm font-medium rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 appearance-none focus:outline-none focus:ring-2 focus:ring-neutral-500"
+                                        className="w-full py-2 px-3 mt-1 text-sm font-medium rounded-lg bg-neutral-50 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 appearance-none focus:outline-none focus:ring-2 focus:ring-neutral-500"
                                     />
                                     <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-2">
                                         使用分享功能时，会显示您的用户名（选填）
@@ -219,7 +219,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
                             <div className="mt-8">
                                 <button
                                     onClick={handleComplete}
-                                    className="w-full py-2 px-4 bg-neutral-900 dark:bg-neutral-100 text-neutral-100 dark:text-black rounded-xl font-medium hover:bg-neutral-800 dark:hover:bg-neutral-100 transition-colors"
+                                    className="w-full py-3 px-4 bg-neutral-800 dark:bg-neutral-50 text-neutral-100 dark:text-neutral-900 rounded-xl font-medium hover:bg-neutral-700 dark:hover:bg-neutral-200 transition-colors"
                                 >
                                     开始使用
                                 </button>
