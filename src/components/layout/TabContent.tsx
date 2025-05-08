@@ -427,8 +427,8 @@ const TabContent: React.FC<TabContentProps> = ({
         return <NoteFormWrapper />;
     }
 
-    // 显示计时器动画
-    if (isTimerRunning && !showComplete && currentBrewingMethod) {
+    // 显示计时器动画 - 添加条件仅在"注水"标签时显示
+    if (activeTab === '注水' && isTimerRunning && !showComplete && currentBrewingMethod) {
         return (
             <div className="flex items-center justify-center h-full">
                 <div className="w-full max-w-[300px]">

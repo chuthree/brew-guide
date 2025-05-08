@@ -578,7 +578,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
     }, [setParameterInfo]); // 添加setParameterInfo作为依赖项
 
     // 判断是否应该隐藏标题和导航
-    const shouldHideHeader = isTimerRunning && !showComplete;
+    const shouldHideHeader = activeBrewingStep === 'brewing' && isTimerRunning && !showComplete;
 
     // 处理主标签点击
     const handleMainTabClick = (tab: MainTabType) => {
