@@ -77,15 +77,6 @@ const normalizeMethodData = (method: any): _Method => {
     return normalizedMethod as _Method;
 };
 
-// 自定义注水动画类型
-interface _CustomPourAnimation {
-    id: string;
-    name: string;
-    customAnimationSvg: string;
-    isSystemDefault?: boolean;
-    pourType?: 'center' | 'circle' | 'ice' | 'other';
-}
-
 // 定义基础的 Stage 类型
 interface _Stage {
     time: number;
@@ -137,7 +128,6 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
 }) => {
     // 当前步骤状态
     const [currentStep, setCurrentStep] = useState<_Step>('name')
-    const formRef = useRef<HTMLDivElement>(null)
     const inputRef = useRef<HTMLInputElement>(null)
     const stagesContainerRef = useRef<HTMLDivElement>(null)
     const newStageRef = useRef<HTMLDivElement>(null)
@@ -168,11 +158,9 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
 
         // 检查是否是自定义预设类型
         const isCustomPreset = customEquipment.animationType === 'custom';
-        console.log(`[CustomMethodForm] 器具类型: ${customEquipment.animationType}, 是否自定义预设: ${isCustomPreset}`);
 
         // 对于自定义预设，不设置初始步骤，让用户完全自由创建
         if (isCustomPreset) {
-            console.log('[CustomMethodForm] 自定义预设器具，不使用预置步骤');
             return {
                 name: '',
                 params: {
@@ -198,19 +186,16 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
             );
             
             if (defaultAnimation && defaultAnimation.pourType) {
-                console.log(`[CustomMethodForm] 使用自定义器具的默认注水类型: ${defaultAnimation.pourType}`);
                 defaultPourType = defaultAnimation.pourType;
             } else if (customEquipment.customPourAnimations.length > 0) {
                 // 如果没有默认动画，使用第一个动画的注水类型（如果有）
                 const firstAnimation = customEquipment.customPourAnimations[0];
                 if (firstAnimation.pourType) {
-                    console.log(`[CustomMethodForm] 使用自定义器具的第一个注水类型: ${firstAnimation.pourType}`);
                     defaultPourType = firstAnimation.pourType;
                 }
             }
         } else {
             // 根据器具类型选择默认注水类型
-            console.log(`[CustomMethodForm] 使用基于器具类型的默认注水类型，器具类型: ${customEquipment.animationType}`);
             switch (customEquipment.animationType) {
                 case 'v60':
                 case 'origami':
@@ -263,59 +248,30 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
 
     // 加载设置
     useEffect(() => {
-        // Renamed settings prop to avoid conflict with state variable
-        // const loadSettings = async (currentSettingsProp?: SettingsOptions) => {
         const loadSettings = async () => {
-            // If settings prop is provided, use it directly
-            // if (currentSettingsProp) {
-            //     setLocalSettings(currentSettingsProp);
-            //     return;
-            // }
-            // Otherwise, try loading from storage
             const savedSettings = await Storage.get('brewGuideSettings');
             if (savedSettings) {
                 try {
                     const parsedSettings = JSON.parse(savedSettings) as SettingsOptions;
-                    // Ensure default layout settings if missing
+                    // 确保布局设置存在
                     if (!parsedSettings.layoutSettings) {
                         parsedSettings.layoutSettings = defaultSettings.layoutSettings;
                     }
-                     // Ensure default language if missing
+                    // 确保语言设置存在
                     if (!parsedSettings.language) {
                         parsedSettings.language = defaultSettings.language;
                     }
                     setLocalSettings(parsedSettings);
                 } catch (e) {
                     console.error("Failed to parse settings from storage:", e);
-                    // Fallback to default settings if parsing fails
                     setLocalSettings(defaultSettings);
                 }
             } else {
-                 // Fallback to default settings if nothing in storage
-                 setLocalSettings(defaultSettings);
+                setLocalSettings(defaultSettings);
             }
         };
-        // Pass the settings prop to the load function
-        // loadSettings(settingsProp);
         loadSettings();
-    }, []); // Removed settingsProp from dependencies as it's not used
-
-    // 点击外部关闭
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (formRef.current && !formRef.current.contains(event.target as Node)) {
-                // 确保 onBack 是一个函数
-                if (typeof onBack === 'function') {
-                    onBack();
-                }
-            }
-        }
-
-        document.addEventListener('mousedown', handleClickOutside)
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside)
-        }
-    }, [onBack])
+    }, []);
 
     // 自动聚焦输入框
     useEffect(() => {
@@ -341,7 +297,6 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     const handleNextStep = () => {
         const currentIndex = getCurrentStepIndex()
 
-
         if (currentIndex < steps.length - 1) {
             // 只处理步骤切换
             setCurrentStep(steps[currentIndex + 1].id)
@@ -351,13 +306,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
 
     // 上一步/返回
     const handleBack = () => {
-        const steps: { id: _Step }[] = [
-            { id: 'name' },
-            { id: 'params' },
-            { id: 'stages' },
-            { id: 'complete' }
-        ];
-        const currentIndex = steps.findIndex(step => step.id === currentStep);
+        const currentIndex = getCurrentStepIndex();
         if (currentIndex > 0) {
             setCurrentStep(steps[currentIndex - 1].id);
         } else {
@@ -503,10 +452,6 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
             const firstCustomAnimation = customEquipment.customPourAnimations.find(anim => !anim.isSystemDefault);
             if (firstCustomAnimation) {
                 defaultPourType = firstCustomAnimation.id;
-                console.log('[CustomMethodForm] 使用第一个自定义动画作为默认值:', {
-                    name: firstCustomAnimation.name,
-                    id: firstCustomAnimation.id
-                });
             }
         }
         
@@ -587,14 +532,9 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         }
 
         try {
-
             // 保存方法
             onSave(finalMethod);
-
-
-            // 如果有需要，可以在这里添加返回主页面的逻辑
         } catch {
-
             // 可以在这里添加用户友好的错误提示
             alert('保存方案失败，请重试');
         }
@@ -708,24 +648,11 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         // 检查是否选择了自定义注水动画（自定义注水动画的值是ID而不是pourType类型）
         const isCustomAnimation = value !== 'center' && value !== 'circle' && value !== 'ice' && value !== 'other';
         
-        console.log('[CustomMethodForm] 选择注水类型:', {
-            value,
-            isCustomAnimation,
-            customAnimations: customEquipment.customPourAnimations,
-            matchedAnimation: customEquipment.customPourAnimations?.find(anim => anim.id === value)
-        });
-        
         if (isCustomAnimation) {
             // 查找对应的自定义注水动画
             const customAnimation = customEquipment.customPourAnimations?.find(anim => anim.id === value);
             
             if (customAnimation) {
-                console.log(`[CustomMethodForm] 选择了自定义注水动画:`, {
-                    name: customAnimation.name,
-                    id: customAnimation.id,
-                    pourType: value
-                });
-                
                 // 直接使用自定义动画的 ID 作为 pourType
                 stage.pourType = value as string;
                 
@@ -1395,10 +1322,6 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                                                                 setShowWaterTooltip(null);
                                                             } else {
                                                                 setShowWaterTooltip(index);
-                                                                // 5秒后自动关闭提示
-                                                                setTimeout(() => {
-                                                                    setShowWaterTooltip(null);
-                                                                }, 5000);
                                                             }
                                                         }}
                                                         onMouseEnter={() => setShowWaterTooltip(index)}
@@ -1693,22 +1616,17 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         // 检查当前步骤是否有效
         const stepValid = isStepValid();
 
-
         // 处理按钮点击
         const handleButtonClick = () => {
-
-
             if (isLastStep) {
                 // 如果是最后一步，直接提交
-
                 try {
                     handleSubmit();
                 } catch {
-
+                    // 错误处理
                 }
             } else {
                 // 否则进入下一步
-
                 handleNextStep();
             }
         };
@@ -1742,7 +1660,6 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
 
     return (
         <motion.div
-            ref={formRef}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
