@@ -860,4 +860,5 @@ export const sponsorsList = [
 	"梁炜东",
 	"Mr.Wrong",
 	"醒来",
+	"Nicole",
 ];
