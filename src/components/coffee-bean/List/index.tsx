@@ -735,13 +735,15 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
     const searchFilteredBeans = React.useMemo(() => {
         if (!searchQuery.trim() || !isSearching) return filteredBeans;
         
-        const query = searchQuery.toLowerCase().trim();
-        return filteredBeans.filter(bean => {
+        // 将查询拆分为多个关键词，移除空字符串
+        const queryTerms = searchQuery.toLowerCase().trim().split(/\s+/).filter(term => term.length > 0);
+        
+        // 给每个咖啡豆计算匹配分数
+        const beansWithScores = filteredBeans.map(bean => {
             // 基本信息搜索
             const name = bean.name?.toLowerCase() || '';
             const origin = bean.origin?.toLowerCase() || '';
             const process = bean.process?.toLowerCase() || '';
-            // 不再从顶层 variety 字段搜索品种
             const notes = bean.notes?.toLowerCase() || '';
             
             // 额外信息搜索
@@ -765,21 +767,69 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
             // 赏味期搜索 - 将赏味期信息转换为可搜索的文本
             const flavorPeriod = `${bean.startDay || ''} ${bean.endDay || ''}`.toLowerCase();
             
-            // 合并所有可搜索文本 - 移除对顶层 variety 字段的搜索
-            return name.includes(query) || 
-                origin.includes(query) || 
-                process.includes(query) || 
-                notes.includes(query) ||
-                roastLevel.includes(query) ||
-                roastDate.includes(query) ||
-                price.includes(query) ||
-                beanType.includes(query) ||
-                flavors.includes(query) ||
-                blendComponentsText.includes(query) ||
-                capacity.includes(query) ||
-                remaining.includes(query) ||
-                flavorPeriod.includes(query);
+            // 组合所有可搜索文本到一个数组，为不同字段分配权重
+            const searchableTexts = [
+                { text: name, weight: 3 },           // 名称权重最高
+                { text: origin, weight: 2 },         // 产地权重较高
+                { text: process, weight: 2 },        // 处理法权重较高
+                { text: notes, weight: 1 },          // 备注权重一般
+                { text: roastLevel, weight: 1 },     // 烘焙度权重一般
+                { text: roastDate, weight: 1 },      // 烘焙日期权重一般
+                { text: price, weight: 1 },          // 价格权重一般
+                { text: beanType, weight: 2 },       // 豆子类型权重较高
+                { text: flavors, weight: 2 },        // 风味标签权重较高
+                { text: blendComponentsText, weight: 2 }, // 拼配组件权重较高
+                { text: capacity, weight: 1 },       // 容量权重一般
+                { text: remaining, weight: 1 },      // 剩余量权重一般
+                { text: flavorPeriod, weight: 1 }    // 赏味期信息权重一般
+            ];
+            
+            // 计算匹配分数 - 所有匹配关键词的权重总和
+            let score = 0;
+            let allTermsMatch = true;
+            
+            for (const term of queryTerms) {
+                // 检查当前关键词是否至少匹配一个字段
+                const termMatches = searchableTexts.some(({ text }) => text.includes(term));
+                
+                if (!termMatches) {
+                    allTermsMatch = false;
+                    break;
+                }
+                
+                // 累加匹配到的权重
+                for (const { text, weight } of searchableTexts) {
+                    if (text.includes(term)) {
+                        score += weight;
+                        
+                        // 精确匹配整个字段给予额外加分
+                        if (text === term) {
+                            score += weight * 2;
+                        }
+                        
+                        // 匹配字段开头给予额外加分
+                        if (text.startsWith(term)) {
+                            score += weight;
+                        }
+                    }
+                }
+            }
+            
+            return {
+                bean,
+                score,
+                matches: allTermsMatch
+            };
         });
+        
+        // 过滤掉不匹配所有关键词的豆子
+        const matchingBeans = beansWithScores.filter(item => item.matches);
+        
+        // 根据分数排序，分数高的在前面
+        matchingBeans.sort((a, b) => b.score - a.score);
+        
+        // 返回排序后的豆子列表
+        return matchingBeans.map(item => item.bean);
     }, [filteredBeans, searchQuery, isSearching]);
 
     const [_isExportingRanking, setIsExportingRanking] = useState(false);
