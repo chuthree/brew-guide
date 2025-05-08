@@ -7,6 +7,7 @@ import ActionMenu, { ActionMenuItem } from '@/components/coffee-bean/ui/action-m
 import { ExtendedCoffeeBean } from '../types'
 import { isBeanEmpty } from '../globalCache'
 import { formatDate, parseDateToTimestamp } from '@/lib/utils/dateUtils'
+import HighlightText from '@/components/common/ui/HighlightText'
 
 // 动态导入 ImageViewer 组件 - 移除加载占位符
 const ImageViewer = dynamic(() => import('@/components/common/ui/ImageViewer'), {
@@ -21,6 +22,7 @@ interface BeanListItemProps {
     onDelete: (bean: ExtendedCoffeeBean) => void
     onShare: (bean: ExtendedCoffeeBean) => void
     onRemainingClick: (bean: ExtendedCoffeeBean, event: React.MouseEvent) => void
+    searchQuery?: string
 }
 
 const BeanListItem: React.FC<BeanListItemProps> = ({
@@ -30,7 +32,8 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
     onEdit,
     onDelete,
     onShare,
-    onRemainingClick
+    onRemainingClick,
+    searchQuery = ''
 }) => {
     // 图片查看器状态和错误状态
     const [imageViewerOpen, setImageViewerOpen] = useState(false);
@@ -172,7 +175,14 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                         <div className="flex justify-between items-start">
                             <div className="flex-1 min-w-0 overflow-hidden">
                                 <div className="text-[11px] font-normal break-words text-neutral-800 dark:text-neutral-100 pr-2">
-                                    {title}
+                                    {searchQuery ? (
+                                        <HighlightText 
+                                            text={title} 
+                                            highlight={searchQuery} 
+                                        />
+                                    ) : (
+                                        title
+                                    )}
                                 </div>
                                 {/* 拼配豆信息显示 */}
                                 {bean.type === '拼配' && bean.blendComponents && bean.blendComponents.length > 1 && (
@@ -189,7 +199,15 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                                             
                                             return (
                                                 <span key={index} className="whitespace-nowrap">
-                                                    {componentText}
+                                                    {searchQuery ? (
+                                                        <HighlightText 
+                                                            text={componentText} 
+                                                            highlight={searchQuery} 
+                                                            className="text-neutral-500 dark:text-neutral-400"
+                                                        />
+                                                    ) : (
+                                                        componentText
+                                                    )}
                                                     {hasPercentage && ` (${comp.percentage}%)`}
                                                 </span>
                                             );
@@ -329,7 +347,15 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                 {/* 备注信息 */}
                 {bean.notes && (
                     <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400 whitespace-pre-line leading-tight">
-                        {bean.notes}
+                        {searchQuery ? (
+                            <HighlightText 
+                                text={bean.notes} 
+                                highlight={searchQuery} 
+                                className="text-neutral-600 dark:text-neutral-400"
+                            />
+                        ) : (
+                            bean.notes
+                        )}
                     </div>
                 )}
             </div>

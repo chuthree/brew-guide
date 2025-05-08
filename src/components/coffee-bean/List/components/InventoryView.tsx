@@ -33,11 +33,17 @@ const InventoryView: React.FC<InventoryViewProps> = ({
     selectedVariety,
     showEmptyBeans,
     selectedBeanType,
+    onVarietyClick,
+    onBeanTypeChange,
+    onToggleShowEmptyBeans,
+    availableVarieties,
     beans,
     onEdit,
     onDelete,
     onShare,
+    _onRemainingUpdate,
     onQuickDecrement,
+    isSearching = false,
     searchQuery = ''
 }) => {
     // 添加剩余量编辑状态
@@ -180,17 +186,18 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                     }
                 </div>
             ) : (
-                <div className="pb-20">
+                <div className="min-h-full pb-20">
                     {displayedBeans.map((bean, index) => (
                         <BeanListItem
                             key={bean.id}
                             bean={bean}
-                            title={generateBeanTitle(bean)} // 直接生成标题，无需useMemo缓存
-                            isLast={index === displayedBeans.length - 1 && !hasMore}
+                            title={generateBeanTitle(bean)}
+                            isLast={index === displayedBeans.length - 1}
                             onEdit={onEdit}
                             onDelete={onDelete}
                             onShare={onShare}
                             onRemainingClick={handleRemainingClick}
+                            searchQuery={isSearching ? searchQuery : ''}
                         />
                     ))}
                     
