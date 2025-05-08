@@ -91,40 +91,36 @@ export const calculateStats = (beans: ExtendedCoffeeBean[], showEmptyBeans: bool
     // 根据产地统计
     const originCount: Record<string, number> = {}
     filteredBeans.forEach(bean => {
-        // 先处理单品豆的产地
-        if (bean.origin) {
-            const origin = bean.origin
-            originCount[origin] = (originCount[origin] || 0) + 1
-        }
-        
-        // 然后处理拼配豆的成分产地
-        if (bean.blendComponents && Array.isArray(bean.blendComponents)) {
+        // 只处理 blendComponents 中的产地信息
+        if (bean.blendComponents && Array.isArray(bean.blendComponents) && bean.blendComponents.length > 0) {
             bean.blendComponents.forEach(comp => {
                 if (comp.origin) {
                     const origin = comp.origin
                     originCount[origin] = (originCount[origin] || 0) + 1
                 }
             })
+        } else {
+            // 如果没有 blendComponents 或者为空，归为"未知"
+            const origin = '未知'
+            originCount[origin] = (originCount[origin] || 0) + 1
         }
     })
     
     // 根据处理法统计
     const processCount: Record<string, number> = {}
     filteredBeans.forEach(bean => {
-        // 先处理单品豆的处理法
-        if (bean.process) {
-            const process = bean.process
-            processCount[process] = (processCount[process] || 0) + 1
-        }
-        
-        // 然后处理拼配豆的成分处理法
-        if (bean.blendComponents && Array.isArray(bean.blendComponents)) {
+        // 只处理 blendComponents 中的处理法信息
+        if (bean.blendComponents && Array.isArray(bean.blendComponents) && bean.blendComponents.length > 0) {
             bean.blendComponents.forEach(comp => {
                 if (comp.process) {
                     const process = comp.process
                     processCount[process] = (processCount[process] || 0) + 1
                 }
             })
+        } else {
+            // 如果没有 blendComponents 或者为空，归为"未知"
+            const process = '未知'
+            processCount[process] = (processCount[process] || 0) + 1
         }
     })
     
