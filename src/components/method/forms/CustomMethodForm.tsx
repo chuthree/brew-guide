@@ -401,7 +401,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
             case 'center':
                 return '中心注水'
             case 'ice':
-                return '冰块注水'
+                return '添加冰块'
             case 'other':
                 return ''
             default:
@@ -783,7 +783,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                 !stage.label ||
                 stage.label === '绕圈注水' ||
                 stage.label === '中心注水' ||
-                stage.label === '冰块注水' ||
+                stage.label === '添加冰块' ||
                 stage.label === '自定义注水' ||
                 stage.label === '注水'
             ) {
@@ -1172,7 +1172,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                                                                             </option>
                                                                         ))
                                                                     }
-                                                                    {/* 如果没有中心注水/绕圈注水/冰块注水的系统预设，添加它们 */}
+                                                                    {/* 如果没有中心注水/绕圈注水/添加冰块的系统预设，添加它们 */}
                                                                     {!customEquipment.customPourAnimations.some(a => a.pourType === 'center') && 
                                                                         <option value="center">中心注水</option>
                                                                     }
@@ -1180,7 +1180,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                                                                         <option value="circle">绕圈注水</option>
                                                                     }
                                                                     {!customEquipment.customPourAnimations.some(a => a.pourType === 'ice') && 
-                                                                        <option value="ice">冰块注水</option>
+                                                                        <option value="ice">添加冰块</option>
                                                                     }
                                                                     <option value="other">其他方式</option>
                                                                 </>
@@ -1205,7 +1205,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                                                                 <>
                                                                     <option value="center">中心注水</option>
                                                                     <option value="circle">绕圈注水</option>
-                                                                    <option value="ice">冰块注水</option>
+                                                                    <option value="ice">添加冰块</option>
                                                                     <option value="other">其他方式</option>
                                                                 </>
                                                             )}

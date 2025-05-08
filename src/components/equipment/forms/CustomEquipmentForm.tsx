@@ -87,7 +87,7 @@ const DEFAULT_POUR_TYPES = [
     },
     {
         id: 'system-ice',
-        name: '冰块注水',
+        name: '添加冰块',
         pourType: 'ice' as const,
         description: '适用于冰滴和冰手冲咖啡',
         isSystemDefault: true,
