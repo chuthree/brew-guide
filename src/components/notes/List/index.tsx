@@ -253,6 +253,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onClose: _onClo
                             grindSize: updatedData.params?.grindSize || note.params.grindSize,
                             temp: updatedData.params?.temp || note.params.temp
                         },
+                        image: typeof updatedData.image === 'string' ? updatedData.image : note.image,
                         rating: updatedData.rating !== undefined ? updatedData.rating : note.rating,
                         taste: updatedData.taste || note.taste,
                         notes: updatedData.notes || note.notes,
@@ -303,6 +304,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onClose: _onClo
                 name: '', // 提供默认值
                 roastLevel: ''
             },
+            image: note.image,
             rating: note.rating,
             taste: note.taste,
             notes: note.notes,

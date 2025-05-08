@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
+import Image from 'next/image'
 
 import type { BrewingNoteData, CoffeeBean } from '@/types/app'
 import AutoResizeTextarea from '@/components/common/forms/AutoResizeTextarea'
@@ -17,6 +18,7 @@ interface FormData {
         name: string;
         roastLevel: string;
     };
+    image?: string;
     rating: number;
     taste: TasteRatings;
     notes: string;
@@ -32,6 +34,89 @@ interface BrewingNoteFormProps {
     };
     inBrewPage?: boolean; // 添加属性，标识是否在冲煮页面中
     showSaveButton?: boolean; // 是否显示保存按钮
+}
+
+// 二次压缩函数：将base64图片再次压缩
+function compressBase64(base64: string, quality = 0.7, maxWidth = 800): Promise<string> {
+  return new Promise((resolve, reject) => {
+    try {
+      console.log('compressBase64开始, quality:', quality, 'maxWidth:', maxWidth);
+      
+      const img = document.createElement('img');
+      
+      // 添加错误处理
+      img.onerror = () => {
+        console.error('图片加载失败');
+        reject(new Error('图片加载失败'));
+      };
+      
+      // 设置图片加载超时
+      const imgLoadTimeout = setTimeout(() => {
+        console.warn('图片加载超时');
+        reject(new Error('图片加载超时'));
+      }, 10000);
+      
+      img.onload = () => {
+        clearTimeout(imgLoadTimeout);
+        console.log('图片加载成功, 原始尺寸:', img.width, 'x', img.height);
+        
+        try {
+          let width = img.width;
+          let height = img.height;
+
+          // 缩放尺寸
+          if (width > maxWidth) {
+            height = height * (maxWidth / width);
+            width = maxWidth;
+          }
+          
+          console.log('缩放后尺寸:', width, 'x', height);
+
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            console.error('无法获取canvas上下文');
+            throw new Error('无法获取canvas上下文');
+          }
+          
+          // 绘制图片到Canvas
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // 转换成新的Base64，使用较低的质量以确保在移动设备上也能运行良好
+          try {
+            const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+            console.log('压缩成功, 原始base64长度:', base64.length, '压缩后长度:', compressedBase64.length);
+            resolve(compressedBase64);
+          } catch (toDataURLError) {
+            console.error('toDataURL失败:', toDataURLError);
+            reject(toDataURLError);
+          }
+        } catch (canvasError) {
+          console.error('Canvas处理失败:', canvasError);
+          reject(canvasError);
+        }
+      };
+      
+      // 设置图片源并开始加载
+      console.log('设置图片源...');
+      img.src = base64;
+      
+      // 对于已经缓存的图片，onload可能不会触发，所以检查complete属性
+      if (img.complete) {
+        console.log('图片已缓存，立即处理');
+        clearTimeout(imgLoadTimeout);
+        if (img.onload) {
+          const event = new Event('load');
+          img.onload(event);
+        }
+      }
+    } catch (error) {
+      console.error('compressBase64整体错误:', error);
+      reject(error);
+    }
+  });
 }
 
 const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
@@ -56,15 +141,19 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
 
     const [formData, setFormData] = useState<FormData>({
         coffeeBeanInfo: initialCoffeeBeanInfo,
+        image: '', // 初始化为空字符串
         rating: initialData?.rating || 3,
         taste: {
             acidity: initialData?.taste?.acidity || 0,
             sweetness: initialData?.taste?.sweetness || 0,
             bitterness: initialData?.taste?.bitterness || 0,
-            body: initialData?.taste?.body || 0,
+            body: initialData?.taste?.body || 0
         },
-        notes: initialData?.notes || '',
+        notes: initialData?.notes || ''
     });
+    
+    // 添加图片上传状态
+    const [isUploading, setIsUploading] = useState(false);
 
     // 添加方案参数状态
     const [methodParams, setMethodParams] = useState({
@@ -138,7 +227,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                 // 如果已经是完整格式，直接返回
                 if (roastLevel.endsWith('烘焙')) return roastLevel;
                 
-                // 否则添加"烘焙"后缀
+                // 否则添加\"烘焙\"后缀
                 if (roastLevel === '极浅') return '极浅烘焙';
                 if (roastLevel === '浅度') return '浅度烘焙';
                 if (roastLevel === '中浅') return '中浅烘焙';
@@ -148,56 +237,46 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                 
                 // 尝试匹配部分字符串
                 if (roastLevel.includes('极浅')) return '极浅烘焙';
-                if (roastLevel.includes('浅')) return '浅度烘焙';
+                if (roastLevel.includes('浅度')) return '浅度烘焙';
                 if (roastLevel.includes('中浅')) return '中浅烘焙';
+                if (roastLevel.includes('中度')) return '中度烘焙';
                 if (roastLevel.includes('中深')) return '中深烘焙';
-                if (roastLevel.includes('深')) return '深度烘焙';
-                if (roastLevel.includes('中')) return '中度烘焙';
+                if (roastLevel.includes('深度')) return '深度烘焙';
                 
-                // 默认返回中度烘焙
                 return '中度烘焙';
             };
             
-            // 重新处理咖啡豆数据
-            const coffeeBeanInfo = initialData.coffeeBean
-                ? {
-                    name: initialData.coffeeBean.name || '',
-                    roastLevel: normalizeRoastLevel(initialData.coffeeBean.roastLevel),
-                }
-                : {
-                    name: initialData.coffeeBeanInfo?.name || '',
-                    roastLevel: normalizeRoastLevel(initialData.coffeeBeanInfo?.roastLevel),
-                };
-
+            // 获取初始咖啡豆信息
+            const coffeeBeanInfo = initialData.coffeeBeanInfo || {
+                name: '',
+                roastLevel: '中度烘焙'
+            };
+            
+            // 标准化咖啡豆的烘焙度
+            if (coffeeBeanInfo.roastLevel) {
+                coffeeBeanInfo.roastLevel = normalizeRoastLevel(coffeeBeanInfo.roastLevel);
+            }
+            
+            // 更新表单数据
             setFormData({
                 coffeeBeanInfo: coffeeBeanInfo,
+                image: typeof initialData.image === 'string' ? initialData.image : '', // 修复类型错误
                 rating: initialData.rating || 3,
                 taste: {
                     acidity: initialData.taste?.acidity || 0,
                     sweetness: initialData.taste?.sweetness || 0,
                     bitterness: initialData.taste?.bitterness || 0,
-                    body: initialData.taste?.body || 0,
+                    body: initialData.taste?.body || 0
                 },
-                notes: initialData.notes || '',
-            })
-
-            // 更新方案参数
+                notes: initialData.notes || ''
+            });
+            
+            // 如果有方法参数，则设置
             if (initialData.params) {
-                setMethodParams({
-                    coffee: initialData.params.coffee || '15g',
-                    water: initialData.params.water || '225g',
-                    ratio: initialData.params.ratio || '1:15',
-                    grindSize: initialData.params.grindSize || '中细',
-                    temp: initialData.params.temp || '92°C',
-                });
-            }
-
-            // Show flavor ratings section if any rating is greater than 0
-            if (initialData.taste && Object.values(initialData.taste).some(value => value > 0)) {
-                setShowFlavorRatings(true);
+                setMethodParams(initialData.params);
             }
         }
-    }, [initialData])
+    }, [initialData]);
 
     const [currentValue, setCurrentValue] = useState<number | null>(null)
 
@@ -270,6 +349,156 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     // Inside the component, add a new state for showing/hiding flavor ratings
     const [showFlavorRatings, setShowFlavorRatings] = useState(false);
 
+    // 处理图片上传
+    const handleImageUpload = async (file: File) => {
+        try {
+            console.log('开始处理图片上传:', file.name, file.type, file.size);
+            
+            // 检查文件类型
+            if (!file.type.startsWith('image/')) {
+                console.error('文件类型不是图片:', file.type);
+                return;
+            }
+            
+            // 直接读取文件为base64
+            const reader = new FileReader();
+            
+            // 设置超时处理，防止移动设备上FileReader挂起
+            const readerTimeout = setTimeout(() => {
+                console.warn('FileReader读取超时，可能是移动设备兼容性问题');
+                // 尝试使用URL.createObjectURL作为备选方案
+                try {
+                    const objectUrl = URL.createObjectURL(file);
+                    setFormData(prev => ({
+                        ...prev,
+                        image: objectUrl
+                    }));
+                    // 清理URL对象
+                    setTimeout(() => URL.revokeObjectURL(objectUrl), 30000);
+                } catch (urlError) {
+                    console.error('备选方案也失败了:', urlError);
+                }
+            }, 5000);
+            
+            reader.onloadend = async () => {
+                clearTimeout(readerTimeout);
+                try {
+                    console.log('FileReader加载完成');
+                    const originalBase64 = reader.result as string;
+                    
+                    if (!originalBase64 || typeof originalBase64 !== 'string') {
+                        console.error('FileReader读取结果无效:', originalBase64);
+                        return;
+                    }
+                    
+                    console.log('读取到base64数据，长度:', originalBase64.length);
+                    
+                    try {
+                        // 使用canvas方法进行压缩
+                        console.log('开始压缩图片...');
+                        const compressedBase64 = await compressBase64(originalBase64, 0.5, 800);
+                        console.log('图片压缩完成，新base64长度:', compressedBase64.length);
+                        
+                        // 更新状态
+                        setFormData(prev => ({
+                            ...prev,
+                            image: compressedBase64
+                        }));
+                    } catch (compressError) {
+                        console.error('图片压缩失败:', compressError);
+                        // 如果压缩失败，使用原始图片
+                        console.log('使用原始图片作为备选');
+                        setFormData(prev => ({
+                            ...prev,
+                            image: originalBase64
+                        }));
+                    }
+                } catch (error) {
+                    console.error('onloadend回调中处理失败:', error);
+                    // 如果处理失败，尝试使用URL.createObjectURL
+                    try {
+                        const objectUrl = URL.createObjectURL(file);
+                        setFormData(prev => ({
+                            ...prev,
+                            image: objectUrl
+                        }));
+                        // 清理URL对象
+                        setTimeout(() => URL.revokeObjectURL(objectUrl), 30000);
+                    } catch (urlError) {
+                        console.error('URL.createObjectURL也失败了:', urlError);
+                    } finally {
+                        setIsUploading(false);
+                    }
+                }
+            };
+            
+            reader.onerror = (error) => {
+                clearTimeout(readerTimeout);
+                console.error('FileReader读取出错:', error);
+                // 如果读取出错，尝试使用URL.createObjectURL
+                try {
+                    const objectUrl = URL.createObjectURL(file);
+                    setFormData(prev => ({
+                        ...prev,
+                        image: objectUrl
+                    }));
+                    // 清理URL对象
+                    setTimeout(() => URL.revokeObjectURL(objectUrl), 30000);
+                } catch (urlError) {
+                    console.error('URL.createObjectURL也失败了:', urlError);
+                } finally {
+                    setIsUploading(false);
+                }
+            };
+            
+            console.log('开始调用readAsDataURL...');
+            reader.readAsDataURL(file);
+        } catch (error) {
+            console.error('图片处理整体失败:', error);
+            setIsUploading(false);
+        }
+    };
+    
+    // 处理图片选择逻辑 (相册或拍照)
+    const handleImageSelect = (source: 'camera' | 'gallery') => {
+        try {
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = 'image/*';
+            
+            // 根据来源设置不同的capture属性
+            if (source === 'camera') {
+                fileInput.setAttribute('capture', 'environment');
+            }
+            
+            fileInput.onchange = (e) => {
+                const input = e.target as HTMLInputElement;
+                if (!input.files || input.files.length === 0) return;
+                
+                const file = input.files[0];
+                if (file.type.startsWith('image/')) {
+                    // 设置上传状态
+                    setIsUploading(true);
+                    
+                    // 先预览一下图片，以便用户知道已经选择了图片
+                    const tempUrl = URL.createObjectURL(file);
+                    // 临时设置图片预览
+                    setFormData(prev => ({
+                        ...prev,
+                        image: tempUrl
+                    }));
+                    // 然后正常处理添加
+                    handleImageUpload(file);
+                    // 释放URL对象
+                    setTimeout(() => URL.revokeObjectURL(tempUrl), 5000);
+                }
+            };
+            fileInput.click();
+        } catch (error) {
+            console.error('打开相机/相册失败:', error);
+        }
+    };
+
     // 保存笔记的处理函数
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
@@ -339,6 +568,96 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
 
             {/* Form content */}
             <div className="flex-1 space-y-6 pb-6">
+                {/* 笔记图片 */}
+                <div className="space-y-2 w-full">
+                    <label className="block text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
+                        笔记图片
+                    </label>
+                    <div className="flex items-center justify-center relative">
+                        <div className="w-32 h-32 rounded-lg border-2 border-dashed border-neutral-300 dark:border-neutral-700 flex flex-col items-center justify-center overflow-hidden relative">
+                            {formData.image ? (
+                                <div className="relative w-full h-full">
+                                    <Image
+                                        src={formData.image}
+                                        alt="笔记图片"
+                                        className="object-contain"
+                                        fill
+                                        sizes="(max-width: 768px) 100vw, 300px"
+                                    />
+                                    <div className="absolute inset-0 bg-black bg-opacity-30 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
+                                        <span className="text-white text-xs font-medium">点击预览</span>
+                                    </div>
+                                    {/* 操作按钮组 */}
+                                    <div className="absolute top-1 right-1 flex space-x-1">
+                                        {/* 删除按钮 */}
+                                        <button
+                                            type="button"
+                                            className="w-6 h-6 bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-800 rounded-full flex items-center justify-center shadow-md hover:bg-red-500 dark:hover:bg-red-500 dark:hover:text-white transition-colors z-10"
+                                            onClick={() => setFormData(prev => ({...prev, image: ''}))}
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-between h-full w-full">
+                                    <div className="flex-1 flex flex-col items-center justify-center">
+                                        {isUploading ? (
+                                            <div className="flex flex-col items-center justify-center">
+                                                <svg className="animate-spin h-5 w-5 text-neutral-500 dark:text-neutral-400 mb-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                </svg>
+                                                <span className="text-xs text-neutral-500 dark:text-neutral-400">处理中...</span>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-neutral-400 dark:text-neutral-600 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                </svg>
+                                                <span className="text-xs text-neutral-500 dark:text-neutral-400">选择图片</span>
+                                            </>
+                                        )}
+                                    </div>
+                                    
+                                    {/* 图片上传按钮组 */}
+                                    <div className="flex w-full mt-auto">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleImageSelect('camera')}
+                                            disabled={isUploading}
+                                            className="flex-1 py-1 text-xs text-neutral-600 dark:text-neutral-400 border-t-2 border-r-2 border-dashed border-neutral-300 dark:border-neutral-700"
+                                        >
+                                            <span className="flex items-center justify-center">
+                                                <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                </svg>
+                                                拍照
+                                            </span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleImageSelect('gallery')}
+                                            disabled={isUploading}
+                                            className="flex-1 py-1 text-xs text-neutral-600 dark:text-neutral-400 border-t-2 border-dashed border-neutral-300 dark:border-neutral-700"
+                                        >
+                                            <span className="flex items-center justify-center">
+                                                <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                </svg>
+                                                相册
+                                            </span>
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
                 {/* 咖啡豆信息 */}
                 <div className="space-y-4">
                     <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">

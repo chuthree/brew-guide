@@ -78,6 +78,7 @@ export interface BrewingNote {
 		roastLevel: string;
 		roastDate?: string;
 	};
+	image?: string;        // 添加可选的图片字段
 	rating: number;
 	taste: {
 		acidity: number;
