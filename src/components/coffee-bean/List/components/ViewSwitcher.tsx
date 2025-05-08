@@ -290,7 +290,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                 <div className="relative">
                     <div className="border-b border-neutral-200 dark:border-neutral-800 px-6 relative">
                         {!isSearching ? (
-                            <div className="flex overflow-x-auto no-scrollbar pr-28">
+                            <div className="flex overflow-x-auto no-scrollbar pr-28 h-[24px]">
                                 {/* 豆子类型筛选按钮 */}
                                 
                                 <button

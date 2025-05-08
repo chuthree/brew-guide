@@ -36,6 +36,10 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onClose: _onClo
     const [selectedNotes, setSelectedNotes] = useState<string[]>([])
     const [isSaving, setIsSaving] = useState(false)
     
+    // 搜索相关状态
+    const [isSearching, setIsSearching] = useState(false)
+    const [searchQuery, setSearchQuery] = useState('')
+    
     // 预览容器引用
     const notesContainerRef = useRef<HTMLDivElement>(null)
     
@@ -397,6 +401,28 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onClose: _onClo
         }
     };
     
+    // 处理搜索按钮点击
+    const handleSearchClick = () => {
+        setIsSearching(!isSearching);
+        if (isSearching) {
+            // 清空搜索查询
+            setSearchQuery('');
+        }
+    };
+    
+    // 处理搜索输入变化
+    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setSearchQuery(e.target.value);
+    };
+    
+    // 处理搜索框键盘事件
+    const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Escape') {
+            setIsSearching(false);
+            setSearchQuery('');
+        }
+    };
+    
     if (!isOpen) return null;
     
     return (
@@ -435,6 +461,11 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onClose: _onClo
                             onFilterModeChange={handleFilterModeChange}
                             onEquipmentClick={handleEquipmentClick}
                             onBeanClick={handleBeanClick}
+                            isSearching={isSearching}
+                            searchQuery={searchQuery}
+                            onSearchClick={handleSearchClick}
+                            onSearchChange={handleSearchChange}
+                            onSearchKeyDown={handleSearchKeyDown}
                         />
                     </div>
 
@@ -450,6 +481,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onClose: _onClo
                             isShareMode={isShareMode}
                             selectedNotes={selectedNotes}
                             onToggleSelect={handleToggleSelect}
+                            searchQuery={searchQuery}
+                            isSearching={isSearching}
                         />
                     </div>
 

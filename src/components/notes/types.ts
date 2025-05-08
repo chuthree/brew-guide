@@ -62,6 +62,11 @@ export interface FilterTabsProps {
     onFilterModeChange: (mode: 'equipment' | 'bean') => void
     onEquipmentClick: (equipment: string | null) => void
     onBeanClick: (bean: string | null) => void
+    isSearching?: boolean
+    searchQuery?: string
+    onSearchClick?: () => void
+    onSearchChange?: (e: React.ChangeEvent<HTMLInputElement>) => void
+    onSearchKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void
 }
 
 // 添加笔记按钮属性
