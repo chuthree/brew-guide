@@ -524,6 +524,22 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onClose: _onClo
         return matchingNotes.map(item => item.note);
     }, [isSearching, searchQuery, globalCache.filteredNotes]);
     
+    // 计算当前筛选或搜索结果的消耗量
+    const currentConsumption = useMemo(() => {
+        // 搜索状态下，计算搜索结果的消耗量
+        if (isSearching && searchQuery.trim()) {
+            return calculateTotalCoffeeConsumption(searchFilteredNotes);
+        }
+        
+        // 筛选状态下，使用已筛选的笔记计算消耗量
+        if (selectedEquipment || selectedBean) {
+            return calculateTotalCoffeeConsumption(globalCache.filteredNotes);
+        }
+        
+        // 无筛选时，返回所有笔记的总消耗量
+        return globalCache.totalConsumption || totalCoffeeConsumption.current;
+    }, [isSearching, searchQuery, searchFilteredNotes, selectedEquipment, selectedBean, globalCache.filteredNotes, globalCache.totalConsumption, totalCoffeeConsumption]);
+    
     if (!isOpen) return null;
     
     return (
@@ -543,12 +559,10 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onClose: _onClo
                         <div className="flex justify-between items-center mb-6 px-6">
                             <div className="text-xs tracking-wide text-neutral-800 dark:text-neutral-100">
                                 {(isSearching && searchQuery.trim())
-                                    ? `${searchFilteredNotes.length}/${globalCache.notes.length} 条记录，已消耗 ${formatConsumption(globalCache.totalConsumption || totalCoffeeConsumption.current)}`
-                                    : (selectedEquipment || selectedBean
-                                        ? (globalCache.filteredNotes.length === globalCache.notes.length
-                                            ? `${globalCache.notes.length} 条记录，已消耗 ${formatConsumption(globalCache.totalConsumption || totalCoffeeConsumption.current)}`
-                                            : `${globalCache.filteredNotes.length}/${globalCache.notes.length} 条记录，已消耗 ${formatConsumption(globalCache.totalConsumption || totalCoffeeConsumption.current)}`)
-                                        : `${globalCache.notes.length} 条记录，已消耗 ${formatConsumption(globalCache.totalConsumption || totalCoffeeConsumption.current)}`)}
+                                    ? `${searchFilteredNotes.length} 条记录，已消耗 ${formatConsumption(currentConsumption)}`
+                                    : `${selectedEquipment || selectedBean 
+                                        ? globalCache.filteredNotes.length 
+                                        : globalCache.notes.length} 条记录，已消耗 ${formatConsumption(currentConsumption)}`}
                             </div>
                             <SortSelector sortOption={sortOption} onSortChange={handleSortChange} />
                         </div>

@@ -124,11 +124,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                 <div className="flex items-center space-x-3">
                     <div className="text-xs tracking-wide text-neutral-800 dark:text-neutral-100 break-words">
                         {viewMode === VIEW_OPTIONS.INVENTORY
-                            ? `${totalBeans 
-                                ? (beansCount === totalBeans 
-                                   ? `${beansCount}` 
-                                   : `${beansCount}/${totalBeans}`)
-                                : beansCount} 款咖啡豆${totalWeight ? `，共 ${totalWeight}` : ''}`
+                            ? `${beansCount} 款咖啡豆${totalWeight ? `，共 ${totalWeight}` : ''}`
                             : viewMode === VIEW_OPTIONS.BLOGGER
                                 ? `${bloggerBeansCount || 0} 款 (${bloggerYear}) 咖啡豆`
                                 : viewMode === VIEW_OPTIONS.STATS
