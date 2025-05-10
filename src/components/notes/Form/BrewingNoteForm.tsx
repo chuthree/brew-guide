@@ -40,6 +40,16 @@ interface BrewingNoteFormProps {
 function compressBase64(base64: string, quality = 0.7, maxWidth = 800): Promise<string> {
   return new Promise((resolve, reject) => {
     try {
+      // 计算base64字符串大小（近似值）
+      // base64字符串长度 * 0.75 = 字节数，因为base64编码会使文件大小增加约33%
+      const approximateSizeInBytes = base64.length * 0.75;
+      
+      // 如果图片小于200kb，直接返回原图，不进行压缩
+      if (approximateSizeInBytes <= 200 * 1024) {
+        resolve(base64);
+        return;
+      }
+      
       const img = document.createElement('img');
       
       img.onerror = () => {
@@ -595,6 +605,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                                 </svg>
                                                 <span className="text-xs text-neutral-500 dark:text-neutral-400">选择图片</span>
+                                                <span className="text-[9px] text-neutral-400 dark:text-neutral-500 mt-1">200kb以上将自动压缩</span>
                                             </>
                                         )}
                                     </div>

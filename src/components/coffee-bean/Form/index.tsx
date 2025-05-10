@@ -16,6 +16,17 @@ function compressBase64(base64: string, quality = 0.7, maxWidth = 800): Promise<
     try {
       console.log('compressBase64开始, quality:', quality, 'maxWidth:', maxWidth);
       
+      // 计算base64字符串大小（近似值）
+      // base64字符串长度 * 0.75 = 字节数，因为base64编码会使文件大小增加约33%
+      const approximateSizeInBytes = base64.length * 0.75;
+      
+      // 如果图片小于200kb，直接返回原图，不进行压缩
+      if (approximateSizeInBytes <= 200 * 1024) {
+        console.log('图片小于200kb，无需压缩');
+        resolve(base64);
+        return;
+      }
+      
       const img = new Image();
       
       // 添加错误处理
