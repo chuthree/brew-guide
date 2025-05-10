@@ -2,7 +2,9 @@
 
 import React, { ReactNode, useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, ArrowRight, Search, X } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Search, X, Shuffle } from 'lucide-react'
+import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager'
+import { showToast } from "@/components/common/feedback/GlobalToast"
 
 export interface Step {
     id: string
@@ -146,6 +148,49 @@ const SteppedFormModal: React.FC<SteppedFormModalProps> = ({
         );
     }, [currentStepContent?.content, isCoffeeBeanStep, searchQuery]);
 
+    // 随机选择咖啡豆
+    const handleRandomBean = async () => {
+        try {
+            const allBeans = await CoffeeBeanManager.getAllBeans();
+            // 过滤掉已经用完的豆子
+            const availableBeans = allBeans.filter(bean => 
+                !(bean.remaining === "0" || bean.remaining === "0g") || !bean.capacity
+            );
+            
+            if (availableBeans.length > 0) {
+                const randomIndex = Math.floor(Math.random() * availableBeans.length);
+                const randomBean = availableBeans[randomIndex];
+                
+                // 找到当前步骤内容中的onSelect函数并调用
+                const currentElement = currentStepContent.content as React.ReactElement;
+                if (currentElement.props.onSelect) {
+                    currentElement.props.onSelect(randomBean.id, randomBean);
+                    showToast({ 
+                        type: 'success', 
+                        title: `已随机选择: ${randomBean.name}`, 
+                        duration: 2000 
+                    });
+                    
+                    // 自动进入下一步
+                    handleNext();
+                }
+            } else {
+                showToast({ 
+                    type: 'info', 
+                    title: '没有可用的咖啡豆', 
+                    duration: 2000 
+                });
+            }
+        } catch (error) {
+            console.error('随机选择咖啡豆失败:', error);
+            showToast({ 
+                type: 'error', 
+                title: '随机选择失败', 
+                duration: 2000 
+            });
+        }
+    };
+
     // 渲染下一步按钮
     const renderNextButton = () => {
         const isLastStep = currentStepIndex === steps.length - 1;
@@ -228,6 +273,24 @@ const SteppedFormModal: React.FC<SteppedFormModalProps> = ({
                                     )}
                                 </div>
                             )}
+                        </motion.button>
+                    )}
+                    
+                    {/* 随机选择按钮 - 仅在咖啡豆步骤且未处于搜索状态时显示 */}
+                    {isValid && isCoffeeBeanStep && !isSearching && (
+                        <motion.button
+                            key="random-button"
+                            layout
+                            type="button"
+                            onClick={handleRandomBean}
+                            transition={springTransition}
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            className={`${buttonBaseClass} p-4 flex items-center justify-center`}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                        >
+                            <Shuffle className="w-4 h-4" strokeWidth="3" />
                         </motion.button>
                     )}
                 </div>

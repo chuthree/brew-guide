@@ -15,7 +15,7 @@ import BottomActionBar from '@/components/layout/BottomActionBar';
 import CoffeeBeanList from '@/components/coffee-bean/List/ListView';
 import MethodShareModal from '@/components/method/share/MethodShareModal';
 import { saveCustomMethod } from '@/lib/managers/customMethods';
-import { Search, X } from 'lucide-react';
+import { Search, X, Shuffle } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 
 // 扩展Step类型，增加固定方案所需的字段
@@ -361,6 +361,44 @@ const TabContent: React.FC<TabContentProps> = ({
     // 添加通用方案折叠状态
     const [isCommonMethodsCollapsed, setIsCommonMethodsCollapsed] = useState(false);
 
+    // 随机选择咖啡豆
+    const handleRandomBean = async () => {
+        await triggerHapticFeedback();
+        try {
+            const allBeans = await CoffeeBeanManager.getAllBeans();
+            // 过滤掉已经用完的豆子
+            const availableBeans = allBeans.filter(bean => 
+                !(bean.remaining === "0" || bean.remaining === "0g") || !bean.capacity
+            );
+            
+            if (availableBeans.length > 0) {
+                const randomIndex = Math.floor(Math.random() * availableBeans.length);
+                const randomBean = availableBeans[randomIndex];
+                if (onCoffeeBeanSelect) {
+                    onCoffeeBeanSelect(randomBean.id, randomBean);
+                    showToast({ 
+                        type: 'success', 
+                        title: `已随机选择: ${randomBean.name}`, 
+                        duration: 2000 
+                    });
+                }
+            } else {
+                showToast({ 
+                    type: 'info', 
+                    title: '没有可用的咖啡豆', 
+                    duration: 2000 
+                });
+            }
+        } catch (error) {
+            console.error('随机选择咖啡豆失败:', error);
+            showToast({ 
+                type: 'error', 
+                title: '随机选择失败', 
+                duration: 2000 
+            });
+        }
+    };
+
     // 如果不是在冲煮主Tab，不显示内容
     if (activeMainTab !== '冲煮') return null;
 
@@ -374,6 +412,20 @@ const TabContent: React.FC<TabContentProps> = ({
                     }}
                     searchQuery={searchQuery}
                 />
+                
+                {/* 随机选豆按钮 - 单独放置在搜索工具栏上方 */}
+                <div className="fixed bottom-[90px] right-6 z-10">
+                    <motion.button
+                        type="button"
+                        onClick={handleRandomBean}
+                        transition={springTransition}
+                        className={`${buttonBaseClass} p-4 flex items-center justify-center`}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                    >
+                        <Shuffle className="w-4 h-4" strokeWidth="3" />
+                    </motion.button>
+                </div>
                 
                 {/* 底部搜索工具栏 */}
                 <div className="fixed bottom-0 left-0 right-0 p-6 flex justify-end items-center z-10 max-w-[500px] mx-auto pb-safe-bottom">

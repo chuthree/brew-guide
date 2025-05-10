@@ -145,7 +145,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
                                 
                                 {/* 方案信息 - 移动到图片右侧标题下方 */}
                                 {note.params && (
-                                    <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400 space-x-1 leading-relaxed">
+                                    <div className="text-[10px] mt-0.5 tracking-widest text-neutral-600 dark:text-neutral-400 space-x-1 leading-relaxed">
                                         {beanName && (
                                             <>
                                                 <span>{equipmentName}</span>
