@@ -137,7 +137,10 @@ export const useBeanOperations = () => {
             // 确保是有效数字
             const numValue = parseFloat(valueToSave);
             if (isNaN(numValue) || numValue < 0) {
-                valueToSave = '0';
+                valueToSave = '0.0';
+            } else {
+                // 格式化为保留一位小数的字符串
+                valueToSave = numValue.toFixed(1);
             }
 
             // 优化UI更新：先更新全局缓存
@@ -180,10 +183,13 @@ export const useBeanOperations = () => {
             // 是否减到0（剩余量不足）
             const reducedToZero = currentValueNum < decrementAmount;
             
+            // 格式化为保留一位小数的字符串
+            const formattedValue = newValue.toFixed(1);
+            
             // 更新全局缓存
             globalCache.beans = globalCache.beans.map(b => {
                 if (b.id === beanId) {
-                    return { ...b, remaining: newValue.toString() };
+                    return { ...b, remaining: formattedValue };
                 }
                 return b;
             });
@@ -192,14 +198,14 @@ export const useBeanOperations = () => {
             setForceRefreshKey(prev => prev + 1);
             
             // 异步更新数据库
-            await CoffeeBeanManager.updateBean(beanId, { remaining: newValue.toString() });
+            await CoffeeBeanManager.updateBean(beanId, { remaining: formattedValue });
             
             // 触发自定义事件以通知其他组件更新
             window.dispatchEvent(new CustomEvent('coffeeBeansUpdated'));
             
             return { 
                 success: true, 
-                value: newValue.toString(), 
+                value: formattedValue, 
                 reducedToZero
             };
         } catch (error) {

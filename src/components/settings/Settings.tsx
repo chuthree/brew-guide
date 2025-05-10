@@ -251,11 +251,14 @@ const Settings: React.FC<SettingsProps> = ({
 
     // 添加预设值函数
     const addDecrementPreset = () => {
-        const value = parseInt(decrementValue)
+        const value = parseFloat(decrementValue)
         if (!isNaN(value) && value > 0) {
+            // 保留一位小数
+            const formattedValue = parseFloat(value.toFixed(1))
+            
             // 检查是否已经存在该预设值
-            if (!decrementPresets.includes(value)) {
-                const newPresets = [...decrementPresets, value].sort((a, b) => a - b)
+            if (!decrementPresets.includes(formattedValue)) {
+                const newPresets = [...decrementPresets, formattedValue].sort((a, b) => a - b)
                 setDecrementPresets(newPresets)
                 handleChange('decrementPresets', newPresets)
                 setDecrementValue('')
@@ -772,9 +775,26 @@ const Settings: React.FC<SettingsProps> = ({
                         
                         <div className="flex h-9">
                             <input
-                                type="number"
+                                type="tel"
                                 value={decrementValue}
-                                onChange={(e) => setDecrementValue(e.target.value)}
+                                onChange={(e) => {
+                                    // 限制只能输入数字和小数点
+                                    const value = e.target.value.replace(/[^0-9.]/g, '');
+                                    
+                                    // 确保只有一个小数点
+                                    const dotCount = (value.match(/\./g) || []).length;
+                                    let sanitizedValue = dotCount > 1 ? 
+                                        value.substring(0, value.lastIndexOf('.')) : 
+                                        value;
+                                        
+                                    // 限制小数点后只能有一位数字
+                                    const dotIndex = sanitizedValue.indexOf('.');
+                                    if (dotIndex !== -1 && dotIndex < sanitizedValue.length - 2) {
+                                        sanitizedValue = sanitizedValue.substring(0, dotIndex + 2);
+                                    }
+                                    
+                                    setDecrementValue(sanitizedValue);
+                                }}
                                 onKeyDown={(e) => {
                                     if (e.key === 'Enter') {
                                         e.preventDefault()
@@ -786,7 +806,7 @@ const Settings: React.FC<SettingsProps> = ({
                             />
                             <button
                                 onClick={addDecrementPreset}
-                                disabled={!decrementValue || isNaN(parseInt(decrementValue)) || parseInt(decrementValue) <= 0}
+                                disabled={!decrementValue || isNaN(parseFloat(decrementValue)) || parseFloat(decrementValue) <= 0}
                                 className="py-1.5 px-2 bg-neutral-700 dark:bg-neutral-600 text-white rounded-r-lg disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                             >
                                 +

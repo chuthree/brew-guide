@@ -31,14 +31,16 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
 
   // 处理咖啡粉量变化
   const handleCoffeeAmountChange = (value: string, method: Method) => {
-    if (value === '' || !isNaN(Number(value))) {
+    // 允许输入数字和小数点的正则表达式
+    const regex = /^$|^[0-9]*\.?[0-9]*$/;
+    if (regex.test(value)) {
       setCoffeeAmount(value)
       
       // 更新方法参数
       method.params.coffee = `${value}g`
       
       // 计算并更新水量
-      if (value && ratioAmount) {
+      if (value && ratioAmount && value !== '.') {
         const coffeeValue = parseFloat(value)
         const ratioValue = parseFloat(ratioAmount)
         
@@ -58,14 +60,16 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
 
   // 处理水粉比变化
   const handleRatioAmountChange = (value: string, method: Method) => {
-    if (value === '' || !isNaN(Number(value))) {
+    // 允许输入数字和小数点的正则表达式
+    const regex = /^$|^[0-9]*\.?[0-9]*$/;
+    if (regex.test(value)) {
       setRatioAmount(value)
       
       // 更新方法参数
       method.params.ratio = `1:${value}`
       
       // 计算并更新水量
-      if (coffeeAmount && value) {
+      if (coffeeAmount && value && value !== '.') {
         const coffeeValue = parseFloat(coffeeAmount)
         const ratioValue = parseFloat(value)
         
@@ -96,7 +100,9 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
   
   // 处理水温变化
   const handleTempChange = (value: string, method: Method) => {
-    if (value === '' || !isNaN(Number(value))) {
+    // 允许输入数字和小数点的正则表达式
+    const regex = /^$|^[0-9]*\.?[0-9]*$/;
+    if (regex.test(value)) {
       setTempValue(value)
       
       // 更新方法参数

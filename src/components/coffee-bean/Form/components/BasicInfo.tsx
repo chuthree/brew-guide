@@ -225,6 +225,8 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
                         clearable={false}
                         suggestions={[]}
                         inputType="tel"
+                        allowDecimal={true}
+                        maxDecimalPlaces={1}
                     />
                 </div>
 
@@ -241,6 +243,8 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
                         suggestions={[]}
                         inputType="tel"
                         onBlur={validateRemaining}
+                        allowDecimal={true}
+                        maxDecimalPlaces={1}
                     />
                 </div>
             </div>

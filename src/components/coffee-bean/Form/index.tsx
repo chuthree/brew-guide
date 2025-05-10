@@ -298,9 +298,15 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
             
             // 确保只有一个小数点
             const dotCount = (numericValue.match(/\./g) || []).length;
-            const sanitizedValue = dotCount > 1 ? 
+            let sanitizedValue = dotCount > 1 ? 
                 numericValue.substring(0, numericValue.lastIndexOf('.')) : 
                 numericValue;
+                
+            // 限制小数点后只能有一位数字
+            const dotIndex = sanitizedValue.indexOf('.');
+            if (dotIndex !== -1 && dotIndex < sanitizedValue.length - 2) {
+                sanitizedValue = sanitizedValue.substring(0, dotIndex + 2);
+            }
 
             if (sanitizedValue.trim() !== '') {
                 setBean(prev => ({
@@ -323,9 +329,15 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
             
             // 确保只有一个小数点
             const dotCount = (numericValue.match(/\./g) || []).length;
-            const sanitizedValue = dotCount > 1 ? 
+            let sanitizedValue = dotCount > 1 ? 
                 numericValue.substring(0, numericValue.lastIndexOf('.')) : 
                 numericValue;
+                
+            // 限制小数点后只能有一位数字
+            const dotIndex = sanitizedValue.indexOf('.');
+            if (dotIndex !== -1 && dotIndex < sanitizedValue.length - 2) {
+                sanitizedValue = sanitizedValue.substring(0, dotIndex + 2);
+            }
 
             setEditingRemaining(sanitizedValue);
 

@@ -154,12 +154,12 @@ export const CoffeeBeanManager = {
 	},
 
 	/**
-	 * 格式化数值，当没有小数部分时显示为整数
+	 * 格式化数值，总是保留一位小数
 	 * @param value 数值
 	 * @returns 格式化后的字符串
 	 */
 	formatNumber(value: number): string {
-		return Number.isInteger(value) ? value.toString() : value.toFixed(1);
+		return value.toFixed(1);
 	},
 
 	/**
