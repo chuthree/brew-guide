@@ -40,72 +40,52 @@ interface BrewingNoteFormProps {
 function compressBase64(base64: string, quality = 0.7, maxWidth = 800): Promise<string> {
   return new Promise((resolve, reject) => {
     try {
-      console.log('compressBase64开始, quality:', quality, 'maxWidth:', maxWidth);
-      
       const img = document.createElement('img');
       
-      // 添加错误处理
       img.onerror = () => {
-        console.error('图片加载失败');
         reject(new Error('图片加载失败'));
       };
       
-      // 设置图片加载超时
       const imgLoadTimeout = setTimeout(() => {
-        console.warn('图片加载超时');
         reject(new Error('图片加载超时'));
       }, 10000);
       
       img.onload = () => {
         clearTimeout(imgLoadTimeout);
-        console.log('图片加载成功, 原始尺寸:', img.width, 'x', img.height);
         
         try {
           let width = img.width;
           let height = img.height;
 
-          // 缩放尺寸
           if (width > maxWidth) {
             height = height * (maxWidth / width);
             width = maxWidth;
           }
-          
-          console.log('缩放后尺寸:', width, 'x', height);
 
           const canvas = document.createElement('canvas');
           canvas.width = width;
           canvas.height = height;
           const ctx = canvas.getContext('2d');
           if (!ctx) {
-            console.error('无法获取canvas上下文');
             throw new Error('无法获取canvas上下文');
           }
           
-          // 绘制图片到Canvas
           ctx.drawImage(img, 0, 0, width, height);
 
-          // 转换成新的Base64，使用较低的质量以确保在移动设备上也能运行良好
           try {
             const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
-            console.log('压缩成功, 原始base64长度:', base64.length, '压缩后长度:', compressedBase64.length);
             resolve(compressedBase64);
           } catch (toDataURLError) {
-            console.error('toDataURL失败:', toDataURLError);
             reject(toDataURLError);
           }
         } catch (canvasError) {
-          console.error('Canvas处理失败:', canvasError);
           reject(canvasError);
         }
       };
       
-      // 设置图片源并开始加载
-      console.log('设置图片源...');
       img.src = base64;
       
-      // 对于已经缓存的图片，onload可能不会触发，所以检查complete属性
       if (img.complete) {
-        console.log('图片已缓存，立即处理');
         clearTimeout(imgLoadTimeout);
         if (img.onload) {
           const event = new Event('load');
@@ -113,7 +93,6 @@ function compressBase64(base64: string, quality = 0.7, maxWidth = 800): Promise<
         }
       }
     } catch (error) {
-      console.error('compressBase64整体错误:', error);
       reject(error);
     }
   });
@@ -139,9 +118,40 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
             roastLevel: initialData.coffeeBeanInfo?.roastLevel || '中度烘焙',
         };
 
+    // 标准化烘焙度值，确保与下拉列表选项匹配
+    const normalizeRoastLevel = (roastLevel?: string): string => {
+        if (!roastLevel) return '中度烘焙';
+        
+        // 如果已经是完整格式，直接返回
+        if (roastLevel.endsWith('烘焙')) return roastLevel;
+        
+        // 否则添加\"烘焙\"后缀
+        if (roastLevel === '极浅') return '极浅烘焙';
+        if (roastLevel === '浅度') return '浅度烘焙';
+        if (roastLevel === '中浅') return '中浅烘焙';
+        if (roastLevel === '中度') return '中度烘焙';
+        if (roastLevel === '中深') return '中深烘焙';
+        if (roastLevel === '深度') return '深度烘焙';
+        
+        // 尝试匹配部分字符串
+        if (roastLevel.includes('极浅')) return '极浅烘焙';
+        if (roastLevel.includes('浅度')) return '浅度烘焙';
+        if (roastLevel.includes('中浅')) return '中浅烘焙';
+        if (roastLevel.includes('中度')) return '中度烘焙';
+        if (roastLevel.includes('中深')) return '中深烘焙';
+        if (roastLevel.includes('深度')) return '深度烘焙';
+        
+        return '中度烘焙';
+    };
+
+    // 确保初始咖啡豆信息的烘焙度是标准化的
+    if (initialCoffeeBeanInfo.roastLevel) {
+        initialCoffeeBeanInfo.roastLevel = normalizeRoastLevel(initialCoffeeBeanInfo.roastLevel);
+    }
+
     const [formData, setFormData] = useState<FormData>({
         coffeeBeanInfo: initialCoffeeBeanInfo,
-        image: '', // 初始化为空字符串
+        image: typeof initialData.image === 'string' ? initialData.image : '', // 修复类型错误
         rating: initialData?.rating || 3,
         taste: {
             acidity: initialData?.taste?.acidity || 0,
@@ -217,65 +227,84 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         }
     }, []);
 
+    // 使用useRef保存上一次的initialData，用于比较变化
+    const prevInitialDataRef = useRef<typeof initialData>(initialData);
+    
     // Update form data when initialData changes
     useEffect(() => {
-        if (initialData) {
-            // 标准化烘焙度值，确保与下拉列表选项匹配
-            const normalizeRoastLevel = (roastLevel?: string): string => {
-                if (!roastLevel) return '中度烘焙';
-                
-                // 如果已经是完整格式，直接返回
-                if (roastLevel.endsWith('烘焙')) return roastLevel;
-                
-                // 否则添加\"烘焙\"后缀
-                if (roastLevel === '极浅') return '极浅烘焙';
-                if (roastLevel === '浅度') return '浅度烘焙';
-                if (roastLevel === '中浅') return '中浅烘焙';
-                if (roastLevel === '中度') return '中度烘焙';
-                if (roastLevel === '中深') return '中深烘焙';
-                if (roastLevel === '深度') return '深度烘焙';
-                
-                // 尝试匹配部分字符串
-                if (roastLevel.includes('极浅')) return '极浅烘焙';
-                if (roastLevel.includes('浅度')) return '浅度烘焙';
-                if (roastLevel.includes('中浅')) return '中浅烘焙';
-                if (roastLevel.includes('中度')) return '中度烘焙';
-                if (roastLevel.includes('中深')) return '中深烘焙';
-                if (roastLevel.includes('深度')) return '深度烘焙';
-                
-                return '中度烘焙';
-            };
+        // 检查咖啡豆信息变化
+        const prevCoffeeBean = prevInitialDataRef.current.coffeeBean;
+        const currentCoffeeBean = initialData.coffeeBean;
+        
+        const hasCoffeeBeanChanged = 
+            (prevCoffeeBean?.id !== currentCoffeeBean?.id) || 
+            (prevCoffeeBean?.name !== currentCoffeeBean?.name) ||
+            (!prevCoffeeBean && currentCoffeeBean) ||
+            (prevCoffeeBean && !currentCoffeeBean);
             
-            // 获取初始咖啡豆信息
-            const coffeeBeanInfo = initialData.coffeeBeanInfo || {
-                name: '',
-                roastLevel: '中度烘焙'
-            };
+        const prevCoffeeBeanInfo = prevInitialDataRef.current.coffeeBeanInfo;
+        const currentCoffeeBeanInfo = initialData.coffeeBeanInfo;
+        
+        const hasCoffeeBeanInfoChanged = 
+            (prevCoffeeBeanInfo?.name !== currentCoffeeBeanInfo?.name) ||
+            (prevCoffeeBeanInfo?.roastLevel !== currentCoffeeBeanInfo?.roastLevel) ||
+            (!prevCoffeeBeanInfo && currentCoffeeBeanInfo) ||
+            (prevCoffeeBeanInfo && !currentCoffeeBeanInfo);
             
-            // 标准化咖啡豆的烘焙度
-            if (coffeeBeanInfo.roastLevel) {
-                coffeeBeanInfo.roastLevel = normalizeRoastLevel(coffeeBeanInfo.roastLevel);
-            }
+        // 只有当咖啡豆信息真的变化时，才更新表单数据
+        if (hasCoffeeBeanChanged || hasCoffeeBeanInfoChanged) {
+            let updatedCoffeeBeanInfo = currentCoffeeBean
+                ? {
+                    name: currentCoffeeBean.name || '',
+                    roastLevel: normalizeRoastLevel(currentCoffeeBean.roastLevel || '中度烘焙'),
+                }
+                : currentCoffeeBeanInfo
+                    ? {
+                        name: currentCoffeeBeanInfo.name || '',
+                        roastLevel: normalizeRoastLevel(currentCoffeeBeanInfo.roastLevel || '中度烘焙'),
+                    }
+                    : {
+                        name: '',
+                        roastLevel: '中度烘焙'
+                    };
             
-            // 更新表单数据
-            setFormData({
-                coffeeBeanInfo: coffeeBeanInfo,
-                image: typeof initialData.image === 'string' ? initialData.image : '', // 修复类型错误
-                rating: initialData.rating || 3,
-                taste: {
-                    acidity: initialData.taste?.acidity || 0,
-                    sweetness: initialData.taste?.sweetness || 0,
-                    bitterness: initialData.taste?.bitterness || 0,
-                    body: initialData.taste?.body || 0
-                },
-                notes: initialData.notes || ''
-            });
-            
-            // 如果有方法参数，则设置
-            if (initialData.params) {
-                setMethodParams(initialData.params);
-            }
+            setFormData(prev => ({
+                ...prev,
+                coffeeBeanInfo: updatedCoffeeBeanInfo
+            }));
         }
+        
+        // 检查其他字段变化
+        const hasOtherDataChanged = 
+            (prevInitialDataRef.current.rating !== initialData.rating) ||
+            (prevInitialDataRef.current.notes !== initialData.notes) ||
+            (prevInitialDataRef.current.image !== initialData.image) ||
+            JSON.stringify(prevInitialDataRef.current.taste) !== JSON.stringify(initialData.taste);
+            
+        if (hasOtherDataChanged) {
+            setFormData(prev => ({
+                ...prev,
+                image: typeof initialData.image === 'string' ? initialData.image : prev.image,
+                rating: initialData.rating || prev.rating,
+                taste: {
+                    acidity: initialData.taste?.acidity ?? prev.taste.acidity,
+                    sweetness: initialData.taste?.sweetness ?? prev.taste.sweetness,
+                    bitterness: initialData.taste?.bitterness ?? prev.taste.bitterness,
+                    body: initialData.taste?.body ?? prev.taste.body
+                },
+                notes: initialData.notes || prev.notes
+            }));
+        }
+        
+        // 检查方法参数变化
+        const hasParamsChanged = JSON.stringify(prevInitialDataRef.current.params) !== JSON.stringify(initialData.params);
+        
+        if (hasParamsChanged && initialData.params) {
+            setMethodParams(initialData.params);
+        }
+        
+        // 更新引用
+        prevInitialDataRef.current = initialData;
     }, [initialData]);
 
     const [currentValue, setCurrentValue] = useState<number | null>(null)
@@ -352,109 +381,57 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     // 处理图片上传
     const handleImageUpload = async (file: File) => {
         try {
-            console.log('开始处理图片上传:', file.name, file.type, file.size);
+            if (!file.type.startsWith('image/')) return;
             
-            // 检查文件类型
-            if (!file.type.startsWith('image/')) {
-                console.error('文件类型不是图片:', file.type);
-                return;
-            }
-            
-            // 直接读取文件为base64
             const reader = new FileReader();
             
-            // 设置超时处理，防止移动设备上FileReader挂起
             const readerTimeout = setTimeout(() => {
-                console.warn('FileReader读取超时，可能是移动设备兼容性问题');
-                // 尝试使用URL.createObjectURL作为备选方案
                 try {
                     const objectUrl = URL.createObjectURL(file);
-                    setFormData(prev => ({
-                        ...prev,
-                        image: objectUrl
-                    }));
-                    // 清理URL对象
+                    setFormData(prev => ({...prev, image: objectUrl}));
                     setTimeout(() => URL.revokeObjectURL(objectUrl), 30000);
-                } catch (urlError) {
-                    console.error('备选方案也失败了:', urlError);
+                } catch (error) {
+                    setIsUploading(false);
                 }
             }, 5000);
             
             reader.onloadend = async () => {
                 clearTimeout(readerTimeout);
                 try {
-                    console.log('FileReader加载完成');
                     const originalBase64 = reader.result as string;
                     
-                    if (!originalBase64 || typeof originalBase64 !== 'string') {
-                        console.error('FileReader读取结果无效:', originalBase64);
-                        return;
-                    }
-                    
-                    console.log('读取到base64数据，长度:', originalBase64.length);
+                    if (!originalBase64 || typeof originalBase64 !== 'string') return;
                     
                     try {
-                        // 使用canvas方法进行压缩
-                        console.log('开始压缩图片...');
                         const compressedBase64 = await compressBase64(originalBase64, 0.5, 800);
-                        console.log('图片压缩完成，新base64长度:', compressedBase64.length);
-                        
-                        // 更新状态
-                        setFormData(prev => ({
-                            ...prev,
-                            image: compressedBase64
-                        }));
-                    } catch (compressError) {
-                        console.error('图片压缩失败:', compressError);
-                        // 如果压缩失败，使用原始图片
-                        console.log('使用原始图片作为备选');
-                        setFormData(prev => ({
-                            ...prev,
-                            image: originalBase64
-                        }));
+                        setFormData(prev => ({...prev, image: compressedBase64}));
+                    } catch (error) {
+                        setFormData(prev => ({...prev, image: originalBase64}));
                     }
                 } catch (error) {
-                    console.error('onloadend回调中处理失败:', error);
-                    // 如果处理失败，尝试使用URL.createObjectURL
                     try {
                         const objectUrl = URL.createObjectURL(file);
-                        setFormData(prev => ({
-                            ...prev,
-                            image: objectUrl
-                        }));
-                        // 清理URL对象
+                        setFormData(prev => ({...prev, image: objectUrl}));
                         setTimeout(() => URL.revokeObjectURL(objectUrl), 30000);
-                    } catch (urlError) {
-                        console.error('URL.createObjectURL也失败了:', urlError);
                     } finally {
                         setIsUploading(false);
                     }
                 }
             };
             
-            reader.onerror = (error) => {
+            reader.onerror = () => {
                 clearTimeout(readerTimeout);
-                console.error('FileReader读取出错:', error);
-                // 如果读取出错，尝试使用URL.createObjectURL
                 try {
                     const objectUrl = URL.createObjectURL(file);
-                    setFormData(prev => ({
-                        ...prev,
-                        image: objectUrl
-                    }));
-                    // 清理URL对象
+                    setFormData(prev => ({...prev, image: objectUrl}));
                     setTimeout(() => URL.revokeObjectURL(objectUrl), 30000);
-                } catch (urlError) {
-                    console.error('URL.createObjectURL也失败了:', urlError);
                 } finally {
                     setIsUploading(false);
                 }
             };
             
-            console.log('开始调用readAsDataURL...');
             reader.readAsDataURL(file);
         } catch (error) {
-            console.error('图片处理整体失败:', error);
             setIsUploading(false);
         }
     };
