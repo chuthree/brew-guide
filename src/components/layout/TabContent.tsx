@@ -18,6 +18,12 @@ import { saveCustomMethod } from '@/lib/managers/customMethods';
 import { Search, X, Shuffle } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 
+// 导入随机咖啡豆选择器组件
+const CoffeeBeanRandomPicker = dynamic(() => import('@/components/coffee-bean/RandomPicker/CoffeeBeanRandomPicker'), {
+    ssr: false,
+    loading: () => null
+});
+
 // 扩展Step类型，增加固定方案所需的字段
 interface Step extends BaseStep {
     customParams?: Record<string, string | number | boolean>;
@@ -147,6 +153,10 @@ const TabContent: React.FC<TabContentProps> = ({
     // 添加随机按钮禁用状态
     const [isRandomButtonDisabled, setIsRandomButtonDisabled] = useState(false);
     
+    // 随机选择器状态
+    const [showRandomPicker, setShowRandomPicker] = useState(false);
+    const [allBeans, setAllBeans] = useState<CoffeeBean[]>([]);
+    
     // 触感反馈函数
     const triggerHapticFeedback = useCallback(async () => {
         if (settings?.hapticFeedback) {
@@ -154,6 +164,22 @@ const TabContent: React.FC<TabContentProps> = ({
             hapticsUtils.default.light();
         }
     }, [settings?.hapticFeedback]);
+
+    // 加载所有咖啡豆数据
+    useEffect(() => {
+        const loadBeans = async () => {
+            try {
+                const beans = await CoffeeBeanManager.getAllBeans();
+                setAllBeans(beans);
+            } catch (error) {
+                console.error('加载咖啡豆失败:', error);
+            }
+        };
+        
+        if (activeTab === '咖啡豆') {
+            loadBeans();
+        }
+    }, [activeTab]);
 
     // 处理方案类型切换
     const handleMethodTypeChange = async (type: 'common' | 'custom') => {
@@ -374,26 +400,26 @@ const TabContent: React.FC<TabContentProps> = ({
         
         await triggerHapticFeedback();
         try {
-            const allBeans = await CoffeeBeanManager.getAllBeans();
+            // 如果没有豆子数据，先加载
+            if (allBeans.length === 0) {
+                const beans = await CoffeeBeanManager.getAllBeans();
+                setAllBeans(beans);
+            }
+            
             // 过滤掉已经用完的豆子
             const availableBeans = allBeans.filter(bean => 
                 !(bean.remaining === "0" || bean.remaining === "0g") || !bean.capacity
             );
             
             if (availableBeans.length > 0) {
-                const randomIndex = Math.floor(Math.random() * availableBeans.length);
-                const randomBean = availableBeans[randomIndex];
+                // 打开随机选择器
+                setShowRandomPicker(true);
                 
-                // 设置高亮豆子ID
-                setHighlightedBeanId(randomBean.id);
-                
-                // 禁用随机按钮3秒
+                // 禁用随机按钮3秒，避免重复点击
                 setIsRandomButtonDisabled(true);
                 setTimeout(() => {
                     setIsRandomButtonDisabled(false);
-                    // 4秒后恢复边框颜色
-                    setHighlightedBeanId(null);
-                }, 3500);
+                }, 3000);
             } else {
                 showToast({ 
                     type: 'info', 
@@ -486,6 +512,22 @@ const TabContent: React.FC<TabContentProps> = ({
                         </motion.button>
                     </div>
                 </div>
+                
+                {/* 随机选择器 */}
+                <CoffeeBeanRandomPicker
+                    beans={allBeans}
+                    isOpen={showRandomPicker}
+                    onClose={() => setShowRandomPicker(false)}
+                    onSelect={(bean) => {
+                        if (onCoffeeBeanSelect) {
+                            onCoffeeBeanSelect(bean.id, bean);
+                            setHighlightedBeanId(bean.id);
+                            // 4秒后清除高亮
+                            setTimeout(() => setHighlightedBeanId(null), 4000);
+                        }
+                        setShowRandomPicker(false);
+                    }}
+                />
             </div>
         );
     }
