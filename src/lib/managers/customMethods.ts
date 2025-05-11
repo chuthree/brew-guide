@@ -2,6 +2,7 @@ import { type Method, type CustomEquipment } from "@/lib/core/config";
 import { methodToReadableText } from "@/lib/utils/jsonUtils";
 import { Storage } from "@/lib/core/storage";
 import { v4 as uuidv4 } from "uuid";
+import { db } from "@/lib/core/db";
 
 /**
  * 从存储加载自定义方案
@@ -9,6 +10,19 @@ import { v4 as uuidv4 } from "uuid";
  */
 export async function loadCustomMethods(): Promise<Record<string, Method[]>> {
 	try {
+		// 尝试从IndexedDB加载自定义方案
+		const methodsFromDB = await db.customMethods.toArray();
+		
+		if (methodsFromDB && methodsFromDB.length > 0) {
+			// 将数组转换为记录格式
+			const result: Record<string, Method[]> = {};
+			for (const item of methodsFromDB) {
+				result[item.equipmentId] = item.methods;
+			}
+			return result;
+		}
+		
+		// 如果IndexedDB中没有数据，尝试从localStorage/Preferences迁移
 		// Get all keys from storage
 		const keys = await Storage.keys();
 
@@ -16,11 +30,15 @@ export async function loadCustomMethods(): Promise<Record<string, Method[]>> {
 		const methodKeys = keys.filter((key) =>
 			key.startsWith("customMethods_")
 		);
-
+		
+		if (methodKeys.length === 0) {
+			return {};
+		}
+		
 		// Create result object
 		const result: Record<string, Method[]> = {};
 
-		// Load methods for each key
+		// Load methods for each key and migrate to IndexedDB
 		for (const key of methodKeys) {
 			// Extract equipment ID from key
 			const equipmentId = key.replace("customMethods_", "");
@@ -31,11 +49,18 @@ export async function loadCustomMethods(): Promise<Record<string, Method[]>> {
 			// Add to result if there are methods
 			if (methods.length > 0) {
 				result[equipmentId] = methods;
+				
+				// 保存到IndexedDB
+				await db.customMethods.put({
+					equipmentId,
+					methods
+				});
 			}
 		}
 
 		return result;
 	} catch (_error) {
+		console.error(`加载自定义方案失败:`, _error);
 		return {};
 	}
 }
@@ -50,8 +75,8 @@ export function loadCustomMethodsSync(): Record<string, Method[]> {
 		if (savedMethods) {
 			return JSON.parse(savedMethods);
 		}
-	} catch {
-		// 错误处理
+	} catch (e) {
+		console.error(`同步加载方案失败:`, e);
 	}
 
 	return {};
@@ -66,33 +91,37 @@ export async function loadCustomMethodsForEquipment(
 	equipmentId: string
 ): Promise<Method[]> {
 	try {
-		console.log(`[loadCustomMethodsForEquipment] 加载设备(${equipmentId})的方案`);
+		// 首先尝试从IndexedDB加载
+		const methodData = await db.customMethods.get(equipmentId);
+		if (methodData && Array.isArray(methodData.methods) && methodData.methods.length > 0) {
+			return methodData.methods;
+		}
 		
-		// 首先尝试从新存储加载
+		// 如果IndexedDB中没有数据，尝试从旧存储加载
 		const storageKey = `customMethods_${equipmentId}`;
-		console.log(`[loadCustomMethodsForEquipment] 尝试从存储键加载: ${storageKey}`);
-		
 		const methodsJson = await Storage.get(storageKey);
 		let methods: Method[] = [];
 
 		if (methodsJson) {
 			methods = JSON.parse(methodsJson);
-			console.log(`[loadCustomMethodsForEquipment] 从存储中加载到${methods.length}个方案`);
-		} else {
-			console.log(`[loadCustomMethodsForEquipment] 存储键(${storageKey})中没有找到方案`);
+			
+			// 如果从旧存储加载到了数据，保存到IndexedDB
+			if (methods.length > 0) {
+				await db.customMethods.put({
+					equipmentId,
+					methods
+				});
+			}
 		}
 
 		// 检查旧存储并进行迁移
 		const legacyMethodsJson = await Storage.get("customMethods");
 		if (legacyMethodsJson) {
-			console.log(`[loadCustomMethodsForEquipment] 检查旧格式的方案存储`);
 			const legacyMethods = JSON.parse(legacyMethodsJson);
 			if (
 				legacyMethods[equipmentId] &&
 				Array.isArray(legacyMethods[equipmentId])
 			) {
-				console.log(`[loadCustomMethodsForEquipment] 在旧存储中找到${legacyMethods[equipmentId].length}个方案`);
-				
 				// 合并旧数据
 				const combinedMethods = [
 					...methods,
@@ -101,14 +130,18 @@ export async function loadCustomMethodsForEquipment(
 
 				// 去重
 				methods = removeDuplicateMethods(combinedMethods);
-				console.log(`[loadCustomMethodsForEquipment] 合并后方案数量: ${methods.length}`);
 
 				// 保存到新存储
 				await Storage.set(
 					storageKey,
 					JSON.stringify(methods)
 				);
-				console.log(`[loadCustomMethodsForEquipment] 已将合并的方案保存到新存储: ${storageKey}`);
+				
+				// 保存到IndexedDB
+				await db.customMethods.put({
+					equipmentId,
+					methods
+				});
 
 				// 从旧存储中移除这个设备的数据
 				delete legacyMethods[equipmentId];
@@ -117,14 +150,10 @@ export async function loadCustomMethodsForEquipment(
 						"customMethods",
 						JSON.stringify(legacyMethods)
 					);
-					console.log(`[loadCustomMethodsForEquipment] 更新了旧存储`);
 				} else {
 					// 如果旧存储已经没有数据了，直接删除它
 					await Storage.remove("customMethods");
-					console.log(`[loadCustomMethodsForEquipment] 删除了空的旧存储`);
 				}
-			} else {
-				console.log(`[loadCustomMethodsForEquipment] 旧存储中没有设备(${equipmentId})的方案`);
 			}
 		}
 
@@ -133,16 +162,15 @@ export async function loadCustomMethodsForEquipment(
 			if (!method.id) {
 				return {
 					...method,
-					id: `method-${uuidv4()}`,
+					id: `method-${Date.now()}`,
 				};
 			}
 			return method;
 		});
 
-		console.log(`[loadCustomMethodsForEquipment] 最终返回${methods.length}个方案`);
 		return methods;
 	} catch (error) {
-		console.error(`[loadCustomMethodsForEquipment] 加载方案出错:`, error);
+		console.error(`加载方案失败:`, error);
 		return [];
 	}
 }
@@ -189,35 +217,34 @@ export async function saveCustomMethod(
 		const method = arg2 as Method;
 
 		try {
-			console.log(`[saveCustomMethod] 准备保存方案 "${method.name}" 到设备 "${equipmentId}"`);
-			
 			// Load existing methods for this equipment
 			const existingMethods = await loadCustomMethodsForEquipment(
 				equipmentId
 			);
-			console.log(`[saveCustomMethod] 设备现有方案数量: ${existingMethods.length}`);
 
 			// Ensure method has an ID
 			const methodWithId = {
 				...method,
-				id: method.id || `method-${uuidv4()}`,
+				id: method.id || `method-${Date.now()}`,
 			};
-			console.log(`[saveCustomMethod] 方案ID: ${methodWithId.id}`);
-
-			// 确保方法ID在保存前是唯一的
 
 			// 更新或添加方法
 			const updatedMethods = existingMethods.filter(
 				(m) => m.id !== methodWithId.id
 			);
 			updatedMethods.push(methodWithId);
-			console.log(`[saveCustomMethod] 更新后方案数量: ${updatedMethods.length}`);
 
 			// 去重并保存
 			const uniqueMethods = removeDuplicateMethods(updatedMethods);
-			const storageKey = `customMethods_${equipmentId}`;
-			console.log(`[saveCustomMethod] 保存方案到存储键: ${storageKey}, 方案数量: ${uniqueMethods.length}`);
 			
+			// 保存到IndexedDB
+			await db.customMethods.put({
+				equipmentId,
+				methods: uniqueMethods
+			});
+			
+			// 同时保存到旧存储作为备份
+			const storageKey = `customMethods_${equipmentId}`;
 			await Storage.set(
 				storageKey,
 				JSON.stringify(uniqueMethods)
@@ -225,6 +252,7 @@ export async function saveCustomMethod(
 
 			return true;
 		} catch (_error) {
+			console.error(`[saveCustomMethod] 保存方案失败:`, _error);
 			return false;
 		}
 	} else {
@@ -258,18 +286,36 @@ export async function saveCustomMethod(
 
 		// 去重并保存
 		const uniqueMethods = removeDuplicateMethods(updatedMethods);
+		
+		// 保存到旧格式存储
 		await Storage.set(
 			`customMethods_${selectedEquipment}`,
 			JSON.stringify(uniqueMethods)
 		);
+		
+		// 同时保存到IndexedDB
+		console.log(`[saveCustomMethod-旧API] 保存方案到IndexedDB, 器具ID: ${selectedEquipment}, 方案数量: ${uniqueMethods.length}`);
+		await db.customMethods.put({
+			equipmentId: selectedEquipment,
+			methods: uniqueMethods
+		});
 
 		// 为了保持向后兼容，也更新内存中的customMethods对象
 		const newCustomMethods = {
 			...customMethods,
 			[selectedEquipment]: uniqueMethods,
 		};
-
-		return { newCustomMethods, methodWithId };
+		
+		// 重新加载所有方案数据
+		try {
+			const allMethods = await loadCustomMethods();
+			return { 
+				newCustomMethods: allMethods, 
+				methodWithId 
+			};
+		} catch (error) {
+			return { newCustomMethods, methodWithId };
+		}
 	}
 }
 
@@ -307,13 +353,23 @@ export async function deleteCustomMethod(
 				return false;
 			}
 
-			// Save updated methods
+			console.log(`[deleteCustomMethod] 删除方案, 设备ID: ${equipmentId}, 方案ID: ${methodId}, 剩余方案数: ${updatedMethods.length}`);
+			
+			// 保存到IndexedDB
+			await db.customMethods.put({
+				equipmentId,
+				methods: updatedMethods
+			});
+			
+			// 同时更新localStorage
 			await Storage.set(
 				`customMethods_${equipmentId}`,
 				JSON.stringify(updatedMethods)
 			);
+			
 			return true;
 		} catch (_error) {
+			console.error(`[deleteCustomMethod] 删除方案失败:`, _error);
 			return false;
 		}
 	} else {
@@ -335,16 +391,25 @@ export async function deleteCustomMethod(
 			[selectedEquipment]: updatedMethods,
 		};
 
-		// 保存到存储
-		await Storage.set("customMethods", JSON.stringify(newCustomMethods));
-
-		// Also save to per-equipment storage for compatibility with new pattern
+		// 保存到localStorage
 		await Storage.set(
 			`customMethods_${selectedEquipment}`,
 			JSON.stringify(updatedMethods)
 		);
-
-		return newCustomMethods;
+		
+		// 同时保存到IndexedDB
+		await db.customMethods.put({
+			equipmentId: selectedEquipment,
+			methods: updatedMethods
+		});
+		
+		// 重新加载所有方案数据
+		try {
+			const allMethods = await loadCustomMethods();
+			return allMethods;
+		} catch (error) {
+			return newCustomMethods;
+		}
 	}
 }
 

@@ -594,7 +594,11 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 			try {
 				const methods = await loadCustomMethods();
 				setCustomMethods(methods);
-			} catch (_error) {}
+			} catch (error) {
+				console.error('加载方案失败:', error);
+				// 添加重试机制，确保方案加载成功
+				setTimeout(loadMethods, 1000);
+			}
 		};
 
 		loadMethods();
@@ -702,48 +706,40 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 					throw new Error("未选择设备");
 				}
 
-				// 注意：我们使用自定义名称避免与导入的函数命名冲突
-				const result = await apiSaveCustomMethod(
+				// 使用旧的API保存方案
+				await apiSaveCustomMethod(
 					method,
 					selectedEquipment,
 					customMethods,
 					editingMethod
-				) as { newCustomMethods: Record<string, Method[]>; methodWithId: Method };
+				);
 
-				console.log("[useBrewingState] 方案保存成功，正在更新状态...", {
-					methodId: result.methodWithId.id,
-					methodName: result.methodWithId.name,
-					equipmentId: selectedEquipment,
-				});
+				// 重新加载所有自定义方案数据
+				const methods = await loadCustomMethods();
+				setCustomMethods(methods);
 
-				// 更新自定义方法列表
-				setCustomMethods(result.newCustomMethods);
-				
-				// 确保选中新创建/编辑的方法
-				setSelectedMethod(result.methodWithId);
+				// 获取当前设备的方案列表并更新UI
+				const updatedMethods = methods[selectedEquipment] || [];
+				const savedMethod = updatedMethods.find(m => m.name === method.name);
+				if (savedMethod) setSelectedMethod(savedMethod);
+				else setSelectedMethod(method);
 				
 				// 关闭表单
 				setShowCustomForm(false);
 				setEditingMethod(undefined);
 
-				// 这个关键步骤：更新内容状态以触发UI刷新
-				// 生成新的方案列表，确保UI会更新
-				const updatedMethodSteps = result.newCustomMethods[selectedEquipment].map((m) => ({
-					title: m.name,
-					methodId: m.id,
-				}));
-
-				// 确保content状态中的方案列表会更新
+				// 更新方案列表UI
 				setContent((prevContent) => ({
 					...prevContent,
 					方案: {
 						...prevContent.方案,
-						steps: updatedMethodSteps,
+						steps: updatedMethods.map((m) => ({
+							title: m.name,
+							methodId: m.id,
+						})),
 						type: methodType,
 					},
 				}));
-
-				console.log("[useBrewingState] 方案列表已更新，共有方案:", updatedMethodSteps.length);
 			} catch (error) {
 				console.error("保存自定义方案时出错:", error);
 				alert("保存自定义方案时出错，请重试");
@@ -763,26 +759,42 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 		async (method: Method) => {
 			if (window.confirm(`确定要删除方案"${method.name}"吗？`)) {
 				try {
-					// 注意：我们使用自定义名称避免与导入的函数命名冲突
-					const newCustomMethods = await apiDeleteCustomMethod(
+					// 使用API删除方案
+					await apiDeleteCustomMethod(
 						method,
 						selectedEquipment,
 						customMethods
-					) as Record<string, Method[]>;
+					);
 
-					setCustomMethods(newCustomMethods);
+					// 重新加载所有方案数据
+					const methods = await loadCustomMethods();
+					setCustomMethods(methods);
 
 					// 如果删除的是当前选中的方案，重置选中的方案
 					if (selectedMethod && selectedMethod.id === method.id) {
 						setSelectedMethod(null);
 					}
+					
+					// 更新UI上的方案列表
+					const updatedMethods = methods[selectedEquipment || ''] || [];
+					setContent((prevContent) => ({
+						...prevContent,
+						方案: {
+							...prevContent.方案,
+							steps: updatedMethods.map((m) => ({
+								title: m.name,
+								methodId: m.id,
+							})),
+							type: methodType,
+						},
+					}));
 				} catch (error) {
 					console.error("删除自定义方案时出错:", error);
 					alert("删除自定义方案时出错，请重试");
 				}
 			}
 		},
-		[selectedEquipment, customMethods, selectedMethod]
+		[selectedEquipment, customMethods, selectedMethod, methodType]
 	);
 
 	// 处理咖啡豆选择

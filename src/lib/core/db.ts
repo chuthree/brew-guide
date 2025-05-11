@@ -1,5 +1,5 @@
 import Dexie from 'dexie';
-import { BrewingNote } from './config';
+import { BrewingNote, Method, CustomEquipment } from './config';
 import { CoffeeBean } from '@/types/app';
 
 /**
@@ -10,6 +10,8 @@ export class BrewGuideDB extends Dexie {
   brewingNotes!: Dexie.Table<BrewingNote, string>; // 冲煮笔记表，主键为id (string)
   coffeeBeans!: Dexie.Table<CoffeeBean, string>; // 咖啡豆表，主键为id (string)
   settings!: Dexie.Table<{ key: string; value: string }, string>; // 设置表，用于存储配置信息
+  customEquipments!: Dexie.Table<CustomEquipment, string>; // 自定义器具表，主键为id (string)
+  customMethods!: Dexie.Table<{ equipmentId: string; methods: Method[] }, string>; // 自定义方案表，按器具ID组织
 
   constructor() {
     super('BrewGuideDB');
@@ -26,6 +28,15 @@ export class BrewGuideDB extends Dexie {
       brewingNotes: 'id, timestamp, equipment, method', // 保持不变
       coffeeBeans: 'id, timestamp, name, type', // 新增咖啡豆表
       settings: 'key' // 保持不变
+    });
+    
+    // 版本3：添加自定义器具和方案表
+    this.version(3).stores({
+      brewingNotes: 'id, timestamp, equipment, method', // 保持不变
+      coffeeBeans: 'id, timestamp, name, type', // 保持不变
+      settings: 'key', // 保持不变
+      customEquipments: 'id, name', // 自定义器具表
+      customMethods: 'equipmentId' // 自定义方案表，按器具ID组织
     });
   }
 }

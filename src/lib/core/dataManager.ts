@@ -1,9 +1,10 @@
 import { Storage } from "@/lib/core/storage";
-import { Method } from "@/lib/core/config";
+import { Method, CustomEquipment } from "@/lib/core/config";
 import { CoffeeBean, BlendComponent } from "@/types/app";
 import { APP_VERSION } from "@/lib/core/config";
 import { SettingsOptions } from "@/components/settings/Settings";
 import { LayoutSettings } from "@/components/brewing/Timer/Settings";
+import { db } from "@/lib/core/db";
 
 // 检查是否在浏览器环境中
 const isBrowser = typeof window !== 'undefined';
@@ -199,11 +200,25 @@ export const DataManager = {
 							? JSON.stringify(importData.data[key])
 							: String(importData.data[key]);
 					await Storage.set(key, value);
+					
+					// 对于自定义器具，同时更新IndexedDB
+					if (key === 'customEquipments' && typeof importData.data[key] === 'object') {
+						const rawEquipments = importData.data[key] as unknown[];
+						if (Array.isArray(rawEquipments)) {
+							// 首先清除现有数据
+							await db.customEquipments.clear();
+							// 然后导入新数据
+							await db.customEquipments.bulkPut(rawEquipments as CustomEquipment[]);
+						}
+					}
 				}
 			}
 			
 			// 导入自定义方案数据
 			if (importData.data.customMethodsByEquipment && typeof importData.data.customMethodsByEquipment === 'object') {
+				// 清除现有方案数据
+				await db.customMethods.clear();
+				
 				// 遍历所有器具的方案
 				const customMethodsByEquipment = importData.data.customMethodsByEquipment as Record<string, unknown>;
 				for (const equipmentId of Object.keys(customMethodsByEquipment)) {
@@ -212,6 +227,12 @@ export const DataManager = {
 						// 保存该器具的所有方案
 						const storageKey = `customMethods_${equipmentId}`;
 						await Storage.set(storageKey, JSON.stringify(methods));
+						
+						// 同时更新IndexedDB
+						await db.customMethods.put({
+							equipmentId,
+							methods
+						});
 					}
 				}
 			}
@@ -272,6 +293,10 @@ export const DataManager = {
 				for (const key of methodKeys) {
 					await Storage.remove(key);
 				}
+				
+				// 同时清除IndexedDB数据
+				await db.customEquipments.clear();
+				await db.customMethods.clear();
 				
 				// 清除所有自定义预设
 				if (isBrowser) {

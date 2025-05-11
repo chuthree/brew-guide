@@ -19,6 +19,9 @@ const STORAGE_TYPE_MAPPING: Record<string, StorageType> = {
   // 大数据量的键使用IndexedDB
   'brewingNotes': StorageType.INDEXED_DB,
   'coffeeBeans': StorageType.INDEXED_DB, // 咖啡豆数据也使用IndexedDB存储
+  'customEquipments': StorageType.INDEXED_DB, // 添加自定义器具到IndexedDB存储
+  // 对于自定义方案，由于键名是动态的(customMethods_[equipmentId])，
+  // 我们将在getStorageType函数中处理这种模式
   
   // 其他小型配置数据使用Preferences
   // 如果有其他大数据量的键，可以添加到这里
@@ -30,7 +33,18 @@ const STORAGE_TYPE_MAPPING: Record<string, StorageType> = {
  * @returns 存储类型
  */
 export const getStorageType = (key: string): StorageType => {
-  return STORAGE_TYPE_MAPPING[key] || StorageType.PREFERENCES;
+  // 直接在映射中找到的键
+  if (STORAGE_TYPE_MAPPING[key]) {
+    return STORAGE_TYPE_MAPPING[key];
+  }
+  
+  // 处理自定义方案的键模式 (customMethods_[equipmentId])
+  if (key.startsWith('customMethods_')) {
+    return StorageType.INDEXED_DB;
+  }
+  
+  // 默认使用Preferences
+  return StorageType.PREFERENCES;
 };
 
 /**
@@ -65,6 +79,12 @@ export const StorageUtils = {
           await this.cleanupLocalStorage();
         }
       }
+      
+      // 迁移自定义器具数据
+      await this.migrateCustomEquipments();
+      
+      // 迁移自定义方案数据
+      await this.migrateCustomMethods();
       
       console.log('存储系统初始化完成');
     } catch (error) {
@@ -517,5 +537,135 @@ export const StorageUtils = {
     } else {
       localStorage.clear();
     }
-  }
+  },
+  
+  /**
+   * 迁移自定义器具数据到IndexedDB
+   */
+  async migrateCustomEquipments(): Promise<boolean> {
+    try {
+      // 检查IndexedDB中是否已有数据
+      const equipmentCount = await db.customEquipments.count();
+      if (equipmentCount > 0) {
+        console.log(`[migrateCustomEquipments] IndexedDB中已有${equipmentCount}个自定义器具，无需迁移`);
+        return true;
+      }
+      
+      // 从localStorage/Preferences读取数据
+      const equipmentsJson = await this.getData('customEquipments', StorageType.PREFERENCES);
+      if (!equipmentsJson) {
+        console.log(`[migrateCustomEquipments] 未找到自定义器具数据，不需要迁移`);
+        return false;
+      }
+      
+      // 解析数据
+      const equipments = JSON.parse(equipmentsJson);
+      if (!Array.isArray(equipments) || equipments.length === 0) {
+        console.log(`[migrateCustomEquipments] 自定义器具数据为空或格式错误，不需要迁移`);
+        return false;
+      }
+      
+      console.log(`[migrateCustomEquipments] 找到${equipments.length}个自定义器具，准备迁移到IndexedDB`);
+      
+      // 保存到IndexedDB
+      await db.customEquipments.bulkPut(equipments);
+      
+      // 验证迁移
+      const migratedCount = await db.customEquipments.count();
+      if (migratedCount === equipments.length) {
+        console.log(`[migrateCustomEquipments] 成功迁移${migratedCount}个自定义器具到IndexedDB`);
+        return true;
+      } else {
+        console.warn(`[migrateCustomEquipments] 迁移不完全：应有${equipments.length}个，实际只有${migratedCount}个`);
+        return false;
+      }
+    } catch (error) {
+      console.error(`[migrateCustomEquipments] 迁移自定义器具失败:`, error);
+      return false;
+    }
+  },
+  
+  /**
+   * 迁移自定义方案数据到IndexedDB
+   */
+  async migrateCustomMethods(): Promise<boolean> {
+    try {
+      // 检查IndexedDB中是否已有数据
+      const methodCount = await db.customMethods.count();
+      if (methodCount > 0) {
+        console.log(`[migrateCustomMethods] IndexedDB中已有${methodCount}组自定义方案，无需迁移`);
+        return true;
+      }
+      
+      // 获取所有键
+      const keys = await this.getStorageKeys();
+      
+      // 筛选方案相关的键
+      const methodKeys = keys.filter(key => key.startsWith('customMethods_'));
+      if (methodKeys.length === 0) {
+        console.log(`[migrateCustomMethods] 未找到任何自定义方案数据，不需要迁移`);
+        return false;
+      }
+      
+      console.log(`[migrateCustomMethods] 找到${methodKeys.length}个自定义方案键，准备迁移到IndexedDB`);
+      
+      // 逐个迁移方案数据
+      let successCount = 0;
+      for (const key of methodKeys) {
+        try {
+          // 从键名中提取设备ID
+          const equipmentId = key.replace('customMethods_', '');
+          
+          // 读取数据
+          const methodsJson = await this.getData(key, StorageType.PREFERENCES);
+          if (!methodsJson) continue;
+          
+          // 解析数据
+          const methods = JSON.parse(methodsJson);
+          if (!Array.isArray(methods) || methods.length === 0) continue;
+          
+          // 保存到IndexedDB
+          await db.customMethods.put({
+            equipmentId,
+            methods
+          });
+          
+          console.log(`[migrateCustomMethods] 成功迁移设备${equipmentId}的${methods.length}个方案到IndexedDB`);
+          successCount++;
+        } catch (e) {
+          console.error(`[migrateCustomMethods] 迁移方案${key}失败:`, e);
+        }
+      }
+      
+      if (successCount > 0) {
+        console.log(`[migrateCustomMethods] 总共成功迁移了${successCount}组方案数据`);
+        return true;
+      } else {
+        console.warn(`[migrateCustomMethods] 未能成功迁移任何方案数据`);
+        return false;
+      }
+    } catch (error) {
+      console.error(`[migrateCustomMethods] 迁移自定义方案失败:`, error);
+      return false;
+    }
+  },
+  
+  /**
+   * 获取存储中的所有键
+   */
+  async getStorageKeys(): Promise<string[]> {
+    try {
+      if (Capacitor.isNativePlatform()) {
+        // 在原生平台上使用 Capacitor Preferences API
+        const { keys } = await Preferences.keys();
+        return keys;
+      } else {
+        // 在 Web 平台上使用 localStorage
+        return Object.keys(localStorage);
+      }
+    } catch (e) {
+      console.error('获取存储键失败:', e);
+      return [];
+    }
+  },
 }; 
