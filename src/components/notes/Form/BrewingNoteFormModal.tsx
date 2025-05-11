@@ -10,6 +10,8 @@ import SteppedFormModal, { Step } from '@/components/common/modals/SteppedFormMo
 import { type Method, type CustomEquipment } from '@/lib/core/config'
 import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager'
 import { loadCustomEquipments } from '@/lib/managers/customEquipments'
+// 导入随机选择器组件
+import CoffeeBeanRandomPicker from '@/components/coffee-bean/RandomPicker/CoffeeBeanRandomPicker'
 
 interface BrewingNoteFormModalProps {
   showForm: boolean
@@ -39,6 +41,9 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
 
   // 步骤控制
   const [currentStep, setCurrentStep] = useState<number>(0)
+  
+  // 随机选择器状态
+  const [isRandomPickerOpen, setIsRandomPickerOpen] = useState(false)
 
   // 使用方法管理Hook
   const {
@@ -97,6 +102,18 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
   const handleCoffeeBeanSelect = (bean: CoffeeBean | null) => {
     setSelectedCoffeeBean(bean)
     // 选择咖啡豆后自动进入下一步（无论是选择豆子还是不选择都跳转）
+    setCurrentStep(1)
+  }
+  
+  // 打开随机选择器
+  const handleOpenRandomPicker = () => {
+    setIsRandomPickerOpen(true)
+  }
+  
+  // 处理随机选择咖啡豆
+  const handleRandomBeanSelect = (bean: CoffeeBean) => {
+    setSelectedCoffeeBean(bean)
+    // 选择咖啡豆后自动进入下一步
     setCurrentStep(1)
   }
 
@@ -296,16 +313,27 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
   ]
 
   return (
-    <SteppedFormModal
-      showForm={showForm}
-      onClose={handleClose}
-      onComplete={handleStepComplete}
-      steps={steps}
-      initialStep={skipToLastStep ? steps.length - 1 : (coffeeBeans.length === 0 ? 1 : 0)}
-      preserveState={false}
-      currentStep={currentStep}
-      setCurrentStep={setCurrentStep}
-    />
+    <>
+      <SteppedFormModal
+        showForm={showForm}
+        onClose={handleClose}
+        onComplete={handleStepComplete}
+        steps={steps}
+        initialStep={skipToLastStep ? steps.length - 1 : (coffeeBeans.length === 0 ? 1 : 0)}
+        preserveState={false}
+        currentStep={currentStep}
+        setCurrentStep={setCurrentStep}
+        onRandomBean={handleOpenRandomPicker} // 添加随机选择器触发函数
+      />
+      
+      {/* 随机选择器 */}
+      <CoffeeBeanRandomPicker
+        beans={coffeeBeans}
+        isOpen={isRandomPickerOpen}
+        onClose={() => setIsRandomPickerOpen(false)}
+        onSelect={handleRandomBeanSelect}
+      />
+    </>
   )
 }
 

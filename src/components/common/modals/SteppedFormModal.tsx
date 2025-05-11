@@ -23,6 +23,7 @@ interface SteppedFormModalProps {
     onStepChange?: (index: number) => void
     currentStep?: number
     setCurrentStep?: React.Dispatch<React.SetStateAction<number>>
+    onRandomBean?: () => void
 }
 
 const SteppedFormModal: React.FC<SteppedFormModalProps> = ({
@@ -34,7 +35,8 @@ const SteppedFormModal: React.FC<SteppedFormModalProps> = ({
     preserveState = false,
     onStepChange,
     currentStep,
-    setCurrentStep
+    setCurrentStep,
+    onRandomBean
 }) => {
     const [internalStepIndex, setInternalStepIndex] = useState(initialStep)
     
@@ -165,6 +167,12 @@ const SteppedFormModal: React.FC<SteppedFormModalProps> = ({
 
     // 随机选择咖啡豆
     const handleRandomBean = async () => {
+        // 如果提供了自定义随机豆子方法，则调用它
+        if (onRandomBean) {
+            onRandomBean();
+            return;
+        }
+        
         // 如果按钮被禁用，直接返回
         if (isRandomButtonDisabled) return;
         

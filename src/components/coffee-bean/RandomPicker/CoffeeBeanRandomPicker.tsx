@@ -189,10 +189,7 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
                         </div>
                       )}
                       <div className="text-center w-full">
-                        <h3 className="text-sm font-medium truncate">{bean.name}</h3>
-                        <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
-                          {bean.origin || bean.roastLevel || ''}
-                        </p>
+                        <h3 className="text-sm font-medium">{bean.name}</h3>
                       </div>
                     </div>
                   ))}
@@ -215,6 +212,7 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
                     >
                       使用
                     </motion.button>
+                    
                     <motion.button
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
