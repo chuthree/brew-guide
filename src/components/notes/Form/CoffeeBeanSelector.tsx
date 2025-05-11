@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useMemo, useState } from 'react'
+import React, { useMemo, useState, useRef, useEffect } from 'react'
 import type { CoffeeBean } from '@/types/app'
 
 interface CoffeeBeanSelectorProps {
@@ -8,6 +8,7 @@ interface CoffeeBeanSelectorProps {
   selectedCoffeeBean: CoffeeBean | null
   onSelect: (bean: CoffeeBean | null) => void
   searchQuery?: string
+  highlightedBeanId?: string | null
 }
 
 // 计算咖啡豆的赏味期阶段和剩余天数
@@ -65,8 +66,33 @@ const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
   coffeeBeans,
   selectedCoffeeBean: _selectedCoffeeBean,
   onSelect,
-  searchQuery = ''
+  searchQuery = '',
+  highlightedBeanId = null
 }) => {
+  // 添加ref用于存储咖啡豆元素列表
+  const beanItemsRef = useRef<Map<string, HTMLDivElement>>(new Map());
+  
+  // 设置ref的回调函数
+  const setItemRef = React.useCallback((id: string) => (node: HTMLDivElement | null) => {
+    if (node) {
+      beanItemsRef.current.set(id, node);
+    } else {
+      beanItemsRef.current.delete(id);
+    }
+  }, []);
+  
+  // 滚动到高亮的咖啡豆
+  useEffect(() => {
+    if (highlightedBeanId && beanItemsRef.current.has(highlightedBeanId)) {
+      // 滚动到高亮的咖啡豆
+      const node = beanItemsRef.current.get(highlightedBeanId);
+      node?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+      });
+    }
+  }, [highlightedBeanId]);
+
   // 过滤出未用完的咖啡豆，并按赏味期排序
   const availableBeans = useMemo(() => {
     // 首先过滤掉剩余量为0(且设置了容量)的咖啡豆
@@ -193,13 +219,20 @@ const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
                 items.push(`烘焙日期 ${bean.roastDate}`);
               }
 
+              // 确定是否高亮当前咖啡豆
+              const isHighlighted = highlightedBeanId === bean.id;
+
               return (
                 <div 
                   key={bean.id}
                   className="group relative text-neutral-500 dark:text-neutral-400"
                   onClick={() => onSelect(bean)}
+                  ref={setItemRef(bean.id)}
                 >
-                  <div className="group relative border-l border-neutral-200 dark:border-neutral-800 pl-6 cursor-pointer">
+                  <div className={`group relative border-l ${isHighlighted 
+                    ? 'border-neutral-800 dark:border-neutral-100' 
+                    : 'border-neutral-200 dark:border-neutral-800'} 
+                    pl-6 cursor-pointer transition-all duration-300`}>
                     <div className="cursor-pointer">
                       <div className="flex items-baseline justify-between">
                         <div className="flex items-baseline gap-3 min-w-0 overflow-hidden">

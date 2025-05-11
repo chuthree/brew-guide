@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useTransition, useCallback, useMemo } from 'react'
+import React, { useState, useEffect, useTransition, useCallback, useMemo, useRef } from 'react'
 import { CoffeeBean } from '@/types/app'
 import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager'
 
@@ -9,6 +9,7 @@ interface CoffeeBeanListProps {
     onSelect: (beanId: string | null, bean: CoffeeBean | null) => void
     isOpen?: boolean
     searchQuery?: string  // 添加搜索查询参数
+    highlightedBeanId?: string | null // 添加高亮咖啡豆ID参数
 }
 
 // 用于缓存咖啡豆数据
@@ -17,12 +18,16 @@ let cachedBeans: CoffeeBean[] | null = null;
 const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
     onSelect,
     isOpen = true,
-    searchQuery = ''  // 添加搜索查询参数默认值
+    searchQuery = '',  // 添加搜索查询参数默认值
+    highlightedBeanId = null // 添加高亮咖啡豆ID默认值
 }) => {
     const [beans, setBeans] = useState<CoffeeBean[]>(cachedBeans || [])
     const [_isPending, startTransition] = useTransition()
     const [isFirstLoad, setIsFirstLoad] = useState(!cachedBeans)
     const [forceRefreshKey, setForceRefreshKey] = useState(0) // 添加强制刷新的key
+    
+    // 添加ref用于存储咖啡豆元素列表
+    const beanItemsRef = useRef<Map<string, HTMLDivElement>>(new Map());
 
     // 检查咖啡豆是否用完
     const isBeanEmpty = (bean: CoffeeBean): boolean => {
@@ -212,6 +217,27 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
         );
     }, [beans, searchQuery]);
 
+    // 设置ref的回调函数
+    const setItemRef = useCallback((id: string) => (node: HTMLDivElement | null) => {
+        if (node) {
+            beanItemsRef.current.set(id, node);
+        } else {
+            beanItemsRef.current.delete(id);
+        }
+    }, []);
+
+    // 滚动到高亮的咖啡豆
+    useEffect(() => {
+        if (highlightedBeanId && beanItemsRef.current.has(highlightedBeanId)) {
+            // 滚动到高亮的咖啡豆
+            const node = beanItemsRef.current.get(highlightedBeanId);
+            node?.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center'
+            });
+        }
+    }, [highlightedBeanId]);
+
     // 使用isFirstLoad替代原来的loading状态
     if (isFirstLoad) {
         return (
@@ -324,10 +350,18 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
                     items.push(`容量 ${remaining}/${capacity} g`);
                 }
 
+                // 确定是否高亮当前咖啡豆
+                const isHighlighted = highlightedBeanId === bean.id;
+
                 return (
                     <div
                         key={bean.id}
-                        className={`group relative border-l border-neutral-200 dark:border-neutral-800 pl-6 cursor-pointer text-neutral-500 dark:text-neutral-400`}
+                        ref={setItemRef(bean.id)}
+                        className={`group relative border-l ${isHighlighted 
+                            ? 'border-neutral-800 dark:border-neutral-100' 
+                            : 'border-neutral-200 dark:border-neutral-800'} 
+                            pl-6 cursor-pointer text-neutral-500 dark:text-neutral-400 transition-all duration-300
+                            ${isBeanEmpty(bean) ? 'bg-neutral-100/60 dark:bg-neutral-800/30' : ''}`}
                         onClick={() => onSelect(bean.id, bean)}
                     >
                         <div className="cursor-pointer">

@@ -141,6 +141,12 @@ const TabContent: React.FC<TabContentProps> = ({
     // 本地流速显示设置
     const localShowFlowRate = settings.showFlowRate;
     
+    // 添加高亮豆子ID状态
+    const [highlightedBeanId, setHighlightedBeanId] = useState<string | null>(null);
+    
+    // 添加随机按钮禁用状态
+    const [isRandomButtonDisabled, setIsRandomButtonDisabled] = useState(false);
+    
     // 触感反馈函数
     const triggerHapticFeedback = useCallback(async () => {
         if (settings?.hapticFeedback) {
@@ -363,6 +369,9 @@ const TabContent: React.FC<TabContentProps> = ({
 
     // 随机选择咖啡豆
     const handleRandomBean = async () => {
+        // 如果按钮被禁用，直接返回
+        if (isRandomButtonDisabled) return;
+        
         await triggerHapticFeedback();
         try {
             const allBeans = await CoffeeBeanManager.getAllBeans();
@@ -374,14 +383,17 @@ const TabContent: React.FC<TabContentProps> = ({
             if (availableBeans.length > 0) {
                 const randomIndex = Math.floor(Math.random() * availableBeans.length);
                 const randomBean = availableBeans[randomIndex];
-                if (onCoffeeBeanSelect) {
-                    onCoffeeBeanSelect(randomBean.id, randomBean);
-                    showToast({ 
-                        type: 'success', 
-                        title: `已随机选择: ${randomBean.name}`, 
-                        duration: 2000 
-                    });
-                }
+                
+                // 设置高亮豆子ID
+                setHighlightedBeanId(randomBean.id);
+                
+                // 禁用随机按钮3秒
+                setIsRandomButtonDisabled(true);
+                setTimeout(() => {
+                    setIsRandomButtonDisabled(false);
+                    // 4秒后恢复边框颜色
+                    setHighlightedBeanId(null);
+                }, 3500);
             } else {
                 showToast({ 
                     type: 'info', 
@@ -411,25 +423,29 @@ const TabContent: React.FC<TabContentProps> = ({
                         if (onCoffeeBeanSelect) onCoffeeBeanSelect(beanId, bean);
                     }}
                     searchQuery={searchQuery}
+                    highlightedBeanId={highlightedBeanId}
                 />
                 
                 {/* 随机选豆按钮 - 单独放置在搜索工具栏上方 */}
-                <div className="fixed bottom-[90px] right-6 z-10">
+                <div className="fixed bottom-[60px] left-0 right-0 p-6 flex justify-end items-center z-10 max-w-[500px] mx-auto pb-safe-bottom pointer-events-none">
                     <motion.button
                         type="button"
                         onClick={handleRandomBean}
                         transition={springTransition}
-                        className={`${buttonBaseClass} p-4 flex items-center justify-center`}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
+                        className={`${buttonBaseClass} p-4 flex items-center justify-center pointer-events-auto ${
+                            isRandomButtonDisabled ? 'opacity-40 cursor-not-allowed bg-neutral-200 dark:bg-neutral-700' : ''
+                        }`}
+                        whileHover={isRandomButtonDisabled ? {} : { scale: 1.05 }}
+                        whileTap={isRandomButtonDisabled ? {} : { scale: 0.95 }}
+                        disabled={isRandomButtonDisabled}
                     >
                         <Shuffle className="w-4 h-4" strokeWidth="3" />
                     </motion.button>
                 </div>
                 
                 {/* 底部搜索工具栏 */}
-                <div className="fixed bottom-0 left-0 right-0 p-6 flex justify-end items-center z-10 max-w-[500px] mx-auto pb-safe-bottom">
-                    <div className="flex items-center justify-center gap-2">
+                <div className="fixed bottom-0 left-0 right-0 p-6 flex justify-end items-center z-10 max-w-[500px] mx-auto pb-safe-bottom pointer-events-none">
+                    <div className="flex items-center justify-center gap-2 pointer-events-none">
                         <AnimatePresence mode="popLayout">
                             {isSearching && (
                                 <motion.div
@@ -438,7 +454,7 @@ const TabContent: React.FC<TabContentProps> = ({
                                     animate={{ scale: 1, opacity: 1 }}
                                     exit={{ scale: 0.95, opacity: 0}}
                                     transition={springTransition}
-                                    className="flex items-center overflow-hidden"
+                                    className="flex items-center overflow-hidden pointer-events-auto"
                                 >
                                     <input
                                         ref={searchInputRef}
@@ -458,7 +474,7 @@ const TabContent: React.FC<TabContentProps> = ({
                             type="button"
                             onClick={isSearching ? handleCloseSearch : handleSearchClick}
                             transition={springTransition}
-                            className={`${buttonBaseClass} p-4 flex items-center justify-center`}
+                            className={`${buttonBaseClass} p-4 flex items-center justify-center pointer-events-auto`}
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                         >

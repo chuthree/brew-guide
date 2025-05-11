@@ -47,6 +47,12 @@ const SteppedFormModal: React.FC<SteppedFormModalProps> = ({
     const [searchQuery, setSearchQuery] = useState('')
     const searchInputRef = useRef<HTMLInputElement>(null)
     
+    // 添加高亮咖啡豆ID状态
+    const [highlightedBeanId, setHighlightedBeanId] = useState<string | null>(null)
+    
+    // 添加随机按钮禁用状态
+    const [isRandomButtonDisabled, setIsRandomButtonDisabled] = useState(false)
+    
     // 模态框DOM引用
     const modalRef = useRef<HTMLDivElement>(null)
 
@@ -63,6 +69,8 @@ const SteppedFormModal: React.FC<SteppedFormModalProps> = ({
             setCurrentStepIndex(initialStep)
             setIsSearching(false)
             setSearchQuery('')
+            setHighlightedBeanId(null)
+            setIsRandomButtonDisabled(false)
         }
     }, [showForm, preserveState, initialStep, setCurrentStepIndex])
 
@@ -95,6 +103,8 @@ const SteppedFormModal: React.FC<SteppedFormModalProps> = ({
             // 重置搜索状态
             setIsSearching(false);
             setSearchQuery('');
+            // 重置高亮状态
+            setHighlightedBeanId(null);
         } else {
             onClose()
         }
@@ -111,6 +121,8 @@ const SteppedFormModal: React.FC<SteppedFormModalProps> = ({
             // 重置搜索状态
             setIsSearching(false);
             setSearchQuery('');
+            // 重置高亮状态
+            setHighlightedBeanId(null);
         } else {
             onComplete()
         }
@@ -141,15 +153,21 @@ const SteppedFormModal: React.FC<SteppedFormModalProps> = ({
     const contentWithSearchProps = React.useMemo(() => {
         if (!isCoffeeBeanStep) return currentStepContent.content;
         
-        // 为咖啡豆选择器添加搜索查询参数
+        // 为咖啡豆选择器添加搜索查询参数和高亮ID
         return React.cloneElement(
             currentStepContent.content as React.ReactElement,
-            { searchQuery }
+            { 
+                searchQuery,
+                highlightedBeanId  
+            }
         );
-    }, [currentStepContent?.content, isCoffeeBeanStep, searchQuery]);
+    }, [currentStepContent?.content, isCoffeeBeanStep, searchQuery, highlightedBeanId]);
 
     // 随机选择咖啡豆
     const handleRandomBean = async () => {
+        // 如果按钮被禁用，直接返回
+        if (isRandomButtonDisabled) return;
+        
         try {
             const allBeans = await CoffeeBeanManager.getAllBeans();
             // 过滤掉已经用完的豆子
@@ -161,19 +179,16 @@ const SteppedFormModal: React.FC<SteppedFormModalProps> = ({
                 const randomIndex = Math.floor(Math.random() * availableBeans.length);
                 const randomBean = availableBeans[randomIndex];
                 
-                // 找到当前步骤内容中的onSelect函数并调用
-                const currentElement = currentStepContent.content as React.ReactElement;
-                if (currentElement.props.onSelect) {
-                    currentElement.props.onSelect(randomBean.id, randomBean);
-                    showToast({ 
-                        type: 'success', 
-                        title: `已随机选择: ${randomBean.name}`, 
-                        duration: 2000 
-                    });
-                    
-                    // 自动进入下一步
-                    handleNext();
-                }
+                // 设置高亮豆子ID，而不是直接选择
+                setHighlightedBeanId(randomBean.id);
+                
+                // 禁用随机按钮3秒
+                setIsRandomButtonDisabled(true);
+                setTimeout(() => {
+                    setIsRandomButtonDisabled(false);
+                    // 4秒后恢复边框颜色
+                    setHighlightedBeanId(null);
+                },3500);
             } else {
                 showToast({ 
                     type: 'info', 
@@ -280,15 +295,15 @@ const SteppedFormModal: React.FC<SteppedFormModalProps> = ({
                     {isValid && isCoffeeBeanStep && !isSearching && (
                         <motion.button
                             key="random-button"
-                            layout
                             type="button"
                             onClick={handleRandomBean}
                             transition={springTransition}
-                            initial={{ scale: 0.95, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            className={`${buttonBaseClass} p-4 flex items-center justify-center`}
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
+                            className={`${buttonBaseClass} p-4 flex items-center justify-center ${
+                                isRandomButtonDisabled ? 'opacity-40 cursor-not-allowed bg-neutral-200 dark:bg-neutral-700' : ''
+                            }`}
+                            whileHover={isRandomButtonDisabled ? {} : { scale: 1.05 }}
+                            whileTap={isRandomButtonDisabled ? {} : { scale: 0.95 }}
+                            disabled={isRandomButtonDisabled}
                         >
                             <Shuffle className="w-4 h-4" strokeWidth="3" />
                         </motion.button>
