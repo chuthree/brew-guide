@@ -183,7 +183,20 @@ globalCache.bloggerYear = getBloggerYearPreference();
 
 // 检查咖啡豆是否用完
 export const isBeanEmpty = (bean: ExtendedCoffeeBean): boolean => {
-    return (bean.remaining === "0" || bean.remaining === "0g") && bean.capacity !== undefined;
+    // 如果没有capacity属性，视为非空
+    if (bean.capacity === undefined) return false;
+    
+    // 如果没有remaining属性，视为非空
+    if (bean.remaining === undefined) return false;
+    
+    // 移除单位"g"
+    const remaining = bean.remaining.replace(/g$/i, '');
+    
+    // 尝试转换为数值并比较
+    const numValue = parseFloat(remaining);
+    
+    // 当数值为0或接近0时视为空（浮点数比较）
+    return !isNaN(numValue) && numValue < 0.001;
 };
 
 // 获取咖啡豆的赏味期信息

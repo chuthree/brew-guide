@@ -88,6 +88,9 @@ export interface BrewingNote {
 	};
 	notes: string;
 	totalTime: number;
+	source?: string;                // 笔记来源，如'quick-decrement'表示快捷扣除自动生成
+	quickDecrementAmount?: number;  // 快捷扣除的数量，仅对source为'quick-decrement'的笔记有效
+	beanId?: string;                // 关联的咖啡豆ID
 }
 
 // Grinder Types

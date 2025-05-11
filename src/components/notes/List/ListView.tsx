@@ -5,6 +5,7 @@ import { BrewingNote } from '@/lib/core/config'
 import { Storage } from '@/lib/core/storage'
 import { globalCache } from './globalCache'
 import NoteItem from './NoteItem'
+import QuickDecrementNoteItem from './QuickDecrementNoteItem'
 import { sortNotes } from '../utils'
 import { SortOption } from '../types'
 
@@ -42,11 +43,33 @@ const NotesListView: React.FC<NotesListViewProps> = ({
     const [notes, setNotes] = useState<BrewingNote[]>(globalCache.filteredNotes)
     const [isFirstLoad, setIsFirstLoad] = useState<boolean>(!globalCache.initialized)
     const [unitPriceCache, _setUnitPriceCache] = useState<Record<string, number>>(globalCache.beanPrices)
+    const [showQuickDecrementNotes, setShowQuickDecrementNotes] = useState(false)
     const isLoadingRef = useRef<boolean>(false)
+    
+    // 判断笔记是否为简单的快捷扣除笔记（未经详细编辑）
+    const isSimpleQuickDecrementNote = useCallback((note: BrewingNote) => {
+        // 如果不是快捷扣除来源，直接返回false
+        if (note.source !== 'quick-decrement') return false;
+        
+        // 通过单个标志检查是否有任何自定义/编辑过的内容
+        const hasCustomContent = 
+            // 检查是否有详细评分
+            (note.taste && Object.values(note.taste).some(value => value > 0)) ||
+            // 检查笔记内容是否已编辑（不是默认文本）
+            (note.notes && !/^快捷扣除\d+g咖啡豆$/.test(note.notes)) ||
+            // 检查是否有评分
+            note.rating > 0 ||
+            // 检查是否设置了冲煮方法和设备
+            note.method || (note.equipment && note.equipment !== '未指定') ||
+            // 检查是否有图片
+            !!note.image;
+        
+        // 返回是否是简单笔记（没有自定义内容）
+        return !hasCustomContent;
+    }, []);
     
     // 加载笔记数据 - 优化加载流程以避免不必要的加载状态显示
     const loadNotes = useCallback(async () => {
-        // 防止并发加载
         if (isLoadingRef.current) return;
         
         try {
@@ -118,7 +141,7 @@ const NotesListView: React.FC<NotesListViewProps> = ({
             // 否则加载新数据
             loadNotes();
         }
-    }, []);
+    }, [loadNotes]);
 
     // 监听笔记更新事件
     useEffect(() => {
@@ -148,7 +171,13 @@ const NotesListView: React.FC<NotesListViewProps> = ({
             onToggleSelect(noteId, enterShareMode);
         }
     }, [onToggleSelect]);
+    
+    // 切换显示快捷扣除笔记
+    const toggleShowQuickDecrementNotes = useCallback(() => {
+        setShowQuickDecrementNotes(prev => !prev);
+    }, []);
 
+    // 渲染加载中状态
     if (isFirstLoad) {
         return (
             <div className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
@@ -157,6 +186,7 @@ const NotesListView: React.FC<NotesListViewProps> = ({
         );
     }
 
+    // 渲染空状态
     if (notes.length === 0) {
         return (
             <div className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
@@ -170,10 +200,16 @@ const NotesListView: React.FC<NotesListViewProps> = ({
             </div>
         );
     }
+    
+    // 分隔笔记
+    const regularNotes = notes.filter(note => !isSimpleQuickDecrementNote(note));
+    const quickDecrementNotes = notes.filter(note => isSimpleQuickDecrementNote(note));
 
     return (
         <div className="pb-20">
-            {notes.map((note) => (
+            {/* 普通笔记列表 */}
+            <div>
+            {regularNotes.map((note) => (
                 <NoteItem
                     key={note.id}
                     note={note}
@@ -186,6 +222,47 @@ const NotesListView: React.FC<NotesListViewProps> = ({
                     onToggleSelect={handleToggleSelect}
                 />
             ))}
+            </div>
+            {/* 快捷扣除笔记区域 */}
+            {quickDecrementNotes.length > 0 && (
+                <div className="mt-2">
+                    <div
+                        className="relative flex items-center mb-2 cursor-pointer"
+                        onClick={toggleShowQuickDecrementNotes}
+                    >
+                        <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
+                        <button className="flex items-center justify-center mx-3 px-2 py-0.5 rounded text-[10px] text-neutral-600 dark:text-neutral-400 transition-colors">
+                            {quickDecrementNotes.length}条快捷扣除记录
+                            <svg
+                                className={`ml-1 w-3 h-3 transition-transform duration-200 ${showQuickDecrementNotes ? 'rotate-180' : ''}`}
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                xmlns="http://www.w3.org/2000/svg"
+                            >
+                                <path d="M6 9L12 15L18 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                        </button>
+                        <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
+                    </div>
+
+                    {/* 快捷扣除笔记列表 - 仅在展开时显示 */}
+                    {showQuickDecrementNotes && (
+                        <div className="opacity-80">
+                            {quickDecrementNotes.map((note) => (
+                                <QuickDecrementNoteItem
+                                    key={note.id}
+                                    note={note}
+                                    onEdit={onNoteClick}
+                                    onDelete={onDeleteNote}
+                                    isShareMode={isShareMode}
+                                    isSelected={selectedNotes.includes(note.id)}
+                                    onToggleSelect={handleToggleSelect}
+                                />
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 };

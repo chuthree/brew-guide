@@ -124,6 +124,10 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
 
     // 网格布局类名
     const gridClassName = `grid ${(!bean.capacity || !bean.remaining) && !bean.roastDate ? 'grid-cols-1' : (bean.capacity && bean.remaining && bean.roastDate ? 'grid-cols-2' : 'grid-cols-1')} gap-x-4`;
+    
+    // 格式化数字显示，整数时不显示小数点
+    const formatNumber = (value: string | undefined): string => 
+        !value ? '0' : (Number.isInteger(parseFloat(value)) ? Math.floor(parseFloat(value)).toString() : value);
 
     return (
         <div
@@ -240,10 +244,10 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                                         className="cursor-pointer border-dashed border-b border-neutral-400 dark:border-neutral-600 transition-colors"
                                         onClick={(e) => onRemainingClick(bean, e)}
                                     >
-                                        {bean.remaining}g
+                                        {formatNumber(bean.remaining)}g
                                     </span>
                                     {" / "}
-                                    {bean.capacity}g
+                                    {formatNumber(bean.capacity)}g
                                 </div>
                             </div>
                             <div

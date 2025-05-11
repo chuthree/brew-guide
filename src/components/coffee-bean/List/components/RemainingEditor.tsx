@@ -5,6 +5,8 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { Storage } from '@/lib/core/storage'
 import { defaultSettings, SettingsOptions } from '@/components/settings/Settings'
 import { cn } from '@/lib/utils/classNameUtils'
+import { CoffeeBean } from '@/types/app'
+import { BrewingNoteData } from '@/types/app'
 
 interface RemainingEditorProps {
     position?: { x: number, y: number } | null
@@ -14,6 +16,7 @@ interface RemainingEditorProps {
     isOpen?: boolean
     onOpenChange?: (open: boolean) => void
     className?: string
+    coffeeBean?: CoffeeBean // 添加咖啡豆对象属性，用于创建笔记
 }
 
 const RemainingEditor: React.FC<RemainingEditorProps> = ({
@@ -23,42 +26,62 @@ const RemainingEditor: React.FC<RemainingEditorProps> = ({
     onCancel,
     isOpen,
     onOpenChange,
-    className
+    className,
+    coffeeBean
 }) => {
-    // 支持内部状态管理或外部控制
-    const [internalOpen, setInternalOpen] = React.useState(false)
+    // 状态管理
+    const [internalOpen, setInternalOpen] = useState(false)
     const open = isOpen !== undefined ? isOpen : internalOpen
-    
-    // 添加ref引用弹出层DOM元素
-    const popoverRef = useRef<HTMLDivElement>(null)
-    
-    // 添加位置状态，用于响应滚动更新
     const [positionStyle, setPositionStyle] = useState<React.CSSProperties>({})
+    const [decrementValues, setDecrementValues] = useState<number[]>(defaultSettings.decrementPresets)
     
-    // 加载设置中的预设值
-    const [decrementValues, setDecrementValues] = React.useState<number[]>(
-        defaultSettings.decrementPresets
-    )
+    // 引用管理
+    const popoverRef = useRef<HTMLDivElement>(null)
+    const isMounted = useRef(false)
+    const safeTargetRef = useRef<HTMLElement | null>(null)
+    const isExiting = useRef(false)
+    
+    // 安全的状态更新函数
+    const safeSetState = <T,>(setter: React.Dispatch<React.SetStateAction<T>>) => {
+        return (value: T) => {
+            if (isMounted.current) {
+                setter(value);
+            }
+        };
+    };
+    
+    // 组件挂载和卸载处理
+    useEffect(() => {
+        isMounted.current = true
+        safeTargetRef.current = targetElement || null
+        
+        // 清理函数
+        return () => {
+            isMounted.current = false
+        }
+    }, [targetElement])
     
     // 更新开关状态
     const setOpen = (value: boolean) => {
+        if (!isMounted.current) return
+        
         setInternalOpen(value)
         onOpenChange?.(value)
-        // 如果正在关闭菜单，触发onCancel回调
+        
         if (!value) {
             onCancel()
         }
     }
     
-    // 初始化时加载设置中的预设值，并添加自定义事件监听
-    React.useEffect(() => {
+    // 加载减量预设值
+    useEffect(() => {
         const loadPresets = async () => {
             try {
                 const settingsStr = await Storage.get('brewGuideSettings')
                 if (settingsStr) {
                     const settings = JSON.parse(settingsStr) as SettingsOptions
-                    if (settings.decrementPresets && Array.isArray(settings.decrementPresets) && settings.decrementPresets.length > 0) {
-                        setDecrementValues(settings.decrementPresets)
+                    if (settings.decrementPresets?.length > 0) {
+                        safeSetState(setDecrementValues)(settings.decrementPresets)
                     }
                 }
             } catch (error) {
@@ -68,16 +91,14 @@ const RemainingEditor: React.FC<RemainingEditorProps> = ({
         
         loadPresets()
         
-        // 添加设置变更事件监听
+        // 监听设置变更
         const handleSettingsChange = (e: CustomEvent) => {
-            if (e.detail?.key === 'brewGuideSettings') {
+            if (e.detail?.key === 'brewGuideSettings' && isMounted.current) {
                 loadPresets()
             }
         }
         
-        // 监听自定义事件
         window.addEventListener('storageChange', handleSettingsChange as EventListener)
-        
         return () => {
             window.removeEventListener('storageChange', handleSettingsChange as EventListener)
         }
@@ -88,7 +109,7 @@ const RemainingEditor: React.FC<RemainingEditorProps> = ({
         if (!open) return
         
         const handleKeyDown = (event: KeyboardEvent) => {
-            if (event.key === 'Escape') {
+            if (event.key === 'Escape' && isMounted.current) {
                 event.preventDefault()
                 setOpen(false)
             }
@@ -102,98 +123,173 @@ const RemainingEditor: React.FC<RemainingEditorProps> = ({
 
     // 计算和更新位置
     const updatePosition = () => {
-        // 如果有固定位置，优先使用
+        if (!isMounted.current) return;
+        
         if (position) {
             setPositionStyle({ 
                 left: `${position.x}px`,
                 top: `${position.y}px`,
-            })
-            return
+            });
+            return;
         }
 
-        // 如果有目标元素，基于目标元素计算位置
-        if (targetElement) {
-            const rect = targetElement.getBoundingClientRect()
-            
-            // 计算组件应该显示的位置
-            const DROPDOWN_WIDTH = 120
-            const DROPDOWN_HEIGHT = 40
-            const WINDOW_WIDTH = window.innerWidth
-            const WINDOW_HEIGHT = window.innerHeight
-            const SAFE_PADDING = 10 // 安全边距
-            
-            // 默认在元素下方显示
-            let top = rect.bottom + 8
-            let left = rect.left
-            
-            // 检查是否会超出右边界
-            if (left + DROPDOWN_WIDTH > WINDOW_WIDTH - SAFE_PADDING) {
-                left = Math.max(SAFE_PADDING, WINDOW_WIDTH - DROPDOWN_WIDTH - SAFE_PADDING)
+        const safeTarget = safeTargetRef.current;
+        
+        if (safeTarget && document.body.contains(safeTarget)) {
+            try {
+                const rect = safeTarget.getBoundingClientRect();
+                
+                const DROPDOWN_WIDTH = 120;
+                const DROPDOWN_HEIGHT = 40;
+                const WINDOW_WIDTH = window.innerWidth;
+                const WINDOW_HEIGHT = window.innerHeight;
+                const SAFE_PADDING = 10;
+                
+                let top = rect.bottom + 8;
+                let left = rect.left;
+                
+                if (left + DROPDOWN_WIDTH > WINDOW_WIDTH - SAFE_PADDING) {
+                    left = Math.max(SAFE_PADDING, WINDOW_WIDTH - DROPDOWN_WIDTH - SAFE_PADDING);
+                }
+                
+                if (top + DROPDOWN_HEIGHT > WINDOW_HEIGHT - SAFE_PADDING) {
+                    top = rect.top - DROPDOWN_HEIGHT - 8;
+                }
+                
+                if (isMounted.current) {
+                    setPositionStyle({
+                        left: `${left}px`,
+                        top: `${top}px`
+                    });
+                }
+            } catch (error) {
+                console.error('计算位置时出错:', error);
+                if (isMounted.current) {
+                    setPositionStyle({
+                        left: '50%',
+                        top: '50%',
+                        transform: 'translate(-50%, -50%)'
+                    });
+                }
             }
-            
-            // 检查是否会超出下边界
-            if (top + DROPDOWN_HEIGHT > WINDOW_HEIGHT - SAFE_PADDING) {
-                // 如果会超出下边界，则改为在目标元素上方显示
-                top = rect.top - DROPDOWN_HEIGHT - 8
-            }
-            
-            // 设置位置样式
-            setPositionStyle({
-                left: `${left}px`,
-                top: `${top}px`
-            })
         }
-    }
+    };
 
-    // 监听滚动和调整大小事件，实时更新位置
+    // 实时更新位置
     useEffect(() => {
         if (!open) return
         
-        // 初始化位置
         updatePosition()
         
-        // 添加滚动和调整大小事件监听
-        window.addEventListener('scroll', updatePosition, true) // 使用捕获阶段确保捕获所有滚动事件
+        window.addEventListener('scroll', updatePosition, true)
         window.addEventListener('resize', updatePosition)
         
-        // 清理事件监听
         return () => {
             window.removeEventListener('scroll', updatePosition, true)
             window.removeEventListener('resize', updatePosition)
         }
     }, [open, targetElement, position])
 
-    // 添加点击外部关闭功能，使用捕获阶段
+    // 添加点击外部关闭功能
     useEffect(() => {
         if (!open) return
 
         const handleClickOutside = (event: MouseEvent) => {
-            // 检查点击是否在菜单内或触发按钮上
+            if (!isMounted.current) return
+            
             const isInMenu = popoverRef.current && popoverRef.current.contains(event.target as Node)
-            const isOnTarget = targetElement && targetElement.contains(event.target as Node)
+            const safeTarget = safeTargetRef.current
+            const isOnTarget = safeTarget && document.body.contains(safeTarget) && safeTarget.contains(event.target as Node)
             
             if (!isInMenu && !isOnTarget) {
                 setOpen(false)
             }
         }
 
-        // 使用捕获阶段确保在冒泡阶段前处理事件
         document.addEventListener('mousedown', handleClickOutside, true)
         return () => {
             document.removeEventListener('mousedown', handleClickOutside, true)
         }
-    }, [open, targetElement])
+    }, [open])
 
     // 阻止事件冒泡
     const handleStop = (e: React.MouseEvent) => {
         e.stopPropagation()
     }
-
-    // 如果没有显示条件则不渲染
-    if ((!position && !targetElement) || !open) return null
+    
+    // 创建自动笔记
+    const createAutoNote = async (decrementAmount: number) => {
+        if (!coffeeBean || !isMounted.current) return
+        
+        const processingTimestamp = Date.now()
+        
+        try {
+            // 创建一个默认的笔记数据
+            const newNote: BrewingNoteData = {
+                id: processingTimestamp.toString(),
+                timestamp: processingTimestamp,
+                source: 'quick-decrement',
+                quickDecrementAmount: decrementAmount,
+                beanId: coffeeBean.id,
+                coffeeBeanInfo: {
+                    name: coffeeBean.name || '',
+                    roastLevel: coffeeBean.roastLevel || '中度烘焙',
+                    roastDate: coffeeBean.roastDate
+                },
+                notes: `快捷扣除${decrementAmount}g咖啡豆`,
+                rating: 0,
+                taste: { acidity: 0, sweetness: 0, bitterness: 0, body: 0 },
+                params: {
+                    coffee: `${decrementAmount}g`,
+                    water: '',
+                    ratio: '',
+                    grindSize: '',
+                    temp: ''
+                }
+            }
+            
+            const existingNotesStr = await Storage.get('brewingNotes')
+            if (!isMounted.current) return
+            
+            const existingNotes = existingNotesStr ? JSON.parse(existingNotesStr) : []
+            const updatedNotes = [newNote, ...existingNotes]
+            
+            await Storage.set('brewingNotes', JSON.stringify(updatedNotes))
+            
+            if (!isMounted.current) return
+            
+            // 使用setTimeout延迟触发事件
+            setTimeout(() => {
+                if (isMounted.current) {
+                    window.dispatchEvent(new CustomEvent('customStorageChange', {
+                        detail: { key: 'brewingNotes' }
+                    }))
+                    console.log('快捷扣除自动创建笔记成功')
+                }
+            }, 100)
+        } catch (error) {
+            console.error('创建快捷扣除笔记失败:', error)
+        }
+    }
+    
+    // 安全处理按钮点击
+    const handleDecrementClick = async (e: React.MouseEvent, value: number) => {
+        e.stopPropagation()
+        if (!isMounted.current) return
+        
+        try {
+            setOpen(false)
+            onQuickDecrement(value)
+            await createAutoNote(value)
+        } catch (error) {
+            console.error('快捷扣除操作失败:', error)
+        }
+    }
+    
+    if (!position && !targetElement && !open) return null
 
     return (
-        <AnimatePresence>
+        <AnimatePresence mode="wait">
             {open && (
                 <motion.div
                     ref={popoverRef}
@@ -209,16 +305,12 @@ const RemainingEditor: React.FC<RemainingEditorProps> = ({
                     onClick={handleStop}
                 >
                     <div className="flex flex-col space-y-2">
-                        {/* 快捷按钮组 */}
                         <div className={`flex ${decrementValues.length > 3 ? 'flex-wrap gap-1' : 'space-x-1'}`}>
                             {decrementValues.map((value) => (
                                 <button
                                     key={value}
                                     className="flex-1 text-[10px] px-2 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-neutral-800 dark:text-neutral-200 rounded py-1 transition-colors"
-                                    onClick={() => {
-                                        onQuickDecrement(value)
-                                        setOpen(false)
-                                    }}
+                                    onClick={(e) => handleDecrementClick(e, value)}
                                 >
                                     -{value}
                                 </button>

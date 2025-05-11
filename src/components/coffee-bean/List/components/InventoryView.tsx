@@ -50,49 +50,70 @@ const InventoryView: React.FC<InventoryViewProps> = ({
     const [editingRemaining, setEditingRemaining] = useState<{
         beanId: string,
         value: string,
-        targetElement: HTMLElement | null
+        targetElement: HTMLElement | null,
+        bean: ExtendedCoffeeBean // 存储完整的咖啡豆对象
     } | null>(null);
 
     // 处理剩余量点击
     const handleRemainingClick = (bean: ExtendedCoffeeBean, event: React.MouseEvent) => {
         event.stopPropagation();
-        const target = event.target as HTMLElement;
-        
-        setEditingRemaining({
-            beanId: bean.id,
-            value: bean.remaining || '',
-            targetElement: target
-        });
+        try {
+            const target = event.target as HTMLElement;
+            
+            // 检查目标元素是否有效
+            if (!target || !document.body.contains(target)) {
+                console.warn('无效的目标元素');
+                return;
+            }
+            
+            setEditingRemaining({
+                beanId: bean.id,
+                value: bean.remaining || '',
+                targetElement: target,
+                bean: bean // 存储完整的咖啡豆对象
+            });
+        } catch (error) {
+            console.error('处理剩余量点击失败:', error);
+        }
     };
 
     // 处理快捷减量
     const handleQuickDecrement = async (decrementAmount: number) => {
         if (!editingRemaining) return;
         try {
+            // 保存当前的bean引用，以防在异步操作中状态变化
+            const currentBeanId = editingRemaining.beanId;
+            const currentValue = editingRemaining.value;
+            
+            // 先关闭弹出层，防止在处理过程中组件卸载导致错误
+            setEditingRemaining(null);
+            
             const result = await onQuickDecrement(
-                editingRemaining.beanId,
-                editingRemaining.value,
+                currentBeanId,
+                currentValue,
                 decrementAmount
             );
+            
             if (result.success) {
-                // 关闭扣除面板
-                setEditingRemaining(null);
-                
                 // 强制更新筛选后的咖啡豆列表，确保UI显示正确
-                // 现在我们依赖全局的事件更新机制
-                const updatedBean = filteredBeans.find(bean => bean.id === editingRemaining.beanId);
+                const updatedBean = filteredBeans.find(bean => bean.id === currentBeanId);
                 if (updatedBean) {
                     updatedBean.remaining = result.value || "0";
                     
-                    // 刷新当前显示的咖啡豆
-                    const updatedDisplayedBeans = displayedBeans.map(bean => 
-                        bean.id === editingRemaining.beanId ? {...bean, remaining: result.value || "0"} : bean
-                    );
-                    setDisplayedBeans(updatedDisplayedBeans);
+                    // 检查组件是否仍然挂载
+                    if (loaderRef.current) {
+                        // 刷新当前显示的咖啡豆
+                        setDisplayedBeans(prev => 
+                            prev.map(bean => 
+                                bean.id === currentBeanId ? {...bean, remaining: result.value || "0"} : bean
+                            )
+                        );
+                    }
                 }
             }
         } catch (error) {
             console.error('快捷减量失败:', error);
+            // 确保组件状态一致
             setEditingRemaining(null);
         }
     };
@@ -222,6 +243,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                 onOpenChange={(open) => !open && setEditingRemaining(null)}
                 onCancel={handleRemainingCancel}
                 onQuickDecrement={handleQuickDecrement}
+                coffeeBean={editingRemaining?.bean} // 传递咖啡豆对象
             />
         </div>
     );
