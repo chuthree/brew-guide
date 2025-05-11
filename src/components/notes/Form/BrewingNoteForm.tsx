@@ -386,7 +386,33 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     };
 
     // Inside the component, add a new state for showing/hiding flavor ratings
-    const [showFlavorRatings, setShowFlavorRatings] = useState(false);
+    const [showFlavorRatings, setShowFlavorRatings] = useState(() => {
+        // 初始化时检查是否有任何风味评分大于0
+        const hasTasteValues = initialData?.taste && (
+            (initialData.taste.acidity > 0) || 
+            (initialData.taste.sweetness > 0) || 
+            (initialData.taste.bitterness > 0) || 
+            (initialData.taste.body > 0)
+        );
+        
+        // 如果有风味评分，默认展开
+        return hasTasteValues || false;
+    });
+    
+    // 监听风味评分变化
+    useEffect(() => {
+        // 检查任何风味评分是否大于0
+        const hasTasteValues = 
+            formData.taste.acidity > 0 || 
+            formData.taste.sweetness > 0 || 
+            formData.taste.bitterness > 0 || 
+            formData.taste.body > 0;
+        
+        // 如果有任何风味评分大于0，自动展开风味评分区域
+        if (hasTasteValues && !showFlavorRatings) {
+            setShowFlavorRatings(true);
+        }
+    }, [formData.taste, showFlavorRatings]);
 
     // 处理图片上传
     const handleImageUpload = async (file: File) => {
