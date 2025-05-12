@@ -253,6 +253,27 @@ export const DataManager = {
 				}
 			}
 			
+			// 触发数据变更事件，通知应用中的组件重新加载数据
+			if (isBrowser) {
+				// 触发自定义器具更新事件
+				const equipmentEvent = new CustomEvent('customEquipmentUpdate', {
+					detail: { source: 'importAllData' }
+				});
+				window.dispatchEvent(equipmentEvent);
+				
+				// 触发自定义方案更新事件
+				const methodEvent = new CustomEvent('customMethodUpdate', {
+					detail: { source: 'importAllData' }
+				});
+				window.dispatchEvent(methodEvent);
+				
+				// 触发一个通用的数据更改事件
+				const dataChangeEvent = new CustomEvent('storage:changed', { 
+					detail: { key: 'allData', action: 'import' } 
+				});
+				window.dispatchEvent(dataChangeEvent);
+			}
+			
 			return {
 				success: true,
 				message: `数据导入成功，导出日期: ${

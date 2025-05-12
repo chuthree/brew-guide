@@ -217,7 +217,30 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             }
         };
 
+        // 添加自定义器具更新事件监听器
+        const handleEquipmentUpdate = () => {
+            loadEquipments();
+        };
+        
+        // 添加数据变更事件监听器
+        const handleStorageChange = (e: Event) => {
+            const customEvent = e as CustomEvent;
+            if (customEvent.detail?.key === 'allData' || customEvent.detail?.key === 'customEquipments') {
+                loadEquipments();
+            }
+        };
+
         loadEquipments();
+
+        // 添加事件监听
+        window.addEventListener('customEquipmentUpdate', handleEquipmentUpdate);
+        window.addEventListener('storage:changed', handleStorageChange);
+
+        // 清理事件监听
+        return () => {
+            window.removeEventListener('customEquipmentUpdate', handleEquipmentUpdate);
+            window.removeEventListener('storage:changed', handleStorageChange);
+        };
     }, []);
 
     const contentHooks = useBrewingContent({
@@ -1454,6 +1477,45 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             console.error('导入器具失败:', error);
         }
     };
+
+    // 加载自定义方法
+    useEffect(() => {
+        const loadMethods = async () => {
+            try {
+                const methods = await import('@/lib/managers/customMethods').then(({ loadCustomMethods }) => {
+                    return loadCustomMethods();
+                });
+                setCustomMethods(methods);
+            } catch (error) {
+                console.error('加载自定义方法失败:', error);
+            }
+        };
+
+        // 添加自定义方法更新事件监听器
+        const handleMethodUpdate = () => {
+            loadMethods();
+        };
+        
+        // 添加数据变更事件监听器
+        const handleStorageChange = (e: Event) => {
+            const customEvent = e as CustomEvent;
+            if (customEvent.detail?.key === 'allData' || customEvent.detail?.key?.startsWith('customMethods')) {
+                loadMethods();
+            }
+        };
+
+        loadMethods();
+
+        // 添加事件监听
+        window.addEventListener('customMethodUpdate', handleMethodUpdate);
+        window.addEventListener('storage:changed', handleStorageChange);
+
+        // 清理事件监听
+        return () => {
+            window.removeEventListener('customMethodUpdate', handleMethodUpdate);
+            window.removeEventListener('storage:changed', handleStorageChange);
+        };
+    }, []);
 
     return (
         <div className="flex h-full flex-col overflow-hidden mx-auto max-w-[500px] text-neutral-800 dark:text-neutral-100">
