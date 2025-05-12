@@ -143,6 +143,15 @@ const NotesListView: React.FC<NotesListViewProps> = ({
         }
     }, [loadNotes]);
 
+    // 专门监听搜索结果变化
+    useEffect(() => {
+        if (preFilteredNotes) {
+            startTransition(() => {
+                setNotes(preFilteredNotes);
+            });
+        }
+    }, [preFilteredNotes]);
+
     // 监听笔记更新事件
     useEffect(() => {
         // 处理笔记更新事件
