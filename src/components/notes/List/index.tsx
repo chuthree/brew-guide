@@ -629,7 +629,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onClose: _onClo
                                 <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
                             </div>
                         </div>
-                        
                     ) : (
                         <AddNoteButton onAddNote={handleAddNote} />
                     )}

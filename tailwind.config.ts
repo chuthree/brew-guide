@@ -20,8 +20,8 @@ const config: Config = {
 				mono: ["var(--font-mono)"],
 			},
 			padding: {
-				'safe-top': 'max(env(safe-area-inset-top), 24px)',
-				'safe-bottom': 'max(env(safe-area-inset-bottom), 28px)',
+				'safe-top': 'max(env(safe-area-inset-top), 36px)',
+				'safe-bottom': 'max(env(safe-area-inset-bottom), 36px)',
 			}
 		},
 	},

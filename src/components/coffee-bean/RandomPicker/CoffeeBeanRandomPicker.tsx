@@ -144,13 +144,13 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-white/90 dark:bg-neutral-900/90 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-white/90 dark:bg-neutral-900/90 backdrop-blur-sm pt-safe-top"
           initial="closed"
           animate="open"
           exit="closed"
           variants={containerVariants}
         >
-          <div className="flex flex-col items-center justify-center w-full h-full p-6">
+          <div className="relative flex flex-col items-center justify-center w-full h-full p-6">
             {/* 中间指示器和卡片容器 */}
             <div className="relative w-full max-w-md" ref={containerRef}>
               {/* 中间指示器 - 永远在中间 */}
@@ -231,7 +231,7 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
           
           {/* 关闭按钮 */}
           <motion.button
-            className="absolute top-6 right-6 p-2 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100"
+            className="absolute top-[calc(env(safe-area-inset-top)+36px)] right-6 p-2 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100"
             onClick={onClose}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
