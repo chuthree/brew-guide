@@ -631,7 +631,7 @@ export const brewingMethods: BrewingMethods = {
 				coffee: "20g",
 				water: "200g",
 				ratio: "1:10",
-				grindSize: "细",
+				grindSize: "中细",
 				temp: "96°C",
 				videoUrl: "",
 				roastLevel: "中浅烘焙",
