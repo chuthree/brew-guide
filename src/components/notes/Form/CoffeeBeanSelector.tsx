@@ -13,6 +13,11 @@ interface CoffeeBeanSelectorProps {
 
 // 计算咖啡豆的赏味期阶段和剩余天数
 const getFlavorInfo = (bean: CoffeeBean) => {
+  // 处理冰冻状态
+  if (bean.isFrozen) {
+    return { phase: '冰冻', remainingDays: 0 };
+  }
+  
   if (!bean.roastDate) return { phase: '未知', remainingDays: 0 };
 
   const today = new Date();
@@ -55,6 +60,7 @@ const getFlavorInfo = (bean: CoffeeBean) => {
 // 获取阶段数值用于排序
 const getPhaseValue = (phase: string): number => {
   switch (phase) {
+    case '冰冻': return 0; // 冰冻状态与赏味期同等优先级
     case '赏味期': return 0;
     case '养豆期': return 1;
     case '衰退期':
@@ -184,7 +190,11 @@ const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
               let freshStatus = "";
               let statusClass = "text-neutral-500 dark:text-neutral-400";
 
-              if (bean.roastDate) {
+              if (bean.isFrozen) {
+                // 冰冻状态处理
+                freshStatus = "(冰冻)";
+                statusClass = "text-blue-400 dark:text-blue-300";
+              } else if (bean.roastDate) {
                 const { phase } = getFlavorInfo(bean);
                 
                 if (phase === '养豆期') {
