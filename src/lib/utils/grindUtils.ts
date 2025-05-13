@@ -94,13 +94,8 @@ export function formatGrindSize(
 	grindType: string
 ): string {
 	if (!grindSize) return "";
-
-	// 如果不是通用类型，则尝试转换
-	if (grindType !== 'generic') {
-		return convertToSpecificGrind(grindSize, grindType);
-	}
-
-	// 如果是通用类型，直接返回
+	
+	// 直接返回原始研磨度值，不再进行转换
 	return grindSize;
 }
 

@@ -169,30 +169,20 @@ const NoteItem: React.FC<NoteItemProps> = ({
                                                 <span>·</span>
                                                 {note.params.grindSize && note.params.temp ? (
                                                     <span>
-                                                        {isShareMode && settings.grindType !== 'generic' && grinderName ? (
-                                                            // 在分享模式下显示磨豆机名称 + 研磨度
-                                                            <>{grinderName} {formatGrindSize(note.params.grindSize, settings.grindType)} · {note.params.temp}</>
-                                                        ) : (
-                                                            // 普通显示
-                                                            <>{note.params.grindSize} · {note.params.temp}</>
-                                                        )}
+                                                        {/* 直接显示原始研磨度，不再进行转换 */}
+                                                        <>{note.params.grindSize} · {note.params.temp}</>
                                                     </span>
-                                                ) : (
+                                                ) :
                                                     <span>
                                                         {note.params.grindSize ? (
-                                                            isShareMode && settings.grindType !== 'generic' && grinderName ? (
-                                                                // 在分享模式下只显示研磨度
-                                                                <>{grinderName} {formatGrindSize(note.params.grindSize, settings.grindType)}</>
-                                                            ) : (
-                                                                // 普通显示
-                                                                <>{note.params.grindSize}</>
-                                                            )
+                                                            // 直接显示原始研磨度
+                                                            <>{note.params.grindSize}</>
                                                         ) : (
                                                             // 只有水温
                                                             <>{note.params.temp}</>
                                                         )}
                                                     </span>
-                                                )}
+                                                }
                                             </>
                                         )}
                                     </div>
