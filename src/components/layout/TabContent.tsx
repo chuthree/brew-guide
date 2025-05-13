@@ -561,7 +561,8 @@ const TabContent: React.FC<TabContentProps> = ({
     const showEmptyMethodsMessage = activeTab === '方案' && 
                                     selectedEquipment && 
                                     (!customMethods[selectedEquipment] || customMethods[selectedEquipment].length === 0) &&
-                                    (!commonMethods[selectedEquipment] || commonMethods[selectedEquipment].length === 0);
+                                    (!commonMethods[selectedEquipment] || commonMethods[selectedEquipment].length === 0) &&
+                                    (content[activeTab]?.steps.length === 0);
     
     // 渲染默认列表内容
     return (
