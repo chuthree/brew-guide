@@ -479,7 +479,16 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
         setBean(prev => ({
             ...prev,
             startDay,
-            endDay
+            endDay,
+            isFrozen: false // 设置赏味期时取消冰冻状态
+        }));
+    };
+
+    // 切换冰冻状态
+    const toggleFrozenState = () => {
+        setBean(prev => ({
+            ...prev,
+            isFrozen: !prev.isFrozen
         }));
     };
 
@@ -643,6 +652,7 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                             change: handleBlendComponentChange
                         }}
                         autoSetFlavorPeriod={autoSetFlavorPeriod}
+                        toggleFrozenState={toggleFrozenState}
                     />
                 );
 

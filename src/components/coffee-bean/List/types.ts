@@ -8,9 +8,11 @@ export interface BlendComponent {
     variety?: string;    // 品种
 }
 
+// 确保 ExtendedCoffeeBean 包含 isFrozen 字段
 // 扩展CoffeeBean类型
 export interface ExtendedCoffeeBean extends CoffeeBean {
     blendComponents?: BlendComponent[];
+    isFrozen?: boolean;  // 显式添加冰冻状态字段，确保类型定义完整
 }
 
 // 视图模式定义

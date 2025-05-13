@@ -33,6 +33,7 @@ export interface CoffeeBean {
     notes?: string;
     startDay?: number;
     endDay?: number;
+    isFrozen?: boolean;  // 新增：是否冰冻状态
 }
 
 // 扩展CoffeeBean类型以支持拼配成分

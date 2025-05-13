@@ -16,6 +16,7 @@ interface DetailInfoProps {
         change: (index: number, field: keyof BlendComponent, value: string | number) => void;
     };
     autoSetFlavorPeriod: () => void;
+    toggleFrozenState: () => void;
 }
 
 // 咖啡豆类型选项
@@ -30,6 +31,7 @@ const DetailInfo: React.FC<DetailInfoProps> = ({
     blendComponents,
     onBlendComponentsChange,
     autoSetFlavorPeriod,
+    toggleFrozenState,
 }) => {
     return (
         <motion.div
@@ -84,47 +86,64 @@ const DetailInfo: React.FC<DetailInfoProps> = ({
                     <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
                         赏味期设置
                     </label>
-                    <button
-                        type="button"
-                        onClick={autoSetFlavorPeriod}
-                        className="text-xs text-neutral-600 dark:text-neutral-400 underline"
-                    >
-                        按烘焙度重置
-                    </button>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                        <label className="block text-xs text-neutral-500 dark:text-neutral-400">
-                            养豆期结束
-                        </label>
-                        <AutocompleteInput
-                            value={bean.startDay ? String(bean.startDay) : ''}
-                            onChange={onBeanChange('startDay')}
-                            placeholder="天数"
-                            unit="天"
-                            clearable={false}
-                            suggestions={[]}
-                            inputType="tel"
-                        />
-                    </div>
-                    <div className="space-y-1">
-                        <label className="block text-xs text-neutral-500 dark:text-neutral-400">
-                            赏味期结束
-                        </label>
-                        <AutocompleteInput
-                            value={bean.endDay ? String(bean.endDay) : ''}
-                            onChange={onBeanChange('endDay')}
-                            placeholder="天数"
-                            unit="天"
-                            clearable={false}
-                            suggestions={[]}
-                            inputType="tel"
-                        />
+                    <div className="flex space-x-2">
+                        <button
+                            type="button"
+                            onClick={autoSetFlavorPeriod}
+                            className="text-xs text-neutral-600 dark:text-neutral-400 underline"
+                        >
+                            按烘焙度重置
+                        </button>
+                        <button
+                            type="button"
+                            onClick={toggleFrozenState}
+                            className={`text-xs ${bean.isFrozen ? 'text-blue-600 dark:text-blue-400' : 'text-neutral-600 dark:text-neutral-400'} underline`}
+                        >
+                            {bean.isFrozen ? '取消冰冻状态' : '设为冰冻状态'}
+                        </button>
                     </div>
                 </div>
-                <div className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
-                    <p>说明：{bean.startDay}天前为养豆期，{bean.startDay}-{bean.endDay}天为赏味期，{bean.endDay}天后赏味期结束</p>
-                </div>
+                {bean.isFrozen ? (
+                    <div className="px-4 py-3 bg-blue-50 dark:bg-blue-900/20 rounded-md text-sm text-blue-800 dark:text-blue-200">
+                        已设置为冰冻保存，冰冻状态下可随时饮用，无需设置养豆期和赏味期。
+                    </div>
+                ) : (
+                    <>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                                <label className="block text-xs text-neutral-500 dark:text-neutral-400">
+                                    养豆期结束
+                                </label>
+                                <AutocompleteInput
+                                    value={bean.startDay ? String(bean.startDay) : ''}
+                                    onChange={onBeanChange('startDay')}
+                                    placeholder="天数"
+                                    unit="天"
+                                    clearable={false}
+                                    suggestions={[]}
+                                    inputType="tel"
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="block text-xs text-neutral-500 dark:text-neutral-400">
+                                    赏味期结束
+                                </label>
+                                <AutocompleteInput
+                                    value={bean.endDay ? String(bean.endDay) : ''}
+                                    onChange={onBeanChange('endDay')}
+                                    placeholder="天数"
+                                    unit="天"
+                                    clearable={false}
+                                    suggestions={[]}
+                                    inputType="tel"
+                                />
+                            </div>
+                        </div>
+                        <div className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                            <p>说明：{bean.startDay}天前为养豆期，{bean.startDay}-{bean.endDay}天为赏味期，{bean.endDay}天后赏味期结束</p>
+                        </div>
+                    </>
+                )}
             </div>
 
             <div className="space-y-2 w-full">

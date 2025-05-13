@@ -58,8 +58,24 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
             preFlavorPercent: 0,
             flavorPercent: 0,
             daysSinceRoast: 0,
-            endDay: 0
+            endDay: 0,
+            isFrozen: false
         };
+
+        // 检查是否为冰冻状态
+        if (bean.isFrozen) {
+            return {
+                phase: '冰冻',
+                remainingDays: 0,
+                progressPercent: 0,
+                status: '冰冻',
+                preFlavorPercent: 0,
+                flavorPercent: 100, // 冰冻状态下整个进度条显示为赏味期区域
+                daysSinceRoast: 0,
+                endDay: 0,
+                isFrozen: true
+            };
+        }
 
         const today = new Date();
         // 使用日期工具函数解析日期
@@ -109,8 +125,8 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
             status = '已衰退';
         }
 
-        return { phase, remainingDays, progressPercent, preFlavorPercent, flavorPercent, status, daysSinceRoast, endDay };
-    }, [bean.roastDate, bean.startDay, bean.endDay, bean.roastLevel]);
+        return { phase, remainingDays, progressPercent, preFlavorPercent, flavorPercent, status, daysSinceRoast, endDay, isFrozen: false };
+    }, [bean.roastDate, bean.startDay, bean.endDay, bean.roastLevel, bean.isFrozen]);
 
     // 计算豆子是否为空
     const isEmpty = isBeanEmpty(bean);
@@ -268,46 +284,58 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                         <div className="space-y-1">
                             <div className="flex items-center justify-between">
                                 <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
-                                    赏味期
+                                    {flavorInfo.isFrozen ? '保存方式' : '赏味期'}
                                 </div>
                                 <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
                                     {flavorInfo.status}
                                 </div>
                             </div>
                             <div className="h-px w-full overflow-hidden bg-neutral-200/50 dark:bg-neutral-800 relative">
-                                {/* 养豆期区间 */}
-                                <div
-                                    className="absolute h-full bg-neutral-400/10 dark:bg-neutral-400/10"
-                                    style={{
-                                        left: '0%',
-                                        width: `${flavorInfo.preFlavorPercent}%`
-                                    }}
-                                ></div>
+                                {flavorInfo.isFrozen ? (
+                                    // 冰冻状态进度条样式
+                                    <div
+                                        className="absolute h-full bg-blue-500/20 dark:bg-blue-600/30 w-full"
+                                        style={{
+                                            backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(0, 0, 0, 0.1) 2px, rgba(0, 0, 0, 0.1) 4px)'
+                                        }}
+                                    ></div>
+                                ) : (
+                                    <>
+                                        {/* 养豆期区间 */}
+                                        <div
+                                            className="absolute h-full bg-neutral-400/10 dark:bg-neutral-400/10"
+                                            style={{
+                                                left: '0%',
+                                                width: `${flavorInfo.preFlavorPercent}%`
+                                            }}
+                                        ></div>
 
-                                {/* 赏味期区间（带纹理） */}
-                                <div
-                                    className="absolute h-full bg-green-500/20 dark:bg-green-600/30"
-                                    style={{
-                                        left: `${flavorInfo.preFlavorPercent}%`,
-                                        width: `${flavorInfo.flavorPercent}%`,
-                                        backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(0, 0, 0, 0.1) 2px, rgba(0, 0, 0, 0.1) 4px)'
-                                    }}
-                                ></div>
+                                        {/* 赏味期区间（带纹理） */}
+                                        <div
+                                            className="absolute h-full bg-green-500/20 dark:bg-green-600/30"
+                                            style={{
+                                                left: `${flavorInfo.preFlavorPercent}%`,
+                                                width: `${flavorInfo.flavorPercent}%`,
+                                                backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(0, 0, 0, 0.1) 2px, rgba(0, 0, 0, 0.1) 4px)'
+                                            }}
+                                        ></div>
 
-                                {/* 进度指示 */}
-                                <div
-                                    className={`absolute h-full ${
-                                        flavorInfo.daysSinceRoast > flavorInfo.endDay 
-                                            ? 'bg-neutral-500 dark:bg-neutral-500' 
-                                            : flavorInfo.daysSinceRoast >= (bean.startDay || 0) 
-                                                ? 'bg-green-500 dark:bg-green-600' 
-                                                : 'bg-neutral-600 dark:bg-neutral-400'
-                                    }`}
-                                    style={{
-                                        zIndex: 10,
-                                        width: `${flavorInfo.progressPercent}%`
-                                    }}
-                                ></div>
+                                        {/* 进度指示 */}
+                                        <div
+                                            className={`absolute h-full ${
+                                                flavorInfo.daysSinceRoast > flavorInfo.endDay 
+                                                    ? 'bg-neutral-500 dark:bg-neutral-500' 
+                                                    : flavorInfo.daysSinceRoast >= (bean.startDay || 0) 
+                                                        ? 'bg-green-500 dark:bg-green-600' 
+                                                        : 'bg-neutral-600 dark:bg-neutral-400'
+                                            }`}
+                                            style={{
+                                                zIndex: 10,
+                                                width: `${flavorInfo.progressPercent}%`
+                                            }}
+                                        ></div>
+                                    </>
+                                )}
                             </div>
                         </div>
                     )}

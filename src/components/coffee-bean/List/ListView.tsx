@@ -37,6 +37,7 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
     // 获取阶段数值用于排序
     const getPhaseValue = useCallback((phase: string): number => {
         switch (phase) {
+            case '冰冻': return 0; // 冰冻状态与赏味期同等优先级
             case '赏味期': return 0;
             case '养豆期': return 1;
             case '衰退期':
@@ -46,6 +47,11 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
 
     // 获取咖啡豆的赏味期信息
     const getFlavorInfo = useCallback((bean: CoffeeBean): { phase: string, remainingDays: number } => {
+        // 处理冰冻状态
+        if (bean.isFrozen) {
+            return { phase: '冰冻', remainingDays: 0 };
+        }
+        
         if (!bean.roastDate) {
             return { phase: '衰退期', remainingDays: 0 };
         }
@@ -280,7 +286,11 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
                 let freshStatus = "";
                 let statusClass = "text-rose-500 dark:text-rose-400";
 
-                if (bean.roastDate) {
+                if (bean.isFrozen) {
+                    // 冰冻状态处理
+                    freshStatus = "(冰冻)";
+                    statusClass = "text-blue-400 dark:text-blue-300";
+                } else if (bean.roastDate) {
                     try {
                         // 消除时区和时间差异，只比较日期部分
                         const today = new Date();
