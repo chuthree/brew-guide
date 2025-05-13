@@ -208,8 +208,7 @@ const EquipmentImportModal: React.FC<EquipmentImportModalProps> = ({
                         return;
                     }
 
-                    console.log('导入器具数据:', equipment);
-                    console.log('导入方案数据:', exportData.methods);
+
 
                     // 确保equipment对象完全符合CustomEquipment接口
                     const validEquipment: CustomEquipment = {
@@ -226,14 +225,14 @@ const EquipmentImportModal: React.FC<EquipmentImportModalProps> = ({
                         customPourAnimations: equipment.customPourAnimations || [],
                     };
 
-                    console.log('处理后的器具数据:', validEquipment);
-
                     // 提取方案（如果有）
                     const methods = exportData.methods && Array.isArray(exportData.methods)
-                        ? exportData.methods as Method[]
+                        ? exportData.methods.map(method => ({
+                            ...method,
+                            // 确保每个方案有ID，优先使用原有ID
+                            id: method.id || `method-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+                        }))
                         : undefined;
-
-                    console.log('最终要导入的方案数量:', methods?.length || 0);
 
                     // 导入器具和方案
                     onImport(validEquipment, methods);

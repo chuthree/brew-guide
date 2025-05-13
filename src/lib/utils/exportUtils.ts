@@ -11,8 +11,8 @@ export function exportEquipment(equipment: CustomEquipment): string {
     // 创建一个副本以避免修改原始对象
     const exportData = { ...equipment };
     
-    // 移除不需要导出的字段
-    delete (exportData as Partial<CustomEquipment>).id;  // 导入时会生成新的ID
+    // 不再删除ID，保留原始ID以确保关联性
+    // delete (exportData as Partial<CustomEquipment>).id;
     
     // 格式化为易读的JSON字符串
     return JSON.stringify(exportData, null, 2);
@@ -27,8 +27,8 @@ export function exportMethod(method: Method): string {
     // 创建一个副本以避免修改原始对象
     const exportData = { ...method };
     
-    // 移除不需要导出的字段
-    delete (exportData as Partial<Method>).id;  // 导入时会生成新的ID
+    // 不再删除ID，保留原始ID以确保关联性
+    // delete (exportData as Partial<Method>).id;
     
     // 格式化为易读的JSON字符串
     return JSON.stringify(exportData, null, 2);

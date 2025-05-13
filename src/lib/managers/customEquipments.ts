@@ -110,7 +110,6 @@ export async function saveCustomEquipment(
 					...equipment,
 					isCustom: true as const
 				});
-				console.log(`[saveCustomEquipment] 更新了IndexedDB中的器具: ${equipment.id}`);
 			} else {
 				// 如果找不到对应ID的器具，但已有ID，保留原始ID
 				// 不再生成新ID，以确保导入导出时方案关联不丢失
@@ -122,7 +121,6 @@ export async function saveCustomEquipment(
 				
 				// 添加到IndexedDB
 				await db.customEquipments.put(newEquipment);
-				console.log(`[saveCustomEquipment] 导入具有ID的新器具到IndexedDB: ${equipment.id}`);
 			}
 		} else {
 			// 如果是新建器具，生成新的 ID
@@ -136,12 +134,13 @@ export async function saveCustomEquipment(
 			
 			// 添加到IndexedDB
 			await db.customEquipments.put(newEquipment);
-			console.log(`[saveCustomEquipment] 添加新器具到IndexedDB: ${newId}`);
+			
+			// 更新equipment变量的ID，以便后续保存方案时使用
+			equipment.id = newId;
 		}
 
 		// 同时更新localStorage（作为备份，后期可移除）
 		await Storage.set(STORAGE_KEY, JSON.stringify(updatedEquipments));
-		console.log(`[saveCustomEquipment] 同时更新了localStorage作为备份`);
 
 		// 检查器具名称是否变更
 		if (equipment.id && oldEquipmentName && oldEquipmentName !== equipment.name) {

@@ -62,19 +62,20 @@ const EquipmentShareModal: React.FC<EquipmentShareModalProps> = ({
                 equipment: {
                     ...equipment,
                     // 确保包含自定义注水动画配置
-                    customPourAnimations: equipment.customPourAnimations || []
+                    customPourAnimations: equipment.customPourAnimations || [],
+                    // 保留ID信息，确保方案能正确关联
+                    id: equipment.id
                 },
                 methods: methods.length > 0 ? methods.filter(method =>
                     selectedMethods.includes(method.id || method.name)
                 ).map(method => ({
                     ...method,
-                    // 不再删除id，保留原有ID以确保关联性
-                    // id: undefined
+                    // 保留ID，确保关联性
+                    id: method.id
                 })) : []
             };
 
-            // 不再删除设备ID，保留原始ID
-            // delete (exportData.equipment as Partial<CustomEquipment>).id;
+
 
             // Convert to JSON
             const jsonData = JSON.stringify(exportData, null, 2);

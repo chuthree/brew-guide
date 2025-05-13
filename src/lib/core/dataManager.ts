@@ -133,6 +133,33 @@ export const DataManager = {
 						}
 					}
 				}
+				
+				// 尝试从IndexedDB加载更完整的自定义方案数据
+				try {
+					const methodsFromDB = await db.customMethods.toArray();
+					if (methodsFromDB && methodsFromDB.length > 0) {
+						// 确保customMethodsByEquipment已初始化
+						if (!exportData.data.customMethodsByEquipment) {
+							exportData.data.customMethodsByEquipment = {};
+						}
+						
+						// 添加或更新来自IndexedDB的方案数据
+						for (const item of methodsFromDB) {
+							const { equipmentId, methods } = item;
+							if (Array.isArray(methods) && methods.length > 0) {
+								// 将当前器具的所有方案添加到导出数据中
+								(exportData.data.customMethodsByEquipment as Record<string, unknown>)[equipmentId] = methods;
+							}
+						}
+						
+						// 检查自定义器具数据
+						if (exportData.data.customEquipments && Array.isArray(exportData.data.customEquipments)) {
+							const customEquipments = exportData.data.customEquipments as CustomEquipment[];
+						}
+					}
+				} catch (dbError) {
+					console.error("从IndexedDB导出自定义方案失败:", dbError);
+				}
 			} catch (error) {
 				console.error("导出自定义方案失败:", error);
 				// 错误处理：即使自定义方案导出失败，也继续导出其他数据
@@ -221,6 +248,13 @@ export const DataManager = {
 				
 				// 遍历所有器具的方案
 				const customMethodsByEquipment = importData.data.customMethodsByEquipment as Record<string, unknown>;
+				
+				// 导入的自定义器具ID列表
+				let customEquipmentIds: string[] = [];
+				if (importData.data.customEquipments && Array.isArray(importData.data.customEquipments)) {
+					customEquipmentIds = (importData.data.customEquipments as CustomEquipment[]).map(e => e.id);
+				}
+				
 				for (const equipmentId of Object.keys(customMethodsByEquipment)) {
 					const methods = customMethodsByEquipment[equipmentId];
 					if (Array.isArray(methods)) {
