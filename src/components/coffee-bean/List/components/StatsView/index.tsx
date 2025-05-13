@@ -2,9 +2,9 @@
 
 import React, { useMemo, useRef, useState, useEffect } from 'react'
 import { StatsViewProps } from './types'
-import { calculateStats, stardomFontStyle } from './utils'
+import { calculateStats, stardomFontStyle, formatNumber } from './utils'
 import BeanImageGallery from './BeanImageGallery'
-import StatsSummary from './StatsSummary'
+import StatsSummary, { calculateAverageConsumption, calculateEstimatedFinishDate } from './StatsSummary'
 import StatsCategories from './StatsCategories'
 import { useAnimation } from './useAnimation'
 import { useConsumption } from './useConsumption'
@@ -20,6 +20,14 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
     
     // 获取今日消耗数据
     const { consumption: todayConsumption, cost: todayCost } = useConsumption(beans)
+    
+    // 计算平均消耗和预计完成日期
+    const averageConsumption = useMemo(() => 
+        calculateAverageConsumption(stats), [stats]);
+    
+    const estimatedFinishDate = useMemo(() => 
+        calculateEstimatedFinishDate(stats, todayConsumption > 0 ? todayConsumption : averageConsumption), 
+        [stats, todayConsumption, averageConsumption]);
     
     // 动画控制
     const { imagesLoaded, textLoaded, styles } = useAnimation()
@@ -93,6 +101,44 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
                         <div className="">✦</div>
                         <StatsSummary stats={stats} todayConsumption={todayConsumption} />
                         <div className="">✦</div>
+                    </div>
+                    
+                    {/* 添加两列统计信息 */}
+                    <div 
+                        className="w-full max-w-xs mx-auto px-4 pb-6 pt-2 grid grid-cols-2 gap-4 text-sm font-medium"
+                        style={styles.infoAnimStyle}
+                    >
+                        <div className="space-y-1.5">
+                            <p className="text-neutral-600 dark:text-neutral-400 text-xs">容量概览</p>
+                            <div>
+                                <span className="text-neutral-800 dark:text-white">总量</span>
+                                <span className="float-right">{formatNumber(stats.totalWeight)}克</span>
+                            </div>
+                            <div>
+                                <span className="text-neutral-800 dark:text-white">剩余</span>
+                                <span className="float-right">{formatNumber(stats.remainingWeight)}克</span>
+                            </div>
+                            <div>
+                                <span className="text-neutral-800 dark:text-white">消耗</span>
+                                <span className="float-right">{formatNumber(stats.consumedWeight)}克</span>
+                            </div>
+                        </div>
+                        
+                        <div className="space-y-1.5">
+                            <p className="text-neutral-600 dark:text-neutral-400 text-xs">消耗预估</p>
+                            <div>
+                                <span className="text-neutral-800 dark:text-white">今日</span>
+                                <span className="float-right">{formatNumber(todayConsumption)}克</span>
+                            </div>
+                            <div>
+                                <span className="text-neutral-800 dark:text-white">平均</span>
+                                <span className="float-right">{formatNumber(averageConsumption)}克/天</span>
+                            </div>
+                            <div>
+                                <span className="text-neutral-800 dark:text-white">预计完成</span>
+                                <span className="float-right">{estimatedFinishDate}</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
