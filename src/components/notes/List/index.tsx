@@ -15,6 +15,7 @@ import { globalCache, saveSelectedEquipmentPreference, saveSelectedBeanPreferenc
 import ListView from './ListView'
 import { SortOption } from '../types'
 import { exportSelectedNotes } from '../Share/NotesExporter'
+import NoteFormHeader from '@/components/notes/ui/NoteFormHeader'
 
 // 为Window对象声明类型扩展
 declare global {
@@ -23,7 +24,13 @@ declare global {
     }
 }
 
-const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onClose: _onClose, onAddNote }) => {
+const BrewingHistory: React.FC<BrewingHistoryProps> = ({
+    isOpen,
+    onClose: _onClose,
+    onAddNote,
+    setAlternativeHeaderContent,
+    setShowAlternativeHeader
+}) => {
     // 用于跟踪用户选择
     const [sortOption, setSortOption] = useState<SortOption>(globalCache.sortOption)
     const [filterMode, setFilterMode] = useState<'equipment' | 'bean'>(globalCache.filterMode)
@@ -233,72 +240,10 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onClose: _onClo
         }
     };
     
-    // 处理保存编辑
-    const handleSaveEdit = async (updatedData: BrewingNoteData) => {
-        if (!editingNote) return;
-        
-        try {
-            const savedNotes = await Storage.get('brewingNotes');
-            const notes = savedNotes ? JSON.parse(savedNotes) as BrewingNote[] : [];
-            
-            let updated = false;
-            const updatedNotes = notes.map(note => {
-                if (note.id === editingNote.id) {
-                    updated = true;
-                    // 创建更新后的笔记
-                    const updatedNote: BrewingNote = {
-                        ...note,
-                        equipment: updatedData.equipment || note.equipment,
-                        method: updatedData.method || note.method,
-                        params: {
-                            coffee: updatedData.params?.coffee || note.params.coffee,
-                            water: updatedData.params?.water || note.params.water,
-                            ratio: updatedData.params?.ratio || note.params.ratio,
-                            grindSize: updatedData.params?.grindSize || note.params.grindSize,
-                            temp: updatedData.params?.temp || note.params.temp
-                        },
-                        image: typeof updatedData.image === 'string' ? updatedData.image : note.image,
-                        rating: updatedData.rating !== undefined ? updatedData.rating : note.rating,
-                        taste: updatedData.taste || note.taste,
-                        notes: updatedData.notes || note.notes,
-                        totalTime: updatedData.totalTime || note.totalTime
-                    };
-                    
-                    // 单独处理 coffeeBeanInfo
-                    if (updatedData.coffeeBeanInfo) {
-                        updatedNote.coffeeBeanInfo = {
-                            name: updatedData.coffeeBeanInfo.name,
-                            roastLevel: updatedData.coffeeBeanInfo.roastLevel,
-                            roastDate: updatedData.coffeeBeanInfo.roastDate
-                        };
-                    }
-                    
-                    return updatedNote;
-                }
-                return note;
-            });
-            
-            if (updated) {
-                await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
-                
-                // 派发自定义事件以通知其他组件
-                const event = new CustomEvent('customStorageChange', {
-                    detail: { key: 'brewingNotes' }
-                });
-                window.dispatchEvent(event);
-                
-                setEditingNote(null);
-                showToast('笔记已更新', 'success');
-            }
-        } catch (error) {
-            console.error('更新笔记失败:', error);
-            showToast('更新笔记失败', 'error');
-        }
-    };
-    
-    // 处理点击笔记
+    // 处理笔记点击 - 添加导航栏替代头部支持
     const handleNoteClick = (note: BrewingNote) => {
-        setEditingNote({
+        // 准备要编辑的笔记数据
+        const noteToEdit = {
             id: note.id,
             timestamp: note.timestamp,
             equipment: note.equipment,
@@ -313,8 +258,85 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onClose: _onClo
             taste: note.taste,
             notes: note.notes,
             totalTime: note.totalTime
-        });
+        };
+        
+        // 设置编辑笔记数据
+        setEditingNote(noteToEdit);
+        
+        // 如果提供了导航栏替代头部功能，则使用
+        if (setAlternativeHeaderContent && setShowAlternativeHeader) {
+            // 获取原始时间戳作为Date对象
+            const timestamp = new Date(note.timestamp);
+            
+            // 创建笔记编辑头部内容
+            const headerContent = (
+                <NoteFormHeader
+                    isEditMode={true}
+                    onBack={() => {
+                        // 关闭编辑并恢复正常导航栏
+                        setEditingNote(null);
+                        setShowAlternativeHeader(false);
+                        setAlternativeHeaderContent(null);
+                    }}
+                    onSave={() => {
+                        // 获取表单元素并触发提交
+                        const form = document.querySelector('form');
+                        if (form) {
+                            form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+                        }
+                    }}
+                    showSaveButton={true}
+                    timestamp={timestamp}
+                />
+            );
+            
+            // 设置替代头部内容并显示
+            setAlternativeHeaderContent(headerContent);
+            setShowAlternativeHeader(true);
+        }
     };
+    
+    // 处理保存编辑 - 添加导航栏替代头部支持
+    const handleSaveEdit = async (updatedData: BrewingNoteData) => {
+        try {
+            // 获取现有笔记
+            const savedNotes = await Storage.get('brewingNotes')
+            let parsedNotes: BrewingNote[] = savedNotes ? JSON.parse(savedNotes) : []
+            
+            // 查找并更新指定笔记
+            parsedNotes = parsedNotes.map(note => {
+                if (note.id === updatedData.id) {
+                    return updatedData as BrewingNote
+                }
+                return note
+            })
+            
+            // 保存更新后的笔记
+            await Storage.set('brewingNotes', JSON.stringify(parsedNotes))
+            
+            // 触发存储变更事件
+            window.dispatchEvent(new CustomEvent('customStorageChange', {
+                detail: { key: 'brewingNotes' }
+            }))
+            
+            // 关闭编辑
+            setEditingNote(null)
+            
+            // 如果提供了导航栏替代头部功能，则关闭它
+            if (setShowAlternativeHeader) {
+                setShowAlternativeHeader(false);
+            }
+            if (setAlternativeHeaderContent) {
+                setAlternativeHeaderContent(null);
+            }
+            
+            // 显示成功提示
+            showToast('笔记已更新', 'success')
+        } catch (error) {
+            console.error('更新笔记失败:', error)
+            showToast('更新笔记失败', 'error')
+        }
+    }
     
     // 处理添加笔记
     const handleAddNote = () => {
@@ -548,9 +570,19 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({ isOpen, onClose: _onClo
                 <BrewingNoteForm
                     id={editingNote.id}
                     isOpen={true}
-                    onClose={() => setEditingNote(null)}
+                    onClose={() => {
+                        setEditingNote(null);
+                        // 如果使用了替代头部，同时关闭它
+                        if (setShowAlternativeHeader) {
+                            setShowAlternativeHeader(false);
+                        }
+                        if (setAlternativeHeaderContent) {
+                            setAlternativeHeaderContent(null);
+                        }
+                    }}
                     onSave={handleSaveEdit}
                     initialData={editingNote}
+                    hideHeader={!!setAlternativeHeaderContent && !!setShowAlternativeHeader}
                 />
             ) : (
                 <>

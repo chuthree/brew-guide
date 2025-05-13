@@ -22,6 +22,7 @@ interface BrewingNoteFormModalProps {
   onSave: (note: BrewingNoteData) => void
   onClose: () => void
   skipToLastStep?: boolean
+  onSaveSuccess?: () => void
 }
 
 const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
@@ -29,7 +30,8 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
   initialNote,
   onSave,
   onClose,
-  skipToLastStep = false
+  skipToLastStep = false,
+  onSaveSuccess
 }) => {
   // 咖啡豆状态
   const [selectedCoffeeBean, setSelectedCoffeeBean] = useState<CoffeeBean | null>(initialNote?.coffeeBean || null)
@@ -249,6 +251,11 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
     // 保存并关闭
     onSave(completeNote)
     handleClose()
+    
+    // 如果提供了保存成功回调，则调用它
+    if (onSaveSuccess) {
+      onSaveSuccess()
+    }
   }
 
   // 定义步骤
@@ -306,6 +313,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
           initialData={getDefaultNote()}
           inBrewPage={true}
           showSaveButton={false}
+          onSaveSuccess={onSaveSuccess}
         />
       ),
       isValid: true

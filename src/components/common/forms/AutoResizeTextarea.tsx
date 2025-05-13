@@ -81,13 +81,8 @@ const AutoResizeTextarea: React.FC<AutoResizeTextareaProps> = ({
                         // 首先滚动到顶部，避免容器被推到顶部太远
                         (modalContainer as HTMLElement).scrollTop = 0;
                         
-                        // 然后再滚动到文本区域
+                        // 保留内边距调整，但不执行滚动
                         setTimeout(() => {
-                            textareaRef.current?.scrollIntoView({
-                                behavior: 'smooth',
-                                block: 'center'
-                            });
-                            
                             // 如果有表单容器，确保它有足够的内边距
                             if (formContainer) {
                                 const keyboardHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--keyboard-height') || '0');
@@ -98,11 +93,13 @@ const AutoResizeTextarea: React.FC<AutoResizeTextareaProps> = ({
                         }, 100);
                     }
                 } else {
-                    // 对普通页面内的文本区域使用通常的滚动策略
-                    textareaRef.current.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'nearest',
-                    });
+                    // 对普通页面内的文本区域，移除默认滚动行为
+                    // textareaRef.current.scrollIntoView({
+                    //     behavior: 'smooth',
+                    //     block: 'nearest',
+                    // });
+                    
+                    // 不执行任何滚动操作，让系统自然处理
                 }
             }
         }, 300);

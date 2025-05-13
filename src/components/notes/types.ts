@@ -31,6 +31,8 @@ export interface BrewingHistoryProps {
     isOpen: boolean
     onClose: () => void
     onAddNote?: () => void
+    setAlternativeHeaderContent?: (content: React.ReactNode | null) => void
+    setShowAlternativeHeader?: (show: boolean) => void
 }
 
 // 单个笔记项属性

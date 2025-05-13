@@ -1,7 +1,7 @@
 'use client'
 
 // 导入React和必要的hooks
-import React, { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback, useRef, ReactNode } from 'react'
 import dynamic from 'next/dynamic'
 import { equipmentList, APP_VERSION, commonMethods, CustomEquipment, type Method } from '@/lib/core/config'
 import { Storage } from '@/lib/core/storage'
@@ -33,6 +33,7 @@ import SwipeBackGesture from '@/components/app/SwipeBackGesture'
 import { loadCustomEquipments, saveCustomEquipment, deleteCustomEquipment } from '@/lib/managers/customEquipments'
 import CustomEquipmentFormModal from '@/components/equipment/forms/CustomEquipmentFormModal'
 import EquipmentImportModal from '@/components/equipment/import/EquipmentImportModal'
+import NoteFormHeader from '@/components/notes/ui/NoteFormHeader'
 
 // 为Window对象声明类型扩展
 declare global {
@@ -1517,14 +1518,59 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         };
     }, []);
 
+    // 添加导航栏替代头部相关状态
+    const [alternativeHeaderContent, setAlternativeHeaderContent] = useState<ReactNode | null>(null);
+    const [showAlternativeHeader, setShowAlternativeHeader] = useState(false);
+
+    // 添加处理编辑笔记时的导航栏内容切换
+    const handleEditNote = (note: BrewingNoteData) => {
+        // 创建笔记编辑头部内容
+        const headerContent = (
+            <NoteFormHeader
+                isEditMode={true}
+                onBack={() => {
+                    // 关闭替代头部显示
+                    setShowAlternativeHeader(false);
+                    setAlternativeHeaderContent(null);
+                    // 处理返回逻辑 - 根据需要可以添加额外逻辑
+                }}
+                onSave={() => {
+                    // 获取表单元素并触发提交
+                    const form = document.querySelector('form');
+                    if (form) {
+                        form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+                    }
+                }}
+                showSaveButton={true}
+            />
+        );
+        
+        // 设置替代头部内容并显示
+        setAlternativeHeaderContent(headerContent);
+        setShowAlternativeHeader(true);
+        
+        // 打开笔记编辑表单 - 使用现有的编辑逻辑
+        // ...
+    };
+
+    // 修改笔记保存成功时的回调
+    const handleSaveNoteSuccess = () => {
+        // 关闭替代头部显示
+        setShowAlternativeHeader(false);
+        setAlternativeHeaderContent(null);
+        
+        // 其他保存后的逻辑
+        // ...
+    };
+
     return (
-        <div className="flex h-full flex-col overflow-hidden mx-auto max-w-[500px] text-neutral-800 dark:text-neutral-100">
-            {/* 使用 NavigationBar 组件替换原有的导航栏 */}
+        <div className="relative h-full flex flex-col overflow-hidden">
+            {/* 导航栏 - 添加替代头部内容支持 */}
             <NavigationBar
                 activeMainTab={activeMainTab}
                 setActiveMainTab={handleMainTabClick}
                 activeBrewingStep={activeBrewingStep}
-                setActiveBrewingStep={handleBrewingStepClickWrapper}
+                setActiveBrewingStep={setActiveBrewingStep}
                 parameterInfo={parameterInfo}
                 setParameterInfo={setParameterInfo}
                 editableParams={editableParams}
@@ -1542,6 +1588,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 hasCoffeeBeans={hasCoffeeBeans}
                 navigateToStep={navigateToStep}
                 onStepClick={handleBrewingStepClickWrapper}
+                alternativeHeader={alternativeHeaderContent}
+                showAlternativeHeader={showAlternativeHeader}
             />
 
             {/* 内容区域 */}
@@ -1599,6 +1647,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                         setShowHistory(false);
                     }}
                     onAddNote={handleAddNote}
+                    setAlternativeHeaderContent={setAlternativeHeaderContent}
+                    setShowAlternativeHeader={setShowAlternativeHeader}
                 />
             )}
             {activeMainTab === '咖啡豆' && (

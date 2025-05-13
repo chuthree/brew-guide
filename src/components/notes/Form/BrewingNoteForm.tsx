@@ -5,6 +5,7 @@ import Image from 'next/image'
 
 import type { BrewingNoteData, CoffeeBean } from '@/types/app'
 import AutoResizeTextarea from '@/components/common/forms/AutoResizeTextarea'
+import NoteFormHeader from '@/components/notes/ui/NoteFormHeader'
 
 interface TasteRatings {
     acidity: number;
@@ -34,6 +35,8 @@ interface BrewingNoteFormProps {
     };
     inBrewPage?: boolean; // 添加属性，标识是否在冲煮页面中
     showSaveButton?: boolean; // 是否显示保存按钮
+    onSaveSuccess?: () => void; // 添加保存成功的回调函数
+    hideHeader?: boolean; // 添加属性，控制是否隐藏头部
 }
 
 // 二次压缩函数：将base64图片再次压缩
@@ -116,6 +119,8 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     initialData,
     inBrewPage = false, // 默认不在冲煮页面
     showSaveButton = true, // 默认显示保存按钮
+    onSaveSuccess, // 保存成功的回调
+    hideHeader = false, // 默认显示头部
 }) => {
     // 处理咖啡豆数据，如果有提供coffeeBean则使用，否则使用coffeeBeanInfo
     const initialCoffeeBeanInfo = initialData.coffeeBean
@@ -530,6 +535,11 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         try {
             // 保存笔记
             onSave(noteData);
+            
+            // 如果提供了保存成功的回调，则调用它
+            if (onSaveSuccess) {
+                onSaveSuccess();
+            }
         } catch (error) {
             console.error('保存笔记时出错:', error);
             alert('保存笔记时出错，请重试');
@@ -539,7 +549,8 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     if (!isOpen) return null
 
     // 动态设置容器 padding，在冲煮页面时不需要额外 padding
-    const containerClassName = `relative flex h-full flex-col space-y-4 ${!inBrewPage ? 'p-6 pt-4' : ''} overflow-auto`;
+    // 当hideHeader为true时，添加足够的顶部边距，确保表单内容不会位于导航栏下面
+    const containerClassName = `relative flex flex-col ${!inBrewPage ? 'p-6 pt-6' : ''} ${hideHeader ? 'pt-6' : ''} h-full overflow-y-auto overscroll-contain`;
 
     return (
         <form 
@@ -548,39 +559,20 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
             onSubmit={handleSubmit}
             className={containerClassName}
         >
-            {/* Header with timestamp */}
-            <div className="flex items-baseline justify-between bg-neutral-50 dark:bg-neutral-900 py-2 z-10">
-                <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
-                    {`${initialData?.id ? '编辑记录' : '新建记录'} · ${new Date().toLocaleString('zh-CN', {
-                        month: 'numeric',
-                        day: 'numeric',
-                        hour: 'numeric',
-                        minute: 'numeric',
-                    })}`}
+            {/* 根据hideHeader属性决定是否显示头部 */}
+            {!hideHeader && (
+                <div className="flex-shrink-0 mb-4">
+                    <NoteFormHeader
+                        isEditMode={!!initialData?.id}
+                        onBack={onClose}
+                        onSave={() => formRef.current?.requestSubmit()}
+                        showSaveButton={showSaveButton}
+                    />
                 </div>
-                <div className="flex items-center space-x-4">
-                    {initialData?.id && (
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="text-[10px] tracking-widest text-neutral-500 transition-colors dark:text-neutral-500"
-                        >
-                            [ 返回 ]
-                        </button>
-                    )}
-                    {showSaveButton && (
-                        <button
-                            type="submit"
-                            className="text-[10px] tracking-widest text-emerald-600 transition-colors dark:text-emerald-500 font-medium"
-                        >
-                            [ 保存 ]
-                        </button>
-                    )}
-                </div>
-            </div>
+            )}
 
-            {/* Form content */}
-            <div className="flex-1 space-y-6 pb-6">
+            {/* Form content - 更新内容区域样式以确保正确滚动 */}
+            <div className="flex-grow space-y-6 pb-20">
                 {/* 笔记图片 */}
                 <div className="space-y-2 w-full">
                     <label className="block text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">

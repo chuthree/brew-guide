@@ -313,6 +313,9 @@ interface NavigationBarProps {
         force?: boolean
     }) => void; // 添加统一的步骤导航函数
     onStepClick?: (step: BrewingStep) => void; // 添加步骤点击回调
+    // 添加替代头部内容支持
+    alternativeHeader?: React.ReactNode; // 替代的头部内容
+    showAlternativeHeader?: boolean; // 是否显示替代头部内容
 }
 
 const NavigationBar: React.FC<NavigationBarProps> = ({
@@ -336,7 +339,9 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
     selectedCoffeeBean: _selectedCoffeeBean, // 重命名为下划线开头以避免未使用变量警告
     hasCoffeeBeans, // 接收是否有咖啡豆的属性
     navigateToStep, // 接收统一的步骤导航函数
-    onStepClick // 接收步骤点击回调
+    onStepClick, // 接收步骤点击回调
+    alternativeHeader, // 接收替代头部内容
+    showAlternativeHeader = false // 默认不显示替代头部内容
 }) => {
     const t = useTranslations('nav');
 
@@ -589,18 +594,22 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
             hapticsUtils.light(); // 添加轻触感反馈
         }
 
-        if (tab === '冲煮') {
-            setActiveMainTab('冲煮');
-            // 从笔记切换回冲煮时，确保关闭历史记录显示
-            if (activeMainTab === '笔记') {
-                setShowHistory(false);
-            }
-            // 移除强制设置到器具步骤的代码
-        } else if (tab === '咖啡豆') {
-            setActiveMainTab('咖啡豆');
-        } else if (tab === '笔记') {
-            setActiveMainTab('笔记');
-            setShowHistory(true);
+        // 使用switch语句确保类型安全
+        switch(tab) {
+            case '冲煮':
+                setActiveMainTab('冲煮');
+                // 从笔记切换回冲煮时，确保关闭历史记录显示
+                if (activeMainTab === '笔记') {
+                    setShowHistory(false);
+                }
+                break;
+            case '咖啡豆':
+                setActiveMainTab('咖啡豆');
+                break;
+            case '笔记':
+                setActiveMainTab('笔记');
+                setShowHistory(true);
+                break;
         }
     };
 
@@ -617,204 +626,223 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
         >
             <style jsx global>{noScrollbarStyle}</style>
 
-            <AnimatePresence mode="wait">
-                <motion.div
-                    key="header"
-                    className="overflow-hidden"
-                    initial={shouldHideHeader ? { height: 0, opacity: 0 } : { height: "auto", opacity: 1 }}
-                    animate={shouldHideHeader ? { height: 0, opacity: 0 } : { height: "auto", opacity: 1 }}
-                    transition={{
-                        duration: 0.2,
-                        ease: "easeInOut",
-                        opacity: { duration: 0.1 }
-                    }}
-                >
-                    <div className="flex items-center justify-between px-6 pb-4">
-                        <div 
-                            onClick={handleTitleClick}
-                            className="cursor-pointer text-[12px] tracking-widest text-neutral-500 dark:text-neutral-400 flex items-center"
+            {/* 修改：创建一个固定高度的容器，用于包含默认头部和替代头部 */}
+            <div className="relative min-h-[34px] w-full">
+                {/* 修改：将AnimatePresence用于透明度变化而非高度变化 */}
+                <AnimatePresence mode="wait">
+                    {showAlternativeHeader ? (
+                        // 替代头部 - 使用绝对定位
+                        <motion.div
+                            key="alternative-header"
+                            className="absolute top-0 left-0 right-0 w-full px-6 pb-4"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.2, ease: "easeInOut" }}
                         >
-                            <Equal className="w-4 h-4 mr-1" />
-                            <span>{t('title')}</span>
-                        </div>
-
-                        <div className="flex items-center space-x-6">
-                            <TabButton
-                                tab={t('main.brewing')}
-                                isActive={activeMainTab === '冲煮'}
-                                onClick={() => handleMainTabClick('冲煮')}
-                                dataTab="冲煮"
-                            />
-                            <TabButton
-                                tab={t('main.beans')}
-                                isActive={activeMainTab === '咖啡豆'}
-                                onClick={() => handleMainTabClick('咖啡豆')}
-                                dataTab="咖啡豆"
-                            />
-                            <TabButton
-                                tab={t('main.notes')}
-                                isActive={activeMainTab === '笔记'}
-                                onClick={() => handleMainTabClick('笔记')}
-                                dataTab="笔记"
-                            />
-                        </div>
-                    </div>
-                </motion.div>
-            </AnimatePresence>
-
-            {/* 将参数栏和步骤指示器包裹在一个动画容器中，作为一个整体进行动画 */}
-            <AnimatePresence mode="wait">
-                {shouldShowContent && (
-                    <motion.div
-                        key="content-container"
-                        className="overflow-hidden"
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{
-                            duration: 0.25,
-                            ease: "easeOut",
-                            opacity: { duration: 0.15 }
-                        }}
-                    >
-                        {/* 参数栏 - 添加高度动画 */}
-                        <AnimatePresence mode="sync">
-                            {shouldShowParams && (
-                                <motion.div
-                                    initial={{ height: 0, opacity: 0 }}
-                                    animate={{ height: "auto", opacity: 1 }}
-                                    exit={{ height: 0, opacity: 0 }}
-                                    transition={{
-                                        duration: 0.2,
-                                        ease: "easeOut"
-                                    }}
-                                    className="overflow-hidden"
+                            {alternativeHeader}
+                        </motion.div>
+                    ) : (
+                        // 默认头部 - 使用绝对定位
+                        <motion.div
+                            key="default-header"
+                            className="absolute top-0 left-0 right-0 w-full px-6 pb-4"
+                            initial={{ opacity: shouldHideHeader ? 0 : 1 }}
+                            animate={{ opacity: shouldHideHeader ? 0 : 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.2, ease: "easeInOut" }}
+                            style={{ pointerEvents: shouldHideHeader ? 'none' : 'auto' }}
+                        >
+                            <div className="flex items-center justify-between">
+                                <div 
+                                    onClick={handleTitleClick}
+                                    className="cursor-pointer text-[12px] tracking-widest text-neutral-500 dark:text-neutral-400 flex items-center"
                                 >
-                                    <div className="px-6 py-2 mb-3 bg-neutral-100 dark:bg-neutral-800 text-[10px] text-neutral-500 dark:text-neutral-400 relative">
-                                        <div className="flex items-center min-w-0 overflow-x-auto no-scrollbar max-w-full">
-                                            {parameterInfo.equipment && (
-                                                <span
-                                                    className="cursor-pointer whitespace-nowrap"
-                                                    onClick={() => {
-                                                        setActiveBrewingStep('equipment');
-                                                        setActiveTab('器具');
-                                                    }}
-                                                >
-                                                    {parameterInfo.equipment}
-                                                </span>
-                                            )}
+                                    <Equal className="w-4 h-4 mr-1" />
+                                    <span>{t('title')}</span>
+                                </div>
 
-                                            {parameterInfo.method && (
-                                                <>
-                                                    <span className="mx-1 flex-shrink-0">·</span>
+                                <div className="flex items-center space-x-6">
+                                    <TabButton
+                                        tab={t('main.brewing')}
+                                        isActive={activeMainTab === '冲煮'}
+                                        onClick={() => handleMainTabClick('冲煮')}
+                                        dataTab="冲煮"
+                                    />
+                                    <TabButton
+                                        tab={t('main.beans')}
+                                        isActive={activeMainTab === '咖啡豆'}
+                                        onClick={() => handleMainTabClick('咖啡豆')}
+                                        dataTab="咖啡豆"
+                                    />
+                                    <TabButton
+                                        tab={t('main.notes')}
+                                        isActive={activeMainTab === '笔记'}
+                                        onClick={() => handleMainTabClick('笔记')}
+                                        dataTab="笔记"
+                                    />
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </div>
+
+            {/* 仅当不显示替代头部内容时才显示参数栏和步骤指示器 */}
+            {!showAlternativeHeader && (
+                <AnimatePresence mode="wait">
+                    {shouldShowContent && (
+                        <motion.div
+                            key="content-container"
+                            className="overflow-hidden"
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{
+                                duration: 0.25,
+                                ease: "easeOut",
+                                opacity: { duration: 0.15 }
+                            }}
+                        >
+                            {/* 参数栏 - 添加高度动画 */}
+                            <AnimatePresence mode="sync">
+                                {shouldShowParams && (
+                                    <motion.div
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: "auto", opacity: 1 }}
+                                        exit={{ height: 0, opacity: 0 }}
+                                        transition={{
+                                            duration: 0.2,
+                                            ease: "easeOut"
+                                        }}
+                                        className="overflow-hidden"
+                                    >
+                                        <div className="px-6 py-2 mb-3 bg-neutral-100 dark:bg-neutral-800 text-[10px] text-neutral-500 dark:text-neutral-400 relative">
+                                            <div className="flex items-center min-w-0 overflow-x-auto no-scrollbar max-w-full">
+                                                {parameterInfo.equipment && (
                                                     <span
                                                         className="cursor-pointer whitespace-nowrap"
                                                         onClick={() => {
-                                                            setActiveBrewingStep('method');
-                                                            setActiveTab('方案');
+                                                            setActiveBrewingStep('equipment');
+                                                            setActiveTab('器具');
                                                         }}
                                                     >
-                                                        {parameterInfo.method}
-                                                    </span>
-                                                </>
-                                            )}
-                                        </div>
-
-                                        {parameterInfo.params && (
-                                            <div className="absolute top-2 right-6 min-w-0 max-w-full text-right z-10">
-                                                {editableParams ? (
-                                                    <div className="flex items-center justify-end bg-neutral-100 dark:bg-neutral-800 space-x-1 sm:space-x-2 overflow-x-auto no-scrollbar pl-3">
-                                                        <EditableParameter
-                                                            value={editableParams.coffee.replace('g', '')}
-                                                            onChange={(v) => handleParamChange('coffee', v)}
-                                                            unit="g"
-                                                            className="border-b border-dashed border-neutral-200 dark:border-neutral-700"
-                                                        />
-                                                        <span className="flex-shrink-0">·</span>
-                                                        <EditableParameter
-                                                            value={editableParams.ratio.replace('1:', '')}
-                                                            onChange={(v) => handleParamChange('ratio', v)}
-                                                            unit=""
-                                                            prefix="1:"
-                                                            className="border-b border-dashed border-neutral-200 dark:border-neutral-700"
-                                                        />
-                                                        {parameterInfo.params?.grindSize && (
-                                                            <>
-                                                                <span className="flex-shrink-0">·</span>
-                                                                {/* 
-                                                                  * 研磨度显示和编辑处理：
-                                                                  * - value属性传入转换后的研磨度(formatGrindSize)用于显示
-                                                                  * - 传入isGrindSize=true标记这是研磨度参数
-                                                                  * - originalGrindSize传入原始通用研磨度，用于编辑时显示和提交
-                                                                  */}
-                                                                <EditableParameter
-                                                                    value={formatGrindSize(editableParams.grindSize, settings.grindType)}
-                                                                    onChange={(v) => handleParamChange('grindSize', v)}
-                                                                    unit=""
-                                                                    className="border-b border-dashed border-neutral-200 dark:border-neutral-700"
-                                                                    isGrindSize={true}
-                                                                    originalGrindSize={editableParams.grindSize}
-                                                                />
-                                                            </>
-                                                        )}
-                                                        {parameterInfo.params?.temp && (
-                                                            <>
-                                                                <span className="flex-shrink-0">·</span>
-                                                                <EditableParameter
-                                                                    value={editableParams.temp.replace('°C', '')}
-                                                                    onChange={(v) => handleParamChange('temp', v)}
-                                                                    unit="°C"
-                                                                    className="border-b border-dashed border-neutral-200 dark:border-neutral-700"
-                                                                />
-                                                            </>
-                                                        )}
-                                                    </div>
-                                                ) : (
-                                                    <span
-                                                        className="cursor-pointer flex items-center justify-end space-x-1 sm:space-x-2 overflow-x-auto no-scrollbar bg-gradient-to-r from-transparent via-neutral-100/95 to-neutral-100/95 dark:via-neutral-800/95 dark:to-neutral-800/95 pl-6"
-                                                        onClick={() => {
-                                                            if (selectedMethod && !isTimerRunning) {
-                                                                setEditableParams({
-                                                                    coffee: selectedMethod.params.coffee,
-                                                                    water: selectedMethod.params.water,
-                                                                    ratio: selectedMethod.params.ratio,
-                                                                    grindSize: selectedMethod.params.grindSize,
-                                                                    temp: selectedMethod.params.temp,
-                                                                });
-                                                            }
-                                                        }}
-                                                    >
-                                                        <span className="truncate max-w-[30px] sm:max-w-[40px]">{parameterInfo.params.coffee}</span>
-                                                        <span className="flex-shrink-0">·</span>
-                                                        <span className="whitespace-nowrap">{parameterInfo.params.ratio}</span>
-                                                        <span className="flex-shrink-0">·</span>
-                                                        <span className="whitespace-nowrap">
-                                                            {/* 显示时使用formatGrindSize将通用研磨度转换为特定磨豆机的研磨度 */}
-                                                            {formatGrindSize(parameterInfo.params.grindSize || "", settings.grindType)}
-                                                        </span>
-                                                        <span className="flex-shrink-0">·</span>
-                                                        <span className="whitespace-nowrap">{parameterInfo.params.temp}</span>
+                                                        {parameterInfo.equipment}
                                                     </span>
                                                 )}
-                                            </div>
-                                        )}
-                                    </div>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
 
-                        {/* 步骤指示器 - 内部不再单独有动画 */}
-                        <div className="mx-6  mb-3">
-                            <StepIndicator
-                                currentStep={activeBrewingStep}
-                                onStepClick={handleBrewingStepClick}
-                                disabledSteps={getDisabledSteps()}
-                                hasCoffeeBeans={hasCoffeeBeans}
-                            />
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+                                                {parameterInfo.method && (
+                                                    <>
+                                                        <span className="mx-1 flex-shrink-0">·</span>
+                                                        <span
+                                                            className="cursor-pointer whitespace-nowrap"
+                                                            onClick={() => {
+                                                                setActiveBrewingStep('method');
+                                                                setActiveTab('方案');
+                                                            }}
+                                                        >
+                                                            {parameterInfo.method}
+                                                        </span>
+                                                    </>
+                                                )}
+                                            </div>
+
+                                            {parameterInfo.params && (
+                                                <div className="absolute top-2 right-6 min-w-0 max-w-full text-right z-10">
+                                                    {editableParams ? (
+                                                        <div className="flex items-center justify-end bg-neutral-100 dark:bg-neutral-800 space-x-1 sm:space-x-2 overflow-x-auto no-scrollbar pl-3">
+                                                            <EditableParameter
+                                                                value={editableParams.coffee.replace('g', '')}
+                                                                onChange={(v) => handleParamChange('coffee', v)}
+                                                                unit="g"
+                                                                className="border-b border-dashed border-neutral-200 dark:border-neutral-700"
+                                                            />
+                                                            <span className="flex-shrink-0">·</span>
+                                                            <EditableParameter
+                                                                value={editableParams.ratio.replace('1:', '')}
+                                                                onChange={(v) => handleParamChange('ratio', v)}
+                                                                unit=""
+                                                                prefix="1:"
+                                                                className="border-b border-dashed border-neutral-200 dark:border-neutral-700"
+                                                            />
+                                                            {parameterInfo.params?.grindSize && (
+                                                                <>
+                                                                    <span className="flex-shrink-0">·</span>
+                                                                    {/* 
+                                                                      * 研磨度显示和编辑处理：
+                                                                      * - value属性传入转换后的研磨度(formatGrindSize)用于显示
+                                                                      * - 传入isGrindSize=true标记这是研磨度参数
+                                                                      * - originalGrindSize传入原始通用研磨度，用于编辑时显示和提交
+                                                                      */}
+                                                                    <EditableParameter
+                                                                        value={formatGrindSize(editableParams.grindSize, settings.grindType)}
+                                                                        onChange={(v) => handleParamChange('grindSize', v)}
+                                                                        unit=""
+                                                                        className="border-b border-dashed border-neutral-200 dark:border-neutral-700"
+                                                                        isGrindSize={true}
+                                                                        originalGrindSize={editableParams.grindSize}
+                                                                    />
+                                                                </>
+                                                            )}
+                                                            {parameterInfo.params?.temp && (
+                                                                <>
+                                                                    <span className="flex-shrink-0">·</span>
+                                                                    <EditableParameter
+                                                                        value={editableParams.temp.replace('°C', '')}
+                                                                        onChange={(v) => handleParamChange('temp', v)}
+                                                                        unit="°C"
+                                                                        className="border-b border-dashed border-neutral-200 dark:border-neutral-700"
+                                                                    />
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    ) : (
+                                                        <span
+                                                            className="cursor-pointer flex items-center justify-end space-x-1 sm:space-x-2 overflow-x-auto no-scrollbar bg-gradient-to-r from-transparent via-neutral-100/95 to-neutral-100/95 dark:via-neutral-800/95 dark:to-neutral-800/95 pl-6"
+                                                            onClick={() => {
+                                                                if (selectedMethod && !isTimerRunning) {
+                                                                    setEditableParams({
+                                                                        coffee: selectedMethod.params.coffee,
+                                                                        water: selectedMethod.params.water,
+                                                                        ratio: selectedMethod.params.ratio,
+                                                                        grindSize: selectedMethod.params.grindSize,
+                                                                        temp: selectedMethod.params.temp,
+                                                                    });
+                                                                }
+                                                            }}
+                                                        >
+                                                            <span className="truncate max-w-[30px] sm:max-w-[40px]">{parameterInfo.params.coffee}</span>
+                                                            <span className="flex-shrink-0">·</span>
+                                                            <span className="whitespace-nowrap">{parameterInfo.params.ratio}</span>
+                                                            <span className="flex-shrink-0">·</span>
+                                                            <span className="whitespace-nowrap">
+                                                                {/* 显示时使用formatGrindSize将通用研磨度转换为特定磨豆机的研磨度 */}
+                                                                {formatGrindSize(parameterInfo.params.grindSize || "", settings.grindType)}
+                                                            </span>
+                                                            <span className="flex-shrink-0">·</span>
+                                                            <span className="whitespace-nowrap">{parameterInfo.params.temp}</span>
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+
+                            {/* 步骤指示器 - 内部不再单独有动画 */}
+                            <div className="mx-6  mb-3">
+                                <StepIndicator
+                                    currentStep={activeBrewingStep}
+                                    onStepClick={handleBrewingStepClick}
+                                    disabledSteps={getDisabledSteps()}
+                                    hasCoffeeBeans={hasCoffeeBeans}
+                                />
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            )}
         </motion.div>
     );
 };
