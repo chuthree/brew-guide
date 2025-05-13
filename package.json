@@ -1,6 +1,6 @@
 {
 	"name": "brew-guide",
-	"version": "1.2.4.5",
+	"version": "1.2.4.6",
 	"private": true,
 	"scripts": {
 		"dev": "next dev",
