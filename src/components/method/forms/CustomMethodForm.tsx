@@ -3,14 +3,24 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { type Method, CustomEquipment, availableGrinders, Grinder } from '@/lib/core/config'
-import { ArrowLeft, ArrowRight, Check, Info } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import AutoResizeTextarea from '../../common/forms/AutoResizeTextarea'
 import { formatGrindSize } from '@/lib/utils/grindUtils'
 import { SettingsOptions, defaultSettings } from '@/components/settings/Settings'
 import { Storage } from '@/lib/core/storage'
+import { 
+    Steps, 
+    NameStep, 
+    ParamsStep, 
+    StagesStep, 
+    CompleteStep,
+    MethodWithStages, 
+    Stage 
+} from './components'
+import type { Step } from './components'
 
 // 数据规范化辅助函数
-const normalizeMethodData = (method: any): _Method => {
+const normalizeMethodData = (method: any): MethodWithStages => {
     const normalizedMethod = { ...method };
     
     // 确保params存在
@@ -74,49 +84,21 @@ const normalizeMethodData = (method: any): _Method => {
         }
     }
     
-    return normalizedMethod as _Method;
+    return normalizedMethod as MethodWithStages;
 };
 
-// 定义基础的 Stage 类型
-interface _Stage {
-    time: number;
-    pourTime?: number;
-    label: string;
-    water: string;
-    detail: string;
-    pourType?: string;
-    valveStatus?: 'open' | 'closed';
-}
-
-// 扩展Stage类型以支持自定义注水动画ID
-type _ExtendedPourType = string;
-
-// 扩展Stage类型
-interface _ExtendedStage extends _Stage {
-    pourType?: _ExtendedPourType;
-}
-
-// 修改 Method 接口以使用新的 Stage 类型
-interface _Method extends Omit<Method, 'params'> {
-    params: {
-        coffee: string;
-        water: string;
-        ratio: string;
-        grindSize: string;
-        temp: string;
-        videoUrl: string;
-        stages: _Stage[];
-    };
-}
+// 使用从 types.ts 导入的类型定义
+// MethodWithStages 替代 _Method
+// Stage 替代 _Stage
 
 // 定义步骤类型
-type _Step = 'name' | 'params' | 'stages' | 'complete';
+// type Step = 'name' | 'params' | 'stages' | 'complete'; // 已在Steps.tsx中定义并导出
 
 // 修改组件 props 类型
 interface CustomMethodFormProps {
-    initialMethod?: _Method;
+    initialMethod?: MethodWithStages;
     customEquipment: CustomEquipment;
-    onSave: (method: _Method) => void;
+    onSave: (method: MethodWithStages) => void;
     onBack: () => void;
 }
 
@@ -127,7 +109,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     onBack,
 }) => {
     // 当前步骤状态
-    const [currentStep, setCurrentStep] = useState<_Step>('name')
+    const [currentStep, setCurrentStep] = useState<Step>('name')
     const inputRef = useRef<HTMLInputElement>(null)
     const stagesContainerRef = useRef<HTMLDivElement>(null)
     const newStageRef = useRef<HTMLDivElement>(null)
@@ -139,7 +121,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     // 添加一个状态来跟踪水量输入提示的显示
     const [showWaterTooltip, setShowWaterTooltip] = useState<number | null>(null)
 
-    const [method, setMethod] = useState<_Method>(() => {
+    const [method, setMethod] = useState<MethodWithStages>(() => {
         // 如果有初始方法，对其进行规范化处理后使用
         if (initialMethod) {
             // 规范化数据，确保water属性是字符串格式
@@ -210,7 +192,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         }
 
         // 创建初始步骤和基本参数
-        const initialStage: _Stage = {
+        const initialStage: Stage = {
             time: 25,
             pourTime: 10,
             label: '焖蒸',
@@ -281,7 +263,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     }, [currentStep])
 
     // 步骤配置
-    const steps: { id: _Step; label: string }[] = [
+    const steps: { id: Step; label: string }[] = [
         { id: 'name', label: '方案名称' },
         { id: 'params', label: '基本参数' },
         { id: 'stages', label: '冲泡步骤' },
@@ -392,7 +374,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         }
     }
 
-    const handleStageChange = (index: number, field: keyof _Stage, value: string | number) => {
+    const handleStageChange = (index: number, field: keyof Stage, value: string | number) => {
         const newStages = [...method.params.stages]
         const stage = { ...newStages[index] }
 
@@ -456,7 +438,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         }
         
         // 所有新添加的步骤都使用空值
-        const newStage: _Stage = {
+        const newStage: Stage = {
             time: 0,
             // pourTime默认为undefined而不是0
             label: '',
@@ -513,7 +495,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
 
     const handleSubmit = () => {
         // 创建一个方法的深拷贝，以便修改
-        const finalMethod = JSON.parse(JSON.stringify(method)) as _Method;
+        const finalMethod = JSON.parse(JSON.stringify(method)) as MethodWithStages;
 
         // 如果是聪明杯，将阀门状态添加到步骤名称中
         if (customEquipment.hasValve && finalMethod.params.stages) {
@@ -642,7 +624,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
 
     const handlePourTypeChange = (index: number, value: string) => {
         const newStages = [...method.params.stages]
-        const stage = { ...newStages[index] } as _ExtendedStage
+        const stage = { ...newStages[index] } as Stage
         const isCustomPreset = customEquipment.animationType === 'custom';
 
         // 检查是否选择了自定义注水动画（自定义注水动画的值是ID而不是pourType类型）
@@ -829,727 +811,71 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         switch (currentStep) {
             case 'name':
                 return (
-                    <motion.div
-                        key="name-step"
-                        initial="initial"
-                        animate="in"
-                        exit="out"
-                        variants={pageVariants}
-                        transition={pageTransition}
-                        className="flex flex-col items-center pt-10 pb-20"
-                    >
-                        <div className="text-center space-y-8 max-w-sm">
-                            <h2 className="text-xl font-medium text-neutral-800 dark:text-neutral-200">
-                                {initialMethod ? '编辑你的冲煮方案名称' : '给你的冲煮方案起个名字'}
-                            </h2>
-                            <div className="relative flex justify-center">
-                                <div className="relative inline-block">
-                                    <input
-                                        ref={inputRef}
-                                        type="text"
-                                        value={method.name}
-                                        onChange={(e) => setMethod({ ...method, name: e.target.value })}
-                                        placeholder="叫做..."
-                                        autoFocus={true}
-                                        className={`
-                                            text-center text-lg py-2 bg-transparent outline-none
-                                            focus:border-neutral-800 dark:focus:border-neutral-400
-                                        `}
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    </motion.div>
+                    <NameStep 
+                        name={method.name}
+                        onChange={(name) => setMethod({ ...method, name })}
+                        isEdit={!!initialMethod}
+                    />
                 )
 
             case 'params':
-                // Find the selected grinder based on localSettings
-                const selectedGrinder = availableGrinders.find((g: Grinder) => g.id === localSettings.grindType);
-                const grinderName = selectedGrinder ? selectedGrinder.name : '通用';
-                const showSpecificGrindInfo = selectedGrinder && selectedGrinder.id !== 'generic' && selectedGrinder.grindSizes;
-
                 return (
-                    <motion.div
-                        key="params-step"
-                        initial="initial"
-                        animate="in"
-                        exit="out"
-                        variants={pageVariants}
-                        transition={pageTransition}
-                        className="space-y-10 max-w-md mx-auto pt-10 pb-20"
-                    >
-                        <div className="grid grid-cols-2 gap-6">
-                            <div className="space-y-2">
-                                <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                                    咖啡粉量
-                                </label>
-                                <div className="relative">
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        step="0.1"
-                                        placeholder='例如：15'
-                                        value={method.params.coffee.replace('g', '')}
-                                        onChange={handleCoffeeChange}
-                                        onFocus={(e) => e.target.select()}
-                                        className="w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
-                                    />
-                                    <span className="absolute right-0 bottom-2 text-neutral-500 dark:text-neutral-400">g</span>
-                                </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                                    水粉比
-                                </label>
-                                <div className="relative">
-                                    <span className="absolute left-0 bottom-2 text-neutral-500 dark:text-neutral-400">1:</span>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        step="0.1"
-                                        placeholder='例如：15'
-                                        value={method.params.ratio.replace('1:', '')}
-                                        onChange={handleRatioChange}
-                                        onFocus={(e) => e.target.select()}
-                                        className="w-full py-2 pl-6 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                                    研磨度 {grinderName !== '通用' && <span className="text-xs text-neutral-400">({grinderName})</span>}
-                                </label>
-                                <input
-                                    type="text"
-                                    value={method.params.grindSize || ''}
-                                    onChange={(e) => setMethod({
-                                        ...method,
-                                        params: {
-                                            ...method.params,
-                                            grindSize: e.target.value
-                                        }
-                                    })}
-                                    onFocus={(e) => e.target.select()}
-                                    placeholder={
-                                        // Provide example based on selected grinder
-                                        selectedGrinder?.id === "phanci_pro"
-                                            ? "例如：中细、特细 (可自动转为对应格数)"
-                                            : "例如：中细、特细、中粗等"
-                                    }
-                                    className="w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
-                                />
-                                {method.params.grindSize && showSpecificGrindInfo && (
-                                    <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                                        参考{grinderName}刻度：{formatGrindSize(method.params.grindSize, localSettings.grindType)}
-                                    </p>
-                                )}
-
-                                {/* 研磨度参考提示 */}
-                                {!method.params.grindSize && (
-                                    <div className="mt-1 text-xs space-y-1">
-                                        <p className="text-neutral-500 dark:text-neutral-400">研磨度参考 (可自由输入):</p>
-                                        {selectedGrinder && selectedGrinder.grindSizes ? (
-                                            // Show specific hints if available
-                                            <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-                                                {Object.entries(selectedGrinder.grindSizes)
-                                                    .filter(([key]) => {
-                                                        // 只显示粗细度类型，而不是冲煮器具名称
-                                                        const basicKeywords = ['极细', '特细', '细', '中细', '中细偏粗', '中粗', '粗', '特粗'];
-                                                        return basicKeywords.includes(key);
-                                                    })
-                                                    .map(([key, value]) => (
-                                                        <p key={key} className="text-neutral-500 dark:text-neutral-400">· {key}: {value}</p>
-                                                    ))
-                                                }
-                                            </div>
-                                        ) : (
-                                            // Show generic hints
-                                            <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-                                                <p className="text-neutral-500 dark:text-neutral-400">· 极细 特细</p>
-                                                <p className="text-neutral-500 dark:text-neutral-400">· 细</p>
-                                                <p className="text-neutral-500 dark:text-neutral-400">· 中细</p>
-                                                <p className="text-neutral-500 dark:text-neutral-400">· 中粗 粗</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                                    水温
-                                </label>
-                                <div className="relative">
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        max="100"
-                                        step="0.1"
-                                        placeholder='例如：92'
-                                        value={method.params.temp ? method.params.temp.replace('°C', '') : ''}
-                                        onChange={handleTempChange}
-                                        onFocus={(e) => e.target.select()}
-                                        className="w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
-                                    />
-                                    <span className="absolute right-0 bottom-2 text-neutral-500 dark:text-neutral-400">°C</span>
-                                </div>
-                            </div>
-                        </div>
-                    </motion.div>
+                    <ParamsStep 
+                        params={{
+                            coffee: method.params.coffee,
+                            water: method.params.water,
+                            ratio: method.params.ratio,
+                            grindSize: method.params.grindSize,
+                            temp: method.params.temp
+                        }}
+                        onCoffeeChange={handleCoffeeChange}
+                        onRatioChange={handleRatioChange}
+                        onGrindSizeChange={(grindSize) => setMethod({
+                            ...method,
+                            params: {
+                                ...method.params,
+                                grindSize
+                            }
+                        })}
+                        onTempChange={handleTempChange}
+                        settings={localSettings}
+                    />
                 )
 
             case 'stages':
                 return (
-                    <motion.div
-                        key="stages-step"
-                        initial="initial"
-                        animate="in"
-                        exit="out"
-                        variants={pageVariants}
-                        transition={pageTransition}
-                        className="space-y-8 max-w-md mx-auto relative"
-                    >
-                        {/* 顶部固定导航 */}
-                        <div className="sticky top-0 pt-2 pb-4 bg-neutral-50 dark:bg-neutral-900 z-10 flex flex-col border-b border-neutral-200 dark:border-neutral-700">
-                            <div className="flex justify-between items-center mb-2">
-                                <h3 className="text-base font-medium text-neutral-800 dark:text-neutral-200">
-                                    冲煮步骤
-                                </h3>
-                                <button
-                                    type="button"
-                                    onClick={addStage}
-                                    className="text-sm text-neutral-600 dark:text-neutral-400"
-                                >
-                                    + 添加步骤
-                                </button>
-                            </div>
-
-                            <div className="flex justify-between text-xs text-neutral-500 dark:text-neutral-400">
-                                <div>
-                                    总时间: {formatTime(calculateTotalTime())}
-                                </div>
-                                <div>
-                                    总水量: {calculateCurrentWater()}g / {formatWater(method.params.water)}
-                                </div>
-                            </div>
-
-                            {/* 顶部渐变阴影 - 作为导航的伪元素 */}
-                            <div className="absolute mt-[72px] left-0 right-0 h-12 -bottom-12 bg-gradient-to-b from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none"></div>
-                        </div>
-
-                        {/* 步骤内容 */}
-                        <div className="space-y-10 pt-2 m-0" ref={stagesContainerRef}>
-
-                            {method.params.stages.map((stage, index) => (
-                                <div
-                                    key={index}
-                                    className="space-y-6 pb-6 border-neutral-200 dark:border-neutral-700 transition-colors duration-200"
-                                    ref={index === method.params.stages.length - 1 ? newStageRef : null}
-                                >
-                                    <div className="flex justify-between items-center">
-                                        <h4 className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                                            步骤 {index + 1}
-                                        </h4>
-                                        {method.params.stages.length > 1 && (
-                                            <button
-                                                type="button"
-                                                onClick={() => removeStage(index)}
-                                                className="text-xs text-neutral-500 dark:text-neutral-400"
-                                            >
-                                                删除
-                                            </button>
-                                        )}
-                                    </div>
-
-                                    <div className="space-y-6">
-                                        <div className="grid grid-cols-3 gap-6">
-                                            <div className="space-y-2">
-                                                <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                                                    注水方式
-                                                </label>
-                                                <select
-                                                    value={stage.pourType}
-                                                    onChange={(e) => handlePourTypeChange(index, e.target.value)}
-                                                    className={`w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400 appearance-none ${!stage.pourType ? 'text-neutral-500 dark:text-neutral-400' : ''}`}
-                                                >
-                                                    <option value="" disabled>请选择注水方式</option>
-                                                    {/* 显示自定义器具的自定义注水动画 */}
-                                                    {customEquipment.customPourAnimations && customEquipment.customPourAnimations.length > 0 ? (
-                                                        <>
-                                                            {/* 用户创建的自定义注水动画 */}
-                                                            {customEquipment.customPourAnimations
-                                                                .filter(anim => !anim.isSystemDefault)
-                                                                .map(animation => (
-                                                                    <option key={animation.id} value={animation.id}>
-                                                                        {animation.name}
-                                                                    </option>
-                                                                ))
-                                                            }
-                                                            {/* 如果不是自定义预设，才显示系统默认注水方式 */}
-                                                            {customEquipment.animationType !== 'custom' && (
-                                                                <>
-                                                                    {/* 系统默认注水方式 */}
-                                                                    {customEquipment.customPourAnimations
-                                                                        .filter(anim => anim.isSystemDefault && anim.pourType)
-                                                                        .map(animation => (
-                                                                            <option key={animation.id} value={animation.pourType || ''}>
-                                                                                {animation.name}
-                                                                            </option>
-                                                                        ))
-                                                                    }
-                                                                    {/* 如果没有中心注水/绕圈注水/添加冰块的系统预设，添加它们 */}
-                                                                    {!customEquipment.customPourAnimations.some(a => a.pourType === 'center') && 
-                                                                        <option value="center">中心注水</option>
-                                                                    }
-                                                                    {!customEquipment.customPourAnimations.some(a => a.pourType === 'circle') && 
-                                                                        <option value="circle">绕圈注水</option>
-                                                                    }
-                                                                    {!customEquipment.customPourAnimations.some(a => a.pourType === 'ice') && 
-                                                                        <option value="ice">添加冰块</option>
-                                                                    }
-                                                                    <option value="other">其他方式</option>
-                                                                </>
-                                                            )}
-                                                            {/* 为自定义预设添加其他方式选项 */}
-                                                            {customEquipment.animationType === 'custom' && (
-                                                                <option value="other">其他方式</option>
-                                                            )}
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            {/* 自定义预设器具显示更简化的选项列表 */}
-                                                            {customEquipment.animationType === 'custom' ? (
-                                                                <>
-                                                                    <option value="other">其他方式</option>
-                                                                    {/* 添加提示信息 */}
-                                                                    <option value="" disabled style={{ fontStyle: 'italic', color: '#999' }}>
-                                                                        提示：可在器具设置中添加自定义注水动画
-                                                                    </option>
-                                                                </>
-                                                            ) : (
-                                                                <>
-                                                                    <option value="center">中心注水</option>
-                                                                    <option value="circle">绕圈注水</option>
-                                                                    <option value="ice">添加冰块</option>
-                                                                    <option value="other">其他方式</option>
-                                                                </>
-                                                            )}
-                                                        </>
-                                                    )}
-                                                </select>
-                                            </div>
-                                            <div className="col-span-2 space-y-2">
-                                                <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                                                    步骤名称
-                                                </label>
-                                                <div className="relative">
-                                                    {customEquipment.hasValve && (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => toggleValveStatus(index)}
-                                                            className={`absolute left-0 bottom-2 px-2 py-1 text-xs rounded ${stage.valveStatus === 'open'
-                                                                ? 'text-green-600 dark:text-green-400'
-                                                                : 'text-red-600 dark:text-red-400'
-                                                                }`}
-                                                        >
-                                                            {stage.valveStatus === 'open' ? '[开阀]' : '[关阀]'}
-                                                        </button>
-                                                    )}
-                                                    <input
-                                                        type="text"
-                                                        value={stage.label}
-                                                        onChange={(e) => handleStageChange(index, 'label', e.target.value)}
-                                                        placeholder="请输入步骤名称"
-                                                        className={`w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400 ${customEquipment.hasValve ? 'pl-12' : ''}`}
-                                                    />
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="grid grid-cols-3 gap-4">
-                                            <div className="space-y-2">
-                                                <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                                                    累计时间（秒）
-                                                </label>
-                                                <input
-                                                    type="number"
-                                                    min="0"
-                                                    step="1"
-                                                    value={
-                                                        editingCumulativeTime && editingCumulativeTime.index === index
-                                                            ? editingCumulativeTime.value
-                                                            : stage.time ? stage.time.toString() : ''
-                                                    }
-                                                    onChange={(e) => {
-                                                        // 更新本地编辑状态
-                                                        setEditingCumulativeTime({
-                                                            index,
-                                                            value: e.target.value
-                                                        });
-
-                                                        // 如果输入为空，允许清空
-                                                        if (!e.target.value.trim()) {
-                                                            handleStageChange(index, 'time', 0);
-                                                            return;
-                                                        }
-
-                                                        // 直接使用用户输入的值
-                                                        const time = parseInt(e.target.value);
-                                                        handleStageChange(index, 'time', time);
-                                                    }}
-                                                    onBlur={(e) => {
-                                                        // 清除编辑状态
-                                                        setEditingCumulativeTime(null);
-
-                                                        // 在失去焦点时进行验证和调整
-                                                        const value = e.target.value;
-
-                                                        // 如果输入为空，设置为0
-                                                        if (!value.trim()) {
-                                                            handleStageChange(index, 'time', 0);
-                                                            return;
-                                                        }
-
-                                                        // 直接使用用户输入的值
-                                                        const time = parseInt(value) || 0;
-                                                        handleStageChange(index, 'time', time);
-
-                                                        // 自动设置注水时间
-                                                        // 计算本阶段的时间（当前累计时间减去前一阶段的累计时间）
-                                                        const previousTime = index > 0 ? method.params.stages[index - 1].time || 0 : 0;
-                                                        const stageTime = time - previousTime;
-
-                                                        // 如果时长有效且注水时长未设置或超出合理范围，则自动设置注水时长
-                                                        if (stageTime > 0 && (!stage.pourTime || stage.pourTime > stageTime)) {
-                                                            handleStageChange(index, 'pourTime', stageTime);
-                                                        }
-                                                    }}
-                                                    onFocus={(e) => e.target.select()}
-                                                    className="w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                                                    注水时间（秒）
-                                                </label>
-                                                <input
-                                                    type="number"
-                                                    min="0"
-                                                    step="1"
-                                                    value={stage.pourTime !== undefined && stage.pourTime !== null ? stage.pourTime : ''}
-                                                    onChange={(e) => {
-                                                        const value = e.target.value
-                                                        // 允许为真正的空值
-                                                        if (value === '') {
-                                                            // 删除pourTime属性而不是设置为null
-                                                            const newStage = { ...stage };
-                                                            delete newStage.pourTime;
-
-                                                            const newStages = [...method.params.stages];
-                                                            newStages[index] = newStage;
-
-                                                            setMethod({
-                                                                ...method,
-                                                                params: {
-                                                                    ...method.params,
-                                                                    stages: newStages,
-                                                                },
-                                                            });
-                                                        } else {
-                                                            // 获取用户输入的值
-                                                            const pourTime = parseInt(value);
-
-                                                            // 计算当前阶段的实际可用时长
-                                                            const previousTime = index > 0 ? method.params.stages[index - 1].time || 0 : 0;
-                                                            const stageTime = stage.time - previousTime;
-
-                                                            // 如果注水时长超过阶段时长，则修正为阶段时长
-                                                            if (pourTime > stageTime && stageTime > 0) {
-                                                                handleStageChange(index, 'pourTime', stageTime);
-                                                            } else {
-                                                                handleStageChange(index, 'pourTime', pourTime);
-                                                            }
-                                                        }
-                                                    }}
-                                                    onBlur={(e) => {
-                                                        // 在失去焦点时再次验证和调整
-                                                        const value = e.target.value;
-
-                                                        // 如果输入为空，则删除pourTime属性
-                                                        if (!value.trim()) {
-                                                            const newStage = { ...stage };
-                                                            delete newStage.pourTime;
-
-                                                            const newStages = [...method.params.stages];
-                                                            newStages[index] = newStage;
-
-                                                            setMethod({
-                                                                ...method,
-                                                                params: {
-                                                                    ...method.params,
-                                                                    stages: newStages,
-                                                                },
-                                                            });
-                                                            return;
-                                                        }
-
-                                                        // 如果有值，确保不超过阶段时长
-                                                        const pourTime = parseInt(value);
-                                                        const previousTime = index > 0 ? method.params.stages[index - 1].time || 0 : 0;
-                                                        const stageTime = stage.time - previousTime;
-
-                                                        if (pourTime > stageTime && stageTime > 0) {
-                                                            handleStageChange(index, 'pourTime', stageTime);
-                                                        }
-                                                    }}
-                                                    placeholder="默认全部"
-                                                    className="w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400 flex items-center">
-                                                    累计水量
-                                                    <button 
-                                                        type="button"
-                                                        className="ml-1 flex items-center justify-center text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 focus:outline-none relative" 
-                                                        onClick={(e) => {
-                                                            e.preventDefault();
-                                                            e.stopPropagation();
-                                                            // 切换提示的显示状态
-                                                            if (showWaterTooltip === index) {
-                                                                setShowWaterTooltip(null);
-                                                            } else {
-                                                                setShowWaterTooltip(index);
-                                                            }
-                                                        }}
-                                                        onMouseEnter={() => setShowWaterTooltip(index)}
-                                                        onMouseLeave={() => setShowWaterTooltip(null)}
-                                                        aria-label="水量输入格式说明"
-                                                    >
-                                                        <Info className="w-[12px] h-[12px]" />
-                                                        {/* 悬浮提示 */}
-                                                        {showWaterTooltip === index && (
-                                                            <div className="absolute z-10 -right-1 -translate-y-full -top-3 w-[110px] p-2 bg-white dark:bg-neutral-800 shadow-lg rounded text-xs text-neutral-700 dark:text-neutral-300">
-                                                                <p className="font-medium mb-1">带后缀自动转换:</p>
-                                                                <ul className="space-y-1">
-                                                                    <li>% : 水量百分比</li>
-                                                                    <li>倍, x : 粉量倍数</li>
-                                                                </ul>
-                                                                {/* 小三角形箭头 */}
-                                                                <div className="absolute right-1 bottom-[-6px] w-3 h-3 rotate-45 bg-white dark:bg-neutral-800"></div>
-                                                            </div>
-                                                        )}
-                                                    </button>
-                                                </label>
-                                                <div className="relative">
-                                                    <input
-                                                        type="text"
-                                                        min="0"
-                                                        step="1"
-                                                        placeholder=""
-                                                        value={
-                                                            editingCumulativeWater && editingCumulativeWater.index === index
-                                                                ? editingCumulativeWater.value
-                                                                : stage.water 
-                                                                  ? (typeof stage.water === 'number' 
-                                                                     ? String(stage.water) 
-                                                                     : String(parseInt((stage.water as string).replace('g', ''))))
-                                                                  : ''
-                                                        }
-                                                        onChange={(e) => {
-                                                            // 更新本地编辑状态
-                                                            setEditingCumulativeWater({
-                                                                index,
-                                                                value: e.target.value
-                                                            });
-
-                                                            // 如果输入为空，允许清空
-                                                            if (!e.target.value.trim()) {
-                                                                handleStageChange(index, 'water', '');
-                                                                return;
-                                                            }
-
-                                                            // 检查是否是百分比输入格式
-                                                            if (e.target.value.endsWith('%')) {
-                                                                // 在输入过程中保持原始输入值，不进行转换
-                                                                // 转换将在onBlur时进行
-                                                                return;
-                                                            }
-
-                                                            // 如果不是百分比，按原有逻辑处理
-                                                            // 直接使用用户输入的值
-                                                            let water;
-                                                            if (e.target.value.includes('.')) {
-                                                                // 处理小数点输入，并四舍五入到整数
-                                                                water = Math.round(parseFloat(e.target.value));
-                                                            } else {
-                                                                water = parseInt(e.target.value) || 0;
-                                                            }
-
-                                                            // 确保累计水量不超过总水量
-                                                            const totalWater = typeof method.params.water === 'number' 
-                                                                ? method.params.water 
-                                                                : parseInt(method.params.water || '0');
-                                                                
-                                                            if (water > totalWater) {
-                                                                handleStageChange(index, 'water', `${totalWater}`);
-                                                            } else {
-                                                                handleStageChange(index, 'water', `${water}`);
-                                                            }
-                                                        }}
-                                                        onBlur={(e) => {
-                                                            // 清除编辑状态
-                                                            setEditingCumulativeWater(null);
-
-                                                            // 在失去焦点时进行验证和调整
-                                                            const value = e.target.value;
-
-                                                            // 如果输入为空，清空水量
-                                                            if (!value.trim()) {
-                                                                handleStageChange(index, 'water', '');
-                                                                return;
-                                                            }
-
-                                                            // 获取总水量（用于计算和验证）
-                                                            const totalWater = typeof method.params.water === 'number' 
-                                                                ? method.params.water 
-                                                                : parseInt(method.params.water?.replace('g', '') || '0');
-
-                                                            // 检查是否是百分比输入 (例如 "50%")
-                                                            const percentMatch = value.match(/^(\d+(\.\d+)?)%$/);
-                                                            if (percentMatch) {
-                                                                // 提取百分比值
-                                                                const percentValue = parseFloat(percentMatch[1]);
-                                                                
-                                                                // 计算实际克数 (百分比 * 总水量)
-                                                                const calculatedWater = Math.round((percentValue / 100) * totalWater);
-                                                                
-                                                                // 确保计算的水量不超过总水量
-                                                                const finalWater = Math.min(calculatedWater, totalWater);
-                                                                
-                                                                // 更新水量
-                                                                handleStageChange(index, 'water', `${finalWater}`);
-                                                                return;
-                                                            }
-
-                                                            // 检查是否是倍数输入 (例如 "2倍"、"2x"、"x2"等)
-                                                            // 匹配：数字+倍、数字+x/X、x/X+数字 格式
-                                                            const multipleMatch = value.match(/^(\d+(\.\d+)?)(倍|[xX])$/) || 
-                                                                                 value.match(/^(\d+(\.\d+)?)[\s]*(倍|[xX])[\s]*$/) || 
-                                                                                 value.match(/^[xX][\s]*(\d+(\.\d+)?)[\s]*$/);
-                                                            if (multipleMatch) {
-                                                                // 提取倍数值 - 根据匹配组的位置确定数值在哪个捕获组
-                                                                const multipleValue = parseFloat(multipleMatch[1]);
-                                                                
-                                                                // 获取咖啡粉量(去掉单位g)
-                                                                const coffeeAmount = parseInt(method.params.coffee.replace('g', ''));
-                                                                
-                                                                // 计算实际克数 (倍数 * 咖啡粉量)
-                                                                const calculatedWater = Math.round(multipleValue * coffeeAmount);
-                                                                
-                                                                // 确保计算的水量不超过总水量
-                                                                const finalWater = Math.min(calculatedWater, totalWater);
-                                                                
-                                                                // 更新水量
-                                                                handleStageChange(index, 'water', `${finalWater}`);
-                                                                return;
-                                                            }
-
-                                                            // 如果不是百分比或倍数，按原有逻辑处理
-                                                            // 直接使用用户输入的值
-                                                            let water;
-                                                            if (value.includes('.')) {
-                                                                // 处理小数点输入，并四舍五入到整数
-                                                                water = Math.round(parseFloat(value));
-                                                            } else {
-                                                                water = parseInt(value) || 0;
-                                                            }
-
-                                                            // 确保累计水量不超过总水量
-                                                            if (water > totalWater) {
-                                                                handleStageChange(index, 'water', `${totalWater}`);
-                                                            } else {
-                                                                handleStageChange(index, 'water', `${water}`);
-                                                            }
-                                                        }}
-                                                        onFocus={(e) => e.target.select()}
-                                                        className="w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
-                                                    />
-                                                    <span className="absolute right-0 bottom-2 text-neutral-500 dark:text-neutral-400">g</span>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                                                详细说明
-                                            </label>
-                                            <AutoResizeTextarea
-                                                value={stage.detail}
-                                                onChange={(e) => handleStageChange(index, 'detail', e.target.value)}
-                                                placeholder="描述这个阶段的注水方式"
-                                                className="w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-
-                        {/* 底部渐变阴影 - 提示有更多内容 */}
-                        <div className="sticky bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none"></div>
-                    </motion.div>
+                    <StagesStep 
+                        stages={method.params.stages}
+                        totalWater={method.params.water}
+                        customEquipment={customEquipment}
+                        onStageChange={handleStageChange}
+                        onPourTypeChange={handlePourTypeChange}
+                        toggleValveStatus={toggleValveStatus}
+                        addStage={addStage}
+                        removeStage={removeStage}
+                        calculateTotalTime={calculateTotalTime}
+                        calculateCurrentWater={calculateCurrentWater}
+                        formatTime={formatTime}
+                        editingCumulativeTime={editingCumulativeTime}
+                        setEditingCumulativeTime={setEditingCumulativeTime}
+                        editingCumulativeWater={editingCumulativeWater}
+                        setEditingCumulativeWater={setEditingCumulativeWater}
+                        showWaterTooltip={showWaterTooltip}
+                        setShowWaterTooltip={setShowWaterTooltip}
+                    />
                 )
 
             case 'complete':
                 return (
-                    <motion.div
-                        key="complete-step"
-                        initial="initial"
-                        animate="in"
-                        exit="out"
-                        variants={pageVariants}
-                        transition={pageTransition}
-                        className="flex flex-col items-center justify-center pt-10 space-y-8 text-center relative"
-                    >
-                        <div className="w-16 h-16 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
-                            <Check className="w-8 h-8 text-neutral-800 dark:text-neutral-200" />
-                        </div>
-                        <div className="space-y-2">
-                            <h3 className="text-xl font-medium text-neutral-800 dark:text-neutral-200">
-                                {initialMethod ? '方案编辑完成' : '方案创建完成'}
-                            </h3>
-                            <p className="text-neutral-600 dark:text-neutral-400">
-                                你的咖啡冲煮方案已经准备就绪
-                            </p>
-                        </div>
-                        <div className="w-full max-w-sm space-y-4 px-4">
-                            <div className="flex justify-between py-2 border-b border-neutral-200 dark:border-neutral-700">
-                                <span className="text-sm text-neutral-500 dark:text-neutral-400">方案名称</span>
-                                <span className="text-sm font-medium">{method.name}</span>
-                            </div>
-                            <div className="flex justify-between py-2 border-b border-neutral-200 dark:border-neutral-700">
-                                <span className="text-sm text-neutral-500 dark:text-neutral-400">咖啡粉量</span>
-                                <span className="text-sm font-medium">{method.params.coffee}</span>
-                            </div>
-                            <div className="flex justify-between py-2 border-b border-neutral-200 dark:border-neutral-700">
-                                <span className="text-sm text-neutral-500 dark:text-neutral-400">水量</span>
-                                <span className="text-sm font-medium">{method.params.water}</span>
-                            </div>
-                            <div className="flex justify-between py-2 border-b border-neutral-200 dark:border-neutral-700">
-                                <span className="text-sm text-neutral-500 dark:text-neutral-400">粉水比</span>
-                                <span className="text-sm font-medium">{method.params.ratio}</span>
-                            </div>
-                            <div className="flex justify-between py-2 border-b border-neutral-200 dark:border-neutral-700">
-                                <span className="text-sm text-neutral-500 dark:text-neutral-400">总时间</span>
-                                <span className="text-sm font-medium">{formatTime(calculateTotalTime())}</span>
-                            </div>
-                        </div>
-                        {/* 底部渐变阴影 - 提示有更多内容 */}
-                        <div className="sticky w-full bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none"></div>
-                    </motion.div>
+                    <CompleteStep 
+                        methodName={method.name}
+                        coffee={method.params.coffee}
+                        water={method.params.water}
+                        ratio={method.params.ratio}
+                        totalTime={calculateTotalTime()}
+                        isEdit={!!initialMethod}
+                        formatTime={formatTime}
+                    />
                 )
 
             default:
@@ -1666,22 +992,11 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
             className="flex flex-col h-[calc(100vh-8rem)]"
         >
             {/* 顶部导航栏 */}
-            <div className="flex items-center justify-between mt-3 mb-6">
-                <button
-                    type="button"
-                    onClick={handleBack}
-                    className="rounded-full"
-                >
-                    <ArrowLeft className="w-5 h-5 text-neutral-800 dark:text-neutral-200" />
-                </button>
-                <div className="w-full px-4">
-                    {renderProgressBar()}
-
-                </div>
-                <div className="text-sm font-medium text-neutral-600 dark:text-neutral-400">
-                    {getCurrentStepIndex() + 1}/{steps.length}
-                </div>
-            </div>
+            <Steps 
+                steps={steps}
+                currentStep={currentStep}
+                onBack={handleBack}
+            />
 
             {/* 步骤内容 */}
             <div className="flex-1 overflow-y-auto pr-2">
