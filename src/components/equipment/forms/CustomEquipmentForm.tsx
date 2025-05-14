@@ -67,6 +67,14 @@ const PRESET_OPTIONS = [
     }
 ] as const;
 
+// 添加分隔，独立出意式机
+const ESPRESSO_PRESET = {
+    value: 'espresso',
+    label: '意式机',
+    description: '适用于意式咖啡机，无需杯型动画和注水方式',
+    equipmentId: 'Espresso',
+} as const;
+
 // 修改默认注水类型常量
 const DEFAULT_POUR_TYPES = [
     {
@@ -169,7 +177,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
     const [isPlaying, setIsPlaying] = useState(false);
 
     // 预设方案状态 - 根据初始值设置，如果是聪明杯则设置为clever
-    const [selectedPreset, setSelectedPreset] = useState<(typeof PRESET_OPTIONS)[number]['value']>(
+    const [selectedPreset, setSelectedPreset] = useState<(typeof PRESET_OPTIONS)[number]['value'] | 'espresso'>(
         initialEquipment?.hasValve ? 'clever' :
             initialEquipment?.animationType === 'custom' ? 'custom' : 'v60'
     );
@@ -341,6 +349,9 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
             // 自定义预设时，过滤掉系统默认注水方式
             setCustomPourAnimations(prev => prev.filter(anim => !anim.isSystemDefault));
             // 自定义预设不自动设置阀门，保持当前值
+        } else if (selectedPreset === 'espresso') {
+            handleChange('animationType', 'espresso');
+            handleChange('hasValve', false);
         }
     }, [selectedPreset]);
 
@@ -1263,87 +1274,23 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                                         />
                                     </label>
                                 ))}
-                            </div>
-                        </div>
 
-                        {/* 杯型设置 */}
-                        <div className="p-4">
-                            <h4 className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-3">杯型设置</h4>
-                            <div className="grid grid-cols-2 gap-3">
-                                {/* 默认杯型选项 */}
-                                {selectedPreset !== 'custom' && (
-                                    <label
-                                        className={`relative flex flex-col p-3 rounded-lg border ${cupShapeType === 'default'
-                                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                                            : 'border-neutral-200 dark:border-neutral-700 hover:border-blue-200 dark:hover:border-blue-800'
-                                            } cursor-pointer transition-all`}
-                                    >
-                                        <div className="flex items-center mb-2">
-                                            <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">默认杯型</span>
-                                            {cupShapeType === 'default' && (
-                                                <div className="ml-2 w-3.5 h-3.5 text-blue-500">
-                                                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                        <path d="M5 13L9 17L19 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                                    </svg>
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="w-full aspect-square flex items-center justify-center bg-neutral-50 dark:bg-neutral-900 rounded-md relative">
-                                            <div className="absolute inset-0 flex items-center justify-center">
-                                                <div className="w-3/4 h-3/4 relative">
-                                                    {/* 默认杯型始终显示默认图像，不管customShapeSvg是否存在 */}
-                                                    <Image
-                                                        src="/images/icons/ui/v60-base.svg"
-                                                        alt="杯型背景"
-                                                        fill
-                                                        className="object-contain invert-0 dark:invert"
-                                                        sizes="(max-width: 768px) 100vw, 300px"
-                                                        quality={85}
-                                                    />
-                                                    {equipment.hasValve && (
-                                                        <Image
-                                                            src="/images/icons/ui/valve-closed.svg"
-                                                            alt="阀门背景"
-                                                            fill
-                                                            className="object-contain invert-0 dark:invert"
-                                                            sizes="(max-width: 768px) 100vw, 300px"
-                                                            quality={85}
-                                                        />
-                                                    )}
-                                                </div>
-                                            </div>
-                                            <input
-                                                type="radio"
-                                                name="cupShapeType"
-                                                value="default"
-                                                checked={cupShapeType === 'default'}
-                                                onChange={() => setCupShapeType('default')}
-                                                className="hidden"
-                                            />
-                                        </div>
-                                    </label>
-                                )}
-
-                                {/* 自定义杯型选项/按钮 */}
+                                {/* 分隔线 */}
+                                <div className="col-span-2 my-2 border-t border-neutral-200 dark:border-neutral-700"></div>
+                                
+                                {/* 意式机选项 */}
                                 <label
-                                    className={`relative flex flex-col p-3 rounded-lg border ${cupShapeType === 'custom'
+                                    key={ESPRESSO_PRESET.value}
+                                    className={`relative flex flex-col p-3 rounded-lg border ${selectedPreset === ESPRESSO_PRESET.value
                                         ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
                                         : 'border-neutral-200 dark:border-neutral-700 hover:border-blue-200 dark:hover:border-blue-800'
-                                        } transition-all cursor-pointer`}
+                                        } cursor-pointer transition-all`}
                                 >
-                                    <input
-                                        type="radio"
-                                        name="cupShapeType"
-                                        value="custom"
-                                        checked={cupShapeType === 'custom'}
-                                        onChange={() => setCupShapeType('custom')}
-                                        className="hidden"
-                                    />
-                                    <div className="flex items-center mb-2">
+                                    <div className="flex items-center mb-1.5">
                                         <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
-                                            {equipment.customShapeSvg ? '自定义杯型' : '添加自定义杯型'}
+                                            {ESPRESSO_PRESET.label}
                                         </span>
-                                        {cupShapeType === 'custom' && (
+                                        {selectedPreset === ESPRESSO_PRESET.value && (
                                             <div className="ml-2 w-3.5 h-3.5 text-blue-500">
                                                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                                     <path d="M5 13L9 17L19 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -1351,30 +1298,150 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                                             </div>
                                         )}
                                     </div>
-                                    <button
-                                        type="button"
-                                        onClick={(e) => {
-                                            e.preventDefault();
-                                            handleShowDrawingCanvas();
-                                        }}
-                                        className="w-full aspect-square flex items-center justify-center bg-neutral-50 dark:bg-neutral-900 rounded-md overflow-hidden hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
-                                    >
-                                        {equipment.customShapeSvg ? (
-                                            <div
-                                                className="w-full h-full flex items-center justify-center"
-                                                dangerouslySetInnerHTML={{
-                                                    __html: equipment.customShapeSvg.replace(/<svg/, '<svg width="100%" height="100%"')
-                                                }}
-                                            />
-                                        ) : (
-                                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-neutral-400">
-                                                <path d="M12 5V19M5 12H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                            </svg>
-                                        )}
-                                    </button>
+                                    <span className="text-xs text-neutral-500 dark:text-neutral-400 line-clamp-2">
+                                        {ESPRESSO_PRESET.description}
+                                    </span>
+                                    <input
+                                        type="radio"
+                                        name="presetOption"
+                                        value={ESPRESSO_PRESET.value}
+                                        checked={selectedPreset === ESPRESSO_PRESET.value}
+                                        onChange={() => setSelectedPreset(ESPRESSO_PRESET.value)}
+                                        className="hidden"
+                                    />
                                 </label>
                             </div>
                         </div>
+
+                        {/* 意式机说明 */}
+                        {selectedPreset === 'espresso' && (
+                            <div className="px-4 pb-4">
+                                <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 p-3 text-sm text-blue-600 dark:text-blue-400">
+                                    <div className="flex items-start">
+                                        <div className="mr-2 mt-0.5 flex-shrink-0">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M13 16H12V12H11M12 8H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            意式机不需要杯型设置和注水动画。您可以直接设置基本信息后保存。
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* 杯型设置 */}
+                        {selectedPreset !== 'espresso' && (
+                            <div className="p-4">
+                                <h4 className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-3">杯型设置</h4>
+                                <div className="grid grid-cols-2 gap-3">
+                                    {/* 默认杯型选项 */}
+                                    {selectedPreset !== 'custom' && (
+                                        <label
+                                            className={`relative flex flex-col p-3 rounded-lg border ${cupShapeType === 'default'
+                                                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                                                : 'border-neutral-200 dark:border-neutral-700 hover:border-blue-200 dark:hover:border-blue-800'
+                                                } cursor-pointer transition-all`}
+                                        >
+                                            <div className="flex items-center mb-2">
+                                                <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">默认杯型</span>
+                                                {cupShapeType === 'default' && (
+                                                    <div className="ml-2 w-3.5 h-3.5 text-blue-500">
+                                                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                            <path d="M5 13L9 17L19 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                                        </svg>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="w-full aspect-square flex items-center justify-center bg-neutral-50 dark:bg-neutral-900 rounded-md relative">
+                                                <div className="absolute inset-0 flex items-center justify-center">
+                                                    <div className="w-3/4 h-3/4 relative">
+                                                        {/* 默认杯型始终显示默认图像，不管customShapeSvg是否存在 */}
+                                                        <Image
+                                                            src="/images/icons/ui/v60-base.svg"
+                                                            alt="杯型背景"
+                                                            fill
+                                                            className="object-contain invert-0 dark:invert"
+                                                            sizes="(max-width: 768px) 100vw, 300px"
+                                                            quality={85}
+                                                        />
+                                                        {equipment.hasValve && (
+                                                            <Image
+                                                                src="/images/icons/ui/valve-closed.svg"
+                                                                alt="阀门背景"
+                                                                fill
+                                                                className="object-contain invert-0 dark:invert"
+                                                                sizes="(max-width: 768px) 100vw, 300px"
+                                                                quality={85}
+                                                            />
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <input
+                                                    type="radio"
+                                                    name="cupShapeType"
+                                                    value="default"
+                                                    checked={cupShapeType === 'default'}
+                                                    onChange={() => setCupShapeType('default')}
+                                                    className="hidden"
+                                                />
+                                            </div>
+                                        </label>
+                                    )}
+
+                                    {/* 自定义杯型选项/按钮 */}
+                                    <label
+                                        className={`relative flex flex-col p-3 rounded-lg border ${cupShapeType === 'custom'
+                                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                                            : 'border-neutral-200 dark:border-neutral-700 hover:border-blue-200 dark:hover:border-blue-800'
+                                            } transition-all cursor-pointer`}
+                                    >
+                                        <input
+                                            type="radio"
+                                            name="cupShapeType"
+                                            value="custom"
+                                            checked={cupShapeType === 'custom'}
+                                            onChange={() => setCupShapeType('custom')}
+                                            className="hidden"
+                                        />
+                                        <div className="flex items-center mb-2">
+                                            <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
+                                                {equipment.customShapeSvg ? '自定义杯型' : '添加自定义杯型'}
+                                            </span>
+                                            {cupShapeType === 'custom' && (
+                                                <div className="ml-2 w-3.5 h-3.5 text-blue-500">
+                                                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                        <path d="M5 13L9 17L19 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                                    </svg>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                handleShowDrawingCanvas();
+                                            }}
+                                            className="w-full aspect-square flex items-center justify-center bg-neutral-50 dark:bg-neutral-900 rounded-md overflow-hidden hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                                        >
+                                            {equipment.customShapeSvg ? (
+                                                <div
+                                                    className="w-full h-full flex items-center justify-center"
+                                                    dangerouslySetInnerHTML={{
+                                                        __html: equipment.customShapeSvg.replace(/<svg/, '<svg width="100%" height="100%"')
+                                                    }}
+                                                />
+                                            ) : (
+                                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-neutral-400">
+                                                    <path d="M12 5V19M5 12H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                                </svg>
+                                            )}
+                                        </button>
+                                    </label>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
 

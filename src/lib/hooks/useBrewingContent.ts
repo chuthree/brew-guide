@@ -152,12 +152,15 @@ export function useBrewingContent({
 				// 检查是否是自定义预设器具（animationType === 'custom'）
 				const isCustomPresetEquipment = customEquipment?.animationType === 'custom';
 				
+				// 检查是否是意式机类型（animationType === 'espresso'）
+				const isEspressoEquipment = customEquipment?.animationType === 'espresso';
+				
 				// 现在我们将获取两种方案列表
 				let customMethodsForEquipment: Method[] = [];
 				let commonMethodsForEquipment: Method[] = [];
 				
-				// 如果是自定义预设器具，只获取自定义方案
-				if (isCustomPresetEquipment) {
+				// 如果是自定义预设器具或意式机，只获取自定义方案
+				if (isCustomPresetEquipment || isEspressoEquipment) {
 					customMethodsForEquipment = currentEquipmentCustomMethods;
 				} else {
 					// 总是获取自定义方案
@@ -182,11 +185,19 @@ export function useBrewingContent({
 							case 'clever':
 								baseEquipmentId = 'CleverDripper';
 								break;
+							case 'espresso':
+								// 意式机不继承任何通用方案
+								baseEquipmentId = '';
+								break;
 							default:
 								baseEquipmentId = 'V60'; // 默认使用 V60 的方案
 						}
 						
-						commonMethodsForEquipment = commonMethods[baseEquipmentId] || [];
+						if (baseEquipmentId) {
+							commonMethodsForEquipment = commonMethods[baseEquipmentId] || [];
+						} else {
+							commonMethodsForEquipment = [];
+						}
 					} else {
 						// 预定义器具，直接使用其通用方案
 						commonMethodsForEquipment = commonMethods[selectedEquipment as keyof typeof commonMethods] || [];
@@ -203,6 +214,9 @@ export function useBrewingContent({
 								baseEquipmentId = 'Kalita';
 							} else if (selectedEquipment.includes('-origami-')) {
 								baseEquipmentId = 'Origami';
+							} else if (selectedEquipment.includes('-espresso-')) {
+								// 意式机类型，不使用任何基础器具的方案
+								baseEquipmentId = '';
 							}
 							
 							if (baseEquipmentId && commonMethods[baseEquipmentId]) {
