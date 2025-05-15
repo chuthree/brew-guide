@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import Image from 'next/image'
 import { motion, AnimatePresence, useAnimation } from 'framer-motion'
-import { Stage } from '@/lib/core/config'
+import { Stage } from '@/components/method/forms/components/types'
 import { AnimationFrame } from './AnimationEditor'
 
 // 定义扩展阶段类型
@@ -28,17 +28,27 @@ interface PourVisualizerProps {
     countdownTime: number | null
     equipmentId?: string // 添加设备ID属性
     isWaiting?: boolean // 添加是否处于等待阶段的属性
-    customEquipment?: {
-        animationType: "v60" | "kalita" | "origami" | "clever" | "custom";
+    customEquipment?: Partial<{
+        id: string;
+        name: string;
+        description: string;
+        note?: string;
+        animationType: "v60" | "kalita" | "origami" | "clever" | "custom" | "espresso";
         hasValve?: boolean;
-        customShapeSvg?: string; // 添加自定义杯型SVG
+        isCustom: true;
+        customShapeSvg?: string;
+        customValveSvg?: string;
+        customValveOpenSvg?: string;
         customPourAnimations?: {
             id: string;
+            name?: string;
             pourType?: 'center' | 'circle' | 'ice';
             customAnimationSvg: string;
+            isSystemDefault?: boolean;
+            previewFrames?: number;
             frames?: AnimationFrame[];
         }[];
-    };
+    }>;
 }
 
 const PourVisualizer: React.FC<PourVisualizerProps> = ({

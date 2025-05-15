@@ -15,9 +15,11 @@ import {
     StagesStep, 
     CompleteStep,
     MethodWithStages, 
-    Stage 
+    Stage,
+    EspressoPourType
 } from './components'
 import type { Step } from './components'
+import { isEspressoMachine, getDefaultPourType, getEspressoPourTypeName } from '@/lib/utils/equipmentUtils'
 
 // 数据规范化辅助函数
 const normalizeMethodData = (method: any): MethodWithStages => {
@@ -102,6 +104,8 @@ interface CustomMethodFormProps {
     onBack: () => void;
 }
 
+
+
 const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     initialMethod,
     customEquipment,
@@ -140,6 +144,9 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
 
         // 检查是否是自定义预设类型
         const isCustomPreset = customEquipment.animationType === 'custom';
+        
+        // 检查是否是意式机类型
+        const isEspresso = isEspressoMachine(customEquipment);
 
         // 对于自定义预设，不设置初始步骤，让用户完全自由创建
         if (isCustomPreset) {
@@ -153,6 +160,29 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                     temp: '92°C',
                     videoUrl: '',
                     stages: [], // 不添加任何初始步骤
+                },
+            };
+        }
+        
+        // 如果是意式机，使用意式机的特定初始化数据
+        if (isEspresso) {
+            return {
+                name: '',
+                params: {
+                    coffee: '18g',
+                    water: '36g', // 默认1:2
+                    ratio: '1:2',
+                    grindSize: '细',
+                    temp: '93°C',
+                    videoUrl: '',
+                    stages: [{
+                        time: 25,
+                        label: '萃取',
+                        water: '36g',
+                        detail: '标准意式萃取',
+                        pourType: 'extraction',
+                        espressoPourType: 'extraction'
+                    }],
                 },
             };
         }
@@ -427,8 +457,64 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         // 检查是否是自定义预设
         const isCustomPreset = customEquipment.animationType === 'custom';
         
+        // 检查是否是意式机
+        const isEspresso = isEspressoMachine(customEquipment);
+        
+        // 如果是意式机，创建意式机的默认步骤
+        if (isEspresso) {
+            // 检查是否已有步骤
+            const hasExistingStages = method.params.stages.length > 0;
+            // 如果已经有步骤，则新步骤默认为"饮料"类型，否则为"萃取"类型
+            const pourType = hasExistingStages ? 'beverage' : 'extraction';
+            
+            const newStage: Stage = {
+                time: 0,
+                label: '',
+                water: '',
+                detail: '',
+                pourType: pourType,
+                espressoPourType: pourType as EspressoPourType
+            };
+            
+            setMethod({
+                ...method,
+                params: {
+                    ...method.params,
+                    stages: [...method.params.stages, newStage],
+                },
+            });
+            
+            // 创建一个标志，表示需要滚动到新添加的步骤
+            const needToScrollToNewStage = true;
+            
+            // 使用setTimeout确保DOM已更新
+            setTimeout(() => {
+                if (stagesContainerRef.current && needToScrollToNewStage) {
+                    const newStageElement = stagesContainerRef.current.lastElementChild as HTMLElement
+                    if (newStageElement) {
+                        // 修改滚动行为，考虑底部阴影的高度
+                        newStageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        
+                        // 额外向上滚动一些距离，确保底部阴影不会遮挡新添加的步骤
+                        setTimeout(() => {
+                            if (stagesContainerRef.current) {
+                                const container = stagesContainerRef.current.parentElement;
+                                if (container) {
+                                    container.scrollTop += 20; // 向下额外滚动20px，确保新步骤完全可见
+                                }
+                            }
+                        }, 300);
+                    }
+                }
+            }, 100);
+            
+            return;
+        }
+        
+        // 对于普通器具，使用getDefaultPourType获取默认注水方式
+        let defaultPourType = isCustomPreset ? '' : getDefaultPourType(customEquipment);
+        
         // 对于自定义预设，尝试使用第一个自定义动画作为默认值
-        let defaultPourType: string | undefined = undefined;
         if (isCustomPreset && customEquipment.customPourAnimations && customEquipment.customPourAnimations.length > 0) {
             // 使用第一个非系统默认的自定义动画
             const firstCustomAnimation = customEquipment.customPourAnimations.find(anim => !anim.isSystemDefault);
@@ -444,7 +530,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
             label: '',
             water: '',
             detail: '',
-            pourType: isCustomPreset ? (defaultPourType as string) : '', // 对于非自定义预设，不设置默认注水方式
+            pourType: defaultPourType, // 使用获取的默认注水方式
             ...(customEquipment.hasValve ? { valveStatus: 'closed' as 'closed' | 'open' } : {})
         };
 
@@ -532,11 +618,20 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
             totalWater = `${Math.round(parseFloat(coffee) * parseFloat(ratio))}g`
         }
 
-        // 更新第一个步骤的水量（咖啡粉量的2倍）
+        // 更新第一个步骤的水量
         const newStages = [...method.params.stages];
+        
+        if (isEspressoMachine(customEquipment)) {
+            // 意式机：第一个萃取步骤的液重与总水量相同
+            if (newStages.length > 0 && coffee && ratio) {
+                newStages[0].water = totalWater;
+            }
+        } else {
+            // 手冲：第一个步骤的水量是咖啡粉量的2倍
         if (newStages.length > 0 && coffee) {
             const waterAmount = Math.round(parseFloat(coffee) * 2);
             newStages[0].water = `${waterAmount}g`;
+            }
         }
 
         setMethod({
@@ -560,11 +655,20 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
             totalWater = `${Math.round(parseFloat(coffee) * parseFloat(ratio))}g`
         }
 
-        // 更新第一个步骤的水量（咖啡粉量的2倍）
+        // 更新第一个步骤的水量
         const newStages = [...method.params.stages];
+        
+        if (isEspressoMachine(customEquipment)) {
+            // 意式机：第一个萃取步骤的液重与总水量相同
+            if (newStages.length > 0 && coffee && ratio) {
+                newStages[0].water = totalWater;
+            }
+        } else {
+            // 手冲：第一个步骤的水量是咖啡粉量的2倍
         if (newStages.length > 0 && coffee) {
             const waterAmount = Math.round(parseFloat(coffee) * 2);
             newStages[0].water = `${waterAmount}g`;
+            }
         }
 
         setMethod({
@@ -587,6 +691,55 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                 temp: temp ? `${temp}°C` : '',
             },
         })
+    }
+
+    // 意式机特有 - 处理萃取时间变更
+    const handleExtractionTimeChange = (time: number) => {
+        if (!isEspressoMachine(customEquipment) || method.params.stages.length === 0) return;
+        
+        // 更新第一个萃取步骤的时间
+        const newStages = [...method.params.stages];
+        const firstStage = { ...newStages[0] };
+        firstStage.time = time;
+        newStages[0] = firstStage;
+
+        setMethod({
+            ...method,
+            params: {
+                ...method.params,
+                stages: newStages
+            }
+        });
+    }
+
+    // 意式机特有 - 处理液重变更
+    const handleLiquidWeightChange = (liquidWeight: string) => {
+        if (!isEspressoMachine(customEquipment) || method.params.stages.length === 0) return;
+
+        // 更新第一个萃取步骤的液重以及方法的总水量
+        const newStages = [...method.params.stages];
+        const firstStage = { ...newStages[0] };
+        firstStage.water = liquidWeight;
+        newStages[0] = firstStage;
+
+        // 根据咖啡粉量和液重计算新的水粉比
+        const coffee = parseFloat(method.params.coffee.replace('g', ''));
+        const liquid = parseFloat(liquidWeight.replace('g', ''));
+        
+        // 计算比值
+        let ratio = liquid / coffee;
+        // 如果比值是整数，则不显示小数点
+        const newRatio = coffee > 0 ? `1:${Number.isInteger(ratio) ? ratio.toString() : ratio.toFixed(1)}` : method.params.ratio;
+
+        setMethod({
+            ...method,
+            params: {
+                ...method.params,
+                water: liquidWeight, // 更新总水量与萃取液重同步
+                ratio: newRatio, // 更新水粉比
+                stages: newStages
+            }
+        });
     }
 
     const calculateTotalTime = () => {
@@ -622,10 +775,72 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         return water.endsWith('g') ? water : `${water}g`;
     }
 
+    // 添加一个处理意式机特有注水方式改变的函数
+    const handleEspressoPourTypeChange = (index: number, value: string) => {
+        const newStages = [...method.params.stages];
+        const stage = { ...newStages[index] } as Stage;
+        
+        // 设置意式机特有的 pourType 和 espressoPourType
+        stage.pourType = value;
+        stage.espressoPourType = value as EspressoPourType;
+        
+        // 获取注水方式的显示名称
+        const pourTypeName = getEspressoPourTypeName(value);
+        
+        // 根据不同的注水方式处理默认值
+        switch (value) {
+            case 'extraction':
+                // 萃取模式，需要时间和液重
+                if (!stage.label || stage.label === '饮料' || stage.label === '') {
+                    stage.label = pourTypeName;
+                }
+                // 确保有时间字段，萃取模式需要
+                if (!stage.time) {
+                    stage.time = 25;
+                }
+                break;
+            case 'beverage':
+                // 饮料模式，只需饮料名称、水量和说明
+                if (!stage.label || stage.label === '萃取' || stage.label === '') {
+                    stage.label = pourTypeName;
+                }
+                // 饮料模式不需要时间
+                stage.time = 0;
+                stage.pourTime = undefined;
+                break;
+            case 'other':
+                // 其他模式，只需要说明
+                if (!stage.label) {
+                    stage.label = '';
+                }
+                // 其他模式不需要时间和水量
+                stage.time = 0;
+                stage.pourTime = undefined;
+                stage.water = '';
+                break;
+        }
+        
+        newStages[index] = stage;
+        setMethod({
+            ...method,
+            params: {
+                ...method.params,
+                stages: newStages,
+            },
+        });
+    };
+
     const handlePourTypeChange = (index: number, value: string) => {
-        const newStages = [...method.params.stages]
-        const stage = { ...newStages[index] } as Stage
+        const newStages = [...method.params.stages];
+        const stage = { ...newStages[index] } as Stage;
         const isCustomPreset = customEquipment.animationType === 'custom';
+        const isEspresso = isEspressoMachine(customEquipment);
+        
+        // 如果是意式机，使用特殊的注水方式处理函数
+        if (isEspresso) {
+            handleEspressoPourTypeChange(index, value);
+            return;
+        }
 
         // 检查是否选择了自定义注水动画（自定义注水动画的值是ID而不是pourType类型）
         const isCustomAnimation = value !== 'center' && value !== 'circle' && value !== 'ice' && value !== 'other';
@@ -636,7 +851,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
             
             if (customAnimation) {
                 // 直接使用自定义动画的 ID 作为 pourType
-                stage.pourType = value as string;
+                stage.pourType = value;
                 
                 // 更新标签和详情（如果为空）
                 if (!stage.label || stage.label === getDefaultStageLabel('center') || 
@@ -826,19 +1041,30 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                             water: method.params.water,
                             ratio: method.params.ratio,
                             grindSize: method.params.grindSize,
-                            temp: method.params.temp
+                            temp: method.params.temp,
+                            // 添加意式机特有参数
+                            extractionTime: isEspressoMachine(customEquipment) 
+                                ? method.params.stages[0]?.time 
+                                : undefined,
+                            liquidWeight: isEspressoMachine(customEquipment) 
+                                ? method.params.stages[0]?.water 
+                                : undefined
                         }}
                         onCoffeeChange={handleCoffeeChange}
                         onRatioChange={handleRatioChange}
                         onGrindSizeChange={(grindSize) => setMethod({
-                            ...method,
-                            params: {
-                                ...method.params,
+                                        ...method,
+                                        params: {
+                                            ...method.params,
                                 grindSize
                             }
                         })}
                         onTempChange={handleTempChange}
+                        // 添加意式机特有参数处理函数
+                        onExtractionTimeChange={isEspressoMachine(customEquipment) ? handleExtractionTimeChange : undefined}
+                        onLiquidWeightChange={isEspressoMachine(customEquipment) ? handleLiquidWeightChange : undefined}
                         settings={localSettings}
+                        customEquipment={customEquipment}
                     />
                 )
 
@@ -887,6 +1113,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     const renderNextButton = () => {
         const isLastStep = getCurrentStepIndex() === steps.length - 1
         const isCustomPreset = customEquipment.animationType === 'custom';
+        const isEspresso = isEspressoMachine(customEquipment);
 
         // 验证当前步骤是否可以进行下一步
         const isStepValid = () => {
@@ -902,6 +1129,28 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                 case 'stages':
                     return method.params.stages.length > 0 &&
                         method.params.stages.every(stage => {
+                            // 意式机器具的特殊验证
+                            if (isEspresso) {
+                                // 根据不同的注水方式类型进行验证
+                                switch (stage.espressoPourType) {
+                                    case 'extraction':
+                                        // 萃取类型需要时间、名称、水量（详细说明变为选填）
+                                        return stage.time > 0 && 
+                                               !!stage.label.trim() && 
+                                               !!stage.water.trim();
+                                    case 'beverage':
+                                        // 饮料类型只需要名称、水量（详细说明变为选填）
+                                        return !!stage.label.trim() && 
+                                               !!stage.water.trim();
+                                    case 'other':
+                                        // 其他类型只需要选择类型（详细说明变为选填）
+                                        return true;
+                                    default:
+                                        // 如果未设置类型，需要选择注水方式
+                                        return !!stage.espressoPourType;
+                                }
+                            }
+                            
                             // 针对自定义预设器具放宽一些验证要求
                             if (isCustomPreset) {
                                 // 基本验证 - 对自定义预设只验证时间和水量
