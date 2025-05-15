@@ -137,11 +137,20 @@ export default function RootLayout({
             <Script src="/sw-dev-unregister.js" strategy="beforeInteractive" />
           </>
         )}
-        <Script 
-          defer 
-          src="/umami.js" 
-          data-website-id="bab2cc4b-6d35-464d-8fc5-1e1ab10fb4f4"
-        />
+        <Script
+          strategy="afterInteractive"
+          id="baidu-analytics"
+        >
+          {`
+            var _hmt = _hmt || [];
+            (function() {
+              var hm = document.createElement("script");
+              hm.src = "https://hm.baidu.com/hm.js?1d5ab7c4016b8737328359797bfaac08";
+              var s = document.getElementsByTagName("script")[0]; 
+              s.parentNode.insertBefore(hm, s);
+            })();
+          `}
+        </Script>
       </head>
       <body className={`${inter.className} bg-neutral-50 dark:bg-neutral-900 fixed inset-0 overflow-hidden`}>
         <ThemeProvider
