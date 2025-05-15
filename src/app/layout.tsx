@@ -139,7 +139,7 @@ export default function RootLayout({
         )}
         <Script 
           defer 
-          src="http://localhost:3001/script.js" 
+          src="/umami.js" 
           data-website-id="bab2cc4b-6d35-464d-8fc5-1e1ab10fb4f4"
         />
       </head>
