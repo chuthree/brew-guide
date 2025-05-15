@@ -137,20 +137,27 @@ export default function RootLayout({
             <Script src="/sw-dev-unregister.js" strategy="beforeInteractive" />
           </>
         )}
-        <Script
-          strategy="afterInteractive"
-          id="baidu-analytics"
-        >
-          {`
-            var _hmt = _hmt || [];
-            (function() {
-              var hm = document.createElement("script");
-              hm.src = "https://hm.baidu.com/hm.js?1d5ab7c4016b8737328359797bfaac08";
-              var s = document.getElementsByTagName("script")[0]; 
-              s.parentNode.insertBefore(hm, s);
-            })();
-          `}
-        </Script>
+        {/* 百度统计代码 - 支持单页应用 */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              var _hmt = _hmt || [];
+              (function() {
+                var hm = document.createElement("script");
+                hm.src = "https://hm.baidu.com/hm.js?1d5ab7c4016b8737328359797bfaac08";
+                var s = document.getElementsByTagName("script")[0]; 
+                s.parentNode.insertBefore(hm, s);
+              })();
+              
+              // 添加单页应用支持
+              _hmt.push(['_requirePlugin', 'UrlChangeTracker', {
+                shouldTrackUrlChange: function (newPath, oldPath) {
+                  return newPath && oldPath;
+                }
+              }]);
+            `
+          }}
+        />
       </head>
       <body className={`${inter.className} bg-neutral-50 dark:bg-neutral-900 fixed inset-0 overflow-hidden`}>
         <ThemeProvider
