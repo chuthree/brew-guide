@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
+import Script from 'next/script'
 
 /**
  * 极简下载页面组件
@@ -282,85 +283,118 @@ export default function DownloadPage(): React.ReactNode {
     };
 
     return (
-        <div className="relative flex min-h-full w-full flex-col">
-            {/* 内容区域 */}
-            <AnimatePresence mode="wait">
-                {showContent && (
-                    <motion.div 
-                        className="flex-1 flex items-center justify-center w-full pb-28"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.3 }}
-                    >
-                        {renderTabContent()}
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* 左下角的APP简介 */}
-            <div className="absolute bottom-8 left-6 max-w-[200px] pb-safe-bottom">
-                <div className="h-[20px] mb-6">
-                    {showContent ? (
-                        <AnimatePresence mode="wait">
-                            <motion.p
-                                key={imageIndex}
-                                className="text-xs text-neutral-500 dark:text-neutral-400"
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                transition={{ duration: 0.2 }}
-                            >
-                                {activeTab === 'intro' ? descriptions[imageIndex] : ''}
-                            </motion.p>
-                        </AnimatePresence>
-                    ) : (
-                        <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                            Brew Guide 一站式管理器具、方案、咖啡豆以及笔记的小工具。
-                        </p>
-                    )}
-                </div>
-                <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400 flex gap-5">
-                    <a 
-                        onClick={() => handleTabClick('intro')} 
-                        className={`cursor-pointer relative ${showContent ? '' : 'underline'}`}
-                    >
-                        {showContent ? (
-                            <>
-                                <span className={`transition-opacity duration-300 ${activeTab === 'intro' ? 'opacity-100' : 'opacity-0'}`}>[</span>
-                                介绍
-                                <span className={`transition-opacity duration-300 ${activeTab === 'intro' ? 'opacity-100' : 'opacity-0'}`}>]</span>
-                            </>
-                        ) : '前往'}
-                    </a>
+        <>
+            {/* 添加结构化数据 Schema.org */}
+            <Script
+                id="app-schema-data"
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{
+                    __html: JSON.stringify({
+                        '@context': 'https://schema.org',
+                        '@type': 'MobileApplication',
+                        'name': 'Brew Guide',
+                        'operatingSystem': 'Android, iOS',
+                        'applicationCategory': 'LifestyleApplication',
+                        'offers': {
+                            '@type': 'Offer',
+                            'price': '0',
+                            'priceCurrency': 'CNY'
+                        },
+                        'description': '好用的咖啡小工具，包含详细冲煮步骤、参数配置和计时器。记录咖啡豆信息，轻松冲煮完美咖啡。',
+                        'aggregateRating': {
+                            '@type': 'AggregateRating',
+                            'ratingValue': '4.8',
+                            'ratingCount': '120'
+                        },
+                        'downloadUrl': 'https://www.123912.com/s/prGKTd-HpJWA',
+                        'screenshot': [
+                            'https://coffee.chu3.top/images/content/brewing.png',
+                            'https://coffee.chu3.top/images/content/inventory.png',
+                            'https://coffee.chu3.top/images/content/notes.png'
+                        ]
+                    })
+                }}
+            />
+            <div className="relative flex min-h-full w-full flex-col">
+                {/* 内容区域 */}
+                <AnimatePresence mode="wait">
                     {showContent && (
-                        <>
-                            <motion.a 
-                                onClick={() => handleTabClick('download')}
-                                className="cursor-pointer relative"
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{ delay: 0.1, duration: 0.3 }}
-                            >
-                                <span className={`transition-opacity duration-300 ${activeTab === 'download' ? 'opacity-100' : 'opacity-0'}`}>[</span>
-                                下载
-                                <span className={`transition-opacity duration-300 ${activeTab === 'download' ? 'opacity-100' : 'opacity-0'}`}>]</span>
-                            </motion.a>
-                            <motion.a 
-                                onClick={() => handleTabClick('changelog')}
-                                className="cursor-pointer relative"
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{ delay: 0.2, duration: 0.3 }}
-                            >
-                                <span className={`transition-opacity duration-300 ${activeTab === 'changelog' ? 'opacity-100' : 'opacity-0'}`}>[</span>
-                                更新记录
-                                <span className={`transition-opacity duration-300 ${activeTab === 'changelog' ? 'opacity-100' : 'opacity-0'}`}>]</span>
-                            </motion.a>
-                        </>
+                        <motion.div 
+                            className="flex-1 flex items-center justify-center w-full pb-28"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.3 }}
+                        >
+                            {renderTabContent()}
+                        </motion.div>
                     )}
-                </p>
+                </AnimatePresence>
+
+                {/* 左下角的APP简介 */}
+                <div className="absolute bottom-8 left-6 max-w-[200px] pb-safe-bottom">
+                    <div className="h-[20px] mb-6">
+                        {showContent ? (
+                            <AnimatePresence mode="wait">
+                                <motion.p
+                                    key={imageIndex}
+                                    className="text-xs text-neutral-500 dark:text-neutral-400"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    transition={{ duration: 0.2 }}
+                                >
+                                    {activeTab === 'intro' ? descriptions[imageIndex] : ''}
+                                </motion.p>
+                            </AnimatePresence>
+                        ) : (
+                            <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                                Brew Guide 一站式管理器具、方案、咖啡豆以及笔记的小工具。
+                            </p>
+                        )}
+                    </div>
+                    <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400 flex gap-5">
+                        <a 
+                            onClick={() => handleTabClick('intro')} 
+                            className={`cursor-pointer relative ${showContent ? '' : 'underline'}`}
+                        >
+                            {showContent ? (
+                                <>
+                                    <span className={`transition-opacity duration-300 ${activeTab === 'intro' ? 'opacity-100' : 'opacity-0'}`}>[</span>
+                                    介绍
+                                    <span className={`transition-opacity duration-300 ${activeTab === 'intro' ? 'opacity-100' : 'opacity-0'}`}>]</span>
+                                </>
+                            ) : '前往'}
+                        </a>
+                        {showContent && (
+                            <>
+                                <motion.a 
+                                    onClick={() => handleTabClick('download')}
+                                    className="cursor-pointer relative"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    transition={{ delay: 0.1, duration: 0.3 }}
+                                >
+                                    <span className={`transition-opacity duration-300 ${activeTab === 'download' ? 'opacity-100' : 'opacity-0'}`}>[</span>
+                                    下载
+                                    <span className={`transition-opacity duration-300 ${activeTab === 'download' ? 'opacity-100' : 'opacity-0'}`}>]</span>
+                                </motion.a>
+                                <motion.a 
+                                    onClick={() => handleTabClick('changelog')}
+                                    className="cursor-pointer relative"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    transition={{ delay: 0.2, duration: 0.3 }}
+                                >
+                                    <span className={`transition-opacity duration-300 ${activeTab === 'changelog' ? 'opacity-100' : 'opacity-0'}`}>[</span>
+                                    更新记录
+                                    <span className={`transition-opacity duration-300 ${activeTab === 'changelog' ? 'opacity-100' : 'opacity-0'}`}>]</span>
+                                </motion.a>
+                            </>
+                        )}
+                    </p>
+                </div>
             </div>
-        </div>
+        </>
     )
 } 

@@ -34,33 +34,55 @@ const notoSansSC = Noto_Sans_SC({
 
 // SEO constants
 export const metadata: Metadata = {
-  metadataBase: new URL('https://brew-guide.vercel.app/'),
-  title: 'Brew Guide',
-  description: '专业的咖啡冲煮指南',
+  metadataBase: new URL('https://coffee.chu3.top/'),
+  title: 'Brew Guide - 咖啡小工具',
+  description: '好用的咖啡小工具，包含详细冲煮步骤、参数配置和计时器。记录咖啡豆信息，轻松冲煮完美咖啡。',
   keywords: [
     '手冲咖啡冲煮',
+    '咖啡计时器',
     'V60',
     '手冲咖啡',
     '手冲咖啡计时器',
     '手冲咖啡教程',
     '手冲咖啡配比',
     '手冲咖啡萃取',
+    'brewguide',
+    'Brew Guide',
+    '咖啡小工具',
+    '咖啡豆记录',
+    '咖啡冲煮参数',
+    '精品咖啡',
+    '咖啡风味',
+    '咖啡器材',
   ],
   manifest: '/manifest.json',
+  alternates: {
+    canonical: 'https://coffee.chu3.top/',
+  },
   openGraph: {
-    title: '手冲咖啡冲煮指南',
+    title: 'Brew Guide - 咖啡小工具',
     description:
-      '专业的手冲咖啡冲煮指南，包含手冲咖啡的详细步骤、参数配置和计时器。提供清爽果香和醇厚平衡两种风味的冲煮方案，帮助您在家制作出完美的手冲咖啡。',
-    url: 'https://brew-guide.vercel.app/',
-    siteName: "Chu3's Coffee Guide",
+      '好用的咖啡小工具，包含详细冲煮步骤、参数配置和计时器。记录咖啡豆信息，轻松冲煮完美咖啡。',
+    url: 'https://coffee.chu3.top/',
+    siteName: "Brew Guide - Chu3's Coffee Guide",
     locale: 'zh_CN',
-    type: 'article',
+    type: 'website',
+    images: [
+      {
+        url: 'https://coffee.chu3.top/images/icons/app/icon-512x512.png',
+        width: 512,
+        height: 512,
+        alt: 'Brew Guide Logo',
+      }
+    ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: '咖啡冲煮指南 | 手冲咖啡冲煮指南',
+    title: 'Brew Guide - 咖啡小工具',
     description:
-      '专业的咖啡冲煮指南，包含手冲咖啡的详细步骤、参数配置和计时器。',
+      '好用的咖啡小工具，包含详细冲煮步骤、参数配置和计时器。记录咖啡豆信息，轻松冲煮完美咖啡。',
+    images: ['https://coffee.chu3.top/images/icons/app/icon-512x512.png'],
+    creator: '@chu3',
   },
   robots: {
     index: true,
@@ -89,7 +111,15 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: '手冲咖啡',
+    title: 'Brew Guide 咖啡冲煮',
+  },
+  verification: {
+    google: null,
+    yandex: null,
+    yahoo: null,
+    other: {
+      baidu: '1d5ab7c4016b8737328359797bfaac08',
+    }
   }
 }
 
