@@ -137,6 +137,11 @@ export default function RootLayout({
             <Script src="/sw-dev-unregister.js" strategy="beforeInteractive" />
           </>
         )}
+        <Script 
+          defer 
+          src="http://localhost:3001/script.js" 
+          data-website-id="bab2cc4b-6d35-464d-8fc5-1e1ab10fb4f4"
+        />
       </head>
       <body className={`${inter.className} bg-neutral-50 dark:bg-neutral-900 fixed inset-0 overflow-hidden`}>
         <ThemeProvider
