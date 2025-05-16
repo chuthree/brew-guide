@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, forwardRef } from 'react';
 import { motion } from 'framer-motion';
 import { Info } from 'lucide-react';
 import AutoResizeTextarea from '@/components/common/forms/AutoResizeTextarea';
@@ -43,6 +43,8 @@ interface StagesStepProps {
   setEditingCumulativeWater: React.Dispatch<React.SetStateAction<{ index: number, value: string } | null>>;
   showWaterTooltip: number | null;
   setShowWaterTooltip: React.Dispatch<React.SetStateAction<number | null>>;
+  stagesContainerRef: React.RefObject<HTMLDivElement>;
+  newStageRef?: React.RefObject<HTMLDivElement>;
 }
 
 const StagesStep: React.FC<StagesStepProps> = ({
@@ -62,10 +64,11 @@ const StagesStep: React.FC<StagesStepProps> = ({
   editingCumulativeWater,
   setEditingCumulativeWater,
   showWaterTooltip,
-  setShowWaterTooltip
+  setShowWaterTooltip,
+  stagesContainerRef,
+  newStageRef
 }) => {
-  const stagesContainerRef = useRef<HTMLDivElement>(null);
-  const newStageRef = useRef<HTMLDivElement>(null);
+  const innerNewStageRef = useRef<HTMLDivElement>(null);
   const isCustomPreset = customEquipment.animationType === 'custom';
 
   return (
@@ -112,7 +115,7 @@ const StagesStep: React.FC<StagesStepProps> = ({
           <div
             key={index}
             className="space-y-6 pb-6 border-neutral-200 dark:border-neutral-700 transition-colors duration-200"
-            ref={index === stages.length - 1 ? newStageRef : null}
+            ref={index === stages.length - 1 ? (newStageRef || innerNewStageRef) : null}
           >
             <div className="flex justify-between items-center">
               <h4 className="text-sm font-medium text-neutral-800 dark:text-neutral-200 flex items-center">

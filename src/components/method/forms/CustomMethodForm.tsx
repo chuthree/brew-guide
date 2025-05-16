@@ -111,6 +111,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
   // ===== DOM引用 =====
   const inputRef = useRef<HTMLInputElement>(null);
   const stagesContainerRef = useRef<HTMLDivElement>(null);
+  const newStageRef = useRef<HTMLDivElement>(null);
   
   // ===== 工具函数 =====
   
@@ -453,88 +454,69 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                     stages: [...method.params.stages, newStage],
                 },
             });
+        } else {
+            // 对于普通器具，使用getDefaultPourType获取默认注水方式
+            let defaultPourType = isCustomPreset ? '' : getDefaultPourType(customEquipment);
             
-            // 创建一个标志，表示需要滚动到新添加的步骤
-            const needToScrollToNewStage = true;
-            
-            // 使用setTimeout确保DOM已更新
-            setTimeout(() => {
-                if (stagesContainerRef.current && needToScrollToNewStage) {
-                    const newStageElement = stagesContainerRef.current.lastElementChild as HTMLElement
-                    if (newStageElement) {
-                        // 修改滚动行为，考虑底部阴影的高度
-                        newStageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        
-                        // 额外向上滚动一些距离，确保底部阴影不会遮挡新添加的步骤
-                        setTimeout(() => {
-                            if (stagesContainerRef.current) {
-                                const container = stagesContainerRef.current.parentElement;
-                                if (container) {
-                                    container.scrollTop += 20; // 向下额外滚动20px，确保新步骤完全可见
-                                }
-                            }
-                        }, 300);
-                    }
+            // 对于自定义预设，尝试使用第一个自定义动画作为默认值
+            if (isCustomPreset && customEquipment.customPourAnimations && customEquipment.customPourAnimations.length > 0) {
+                // 使用第一个非系统默认的自定义动画
+                const firstCustomAnimation = customEquipment.customPourAnimations.find(anim => !anim.isSystemDefault);
+                if (firstCustomAnimation) {
+                    defaultPourType = firstCustomAnimation.id;
                 }
-            }, 100);
-            
-            return;
-        }
-        
-        // 对于普通器具，使用getDefaultPourType获取默认注水方式
-        let defaultPourType = isCustomPreset ? '' : getDefaultPourType(customEquipment);
-        
-        // 对于自定义预设，尝试使用第一个自定义动画作为默认值
-        if (isCustomPreset && customEquipment.customPourAnimations && customEquipment.customPourAnimations.length > 0) {
-            // 使用第一个非系统默认的自定义动画
-            const firstCustomAnimation = customEquipment.customPourAnimations.find(anim => !anim.isSystemDefault);
-            if (firstCustomAnimation) {
-                defaultPourType = firstCustomAnimation.id;
             }
+            
+            // 所有新添加的步骤都使用空值
+            const newStage: Stage = {
+                time: 0,
+                // pourTime默认为undefined而不是0
+                label: '',
+                water: '',
+                detail: '',
+                pourType: defaultPourType, // 使用获取的默认注水方式
+                ...(customEquipment.hasValve ? { valveStatus: 'closed' as 'closed' | 'open' } : {})
+            };
+
+            setMethod({
+                ...method,
+                params: {
+                    ...method.params,
+                    stages: [...method.params.stages, newStage],
+                },
+            });
         }
-        
-        // 所有新添加的步骤都使用空值
-        const newStage: Stage = {
-            time: 0,
-            // pourTime默认为undefined而不是0
-            label: '',
-            water: '',
-            detail: '',
-            pourType: defaultPourType, // 使用获取的默认注水方式
-            ...(customEquipment.hasValve ? { valveStatus: 'closed' as 'closed' | 'open' } : {})
-        };
 
-        setMethod({
-            ...method,
-            params: {
-                ...method.params,
-                stages: [...method.params.stages, newStage],
-            },
-        })
-
-        // 创建一个标志，表示需要滚动到新添加的步骤
-        const needToScrollToNewStage = true;
-
-        // 使用setTimeout确保DOM已更新
+        // 使用setTimeout确保DOM已更新后再滚动
         setTimeout(() => {
-            if (stagesContainerRef.current && needToScrollToNewStage) {
-                const newStageElement = stagesContainerRef.current.lastElementChild as HTMLElement
+            // 首先尝试使用直接引用的方式滚动到新步骤
+            if (newStageRef.current) {
+                newStageRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+                // 额外向上滚动一些距离，确保底部阴影不会遮挡新添加的步骤
+                setTimeout(() => {
+                    const container = stagesContainerRef.current?.parentElement;
+                    if (container) {
+                        container.scrollTop += 20; // 向下额外滚动20px，确保新步骤完全可见
+                    }
+                }, 300);
+            } 
+            // 如果没有直接引用，则尝试使用容器的最后一个子元素
+            else if (stagesContainerRef.current) {
+                const newStageElement = stagesContainerRef.current.lastElementChild as HTMLElement;
                 if (newStageElement) {
-                    // 修改滚动行为，考虑底部阴影的高度
                     newStageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
+                    
                     // 额外向上滚动一些距离，确保底部阴影不会遮挡新添加的步骤
                     setTimeout(() => {
-                        if (stagesContainerRef.current) {
-                            const container = stagesContainerRef.current.parentElement;
-                            if (container) {
-                                container.scrollTop += 20; // 向下额外滚动20px，确保新步骤完全可见
-                            }
+                        const container = stagesContainerRef.current?.parentElement;
+                        if (container) {
+                            container.scrollTop += 20; // 向下额外滚动20px，确保新步骤完全可见
                         }
                     }, 300);
                 }
             }
-        }, 100)
+        }, 100);
     }
 
     const removeStage = (index: number) => {
@@ -979,6 +961,8 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                         setEditingCumulativeWater={setEditingCumulativeWater}
                         showWaterTooltip={showWaterTooltip}
                         setShowWaterTooltip={setShowWaterTooltip}
+                        stagesContainerRef={stagesContainerRef}
+                        newStageRef={newStageRef}
                     />
                 );
 
