@@ -41,14 +41,6 @@ export const createExpandedStages = (stages: Stage[] | undefined): ExpandedStage
           originalIndex: index,
         });
       }
-      
-      // 添加调试日志
-      console.log(`意式咖啡阶段${index + 1}:`, {
-        label: stage.label || `阶段 ${index + 1}`,
-        startTime: prevStageTime,
-        endTime: stage.time,
-        duration: duration
-      });
     });
     
     // 确保如果没有有效阶段，创建一个默认阶段
@@ -65,13 +57,6 @@ export const createExpandedStages = (stages: Stage[] | undefined): ExpandedStage
         detail: lastStage.detail || "",
         pourType: "espresso_extraction",
         originalIndex: 0,
-      });
-      
-      console.log('创建默认意式咖啡阶段:', {
-        label: lastStage.label || "萃取",
-        startTime: 0,
-        endTime: lastStage.time,
-        duration: lastStage.time
       });
     }
   } else {

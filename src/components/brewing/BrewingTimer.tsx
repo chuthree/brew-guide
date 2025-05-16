@@ -406,14 +406,12 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     if (currentBrewingMethod) {
       // 首先确认有扩展阶段数据
       if (expandedStagesRef.current.length === 0) {
-        console.warn('没有扩展阶段数据，重新处理阶段数据');
         // 强制重新处理阶段数据
         const newExpandedStages = createExpandedStages(currentBrewingMethod.params.stages || []);
         expandedStagesRef.current = newExpandedStages;
         
         // 检查再次扩展后的结果
         if (expandedStagesRef.current.length === 0) {
-          console.error('重新处理阶段数据后仍然没有可用的阶段数据，无法启动计时器');
           return;
         }
       }
@@ -434,15 +432,6 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
           }
         }
       };
-
-      // 打印主计时器启动信息
-      console.log('准备启动主计时器:', {
-        方法名: currentBrewingMethod.name,
-        阶段数: expandedStagesRef.current.length,
-        总时长: expandedStagesRef.current.length > 0 
-          ? expandedStagesRef.current[expandedStagesRef.current.length - 1].endTime 
-          : 0
-      });
 
       const timerId = startTimerController(
         expandedStagesRef.current,
@@ -519,13 +508,6 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
               const newExpandedStages = createExpandedStages(currentBrewingMethod.params.stages);
               expandedStagesRef.current = newExpandedStages;
               
-              // 打印意式咖啡阶段信息用于调试
-              const isEspresso = currentBrewingMethod.name.toLowerCase().includes('意式') || 
-                                 currentBrewingMethod.name.toLowerCase().includes('espresso');
-              if (isEspresso) {
-                console.log('意式咖啡阶段数据:', JSON.stringify(newExpandedStages, null, 2));
-              }
-              
               // 通知扩展阶段变化
               if (onExpandedStagesChange) {
                 onExpandedStagesChange(newExpandedStages);
@@ -536,10 +518,6 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
             setTimeout(() => {
               // 确保方法和阶段都存在
               if (currentBrewingMethod && expandedStagesRef.current.length > 0) {
-                // 增加日志以便调试
-                console.log("启动主计时器", expandedStagesRef.current.length, "阶段", 
-                            "首个阶段时间:", expandedStagesRef.current[0].time,
-                            "所有阶段总时间:", expandedStagesRef.current.reduce((sum, stage) => sum + stage.time, 0));
                 startMainTimer();
                 
                 // 派发事件以确保其他组件收到通知
@@ -548,10 +526,6 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                     detail: { started: true },
                   })
                 );
-              } else {
-                console.error("无法启动主计时器 - 方法或阶段不存在", 
-                              "方法:", currentBrewingMethod?.name,
-                              "阶段数:", expandedStagesRef.current.length);
               }
             }, 50);
           }, 0);
