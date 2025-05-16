@@ -2,10 +2,10 @@
 
 import React, { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { type Method, CustomEquipment, availableGrinders, Grinder } from '@/lib/core/config'
 import { ArrowRight } from 'lucide-react'
-import AutoResizeTextarea from '../../common/forms/AutoResizeTextarea'
+import { type Method, CustomEquipment } from '@/lib/core/config'
 import { formatGrindSize } from '@/lib/utils/grindUtils'
+import { isEspressoMachine, getDefaultPourType, getEspressoPourTypeName } from '@/lib/utils/equipmentUtils'
 import { SettingsOptions, defaultSettings } from '@/components/settings/Settings'
 import { Storage } from '@/lib/core/storage'
 import { 
@@ -16,10 +16,9 @@ import {
     CompleteStep,
     MethodWithStages, 
     Stage,
-    EspressoPourType
+    EspressoPourType        
 } from './components'
 import type { Step } from './components'
-import { isEspressoMachine, getDefaultPourType, getEspressoPourTypeName } from '@/lib/utils/equipmentUtils'
 
 // 数据规范化辅助函数
 const normalizeMethodData = (method: any): MethodWithStages => {
@@ -40,23 +39,16 @@ const normalizeMethodData = (method: any): MethodWithStages => {
         // 规范化params对象
         normalizedMethod.params = { ...normalizedMethod.params };
         
-        // 确保水量是字符串格式
-        if (normalizedMethod.params.water !== undefined) {
-            if (typeof normalizedMethod.params.water === 'number') {
-                normalizedMethod.params.water = `${normalizedMethod.params.water}g`;
-            } else if (typeof normalizedMethod.params.water === 'string' && !normalizedMethod.params.water.endsWith('g')) {
-                normalizedMethod.params.water = `${normalizedMethod.params.water}g`;
+        // 确保水量、咖啡粉量是字符串格式
+        ['water', 'coffee'].forEach(field => {
+            if (normalizedMethod.params[field] !== undefined) {
+                if (typeof normalizedMethod.params[field] === 'number') {
+                    normalizedMethod.params[field] = `${normalizedMethod.params[field]}g`;
+                } else if (typeof normalizedMethod.params[field] === 'string' && !normalizedMethod.params[field].endsWith('g')) {
+                    normalizedMethod.params[field] = `${normalizedMethod.params[field]}g`;
+                }
             }
-        }
-        
-        // 确保咖啡粉量是字符串格式
-        if (normalizedMethod.params.coffee !== undefined) {
-            if (typeof normalizedMethod.params.coffee === 'number') {
-                normalizedMethod.params.coffee = `${normalizedMethod.params.coffee}g`;
-            } else if (typeof normalizedMethod.params.coffee === 'string' && !normalizedMethod.params.coffee.endsWith('g')) {
-                normalizedMethod.params.coffee = `${normalizedMethod.params.coffee}g`;
-            }
-        }
+        });
         
         // 确保温度是字符串格式
         if (normalizedMethod.params.temp !== undefined) {
@@ -71,8 +63,6 @@ const normalizeMethodData = (method: any): MethodWithStages => {
         if (Array.isArray(normalizedMethod.params.stages)) {
             normalizedMethod.params.stages = normalizedMethod.params.stages.map((stage: Record<string, any>) => {
                 const normalizedStage = { ...stage };
-                
-                // 规范化水量为字符串
                 if (normalizedStage.water !== undefined) {
                     if (typeof normalizedStage.water === 'number') {
                         normalizedStage.water = `${normalizedStage.water}g`;
@@ -80,7 +70,6 @@ const normalizeMethodData = (method: any): MethodWithStages => {
                         normalizedStage.water = `${normalizedStage.water}g`;
                     }
                 }
-                
                 return normalizedStage;
             });
         }
@@ -104,354 +93,335 @@ interface CustomMethodFormProps {
     onBack: () => void;
 }
 
-
-
+/**
+ * 自定义冲泡方案表单组件
+ */
 const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
-    initialMethod,
-    customEquipment,
-    onSave,
-    onBack,
+  initialMethod,
+  customEquipment,
+  onSave,
+  onBack,
 }) => {
-    // 当前步骤状态
-    const [currentStep, setCurrentStep] = useState<Step>('name')
-    const inputRef = useRef<HTMLInputElement>(null)
-    const stagesContainerRef = useRef<HTMLDivElement>(null)
-    const newStageRef = useRef<HTMLDivElement>(null)
+  // ===== 状态管理 =====
+  const [currentStep, setCurrentStep] = useState<Step>('name');
+  const [editingCumulativeTime, setEditingCumulativeTime] = useState<{index: number, value: string} | null>(null);
+  const [editingCumulativeWater, setEditingCumulativeWater] = useState<{index: number, value: string} | null>(null);
+  const [showWaterTooltip, setShowWaterTooltip] = useState<number | null>(null);
+  
+  // ===== DOM引用 =====
+  const inputRef = useRef<HTMLInputElement>(null);
+  const stagesContainerRef = useRef<HTMLDivElement>(null);
+  
+  // ===== 工具函数 =====
+  
+  // 初始化新方法
+  const initializeNewMethod = (): MethodWithStages => {
+    const isCustomPreset = customEquipment.animationType === 'custom';
+    const isEspresso = isEspressoMachine(customEquipment);
 
-    // 添加一个状态来跟踪正在编辑的累计时间输入
-    const [editingCumulativeTime, setEditingCumulativeTime] = useState<{ index: number, value: string } | null>(null)
-    // 添加一个状态来跟踪正在编辑的累计水量输入
-    const [editingCumulativeWater, setEditingCumulativeWater] = useState<{ index: number, value: string } | null>(null)
-    // 添加一个状态来跟踪水量输入提示的显示
-    const [showWaterTooltip, setShowWaterTooltip] = useState<number | null>(null)
-
-    const [method, setMethod] = useState<MethodWithStages>(() => {
-        // 如果有初始方法，对其进行规范化处理后使用
-        if (initialMethod) {
-            // 规范化数据，确保water属性是字符串格式
-            const normalizedMethod = normalizeMethodData(initialMethod);
-            
-            // 如果是聪明杯，确保从标签中移除阀门状态标记
-            if (customEquipment.hasValve && normalizedMethod.params.stages) {
-                normalizedMethod.params.stages = normalizedMethod.params.stages.map(stage => ({
-                    ...stage,
-                    label: stage.label.replace(/\s*\[开阀\]|\s*\[关阀\]/g, '').trim()
-                }));
-            }
-            
-            return normalizedMethod;
-        }
-
-        // 检查是否是自定义预设类型
-        const isCustomPreset = customEquipment.animationType === 'custom';
-        
-        // 检查是否是意式机类型
-        const isEspresso = isEspressoMachine(customEquipment);
-
-        // 对于自定义预设，不设置初始步骤，让用户完全自由创建
-        if (isCustomPreset) {
-            return {
-                name: '',
-                params: {
-                    coffee: '15g',
-                    water: '225g', // 15 * 15 = 225
-                    ratio: '1:15',
-                    grindSize: '中细',
-                    temp: '92°C',
-                    videoUrl: '',
-                    stages: [], // 不添加任何初始步骤
-                },
-            };
-        }
-        
-        // 如果是意式机，使用意式机的特定初始化数据
-        if (isEspresso) {
-            return {
-                name: '',
-                params: {
-                    coffee: '18g',
-                    water: '36g', // 默认1:2
-                    ratio: '1:2',
-                    grindSize: '细',
-                    temp: '93°C',
-                    videoUrl: '',
-                    stages: [{
-                        time: 25,
-                        label: '萃取',
-                        water: '36g',
-                        detail: '标准意式萃取',
-                        pourType: 'extraction',
-                        espressoPourType: 'extraction'
-                    }],
-                },
-            };
-        }
-
-        // 确定默认注水类型，基于自定义器具的配置
-        let defaultPourType: 'center' | 'circle' | 'ice' | 'other' = 'circle';
-        
-        // 检查自定义器具是否有自定义注水动画
-        if (customEquipment.customPourAnimations && customEquipment.customPourAnimations.length > 0) {
-            // 查找默认注水动画
-            const defaultAnimation = customEquipment.customPourAnimations.find(
-                anim => anim.isSystemDefault && anim.pourType
-            );
-            
-            if (defaultAnimation && defaultAnimation.pourType) {
-                defaultPourType = defaultAnimation.pourType;
-            } else if (customEquipment.customPourAnimations.length > 0) {
-                // 如果没有默认动画，使用第一个动画的注水类型（如果有）
-                const firstAnimation = customEquipment.customPourAnimations[0];
-                if (firstAnimation.pourType) {
-                    defaultPourType = firstAnimation.pourType;
-                }
-            }
-        } else {
-            // 根据器具类型选择默认注水类型
-            switch (customEquipment.animationType) {
-                case 'v60':
-                case 'origami':
-                    defaultPourType = 'circle'; // V60和Origami默认使用绕圈注水
-                    break;
-                case 'kalita':
-                    defaultPourType = 'center'; // Kalita默认使用中心注水
-                    break;
-                default:
-                    defaultPourType = 'circle'; // 默认使用绕圈注水
-            }
-        }
-
-        // 创建初始步骤和基本参数
-        const initialStage: Stage = {
+    // 自定义预设类型 - 不设置初始步骤
+    if (isCustomPreset) {
+      return {
+        name: '',
+        params: {
+          coffee: '15g',
+          water: '225g',
+          ratio: '1:15',
+          grindSize: '中细',
+          temp: '92°C',
+          videoUrl: '',
+          stages: [],
+        },
+      };
+    }
+    
+    // 意式机类型
+    if (isEspresso) {
+      return {
+        name: '',
+        params: {
+          coffee: '18g',
+          water: '36g',
+          ratio: '1:2',
+          grindSize: '细',
+          temp: '93°C',
+          videoUrl: '',
+          stages: [{
             time: 25,
-            pourTime: 10,
-            label: '焖蒸',
-            water: '30g', // 咖啡粉量的2倍
-            detail: '使咖啡粉充分吸水并释放气体，提升萃取效果',
-            pourType: defaultPourType,
-            ...(customEquipment.hasValve ? { valveStatus: 'closed' as 'closed' | 'open' } : {})
-        };
+            label: '萃取',
+            water: '36g',
+            detail: '标准意式萃取',
+            pourType: 'extraction',
+            espressoPourType: 'extraction'
+          }],
+        },
+      };
+    }
 
-        return {
-            name: '',
-            params: {
-                coffee: '15g',
-                water: '225g', // 15 * 15 = 225
-                ratio: '1:15',
-                grindSize: '中细',
-                temp: '92°C',
-                videoUrl: '',
-                stages: [initialStage],
-            },
-        };
-    })
+    // 手冲类型 - 获取默认注水方式
+    let defaultPourType = getDefaultPourType(customEquipment);
+    
+    // 创建初始步骤
+    const initialStage: Stage = {
+      time: 25,
+      pourTime: 10,
+      label: '焖蒸',
+      water: '30g',
+      detail: '使咖啡粉充分吸水并释放气体，提升萃取效果',
+      pourType: defaultPourType,
+      ...(customEquipment.hasValve ? { valveStatus: 'closed' as 'closed' | 'open' } : {})
+    };
 
-    // 获取设置，如果没有提供设置，则使用默认设置
-    const [localSettings, setLocalSettings] = useState<SettingsOptions>({
-        notificationSound: true,
-        hapticFeedback: true,
-        grindType: 'generic',
-        textZoomLevel: 1,
-        language: 'zh',
-        showFlowRate: true,
-        username: '',
-        decrementPresets: [15, 16, 18] // 添加默认的库存扣除量预设值
+    return {
+      name: '',
+      params: {
+        coffee: '15g',
+        water: '225g',
+        ratio: '1:15',
+        grindSize: '中细',
+        temp: '92°C',
+        videoUrl: '',
+        stages: [initialStage],
+      },
+    };
+  };
+  
+  // 初始化方法状态
+  const [method, setMethod] = useState<MethodWithStages>(() => {
+    if (initialMethod) {
+      // 使用初始方法
+      const normalizedMethod = normalizeMethodData(initialMethod);
+      
+      // 处理聪明杯标签特殊情况
+      if (customEquipment.hasValve && normalizedMethod.params.stages) {
+        normalizedMethod.params.stages = normalizedMethod.params.stages.map(stage => ({
+          ...stage,
+          label: stage.label.replace(/\s*\[开阀\]|\s*\[关阀\]/g, '').trim()
+        }));
+      }
+      
+      return normalizedMethod;
+    }
+
+    // 创建新方法
+    return initializeNewMethod();
     });
+  
+  // 获取设置
+  const [localSettings, setLocalSettings] = useState<SettingsOptions>(defaultSettings);
 
-    // 加载设置
-    useEffect(() => {
-        const loadSettings = async () => {
-            const savedSettings = await Storage.get('brewGuideSettings');
-            if (savedSettings) {
-                try {
-                    const parsedSettings = JSON.parse(savedSettings) as SettingsOptions;
-                    // 确保布局设置存在
-                    if (!parsedSettings.layoutSettings) {
-                        parsedSettings.layoutSettings = defaultSettings.layoutSettings;
-                    }
-                    // 确保语言设置存在
-                    if (!parsedSettings.language) {
-                        parsedSettings.language = defaultSettings.language;
-                    }
-                    setLocalSettings(parsedSettings);
-                } catch (e) {
-                    console.error("Failed to parse settings from storage:", e);
-                    setLocalSettings(defaultSettings);
-                }
-            } else {
-                setLocalSettings(defaultSettings);
-            }
-        };
-        loadSettings();
-    }, []);
+  // ===== 步骤配置 =====
+  const steps: { id: Step; label: string }[] = [
+    { id: 'name', label: '方案名称' },
+    { id: 'params', label: '基本参数' },
+    { id: 'stages', label: '冲泡步骤' },
+    { id: 'complete', label: '完成' }
+  ];
 
-    // 自动聚焦输入框
-    useEffect(() => {
-        if (currentStep === 'name' && inputRef.current) {
-            inputRef.current.focus()
-        }
-    }, [currentStep])
-
-    // 步骤配置
-    const steps: { id: Step; label: string }[] = [
-        { id: 'name', label: '方案名称' },
-        { id: 'params', label: '基本参数' },
-        { id: 'stages', label: '冲泡步骤' },
-        { id: 'complete', label: '完成' }
-    ]
-
-    // 获取当前步骤索引
-    const getCurrentStepIndex = () => {
-        return steps.findIndex(step => step.id === currentStep)
+  // ===== 基本功能函数 =====
+  const getCurrentStepIndex = () => steps.findIndex(step => step.id === currentStep);
+  
+  const handleNextStep = () => {
+    const currentIndex = getCurrentStepIndex();
+    if (currentIndex < steps.length - 1) {
+      setCurrentStep(steps[currentIndex + 1].id);
     }
-
-    // 下一步
-    const handleNextStep = () => {
-        const currentIndex = getCurrentStepIndex()
-
-        if (currentIndex < steps.length - 1) {
-            // 只处理步骤切换
-            setCurrentStep(steps[currentIndex + 1].id)
-        }
-        // 移除了提交逻辑，因为这已经在handleButtonClick中处理
+  };
+  
+  const handleBack = () => {
+    const currentIndex = getCurrentStepIndex();
+    if (currentIndex > 0) {
+      setCurrentStep(steps[currentIndex - 1].id);
+    } else {
+      onBack();
     }
-
-    // 上一步/返回
-    const handleBack = () => {
-        const currentIndex = getCurrentStepIndex();
-        if (currentIndex > 0) {
-            setCurrentStep(steps[currentIndex - 1].id);
-        } else {
-            onBack();
-        }
+  };
+  
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+  
+  const formatWater = (water: string | number | undefined) => {
+    if (water === undefined || water === null || water === '') return '0g';
+    if (typeof water === 'number') return `${water}g`;
+    return water.endsWith('g') ? water : `${water}g`;
+  };
+  
+  // ===== 注水步骤辅助函数 =====
+  const getDefaultStageLabel = (pourType: string) => {
+    const isCustomPreset = customEquipment.animationType === 'custom';
+    
+    // 特殊情况处理
+    if (isCustomPreset && pourType === 'other') return '';
+    
+    // 检查自定义注水动画
+    if (customEquipment.customPourAnimations) {
+      // 先检查ID匹配
+      const idMatch = customEquipment.customPourAnimations.find(anim => anim.id === pourType);
+      if (idMatch) return idMatch.name;
+      
+      // 再检查pourType匹配
+      const typeMatch = customEquipment.customPourAnimations.find(anim => anim.pourType === pourType);
+      if (typeMatch?.name) return typeMatch.name;
     }
-
-    const getDefaultStageLabel = (pourType: string) => {
-        // 检查是否是自定义预设
-        const isCustomPreset = customEquipment.animationType === 'custom';
-        
-        // 对于自定义预设的"other"类型，使用空标签
-        if (isCustomPreset && pourType === 'other') {
-            return '';
-        }
-        
-        // 检查是否是自定义注水动画ID
-        if (customEquipment.customPourAnimations) {
-            const customAnimation = customEquipment.customPourAnimations.find(
-                anim => anim.id === pourType
-            );
-            if (customAnimation) {
-                return customAnimation.name;
-            }
-        }
-        
-        // 首先检查自定义器具是否有对应注水类型的自定义标签
-        if (customEquipment.customPourAnimations) {
-            const animation = customEquipment.customPourAnimations.find(
-                anim => anim.pourType === pourType
-            );
-            if (animation && animation.name) {
-                return animation.name;
-            }
-        }
-        
-        // 默认标签
-        switch (pourType) {
-            case 'circle':
-                return '绕圈注水'
-            case 'center':
-                return '中心注水'
-            case 'ice':
-                return '添加冰块'
-            case 'other':
-                return ''
-            default:
-                return '注水'
-        }
+    
+    // 默认标签
+    switch (pourType) {
+      case 'circle': return '绕圈注水';
+      case 'center': return '中心注水';
+      case 'ice': return '添加冰块';
+      case 'other': return '';
+      default: return '注水';
     }
+  };
 
-    const getDefaultStageDetail = (pourType: string) => {
-        // 检查是否是自定义预设
-        const isCustomPreset = customEquipment.animationType === 'custom';
-        
-        // 对于自定义预设的"other"类型，使用空详情
-        if (isCustomPreset && pourType === 'other') {
-            return '';
-        }
-        
-        // 检查是否是自定义注水动画ID
-        if (customEquipment.customPourAnimations) {
-            const customAnimation = customEquipment.customPourAnimations.find(
-                anim => anim.id === pourType
-            );
-            if (customAnimation) {
-                return `使用${customAnimation.name}注水`;
-            }
-        }
-        
-        // 针对不同注水类型的默认详情
-        switch (pourType) {
-            case 'circle':
-                return '中心向外缓慢画圈注水，均匀萃取咖啡风味'
-            case 'center':
-                return '中心定点注水，降低萃取率'
-            case 'ice':
-                return '添加冰块，降低温度进行冷萃'
-            case 'other':
-                return ''
-            default:
-                return '注水'
-        }
+  const getDefaultStageDetail = (pourType: string) => {
+    const isCustomPreset = customEquipment.animationType === 'custom';
+    
+    // 特殊情况处理
+    if (isCustomPreset && pourType === 'other') return '';
+    
+    // 检查自定义注水动画
+    if (customEquipment.customPourAnimations) {
+      const customAnimation = customEquipment.customPourAnimations.find(anim => anim.id === pourType);
+      if (customAnimation) return `使用${customAnimation.name}注水`;
     }
-
-    const handleStageChange = (index: number, field: keyof Stage, value: string | number) => {
-        const newStages = [...method.params.stages]
-        const stage = { ...newStages[index] }
-
-        if (field === 'water') {
-            // 更新水量时自动调整总水量，但只在有值的情况下
-            const oldWater = stage.water ? parseInt(stage.water) : 0
-            const newWater = typeof value === 'string' && value ? parseInt(value) : 0
-            const diff = newWater - oldWater
-
-            if (method.params.water) {
-                const totalWater = parseInt(method.params.water)
-                setMethod({
-                    ...method,
-                    params: {
-                        ...method.params,
-                        water: `${totalWater + diff}g`,
-                    },
-                })
-            }
+    
+    // 默认详情
+    switch (pourType) {
+      case 'circle': return '中心向外缓慢画圈注水，均匀萃取咖啡风味';
+      case 'center': return '中心定点注水，降低萃取率';
+      case 'ice': return '添加冰块，降低温度进行冷萃';
+      case 'other': return '';
+      default: return '注水';
+    }
+  };
+  
+  // ===== 副作用 =====
+  
+  // 加载设置
+  useEffect(() => {
+    const loadSettings = async () => {
+      const savedSettings = await Storage.get('brewGuideSettings');
+      if (!savedSettings) return;
+      
+      try {
+        const parsedSettings = JSON.parse(savedSettings) as SettingsOptions;
+        // 确保必要设置存在
+        if (!parsedSettings.layoutSettings) {
+          parsedSettings.layoutSettings = defaultSettings.layoutSettings;
         }
-
-        // 修复类型错误
-        if (field === 'time' || field === 'pourTime') {
-            stage[field] = value as number
-            // 当更新注水时间时，确保它不超过当前阶段的总时间
-            if (field === 'pourTime' && stage.time !== undefined && (stage.pourTime ?? 0) > stage.time) {
-                stage.pourTime = stage.time
-            }
-        } else if (field === 'label' || field === 'detail' || field === 'water') {
-            if (field === 'water' && typeof value === 'string' && value) {
-                stage[field] = `${value}g`
-            } else {
-                stage[field] = value as string
-            }
-        } else if (field === 'pourType') {
-            stage[field] = value as string
+        if (!parsedSettings.language) {
+          parsedSettings.language = defaultSettings.language;
         }
+        setLocalSettings(parsedSettings);
+      } catch (e) {
+        console.error("Failed to parse settings from storage:", e);
+      }
+    };
+    
+    loadSettings();
+  }, []);
 
-        newStages[index] = stage
+  // 自动聚焦输入框
+  useEffect(() => {
+    if (currentStep === 'name' && inputRef.current) {
+      inputRef.current.focus();
+    }
+    }, [currentStep]);
+  
+  // ===== 数据计算函数 =====
+  
+  // 计算总冲泡时间
+  const calculateTotalTime = () => {
+    if (method.params.stages.length === 0) return 0;
+    
+    // 返回最后一个有时间的步骤的时间
+    for (let i = method.params.stages.length - 1; i >= 0; i--) {
+      if (method.params.stages[i].time) {
+        return method.params.stages[i].time;
+      }
+    }
+    
+    return 0;
+  };
+  
+  // 计算当前已使用的水量
+  const calculateCurrentWater = () => {
+    if (method.params.stages.length === 0) return 0;
+    
+    // 找到最后一个有水量的步骤
+    for (let i = method.params.stages.length - 1; i >= 0; i--) {
+      const stage = method.params.stages[i];
+      if (stage.water) {
+        if (typeof stage.water === 'number') {
+          return stage.water;
+        } else if (typeof stage.water === 'string') {
+          return parseInt(stage.water.replace('g', ''));
+        }
+      }
+    }
+    
+    return 0;
+  };
+  
+  // ===== 事件处理函数 =====
+  
+  // 处理步骤变更
+  const handleStageChange = (index: number, field: keyof Stage, value: string | number) => {
+    const newStages = [...method.params.stages];
+    const stage = { ...newStages[index] };
+
+    // 水量特殊处理 - 更新总水量
+    if (field === 'water') {
+      const oldWater = stage.water ? parseInt(stage.water) : 0;
+      const newWater = typeof value === 'string' && value ? parseInt(value) : 0;
+      const diff = newWater - oldWater;
+
+      if (method.params.water) {
+        const totalWater = parseInt(method.params.water);
         setMethod({
-            ...method,
-            params: {
-                ...method.params,
-                stages: newStages,
-            },
-        })
+          ...method,
+          params: {
+            ...method.params,
+            water: `${totalWater + diff}g`,
+          },
+        });
+      }
     }
+
+    // 根据字段类型处理值
+    if (field === 'time' || field === 'pourTime') {
+      // 数值类型
+      stage[field] = value as number;
+      // 确保注水时间不超过总时间
+      if (field === 'pourTime' && stage.time !== undefined && (stage.pourTime ?? 0) > stage.time) {
+        stage.pourTime = stage.time;
+      }
+    } else if (field === 'label' || field === 'detail' || field === 'water') {
+      // 字符串类型
+      if (field === 'water' && typeof value === 'string' && value) {
+        stage[field] = `${value}g`;
+      } else {
+        stage[field] = value as string;
+      }
+    } else if (field === 'pourType') {
+      // 注水类型
+      stage[field] = value as string;
+    }
+
+    // 更新method状态
+    newStages[index] = stage;
+    setMethod({
+      ...method,
+      params: {
+        ...method.params,
+        stages: newStages,
+      },
+    });
+  };
 
     const addStage = () => {
         // 检查是否是自定义预设
@@ -742,38 +712,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         });
     }
 
-    const calculateTotalTime = () => {
-        // 如果没有步骤，返回0
-        if (method.params.stages.length === 0) return 0;
-
-        // 返回最后一个有时间的步骤的时间
-        for (let i = method.params.stages.length - 1; i >= 0; i--) {
-            const stage = method.params.stages[i];
-            if (stage.time) {
-                return stage.time;
-            }
-        }
-
-        // 如果没有找到有时间的步骤，返回0
-        return 0;
-    }
-
-    const formatTime = (seconds: number) => {
-        const mins = Math.floor(seconds / 60)
-        const secs = seconds % 60
-        return `${mins}:${secs.toString().padStart(2, '0')}`
-    }
-
-    // 格式化水量显示
-    const formatWater = (water: string | number | undefined) => {
-        if (water === undefined || water === null || water === '') return '0g';
-        
-        if (typeof water === 'number') {
-            return `${water}g`;
-        }
-        
-        return water.endsWith('g') ? water : `${water}g`;
-    }
+    // 此处原calculateTotalTime函数已移至上方统一管理
 
     // 添加一个处理意式机特有注水方式改变的函数
     const handleEspressoPourTypeChange = (index: number, value: string) => {
@@ -965,62 +904,10 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         })
     }
 
-    // 计算当前已使用的水量
-    const calculateCurrentWater = () => {
-        // 如果没有步骤，返回0
-        if (method.params.stages.length === 0) return 0;
+    // 此处原calculateCurrentWater函数已移至上方统一管理
 
-        // 找到最后一个有水量的步骤
-        for (let i = method.params.stages.length - 1; i >= 0; i--) {
-            const stage = method.params.stages[i];
-            if (stage.water) {
-                // 增加类型检查以提高健壮性
-                if (typeof stage.water === 'number') {
-                    return stage.water;
-                } else if (typeof stage.water === 'string') {
-                    return parseInt(stage.water.replace('g', ''));
-                }
-            }
-        }
-
-        // 如果没有找到有水量的步骤，返回0
-        return 0;
-    }
-
-    // 添加动画变体
-    const pageVariants = {
-        initial: {
-            opacity: 0,
-        },
-        in: {
-            opacity: 1,
-        },
-        out: {
-            opacity: 0,
-        }
-    }
-
-    const pageTransition = {
-        type: "tween",
-        ease: "anticipate",
-        duration: 0.26
-    }
-
-    // 渲染进度条
-    const renderProgressBar = () => {
-        const currentIndex = getCurrentStepIndex()
-        const progress = ((currentIndex + 1) / steps.length) * 100
-
-        return (
-            <div className="w-full h-1 bg-neutral-200 dark:bg-neutral-700 rounded-full overflow-hidden">
-                <div
-                    className="h-full bg-neutral-800 dark:bg-neutral-200 transition-all duration-300 ease-in-out"
-                    style={{ width: `${progress}%` }}
-                />
-            </div>
-        )
-    }
-
+    // ===== 渲染函数 =====
+    
     // 渲染步骤内容
     const renderStepContent = () => {
         switch (currentStep) {
@@ -1031,7 +918,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                         onChange={(name) => setMethod({ ...method, name })}
                         isEdit={!!initialMethod}
                     />
-                )
+                );
 
             case 'params':
                 return (
@@ -1053,20 +940,24 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                         onCoffeeChange={handleCoffeeChange}
                         onRatioChange={handleRatioChange}
                         onGrindSizeChange={(grindSize) => setMethod({
-                                        ...method,
-                                        params: {
-                                            ...method.params,
+                            ...method,
+                            params: {
+                                ...method.params,
                                 grindSize
                             }
                         })}
                         onTempChange={handleTempChange}
                         // 添加意式机特有参数处理函数
-                        onExtractionTimeChange={isEspressoMachine(customEquipment) ? handleExtractionTimeChange : undefined}
-                        onLiquidWeightChange={isEspressoMachine(customEquipment) ? handleLiquidWeightChange : undefined}
+                        onExtractionTimeChange={isEspressoMachine(customEquipment) 
+                            ? handleExtractionTimeChange 
+                            : undefined}
+                        onLiquidWeightChange={isEspressoMachine(customEquipment) 
+                            ? handleLiquidWeightChange 
+                            : undefined}
                         settings={localSettings}
                         customEquipment={customEquipment}
                     />
-                )
+                );
 
             case 'stages':
                 return (
@@ -1089,7 +980,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                         showWaterTooltip={showWaterTooltip}
                         setShowWaterTooltip={setShowWaterTooltip}
                     />
-                )
+                );
 
             case 'complete':
                 return (
@@ -1102,106 +993,103 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                         isEdit={!!initialMethod}
                         formatTime={formatTime}
                     />
-                )
+                );
 
             default:
-                return null
+                return null;
         }
-    }
+    };
 
     // 渲染下一步按钮
     const renderNextButton = () => {
-        const isLastStep = getCurrentStepIndex() === steps.length - 1
+        const isLastStep = getCurrentStepIndex() === steps.length - 1;
         const isCustomPreset = customEquipment.animationType === 'custom';
         const isEspresso = isEspressoMachine(customEquipment);
 
-        // 验证当前步骤是否可以进行下一步
+        // 验证当前步骤是否可进行下一步
         const isStepValid = () => {
             switch (currentStep) {
                 case 'name':
                     return !!method.name.trim();
+                    
                 case 'params':
+                    // 基本参数验证
                     return !!method.params.coffee.trim() &&
-                        !!method.params.water.trim() &&
-                        !!method.params.ratio.trim() &&
-                        !!method.params.temp.trim() &&
-                        !!method.params.grindSize.trim();
+                           !!method.params.water.trim() &&
+                           !!method.params.ratio.trim() &&
+                           !!method.params.temp.trim() &&
+                           !!method.params.grindSize.trim();
+                    
                 case 'stages':
-                    return method.params.stages.length > 0 &&
-                        method.params.stages.every(stage => {
-                            // 意式机器具的特殊验证
-                            if (isEspresso) {
-                                // 根据不同的注水方式类型进行验证
-                                switch (stage.espressoPourType) {
-                                    case 'extraction':
-                                        // 萃取类型需要时间、名称、水量（详细说明变为选填）
-                                        return stage.time > 0 && 
-                                               !!stage.label.trim() && 
-                                               !!stage.water.trim();
-                                    case 'beverage':
-                                        // 饮料类型只需要名称、水量（详细说明变为选填）
-                                        return !!stage.label.trim() && 
-                                               !!stage.water.trim();
-                                    case 'other':
-                                        // 其他类型只需要选择类型（详细说明变为选填）
-                                        return true;
-                                    default:
-                                        // 如果未设置类型，需要选择注水方式
-                                        return !!stage.espressoPourType;
-                                }
+                    if (method.params.stages.length === 0) return false;
+                    
+                    return method.params.stages.every(stage => {
+                        // 意式机特殊验证
+                        if (isEspresso) {
+                            switch (stage.espressoPourType) {
+                                case 'extraction': // 萃取类型
+                                    return stage.time > 0 && 
+                                           !!stage.label.trim() && 
+                                           !!stage.water.trim();
+                                case 'beverage': // 饮料类型
+                                    return !!stage.label.trim() && 
+                                           !!stage.water.trim();
+                                case 'other': // 其他类型
+                                    return true;
+                                default:
+                                    return !!stage.espressoPourType;
+                            }
+                        }
+                        
+                        // 自定义预设验证
+                        if (isCustomPreset) {
+                            const basicValidation = stage.time > 0 && !!stage.water.trim();
+                            
+                            // 聪明杯验证阀门状态
+                            if (customEquipment.hasValve) {
+                                return basicValidation &&
+                                    (stage.valveStatus === 'open' || stage.valveStatus === 'closed');
                             }
                             
-                            // 针对自定义预设器具放宽一些验证要求
-                            if (isCustomPreset) {
-                                // 基本验证 - 对自定义预设只验证时间和水量
-                                const basicValidation = stage.time > 0 && !!stage.water.trim();
-                                
-                                // 如果是聪明杯，验证阀门状态
-                                if (customEquipment.hasValve) {
-                                    return basicValidation &&
-                                        (stage.valveStatus === 'open' || stage.valveStatus === 'closed');
-                                }
-                                
-                                return basicValidation;
-                            } else {
-                                // 标准器具的正常验证
-                                const basicValidation =
-                                    stage.time > 0 &&
-                                    !!stage.label.trim() &&
-                                    !!stage.water.trim() &&
-                                    !!stage.pourType;
-                                // 注水时长和详细说明可以为空，不作为必填项
-                                
-                                // 如果是聪明杯，验证阀门状态
-                                if (customEquipment.hasValve) {
-                                    return basicValidation &&
-                                        (stage.valveStatus === 'open' || stage.valveStatus === 'closed');
-                                }
-                                
-                                return basicValidation;
-                            }
-                        });
+                            return basicValidation;
+                        } 
+                        
+                        // 标准器具验证
+                        const basicValidation =
+                            stage.time > 0 &&
+                            !!stage.label.trim() &&
+                            !!stage.water.trim() &&
+                            !!stage.pourType;
+                        
+                        // 聪明杯验证阀门状态
+                        if (customEquipment.hasValve) {
+                            return basicValidation &&
+                                (stage.valveStatus === 'open' || stage.valveStatus === 'closed');
+                        }
+                        
+                        return basicValidation;
+                    });
+                    
                 case 'complete':
                     return true;
+                    
                 default:
                     return true;
             }
         };
 
-        // 检查当前步骤是否有效
+        // 检查步骤有效性
         const stepValid = isStepValid();
 
-        // 处理按钮点击
+        // 按钮点击处理
         const handleButtonClick = () => {
             if (isLastStep) {
-                // 如果是最后一步，直接提交
                 try {
                     handleSubmit();
-                } catch {
-                    // 错误处理
+                } catch (error) {
+                    console.error('提交表单失败', error);
                 }
             } else {
-                // 否则进入下一步
                 handleNextStep();
             }
         };
@@ -1230,16 +1118,12 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                     )}
                 </button>
             </div>
-        )
-    }
+        );
+    };
 
+    // 最终渲染
     return (
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="flex flex-col h-[calc(100vh-8rem)]"
-        >
+        <>
             {/* 顶部导航栏 */}
             <Steps 
                 steps={steps}
@@ -1249,15 +1133,13 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
 
             {/* 步骤内容 */}
             <div className="flex-1 overflow-y-auto pr-2">
-                <AnimatePresence mode="wait">
-                    {renderStepContent()}
-                </AnimatePresence>
+                {renderStepContent()}
             </div>
 
             {/* 下一步按钮 */}
             {renderNextButton()}
-        </motion.div >
-    )
+        </>
+    );
 }
 
-export default CustomMethodForm 
+export default CustomMethodForm
