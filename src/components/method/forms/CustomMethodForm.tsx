@@ -920,6 +920,57 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
 
     // 此处原calculateCurrentWater函数已移至上方统一管理
 
+    // 格式化意式咖啡的总水量，显示为各阶段的累加
+    const formatEspressoTotalWater = () => {
+        if (!method.params.stages || method.params.stages.length === 0) return "0g";
+        
+        // 收集水量信息，按完整的饮料名称分组
+        const waterByName: Record<string, { label: string; water: number; count: number }> = {};
+        
+        method.params.stages.forEach(stage => {
+            if (!stage.water) return;
+            
+            const waterValue = typeof stage.water === 'number' 
+                ? stage.water 
+                : parseInt(stage.water.toString().replace('g', '') || '0');
+            
+            if (waterValue <= 0) return;
+            
+            // 获取显示的标签
+            const displayLabel = stage.espressoPourType === 'extraction' ? '萃取' : 
+                                stage.label || (stage.espressoPourType === 'beverage' ? '饮料' : '其他');
+            
+            // 使用完整标签作为键，只有完全相同的标签才会合并
+            const key = `${stage.espressoPourType}_${displayLabel}`;
+            
+            // 如果该名称已存在，则累加水量
+            if (waterByName[key]) {
+                waterByName[key].water += waterValue;
+                waterByName[key].count += 1;
+            } else {
+                // 否则创建新条目
+                waterByName[key] = {
+                    label: displayLabel,
+                    water: waterValue,
+                    count: 1
+                };
+            }
+        });
+        
+        // 将Map转换为数组
+        const waterItems = Object.values(waterByName);
+        
+        // 如果没有有效数据，返回零
+        if (waterItems.length === 0) return "0g";
+        
+        // 构建显示字符串：水量g(标签) + 水量g(标签) + ...
+        return waterItems.map(item => {
+            // 只有相同名称有多个时才添加数量
+            const countSuffix = item.count > 1 ? `×${item.count}` : '';
+            return `${item.water}g(${item.label}${countSuffix})`;
+        }).join(' + ');
+    };
+
     // ===== 渲染函数 =====
     
     // 渲染步骤内容
@@ -1008,6 +1059,8 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                         totalTime={calculateTotalTime()}
                         isEdit={!!initialMethod}
                         formatTime={formatTime}
+                        isEspressoMachine={isEspressoMachine(customEquipment)}
+                        formattedEspressoWater={isEspressoMachine(customEquipment) ? formatEspressoTotalWater() : undefined}
                     />
                 );
 

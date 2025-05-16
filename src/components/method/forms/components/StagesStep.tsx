@@ -146,8 +146,8 @@ const StagesStep: React.FC<StagesStepProps> = ({
   const formatEspressoTotalWater = () => {
     if (!stages || stages.length === 0) return "0g";
     
-    // 收集不同类型的水量信息，按espressoPourType分类合并
-    const waterByTypeMap: Record<string, { label: string; water: number; count: number }> = {};
+    // 收集水量信息，按完整的饮料名称分组
+    const waterByName: Record<string, { label: string; water: number; count: number }> = {};
     
     stages.forEach(stage => {
       if (!stage.water) return;
@@ -158,25 +158,20 @@ const StagesStep: React.FC<StagesStepProps> = ({
       
       if (waterValue <= 0) return;
       
-      // 使用espressoPourType作为分组键
-      const type = stage.espressoPourType || stage.pourType || 'other';
-      
       // 获取显示的标签
       const displayLabel = stage.espressoPourType === 'extraction' ? '萃取' : 
-                          stage.espressoPourType === 'beverage' ? stage.label || '饮料' : 
-                          stage.label || '其他';
+                           stage.label || (stage.espressoPourType === 'beverage' ? '饮料' : '其他');
       
-      // 如果该类型已存在，则累加水量
-      if (waterByTypeMap[type]) {
-        waterByTypeMap[type].water += waterValue;
-        waterByTypeMap[type].count += 1;
-        // 如果是饮料类型且有不同的标签，更新标签
-        if (type === 'beverage' && waterByTypeMap[type].label !== displayLabel) {
-          waterByTypeMap[type].label = '饮料';  // 简化为通用标签
-        }
+      // 使用完整标签作为键，只有完全相同的标签才会合并
+      const key = `${stage.espressoPourType}_${displayLabel}`;
+      
+      // 如果该名称已存在，则累加水量
+      if (waterByName[key]) {
+        waterByName[key].water += waterValue;
+        waterByName[key].count += 1;
       } else {
         // 否则创建新条目
-        waterByTypeMap[type] = {
+        waterByName[key] = {
           label: displayLabel,
           water: waterValue,
           count: 1
@@ -185,14 +180,14 @@ const StagesStep: React.FC<StagesStepProps> = ({
     });
     
     // 将Map转换为数组
-    const waterItems = Object.values(waterByTypeMap);
+    const waterItems = Object.values(waterByName);
     
     // 如果没有有效数据，返回零
     if (waterItems.length === 0) return "0g";
     
     // 构建显示字符串：水量g(标签) + 水量g(标签) + ...
     return waterItems.map(item => {
-      // 如果同类型有多个且标签不是简单的'萃取'/'饮料'，则添加数量
+      // 只有相同名称有多个时才添加数量
       const countSuffix = item.count > 1 ? `×${item.count}` : '';
       return `${item.water}g(${item.label}${countSuffix})`;
     }).join(' + ');

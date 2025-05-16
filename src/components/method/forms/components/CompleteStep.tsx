@@ -29,6 +29,8 @@ interface CompleteStepProps {
   totalTime: number;
   isEdit: boolean;
   formatTime: (seconds: number) => string;
+  isEspressoMachine?: boolean; // 是否是意式机
+  formattedEspressoWater?: string; // 格式化后的意式水量
 }
 
 const CompleteStep: React.FC<CompleteStepProps> = ({
@@ -38,7 +40,9 @@ const CompleteStep: React.FC<CompleteStepProps> = ({
   ratio,
   totalTime,
   isEdit,
-  formatTime
+  formatTime,
+  isEspressoMachine = false,
+  formattedEspressoWater
 }) => {
   return (
     <motion.div
@@ -62,23 +66,29 @@ const CompleteStep: React.FC<CompleteStepProps> = ({
         </p>
       </div>
       <div className="w-full max-w-sm space-y-4 px-4">
-        <div className="flex justify-between py-2 border-b border-neutral-200 dark:border-neutral-700">
+        <div className="flex justify-between items-center py-2 border-b border-neutral-200 dark:border-neutral-700">
           <span className="text-sm text-neutral-500 dark:text-neutral-400">方案名称</span>
           <span className="text-sm font-medium">{methodName}</span>
         </div>
-        <div className="flex justify-between py-2 border-b border-neutral-200 dark:border-neutral-700">
+        <div className="flex justify-between items-center py-2 border-b border-neutral-200 dark:border-neutral-700">
           <span className="text-sm text-neutral-500 dark:text-neutral-400">咖啡粉量</span>
           <span className="text-sm font-medium">{coffee}</span>
         </div>
-        <div className="flex justify-between py-2 border-b border-neutral-200 dark:border-neutral-700">
+        <div className="flex justify-between items-center py-2 border-b border-neutral-200 dark:border-neutral-700">
           <span className="text-sm text-neutral-500 dark:text-neutral-400">水量</span>
-          <span className="text-sm font-medium">{water}</span>
+          {isEspressoMachine && formattedEspressoWater ? (
+            <div className="text-right">
+              <span className="text-sm font-medium">{formattedEspressoWater}</span>
+            </div>
+          ) : (
+            <span className="text-sm font-medium">{water}</span>
+          )}
         </div>
-        <div className="flex justify-between py-2 border-b border-neutral-200 dark:border-neutral-700">
+        <div className="flex justify-between items-center py-2 border-b border-neutral-200 dark:border-neutral-700">
           <span className="text-sm text-neutral-500 dark:text-neutral-400">粉水比</span>
           <span className="text-sm font-medium">{ratio}</span>
         </div>
-        <div className="flex justify-between py-2 border-b border-neutral-200 dark:border-neutral-700">
+        <div className="flex justify-between items-center py-2 border-b border-neutral-200 dark:border-neutral-700">
           <span className="text-sm text-neutral-500 dark:text-neutral-400">总时间</span>
           <span className="text-sm font-medium">{formatTime(totalTime)}</span>
         </div>
