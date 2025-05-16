@@ -60,6 +60,12 @@ const PRESET_OPTIONS = [
         equipmentId: 'CleverDripper',
     },
     {
+        value: 'espresso',
+        label: '意式机',
+        description: '适用于意式咖啡机，关注萃取时间和液重',
+        equipmentId: 'Espresso',
+    },
+    {
         value: 'custom',
         label: '自定义预设',
         description: '完全自定义器具，创建您自己的独特设置',
@@ -67,13 +73,7 @@ const PRESET_OPTIONS = [
     }
 ] as const;
 
-// 添加分隔，独立出意式机
-const ESPRESSO_PRESET = {
-    value: 'espresso',
-    label: '意式机',
-    description: '适用于意式咖啡机，无需杯型动画和注水方式',
-    equipmentId: 'Espresso',
-} as const;
+// 意式机已整合到PRESET_OPTIONS数组中
 
 // 修改默认注水类型常量
 const DEFAULT_POUR_TYPES = [
@@ -342,6 +342,9 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
         } else if (selectedPreset === 'clever') {
             handleChange('animationType', 'clever');
             handleChange('hasValve', true);
+        } else if (selectedPreset === 'espresso') {
+            handleChange('animationType', 'espresso');
+            handleChange('hasValve', false);
         } else if (selectedPreset === 'custom') {
             handleChange('animationType', 'custom');
             // 自定义预设强制使用自定义杯型
@@ -349,9 +352,6 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
             // 自定义预设时，过滤掉系统默认注水方式
             setCustomPourAnimations(prev => prev.filter(anim => !anim.isSystemDefault));
             // 自定义预设不自动设置阀门，保持当前值
-        } else if (selectedPreset === 'espresso') {
-            handleChange('animationType', 'espresso');
-            handleChange('hasValve', false);
         }
     }, [selectedPreset]);
 
@@ -1275,45 +1275,11 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                                     </label>
                                 ))}
 
-                                {/* 分隔线 */}
-                                <div className="col-span-2 my-2 border-t border-neutral-200 dark:border-neutral-700"></div>
-                                
-                                {/* 意式机选项 */}
-                                <label
-                                    key={ESPRESSO_PRESET.value}
-                                    className={`relative flex flex-col p-3 rounded-lg border ${selectedPreset === ESPRESSO_PRESET.value
-                                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                                        : 'border-neutral-200 dark:border-neutral-700 hover:border-blue-200 dark:hover:border-blue-800'
-                                        } cursor-pointer transition-all`}
-                                >
-                                    <div className="flex items-center mb-1.5">
-                                        <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
-                                            {ESPRESSO_PRESET.label}
-                                        </span>
-                                        {selectedPreset === ESPRESSO_PRESET.value && (
-                                            <div className="ml-2 w-3.5 h-3.5 text-blue-500">
-                                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                    <path d="M5 13L9 17L19 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                                </svg>
-                                            </div>
-                                        )}
-                                    </div>
-                                    <span className="text-xs text-neutral-500 dark:text-neutral-400 line-clamp-2">
-                                        {ESPRESSO_PRESET.description}
-                                    </span>
-                                    <input
-                                        type="radio"
-                                        name="presetOption"
-                                        value={ESPRESSO_PRESET.value}
-                                        checked={selectedPreset === ESPRESSO_PRESET.value}
-                                        onChange={() => setSelectedPreset(ESPRESSO_PRESET.value)}
-                                        className="hidden"
-                                    />
-                                </label>
+
                             </div>
                         </div>
 
-                        {/* 意式机说明 */}
+                        {/* 器具说明 */}
                         {selectedPreset === 'espresso' && (
                             <div className="px-4 pb-4">
                                 <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 p-3 text-sm text-blue-600 dark:text-blue-400">

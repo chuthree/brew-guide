@@ -336,7 +336,8 @@ const TabContent: React.FC<TabContentProps> = ({
     const isEspressoMethod = currentBrewingMethod?.name?.toLowerCase().includes('意式') || 
                             currentBrewingMethod?.name?.toLowerCase().includes('espresso') ||
                             expandedStages?.some(stage => 
-                              stage.pourType === 'espresso_extraction');
+                              stage.pourType === 'extraction' || 
+                              stage.pourType === 'beverage');
 
     // 搜索相关状态和处理
     const [isSearching, setIsSearching] = useState(false);

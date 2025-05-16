@@ -9,8 +9,10 @@ export const createExpandedStages = (stages: Stage[] | undefined): ExpandedStage
 
   const expandedStages: ExpandedStage[] = [];
   
-  // 检查是否为意式咖啡方案
+  // 检查是否为意式咖啡方案 - 改进的检测逻辑
   const isEspressoMethod = stages.some(stage => 
+    stage.pourType === 'extraction' || 
+    stage.pourType === 'beverage' ||
     stage.label?.toLowerCase().includes('意式') || 
     stage.label?.toLowerCase().includes('espresso') ||
     stage.detail?.toLowerCase().includes('意式') || 
@@ -37,7 +39,7 @@ export const createExpandedStages = (stages: Stage[] | undefined): ExpandedStage
           pourTime: duration, // 整个阶段都是萃取时间
           water: stage.water || "",
           detail: stage.detail || "",
-          pourType: "espresso_extraction", // 使用特殊标记区分意式萃取
+          pourType: stage.pourType || "extraction", // 使用stage中原有的pourType，默认为extraction
           originalIndex: index,
         });
       }
@@ -55,7 +57,7 @@ export const createExpandedStages = (stages: Stage[] | undefined): ExpandedStage
         pourTime: lastStage.time,
         water: lastStage.water || "",
         detail: lastStage.detail || "",
-        pourType: "espresso_extraction",
+        pourType: lastStage.pourType || "extraction", // 使用stage中原有的pourType，默认为extraction
         originalIndex: 0,
       });
     }

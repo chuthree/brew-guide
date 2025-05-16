@@ -14,7 +14,6 @@ export type ExpandedStage = {
   water: string;
   detail: string;
   pourType?: string;
-  espressoPourType?: "extraction" | "beverage" | "other";
   valveStatus?: "open" | "closed";
   originalIndex: number;
 };

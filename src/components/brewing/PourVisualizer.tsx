@@ -172,7 +172,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
             const pourType = stages[currentStage]?.pourType || 'center';
             
             // 检查是否是意式萃取类型，如果是则不显示注水动画
-            if (pourType === 'espresso_extraction') {
+            if (pourType === 'extraction') {
                 return 'none'; // 返回特殊值表示不显示动画
             }
 

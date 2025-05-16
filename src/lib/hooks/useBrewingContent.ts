@@ -12,10 +12,10 @@ import { loadCustomMethodsForEquipment } from "@/lib/managers/customMethods";
 import { Stage } from '@/components/method/forms/components/types';
 import { isEspressoMachine } from '@/lib/utils/equipmentUtils';
 
-// 增强 Content.注水.steps 接口以支持 espressoPourType
+// 增强 Content.注水.steps 接口以支持 pourType
 declare module "./useBrewingState" {
 	interface Step {
-		espressoPourType?: string;
+		pourType?: string;
 	}
 }
 
@@ -311,24 +311,27 @@ export function useBrewingContent({
 	// 更新注水步骤内容
 	const updateBrewingSteps = (stages: Stage[]) => {
 		// 检查是否是意式机预设的步骤
-		const isEspressoStages = stages.some(stage => stage.espressoPourType !== undefined);
+		const isEspressoStages = stages.some(stage => 
+			stage.pourType === 'extraction' || 
+			stage.pourType === 'beverage'
+		);
 		
 		// 如果是意式机，使用特殊的处理逻辑
 		if (isEspressoStages) {
 			// 意式机的步骤不需要拆分注水和等待
 			const espressoSteps = stages.map(stage => ({
 				title: stage.label,
-				items: stage.espressoPourType === 'other' 
+				items: stage.pourType === 'other' 
 					? [stage.detail] // other类型只显示说明
 					: [`${stage.water}`, stage.detail], // 其他类型显示水量和说明
-				note: stage.espressoPourType === 'extraction' 
+				note: stage.pourType === 'extraction' 
 					? `${stage.time}秒` // 萃取类型显示时间
 					: '', // 其他类型不显示时间
-				type: stage.espressoPourType === 'extraction' ? 'pour' as const : undefined, // 使用有效的类型
+				type: stage.pourType === 'extraction' ? 'pour' as const : undefined, // 使用有效的类型
 				originalIndex: stages.indexOf(stage), // 保留原始索引以便于参考
-				startTime: stage.espressoPourType === 'extraction' ? 0 : undefined, // 只有萃取类型有开始时间
-				endTime: stage.espressoPourType === 'extraction' ? stage.time : undefined, // 只有萃取类型有结束时间
-				espressoPourType: stage.espressoPourType, // 添加意式机特有类型
+				startTime: stage.pourType === 'extraction' ? 0 : undefined, // 只有萃取类型有开始时间
+				endTime: stage.pourType === 'extraction' ? stage.time : undefined, // 只有萃取类型有结束时间
+				pourType: stage.pourType, // 使用统一的pourType字段
 			}));
 			
 			// 更新content的注水部分

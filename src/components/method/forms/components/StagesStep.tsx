@@ -5,7 +5,7 @@ import AutoResizeTextarea from '@/components/common/forms/AutoResizeTextarea';
 import AutocompleteInput from '@/components/common/forms/AutocompleteInput';
 import { CustomEquipment } from '@/lib/core/config';
 import { Stage } from './types';
-import { isEspressoMachine, getEspressoPourTypeName } from '@/lib/utils/equipmentUtils';
+import { isEspressoMachine, getPourTypeName } from '@/lib/utils/equipmentUtils';
 
 // 预设饮料列表
 const PRESET_BEVERAGES = [
@@ -159,11 +159,11 @@ const StagesStep: React.FC<StagesStepProps> = ({
       if (waterValue <= 0) return;
       
       // 获取显示的标签
-      const displayLabel = stage.espressoPourType === 'extraction' ? '萃取' : 
-                           stage.label || (stage.espressoPourType === 'beverage' ? '饮料' : '其他');
+      const displayLabel = stage.pourType === 'extraction' ? '萃取' : 
+                           stage.label || (stage.pourType === 'beverage' ? '饮料' : '其他');
       
       // 使用完整标签作为键，只有完全相同的标签才会合并
-      const key = `${stage.espressoPourType}_${displayLabel}`;
+      const key = `${stage.pourType}_${displayLabel}`;
       
       // 如果该名称已存在，则累加水量
       if (waterByName[key]) {
@@ -370,7 +370,7 @@ const StagesStep: React.FC<StagesStepProps> = ({
                       </button>
                     )}
                     {/* 只有意式机的饮料类型步骤才使用AutocompleteInput */}
-                    {isEspressoMachine(customEquipment) && stage.espressoPourType === 'beverage' ? (
+                    {isEspressoMachine(customEquipment) && stage.pourType === 'beverage' ? (
                       <AutocompleteInput
                         value={stage.label}
                         onChange={(value) => handleBeverageChange(index, value)}
@@ -578,7 +578,7 @@ const StagesStep: React.FC<StagesStepProps> = ({
                           // 检查是否是倍数输入 (例如 "2倍"、"2x"、"x2"等)
                           // 匹配：数字+倍、数字+x/X、x/X+数字 格式
                           const multipleMatch = value.match(/^(\d+(\.\d+)?)(倍|[xX])$/) || 
-                                              value.match(/^(\d+(\.\d+)?)[\s]*(倍|[xX])[\s]*$/) || 
+                                              value.match(/^(\d+(\.\d+)?)[\s]*(\d+(\.\d+)?)[\s]*$/) || 
                                               value.match(/^[xX][\s]*(\d+(\.\d+)?)[\s]*$/);
                           if (multipleMatch) {
                             // 提取倍数值 - 根据匹配组的位置确定数值在哪个捕获组
@@ -625,7 +625,7 @@ const StagesStep: React.FC<StagesStepProps> = ({
               )}
 
               {/* 意式机 - 萃取类型 */}
-              {isEspressoMachine(customEquipment) && stage.espressoPourType === 'extraction' && (
+              {isEspressoMachine(customEquipment) && stage.pourType === 'extraction' && (
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
@@ -698,7 +698,7 @@ const StagesStep: React.FC<StagesStepProps> = ({
               )}
 
               {/* 意式机 - 饮料类型 */}
-              {isEspressoMachine(customEquipment) && stage.espressoPourType === 'beverage' && (
+              {isEspressoMachine(customEquipment) && stage.pourType === 'beverage' && (
                 <div className="grid grid-cols-1 gap-4">
                   <div className="space-y-2">
                     <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400 flex items-center">

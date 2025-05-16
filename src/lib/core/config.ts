@@ -7,7 +7,7 @@ export interface Stage {
 	water: string;
 	detail: string;
 	pourTime?: number;
-	pourType?: string;  // 改为 string 类型以支持自定义注水方式
+	pourType?: string;  // 支持自定义注水方式和意式机类型，包括'extraction'和'beverage'等
 	valveStatus?: "open" | "closed";
 }
 
@@ -425,8 +425,6 @@ export const availableGrinders: Grinder[] = [
 		法压壶: "25-30格", // 法压壶推荐
 		冷萃: "20-25格", // 冷萃推荐
 	}},
-
-	// 在这里添加更多磨豆机
 ];
 
 // Equipment Data
@@ -450,6 +448,11 @@ export const equipmentList: Equipment[] = [
 		id: "Origami",
 		name: "折纸滤杯",
 		description: "褶皱设计兼具美感与实用性，可使用不同形状滤纸",
+	},
+	{
+		id: "Espresso",
+		name: "意式咖啡机",
+		description: "高压萃取，制作浓缩咖啡和其他意式咖啡饮品",
 	},
 	// 可以在这里添加更多器具
 ];
@@ -934,6 +937,99 @@ export const brewingMethods: BrewingMethods = {
 			},
 		},
 	],
+	Espresso: [
+		{
+			name: "经典意式萃取",
+			params: {
+				coffee: "18g",
+				water: "36g",
+				ratio: "1:2",
+				grindSize: "特细",
+				temp: "93°C",
+				videoUrl: "",
+				roastLevel: "中深烘焙",
+				stages: [
+					{
+						time: 25,
+						label: "萃取",
+						water: "36g",
+						detail: "标准意式萃取，水温93°C，25秒出36g液体",
+						pourType: "extraction",
+					},
+				],
+			},
+		},
+		{
+			name: "Ristretto浓缩",
+			params: {
+				coffee: "18g",
+				water: "27g",
+				ratio: "1:1.5",
+				grindSize: "特细",
+				temp: "93°C",
+				videoUrl: "",
+				roastLevel: "中深烘焙",
+				stages: [
+					{
+						time: 25,
+						label: "萃取",
+						water: "27g",
+						detail: "浓缩萃取，水温93°C，25秒出27g液体，风味更加浓郁",
+						pourType: "extraction",
+					},
+				],
+			},
+		},
+		{
+			name: "Lungo长萃取",
+			params: {
+				coffee: "18g",
+				water: "54g",
+				ratio: "1:3",
+				grindSize: "特细偏粗",
+				temp: "94°C",
+				videoUrl: "",
+				roastLevel: "中烘焙",
+				stages: [
+					{
+						time: 30,
+						label: "萃取",
+						water: "54g",
+						detail: "长时间萃取，水温94°C，30秒出54g液体，风味更加丰富",
+						pourType: "extraction",
+					},
+				],
+			},
+		},
+		{
+			name: "美式咖啡",
+			params: {
+				coffee: "18g",
+				water: "180g",
+				ratio: "1:10",
+				grindSize: "特细",
+				temp: "93°C",
+				videoUrl: "",
+				roastLevel: "中烘焙",
+				stages: [
+					{
+						time: 25,
+						label: "萃取",
+						water: "36g",
+						detail: "标准意式萃取，水温93°C，25秒出36g液体",
+						pourType: "extraction",
+					},
+					{
+						time: 30,
+						label: "饮料",
+						water: "180g",
+						detail: "加入约150ml热水，稀释成美式咖啡",
+						pourType: "beverage",
+					},
+				],
+			},
+		},
+	],
 };
 
 // 将现有的通用方案重命名为 commonMethods
@@ -942,6 +1038,7 @@ export const commonMethods: BrewingMethods = {
 	CleverDripper: brewingMethods.CleverDripper,
 	Kalita: brewingMethods.Kalita,
 	Origami: brewingMethods.Origami,
+	Espresso: brewingMethods.Espresso,
 };
 
 /**

@@ -249,7 +249,7 @@ const StageItem: React.FC<StageItemProps> = ({
                                 </div>
                             )}
                             {/* 饮料显示水量 */}
-                            {activeTab === '注水' && selectedMethod && step.items && step.items.length > 0 && (step.type === 'wait' || step.espressoPourType === 'beverage') && (
+                            {activeTab === '注水' && selectedMethod && step.items && step.items.length > 0 && (step.type === 'wait' || step.pourType === 'beverage') && (
                                 <div className="flex items-baseline gap-3 text-[10px] text-neutral-600 dark:text-neutral-400 shrink-0">
                                     <span>·</span>
                                     <span>{step.items[0]}</span>

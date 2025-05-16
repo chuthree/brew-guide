@@ -72,7 +72,7 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
     }, [selectedEquipment, showCustomForm]); // 只在selectedEquipment或showCustomForm变化时重新加载
 
     // 根据标准器具ID获取动画类型
-    const getAnimationTypeFromEquipmentId = (equipmentId: string | null): "v60" | "kalita" | "origami" | "clever" | "custom" => {
+    const getAnimationTypeFromEquipmentId = (equipmentId: string | null): "v60" | "kalita" | "origami" | "clever" | "custom" | "espresso" => {
         if (!equipmentId) return "custom";
         
         switch (equipmentId) {
@@ -84,6 +84,8 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
                 return 'origami';
             case 'CleverDripper':
                 return 'clever';
+            case 'Espresso':
+                return 'espresso';
             default:
                 return 'custom';
         }

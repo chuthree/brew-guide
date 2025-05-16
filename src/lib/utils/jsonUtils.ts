@@ -269,6 +269,15 @@ export function parseMethodFromJson(jsonString: string): Method | null {
 		if (!methodName && !parsedData.equipment) {
 			throw new Error("导入的JSON缺少必要字段 (name或method)");
 		}
+		
+		// 检查是否是意式咖啡方案 - 改进识别逻辑
+		const isEspresso = parsedData.equipment === 'Espresso' || 
+			  parsedData.equipment === '意式咖啡机' ||
+			  parsedData.isEspresso === true ||
+			  (parsedData.params?.stages && Array.isArray(parsedData.params.stages) && 
+			   parsedData.params.stages.some((stage: StageData) => 
+			     stage.pourType === 'extraction' || stage.pourType === 'beverage'
+			   ));
 
 		// 构建Method对象 - 始终生成新的ID，避免ID冲突
 		const method: Method = {
@@ -279,7 +288,7 @@ export function parseMethodFromJson(jsonString: string): Method | null {
 				water: parsedData.params?.water || "225g",
 				ratio: parsedData.params?.ratio || "1:15",
 				grindSize: parsedData.params?.grindSize || "中细",
-				temp: parsedData.params?.temp || "92°C",
+				temp: parsedData.params?.temp || "93°C",
 				videoUrl: parsedData.params?.videoUrl || "",
 				stages: [],
 			},
@@ -295,7 +304,7 @@ export function parseMethodFromJson(jsonString: string): Method | null {
 					// 确保pourType是有效的值
 					let pourType = stage.pourType || "circle";
 					if (
-						!["center", "circle", "ice", "other"].includes(pourType)
+						!["center", "circle", "ice", "other", "extraction", "beverage"].includes(pourType)
 					) {
 						// 映射可能的pourType值
 						if (pourType === "spiral") pourType = "circle";
@@ -310,20 +319,46 @@ export function parseMethodFromJson(jsonString: string): Method | null {
 					) {
 						valveStatus = ""; // 如果不是有效值，则设置为空
 					}
-
-					return {
+					
+					// 基本步骤对象
+					const parsedStage: any = {
 						time: stage.time || 0,
-						pourTime: stage.pourTime || 0,
 						label: stage.label || "",
 						water: stage.water || "",
 						detail: stage.detail || "",
-						pourType: pourType as
-							| "center"
-							| "circle"
-							| "ice"
-							| "other",
+						pourType: pourType,
 						valveStatus: valveStatus as "open" | "closed" | "",
 					};
+					
+					// 只有非意式咖啡方法才需要pourTime字段
+					if (!isEspresso) {
+						parsedStage.pourTime = stage.pourTime || 0;
+					}
+					
+					// 如果是意式咖啡方案，为特定类型的步骤设置特殊属性
+					if (isEspresso) {
+						// 意式咖啡的萃取步骤不需要pourTime
+						if (pourType === 'extraction') {
+							// 确保没有pourTime字段
+							delete parsedStage.pourTime;
+						} else if (pourType === 'beverage') {
+							// 饮料步骤不需要时间和注水时间
+							parsedStage.time = 0;
+							delete parsedStage.pourTime;
+						}
+					}
+
+					// 如果是意式咖啡，根据label推断pourType
+					if (isEspresso && !stage.pourType) {
+						// 默认为萃取
+						if (parsedStage.label.includes('饮料')) {
+							parsedStage.pourType = 'beverage';
+						} else {
+							parsedStage.pourType = 'extraction';
+						}
+					}
+
+					return parsedStage;
 				}
 			);
 		}
@@ -402,16 +437,31 @@ export function getExampleJson() {
  * 将Method对象转换为JSON字符串，用于分享
  */
 export function methodToJson(method: Method): string {
+	// 检查是否是意式咖啡方案
+	const isEspresso = method.params.stages.some(stage => 
+		stage.pourType === 'extraction' || 
+		stage.pourType === 'beverage'
+	);
+	
+	// 创建深拷贝
+	const methodCopy = JSON.parse(JSON.stringify(method));
+	
+	// 对意式咖啡方案进行特殊处理
+	if (isEspresso) {
+		methodCopy.isEspresso = true;
+	}
+	
 	// 创建配置对象
 	const configObject = {
-		method: method.name,
+		method: methodCopy.name,
+		isEspresso: isEspresso,
 		params: {
-			coffee: method.params.coffee,
-			water: method.params.water,
-			ratio: method.params.ratio,
-			grindSize: method.params.grindSize,
-			temp: method.params.temp,
-			stages: method.params.stages || [],
+			coffee: methodCopy.params.coffee,
+			water: methodCopy.params.water,
+			ratio: methodCopy.params.ratio,
+			grindSize: methodCopy.params.grindSize,
+			temp: methodCopy.params.temp,
+			stages: methodCopy.params.stages,
 		},
 	};
 
@@ -587,12 +637,24 @@ function findCustomPourTypeIdByName(name: string, customEquipment?: CustomEquipm
 export function methodToReadableText(method: Method, customEquipment?: CustomEquipment): string {
 	const { name, params } = method;
 
+	// 检查是否是意式咖啡方案 - 改进判断逻辑
+	const isEspresso = customEquipment?.animationType === 'espresso' || 
+	                  params.stages.some(stage => 
+	                    stage.pourType === 'extraction' || 
+	                    stage.pourType === 'beverage'
+	                  );
+
 	// 构建可读文本
 	let text = `【冲煮方案】${name}\n\n`;
 	text += `咖啡粉量: ${params.coffee || "未设置"}\n`;
 	text += `粉水比: ${params.ratio || "未设置"}\n`;
 	text += `研磨度: ${params.grindSize || "未设置"}\n`;
 	text += `水温: ${params.temp || "未设置"}\n`;
+	
+	// 如果是意式咖啡，添加一个标记
+	if (isEspresso) {
+		text += `器具类型: 意式咖啡机\n`;
+	}
 
 	if (params.stages && params.stages.length > 0) {
 		text += "\n冲煮步骤:\n\n";
@@ -603,19 +665,41 @@ export function methodToReadableText(method: Method, customEquipment?: CustomEqu
 
 			// 分别生成注水时间和注水方式文本
 			let pourTimeText = "";
-			if (stage.pourTime) {
+			// 只有非意式咖啡方案才显示注水时间
+			if (!isEspresso && stage.pourTime) {
 				pourTimeText = ` (注水${stage.pourTime}秒)`;
 			}
 
+			// 添加注水方式信息 [注水方式]
 			let pourTypeText = "";
+			
+			// 处理pourType
 			if (stage.pourType) {
-				// 如果是自定义注水方式（ID 以 pour- 开头），尝试获取其名称
-				if (stage.pourType.startsWith('pour-')) {
-					const customName = getCustomPourTypeName(stage.pourType, customEquipment);
-					pourTypeText = ` [${customName}]`;
-				} else {
-					pourTypeText = ` [${stage.pourType}]`;
+				// 检查customEquipment中是否有对应的自定义注水方式
+				let pourTypeName = "";
+				
+				if (customEquipment?.customPourAnimations) {
+					const customAnimation = customEquipment.customPourAnimations.find(
+						(anim) => anim.id === stage.pourType
+					);
+					if (customAnimation && customAnimation.name) {
+						pourTypeName = customAnimation.name;
+					}
 				}
+				
+				// 如果没有找到自定义注水方式的名称，则使用系统默认名称
+				if (!pourTypeName) {
+					// 系统默认注水方式
+					if (stage.pourType === "center") pourTypeName = "中心注水";
+					else if (stage.pourType === "circle") pourTypeName = "绕圈注水";
+					else if (stage.pourType === "ice") pourTypeName = "添加冰块";
+					else if (stage.pourType === "extraction") pourTypeName = "萃取";
+					else if (stage.pourType === "beverage") pourTypeName = "饮料";
+					else pourTypeName = stage.pourType;
+				}
+				
+				// 添加注水方式标记
+				pourTypeText = ` [${pourTypeName}]`;
 			}
 
 			// 确保标签和详情是分开的
@@ -946,6 +1030,13 @@ function parseMethodText(text: string, customEquipment?: CustomEquipment): Metho
 	if (tempMatch && tempMatch[1] && tempMatch[1] !== "未设置") {
 		method.params.temp = tempMatch[1].trim();
 	}
+	
+	// 检查是否是意式咖啡方案 - 改进判断逻辑
+	const isEspresso = text.includes("器具类型: 意式咖啡机") || 
+	                   customEquipment?.animationType === 'espresso' ||
+	                   text.includes("[萃取]") ||
+	                   text.includes("[extraction]") ||
+	                   text.includes("[beverage]");
 
 	// 尝试提取ID（如果有）
 	const idMatch = text.match(/@METHOD_ID:(method-[a-zA-Z0-9-]+)@/);
@@ -980,17 +1071,48 @@ function parseMethodText(text: string, customEquipment?: CustomEquipment): Metho
 					const label = stageMatch[5].trim();
 					const water = stageMatch[6].trim();
 
-					// 创建步骤对象，并尝试查找自定义注水方式的ID
-					const pourType = pourTypeText ? findCustomPourTypeIdByName(pourTypeText, customEquipment) : "";
-					
-					const stage: ParsedStage = {
+					// 创建步骤对象
+					let stage: ParsedStage = {
 						time,
-						pourTime,
 						label,
 						water,
 						detail: "",
-						pourType,
+						pourType: "",
 					};
+					
+					// 只有非意式咖啡才添加pourTime字段
+					if (!isEspresso) {
+						stage.pourTime = pourTime;
+					}
+					
+					// 处理pourType
+					if (pourTypeText) {
+						// 查找自定义注水方式或使用系统默认注水方式
+						if (pourTypeText === "中心注水") {
+							stage.pourType = "center";
+						} else if (pourTypeText === "绕圈注水") {
+							stage.pourType = "circle";
+						} else if (pourTypeText === "添加冰块") {
+							stage.pourType = "ice";
+						} else if (pourTypeText === "萃取") {
+							stage.pourType = "extraction";
+						} else if (pourTypeText === "饮料") {
+							stage.pourType = "beverage";
+						} else {
+							// 查找自定义注水方式
+							stage.pourType = findCustomPourTypeIdByName(pourTypeText, customEquipment);
+						}
+					}
+					
+					// 如果是意式咖啡，根据label推断pourType
+					if (isEspresso && !stage.pourType) {
+						// 默认为萃取
+						if (label.includes('饮料')) {
+							stage.pourType = 'beverage';
+						} else {
+							stage.pourType = 'extraction';
+						}
+					}
 
 					// 检查下一行是否是详细信息（以空格开头）
 					if (i + 1 < stageLines.length && stageLines[i + 1].trim().length > 0 && stageLines[i + 1].startsWith(" ")) {
