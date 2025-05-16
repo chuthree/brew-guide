@@ -8,65 +8,128 @@ export const createExpandedStages = (stages: Stage[] | undefined): ExpandedStage
   if (!stages?.length) return [];
 
   const expandedStages: ExpandedStage[] = [];
+  
+  // 检查是否为意式咖啡方案
+  const isEspressoMethod = stages.some(stage => 
+    stage.label?.toLowerCase().includes('意式') || 
+    stage.label?.toLowerCase().includes('espresso') ||
+    stage.detail?.toLowerCase().includes('意式') || 
+    stage.detail?.toLowerCase().includes('espresso')
+  );
 
-  stages.forEach((stage, index) => {
-    const prevStageTime = index > 0 ? stages[index - 1].time : 0;
-    const stagePourTime =
-      stage.pourTime === 0
-        ? 0
-        : stage.pourTime || Math.floor((stage.time - prevStageTime) / 3);
-
-    // 如果有注水时间，添加一个注水阶段
-    if (stagePourTime > 0) {
-      // 创建注水阶段
+  // 如果是意式咖啡方案，使用特殊处理逻辑
+  if (isEspressoMethod) {
+    // 直接处理每个阶段，不拆分注水和等待
+    stages.forEach((stage, index) => {
+      const prevStageTime = index > 0 ? stages[index - 1].time : 0;
+      
+      // 计算当前阶段的持续时间
+      const duration = stage.time - prevStageTime;
+      
+      // 确保每个阶段有一个合理的持续时间
+      if (duration > 0) {
+        expandedStages.push({
+          type: "pour", // 将所有阶段标记为pour类型
+          label: stage.label || `阶段 ${index + 1}`,
+          startTime: prevStageTime,
+          endTime: stage.time,
+          time: duration,
+          pourTime: duration, // 整个阶段都是萃取时间
+          water: stage.water || "",
+          detail: stage.detail || "",
+          pourType: "espresso_extraction", // 使用特殊标记区分意式萃取
+          originalIndex: index,
+        });
+      }
+      
+      // 添加调试日志
+      console.log(`意式咖啡阶段${index + 1}:`, {
+        label: stage.label || `阶段 ${index + 1}`,
+        startTime: prevStageTime,
+        endTime: stage.time,
+        duration: duration
+      });
+    });
+    
+    // 确保如果没有有效阶段，创建一个默认阶段
+    if (expandedStages.length === 0 && stages.length > 0) {
+      const lastStage = stages[stages.length - 1];
       expandedStages.push({
         type: "pour",
-        label: stage.label,
-        startTime: prevStageTime,
-        endTime: prevStageTime + stagePourTime,
-        time: stagePourTime,
-        pourTime: stagePourTime,
-        water: stage.water,
-        detail: stage.detail,
-        pourType: stage.pourType,
-        valveStatus: stage.valveStatus,
-        originalIndex: index,
+        label: lastStage.label || "萃取",
+        startTime: 0,
+        endTime: lastStage.time,
+        time: lastStage.time,
+        pourTime: lastStage.time,
+        water: lastStage.water || "",
+        detail: lastStage.detail || "",
+        pourType: "espresso_extraction",
+        originalIndex: 0,
       });
+      
+      console.log('创建默认意式咖啡阶段:', {
+        label: lastStage.label || "萃取",
+        startTime: 0,
+        endTime: lastStage.time,
+        duration: lastStage.time
+      });
+    }
+  } else {
+    // 常规方案处理逻辑
+    stages.forEach((stage, index) => {
+      const prevStageTime = index > 0 ? stages[index - 1].time : 0;
+      const stagePourTime =
+        stage.pourTime === 0
+          ? 0
+          : stage.pourTime || Math.floor((stage.time - prevStageTime) / 3);
 
-      // 只有当注水结束时间小于阶段结束时间时，才添加等待阶段
-      if (prevStageTime + stagePourTime < stage.time) {
-        // 创建等待阶段
+      // 如果有注水阶段
+      if (stagePourTime > 0) {
+        // 添加注水阶段
+        expandedStages.push({
+          type: "pour",
+          label: stage.label || `阶段 ${index + 1}`,
+          startTime: prevStageTime,
+          endTime: prevStageTime + stagePourTime,
+          time: stagePourTime,
+          pourTime: stagePourTime,
+          water: stage.water || "",
+          detail: stage.detail || "",
+          pourType: stage.pourType,
+          valveStatus: stage.valveStatus,
+          originalIndex: index,
+        });
+
+        // 添加等待阶段
         expandedStages.push({
           type: "wait",
-          label: "等待",
+          label: stage.label || `阶段 ${index + 1}`,
           startTime: prevStageTime + stagePourTime,
           endTime: stage.time,
           time: stage.time - (prevStageTime + stagePourTime),
-          water: stage.water, // 水量与前一阶段相同
-          detail: "保持耐心，等待咖啡萃取",
-          pourType: stage.pourType, // 保留注水类型以便视觉一致性
+          water: stage.water || "",
+          detail: stage.detail || "",
+          pourType: stage.pourType,
+          valveStatus: stage.valveStatus,
+          originalIndex: index,
+        });
+      } else {
+        // 如果没有注水阶段，则整个阶段都是等待
+        expandedStages.push({
+          type: "wait",
+          label: stage.label || `阶段 ${index + 1}`,
+          startTime: prevStageTime,
+          endTime: stage.time,
+          time: stage.time - prevStageTime,
+          water: stage.water || "",
+          detail: stage.detail || "",
+          pourType: stage.pourType,
           valveStatus: stage.valveStatus,
           originalIndex: index,
         });
       }
-    } else {
-      // 如果没有注水时间，只添加一个等待阶段
-      // 当pourTime明确设为0时，保留原始标签，否则使用默认"等待"标签
-      expandedStages.push({
-        type: "wait",
-        label: stage.pourTime === 0 ? stage.label : "等待",
-        startTime: prevStageTime,
-        endTime: stage.time,
-        time: stage.time - prevStageTime,
-        water: stage.water,
-        detail:
-          stage.pourTime === 0 ? stage.detail : "保持耐心，等待咖啡萃取",
-        pourType: stage.pourType,
-        valveStatus: stage.valveStatus,
-        originalIndex: index,
-      });
-    }
-  });
+    });
+  }
 
   return expandedStages;
 };

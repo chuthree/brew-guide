@@ -332,6 +332,12 @@ const TabContent: React.FC<TabContentProps> = ({
         }
     };
 
+    // 检查当前是否为意式咖啡方案
+    const isEspressoMethod = currentBrewingMethod?.name?.toLowerCase().includes('意式') || 
+                            currentBrewingMethod?.name?.toLowerCase().includes('espresso') ||
+                            expandedStages?.some(stage => 
+                              stage.pourType === 'espresso_extraction');
+
     // 搜索相关状态和处理
     const [isSearching, setIsSearching] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -538,7 +544,7 @@ const TabContent: React.FC<TabContentProps> = ({
     }
 
     // 显示计时器动画 - 添加条件仅在"注水"标签时显示
-    if (activeTab === '注水' && isTimerRunning && !showComplete && currentBrewingMethod) {
+    if (activeTab === '注水' && !isEspressoMethod && isTimerRunning && !showComplete && currentBrewingMethod) {
         return (
             <div className="flex items-center justify-center h-full">
                 <div className="w-full max-w-[300px]">

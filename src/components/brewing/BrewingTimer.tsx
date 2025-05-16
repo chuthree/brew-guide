@@ -404,6 +404,21 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
   // 处理主计时器的启动
   const startMainTimer = useCallback(() => {
     if (currentBrewingMethod) {
+      // 首先确认有扩展阶段数据
+      if (expandedStagesRef.current.length === 0) {
+        console.warn('没有扩展阶段数据，重新处理阶段数据');
+        // 强制重新处理阶段数据
+        const newExpandedStages = createExpandedStages(currentBrewingMethod.params.stages || []);
+        expandedStagesRef.current = newExpandedStages;
+        
+        // 检查再次扩展后的结果
+        if (expandedStagesRef.current.length === 0) {
+          console.error('重新处理阶段数据后仍然没有可用的阶段数据，无法启动计时器');
+          return;
+        }
+      }
+      
+      // 现在可以安全地启动计时器
       const timerCallbacks: TimerCallbacks = {
         onTick: (updater) => {
           setCurrentTime(updater);
@@ -420,6 +435,15 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         }
       };
 
+      // 打印主计时器启动信息
+      console.log('准备启动主计时器:', {
+        方法名: currentBrewingMethod.name,
+        阶段数: expandedStagesRef.current.length,
+        总时长: expandedStagesRef.current.length > 0 
+          ? expandedStagesRef.current[expandedStagesRef.current.length - 1].endTime 
+          : 0
+      });
+
       const timerId = startTimerController(
         expandedStagesRef.current,
         audioState.current,
@@ -428,7 +452,14 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         timerCallbacks
       );
       
+      // 设置状态和开始计时
+      setIsRunning(true);
       setTimerId(timerId);
+      
+      // 通知状态变化
+      if (onStatusChange) {
+        onStatusChange({ isRunning: true });
+      }
     }
   }, [
     currentBrewingMethod,
@@ -436,7 +467,8 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     triggerHaptic,
     isHapticsSupported,
     settings.notificationSound,
-    settings.hapticFeedback
+    settings.hapticFeedback,
+    onStatusChange
   ]);
 
   // 添加startCountdown函数
@@ -473,12 +505,55 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
           
           // 倒计时结束
           setTimeout(() => {
+            // 设置倒计时为null以触发UI更新
             setCountdownTime(null);
             playSoundEffect("ding");
             triggerHaptic("vibrateMultiple");
+            
             // 确保清理所有旧的计时器，然后再开始新的
             clearTimerAndStates();
-            startMainTimer();
+            
+            // 重新处理和检查阶段扩展数据
+            if (currentBrewingMethod?.params?.stages) {
+              // 强制重新处理扩展阶段
+              const newExpandedStages = createExpandedStages(currentBrewingMethod.params.stages);
+              expandedStagesRef.current = newExpandedStages;
+              
+              // 打印意式咖啡阶段信息用于调试
+              const isEspresso = currentBrewingMethod.name.toLowerCase().includes('意式') || 
+                                 currentBrewingMethod.name.toLowerCase().includes('espresso');
+              if (isEspresso) {
+                console.log('意式咖啡阶段数据:', JSON.stringify(newExpandedStages, null, 2));
+              }
+              
+              // 通知扩展阶段变化
+              if (onExpandedStagesChange) {
+                onExpandedStagesChange(newExpandedStages);
+              }
+            }
+            
+            // 添加额外的延迟确保倒计时UI完全更新
+            setTimeout(() => {
+              // 确保方法和阶段都存在
+              if (currentBrewingMethod && expandedStagesRef.current.length > 0) {
+                // 增加日志以便调试
+                console.log("启动主计时器", expandedStagesRef.current.length, "阶段", 
+                            "首个阶段时间:", expandedStagesRef.current[0].time,
+                            "所有阶段总时间:", expandedStagesRef.current.reduce((sum, stage) => sum + stage.time, 0));
+                startMainTimer();
+                
+                // 派发事件以确保其他组件收到通知
+                window.dispatchEvent(
+                  new CustomEvent("brewing:mainTimerStarted", {
+                    detail: { started: true },
+                  })
+                );
+              } else {
+                console.error("无法启动主计时器 - 方法或阶段不存在", 
+                              "方法:", currentBrewingMethod?.name,
+                              "阶段数:", expandedStagesRef.current.length);
+              }
+            }, 50);
           }, 0);
           
           return 0;
@@ -496,7 +571,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         countdownTimerRef.current = null;
       }
     };
-  }, [playSoundEffect, triggerHaptic, startMainTimer, clearTimerAndStates]);
+  }, [playSoundEffect, triggerHaptic, startMainTimer, clearTimerAndStates, currentBrewingMethod, onExpandedStagesChange]);
 
   // 添加倒计时ref
   const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);

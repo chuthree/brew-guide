@@ -170,6 +170,11 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
 
             // 获取当前阶段的pourType，如果未设置，默认使用center
             const pourType = stages[currentStage]?.pourType || 'center';
+            
+            // 检查是否是意式萃取类型，如果是则不显示注水动画
+            if (pourType === 'espresso_extraction') {
+                return 'none'; // 返回特殊值表示不显示动画
+            }
 
             // 检查是否是自定义动画ID
             if (customEquipment?.customPourAnimations?.some(anim => anim.id === pourType)) {
@@ -319,9 +324,13 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
         // 检查当前阶段是否为等待阶段
         const currentStageType = (currentStageData as ExtendedStage)?.type || 'pour';
         const currentPourTime = currentStageData.pourTime;
+        const currentPourType = getCurrentPourType();
 
-        // 如果是等待阶段、isWaiting为true、或pourTime明确设为0，不显示注水动画
-        if (currentStageType === 'wait' || isWaiting || currentPourTime === 0) {
+        // 如果是等待阶段、isWaiting为true、pourTime明确设为0，或者是意式萃取类型，不显示注水动画
+        if (currentStageType === 'wait' || 
+            isWaiting || 
+            currentPourTime === 0 || 
+            currentPourType === 'none') {
             setIsPouring(false);
             setDisplayedIceIndices([]);
             setCurrentMotionIndex(1);
@@ -343,6 +352,16 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
             }
 
             const pourType = getCurrentPourType();
+            
+            // 如果pourType是none，停止动画
+            if (pourType === 'none') {
+                setIsPouring(false);
+                setDisplayedIceIndices([]);
+                setCurrentMotionIndex(1);
+                clearInterval(timer);
+                return;
+            }
+            
             const animationConfig = availableAnimations[pourType as keyof typeof availableAnimations];
 
             if (animationConfig?.isStacking) {
