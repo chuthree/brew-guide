@@ -230,12 +230,13 @@ const StageItem: React.FC<StageItemProps> = ({
                             <h3 className={`text-xs font-normal tracking-wider truncate ${isCurrentStage ? 'text-neutral-800 dark:text-neutral-100' : ''}`}>
                                 {step.title}
                             </h3>
-                            {activeTab === '注水' && selectedMethod && step.originalIndex !== undefined && step.items && step.note && (
-                                <div className="flex items-baseline gap-2 text-[10px] text-neutral-600 dark:text-neutral-400 shrink-0">
+                            {/* 注水阶段显示时间和水量 */}
+                            {activeTab === '注水' && selectedMethod && step.originalIndex !== undefined && step.items && step.note && step.type === 'pour' && (
+                                <div className="flex items-baseline gap-3 text-[10px] text-neutral-600 dark:text-neutral-400 shrink-0">
                                     <span>{step.endTime ? formatTime(step.endTime, true) : formatTime(parseInt(step.note), true)}</span>
                                     <span>·</span>
                                     <span>{step.items[0]}</span>
-                                    {showFlowRate && step.type === 'pour' && (
+                                    {showFlowRate && (
                                         <>
                                             <span>·</span>
                                             <span>
@@ -245,6 +246,13 @@ const StageItem: React.FC<StageItemProps> = ({
                                             </span>
                                         </>
                                     )}
+                                </div>
+                            )}
+                            {/* 饮料显示水量 */}
+                            {activeTab === '注水' && selectedMethod && step.items && step.items.length > 0 && (step.type === 'wait' || step.espressoPourType === 'beverage') && (
+                                <div className="flex items-baseline gap-3 text-[10px] text-neutral-600 dark:text-neutral-400 shrink-0">
+                                    <span>·</span>
+                                    <span>{step.items[0]}</span>
                                 </div>
                             )}
                         </div>
