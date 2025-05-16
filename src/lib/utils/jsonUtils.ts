@@ -658,9 +658,11 @@ export function methodToReadableText(method: Method, customEquipment?: CustomEqu
 
 	if (params.stages && params.stages.length > 0) {
 		text += "\n冲煮步骤:\n\n";
-		params.stages.forEach((stage: ParsedStage, index: number) => {
-			const timeText = `${Math.floor(stage.time / 60)}分${
-				stage.time % 60
+		params.stages.forEach((stage, index: number) => {
+			// 确保 stage.time 有值
+			const stageTime = stage.time || 0;
+			const timeText = `${Math.floor(stageTime / 60)}分${
+				stageTime % 60
 			}秒`;
 
 			// 分别生成注水时间和注水方式文本

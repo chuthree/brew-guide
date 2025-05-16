@@ -236,37 +236,96 @@ export function useBrewingContent({
 				}
 
 				// 准备两个方案列表
-				const customMethodSteps = customMethodsForEquipment.map(method => ({
-					title: method.name,
-					methodId: method.id,
-					items: [
-						`水粉比 ${method.params.ratio}`,
-						`总时长 ${formatTime(
-							method.params.stages[method.params.stages.length - 1].time,
-							true
-						)}`,
-						`研磨度 ${formatGrindSize(
-							method.params.grindSize,
-							settings.grindType
-						)}`,
-					],
-					note: "",
-					isCustom: true, // 标记为自定义方案
-				}));
+				const customMethodSteps = customMethodsForEquipment.map(method => {
+					// 检查是否是意式咖啡方案
+					const isEspressoMethod = method.params.stages.some(stage => 
+						stage.pourType === 'extraction' || 
+						stage.pourType === 'beverage'
+					);
+					
+					// 计算总时长
+					let totalTime = 0;
+					if (isEspressoMethod) {
+						// 对于意式咖啡，只计算萃取步骤的时间
+						const extractionStage = method.params.stages.find(stage => stage.pourType === 'extraction');
+						totalTime = extractionStage?.time || 0;
+					} else {
+						// 对于常规方法，使用最后一个步骤的时间
+						totalTime = method.params.stages[method.params.stages.length - 1]?.time || 0;
+					}
+					
+					// 针对不同类型的方案显示不同的信息
+					let items: string[] = [];
+					if (isEspressoMethod) {
+						// 意式咖啡方案显示: 粉量、液重、萃取时间
+						const extractionStage = method.params.stages.find(stage => stage.pourType === 'extraction');
+						items = [
+							`粉量 ${method.params.coffee}`,
+							`萃取时间 ${formatTime(totalTime, true)}`,
+							`液重 ${extractionStage?.water || method.params.water}`,
+						];
+					} else {
+						// 传统方案显示: 水粉比、总时长、研磨度
+						items = [
+							`水粉比 ${method.params.ratio}`,
+							`总时长 ${formatTime(totalTime, true)}`,
+							`研磨度 ${formatGrindSize(method.params.grindSize, settings.grindType)}`,
+						];
+					}
+					
+					return {
+						title: method.name,
+						methodId: method.id,
+						items: items,
+						note: "",
+						isCustom: true, // 标记为自定义方案
+					};
+				});
 				
 				// 通用方案列表（如果不是自定义预设器具）
 				const commonMethodSteps = !isCustomPresetEquipment ? commonMethodsForEquipment.map((method, methodIndex) => {
-					const totalTime = method.params.stages[method.params.stages.length - 1].time;
+					// 检查是否是意式咖啡方案
+					const isEspressoMethod = method.params.stages.some(stage => 
+						stage.pourType === 'extraction' || 
+						stage.pourType === 'beverage'
+					);
+					
+					// 计算总时长
+					let totalTime = 0;
+					if (isEspressoMethod) {
+						// 对于意式咖啡，只计算萃取步骤的时间
+						const extractionStage = method.params.stages.find(stage => stage.pourType === 'extraction');
+						totalTime = extractionStage?.time || 0;
+					} else {
+						// 对于常规方法，使用最后一个步骤的时间
+						totalTime = method.params.stages[method.params.stages.length - 1]?.time || 0;
+					}
+					
+					// 针对不同类型的方案显示不同的信息
+					let items: string[] = [];
+					if (isEspressoMethod) {
+						// 意式咖啡方案显示: 粉量、液重、萃取时间
+						const extractionStage = method.params.stages.find(stage => stage.pourType === 'extraction');
+						items = [
+							`粉量 ${method.params.coffee}`,
+							`液重 ${extractionStage?.water || method.params.water}`,
+							`萃取时间 ${formatTime(totalTime, true)}`,
+						];
+					} else {
+						// 传统方案显示: 水粉比、总时长、研磨度
+						items = [
+							`水粉比 ${method.params.ratio}`,
+							`总时长 ${formatTime(totalTime, true)}`,
+							`研磨度 ${formatGrindSize(method.params.grindSize, settings.grindType)}`,
+						];
+					}
+					
 					return {
 						title: method.name,
 						methodId: method.id,
 						isCommonMethod: true, // 标记为通用方案
 						methodIndex: methodIndex,
-						items: [
-							`水粉比 ${method.params.ratio}`,
-							`总时长 ${formatTime(totalTime, true)}`,
-							`研磨度 ${formatGrindSize(method.params.grindSize, settings.grindType)}`,
-						],
+						items: items,
 						note: "",
 					};
 				}) : [];
@@ -319,20 +378,37 @@ export function useBrewingContent({
 		// 如果是意式机，使用特殊的处理逻辑
 		if (isEspressoStages) {
 			// 意式机的步骤不需要拆分注水和等待
-			const espressoSteps = stages.map(stage => ({
-				title: stage.label,
-				items: stage.pourType === 'other' 
-					? [stage.detail] // other类型只显示说明
-					: [`${stage.water}`, stage.detail], // 其他类型显示水量和说明
-				note: stage.pourType === 'extraction' 
-					? `${stage.time}秒` // 萃取类型显示时间
-					: '', // 其他类型不显示时间
-				type: stage.pourType === 'extraction' ? 'pour' as const : undefined, // 使用有效的类型
-				originalIndex: stages.indexOf(stage), // 保留原始索引以便于参考
-				startTime: stage.pourType === 'extraction' ? 0 : undefined, // 只有萃取类型有开始时间
-				endTime: stage.pourType === 'extraction' ? stage.time : undefined, // 只有萃取类型有结束时间
-				pourType: stage.pourType, // 使用统一的pourType字段
-			}));
+			const espressoSteps = stages.map(stage => {
+				// 基本步骤信息
+				const baseStep = {
+					title: stage.label,
+					items: stage.pourType === 'other' 
+						? [stage.detail] // other类型只显示说明
+						: [`${stage.water}`, stage.detail], // 其他类型显示水量和说明
+					originalIndex: stages.indexOf(stage), // 保留原始索引以便于参考
+					pourType: stage.pourType, // 使用统一的pourType字段
+				};
+				
+				// 根据pourType类型添加不同的属性
+				if (stage.pourType === 'extraction') {
+					return {
+						...baseStep,
+						note: `${stage.time}秒`, // 萃取类型显示时间
+						type: 'pour' as const, // 使用有效的类型
+						startTime: 0, // 萃取从0开始
+						endTime: stage.time, // 萃取结束时间
+					};
+				} else {
+					// beverage或其他类型不参与计时
+					return {
+						...baseStep,
+						note: '', // 不显示时间
+						type: undefined, // 不是pour或wait类型
+						startTime: undefined, // 没有开始时间
+						endTime: undefined, // 没有结束时间
+					};
+				}
+			});
 			
 			// 更新content的注水部分
 			setContent((prev) => ({
@@ -362,12 +438,13 @@ export function useBrewingContent({
 
 		// 按照BrewingTimer的逻辑扩展阶段
 		stages.forEach((stage, index) => {
-			const prevStageTime = index > 0 ? stages[index - 1].time : 0;
+			const prevStageTime = index > 0 ? (stages[index - 1]?.time || 0) : 0;
+			const stageTime = stage.time || 0;
 			const stagePourTime =
 				stage.pourTime === 0
 					? 0
 					: stage.pourTime ||
-					  Math.floor((stage.time - prevStageTime) / 3);
+					  Math.floor((stageTime - prevStageTime) / 3);
 
 			// 如果pourTime明确设置为0，直接添加一个等待阶段而不拆分
 			if (stage.pourTime === 0) {
@@ -377,8 +454,8 @@ export function useBrewingContent({
 					water: stage.water,
 					detail: stage.detail,
 					startTime: prevStageTime,
-					endTime: stage.time,
-					time: stage.time - prevStageTime,
+					endTime: stageTime,
+					time: stageTime - prevStageTime,
 					pourType: stage.pourType,
 					valveStatus: stage.valveStatus,
 					originalIndex: index,
@@ -402,7 +479,7 @@ export function useBrewingContent({
 				});
 
 				// 只有当注水结束时间小于阶段结束时间时，才添加等待阶段
-				if (prevStageTime + stagePourTime < stage.time) {
+				if (prevStageTime + stagePourTime < stageTime) {
 					// 创建等待阶段
 					expandedStages.push({
 						type: "wait",
@@ -410,8 +487,8 @@ export function useBrewingContent({
 						water: stage.water, // 水量与前一阶段相同
 						detail: "",
 						startTime: prevStageTime + stagePourTime,
-						endTime: stage.time,
-						time: stage.time - (prevStageTime + stagePourTime),
+						endTime: stageTime,
+						time: stageTime - (prevStageTime + stagePourTime),
 						pourType: stage.pourType, // 保留注水类型以便视觉一致性
 						valveStatus: stage.valveStatus,
 						originalIndex: index,
@@ -425,8 +502,8 @@ export function useBrewingContent({
 					water: stage.water,
 					detail: "",
 					startTime: prevStageTime,
-					endTime: stage.time,
-					time: stage.time - prevStageTime,
+					endTime: stageTime,
+					time: stageTime - prevStageTime,
 					pourType: stage.pourType,
 					valveStatus: stage.valveStatus,
 					originalIndex: index,

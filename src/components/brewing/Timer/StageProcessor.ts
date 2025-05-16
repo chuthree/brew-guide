@@ -21,54 +21,64 @@ export const createExpandedStages = (stages: Stage[] | undefined): ExpandedStage
 
   // 如果是意式咖啡方案，使用特殊处理逻辑
   if (isEspressoMethod) {
-    // 直接处理每个阶段，不拆分注水和等待
-    stages.forEach((stage, index) => {
-      const prevStageTime = index > 0 ? stages[index - 1].time : 0;
-      
-      // 计算当前阶段的持续时间
-      const duration = stage.time - prevStageTime;
-      
-      // 确保每个阶段有一个合理的持续时间
-      if (duration > 0) {
-        expandedStages.push({
-          type: "pour", // 将所有阶段标记为pour类型
-          label: stage.label || `阶段 ${index + 1}`,
-          startTime: prevStageTime,
-          endTime: stage.time,
-          time: duration,
-          pourTime: duration, // 整个阶段都是萃取时间
-          water: stage.water || "",
-          detail: stage.detail || "",
-          pourType: stage.pourType || "extraction", // 使用stage中原有的pourType，默认为extraction
-          originalIndex: index,
-        });
-      }
+    // 先过滤出萃取类型的步骤，只有这些步骤参与计时
+    const extractionStages = stages.filter(stage => stage.pourType === 'extraction');
+    
+    // 处理萃取步骤，创建计时相关的阶段
+    extractionStages.forEach((stage, index) => {
+      expandedStages.push({
+        type: "pour", // 萃取步骤标记为pour类型
+        label: stage.label || `萃取`,
+        startTime: 0, // 萃取始终从0开始
+        endTime: stage.time || 25, // 使用设定时间，默认25秒
+        time: stage.time || 25, // 阶段持续时间
+        pourTime: stage.time || 25, // 整个阶段都是萃取时间
+        water: stage.water || "",
+        detail: stage.detail || "",
+        pourType: "extraction",
+        originalIndex: stages.indexOf(stage), // 保留原始索引
+      });
     });
     
-    // 确保如果没有有效阶段，创建一个默认阶段
-    if (expandedStages.length === 0 && stages.length > 0) {
-      const lastStage = stages[stages.length - 1];
-      expandedStages.push({
-        type: "pour",
-        label: lastStage.label || "萃取",
-        startTime: 0,
-        endTime: lastStage.time,
-        time: lastStage.time,
-        pourTime: lastStage.time,
-        water: lastStage.water || "",
-        detail: lastStage.detail || "",
-        pourType: lastStage.pourType || "extraction", // 使用stage中原有的pourType，默认为extraction
-        originalIndex: 0,
-      });
+    // 如果没有萃取步骤但标记为意式咖啡，创建一个默认萃取步骤
+    if (expandedStages.length === 0) {
+      // 尝试找出一个萃取步骤，如果没有则使用第一个步骤
+      const extractionStage = stages.find(stage => 
+        stage.pourType === 'extraction' || 
+        stage.label?.toLowerCase().includes('萃取')
+      ) || stages[0];
+      
+      if (extractionStage) {
+        expandedStages.push({
+          type: "pour",
+          label: extractionStage.label || "萃取",
+          startTime: 0,
+          endTime: extractionStage.time || 25,
+          time: extractionStage.time || 25,
+          pourTime: extractionStage.time || 25,
+          water: extractionStage.water || "",
+          detail: extractionStage.detail || "",
+          pourType: "extraction",
+          originalIndex: stages.indexOf(extractionStage),
+        });
+      }
     }
+    
+    // 添加饮料步骤作为信息性显示，但不计入计时器
+    const beverageStages = stages.filter(stage => stage.pourType === 'beverage');
+    beverageStages.forEach(stage => {
+      // 饮料步骤不添加到expandedStages中，因为它们不参与计时
+      // 这些步骤会在界面上显示，但不会影响计时器
+    });
   } else {
     // 常规方案处理逻辑
     stages.forEach((stage, index) => {
-      const prevStageTime = index > 0 ? stages[index - 1].time : 0;
+      const prevStageTime = index > 0 ? (stages[index - 1].time || 0) : 0;
+      const stageTime = stage.time || 0;
       const stagePourTime =
         stage.pourTime === 0
           ? 0
-          : stage.pourTime || Math.floor((stage.time - prevStageTime) / 3);
+          : stage.pourTime || Math.floor((stageTime - prevStageTime) / 3);
 
       // 如果有注水阶段
       if (stagePourTime > 0) {
@@ -92,8 +102,8 @@ export const createExpandedStages = (stages: Stage[] | undefined): ExpandedStage
           type: "wait",
           label: stage.label || `阶段 ${index + 1}`,
           startTime: prevStageTime + stagePourTime,
-          endTime: stage.time,
-          time: stage.time - (prevStageTime + stagePourTime),
+          endTime: stageTime,
+          time: stageTime - (prevStageTime + stagePourTime),
           water: stage.water || "",
           detail: stage.detail || "",
           pourType: stage.pourType,
@@ -106,8 +116,8 @@ export const createExpandedStages = (stages: Stage[] | undefined): ExpandedStage
           type: "wait",
           label: stage.label || `阶段 ${index + 1}`,
           startTime: prevStageTime,
-          endTime: stage.time,
-          time: stage.time - prevStageTime,
+          endTime: stageTime,
+          time: stageTime - prevStageTime,
           water: stage.water || "",
           detail: stage.detail || "",
           pourType: stage.pourType,

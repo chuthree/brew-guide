@@ -439,7 +439,7 @@ const StagesStep: React.FC<StagesStepProps> = ({
                       value={stage.pourTime || ''}
                       onChange={(e) => {
                         const pourTime = parseInt(e.target.value) || 0;
-                        const stageTime = stage.time;
+                        const stageTime = stage.time || 0;
                         
                         // 如果注水时间大于阶段总时间，则将注水时间设置为阶段总时间
                         if (pourTime > stageTime) {

@@ -338,10 +338,19 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
   const calculateTotalTime = () => {
     if (method.params.stages.length === 0) return 0;
     
-    // 返回最后一个有时间的步骤的时间
-    for (let i = method.params.stages.length - 1; i >= 0; i--) {
-      if (method.params.stages[i].time) {
-        return method.params.stages[i].time;
+    // 检查是否为意式咖啡方案
+    const isEspresso = isEspressoMachine(customEquipment);
+    
+    if (isEspresso) {
+      // 意式咖啡只计算萃取步骤的时间
+      const extractionStage = method.params.stages.find(stage => stage.pourType === 'extraction');
+      return extractionStage?.time || 0;
+    } else {
+      // 常规方案返回最后一个有时间的步骤的时间
+      for (let i = method.params.stages.length - 1; i >= 0; i--) {
+        if (method.params.stages[i].time !== undefined) {
+          return method.params.stages[i].time as number;
+        }
       }
     }
     
@@ -438,15 +447,16 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         
         // 根据器具类型和阶段设置默认时间
         const defaultTime = (() => {
-            if (isEspresso && defaultPourType === 'extraction') {
-                return 25; // 意式萃取默认25秒
+            if (isEspresso) {
+                // 意式咖啡机：只有萃取类型有时间，饮料类型时间为0
+                return defaultPourType === 'extraction' ? 25 : 0;
             } else if (method.params.stages.length === 0) {
                 return 30; // 第一个阶段默认30秒
-        } else {
+            } else {
                 // 获取上一个阶段的时间
                 const lastStage = method.params.stages[method.params.stages.length - 1];
                 return (lastStage.time || 0) + 30; // 默认比上一阶段多30秒
-                }
+            }
         })();
             
         // 创建新阶段
@@ -996,7 +1006,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                         if (isEspresso) {
                             switch (stage.pourType) {
                                 case 'extraction': // 萃取类型
-                                    return stage.time > 0 && 
+                                    return (stage.time ?? 0) > 0 && 
                                            !!stage.label.trim() && 
                                            !!stage.water.trim();
                                 case 'beverage': // 饮料类型
@@ -1011,7 +1021,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                         
                         // 自定义预设验证
                         if (isCustomPreset) {
-                            const basicValidation = stage.time > 0 && !!stage.water.trim();
+                            const basicValidation = (stage.time ?? 0) > 0 && !!stage.water.trim();
                             
                             // 聪明杯验证阀门状态
                             if (customEquipment.hasValve) {
@@ -1024,15 +1034,15 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                         
                         // 标准器具验证
                         const basicValidation =
-                            stage.time > 0 &&
-                            !!stage.label.trim() &&
-                            !!stage.water.trim() &&
-                            !!stage.pourType;
+                          (stage.time ?? 0) > 0 &&
+                          !!stage.label.trim() &&
+                          !!stage.water.trim() &&
+                          !!stage.pourType;
                         
                         // 聪明杯验证阀门状态
                         if (customEquipment.hasValve) {
-                            return basicValidation &&
-                                (stage.valveStatus === 'open' || stage.valveStatus === 'closed');
+                          return basicValidation &&
+                              (stage.valveStatus === 'open' || stage.valveStatus === 'closed');
                         }
                         
                         return basicValidation;

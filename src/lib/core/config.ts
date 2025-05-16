@@ -2,7 +2,7 @@ export const APP_VERSION = "1.2.4.6";
 
 // Types
 export interface Stage {
-	time: number;
+	time?: number;  // 对于饮料（beverage）类型是可选的
 	label: string;
 	water: string;
 	detail: string;
@@ -944,7 +944,7 @@ export const brewingMethods: BrewingMethods = {
 				coffee: "18g",
 				water: "36g",
 				ratio: "1:2",
-				grindSize: "特细",
+				grindSize: "意式",
 				temp: "93°C",
 				videoUrl: "",
 				roastLevel: "中深烘焙",
@@ -953,7 +953,7 @@ export const brewingMethods: BrewingMethods = {
 						time: 25,
 						label: "萃取",
 						water: "36g",
-						detail: "标准意式萃取，水温93°C，25秒出36g液体",
+						detail: "标准意式萃取，风味平衡",
 						pourType: "extraction",
 					},
 				],
@@ -965,7 +965,7 @@ export const brewingMethods: BrewingMethods = {
 				coffee: "18g",
 				water: "27g",
 				ratio: "1:1.5",
-				grindSize: "特细",
+				grindSize: "意式",
 				temp: "93°C",
 				videoUrl: "",
 				roastLevel: "中深烘焙",
@@ -974,7 +974,7 @@ export const brewingMethods: BrewingMethods = {
 						time: 25,
 						label: "萃取",
 						water: "27g",
-						detail: "浓缩萃取，水温93°C，25秒出27g液体，风味更加浓郁",
+						detail: "浓缩萃取，风味更加浓郁",
 						pourType: "extraction",
 					},
 				],
@@ -986,7 +986,7 @@ export const brewingMethods: BrewingMethods = {
 				coffee: "18g",
 				water: "54g",
 				ratio: "1:3",
-				grindSize: "特细偏粗",
+				grindSize: "意式",
 				temp: "94°C",
 				videoUrl: "",
 				roastLevel: "中烘焙",
@@ -995,7 +995,7 @@ export const brewingMethods: BrewingMethods = {
 						time: 30,
 						label: "萃取",
 						water: "54g",
-						detail: "长时间萃取，水温94°C，30秒出54g液体，风味更加丰富",
+						detail: "长时间萃取，风味更加丰富",
 						pourType: "extraction",
 					},
 				],
@@ -1005,9 +1005,9 @@ export const brewingMethods: BrewingMethods = {
 			name: "美式咖啡",
 			params: {
 				coffee: "18g",
-				water: "180g",
+				water: "36g",
 				ratio: "1:10",
-				grindSize: "特细",
+				grindSize: "意式",
 				temp: "93°C",
 				videoUrl: "",
 				roastLevel: "中烘焙",
@@ -1016,14 +1016,13 @@ export const brewingMethods: BrewingMethods = {
 						time: 25,
 						label: "萃取",
 						water: "36g",
-						detail: "标准意式萃取，水温93°C，25秒出36g液体",
+						detail: "标准意式萃取",
 						pourType: "extraction",
 					},
 					{
-						time: 30,
-						label: "饮料",
+						label: "加入热水",
 						water: "180g",
-						detail: "加入约150ml热水，稀释成美式咖啡",
+						detail: "稀释成美式咖啡",
 						pourType: "beverage",
 					},
 				],
