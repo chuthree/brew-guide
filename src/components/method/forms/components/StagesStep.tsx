@@ -1,10 +1,20 @@
-import React, { useRef, forwardRef } from 'react';
+import React, { useRef, forwardRef, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Info } from 'lucide-react';
 import AutoResizeTextarea from '@/components/common/forms/AutoResizeTextarea';
+import AutocompleteInput from '@/components/common/forms/AutocompleteInput';
 import { CustomEquipment } from '@/lib/core/config';
 import { Stage } from './types';
 import { isEspressoMachine, getEspressoPourTypeName } from '@/lib/utils/equipmentUtils';
+
+// 预设饮料列表
+const PRESET_BEVERAGES = [
+  '饮用水',
+  '冰块',
+  '纯牛奶',
+  '厚椰乳',
+  '燕麦奶'
+];
 
 // 动画变体
 const pageVariants = {
@@ -70,6 +80,123 @@ const StagesStep: React.FC<StagesStepProps> = ({
 }) => {
   const innerNewStageRef = useRef<HTMLDivElement>(null);
   const isCustomPreset = customEquipment.animationType === 'custom';
+  
+  // 添加状态来存储用户自定义的饮料建议列表
+  const [beverageSuggestions, setBeverageSuggestions] = useState<string[]>(PRESET_BEVERAGES);
+  
+  // 初始化时从 localStorage 读取用户自定义的饮料建议
+  useEffect(() => {
+    const loadBeverageSuggestions = () => {
+      try {
+        const savedSuggestions = localStorage.getItem('userBeverageSuggestions');
+        if (savedSuggestions) {
+          const parsedSuggestions = JSON.parse(savedSuggestions) as string[];
+          // 合并预设和用户自定义饮料，去除重复
+          const uniqueSuggestions = Array.from(
+            new Set([...PRESET_BEVERAGES, ...parsedSuggestions])
+          );
+          setBeverageSuggestions(uniqueSuggestions);
+        }
+      } catch (error) {
+        console.error('Failed to load beverage suggestions:', error);
+      }
+    };
+    
+    loadBeverageSuggestions();
+  }, []);
+  
+  // 当用户输入新的饮料名称时，保存到建议列表和localStorage
+  const handleBeverageChange = (index: number, value: string) => {
+    // 只将值传递给 onStageChange，不进行本地保存
+    onStageChange(index, 'label', value);
+  };
+
+  // 从suggestions中删除指定的饮料名称
+  const handleRemoveBeverage = (value: string) => {
+    // 不能删除预设饮料
+    if (PRESET_BEVERAGES.includes(value)) {
+      return;
+    }
+    
+    try {
+      // 从localStorage中读取用户自定义饮料
+      const savedSuggestions = localStorage.getItem('userBeverageSuggestions');
+      if (savedSuggestions) {
+        const userBeverages = JSON.parse(savedSuggestions) as string[];
+        // 过滤掉要删除的饮料
+        const updatedBeverages = userBeverages.filter(item => item !== value);
+        // 保存回localStorage
+        localStorage.setItem('userBeverageSuggestions', JSON.stringify(updatedBeverages));
+        
+        // 更新本地状态
+        const newSuggestions = beverageSuggestions.filter(item => item !== value);
+        setBeverageSuggestions(newSuggestions);
+      }
+    } catch (error) {
+      console.error('删除饮料名称失败:', error);
+    }
+  };
+  
+  // 判断是否为自定义饮料（可删除）
+  const isCustomBeverage = (value: string) => {
+    return !PRESET_BEVERAGES.includes(value);
+  };
+
+  // 格式化意式咖啡的总水量，显示为各阶段的累加
+  const formatEspressoTotalWater = () => {
+    if (!stages || stages.length === 0) return "0g";
+    
+    // 收集不同类型的水量信息，按espressoPourType分类合并
+    const waterByTypeMap: Record<string, { label: string; water: number; count: number }> = {};
+    
+    stages.forEach(stage => {
+      if (!stage.water) return;
+      
+      const waterValue = typeof stage.water === 'number' 
+        ? stage.water 
+        : parseInt(stage.water.toString().replace('g', '') || '0');
+      
+      if (waterValue <= 0) return;
+      
+      // 使用espressoPourType作为分组键
+      const type = stage.espressoPourType || stage.pourType || 'other';
+      
+      // 获取显示的标签
+      const displayLabel = stage.espressoPourType === 'extraction' ? '萃取' : 
+                          stage.espressoPourType === 'beverage' ? stage.label || '饮料' : 
+                          stage.label || '其他';
+      
+      // 如果该类型已存在，则累加水量
+      if (waterByTypeMap[type]) {
+        waterByTypeMap[type].water += waterValue;
+        waterByTypeMap[type].count += 1;
+        // 如果是饮料类型且有不同的标签，更新标签
+        if (type === 'beverage' && waterByTypeMap[type].label !== displayLabel) {
+          waterByTypeMap[type].label = '饮料';  // 简化为通用标签
+        }
+      } else {
+        // 否则创建新条目
+        waterByTypeMap[type] = {
+          label: displayLabel,
+          water: waterValue,
+          count: 1
+        };
+      }
+    });
+    
+    // 将Map转换为数组
+    const waterItems = Object.values(waterByTypeMap);
+    
+    // 如果没有有效数据，返回零
+    if (waterItems.length === 0) return "0g";
+    
+    // 构建显示字符串：水量g(标签) + 水量g(标签) + ...
+    return waterItems.map(item => {
+      // 如果同类型有多个且标签不是简单的'萃取'/'饮料'，则添加数量
+      const countSuffix = item.count > 1 ? `×${item.count}` : '';
+      return `${item.water}g(${item.label}${countSuffix})`;
+    }).join(' + ');
+  };
 
   return (
     <motion.div
@@ -97,11 +224,20 @@ const StagesStep: React.FC<StagesStepProps> = ({
         </div>
 
         <div className="flex justify-between text-xs text-neutral-500 dark:text-neutral-400">
-          <div>
+          <div className="flex-shrink-0">
             总时间: {formatTime(calculateTotalTime())}
           </div>
-          <div>
-            总水量: {calculateCurrentWater()}g / {parseInt(totalWater)}g
+          <div className={`${isEspressoMachine(customEquipment) ? 'flex-1 ml-4 text-right truncate relative group' : 'flex-shrink-0'}`}>
+            <span className="truncate">总水量: {isEspressoMachine(customEquipment) 
+                  ? formatEspressoTotalWater() 
+                  : `${calculateCurrentWater()}g / ${parseInt(totalWater)}g`}</span>
+            
+            {/* 当水量文本溢出时显示的提示框 */}
+            {isEspressoMachine(customEquipment) && (
+              <div className="absolute right-0 -bottom-8 hidden group-hover:block z-20 bg-white dark:bg-neutral-800 py-1 px-2 rounded shadow-md text-xs">
+                {formatEspressoTotalWater()}
+              </div>
+            )}
           </div>
         </div>
 
@@ -238,13 +374,26 @@ const StagesStep: React.FC<StagesStepProps> = ({
                         {stage.valveStatus === 'open' ? '[开阀]' : '[关阀]'}
                       </button>
                     )}
-                    <input
-                      type="text"
-                      value={stage.label}
-                      onChange={(e) => onStageChange(index, 'label', e.target.value)}
-                      placeholder="请输入步骤名称"
-                      className={`w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400 ${customEquipment.hasValve ? 'pl-12' : ''}`}
-                    />
+                    {/* 只有意式机的饮料类型步骤才使用AutocompleteInput */}
+                    {isEspressoMachine(customEquipment) && stage.espressoPourType === 'beverage' ? (
+                      <AutocompleteInput
+                        value={stage.label}
+                        onChange={(value) => handleBeverageChange(index, value)}
+                        suggestions={beverageSuggestions}
+                        placeholder="请选择或输入饮料名称"
+                        className={`w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400 ${customEquipment.hasValve ? 'pl-12' : ''}`}
+                        onRemovePreset={handleRemoveBeverage}
+                        isCustomPreset={isCustomBeverage}
+                      />
+                    ) : (
+                      <input
+                        type="text"
+                        value={stage.label}
+                        onChange={(e) => onStageChange(index, 'label', e.target.value)}
+                        placeholder="请输入步骤名称"
+                        className={`w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400 ${customEquipment.hasValve ? 'pl-12' : ''}`}
+                      />
+                    )}
                   </div>
                 </div>
               </div>
@@ -555,7 +704,7 @@ const StagesStep: React.FC<StagesStepProps> = ({
 
               {/* 意式机 - 饮料类型 */}
               {isEspressoMachine(customEquipment) && stage.espressoPourType === 'beverage' && (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4">
                   <div className="space-y-2">
                     <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400 flex items-center">
                       水量

@@ -551,6 +551,38 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
             });
         }
 
+        // 保存意式机饮料名称到localStorage
+        if (isEspressoMachine(customEquipment)) {
+            try {
+                // 获取所有饮料类型步骤的饮料名称
+                const beverageNames = finalMethod.params.stages
+                    .filter(stage => stage.espressoPourType === 'beverage')
+                    .map(stage => stage.label)
+                    .filter(label => label.trim() !== ''); // 排除空名称
+                
+                if (beverageNames.length > 0) {
+                    // 从localStorage读取已保存的饮料名称
+                    const savedSuggestions = localStorage.getItem('userBeverageSuggestions');
+                    let userBeverages: string[] = [];
+                    
+                    if (savedSuggestions) {
+                        userBeverages = JSON.parse(savedSuggestions);
+                    }
+                    
+                    // 添加新的饮料名称，去重
+                    const uniqueBeverages = Array.from(
+                        new Set([...userBeverages, ...beverageNames])
+                    );
+                    
+                    // 保存回localStorage
+                    localStorage.setItem('userBeverageSuggestions', JSON.stringify(uniqueBeverages));
+                }
+            } catch (error) {
+                console.error('保存饮料名称失败:', error);
+                // 继续执行，不影响主要功能
+            }
+        }
+
         try {
             // 保存方法
             onSave(finalMethod);
