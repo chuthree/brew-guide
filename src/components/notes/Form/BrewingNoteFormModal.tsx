@@ -50,6 +50,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
     methodType,
     selectedMethod,
     availableMethods,
+    customMethods,
     handleMethodTypeChange,
     setSelectedMethod
   } = useMethodManagement({
@@ -289,10 +290,9 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
       content: (
         <MethodSelector
           selectedEquipment={selectedEquipment}
-          methodType={methodType}
           selectedMethod={selectedMethod}
-          availableMethods={availableMethods}
-          onMethodTypeChange={handleMethodTypeChange}
+          customMethods={methodType === 'custom' ? availableMethods : customMethods}
+          commonMethods={methodType === 'common' ? availableMethods : []}
           onMethodSelect={setSelectedMethod}
           onParamsChange={handleMethodParamsChange}
         />

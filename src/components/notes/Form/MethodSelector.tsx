@@ -5,20 +5,18 @@ import { Method } from '@/lib/core/config'
 
 interface MethodSelectorProps {
   selectedEquipment: string
-  methodType: 'common' | 'custom'
   selectedMethod: string
-  availableMethods: Method[]
-  onMethodTypeChange: (type: 'common' | 'custom') => void
+  customMethods: Method[]
+  commonMethods: Method[]
   onMethodSelect: (methodId: string) => void
   onParamsChange: (method: Method) => void
 }
 
 const MethodSelector: React.FC<MethodSelectorProps> = ({
   selectedEquipment,
-  methodType,
   selectedMethod,
-  availableMethods,
-  onMethodTypeChange,
+  customMethods,
+  commonMethods,
   onMethodSelect,
   onParamsChange
 }) => {
@@ -115,10 +113,10 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
 
   // 当选择的方法变化时，初始化参数
   useEffect(() => {
-    if (selectedMethod && availableMethods.length > 0) {
-      const method = availableMethods.find(m => 
-        methodType === 'common' ? m.name === selectedMethod : (m.id === selectedMethod || m.name === selectedMethod)
-      )
+    if (selectedMethod) {
+      // 在所有方案中查找选中的方案
+      const allMethods = [...customMethods, ...commonMethods];
+      const method = allMethods.find(m => m.id === selectedMethod || m.name === selectedMethod);
       
       if (method) {
         // 提取参数到本地状态
@@ -133,7 +131,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
         setTempValue(temp)
       }
     }
-  }, [selectedMethod, availableMethods, methodType])
+  }, [selectedMethod, customMethods, commonMethods])
 
   // 辅助函数：提取数字部分
   function extractNumber(str: string): string {
@@ -149,165 +147,150 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
 
   // 判断方法是否选中
   const isMethodSelected = (method: Method) => {
-    return (methodType === 'common' && selectedMethod === method.name) ||
-      (methodType === 'custom' && (selectedMethod === method.id || selectedMethod === method.name));
+    return selectedMethod === method.id || selectedMethod === method.name;
   }
+
+  // 创建分隔符
+  const divider = (customMethods.length > 0 && commonMethods.length > 0) ? (
+    <div className="py-3 flex items-center">
+      <div className="flex-grow h-px bg-neutral-200 dark:bg-neutral-800"></div>
+      <span className="px-2 text-xs text-neutral-500 dark:text-neutral-400">通用方案</span>
+      <div className="flex-grow h-px bg-neutral-200 dark:bg-neutral-800"></div>
+    </div>
+  ) : null;
+
+  // 渲染单个方案
+  const renderMethod = (method: Method, isCustom: boolean) => {
+    const isSelected = isMethodSelected(method);
+    
+    return (
+      <div
+        key={isCustom ? (method.id || method.name) : method.name}
+        className="group relative text-neutral-500 dark:text-neutral-400"
+      >
+        <div 
+          className={`group relative border-l ${isSelected ? 'border-neutral-800 dark:border-white' : 'border-neutral-200 dark:border-neutral-800'} pl-6 cursor-pointer`}
+          onClick={() => onMethodSelect(isCustom ? (method.id || method.name) : method.name)}
+        >
+          {isSelected && (
+            <div className="absolute -left-px top-0 h-full w-px bg-neutral-800 dark:bg-white"></div>
+          )}
+          <div className="flex items-baseline justify-between">
+            <div className="flex items-baseline gap-3 min-w-0 overflow-hidden">
+              <h3 className={`text-xs ${isSelected ? 'font-medium' : 'font-normal'} tracking-wider truncate`}>
+                {method.name}
+              </h3>
+            </div>
+          </div>
+          
+          {!isSelected && (
+            <div className="mt-1.5 space-y-0.5">
+              <div className="flex items-center">
+                <span className="text-xs font-light w-14">咖啡粉:</span>
+                <span className="text-xs font-light">{method.params.coffee}</span>
+              </div>
+              <div className="flex items-center">
+                <span className="text-xs font-light w-14">水量:</span>
+                <span className="text-xs font-light">{method.params.water}</span>
+              </div>
+              <div className="flex items-center">
+                <span className="text-xs font-light w-14">粉水比:</span>
+                <span className="text-xs font-light">{method.params.ratio}</span>
+              </div>
+              <div className="flex items-center">
+                <span className="text-xs font-light w-14">研磨度:</span>
+                <span className="text-xs font-light">{method.params.grindSize}</span>
+              </div>
+            </div>
+          )}
+          
+          {isSelected && (
+            <div className="mt-2 pt-2 border-t border-dashed border-neutral-200 dark:border-neutral-700" onClick={(e) => e.stopPropagation()}>
+              <div className="space-y-2">
+                {/* 咖啡粉量 */}
+                <div className="flex items-center">
+                  <label className="text-xs text-neutral-600 dark:text-neutral-400 w-14">咖啡粉:</label>
+                  <div className="w-20 flex justify-end">
+                    <input
+                      type="text"
+                      value={coffeeAmount}
+                      onChange={(e) => handleCoffeeAmountChange(e.target.value, method)}
+                      className="w-12 py-0.5 px-1 border border-neutral-300 dark:border-neutral-700 rounded bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100 text-right text-xs focus:outline-none focus:ring-1 focus:ring-neutral-500"
+                      placeholder="15"
+                    />
+                    <span className="ml-0.5 text-xs text-neutral-600 dark:text-neutral-400">g</span>
+                  </div>
+                </div>
+                
+                {/* 水量 - 不可编辑，仅显示计算结果 */}
+                <div className="flex items-center">
+                  <label className="text-xs text-neutral-600 dark:text-neutral-400 w-14">水量:</label>
+                  <div className="w-20 flex justify-end">
+                    <span className="text-xs text-neutral-700 dark:text-neutral-300">{waterAmount}</span>
+                  </div>
+                </div>
+                
+                {/* 粉水比 */}
+                <div className="flex items-center">
+                  <label className="text-xs text-neutral-600 dark:text-neutral-400 w-14">粉水比:</label>
+                  <div className="w-20 flex justify-end items-center">
+                    <span className="mr-0.5 text-xs text-neutral-600 dark:text-neutral-400">1:</span>
+                    <input
+                      type="text"
+                      value={ratioAmount}
+                      onChange={(e) => handleRatioAmountChange(e.target.value, method)}
+                      className="w-10 py-0.5 px-1 border border-neutral-300 dark:border-neutral-700 rounded bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100 text-right text-xs focus:outline-none focus:ring-1 focus:ring-neutral-500"
+                      placeholder="15"
+                    />
+                  </div>
+                </div>
+                
+                {/* 研磨度 */}
+                <div className="flex items-center">
+                  <label className="text-xs text-neutral-600 dark:text-neutral-400 w-14">研磨度:</label>
+                  <div className="w-20 flex justify-end">
+                    <input
+                      type="text"
+                      value={grindSize}
+                      onChange={(e) => handleGrindSizeChange(e.target.value, method)}
+                      className="w-16 py-0.5 px-1 border border-neutral-300 dark:border-neutral-700 rounded bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100 text-right text-xs focus:outline-none focus:ring-1 focus:ring-neutral-500"
+                      placeholder="中细"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="py-3">
-      {/* 方案类型选择器 */}
-      <div className="flex justify-start items-center mb-3 border-b border-neutral-200 dark:border-neutral-800 pb-2">
-        <button
-          onClick={() => onMethodTypeChange('common')}
-          className={`text-xs transition-colors ${methodType === 'common'
-            ? 'text-neutral-800 dark:text-neutral-100 font-medium'
-            : 'text-neutral-500 dark:text-neutral-400'
-            }`}
-        >
-          通用方案
-        </button>
-        <span className="mx-3 text-neutral-300 dark:text-neutral-600 text-xs">|</span>
-        <button
-          onClick={() => onMethodTypeChange('custom')}
-          className={`text-xs transition-colors ${methodType === 'custom'
-            ? 'text-neutral-800 dark:text-neutral-100 font-medium'
-            : 'text-neutral-500 dark:text-neutral-400'
-            }`}
-        >
-          自定义方案
-        </button>
-      </div>
-
       <div>
         <label className="text-xs font-medium text-neutral-800 dark:text-neutral-200 mb-6 block">
-          选择{methodType === 'common' ? '通用' : '自定义'}冲煮方案
+          选择冲煮方案
         </label>
         {selectedEquipment ? (
           <div className="space-y-5">
-            {availableMethods.length > 0 ? (
-              availableMethods.map((method) => {
-                const isSelected = isMethodSelected(method);
-                
-                // 准备方法参数信息列表
-                const items = [];
-                items.push(`咖啡粉量 ${method.params.coffee}`);
-                items.push(`水量 ${method.params.water}`);
-                items.push(`粉水比 ${method.params.ratio}`);
-                items.push(`研磨度 ${method.params.grindSize}`);
-                items.push(`水温 ${method.params.temp}`);
-                
-                return (
-                <div
-                  key={methodType === 'common' ? method.name : (method.id || method.name)}
-                  className="group relative text-neutral-500 dark:text-neutral-400"
-                >
-                  <div 
-                    className={`group relative border-l ${isSelected ? 'border-neutral-800 dark:border-white' : 'border-neutral-200 dark:border-neutral-800'} pl-6 cursor-pointer`}
-                  >
-                    {isSelected && (
-                      <div className="absolute -left-px top-0 h-full w-px bg-neutral-800 dark:bg-white"></div>
-                    )}
-                    <div className="cursor-pointer" onClick={() => onMethodSelect(methodType === 'common' ? method.name : (method.id || method.name))}>
-                      <div className="flex items-baseline justify-between">
-                        <div className="flex items-baseline gap-3 min-w-0 overflow-hidden">
-                          <h3 className="text-xs font-normal tracking-wider truncate">
-                            {method.name}
-                          </h3>
-                        </div>
-                      </div>
-                      <div className="mt-2">
-                        <ul className="space-y-1">
-                          {items.map((item, i) => (
-                            <li key={i} className="text-xs font-light">
-                              {item}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
-                    
-                    {isSelected && (
-                      <div 
-                        className="mt-4 pt-3 border-t border-neutral-200 dark:border-neutral-700"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <div className="text-xs font-medium mb-3 text-neutral-700 dark:text-neutral-300">
-                          调整参数
-                        </div>
-                        <div className="space-y-3">
-                          {/* 咖啡粉量 */}
-                          <div className="flex items-center justify-between">
-                            <label className="text-xs text-neutral-600 dark:text-neutral-400">咖啡粉量</label>
-                            <div className="flex items-center">
-                              <input
-                                type="text"
-                                value={coffeeAmount}
-                                onChange={(e) => handleCoffeeAmountChange(e.target.value, method)}
-                                className="w-16 py-1 px-2 border border-neutral-300 dark:border-neutral-700 rounded bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100 text-right text-xs"
-                                placeholder="15"
-                              />
-                              <span className="ml-1 text-xs text-neutral-600 dark:text-neutral-400">g</span>
-                            </div>
-                          </div>
-                          
-                          {/* 粉水比 */}
-                          <div className="flex items-center justify-between">
-                            <label className="text-xs text-neutral-600 dark:text-neutral-400">粉水比</label>
-                            <div className="flex items-center">
-                              <span className="mr-1 text-xs text-neutral-600 dark:text-neutral-400">1:</span>
-                              <input
-                                type="text"
-                                value={ratioAmount}
-                                onChange={(e) => handleRatioAmountChange(e.target.value, method)}
-                                className="w-16 py-1 px-2 border border-neutral-300 dark:border-neutral-700 rounded bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100 text-right text-xs"
-                                placeholder="15"
-                              />
-                            </div>
-                          </div>
-                          
-                          {/* 研磨度 */}
-                          <div className="flex items-center justify-between">
-                            <label className="text-xs text-neutral-600 dark:text-neutral-400">研磨度</label>
-                            <div className="flex items-center">
-                              <input
-                                type="text"
-                                value={grindSize}
-                                onChange={(e) => handleGrindSizeChange(e.target.value, method)}
-                                className="w-24 py-1 px-2 border border-neutral-300 dark:border-neutral-700 rounded bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100 text-right text-xs"
-                                placeholder="中细"
-                              />
-                            </div>
-                          </div>
-                          
-                          {/* 水温 */}
-                          <div className="flex items-center justify-between">
-                            <label className="text-xs text-neutral-600 dark:text-neutral-400">水温</label>
-                            <div className="flex items-center">
-                              <input
-                                type="text"
-                                value={tempValue}
-                                onChange={(e) => handleTempChange(e.target.value, method)}
-                                className="w-16 py-1 px-2 border border-neutral-300 dark:border-neutral-700 rounded bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100 text-right text-xs"
-                                placeholder="92"
-                              />
-                              <span className="ml-1 text-xs text-neutral-600 dark:text-neutral-400">°C</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="mt-2 flex items-center gap-1 text-xs text-neutral-500 dark:text-neutral-400">
-                          <span>计算出的水量:</span>
-                          <span className="font-medium">{waterAmount}</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                )
-              })
+            {/* 自定义方案 */}
+            {customMethods.length > 0 && (
+              customMethods.map((method) => renderMethod(method, true))
+            )}
+            
+            {/* 分隔符 */}
+            {divider}
+            
+            {/* 通用方案 */}
+            {commonMethods.length > 0 ? (
+              commonMethods.map((method) => renderMethod(method, false))
             ) : (
-              <div className="text-xs text-neutral-500 dark:text-neutral-400 border-l border-neutral-200 dark:border-neutral-800 pl-6">
-                {methodType === 'common' ? '没有可用的通用冲煮方案' : '没有可用的自定义冲煮方案'}
-              </div>
+              !customMethods.length && (
+                <div className="text-xs text-neutral-500 dark:text-neutral-400 border-l border-neutral-200 dark:border-neutral-800 pl-6">
+                  没有可用的冲煮方案
+                </div>
+              )
             )}
           </div>
         ) : (
