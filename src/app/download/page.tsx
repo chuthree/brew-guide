@@ -208,7 +208,7 @@ export default function DownloadPage(): React.ReactNode {
                                 </div>
                                 
                                 <div>
-                                    <p className="font-medium">v1.2.4.6（最新版本）</p>
+                                    <p className="font-medium">v1.2.4.7（最新版本）</p>
                                     <p className="text-xs text-neutral-500 mt-1">2025-05-12</p>
                                     <ul className="mt-2 text-xs text-neutral-500 list-disc pl-4 space-y-1">
                                         <li>新增随机选择咖啡豆功能 "今天喝什么豆子"</li>
