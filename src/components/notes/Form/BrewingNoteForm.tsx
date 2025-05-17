@@ -268,7 +268,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
             
         // 只有当咖啡豆信息真的变化时，才更新表单数据
         if (hasCoffeeBeanChanged || hasCoffeeBeanInfoChanged) {
-            let updatedCoffeeBeanInfo = currentCoffeeBean
+            const updatedCoffeeBeanInfo = currentCoffeeBean
                 ? {
                     name: currentCoffeeBean.name || '',
                     roastLevel: normalizeRoastLevel(currentCoffeeBean.roastLevel || '中度烘焙'),

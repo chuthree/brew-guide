@@ -1074,7 +1074,7 @@ function parseMethodText(text: string, customEquipment?: CustomEquipment): Metho
 					const water = stageMatch[6].trim();
 
 					// 创建步骤对象
-					let stage: ParsedStage = {
+					const stage: ParsedStage = {
 						time,
 						label,
 						water,

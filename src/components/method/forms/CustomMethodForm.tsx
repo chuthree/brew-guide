@@ -159,7 +159,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     }
 
     // 手冲类型 - 获取默认注水方式
-    let defaultPourType = getDefaultPourType(customEquipment);
+    const defaultPourType = getDefaultPourType(customEquipment);
     
     // 创建初始步骤
     const initialStage: Stage = {
@@ -713,7 +713,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         const liquid = parseFloat(liquidWeight.replace('g', ''));
         
         // 计算比值
-        let ratio = liquid / coffee;
+        const ratio = liquid / coffee;
         // 如果比值是整数，则不显示小数点
         const newRatio = coffee > 0 ? `1:${Number.isInteger(ratio) ? ratio.toString() : ratio.toFixed(1)}` : method.params.ratio;
 
