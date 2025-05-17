@@ -21,7 +21,6 @@ interface BrewingNoteFormModalProps {
   }
   onSave: (note: BrewingNoteData) => void
   onClose: () => void
-  skipToLastStep?: boolean
   onSaveSuccess?: () => void
 }
 
@@ -30,7 +29,6 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
   initialNote,
   onSave,
   onClose,
-  skipToLastStep = false,
   onSaveSuccess
 }) => {
   // 咖啡豆状态
@@ -74,14 +72,10 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
       CoffeeBeanManager.getAllBeans()
         .then(beans => {
           setCoffeeBeans(beans)
-          // 如果没有咖啡豆，自动跳过咖啡豆步骤
-          if (beans.length === 0 && currentStep === 0) {
-            setCurrentStep(1)
-          }
         })
         .catch(error => console.error('加载咖啡豆失败:', error))
     }
-  }, [showForm, currentStep])
+  }, [showForm])
 
   // 加载自定义器具列表
   useEffect(() => {
@@ -96,15 +90,17 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
   const handleEquipmentSelect = (equipmentId: string) => {
     if (equipmentId === selectedEquipment) return
     setSelectedEquipment(equipmentId)
-    // 选择器具后自动进入下一步
-    setCurrentStep(2)
+    // 选择器具后自动前进到下一步
+    const nextStep = currentStep + 1
+    setCurrentStep(nextStep)
   }
 
   // 处理咖啡豆选择
   const handleCoffeeBeanSelect = (bean: CoffeeBean | null) => {
     setSelectedCoffeeBean(bean)
-    // 选择咖啡豆后自动进入下一步（无论是选择豆子还是不选择都跳转）
-    setCurrentStep(1)
+    // 选择咖啡豆后自动前进到下一步
+    const nextStep = currentStep + 1
+    setCurrentStep(nextStep)
   }
   
   // 打开随机选择器
@@ -115,8 +111,9 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
   // 处理随机选择咖啡豆
   const handleRandomBeanSelect = (bean: CoffeeBean) => {
     setSelectedCoffeeBean(bean)
-    // 选择咖啡豆后自动进入下一步
-    setCurrentStep(1)
+    // 选择随机咖啡豆后自动前进到下一步
+    const nextStep = currentStep + 1
+    setCurrentStep(nextStep)
   }
 
   // 处理方法参数变化
@@ -260,7 +257,8 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
 
   // 定义步骤
   const steps: Step[] = [
-    {
+    // 只有当有咖啡豆时才添加咖啡豆选择步骤
+    ...(coffeeBeans.length > 0 ? [{
       id: 'coffeeBean',
       label: '选择咖啡豆',
       content: (
@@ -271,7 +269,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
         />
       ),
       isValid: true // 咖啡豆选择为可选
-    },
+    }] : []),
     {
       id: 'equipment',
       label: '选择器具',
@@ -327,11 +325,11 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
         onClose={handleClose}
         onComplete={handleStepComplete}
         steps={steps}
-        initialStep={skipToLastStep ? steps.length - 1 : (coffeeBeans.length === 0 ? 1 : 0)}
+        initialStep={0}
         preserveState={false}
         currentStep={currentStep}
         setCurrentStep={setCurrentStep}
-        onRandomBean={handleOpenRandomPicker} // 添加随机选择器触发函数
+        onRandomBean={handleOpenRandomPicker}
       />
       
       {/* 随机选择器 */}
