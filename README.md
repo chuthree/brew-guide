@@ -62,9 +62,7 @@ bun dev
 
 欢迎加微信交流群～
 
-![CleanShot 2025-05-07 at 21 09 08@2x](https://github.com/user-attachments/assets/02cc7e3d-b8bc-40d0-bde4-fc72c678dfb0)
-
-
+![CleanShot 2025-05-17 at 11 11 00](https://github.com/user-attachments/assets/3462bde1-3f5d-4fed-9f61-600de73bdc1a)
 
 
 
