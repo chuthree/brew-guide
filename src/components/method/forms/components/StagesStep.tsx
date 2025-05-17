@@ -159,7 +159,7 @@ const StagesStep: React.FC<StagesStepProps> = ({
       if (waterValue <= 0) return;
       
       // 获取显示的标签
-      const displayLabel = stage.pourType === 'extraction' ? '萃取' : 
+      const displayLabel = stage.pourType === 'extraction' ? '萃取浓缩' : 
                            stage.label || (stage.pourType === 'beverage' ? '饮料' : '其他');
       
       // 使用完整标签作为键，只有完全相同的标签才会合并
@@ -278,7 +278,7 @@ const StagesStep: React.FC<StagesStepProps> = ({
                     {/* 意式机特有的注水方式 */}
                     {isEspressoMachine(customEquipment) ? (
                       <>
-                        <option value="extraction">萃取</option>
+                        <option value="extraction">萃取浓缩</option>
                         <option value="beverage">饮料</option>
                         <option value="other">其他</option>
                       </>
@@ -354,7 +354,7 @@ const StagesStep: React.FC<StagesStepProps> = ({
                 </div>
                 <div className="col-span-2 space-y-2">
                   <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                    步骤名称
+                    {isEspressoMachine(customEquipment) && stage.pourType === 'beverage' ? '饮料名称' : '步骤名称'}
                   </label>
                   <div className="relative">
                     {customEquipment.hasValve && (

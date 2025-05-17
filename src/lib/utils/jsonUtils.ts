@@ -337,7 +337,7 @@ export function parseMethodFromJson(jsonString: string): Method | null {
 					
 					// 如果是意式咖啡方案，为特定类型的步骤设置特殊属性
 					if (isEspresso) {
-						// 意式咖啡的萃取步骤不需要pourTime
+						// 意式咖啡的萃取浓缩步骤不需要pourTime
 						if (pourType === 'extraction') {
 							// 确保没有pourTime字段
 							delete parsedStage.pourTime;
@@ -350,7 +350,7 @@ export function parseMethodFromJson(jsonString: string): Method | null {
 
 					// 如果是意式咖啡，根据label推断pourType
 					if (isEspresso && !stage.pourType) {
-						// 默认为萃取
+						// 默认为萃取浓缩
 						if (parsedStage.label.includes('饮料')) {
 							parsedStage.pourType = 'beverage';
 						} else {
@@ -695,7 +695,7 @@ export function methodToReadableText(method: Method, customEquipment?: CustomEqu
 					if (stage.pourType === "center") pourTypeName = "中心注水";
 					else if (stage.pourType === "circle") pourTypeName = "绕圈注水";
 					else if (stage.pourType === "ice") pourTypeName = "添加冰块";
-					else if (stage.pourType === "extraction") pourTypeName = "萃取";
+					else if (stage.pourType === "extraction") pourTypeName = "萃取浓缩";
 					else if (stage.pourType === "beverage") pourTypeName = "饮料";
 					else pourTypeName = stage.pourType;
 				}
@@ -1036,7 +1036,7 @@ function parseMethodText(text: string, customEquipment?: CustomEquipment): Metho
 	// 检查是否是意式咖啡方案 - 改进判断逻辑
 	const isEspresso = text.includes("器具类型: 意式咖啡机") || 
 	                   customEquipment?.animationType === 'espresso' ||
-	                   text.includes("[萃取]") ||
+	                   text.includes("[萃取浓缩]") ||
 	                   text.includes("[extraction]") ||
 	                   text.includes("[beverage]");
 
@@ -1096,7 +1096,7 @@ function parseMethodText(text: string, customEquipment?: CustomEquipment): Metho
 							stage.pourType = "circle";
 						} else if (pourTypeText === "添加冰块") {
 							stage.pourType = "ice";
-						} else if (pourTypeText === "萃取") {
+						} else if (pourTypeText === "萃取浓缩") {
 							stage.pourType = "extraction";
 						} else if (pourTypeText === "饮料") {
 							stage.pourType = "beverage";

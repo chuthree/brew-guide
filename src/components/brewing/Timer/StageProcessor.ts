@@ -28,7 +28,7 @@ export const createExpandedStages = (stages: Stage[] | undefined): ExpandedStage
     extractionStages.forEach((stage, index) => {
       expandedStages.push({
         type: "pour", // 萃取步骤标记为pour类型
-        label: stage.label || `萃取`,
+        label: stage.label || `萃取浓缩`,
         startTime: 0, // 萃取始终从0开始
         endTime: stage.time || 25, // 使用设定时间，默认25秒
         time: stage.time || 25, // 阶段持续时间
@@ -45,13 +45,13 @@ export const createExpandedStages = (stages: Stage[] | undefined): ExpandedStage
       // 尝试找出一个萃取步骤，如果没有则使用第一个步骤
       const extractionStage = stages.find(stage => 
         stage.pourType === 'extraction' || 
-        stage.label?.toLowerCase().includes('萃取')
+        stage.label?.toLowerCase().includes('萃取浓缩')
       ) || stages[0];
       
       if (extractionStage) {
         expandedStages.push({
           type: "pour",
-          label: extractionStage.label || "萃取",
+          label: extractionStage.label || "萃取浓缩",
           startTime: 0,
           endTime: extractionStage.time || 25,
           time: extractionStage.time || 25,

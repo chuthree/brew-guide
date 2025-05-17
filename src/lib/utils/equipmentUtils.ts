@@ -19,7 +19,7 @@ export const getPourTypeName = (pourType?: string): string => {
   
   switch (pourType) {
     case 'extraction':
-      return '萃取';
+      return '萃取浓缩';
     case 'beverage':
       return '饮料';
     case 'other':
@@ -53,7 +53,7 @@ export const getDefaultPourType = (customEquipment: CustomEquipment): string => 
   // 根据器具类型返回默认注水方式
   switch (customEquipment.animationType) {
     case 'espresso':
-      return 'extraction'; // 意式机默认使用萃取模式
+      return 'extraction'; // 意式机默认使用萃取浓缩模式
     case 'v60':
     case 'origami':
       return 'circle'; // V60和Origami默认使用绕圈注水

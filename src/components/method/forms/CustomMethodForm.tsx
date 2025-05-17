@@ -149,9 +149,9 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
           videoUrl: '',
           stages: [{
             time: 25,
-            label: '萃取',
+            label: '萃取浓缩',
             water: '36g',
-            detail: '标准意式萃取',
+            detail: '标准意式浓缩',
             pourType: 'extraction'
           }],
         },
@@ -330,7 +330,18 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     if (currentStep === 'name' && inputRef.current) {
       inputRef.current.focus();
     }
-    }, [currentStep]);
+  }, [currentStep]);
+  
+  // 监听器具变化，重新初始化方法
+  useEffect(() => {
+    // 忽略初始加载时的处理（已在初始 state 中处理）
+    // 或者已经有初始方案的情况（编辑现有方案）
+    if (initialMethod) return;
+    
+    // 重新初始化方法
+    setMethod(initializeNewMethod());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customEquipment.animationType, customEquipment.hasValve, customEquipment.customPourAnimations, initialMethod]); // 监听器具相关属性的变化
   
   // ===== 数据计算函数 =====
   
@@ -462,9 +473,14 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         // 创建新阶段
             const newStage: Stage = {
             time: defaultTime,
-            label: isEspresso ? getPourTypeName(defaultPourType) : '',
+            // 当是意式机且为饮料类型时，不自动设置标签名称，留空让用户自行填写
+            // 非意式机则使用默认的步骤名称
+            label: isEspresso 
+                ? (defaultPourType === 'beverage' ? '' : getPourTypeName(defaultPourType)) 
+                : getDefaultStageLabel(defaultPourType),
                 water: '',
-                detail: '',
+                // 非意式机设置默认的详细说明
+                detail: isEspresso ? '' : getDefaultStageDetail(defaultPourType),
             pourType: defaultPourType,
         };
         
@@ -742,76 +758,122 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         
         // 对于意式机的特殊处理
         if (isEspresso) {
-        // 获取注水方式的显示名称
-        const pourTypeName = getPourTypeName(value);
-        
-        // 根据不同的注水方式处理默认值
-        switch (value) {
-            case 'extraction':
-                // 萃取模式，需要时间和液重
-                if (!stage.label || stage.label === '饮料' || stage.label === '') {
-                    stage.label = pourTypeName;
-                }
-                // 确保有时间字段，萃取模式需要
-                if (!stage.time) {
-                    stage.time = 25;
-                }
-                break;
-            case 'beverage':
+            // 获取注水方式的显示名称
+            const pourTypeName = getPourTypeName(value);
+            
+            // 获取所有可能的默认注水方式标签
+            const allDefaultLabels = ['萃取浓缩', '饮料', '其他', ''];
+            
+            // 检查当前标签是否与任何默认标签匹配，或者是否为特定切换场景（从饮料切换到萃取，或从萃取切换到饮料）
+            const isLabelDefault = !stage.label || 
+                                stage.label === '' || 
+                                allDefaultLabels.includes(stage.label) || 
+                                (value === 'extraction' && stage.label === '饮料') || 
+                                (value === 'beverage' && stage.label === '萃取浓缩');
+            
+            // 根据不同的注水方式处理默认值
+            switch (value) {
+                case 'extraction':
+                    // 萃取模式，需要时间和液重
+                    if (isLabelDefault) {
+                        stage.label = pourTypeName;
+                    }
+                    // 确保有时间字段，萃取模式需要
+                    if (!stage.time) {
+                        stage.time = 25;
+                    }
+                    break;
+                case 'beverage':
                     // 饮料模式，只需要名称和液重，不需要时间
-                if (!stage.label || stage.label === '萃取' || stage.label === '') {
-                    stage.label = pourTypeName;
-                }
+                    if (isLabelDefault) {
+                        stage.label = pourTypeName;
+                    }
                     // 饮料阶段不需要时间
-                stage.time = 0;
-                stage.pourTime = undefined;
-                break;
+                    stage.time = 0;
+                    stage.pourTime = undefined;
+                    break;
                 default:
                     // 其他模式，根据实际情况设置
-                    if (!stage.label || stage.label === '') {
+                    if (isLabelDefault) {
                         stage.label = pourTypeName;
                     }
                 break;
-        }
+            }
         }
         // 检查是否选择了自定义注水动画（自定义注水动画的值是ID而不是pourType类型）
         else if (isCustomPreset) {
-        const isCustomAnimation = value !== 'center' && value !== 'circle' && value !== 'ice' && value !== 'other';
-        
-        if (isCustomAnimation) {
-            // 查找对应的自定义注水动画
-            const customAnimation = customEquipment.customPourAnimations?.find(anim => anim.id === value);
+            // 获取所有可能的默认注水方式标签
+            const allDefaultLabels = ['绕圈注水', '中心注水', '添加冰块', '注水', ''];
+            // 获取所有可能的默认注水方式详细信息
+            const allDefaultDetails = ['中心向外缓慢画圈注水，均匀萃取咖啡风味', '中心定点注水，降低萃取率', '添加冰块，降低温度进行冷萃', '注水', ''];
             
-            if (customAnimation) {
-                    // 更新标签和详细信息
-                    if (!stage.label || stage.label === '') {
-                        stage.label = customAnimation.name || getDefaultStageLabel(value);
-                }
-                
-                    if (!stage.detail || stage.detail === '') {
-                        stage.detail = getDefaultStageDetail(value);
-                }
+            // 如果有自定义注水动画，将它们的名称添加到默认标签列表中
+            if (customEquipment.customPourAnimations) {
+                customEquipment.customPourAnimations.forEach(anim => {
+                    if (anim.name) allDefaultLabels.push(anim.name);
+                    if (anim.name) allDefaultDetails.push(`使用${anim.name}注水`);
+                });
             }
-        } else {
+            
+            const isCustomAnimation = value !== 'center' && value !== 'circle' && value !== 'ice' && value !== 'other';
+            
+            // 检查当前标签是否与任何默认标签匹配
+            const isLabelDefault = !stage.label || stage.label === '' || allDefaultLabels.includes(stage.label);
+            // 检查当前详细说明是否与任何默认详细说明匹配
+            const isDetailDefault = !stage.detail || stage.detail === '' || allDefaultDetails.includes(stage.detail);
+            
+            if (isCustomAnimation) {
+                // 查找对应的自定义注水动画
+                const customAnimation = customEquipment.customPourAnimations?.find(anim => anim.id === value);
+                
+                if (customAnimation) {
+                    // 更新标签和详细信息，如果它们是默认值之一或为空
+                    if (isLabelDefault) {
+                        stage.label = customAnimation.name || getDefaultStageLabel(value);
+                    }
+                    
+                    if (isDetailDefault) {
+                        stage.detail = getDefaultStageDetail(value);
+                    }
+                }
+            } else {
                 // 常规注水方式
-                if (!stage.label || stage.label === '') {
+                if (isLabelDefault) {
                     stage.label = getDefaultStageLabel(value);
                 }
                 
-                if (!stage.detail || stage.detail === '') {
+                if (isDetailDefault) {
                     stage.detail = getDefaultStageDetail(value);
                 }
             }
         } 
         // 常规器具处理
         else {
-            // 设置默认标签（如果未设置）
-            if (!stage.label || stage.label === '') {
+            // 获取所有可能的默认注水方式标签
+            const allDefaultLabels = ['绕圈注水', '中心注水', '添加冰块', '注水', ''];
+            // 获取所有可能的默认注水方式详细信息
+            const allDefaultDetails = ['中心向外缓慢画圈注水，均匀萃取咖啡风味', '中心定点注水，降低萃取率', '添加冰块，降低温度进行冷萃', '注水', ''];
+            
+            // 如果有自定义注水动画，将它们的名称添加到默认标签列表中
+            if (customEquipment.customPourAnimations) {
+                customEquipment.customPourAnimations.forEach(anim => {
+                    if (anim.name) allDefaultLabels.push(anim.name);
+                    if (anim.name) allDefaultDetails.push(`使用${anim.name}注水`);
+                });
+            }
+            
+            // 检查当前标签是否与任何默认标签匹配
+            const isLabelDefault = !stage.label || stage.label === '' || allDefaultLabels.includes(stage.label);
+            // 检查当前详细说明是否与任何默认详细说明匹配
+            const isDetailDefault = !stage.detail || stage.detail === '' || allDefaultDetails.includes(stage.detail);
+            
+            // 如果标签是默认值之一或为空，更新它
+            if (isLabelDefault) {
                 stage.label = getDefaultStageLabel(value);
             }
 
-            // 设置默认详细信息（如果未设置）
-            if (!stage.detail || stage.detail === '') {
+            // 如果详细说明是默认值之一或为空，更新它
+            if (isDetailDefault) {
                 stage.detail = getDefaultStageDetail(value);
             }
         }
