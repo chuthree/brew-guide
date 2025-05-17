@@ -316,7 +316,32 @@ interface NavigationBarProps {
     // 添加替代头部内容支持
     alternativeHeader?: React.ReactNode; // 替代的头部内容
     showAlternativeHeader?: boolean; // 是否显示替代头部内容
+    // 添加萃取时间变更处理函数
+    handleExtractionTimeChange?: (time: number) => void;
 }
+
+// 判断是否是意式咖啡方法
+const isEspressoMethod = (method: any): boolean => {
+    if (!method?.params?.stages) return false;
+    return method.params.stages.some((stage: any) => 
+        stage.pourType === 'extraction' || 
+        stage.pourType === 'beverage'
+    );
+};
+
+// 获取意式咖啡的萃取时间（秒）
+const getEspressoExtractionTime = (method: any): number => {
+    if (!method?.params?.stages) return 0;
+    const extractionStage = method.params.stages.find((stage: any) => 
+        stage.pourType === 'extraction'
+    );
+    return extractionStage?.time || 0;
+};
+
+// 格式化时间显示，不再添加"秒"字符
+const formatExtractionTime = (seconds: number): string => {
+    return `${seconds}`;
+};
 
 const NavigationBar: React.FC<NavigationBarProps> = ({
     activeMainTab,
@@ -341,7 +366,8 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
     navigateToStep, // 接收统一的步骤导航函数
     onStepClick, // 接收步骤点击回调
     alternativeHeader, // 接收替代头部内容
-    showAlternativeHeader = false // 默认不显示替代头部内容
+    showAlternativeHeader = false, // 默认不显示替代头部内容
+    handleExtractionTimeChange, // 接收萃取时间变更处理函数
 }) => {
     const t = useTranslations('nav');
 
@@ -619,6 +645,15 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
     // 判断是否应该显示参数栏（仅在选择了器具且当前不是器具步骤时显示）
     const shouldShowParams = parameterInfo.equipment && activeBrewingStep !== 'equipment';
 
+    // 处理萃取时间变更
+    const handleTimeChange = (value: string) => {
+        if (handleExtractionTimeChange && selectedMethod) {
+            // 将字符串转换为数字
+            const time = parseInt(value, 10) || 0;
+            handleExtractionTimeChange(time);
+        }
+    };
+
     return (
         <motion.div
             className="sticky top-0 z-20 pt-safe-top bg-neutral-50/95 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800"
@@ -757,23 +792,24 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                                                 unit="g"
                                                                 className="border-b border-dashed border-neutral-200 dark:border-neutral-700"
                                                             />
-                                                            <span className="flex-shrink-0">·</span>
-                                                            <EditableParameter
-                                                                value={editableParams.ratio.replace('1:', '')}
-                                                                onChange={(v) => handleParamChange('ratio', v)}
-                                                                unit=""
-                                                                prefix="1:"
-                                                                className="border-b border-dashed border-neutral-200 dark:border-neutral-700"
-                                                            />
+                                                            
+                                                            {!isEspressoMethod(selectedMethod) && (
+                                                                // 普通冲煮模式显示水粉比
+                                                                <>
+                                                                    <span className="flex-shrink-0">·</span>
+                                                                    <EditableParameter
+                                                                        value={editableParams.ratio.replace('1:', '')}
+                                                                        onChange={(v) => handleParamChange('ratio', v)}
+                                                                        unit=""
+                                                                        prefix="1:"
+                                                                        className="border-b border-dashed border-neutral-200 dark:border-neutral-700"
+                                                                    />
+                                                                </>
+                                                            )}
+                                                            
                                                             {parameterInfo.params?.grindSize && (
                                                                 <>
                                                                     <span className="flex-shrink-0">·</span>
-                                                                    {/* 
-                                                                      * 研磨度显示和编辑处理：
-                                                                      * - value属性传入转换后的研磨度(formatGrindSize)用于显示
-                                                                      * - 传入isGrindSize=true标记这是研磨度参数
-                                                                      * - originalGrindSize传入原始通用研磨度，用于编辑时显示和提交
-                                                                      */}
                                                                     <EditableParameter
                                                                         value={formatGrindSize(editableParams.grindSize, settings.grindType)}
                                                                         onChange={(v) => handleParamChange('grindSize', v)}
@@ -784,16 +820,38 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                                                     />
                                                                 </>
                                                             )}
-                                                            {parameterInfo.params?.temp && (
+                                                            
+                                                            {isEspressoMethod(selectedMethod) ? (
+                                                                // 意式咖啡模式显示液重和时间
                                                                 <>
                                                                     <span className="flex-shrink-0">·</span>
                                                                     <EditableParameter
-                                                                        value={editableParams.temp.replace('°C', '')}
-                                                                        onChange={(v) => handleParamChange('temp', v)}
-                                                                        unit="°C"
+                                                                        value={formatExtractionTime(getEspressoExtractionTime(selectedMethod))}
+                                                                        onChange={(v) => handleTimeChange(v)}
+                                                                        unit="秒"
+                                                                        className="border-b border-dashed border-neutral-200 dark:border-neutral-700"
+                                                                    />
+                                                                    <span className="flex-shrink-0">·</span>
+                                                                    <EditableParameter
+                                                                        value={editableParams.water.replace('g', '')}
+                                                                        onChange={(v) => handleParamChange('water', v)}
+                                                                        unit="g"
                                                                         className="border-b border-dashed border-neutral-200 dark:border-neutral-700"
                                                                     />
                                                                 </>
+                                                            ) : (
+                                                                // 普通冲煮模式显示水温
+                                                                parameterInfo.params?.temp && (
+                                                                    <>
+                                                                        <span className="flex-shrink-0">·</span>
+                                                                        <EditableParameter
+                                                                            value={editableParams.temp.replace('°C', '')}
+                                                                            onChange={(v) => handleParamChange('temp', v)}
+                                                                            unit="°C"
+                                                                            className="border-b border-dashed border-neutral-200 dark:border-neutral-700"
+                                                                        />
+                                                                    </>
+                                                                )
                                                             )}
                                                         </div>
                                                     ) : (
@@ -811,16 +869,36 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                                                 }
                                                             }}
                                                         >
-                                                            <span className="truncate max-w-[30px] sm:max-w-[40px]">{parameterInfo.params.coffee}</span>
-                                                            <span className="flex-shrink-0">·</span>
-                                                            <span className="whitespace-nowrap">{parameterInfo.params.ratio}</span>
-                                                            <span className="flex-shrink-0">·</span>
-                                                            <span className="whitespace-nowrap">
-                                                                {/* 显示时使用formatGrindSize将通用研磨度转换为特定磨豆机的研磨度 */}
-                                                                {formatGrindSize(parameterInfo.params.grindSize || "", settings.grindType)}
-                                                            </span>
-                                                            <span className="flex-shrink-0">·</span>
-                                                            <span className="whitespace-nowrap">{parameterInfo.params.temp}</span>
+                                                            {isEspressoMethod(selectedMethod) ? (
+                                                                // 意式咖啡参数显示: 研磨度、粉量、萃取时间、液重
+                                                                <>
+                                                                    <span className="whitespace-nowrap">
+                                                                        {formatGrindSize(parameterInfo.params.grindSize || "", settings.grindType)}
+                                                                    </span>
+                                                                    <span className="flex-shrink-0">·</span>
+                                                                    <span className="truncate max-w-[30px] sm:max-w-[40px]">{parameterInfo.params.coffee}</span>
+                                                                    <span className="flex-shrink-0">·</span>
+                                                                    <span className="whitespace-nowrap">
+                                                                        {formatExtractionTime(getEspressoExtractionTime(selectedMethod))}秒
+                                                                    </span>
+                                                                    <span className="flex-shrink-0">·</span>
+                                                                    <span className="whitespace-nowrap">{parameterInfo.params.water}</span>
+                                                                </>
+                                                            ) : (
+                                                                // 普通冲煮参数显示: 粉量、比例、研磨度、水温
+                                                                <>
+                                                                    <span className="truncate max-w-[30px] sm:max-w-[40px]">{parameterInfo.params.coffee}</span>
+                                                                    <span className="flex-shrink-0">·</span>
+                                                                    <span className="whitespace-nowrap">{parameterInfo.params.ratio}</span>
+                                                                    <span className="flex-shrink-0">·</span>
+                                                                    <span className="whitespace-nowrap">
+                                                                        {/* 显示时使用formatGrindSize将通用研磨度转换为特定磨豆机的研磨度 */}
+                                                                        {formatGrindSize(parameterInfo.params.grindSize || "", settings.grindType)}
+                                                                    </span>
+                                                                    <span className="flex-shrink-0">·</span>
+                                                                    <span className="whitespace-nowrap">{parameterInfo.params.temp}</span>
+                                                                </>
+                                                            )}
                                                         </span>
                                                     )}
                                                 </div>

@@ -383,6 +383,42 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         );
     };
 
+    // 处理意式咖啡萃取时间变更
+    const handleExtractionTimeChange = (time: number) => {
+        if (!selectedMethod || !selectedMethod.params.stages) return;
+        
+        // 只处理意式咖啡，查找萃取步骤
+        const isEspresso = selectedMethod.params.stages.some(stage => 
+            stage.pourType === 'extraction' || 
+            stage.pourType === 'beverage'
+        );
+        
+        if (!isEspresso) return;
+        
+        // 创建新的方法对象
+        const updatedMethod = {
+            ...selectedMethod,
+            params: {
+                ...selectedMethod.params,
+                stages: selectedMethod.params.stages.map(stage => {
+                    // 只更新萃取类型的步骤时间
+                    if (stage.pourType === 'extraction') {
+                        return { ...stage, time };
+                    }
+                    return stage;
+                })
+            }
+        };
+        
+        // 更新方法
+        setSelectedMethod(updatedMethod);
+        
+        // 如果在冲煮步骤，同步更新当前冲煮方法
+        if (activeBrewingStep === 'brewing') {
+            setCurrentBrewingMethod(updatedMethod);
+        }
+    };
+
     // 修改标签切换检测逻辑，确保有咖啡豆时始终从咖啡豆步骤开始
     useEffect(() => {
         // 只在activeMainTab为冲煮时执行，避免其他标签页的干扰
@@ -1623,6 +1659,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 selectedEquipment={selectedEquipment}
                 selectedMethod={currentBrewingMethod as any} // 类型断言，强制通过类型检查
                 handleParamChange={handleParamChangeWrapper}
+                handleExtractionTimeChange={handleExtractionTimeChange}
                 setShowHistory={setShowHistory}
                 setActiveTab={setActiveTab}
                 onTitleDoubleClick={handleTitleDoubleClick}
