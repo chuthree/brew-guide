@@ -379,10 +379,10 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         coffeeBeanInfo: coffeeBeanInfo,
         rating: 3, // 默认评分
         taste: {
-          acidity: 3,
-          sweetness: 3,
-          bitterness: 3,
-          body: 3,
+          acidity: 0,
+          sweetness: 0,
+          bitterness: 0,
+          body: 0,
         },
         coffeeBean: null,
       };

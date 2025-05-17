@@ -189,10 +189,10 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
       params: initialNote?.params || params,
       rating: initialNote?.rating || 3,
       taste: initialNote?.taste || {
-        acidity: 3,
-        sweetness: 3,
-        bitterness: 3,
-        body: 3
+        acidity: 0,
+        sweetness: 0,
+        bitterness: 0,
+        body: 0
       },
       notes: initialNote?.notes || '',
       ...(isNewNote ? {} : { id: initialNote?.id })
