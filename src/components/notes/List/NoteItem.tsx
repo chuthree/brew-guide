@@ -305,7 +305,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
 
                 {/* 备注信息 */}
                 {hasNotes && (
-                    <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400 whitespace-pre-line leading-tight">
+                    <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400 whitespace-pre-line leading-tight text-justify">
                         {note.notes}
                     </div>
                 )}
