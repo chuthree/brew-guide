@@ -1,5 +1,6 @@
 import type { Config } from "tailwindcss";
 import safeArea from "tailwindcss-safe-area";
+import animate from "tailwindcss-animate";
 
 const config: Config = {
 	darkMode: 'class',
@@ -27,6 +28,7 @@ const config: Config = {
 	},
 	plugins: [
 		safeArea,
+		animate,
 	],
 	future: {
 		hoverOnlyWhenSupported: true,

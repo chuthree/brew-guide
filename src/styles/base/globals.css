@@ -138,3 +138,120 @@ select:focus,
   font-family: var(--font-timer);
   font-feature-settings: "tnum" on, "lnum" on;
 }
+
+/* 动画效果 */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes zoomIn {
+  from { transform: scale(0.99); }
+  to { transform: scale(1); }
+}
+
+@keyframes zoomOut {
+  from { transform: scale(1); }
+  to { transform: scale(0.99); }
+}
+
+@keyframes slideInFromTop {
+  from { transform: translateY(-0.5rem); }
+  to { transform: translateY(0); }
+}
+
+@keyframes slideOutToTop {
+  from { transform: translateY(0); }
+  to { transform: translateY(-0.5rem); }
+}
+
+@keyframes slideInFromBottom {
+  from { transform: translateY(0.5rem); }
+  to { transform: translateY(0); }
+}
+
+@keyframes slideOutToBottom {
+  from { transform: translateY(0); }
+  to { transform: translateY(0.5rem); }
+}
+
+@keyframes slideInFromLeft {
+  from { transform: translateX(-0.5rem); }
+  to { transform: translateX(0); }
+}
+
+@keyframes slideOutToLeft {
+  from { transform: translateX(0); }
+  to { transform: translateX(-0.5rem); }
+}
+
+@keyframes slideInFromRight {
+  from { transform: translateX(0.5rem); }
+  to { transform: translateX(0); }
+}
+
+@keyframes slideOutToRight {
+  from { transform: translateX(0); }
+  to { transform: translateX(0.5rem); }
+}
+
+.animate-in {
+  animation: fadeIn 150ms ease, zoomIn 150ms ease;
+}
+
+.animate-out {
+  animation: fadeOut 150ms ease, zoomOut 150ms ease;
+}
+
+.fade-in-0 {
+  animation: fadeIn 150ms ease;
+}
+
+.fade-out-0 {
+  animation: fadeOut 150ms ease;
+}
+
+.zoom-in-95 {
+  animation: zoomIn 150ms ease;
+}
+
+.zoom-out-95 {
+  animation: zoomOut 150ms ease;
+}
+
+.slide-in-from-top-2 {
+  animation: slideInFromTop 150ms ease;
+}
+
+.slide-out-to-top-2 {
+  animation: slideOutToTop 150ms ease;
+}
+
+.slide-in-from-bottom-2 {
+  animation: slideInFromBottom 150ms ease;
+}
+
+.slide-out-to-bottom-2 {
+  animation: slideOutToBottom 150ms ease;
+}
+
+.slide-in-from-left-2 {
+  animation: slideInFromLeft 150ms ease;
+}
+
+.slide-out-to-left-2 {
+  animation: slideOutToLeft 150ms ease;
+}
+
+.slide-in-from-right-2 {
+  animation: slideInFromRight 150ms ease;
+}
+
+.slide-out-to-right-2 {
+  animation: slideOutToRight 150ms ease;
+}

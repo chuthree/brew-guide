@@ -5,6 +5,7 @@ import AutocompleteInput from '@/components/common/forms/AutocompleteInput';
 import { ExtendedCoffeeBean } from '../types';
 import { pageVariants, pageTransition } from '../constants';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/coffee-bean/ui/select';
+import { DatePicker } from '@/components/common/ui/DatePicker';
 
 interface BasicInfoProps {
     bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>;
@@ -243,7 +244,7 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
                         onValueChange={(value) => onBeanChange('roastLevel')(value)}
                     >
                         <SelectTrigger 
-                            className="w-full py-2 bg-transparent border-0 border-b border-neutral-300 dark:border-neutral-700 focus-within:border-neutral-800 dark:focus-within:border-neutral-400 shadow-none rounded-none h-auto"
+                            className="w-full py-2 bg-transparent border-0 border-b border-neutral-300 dark:border-neutral-700 focus-within:border-neutral-800 dark:focus-within:border-neutral-400 shadow-none rounded-none h-auto px-0 text-base"
                         >
                             <SelectValue placeholder="选择烘焙度" />
                         </SelectTrigger>
@@ -264,45 +265,17 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
                     <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
                         烘焙日期
                     </label>
-                    <div 
-                        className="relative w-full cursor-pointer"
-                        onClick={() => {
-                            const dateInput = document.getElementById('bean-roast-date');
-                            if (dateInput) {
-                                (dateInput as HTMLInputElement & { showPicker: () => void }).showPicker();
-                            }
+                    <DatePicker
+                        date={bean.roastDate ? new Date(bean.roastDate) : undefined}
+                        onDateChange={(date) => {
+                            // 修复时区问题，使用当地时区的日期
+                            const year = date.getFullYear();
+                            const month = String(date.getMonth() + 1).padStart(2, '0');
+                            const day = String(date.getDate()).padStart(2, '0');
+                            const standardFormat = `${year}-${month}-${day}`;
+                            onBeanChange('roastDate')(standardFormat);
                         }}
-                    >
-                        <div className="w-full py-2 bg-transparent outline-hidden border-b border-neutral-300 dark:border-neutral-700 focus-within:border-neutral-800 dark:focus-within:border-neutral-400">
-                            <div className="flex items-center justify-between">
-                                <span className={`${!bean.roastDate ? 'text-neutral-500' : ''}`}>
-                                    {bean.roastDate ? new Date(bean.roastDate).toLocaleDateString('zh-CN') : '点击选择'}
-                                </span>
-                            </div>
-                        </div>
-                        <input
-                            id="bean-roast-date"
-                            type="date"
-                            value={bean.roastDate || ''}
-                            onChange={(e) => {
-                                // 确保以标准格式 YYYY-MM-DD 保存
-                                const value = e.target.value;
-                                if (value) {
-                                    // 将日期转换为标准格式
-                                    const date = new Date(value);
-                                    if (!isNaN(date.getTime())) {
-                                        const standardFormat = date.toISOString().split('T')[0]; // YYYY-MM-DD 格式
-                                        onBeanChange('roastDate')(standardFormat);
-                                    } else {
-                                        onBeanChange('roastDate')(value);
-                                    }
-                                } else {
-                                    onBeanChange('roastDate')('');
-                                }
-                            }}
-                            className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
-                        />
-                    </div>
+                    />
                 </div>
             </div>
         </motion.div>
