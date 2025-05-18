@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import AutocompleteInput from '@/components/common/forms/AutocompleteInput';
 import { ExtendedCoffeeBean } from '../types';
 import { pageVariants, pageTransition } from '../constants';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/coffee-bean/ui/select';
-import { DatePicker } from '@/components/common/ui/DatePicker';
+import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator } from '@/components/common/ui/input-otp';
+import { REGEXP_ONLY_DIGITS } from 'input-otp';
 
 interface BasicInfoProps {
     bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>;
@@ -22,6 +23,37 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
     editingRemaining,
     validateRemaining,
 }) => {
+    // 处理容量和剩余容量的状态
+    const [capacityValue, setCapacityValue] = useState('');
+    const [remainingValue, setRemainingValue] = useState('');
+    
+    // 初始化和同步容量值
+    useEffect(() => {
+        setCapacityValue(bean.capacity || '');
+        setRemainingValue(editingRemaining !== null ? editingRemaining : (bean.remaining || ''));
+    }, [bean.capacity, bean.remaining, editingRemaining]);
+    
+    // 处理容量变化
+    const handleCapacityChange = (value: string) => {
+        setCapacityValue(value);
+        onBeanChange('capacity')(value);
+        // 如果剩余容量为空或者剩余容量大于总容量，则同步剩余容量
+        if (!remainingValue || (parseFloat(value) < parseFloat(remainingValue))) {
+            setRemainingValue(value);
+            onBeanChange('remaining')(value);
+        }
+    };
+    
+    // 处理剩余容量变化
+    const handleRemainingChange = (value: string) => {
+        // 确保剩余容量不大于总容量
+        if (capacityValue && parseFloat(value) > parseFloat(capacityValue)) {
+            value = capacityValue;
+        }
+        setRemainingValue(value);
+        onBeanChange('remaining')(value);
+    };
+
     // 处理图片选择逻辑 (相册或拍照)
     const handleImageSelect = (source: 'camera' | 'gallery') => {
         try {
@@ -183,41 +215,34 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
             <div className="grid grid-cols-2 gap-6 w-full">
                 <div className="space-y-2">
                     <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                        容量
+                        容量/剩余 (g)
                     </label>
-                    <AutocompleteInput
-                        value={bean.capacity || ''}
-                        onChange={onBeanChange('capacity')}
-                        placeholder="例如：100"
-                        unit="g"
-                        clearable={false}
-                        suggestions={[]}
-                        inputType="tel"
-                        allowDecimal={true}
-                        maxDecimalPlaces={1}
-                    />
+                    <div className="flex items-center justify-start w-full">
+                        <div className="flex items-center border-b border-neutral-300 dark:border-neutral-700 py-2 w-full">
+                            <input
+                                type="number"
+                                inputMode="decimal"
+                                step="0.1"
+                                value={capacityValue}
+                                onChange={(e) => handleCapacityChange(e.target.value)}
+                                placeholder="总量"
+                                className="bg-transparent outline-none w-1/2 text-center"
+                            />
+                            <span className="text-neutral-500 dark:text-neutral-400 px-1">/</span>
+                            <input
+                                type="number"
+                                inputMode="decimal"
+                                step="0.1"
+                                value={remainingValue}
+                                onChange={(e) => handleRemainingChange(e.target.value)}
+                                placeholder="剩余"
+                                className="bg-transparent outline-none w-1/2 text-center"
+                                onBlur={validateRemaining}
+                            />
+                        </div>
+                    </div>
                 </div>
 
-                <div className="space-y-2">
-                    <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                        剩余容量
-                    </label>
-                    <AutocompleteInput
-                        value={editingRemaining !== null ? editingRemaining : (bean.remaining || '')}
-                        onChange={onBeanChange('remaining')}
-                        placeholder="例如：100"
-                        unit="g"
-                        clearable={false}
-                        suggestions={[]}
-                        inputType="tel"
-                        onBlur={validateRemaining}
-                        allowDecimal={true}
-                        maxDecimalPlaces={1}
-                    />
-                </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-6 w-full">
                 <div className="space-y-2">
                     <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
                         价格
@@ -230,11 +255,14 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
                         clearable={false}
                         suggestions={[]}
                         inputType="number"
+                        inputMode="decimal"
                         allowDecimal={true}
                         maxDecimalPlaces={2}
                     />
                 </div>
+            </div>
 
+            <div className="grid grid-cols-2 gap-6 w-full">
                 <div className="space-y-2">
                     <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
                         烘焙度
@@ -265,17 +293,38 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
                     <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
                         烘焙日期
                     </label>
-                    <DatePicker
-                        date={bean.roastDate ? new Date(bean.roastDate) : undefined}
-                        onDateChange={(date) => {
-                            // 修复时区问题，使用当地时区的日期
-                            const year = date.getFullYear();
-                            const month = String(date.getMonth() + 1).padStart(2, '0');
-                            const day = String(date.getDate()).padStart(2, '0');
-                            const standardFormat = `${year}-${month}-${day}`;
-                            onBeanChange('roastDate')(standardFormat);
-                        }}
-                    />
+                    <div className="flex items-center justify-start w-full">
+                        <InputOTP
+                            maxLength={8}
+                            value={bean.roastDate?.replace(/-/g, '') || ''}
+                            onChange={(value) => {
+                                if (value.length === 8) {
+                                    // 格式化为 YYYY-MM-DD
+                                    const year = value.substring(0, 4);
+                                    const month = value.substring(4, 6);
+                                    const day = value.substring(6, 8);
+                                    const formattedDate = `${year}-${month}-${day}`;
+                                    onBeanChange('roastDate')(formattedDate);
+                                } else {
+                                    // 如果不是完整日期，只保存当前输入
+                                    onBeanChange('roastDate')(value ? value : '');
+                                }
+                            }}
+                            pattern={REGEXP_ONLY_DIGITS}
+                            containerClassName="justify-between"
+                        >
+                            <InputOTPSlot index={0} />
+                            <InputOTPSlot index={1} />
+                            <InputOTPSlot index={2} />
+                            <InputOTPSlot index={3} />
+                            <span className="text-neutral-500 dark:text-neutral-400 border-b border-neutral-300 dark:border-neutral-700 h-[40px] flex items-center px-0.5">-</span>
+                            <InputOTPSlot index={4} />
+                            <InputOTPSlot index={5} />
+                            <span className="text-neutral-500 dark:text-neutral-400 border-b border-neutral-300 dark:border-neutral-700 h-[40px] flex items-center px-0.5">-</span>
+                            <InputOTPSlot index={6} />
+                            <InputOTPSlot index={7} />
+                        </InputOTP>
+                    </div>
                 </div>
             </div>
         </motion.div>

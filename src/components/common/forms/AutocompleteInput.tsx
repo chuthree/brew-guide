@@ -18,6 +18,7 @@ interface AutocompleteInputProps {
     onBlur?: () => void
     containerClassName?: string
     inputType?: 'text' | 'number' | 'tel' | 'email' // 新增输入框类型属性
+    inputMode?: 'text' | 'decimal' | 'numeric' | 'tel' | 'search' | 'email' | 'url' // 新增输入模式属性
     disabled?: boolean // 添加禁用属性
     maxValue?: number // 添加最大值属性，用于限制数字输入
     allowDecimal?: boolean // 新增：是否允许小数点输入
@@ -41,6 +42,7 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
     onBlur,
     containerClassName,
     inputType = 'text', // 默认为text类型
+    inputMode, // 输入模式
     disabled = false, // 默认为不禁用
     maxValue,
     allowDecimal = false, // 新增：默认不允许小数点
@@ -299,6 +301,7 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
                     <input
                         ref={inputRef}
                         type={inputType}
+                        inputMode={inputMode || (allowDecimal ? 'decimal' : 'numeric')}
                         value={inputValue}
                         onChange={handleInputChange}
                         onFocus={handleFocus}
