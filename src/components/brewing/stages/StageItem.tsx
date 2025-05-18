@@ -194,7 +194,7 @@ const StageItem: React.FC<StageItemProps> = ({
                     className="relative flex items-center mb-4 cursor-pointer"
                     onClick={handleClick}
                 >
-                    <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
+                    <div className="grow border-t border-neutral-200 dark:border-neutral-800"></div>
                     <button className="flex items-center justify-center mx-3 text-[10px] text-neutral-600 dark:text-neutral-400">
                         {step.dividerText || ''}
                         <svg
@@ -206,7 +206,7 @@ const StageItem: React.FC<StageItemProps> = ({
                             <path d="M6 9L12 15L18 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                     </button>
-                    <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
+                    <div className="grow border-t border-neutral-200 dark:border-neutral-800"></div>
                 </div>
             );
         }

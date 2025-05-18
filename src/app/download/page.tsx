@@ -109,7 +109,7 @@ export default function DownloadPage(): React.ReactNode {
                                         index === images.length - 1 
                                             ? 'w-full' 
                                             : 'w-[85%] mr-[-50px]'
-                                    } flex-shrink-0 snap-start relative`}
+                                    } shrink-0 snap-start relative`}
                                     initial={{ opacity: 0, filter: 'blur(10px)' }}
                                     animate={{ opacity: 1, filter: 'blur(0px)' }}
                                     transition={{ delay: index * 0.1, duration: 0.3 }}
@@ -183,7 +183,7 @@ export default function DownloadPage(): React.ReactNode {
                         exit={{ opacity: 0, scale: 0.98 }}
                         transition={{ duration: 0.3 }}
                     >
-                        <div className="absolute top-0 left-0 w-full h-[120px] bg-gradient-to-b from-neutral-50 dark:from-neutral-900 to-transparent z-[1] pointer-events-none" />
+                        <div className="absolute top-0 left-0 w-full h-[120px] bg-linear-to-b from-neutral-50 dark:from-neutral-900 to-transparent z-1 pointer-events-none" />
                         
                         <div className="w-full h-full overflow-y-auto scrollbar-none relative" 
                              style={{ scrollbarWidth: 'none' }}>
@@ -274,7 +274,7 @@ export default function DownloadPage(): React.ReactNode {
                             </div>
                         </div>
                         
-                        <div className="absolute bottom-0 left-0 w-full h-[120px] bg-gradient-to-t from-neutral-50 dark:from-neutral-900 to-transparent z-[1] pointer-events-none" />
+                        <div className="absolute bottom-0 left-0 w-full h-[120px] bg-linear-to-t from-neutral-50 dark:from-neutral-900 to-transparent z-1 pointer-events-none" />
                     </motion.div>
                 );
             default:

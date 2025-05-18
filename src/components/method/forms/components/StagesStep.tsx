@@ -219,17 +219,17 @@ const StagesStep: React.FC<StagesStepProps> = ({
         </div>
 
         <div className="flex justify-between text-xs text-neutral-500 dark:text-neutral-400">
-          <div className="flex-shrink-0">
+          <div className="shrink-0">
             总时间: {formatTime(calculateTotalTime())}
           </div>
-          <div className={`${isEspressoMachine(customEquipment) ? 'flex-1 ml-4 text-right truncate relative group' : 'flex-shrink-0'}`}>
+          <div className={`${isEspressoMachine(customEquipment) ? 'flex-1 ml-4 text-right truncate relative group' : 'shrink-0'}`}>
             <span className="truncate">总水量: {isEspressoMachine(customEquipment) 
                   ? formatEspressoTotalWater() 
                   : `${calculateCurrentWater()}g / ${parseInt(totalWater)}g`}</span>
             
             {/* 当水量文本溢出时显示的提示框 */}
             {isEspressoMachine(customEquipment) && (
-              <div className="absolute right-0 -bottom-8 hidden group-hover:block z-20 bg-white dark:bg-neutral-800 py-1 px-2 rounded shadow-md text-xs">
+              <div className="absolute right-0 -bottom-8 hidden group-hover:block z-20 bg-white dark:bg-neutral-800 py-1 px-2 rounded-sm shadow-md text-xs">
                 {formatEspressoTotalWater()}
               </div>
             )}
@@ -237,7 +237,7 @@ const StagesStep: React.FC<StagesStepProps> = ({
         </div>
 
         {/* 顶部渐变阴影 - 作为导航的伪元素 */}
-        <div className="absolute mt-[72px] left-0 right-0 h-12 -bottom-12 bg-gradient-to-b from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none"></div>
+        <div className="absolute mt-[72px] left-0 right-0 h-12 -bottom-12 bg-linear-to-b from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none"></div>
       </div>
 
       {/* 步骤内容 */}
@@ -272,7 +272,7 @@ const StagesStep: React.FC<StagesStepProps> = ({
                   <select
                     value={stage.pourType}
                     onChange={(e) => onPourTypeChange(index, e.target.value)}
-                    className={`w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400 appearance-none ${!stage.pourType ? 'text-neutral-500 dark:text-neutral-400' : ''}`}
+                    className={`w-full py-2 bg-transparent outline-hidden border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400 appearance-none ${!stage.pourType ? 'text-neutral-500 dark:text-neutral-400' : ''}`}
                   >
                     <option value="" disabled>请选择注水方式</option>
                     {/* 意式机特有的注水方式 */}
@@ -361,7 +361,7 @@ const StagesStep: React.FC<StagesStepProps> = ({
                       <button
                         type="button"
                         onClick={() => toggleValveStatus(index)}
-                        className={`absolute left-0 bottom-2 px-2 py-1 text-xs rounded ${stage.valveStatus === 'open'
+                        className={`absolute left-0 bottom-2 px-2 py-1 text-xs rounded-sm ${stage.valveStatus === 'open'
                           ? 'text-green-600 dark:text-green-400'
                           : 'text-red-600 dark:text-red-400'
                           }`}
@@ -376,7 +376,7 @@ const StagesStep: React.FC<StagesStepProps> = ({
                         onChange={(value) => handleBeverageChange(index, value)}
                         suggestions={beverageSuggestions}
                         placeholder="请选择或输入饮料名称"
-                        className={`w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400 ${customEquipment.hasValve ? 'pl-12' : ''}`}
+                        className={`w-full py-2 bg-transparent outline-hidden border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400 ${customEquipment.hasValve ? 'pl-12' : ''}`}
                         onRemovePreset={handleRemoveBeverage}
                         isCustomPreset={isCustomBeverage}
                       />
@@ -386,7 +386,7 @@ const StagesStep: React.FC<StagesStepProps> = ({
                         value={stage.label}
                         onChange={(e) => onStageChange(index, 'label', e.target.value)}
                         placeholder="请输入步骤名称"
-                        className={`w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400 ${customEquipment.hasValve ? 'pl-12' : ''}`}
+                        className={`w-full py-2 bg-transparent outline-hidden border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400 ${customEquipment.hasValve ? 'pl-12' : ''}`}
                       />
                     )}
                   </div>
@@ -424,7 +424,7 @@ const StagesStep: React.FC<StagesStepProps> = ({
                       }}
                       onBlur={() => setEditingCumulativeTime(null)} // 失去焦点时清除本地状态
                       placeholder="0"
-                      className="w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
+                      className="w-full py-2 bg-transparent outline-hidden border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
                     />
                   </div>
 
@@ -449,7 +449,7 @@ const StagesStep: React.FC<StagesStepProps> = ({
                         }
                       }}
                       placeholder="默认全部"
-                      className="w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
+                      className="w-full py-2 bg-transparent outline-hidden border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
                     />
                   </div>
 
@@ -458,7 +458,7 @@ const StagesStep: React.FC<StagesStepProps> = ({
                       累计水量
                       <button 
                         type="button"
-                        className="ml-1 flex items-center justify-center text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 focus:outline-none relative" 
+                        className="ml-1 flex items-center justify-center text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 focus:outline-hidden relative" 
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
@@ -476,7 +476,7 @@ const StagesStep: React.FC<StagesStepProps> = ({
                         <Info className="w-[12px] h-[12px]" />
                         {/* 悬浮提示 */}
                         {showWaterTooltip === index && (
-                          <div className="absolute z-10 -right-1 -translate-y-full -top-3 w-[110px] p-2 bg-white dark:bg-neutral-800 shadow-lg rounded text-xs text-neutral-700 dark:text-neutral-300">
+                          <div className="absolute z-10 -right-1 -translate-y-full -top-3 w-[110px] p-2 bg-white dark:bg-neutral-800 shadow-lg rounded-sm text-xs text-neutral-700 dark:text-neutral-300">
                             <p className="font-medium mb-1">带后缀自动转换:</p>
                             <ul className="space-y-1">
                               <li>% : 水量百分比</li>
@@ -616,7 +616,7 @@ const StagesStep: React.FC<StagesStepProps> = ({
                           }
                         }}
                         onFocus={(e) => e.target.select()}
-                        className="w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
+                        className="w-full py-2 bg-transparent outline-hidden border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
                       />
                       <span className="absolute right-0 bottom-2 text-neutral-500 dark:text-neutral-400">g</span>
                     </div>
@@ -652,7 +652,7 @@ const StagesStep: React.FC<StagesStepProps> = ({
                       }}
                       onBlur={() => setEditingCumulativeTime(null)}
                       placeholder="0"
-                      className="w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
+                      className="w-full py-2 bg-transparent outline-hidden border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
                     />
                   </div>
 
@@ -689,7 +689,7 @@ const StagesStep: React.FC<StagesStepProps> = ({
                         }}
                         onBlur={() => setEditingCumulativeWater(null)}
                         onFocus={(e) => e.target.select()}
-                        className="w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
+                        className="w-full py-2 bg-transparent outline-hidden border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
                       />
                       <span className="absolute right-0 bottom-2 text-neutral-500 dark:text-neutral-400">g</span>
                     </div>
@@ -733,7 +733,7 @@ const StagesStep: React.FC<StagesStepProps> = ({
                         }}
                         onBlur={() => setEditingCumulativeWater(null)}
                         onFocus={(e) => e.target.select()}
-                        className="w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
+                        className="w-full py-2 bg-transparent outline-hidden border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
                       />
                       <span className="absolute right-0 bottom-2 text-neutral-500 dark:text-neutral-400">g</span>
                     </div>
@@ -750,7 +750,7 @@ const StagesStep: React.FC<StagesStepProps> = ({
                   value={stage.detail}
                   onChange={(e) => onStageChange(index, 'detail', e.target.value)}
                   placeholder="描述这个阶段的注水方式"
-                  className="w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
+                  className="w-full py-2 bg-transparent outline-hidden border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
                 />
               </div>
             </div>
@@ -759,7 +759,7 @@ const StagesStep: React.FC<StagesStepProps> = ({
       </div>
 
       {/* 底部渐变阴影 - 提示有更多内容 */}
-      <div className="sticky bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none"></div>
+      <div className="sticky bottom-0 left-0 right-0 h-12 bg-linear-to-t from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none"></div>
     </motion.div>
   );
 };

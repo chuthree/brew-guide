@@ -94,7 +94,7 @@ const BrewingTimerSettings: React.FC<BrewingTimerSettingsProps> = ({
           }}
         >
           {/* 添加渐变阴影 */}
-          <div className="absolute -top-12 left-0 right-0 h-12 bg-gradient-to-t from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none"></div>
+          <div className="absolute -top-12 left-0 right-0 h-12 bg-linear-to-t from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none"></div>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-medium text-neutral-900 dark:text-neutral-100">

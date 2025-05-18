@@ -50,7 +50,7 @@ const StarRating: React.FC<StarRatingProps> = ({
                         key={index}
                         type="button"
                         whileTap={readonly ? {} : { scale: 0.9 }}
-                        className={`${starSizes[size]} transition-colors focus:outline-none ${readonly ? 'cursor-default' : 'cursor-pointer'}`}
+                        className={`${starSizes[size]} transition-colors focus:outline-hidden ${readonly ? 'cursor-default' : 'cursor-pointer'}`}
                         onClick={() => handleStarClick(starValue)}
                     >
                         <svg

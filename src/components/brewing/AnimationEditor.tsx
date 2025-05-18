@@ -548,7 +548,7 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(({
                 e.preventDefault();
                 goToFrame(index);
               }}
-              className={`relative flex-shrink-0 w-16 h-16 bg-neutral-200 dark:bg-neutral-700 rounded-md border-2 overflow-hidden
+              className={`relative shrink-0 w-16 h-16 bg-neutral-200 dark:bg-neutral-700 rounded-md border-2 overflow-hidden
                 ${index === currentFrameIndex 
                   ? 'border-blue-500 ring-2 ring-blue-300 dark:ring-blue-700' 
                   : 'border-neutral-300 dark:border-neutral-600'}`}
@@ -580,7 +580,7 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(({
                 e.preventDefault();
                 addFrame();
               }}
-              className="flex-shrink-0 w-16 h-16 bg-neutral-200 dark:bg-neutral-700 rounded-md border-2 border-dashed border-neutral-300 dark:border-neutral-600 flex items-center justify-center"
+              className="shrink-0 w-16 h-16 bg-neutral-200 dark:bg-neutral-700 rounded-md border-2 border-dashed border-neutral-300 dark:border-neutral-600 flex items-center justify-center"
             >
               <svg className="w-6 h-6 text-neutral-500 dark:text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -703,7 +703,7 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(({
                   e.preventDefault();
                   selectReferenceImage(null);
                 }}
-                className={`relative flex-shrink-0 w-12 h-12 rounded-md border-2 overflow-hidden
+                className={`relative shrink-0 w-12 h-12 rounded-md border-2 overflow-hidden
                   ${!referenceSrc 
                     ? 'border-blue-500 ring-2 ring-blue-300 dark:ring-blue-700' 
                     : 'border-neutral-300 dark:border-neutral-600'}`}
@@ -727,7 +727,7 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(({
                     e.preventDefault();
                     selectReferenceImage(img.url);
                   }}
-                  className={`relative flex-shrink-0 w-12 h-12 rounded-md border-2 overflow-hidden
+                  className={`relative shrink-0 w-12 h-12 rounded-md border-2 overflow-hidden
                     ${referenceSrc === img.url
                       ? 'border-blue-500 ring-2 ring-blue-300 dark:ring-blue-700' 
                       : 'border-neutral-300 dark:border-neutral-600'}`}

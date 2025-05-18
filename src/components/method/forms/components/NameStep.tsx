@@ -60,7 +60,7 @@ const NameStep: React.FC<NameStepProps> = ({ name, onChange, isEdit }) => {
               placeholder="叫做..."
               autoFocus={true}
               className={`
-                text-center text-lg py-2 bg-transparent outline-none
+                text-center text-lg py-2 bg-transparent outline-hidden
                 focus:border-neutral-800 dark:focus:border-neutral-400
               `}
             />

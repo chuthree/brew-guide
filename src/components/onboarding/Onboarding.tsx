@@ -93,7 +93,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
     return (
         <div className="fixed inset-0 z-50 flex flex-col justify-end">
             {/* 半透明背景 */}
-            <div className="absolute inset-0 bg-neutral-900/30 backdrop-blur-sm" />
+            <div className="absolute inset-0 bg-neutral-900/30 backdrop-blur-xs" />
 
             {/* 设置内容卡片 */}
             <div className="relative w-full bg-neutral-50 dark:bg-neutral-950 rounded-t-2xl pb-safe-bottom">
@@ -169,7 +169,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
                                         >
                                             <SelectTrigger 
                                                 variant="minimal"
-                                                className="w-full py-2 px-3 text-sm font-medium rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-neutral-500 border border-neutral-200 dark:border-neutral-700"
+                                                className="w-full py-2 px-3 text-sm font-medium rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 focus:outline-hidden focus:ring-2 focus:ring-neutral-500 border border-neutral-200 dark:border-neutral-700"
                                             >
                                                 <SelectValue placeholder="选择磨豆机" />
                                                 <svg 
@@ -208,7 +208,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
                                         value={settings.username}
                                         onChange={(e) => handleSettingChange('username', e.target.value)}
                                         placeholder="请输入您的用户名"
-                                        className="w-full py-2 px-3 mt-1 text-sm font-medium rounded-lg bg-neutral-50 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 appearance-none focus:outline-none focus:ring-2 focus:ring-neutral-500"
+                                        className="w-full py-2 px-3 mt-1 text-sm font-medium rounded-lg bg-neutral-50 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 appearance-none focus:outline-hidden focus:ring-2 focus:ring-neutral-500"
                                     />
                                     <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-2">
                                         使用分享功能时，会显示您的用户名（选填）

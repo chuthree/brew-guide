@@ -431,7 +431,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                     const objectUrl = URL.createObjectURL(file);
                     setFormData(prev => ({...prev, image: objectUrl}));
                     setTimeout(() => URL.revokeObjectURL(objectUrl), 30000);
-                } catch (error) {
+                } catch (_error) {
                     setIsUploading(false);
                 }
             }, 5000);
@@ -446,10 +446,10 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                     try {
                         const compressedBase64 = await compressBase64(originalBase64, 0.5, 800);
                         setFormData(prev => ({...prev, image: compressedBase64}));
-                    } catch (error) {
+                    } catch (_error) {
                         setFormData(prev => ({...prev, image: originalBase64}));
                     }
-                } catch (error) {
+                } catch (_error) {
                     try {
                         const objectUrl = URL.createObjectURL(file);
                         setFormData(prev => ({...prev, image: objectUrl}));
@@ -472,7 +472,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
             };
             
             reader.readAsDataURL(file);
-        } catch (error) {
+        } catch (_error) {
             setIsUploading(false);
         }
     };
@@ -561,7 +561,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         >
             {/* 根据hideHeader属性决定是否显示头部 */}
             {!hideHeader && (
-                <div className="flex-shrink-0 mb-4">
+                <div className="shrink-0 mb-4">
                     <NoteFormHeader
                         isEditMode={!!initialData?.id}
                         onBack={onClose}
@@ -572,7 +572,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
             )}
 
             {/* Form content - 更新内容区域样式以确保正确滚动 */}
-            <div className="flex-grow space-y-6 pb-20">
+            <div className="grow space-y-6 pb-20">
                 {/* 笔记图片 */}
                 <div className="space-y-2 w-full">
                     <label className="block text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
@@ -589,9 +589,6 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                                         fill
                                         sizes="(max-width: 768px) 100vw, 300px"
                                     />
-                                    <div className="absolute inset-0 bg-black bg-opacity-30 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
-                                        <span className="text-white text-xs font-medium">点击预览</span>
-                                    </div>
                                     {/* 操作按钮组 */}
                                     <div className="absolute top-1 right-1 flex space-x-1">
                                         {/* 删除按钮 */}
@@ -684,7 +681,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                                             },
                                         })
                                     }
-                                    className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
+                                    className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-hidden transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
                                     placeholder="咖啡豆名称"
                                 />
                             </div>
@@ -700,7 +697,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                                             },
                                         })
                                     }
-                                    className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 text-neutral-800 dark:text-neutral-300"
+                                    className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-hidden transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 text-neutral-800 dark:text-neutral-300"
                                 >
                                     <option value="极浅烘焙">极浅烘焙</option>
                                     <option value="浅度烘焙">浅度烘焙</option>
@@ -726,7 +723,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                                 type="text"
                                 value={methodParams.coffee}
                                 onChange={(e) => handleCoffeeChange(e.target.value)}
-                                className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
+                                className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-hidden transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
                                 placeholder="咖啡粉量 (如: 15g)"
                             />
                         </div>
@@ -754,7 +751,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                                     
                                     setMethodParams(newMethodParams);
                                 }}
-                                className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
+                                className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-hidden transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
                                 placeholder="粉水比 (如: 1:15)"
                             />
                         </div>
@@ -765,7 +762,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                                 type="text"
                                 value={methodParams.grindSize}
                                 onChange={(e) => setMethodParams({...methodParams, grindSize: e.target.value})}
-                                className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
+                                className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-hidden transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
                                 placeholder="研磨度 (如: 中细)"
                             />
                         </div>
@@ -774,7 +771,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                                 type="text"
                                 value={methodParams.temp}
                                 onChange={(e) => setMethodParams({...methodParams, temp: e.target.value})}
-                                className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-none transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
+                                className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-hidden transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
                                 placeholder="水温 (如: 92°C)"
                             />
                         </div>
@@ -835,12 +832,12 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                                             onTouchStart={handleTouchStart(key, value)}
                                             onTouchMove={handleTouchMove(key)}
                                             onTouchEnd={handleTouchEnd}
-                                            className="relative h-[1px] w-full appearance-none bg-neutral-300 dark:bg-neutral-600 cursor-pointer touch-none 
+                                            className="relative h-px w-full appearance-none bg-neutral-300 dark:bg-neutral-600 cursor-pointer touch-none 
                                             [&::-webkit-slider-thumb]:h-4 
                                             [&::-webkit-slider-thumb]:w-4
                                             [&::-webkit-slider-thumb]:appearance-none 
                                             [&::-webkit-slider-thumb]:rounded-full 
-                                            [&::-webkit-slider-thumb]:border-[1px] 
+                                            [&::-webkit-slider-thumb]:border 
                                             [&::-webkit-slider-thumb]:border-solid
                                             [&::-webkit-slider-thumb]:border-neutral-300
                                             [&::-webkit-slider-thumb]:bg-neutral-50
@@ -851,7 +848,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                                             [&::-moz-range-thumb]:w-4
                                             [&::-moz-range-thumb]:appearance-none 
                                             [&::-moz-range-thumb]:rounded-full 
-                                            [&::-moz-range-thumb]:border-[1px]
+                                            [&::-moz-range-thumb]:border
                                             [&::-moz-range-thumb]:border-solid
                                             [&::-moz-range-thumb]:border-neutral-300
                                             [&::-moz-range-thumb]:bg-neutral-50
@@ -893,12 +890,12 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                                 onTouchStart={handleRatingTouchStart(formData.rating)}
                                 onTouchMove={handleRatingTouchMove}
                                 onTouchEnd={handleRatingTouchEnd}
-                                className="relative h-[1px] w-full appearance-none bg-neutral-300 dark:bg-neutral-600 cursor-pointer touch-none 
+                                className="relative h-px w-full appearance-none bg-neutral-300 dark:bg-neutral-600 cursor-pointer touch-none 
                                 [&::-webkit-slider-thumb]:h-4 
                                 [&::-webkit-slider-thumb]:w-4
                                 [&::-webkit-slider-thumb]:appearance-none 
                                 [&::-webkit-slider-thumb]:rounded-full 
-                                [&::-webkit-slider-thumb]:border-[1px] 
+                                [&::-webkit-slider-thumb]:border 
                                 [&::-webkit-slider-thumb]:border-solid
                                 [&::-webkit-slider-thumb]:border-neutral-300
                                 [&::-webkit-slider-thumb]:bg-neutral-50
@@ -909,7 +906,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                                 [&::-moz-range-thumb]:w-4
                                 [&::-moz-range-thumb]:appearance-none 
                                 [&::-moz-range-thumb]:rounded-full 
-                                [&::-moz-range-thumb]:border-[1px]
+                                [&::-moz-range-thumb]:border
                                 [&::-moz-range-thumb]:border-solid
                                 [&::-moz-range-thumb]:border-neutral-300
                                 [&::-moz-range-thumb]:bg-neutral-50

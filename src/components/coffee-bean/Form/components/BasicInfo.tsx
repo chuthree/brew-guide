@@ -118,9 +118,6 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
                                     fill
                                     sizes="(max-width: 768px) 100vw, 300px"
                                 />
-                                <div className="absolute inset-0 bg-black bg-opacity-30 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
-                                    <span className="text-white text-xs font-medium">点击预览</span>
-                                </div>
                                 {/* 操作按钮组 */}
                                 <div className="absolute top-1 right-1 flex space-x-1">
                                     {/* 删除按钮 */}
@@ -281,7 +278,7 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
                             <SelectValue placeholder="选择烘焙度" />
                         </SelectTrigger>
                         <SelectContent 
-                            className="max-h-[40vh] overflow-y-auto border-neutral-200/70 dark:border-neutral-800/70 shadow-lg backdrop-blur-sm bg-white/95 dark:bg-neutral-900/95 rounded-lg"
+                            className="max-h-[40vh] overflow-y-auto border-neutral-200/70 dark:border-neutral-800/70 shadow-lg backdrop-blur-xs bg-white/95 dark:bg-neutral-900/95 rounded-lg"
                         >
                             <SelectItem value="极浅烘焙">极浅烘焙</SelectItem>
                             <SelectItem value="浅度烘焙">浅度烘焙</SelectItem>
@@ -306,7 +303,7 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
                             }
                         }}
                     >
-                        <div className="w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus-within:border-neutral-800 dark:focus-within:border-neutral-400">
+                        <div className="w-full py-2 bg-transparent outline-hidden border-b border-neutral-300 dark:border-neutral-700 focus-within:border-neutral-800 dark:focus-within:border-neutral-400">
                             <div className="flex items-center justify-between">
                                 <span className={`${!bean.roastDate ? 'text-neutral-500' : ''}`}>
                                     {bean.roastDate ? new Date(bean.roastDate).toLocaleDateString('zh-CN') : '点击选择'}

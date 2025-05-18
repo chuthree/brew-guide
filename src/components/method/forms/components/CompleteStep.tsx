@@ -94,7 +94,7 @@ const CompleteStep: React.FC<CompleteStepProps> = ({
         </div>
       </div>
       {/* 底部渐变阴影 - 提示有更多内容 */}
-      <div className="sticky w-full bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none"></div>
+      <div className="sticky w-full bottom-0 left-0 right-0 h-12 bg-linear-to-t from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none"></div>
     </motion.div>
   );
 };

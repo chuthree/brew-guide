@@ -239,8 +239,8 @@ const NotesListView: React.FC<NotesListViewProps> = ({
                         className="relative flex items-center mb-2 cursor-pointer"
                         onClick={toggleShowQuickDecrementNotes}
                     >
-                        <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
-                        <button className="flex items-center justify-center mx-3 px-2 py-0.5 rounded text-[10px] text-neutral-600 dark:text-neutral-400 transition-colors">
+                        <div className="grow border-t border-neutral-200 dark:border-neutral-800"></div>
+                        <button className="flex items-center justify-center mx-3 px-2 py-0.5 rounded-sm text-[10px] text-neutral-600 dark:text-neutral-400 transition-colors">
                             {quickDecrementNotes.length}条快捷扣除记录
                             <svg
                                 className={`ml-1 w-3 h-3 transition-transform duration-200 ${showQuickDecrementNotes ? 'rotate-180' : ''}`}
@@ -251,7 +251,7 @@ const NotesListView: React.FC<NotesListViewProps> = ({
                                 <path d="M6 9L12 15L18 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                             </svg>
                         </button>
-                        <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
+                        <div className="grow border-t border-neutral-200 dark:border-neutral-800"></div>
                     </div>
 
                     {/* 快捷扣除笔记列表 - 仅在展开时显示 */}

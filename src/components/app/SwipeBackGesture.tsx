@@ -217,7 +217,7 @@ const SwipeBackGesture: React.FC<SwipeBackGestureProps> = ({
         <>
           {/* 背景遮罩 */}
           <motion.div
-            className="fixed inset-0 bg-black pointer-events-none z-[999]"
+            className="fixed inset-0 bg-black pointer-events-none z-999"
             initial={{ opacity: 0 }}
             animate={{ opacity: progress * 0.25 }}
             exit={{ opacity: 0 }}
@@ -225,7 +225,7 @@ const SwipeBackGesture: React.FC<SwipeBackGestureProps> = ({
           
           {/* 返回指示器 */}
           <motion.div
-            className="fixed left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center z-[1000] pointer-events-none"
+            className="fixed left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center z-1000 pointer-events-none"
             initial={{ opacity: 0, x: -20 }}
             animate={{ 
               opacity: Math.min(progress * 1.5, 1),

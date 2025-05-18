@@ -309,7 +309,7 @@ const RemainingEditor: React.FC<RemainingEditorProps> = ({
                             {decrementValues.map((value) => (
                                 <button
                                     key={value}
-                                    className="flex-1 text-[10px] px-2 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-neutral-800 dark:text-neutral-200 rounded py-1 transition-colors"
+                                    className="flex-1 text-[10px] px-2 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-neutral-800 dark:text-neutral-200 rounded-sm py-1 transition-colors"
                                     onClick={(e) => handleDecrementClick(e, value)}
                                 >
                                     -{value}

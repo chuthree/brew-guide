@@ -153,9 +153,9 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
   // 创建分隔符
   const divider = (customMethods.length > 0 && commonMethods.length > 0) ? (
     <div className="py-3 flex items-center">
-      <div className="flex-grow h-px bg-neutral-200 dark:bg-neutral-800"></div>
+      <div className="grow h-px bg-neutral-200 dark:bg-neutral-800"></div>
       <span className="px-2 text-xs text-neutral-500 dark:text-neutral-400">通用方案</span>
-      <div className="flex-grow h-px bg-neutral-200 dark:bg-neutral-800"></div>
+      <div className="grow h-px bg-neutral-200 dark:bg-neutral-800"></div>
     </div>
   ) : null;
 
@@ -215,7 +215,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
                       type="text"
                       value={coffeeAmount}
                       onChange={(e) => handleCoffeeAmountChange(e.target.value, method)}
-                      className="w-12 py-0.5 px-1 border border-neutral-300 dark:border-neutral-700 rounded bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100 text-right text-xs focus:outline-none focus:ring-1 focus:ring-neutral-500"
+                      className="w-12 py-0.5 px-1 border border-neutral-300 dark:border-neutral-700 rounded-sm bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100 text-right text-xs focus:outline-hidden focus:ring-1 focus:ring-neutral-500"
                       placeholder="15"
                     />
                     <span className="ml-0.5 text-xs text-neutral-600 dark:text-neutral-400">g</span>
@@ -239,7 +239,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
                       type="text"
                       value={ratioAmount}
                       onChange={(e) => handleRatioAmountChange(e.target.value, method)}
-                      className="w-10 py-0.5 px-1 border border-neutral-300 dark:border-neutral-700 rounded bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100 text-right text-xs focus:outline-none focus:ring-1 focus:ring-neutral-500"
+                      className="w-10 py-0.5 px-1 border border-neutral-300 dark:border-neutral-700 rounded-sm bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100 text-right text-xs focus:outline-hidden focus:ring-1 focus:ring-neutral-500"
                       placeholder="15"
                     />
                   </div>
@@ -253,7 +253,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
                       type="text"
                       value={grindSize}
                       onChange={(e) => handleGrindSizeChange(e.target.value, method)}
-                      className="w-16 py-0.5 px-1 border border-neutral-300 dark:border-neutral-700 rounded bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100 text-right text-xs focus:outline-none focus:ring-1 focus:ring-neutral-500"
+                      className="w-16 py-0.5 px-1 border border-neutral-300 dark:border-neutral-700 rounded-sm bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100 text-right text-xs focus:outline-hidden focus:ring-1 focus:ring-neutral-500"
                       placeholder="中细"
                     />
                   </div>

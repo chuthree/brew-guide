@@ -52,7 +52,7 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                                 onChange={onSearchChange}
                                 onKeyDown={onSearchKeyDown}
                                 placeholder="搜索笔记..."
-                                className="w-full pr-2 text-[11px] bg-transparent border-none outline-none text-neutral-800 dark:text-neutral-100 placeholder-neutral-400 dark:placeholder-neutral-500"
+                                className="w-full pr-2 text-[11px] bg-transparent border-none outline-hidden text-neutral-800 dark:text-neutral-100 placeholder-neutral-400 dark:placeholder-neutral-500"
                                 autoComplete="off"
                             />
                         </div>
@@ -74,7 +74,7 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                                 >
                                     <span className="relative">全部记录</span>
                                     {selectedEquipment === null && (
-                                        <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
+                                        <span className="absolute bottom-0 left-0 w-full h-px bg-neutral-800 dark:bg-white"></span>
                                     )}
                                 </button>
                                 {availableEquipments.map(equipment => (
@@ -85,7 +85,7 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                                     >
                                         <span className="relative">{equipmentNames[equipment] || equipment}</span>
                                         {selectedEquipment === equipment && (
-                                            <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
+                                            <span className="absolute bottom-0 left-0 w-full h-px bg-neutral-800 dark:bg-white"></span>
                                         )}
                                     </button>
                                 ))}
@@ -98,7 +98,7 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                                 >
                                     <span className="relative">全部记录</span>
                                     {selectedBean === null && (
-                                        <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
+                                        <span className="absolute bottom-0 left-0 w-full h-px bg-neutral-800 dark:bg-white"></span>
                                     )}
                                 </button>
                                 {availableBeans.map(bean => (
@@ -109,7 +109,7 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                                     >
                                         <span className="relative">{bean}</span>
                                         {selectedBean === bean && (
-                                            <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
+                                            <span className="absolute bottom-0 left-0 w-full h-px bg-neutral-800 dark:bg-white"></span>
                                         )}
                                     </button>
                                 ))}
@@ -120,7 +120,7 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
 
                 {/* 筛选模式切换按钮和搜索按钮 - 固定在右侧，仅在非搜索模式下显示 */}
                 {!isSearching && (
-                    <div className="absolute right-6 top-0 bottom-0 flex items-center bg-neutral-50 dark:bg-neutral-900 pl-1 before:content-[''] before:absolute before:left-[-20px] before:top-0 before:bottom-0 before:w-5 before:bg-gradient-to-r before:from-transparent before:to-neutral-50 dark:before:to-neutral-900 before:pointer-events-none">
+                    <div className="absolute right-6 top-0 bottom-0 flex items-center bg-neutral-50 dark:bg-neutral-900 pl-1 before:content-[''] before:absolute before:left-[-20px] before:top-0 before:bottom-0 before:w-5 before:bg-linear-to-r before:from-transparent before:to-neutral-50 dark:before:to-neutral-900 before:pointer-events-none">
                         <button
                             onClick={() => onFilterModeChange(filterMode === 'equipment' ? 'bean' : 'equipment')}
                             className={`pb-1.5 text-[11px] whitespace-nowrap relative text-neutral-600 dark:text-neutral-400`}

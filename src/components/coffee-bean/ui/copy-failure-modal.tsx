@@ -27,7 +27,7 @@ const CopyFailureModal: React.FC<CopyFailureModalProps> = ({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.265 }}
-          className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
+          className="fixed inset-0 z-50 bg-black/30 backdrop-blur-xs"
         >
           <motion.div
             initial={{ y: "100%" }}
@@ -81,7 +81,7 @@ const CopyFailureModal: React.FC<CopyFailureModalProps> = ({
                       document.body.removeChild(textarea)
                       onClose()
                     }}
-                    className="absolute top-2 right-2 px-2 py-1 text-xs bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 rounded hover:bg-neutral-300 dark:hover:bg-neutral-600 transition-colors"
+                    className="absolute top-2 right-2 px-2 py-1 text-xs bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 rounded-sm hover:bg-neutral-300 dark:hover:bg-neutral-600 transition-colors"
                   >
                     复制
                   </button>

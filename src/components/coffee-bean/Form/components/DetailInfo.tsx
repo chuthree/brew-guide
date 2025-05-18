@@ -66,7 +66,7 @@ const DetailInfo: React.FC<DetailInfoProps> = ({
                                     {type.label}
                                 </button>
                                 {bean.beanType === type.value && (
-                                    <div className="absolute bottom-[-1px] left-0 w-full h-[1px] bg-neutral-800 dark:bg-neutral-200"></div>
+                                    <div className="absolute -bottom-px left-0 w-full h-px bg-neutral-800 dark:bg-neutral-200"></div>
                                 )}
                             </div>
                         ))}
@@ -154,7 +154,7 @@ const DetailInfo: React.FC<DetailInfoProps> = ({
                     value={bean.notes || ''}
                     onChange={(e) => onBeanChange('notes')(e.target.value)}
                     placeholder="其他备注信息..."
-                    className="w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
+                    className="w-full py-2 bg-transparent outline-hidden border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
                 />
             </div>
         </motion.div>

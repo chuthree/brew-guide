@@ -316,7 +316,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                             >
                                 <span className="relative">全部豆子</span>
                                 {beanType === 'all' && (
-                                    <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
+                                    <span className="absolute bottom-0 left-0 w-full h-px bg-neutral-800 dark:bg-white"></span>
                                 )}
                             </button>
                             <button
@@ -325,7 +325,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                             >
                                 <span className="relative">意式豆</span>
                                 {beanType === 'espresso' && (
-                                    <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
+                                    <span className="absolute bottom-0 left-0 w-full h-px bg-neutral-800 dark:bg-white"></span>
                                 )}
                             </button>
                             <button
@@ -334,7 +334,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                             >
                                 <span className="relative">手冲豆</span>
                                 {beanType === 'filter' && (
-                                    <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
+                                    <span className="absolute bottom-0 left-0 w-full h-px bg-neutral-800 dark:bg-white"></span>
                                 )}
                             </button>
                         </div>
@@ -347,7 +347,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                             >
                                 <span className="relative">{editMode ? '完成' : '编辑'}</span>
                                 {editMode && (
-                                    <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
+                                    <span className="absolute bottom-0 left-0 w-full h-px bg-neutral-800 dark:bg-white"></span>
                                 )}
                             </button>
                         )}
@@ -369,7 +369,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                         >
                             <div className="flex items-start px-6 py-2.5">
                                 {/* 序号 - 极简风格 */}
-                                <div className="text-[11px] text-neutral-600 dark:text-neutral-400 w-4 mr-2 flex-shrink-0">
+                                <div className="text-[11px] text-neutral-600 dark:text-neutral-400 w-4 mr-2 shrink-0">
                                     {index + 1}
                                 </div>
 
@@ -377,7 +377,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                                 <div className="cursor-pointer flex-1 min-w-0">
                                     <div className="flex items-center">
                                         <div className="text-[11px] text-neutral-800 dark:text-neutral-100 truncate">{bean.name}</div>
-                                        <div className="ml-2 text-[11px] text-neutral-800 dark:text-neutral-100 flex-shrink-0">
+                                        <div className="ml-2 text-[11px] text-neutral-800 dark:text-neutral-100 shrink-0">
                                             +{bean.overallRating !== undefined ? bean.overallRating : 0}
                                         </div>
                                     </div>
@@ -487,7 +487,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                         className="relative flex items-center mb-4 cursor-pointer"
                         onClick={toggleShowUnrated}
                     >
-                        <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
+                        <div className="grow border-t border-neutral-200 dark:border-neutral-800"></div>
                         <button className="flex items-center justify-center mx-3 text-[10px] text-neutral-600 dark:text-neutral-400">
                             {unratedBeans.length}款未评分咖啡豆
                             <svg
@@ -499,7 +499,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                                 <path d="M6 9L12 15L18 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                             </svg>
                         </button>
-                        <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
+                        <div className="grow border-t border-neutral-200 dark:border-neutral-800"></div>
                     </div>
 
                     {/* 未评分咖啡豆列表 */}

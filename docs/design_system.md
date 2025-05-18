@@ -154,7 +154,7 @@
 
 /* 标准阴影 */
 .shadow-standard {
-  @apply shadow-sm dark:shadow-none;
+  @apply shadow-xs dark:shadow-none;
 }
 ```
 

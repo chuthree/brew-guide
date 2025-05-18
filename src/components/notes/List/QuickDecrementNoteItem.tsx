@@ -51,7 +51,7 @@ const QuickDecrementNoteItem: React.FC<QuickDecrementNoteItemProps> = ({
                     </div>
                     
                     {/* 扣除量 */}
-                    <div className="text-[10px] bg-neutral-100 dark:bg-neutral-800 px-2 py-[1px] rounded-sm text-neutral-600 dark:text-neutral-400 whitespace-nowrap">
+                    <div className="text-[10px] bg-neutral-100 dark:bg-neutral-800 px-2 py-px rounded-xs text-neutral-600 dark:text-neutral-400 whitespace-nowrap">
                         -{amount}g
                     </div>
                     
@@ -62,7 +62,7 @@ const QuickDecrementNoteItem: React.FC<QuickDecrementNoteItemProps> = ({
                 </div>
                 
                 {/* 右侧操作区域 */}
-                <div className="flex-shrink-0 ml-2">
+                <div className="shrink-0 ml-2">
                     {isShareMode ? (
                         <input 
                             type="checkbox" 
@@ -72,7 +72,7 @@ const QuickDecrementNoteItem: React.FC<QuickDecrementNoteItemProps> = ({
                                 if (onToggleSelect) onToggleSelect(note.id)
                             }}
                             onClick={(e) => e.stopPropagation()}
-                            className="appearance-none h-4 w-4 rounded border border-neutral-300 dark:border-neutral-700 checked:bg-neutral-800 dark:checked:bg-neutral-200 relative checked:after:absolute checked:after:left-1/2 checked:after:top-1/2 checked:after:-translate-x-1/2 checked:after:-translate-y-1/2 checked:after:content-['✓'] checked:after:text-white dark:checked:after:text-black text-xs"
+                            className="appearance-none h-4 w-4 rounded-sm border border-neutral-300 dark:border-neutral-700 checked:bg-neutral-800 dark:checked:bg-neutral-200 relative checked:after:absolute checked:after:left-1/2 checked:after:top-1/2 checked:after:-translate-x-1/2 checked:after:-translate-y-1/2 checked:after:content-['✓'] checked:after:text-white dark:checked:after:text-black text-xs"
                         />
                     ) : (
                         <ActionMenu

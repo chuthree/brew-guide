@@ -1,10 +1,10 @@
 import { CoffeeBean } from '@/types/app';
 // Import 2025 data (assuming these are the current files)
-import filterBeans2025CSV from '@public/data/filter-beans.csv';
-import espressoBeans2025CSV from '@public/data/espresso-beans.csv';
+import filterBeans2025CSV from '/public/data/filter-beans.csv';
+import espressoBeans2025CSV from '/public/data/espresso-beans.csv';
 // Import 2024 data
-import filterBeans2024CSV from '@public/data/filter-beans-2024.csv';
-import espressoBeans2024CSV from '@public/data/espresso-beans-2024.csv';
+import filterBeans2024CSV from '/public/data/filter-beans-2024.csv';
+import espressoBeans2024CSV from '/public/data/espresso-beans-2024.csv';
 
 export interface BloggerBean extends CoffeeBean {
     isBloggerRecommended: boolean;

@@ -160,7 +160,7 @@ const ActionMenu: React.FC<ActionMenuProps> = ({
               exit={{ opacity: 0 }}
               transition={{ duration: 0.26, ease: "easeOut" }}
               className={cn(
-                "absolute top-6 right-0 z-50 border border-neutral-200/70 dark:border-neutral-800/70 shadow-lg backdrop-blur-sm bg-white/95 dark:bg-neutral-900/95 rounded-lg overflow-hidden min-w-[100px]",
+                "absolute top-6 right-0 z-50 border border-neutral-200/70 dark:border-neutral-800/70 shadow-lg backdrop-blur-xs bg-white/95 dark:bg-neutral-900/95 rounded-lg overflow-hidden min-w-[100px]",
                 menuClassName
               )}
               ref={menuRef}
@@ -189,7 +189,7 @@ const ActionMenu: React.FC<ActionMenuProps> = ({
             <div
               ref={menuRef}
               className={cn(
-                "absolute top-6 right-0 z-50 border border-neutral-200/70 dark:border-neutral-800/70 shadow-lg backdrop-blur-sm bg-white/95 dark:bg-neutral-900/95 rounded-lg overflow-hidden min-w-[100px]",
+                "absolute top-6 right-0 z-50 border border-neutral-200/70 dark:border-neutral-800/70 shadow-lg backdrop-blur-xs bg-white/95 dark:bg-neutral-900/95 rounded-lg overflow-hidden min-w-[100px]",
                 menuClassName
               )}
               onClick={handleStop}

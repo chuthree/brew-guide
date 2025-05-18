@@ -43,13 +43,13 @@ const SortSelector: React.FC<SortSelectorProps> = ({ sortOption, onSortChange })
             <SelectContent
                 position="popper"
                 sideOffset={5}
-                className="border-neutral-200/70 dark:border-neutral-800/70 shadow-lg backdrop-blur-sm bg-white/95 dark:bg-neutral-900/95 rounded-lg overflow-hidden"
+                className="border-neutral-200/70 dark:border-neutral-800/70 shadow-lg backdrop-blur-xs bg-white/95 dark:bg-neutral-900/95 rounded-lg overflow-hidden"
             >
                 {Object.values(SORT_OPTIONS).map((value) => (
                     <SelectItem
                         key={value}
                         value={value}
-                        className="tracking-wide text-neutral-800 dark:text-neutral-100 data-[highlighted]:opacity-80 transition-colors"
+                        className="tracking-wide text-neutral-800 dark:text-neutral-100 data-highlighted:opacity-80 transition-colors"
                     >
                         <div className="flex items-center justify-between w-full">
                             <span>{SORT_LABELS[value].split(' ')[0]}</span>

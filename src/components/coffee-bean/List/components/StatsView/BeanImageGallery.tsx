@@ -47,7 +47,7 @@ const BeanImageGallery: React.FC<BeanImageGalleryProps> = ({ beansWithImages, im
                     return (
                         <div 
                             key={`bean-card-${bean.id}`}
-                            className="absolute w-14 h-20 transform -translate-x-1/2 -translate-y-1/2 shadow-sm rounded border border-white/90 dark:border-neutral-700/90 overflow-hidden transition-all duration-700"
+                            className="absolute w-14 h-20 transform -translate-x-1/2 -translate-y-1/2 shadow-xs rounded-sm border border-white/90 dark:border-neutral-700/90 overflow-hidden transition-all duration-700"
                             style={{
                                 left: `calc(50% + ${x}px)`,
                                 top: `calc(100% + ${y}px - -80px)`, // y 在顶部时为负，因此整体下移
@@ -68,7 +68,7 @@ const BeanImageGallery: React.FC<BeanImageGalleryProps> = ({ beansWithImages, im
                                 priority={false}
                                 loading="lazy"
                             />
-                            <div className="absolute inset-0 border-2 border-white/30 dark:border-neutral-700/30 rounded"></div>
+                            <div className="absolute inset-0 border-2 border-white/30 dark:border-neutral-700/30 rounded-sm"></div>
                         </div>
                     )
                 })}

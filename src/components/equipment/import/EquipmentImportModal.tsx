@@ -265,7 +265,7 @@ const EquipmentImportModal: React.FC<EquipmentImportModalProps> = ({
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.265 }}
-                    className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
+                    className="fixed inset-0 z-50 bg-black/30 backdrop-blur-xs"
                 >
                     <motion.div
                         initial={{ y: '100%' }}
@@ -372,15 +372,15 @@ const EquipmentImportModal: React.FC<EquipmentImportModalProps> = ({
 
                             {/* 分隔线 */}
                             <div className="flex items-center mb-4">
-                                <div className="flex-grow h-px bg-neutral-200 dark:bg-neutral-700"></div>
+                                <div className="grow h-px bg-neutral-200 dark:bg-neutral-700"></div>
                                 <span className="px-3 text-xs text-neutral-500 dark:text-neutral-400">或粘贴JSON数据</span>
-                                <div className="flex-grow h-px bg-neutral-200 dark:bg-neutral-700"></div>
+                                <div className="grow h-px bg-neutral-200 dark:bg-neutral-700"></div>
                             </div>
 
                             {/* 文本输入区域 */}
                             <div className="space-y-4">
                                 <textarea
-                                    className="w-full h-40 p-3 text-sm border rounded-lg bg-neutral-100/60 dark:bg-neutral-800/30 border-neutral-200 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-200 focus:outline-none text-neutral-800 dark:text-neutral-200 placeholder-neutral-500 dark:placeholder-neutral-400 transition-colors"
+                                    className="w-full h-40 p-3 text-sm border rounded-lg bg-neutral-100/60 dark:bg-neutral-800/30 border-neutral-200 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-200 focus:outline-hidden text-neutral-800 dark:text-neutral-200 placeholder-neutral-500 dark:placeholder-neutral-400 transition-colors"
                                     placeholder='粘贴器具数据，支持JSON格式，如{"name":"自定义V60","animationType":"v60",...}'
                                     value={importData}
                                     onChange={(e) => setImportData(e.target.value)}

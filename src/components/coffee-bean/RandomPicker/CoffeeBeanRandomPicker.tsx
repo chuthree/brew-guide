@@ -144,7 +144,7 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-white/90 dark:bg-neutral-900/90 backdrop-blur-sm pt-safe-top"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-white/90 dark:bg-neutral-900/90 backdrop-blur-xs pt-safe-top"
           initial="closed"
           animate="open"
           exit="closed"
@@ -157,7 +157,7 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
               <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[160px] h-[132px] border-2 border-neutral-800 dark:border-neutral-100 rounded-lg z-10 pointer-events-none"></div>
               
               {/* 创建渐变遮罩效果 */}
-              <div className="absolute inset-0 bg-gradient-to-r from-white/95 via-transparent to-white/95 dark:from-neutral-900/95 dark:via-transparent dark:to-neutral-900/95 z-20 pointer-events-none"></div>
+              <div className="absolute inset-0 bg-linear-to-r from-white/95 via-transparent to-white/95 dark:from-neutral-900/95 dark:via-transparent dark:to-neutral-900/95 z-20 pointer-events-none"></div>
               
               {/* 横向卡片容器 */}
               <div className="relative w-full h-[132px] overflow-hidden">

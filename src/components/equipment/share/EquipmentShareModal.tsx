@@ -170,7 +170,7 @@ const EquipmentShareModal: React.FC<EquipmentShareModalProps> = ({
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.265 }}
-                    className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
+                    className="fixed inset-0 z-50 bg-black/30 backdrop-blur-xs"
                 >
                     <motion.div
                         initial={{ y: '100%' }}
@@ -233,7 +233,7 @@ const EquipmentShareModal: React.FC<EquipmentShareModalProps> = ({
                                                     type="checkbox"
                                                     checked={selectedMethods.includes(method.id || method.name)}
                                                     onChange={() => handleToggleMethod(method.id || method.name)}
-                                                    className="w-4 h-4 rounded border-neutral-300 dark:border-neutral-600 text-blue-600 dark:text-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400"
+                                                    className="w-4 h-4 rounded-sm border-neutral-300 dark:border-neutral-600 text-blue-600 dark:text-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400"
                                                 />
                                                 <span className="ml-3 text-sm text-neutral-800 dark:text-neutral-200">
                                                     {method.name}

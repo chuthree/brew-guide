@@ -87,7 +87,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
                     {/* 笔记图片 - 只在有图片时显示 */}
                     {note.image && (
                         <div 
-                            className="h-14 overflow-hidden flex-shrink-0 relative cursor-pointer border border-neutral-200 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800"
+                            className="h-14 overflow-hidden shrink-0 relative cursor-pointer border border-neutral-200 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800"
                             onClick={(e) => {
                                 e.stopPropagation();
                                 if (!imageError) setImageViewerOpen(true);
@@ -188,7 +188,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
                                     </div>
                                 )}
                             </div>
-                            <div className="flex-shrink-0 ml-1 relative">
+                            <div className="shrink-0 ml-1 relative">
                                 {isShareMode ? (
                                     <input 
                                         type="checkbox" 
@@ -198,7 +198,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
                                             if (onToggleSelect) onToggleSelect(note.id);
                                         }}
                                         onClick={(e) => e.stopPropagation()}
-                                        className="appearance-none h-4 w-4 rounded border border-neutral-300 dark:border-neutral-700 checked:bg-neutral-800 dark:checked:bg-neutral-200 relative checked:after:absolute checked:after:left-1/2 checked:after:top-1/2 checked:after:-translate-x-1/2 checked:after:-translate-y-1/2 checked:after:content-['✓'] checked:after:text-white dark:checked:after:text-black text-xs"
+                                        className="appearance-none h-4 w-4 rounded-sm border border-neutral-300 dark:border-neutral-700 checked:bg-neutral-800 dark:checked:bg-neutral-200 relative checked:after:absolute checked:after:left-1/2 checked:after:top-1/2 checked:after:-translate-x-1/2 checked:after:-translate-y-1/2 checked:after:content-['✓'] checked:after:text-white dark:checked:after:text-black text-xs"
                                     />
                                 ) : (
                                     <ActionMenu

@@ -76,7 +76,7 @@ const BottomActionBar: React.FC<BottomActionBarProps> = ({
     
     return (
       <div className={baseClassName}>
-        <div className="absolute bottom-full left-0 right-0 h-12 bg-gradient-to-t from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none"></div>
+        <div className="absolute bottom-full left-0 right-0 h-12 bg-linear-to-t from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none"></div>
         <div className="relative flex items-center justify-between bg-neutral-50 dark:bg-neutral-900 py-4">
           {/* 左侧按钮 */}
           <div className="flex items-center space-x-3 mx-6">
@@ -186,16 +186,16 @@ const BottomActionBar: React.FC<BottomActionBarProps> = ({
     const button = processedButtons[0] as ButtonConfig;
     return (
       <div className={baseClassName}>
-        <div className="absolute bottom-full left-0 right-0 h-12 bg-gradient-to-t from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none"></div>
+        <div className="absolute bottom-full left-0 right-0 h-12 bg-linear-to-t from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none"></div>
         <div className="relative max-w-[500px] mx-auto flex items-center bg-neutral-50 dark:bg-neutral-900 pb-safe-bottom">
-          <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
+          <div className="grow border-t border-neutral-200 dark:border-neutral-800"></div>
           <button
             onClick={button.onClick}
             className="flex items-center justify-center text-[11px] text-neutral-800 dark:text-neutral-100 hover:opacity-80 mx-3"
           >
             <span className="mr-1">{button.icon || '+'}</span> {button.text}
           </button>
-          <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
+          <div className="grow border-t border-neutral-200 dark:border-neutral-800"></div>
         </div>
         {bottomHint && (
           <div className="text-center mt-2 mb-2">
@@ -211,14 +211,14 @@ const BottomActionBar: React.FC<BottomActionBarProps> = ({
     // 单组多个按钮
     return (
       <div className={baseClassName}>
-        <div className="absolute bottom-full left-0 right-0 h-12 bg-gradient-to-t from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none"></div>
+        <div className="absolute bottom-full left-0 right-0 h-12 bg-linear-to-t from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none"></div>
         <div className="relative max-w-[500px] mx-auto flex items-center bg-neutral-50 dark:bg-neutral-900 pb-safe-bottom">
-          <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
+          <div className="grow border-t border-neutral-200 dark:border-neutral-800"></div>
           <div className="flex items-center space-x-3 mx-3">
             {(processedButtons as ButtonConfig[]).map((button, index) => (
               <React.Fragment key={`button-${index}`}>
                 {index > 0 && (
-                  <div className="flex-grow w-4 border-t border-neutral-200 dark:border-neutral-800"></div>
+                  <div className="grow w-4 border-t border-neutral-200 dark:border-neutral-800"></div>
                 )}
                 <button
                   onClick={button.onClick}
@@ -242,7 +242,7 @@ const BottomActionBar: React.FC<BottomActionBarProps> = ({
               </React.Fragment>
             ))}
           </div>
-          <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
+          <div className="grow border-t border-neutral-200 dark:border-neutral-800"></div>
         </div>
         {bottomHint && (
           <div className="text-center mt-2 mb-2">
@@ -256,9 +256,9 @@ const BottomActionBar: React.FC<BottomActionBarProps> = ({
   // 处理按钮组数组的情况
   return (
     <div className={baseClassName}>
-      <div className="absolute bottom-full left-0 right-0 h-12 bg-gradient-to-t from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none"></div>
+      <div className="absolute bottom-full left-0 right-0 h-12 bg-linear-to-t from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none"></div>
       <div className="relative max-w-[500px] mx-auto flex items-center bg-neutral-50 dark:bg-neutral-900 pb-safe-bottom">
-        <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
+        <div className="grow border-t border-neutral-200 dark:border-neutral-800"></div>
         <div className="flex items-center">
           {(processedButtons as ButtonConfig[][]).map((buttonGroup, groupIndex) => (
             <React.Fragment key={`group-${groupIndex}`}>
@@ -296,7 +296,7 @@ const BottomActionBar: React.FC<BottomActionBarProps> = ({
             </React.Fragment>
           ))}
         </div>
-        <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
+        <div className="grow border-t border-neutral-200 dark:border-neutral-800"></div>
       </div>
       {bottomHint && (
         <div className="text-center mt-2 mb-2">

@@ -167,13 +167,13 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                         <SelectContent
                             position="popper"
                             sideOffset={5}
-                            className="border-neutral-200/70 dark:border-neutral-800/70 shadow-lg backdrop-blur-sm bg-white/95 dark:bg-neutral-900/95 rounded-lg overflow-hidden"
+                            className="border-neutral-200/70 dark:border-neutral-800/70 shadow-lg backdrop-blur-xs bg-white/95 dark:bg-neutral-900/95 rounded-lg overflow-hidden"
                         >
                             {Object.entries(VIEW_LABELS).map(([value, label]) => (
                                 <SelectItem
                                     key={value}
                                     value={value}
-                                    className="tracking-wide text-neutral-800 dark:text-neutral-100 data-[highlighted]:opacity-80 transition-colors font-medium"
+                                    className="tracking-wide text-neutral-800 dark:text-neutral-100 data-highlighted:opacity-80 transition-colors font-medium"
                                 >
                                     {label}
                                 </SelectItem>
@@ -205,7 +205,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                             >
                                 <span className="relative">全部豆子</span>
                                 {rankingBeanType === 'all' && (
-                                    <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
+                                    <span className="absolute bottom-0 left-0 w-full h-px bg-neutral-800 dark:bg-white"></span>
                                 )}
                             </button>
                             <button
@@ -214,7 +214,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                             >
                                 <span className="relative">意式豆</span>
                                 {rankingBeanType === 'espresso' && (
-                                    <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
+                                    <span className="absolute bottom-0 left-0 w-full h-px bg-neutral-800 dark:bg-white"></span>
                                 )}
                             </button>
                             <button
@@ -223,7 +223,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                             >
                                 <span className="relative">手冲豆</span>
                                 {rankingBeanType === 'filter' && (
-                                    <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
+                                    <span className="absolute bottom-0 left-0 w-full h-px bg-neutral-800 dark:bg-white"></span>
                                 )}
                             </button>
                         </div>
@@ -238,7 +238,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                                     >
                                         <span className="relative">2025</span>
                                         {bloggerYear === 2025 && (
-                                            <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
+                                            <span className="absolute bottom-0 left-0 w-full h-px bg-neutral-800 dark:bg-white"></span>
                                         )}
                                     </button>
                                     <button
@@ -247,7 +247,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                                     >
                                         <span className="relative">2024</span>
                                         {bloggerYear === 2024 && (
-                                            <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
+                                            <span className="absolute bottom-0 left-0 w-full h-px bg-neutral-800 dark:bg-white"></span>
                                         )}
                                     </button>
                                 </div>
@@ -261,7 +261,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                                 >
                                     <span className="relative">{rankingEditMode ? '完成' : '编辑'}</span>
                                     {rankingEditMode && (
-                                        <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
+                                        <span className="absolute bottom-0 left-0 w-full h-px bg-neutral-800 dark:bg-white"></span>
                                     )}
                                 </button>
                             )}
@@ -295,7 +295,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                                 >
                                     <span className="relative">意式豆</span>
                                     {selectedBeanType === 'espresso' && (
-                                        <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
+                                        <span className="absolute bottom-0 left-0 w-full h-px bg-neutral-800 dark:bg-white"></span>
                                     )}
                                 </button>
                                 
@@ -305,7 +305,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                                 >
                                     <span className="relative">手冲豆</span>
                                     {selectedBeanType === 'filter' && (
-                                        <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
+                                        <span className="absolute bottom-0 left-0 w-full h-px bg-neutral-800 dark:bg-white"></span>
                                     )}
                                 </button>
 
@@ -315,7 +315,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                                 >
                                     <span className="relative">全部豆种</span>
                                     {selectedVariety === null && (
-                                        <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
+                                        <span className="absolute bottom-0 left-0 w-full h-px bg-neutral-800 dark:bg-white"></span>
                                     )}
                                 </button>
                                 
@@ -329,7 +329,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                                     >
                                         <span className="relative">{variety}</span>
                                         {selectedVariety === variety && (
-                                            <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
+                                            <span className="absolute bottom-0 left-0 w-full h-px bg-neutral-800 dark:bg-white"></span>
                                         )}
                                     </button>
                                 ))}
@@ -344,7 +344,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                                         onChange={handleSearchChange}
                                         onKeyDown={handleSearchKeyDown}
                                         placeholder="输入咖啡豆名称..."
-                                        className="w-full pr-2 text-[11px] bg-transparent border-none outline-none text-neutral-800 dark:text-neutral-100 placeholder-neutral-400 dark:placeholder-neutral-500"
+                                        className="w-full pr-2 text-[11px] bg-transparent border-none outline-hidden text-neutral-800 dark:text-neutral-100 placeholder-neutral-400 dark:placeholder-neutral-500"
                                         autoComplete="off"
                                     />
                                 </div>
@@ -359,14 +359,14 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
 
                         {/* 操作按钮 - 右侧固定 */}
                         {!isSearching && (
-                            <div className="absolute right-6 top-0 bottom-0 flex items-center bg-neutral-50 dark:bg-neutral-900 pl-1 before:content-[''] before:absolute before:left-[-20px] before:top-0 before:bottom-0 before:w-5 before:bg-gradient-to-r before:from-transparent before:to-neutral-50 dark:before:to-neutral-900 before:pointer-events-none">
+                            <div className="absolute right-6 top-0 bottom-0 flex items-center bg-neutral-50 dark:bg-neutral-900 pl-1 before:content-[''] before:absolute before:left-[-20px] before:top-0 before:bottom-0 before:w-5 before:bg-linear-to-r before:from-transparent before:to-neutral-50 dark:before:to-neutral-900 before:pointer-events-none">
                                 <button
                                     onClick={onToggleShowEmptyBeans}
                                     className={`pb-1.5 text-[11px] whitespace-nowrap relative ${showEmptyBeans ? 'text-neutral-800 dark:text-neutral-100 font-normal' : 'text-neutral-600 dark:text-neutral-400'}`}
                                 >
                                     <span className="relative">已用完</span>
                                     {showEmptyBeans && (
-                                        <span className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-800 dark:bg-white"></span>
+                                        <span className="absolute bottom-0 left-0 w-full h-px bg-neutral-800 dark:bg-white"></span>
                                     )}
                                 </button>
                                 <button

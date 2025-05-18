@@ -394,7 +394,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                 value={settings.username}
                                 onChange={(e) => handleChange('username', e.target.value)}
                                 placeholder="请输入您的用户名"
-                                className="w-full py-2 px-3 text-sm font-medium rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 appearance-none focus:outline-none focus:ring-2 focus:ring-neutral-500"
+                                className="w-full py-2 px-3 text-sm font-medium rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 appearance-none focus:outline-hidden focus:ring-2 focus:ring-neutral-500"
                             />
                             <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
                                 用于在分享时显示签名
@@ -470,7 +470,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                     <button
                                         className={`px-2 py-1.5 text-xs font-medium rounded-md transition-colors ${
                                             settings.language === 'zh'
-                                                ? 'bg-white dark:bg-neutral-600 text-neutral-900 dark:text-neutral-100 shadow-sm'
+                                                ? 'bg-white dark:bg-neutral-600 text-neutral-900 dark:text-neutral-100 shadow-xs'
                                                 : 'text-neutral-600 dark:text-neutral-400'
                                         }`}
                                         onClick={() => {
@@ -485,7 +485,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                     <button
                                         className={`px-2 py-1.5 text-xs font-medium rounded-md transition-colors ${
                                             settings.language === 'en'
-                                                ? 'bg-white dark:bg-neutral-600 text-neutral-900 dark:text-neutral-100 shadow-sm'
+                                                ? 'bg-white dark:bg-neutral-600 text-neutral-900 dark:text-neutral-100 shadow-xs'
                                                 : 'text-neutral-600 dark:text-neutral-400'
                                         }`}
                                         onClick={() => {
@@ -511,7 +511,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                     <button
                                         className={`px-2 py-1.5 text-xs font-medium rounded-md transition-colors ${
                                             theme === 'light'
-                                                ? 'bg-white dark:bg-neutral-600 text-neutral-900 dark:text-neutral-100 shadow-sm'
+                                                ? 'bg-white dark:bg-neutral-600 text-neutral-900 dark:text-neutral-100 shadow-xs'
                                                 : 'text-neutral-600 dark:text-neutral-400'
                                         }`}
                                         onClick={() => {
@@ -526,7 +526,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                     <button
                                         className={`px-2 py-1.5 text-xs font-medium rounded-md transition-colors ${
                                             theme === 'dark'
-                                                ? 'bg-white dark:bg-neutral-600 text-neutral-900 dark:text-neutral-100 shadow-sm'
+                                                ? 'bg-white dark:bg-neutral-600 text-neutral-900 dark:text-neutral-100 shadow-xs'
                                                 : 'text-neutral-600 dark:text-neutral-400'
                                         }`}
                                         onClick={() => {
@@ -541,7 +541,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                     <button
                                         className={`px-2 py-1.5 text-xs font-medium rounded-md transition-colors ${
                                             theme === 'system'
-                                                ? 'bg-white dark:bg-neutral-600 text-neutral-900 dark:text-neutral-100 shadow-sm'
+                                                ? 'bg-white dark:bg-neutral-600 text-neutral-900 dark:text-neutral-100 shadow-xs'
                                                 : 'text-neutral-600 dark:text-neutral-400'
                                         }`}
                                         onClick={() => {
@@ -581,7 +581,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                     <div className="flex justify-between mt-1 text-xs text-neutral-500">
                                         <span>小</span>
                                         <span 
-                                            className={`px-2 py-0.5 rounded ${Math.abs(zoomLevel - 1.0) < 0.05 ? 'bg-neutral-800 text-neutral-100 dark:bg-neutral-200 dark:text-neutral-900' : ''}`}
+                                            className={`px-2 py-0.5 rounded-sm ${Math.abs(zoomLevel - 1.0) < 0.05 ? 'bg-neutral-800 text-neutral-100 dark:bg-neutral-200 dark:text-neutral-900' : ''}`}
                                             onClick={() => handleTextZoomChange(1.0)}
                                         >
                                             标准
@@ -646,7 +646,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                     }
                                 }}
                                 placeholder="克数"
-                                className="w-16 py-1.5 px-2 text-sm bg-neutral-100 dark:bg-neutral-800 border-y border-l border-neutral-200/50 dark:border-neutral-700 rounded-l-lg rounded-r-none focus:outline-none focus:ring-1 focus:ring-neutral-500"
+                                className="w-16 py-1.5 px-2 text-sm bg-neutral-100 dark:bg-neutral-800 border-y border-l border-neutral-200/50 dark:border-neutral-700 rounded-l-lg rounded-r-none focus:outline-hidden focus:ring-1 focus:ring-neutral-500"
                             />
                             <button
                                 onClick={addDecrementPreset}

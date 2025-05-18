@@ -549,7 +549,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                                             clearMessages();
                                             _copyTextToClipboard(_templatePrompt);
                                         }}
-                                        className="text-neutral-500 dark:text-neutral-400 px-2 py-0.5 rounded text-[10px] bg-neutral-200/80 dark:bg-neutral-800/80 hover:bg-neutral-300 dark:hover:bg-neutral-700 transition-colors"
+                                        className="text-neutral-500 dark:text-neutral-400 px-2 py-0.5 rounded-sm text-[10px] bg-neutral-200/80 dark:bg-neutral-800/80 hover:bg-neutral-300 dark:hover:bg-neutral-700 transition-colors"
                                     >
                                         复制
                                     </button>
@@ -599,7 +599,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                                                 y: 0
                                             });
                                         }}
-                                        className="text-[10px] px-2 py-0.5 bg-neutral-200 dark:bg-neutral-700 rounded text-neutral-700 dark:text-neutral-300"
+                                        className="text-[10px] px-2 py-0.5 bg-neutral-200 dark:bg-neutral-700 rounded-sm text-neutral-700 dark:text-neutral-300"
                                     >
                                         取消框选
                                     </button>
@@ -613,13 +613,13 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                                     setCroppedImage(null);
                                     setIsCropActive(false);
                                 }}
-                                className="px-3 py-1 text-sm border border-neutral-300 dark:border-neutral-600 rounded"
+                                className="px-3 py-1 text-sm border border-neutral-300 dark:border-neutral-600 rounded-sm"
                             >
                                 取消
                             </button>
                             <button
                                 onClick={handleImageRecognition}
-                                className="px-3 py-1 text-sm bg-neutral-800 dark:bg-neutral-200 text-neutral-100 dark:text-neutral-800 rounded"
+                                className="px-3 py-1 text-sm bg-neutral-800 dark:bg-neutral-200 text-neutral-100 dark:text-neutral-800 rounded-sm"
                             >
                                 识别
                             </button>
@@ -676,7 +676,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.265 }}
-                    className="fixed inset-0 z-50 bg-black bg-opacity-30 backdrop-blur-sm"
+                    className="fixed inset-0 z-50 bg-black bg-opacity-30 backdrop-blur-xs"
                 >
                     <motion.div
                         initial={{ y: '100%' }}
@@ -750,7 +750,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                                         </p>
                                     </div>
                                     <textarea
-                                        className="w-full h-40 p-3 border border-neutral-300 dark:border-neutral-700 rounded-md bg-transparent focus:border-neutral-800 dark:focus:border-neutral-400 focus:outline-none text-neutral-800 dark:text-neutral-200"
+                                        className="w-full h-40 p-3 border border-neutral-300 dark:border-neutral-700 rounded-md bg-transparent focus:border-neutral-800 dark:focus:border-neutral-400 focus:outline-hidden text-neutral-800 dark:text-neutral-200"
                                         placeholder={manualMode ? 
                                             '单个：{"name":"埃塞俄比亚耶加雪菲", "capacity":"200",...}\n多个：[{"name":"耶加雪菲",...},{"name":"瑰夏",...}]' : 
                                             '支持单个或多个咖啡豆数据，多个豆使用数组格式[{},{},...]'}

@@ -127,7 +127,7 @@ const ParamsStep: React.FC<ParamsStepProps> = ({
               value={params.coffee.replace('g', '')}
               onChange={onCoffeeChange}
               onFocus={(e) => e.target.select()}
-              className="w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
+              className="w-full py-2 bg-transparent outline-hidden border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
             />
             <span className="absolute right-0 bottom-2 text-neutral-500 dark:text-neutral-400">g</span>
           </div>
@@ -148,7 +148,7 @@ const ParamsStep: React.FC<ParamsStepProps> = ({
               value={params.ratio.replace('1:', '')}
               onChange={onRatioChange}
               onFocus={(e) => e.target.select()}
-              className="w-full py-2 pl-6 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
+              className="w-full py-2 pl-6 bg-transparent outline-hidden border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
             />
           </div>
         </div>
@@ -172,7 +172,7 @@ const ParamsStep: React.FC<ParamsStepProps> = ({
                   }
                 }}
                 onFocus={(e) => e.target.select()}
-                className="w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
+                className="w-full py-2 bg-transparent outline-hidden border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
               />
               <span className="absolute right-0 bottom-2 text-neutral-500 dark:text-neutral-400">g</span>
             </div>
@@ -198,7 +198,7 @@ const ParamsStep: React.FC<ParamsStepProps> = ({
                   }
                 }}
                 onFocus={(e) => e.target.select()}
-                className="w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
+                className="w-full py-2 bg-transparent outline-hidden border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
               />
               <span className="absolute right-0 bottom-2 text-neutral-500 dark:text-neutral-400">秒</span>
             </div>
@@ -222,7 +222,7 @@ const ParamsStep: React.FC<ParamsStepProps> = ({
                   ? "例如：中细、特细 (可自动转为对应格数)"
                   : "例如：中细、特细、中粗等")
             }
-            className="w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
+            className="w-full py-2 bg-transparent outline-hidden border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
           />
           {params.grindSize && showSpecificGrindInfo && (
             <p className="text-xs text-neutral-500 dark:text-neutral-400">
@@ -250,7 +250,7 @@ const ParamsStep: React.FC<ParamsStepProps> = ({
                 value={params.temp ? params.temp.replace('°C', '') : ''}
                 onChange={onTempChange}
                 onFocus={(e) => e.target.select()}
-                className="w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
+                className="w-full py-2 bg-transparent outline-hidden border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
               />
               <span className="absolute right-0 bottom-2 text-neutral-500 dark:text-neutral-400">°C</span>
             </div>

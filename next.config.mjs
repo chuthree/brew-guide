@@ -1,4 +1,4 @@
-import nextPWA from 'next-pwa';
+import nextPWA from '@ducanh2912/next-pwa';
 
 // 检查当前环境
 const isDev = process.env.NODE_ENV === 'development';

@@ -244,7 +244,7 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
                                     clearMessages();
                                     _copyTextToClipboard(_templatePrompt);
                                 }}
-                                className="text-neutral-500 dark:text-neutral-400 px-2 py-0.5 rounded text-[10px] bg-neutral-200/80 dark:bg-neutral-800/80 hover:bg-neutral-300 dark:hover:bg-neutral-700 transition-colors"
+                                className="text-neutral-500 dark:text-neutral-400 px-2 py-0.5 rounded-sm text-[10px] bg-neutral-200/80 dark:bg-neutral-800/80 hover:bg-neutral-300 dark:hover:bg-neutral-700 transition-colors"
                             >
                                 复制
                             </button>
@@ -263,7 +263,7 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.265 }}
-                    className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
+                    className="fixed inset-0 z-50 bg-black/30 backdrop-blur-xs"
                 >
                     <motion.div
                         initial={{ y: '100%' }}
@@ -337,7 +337,7 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
                                         </p>
                                     </div>
                                     <textarea
-                                        className="w-full h-40 p-3 border border-neutral-300 dark:border-neutral-700 rounded-md bg-transparent focus:border-neutral-800 dark:focus:border-neutral-400 focus:outline-none text-neutral-800 dark:text-neutral-200"
+                                        className="w-full h-40 p-3 border border-neutral-300 dark:border-neutral-700 rounded-md bg-transparent focus:border-neutral-800 dark:focus:border-neutral-400 focus:outline-hidden text-neutral-800 dark:text-neutral-200"
                                         placeholder='支持粘贴分享的文本或各种JSON格式，如{"name":"改良分段式一刀流",...} 或带有代码块的JSON'
                                         value={importData}
                                         onChange={(e) => setImportData(e.target.value)}

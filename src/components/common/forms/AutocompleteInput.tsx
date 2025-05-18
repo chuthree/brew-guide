@@ -307,7 +307,7 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
                         placeholder={placeholder}
                         disabled={disabled}
                         className={cn(
-                            "w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400",
+                            "w-full py-2 bg-transparent outline-hidden border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400",
                             disabled && "opacity-60 cursor-not-allowed",
                             className
                         )}
@@ -326,7 +326,7 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
                         <button
                             type="button"
                             onClick={handleClear}
-                            className="absolute right-0 bottom-2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 z-[51]"
+                            className="absolute right-0 bottom-2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 z-51"
                         >
                             <X className="h-4 w-4" />
                         </button>

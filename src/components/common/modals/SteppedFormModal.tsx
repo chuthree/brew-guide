@@ -246,7 +246,7 @@ const SteppedFormModal: React.FC<SteppedFormModalProps> = ({
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     placeholder="搜索咖啡豆名称..."
-                                    className="w-48 text-sm bg-neutral-100 dark:bg-neutral-800 rounded-full py-[14px] px-5 border-none outline-none text-neutral-800 dark:text-neutral-100 placeholder-neutral-400 dark:placeholder-neutral-500"
+                                    className="w-48 text-sm bg-neutral-100 dark:bg-neutral-800 rounded-full py-[14px] px-5 border-none outline-hidden text-neutral-800 dark:text-neutral-100 placeholder-neutral-400 dark:placeholder-neutral-500"
                                     autoComplete="off"
                                     onKeyDown={(e) => {
                                         if (e.key === 'Escape') {
@@ -257,7 +257,7 @@ const SteppedFormModal: React.FC<SteppedFormModalProps> = ({
                                 <motion.button
                                     type="button"
                                     onClick={handleCloseSearch}
-                                    className={`${buttonBaseClass} p-4 flex-shrink-0`}
+                                    className={`${buttonBaseClass} p-4 shrink-0`}
                                     whileHover={{ scale: 1.05 }}
                                     whileTap={{ scale: 0.95 }}
                                 >
@@ -328,7 +328,7 @@ const SteppedFormModal: React.FC<SteppedFormModalProps> = ({
             className={`fixed inset-0 z-50 transition-opacity duration-200 ${showForm ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
         >
             <div 
-                className="absolute inset-0 bg-black/30 backdrop-blur-sm"
+                className="absolute inset-0 bg-black/30 backdrop-blur-xs"
                 onClick={onClose}
             >
                 <div 

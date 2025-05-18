@@ -18,7 +18,7 @@ const CustomSelectItem = React.forwardRef<
     <SelectPrimitive.Item
         ref={ref}
         className={cn(
-            "relative flex w-full cursor-default select-none items-center rounded-md py-2 pl-3 pr-8 text-xs outline-none data-[highlighted]:bg-neutral-50 data-[highlighted]:text-neutral-600 data-[disabled]:pointer-events-none data-[disabled]:opacity-50 dark:data-[highlighted]:bg-neutral-800/50 dark:data-[highlighted]:text-neutral-300",
+            "relative flex w-full cursor-default select-none items-center rounded-md py-2 pl-3 pr-8 text-xs outline-hidden data-highlighted:bg-neutral-50 data-highlighted:text-neutral-600 data-disabled:pointer-events-none data-disabled:opacity-50 dark:data-highlighted:bg-neutral-800/50 dark:data-highlighted:text-neutral-300",
             className
         )}
         {...props}
@@ -660,7 +660,7 @@ export const SortSelector: React.FC<SortSelectorProps> = ({
             <SelectContent
                 position="popper"
                 sideOffset={5}
-                className="border-neutral-200/70 dark:border-neutral-800/70 shadow-lg backdrop-blur-sm bg-white/95 dark:bg-neutral-900/95 rounded-lg overflow-hidden min-w-[140px]"
+                className="border-neutral-200/70 dark:border-neutral-800/70 shadow-lg backdrop-blur-xs bg-white/95 dark:bg-neutral-900/95 rounded-lg overflow-hidden min-w-[140px]"
             >
                 <div className="py-1">
                     <div className="px-2 py-1.5 text-xs text-neutral-500 dark:text-neutral-400">
@@ -670,7 +670,7 @@ export const SortSelector: React.FC<SortSelectorProps> = ({
                         <CustomSelectItem
                             key={type}
                             value={type === SORT_TYPES.ORIGINAL ? SORT_OPTIONS.ORIGINAL : getSortOption(type, currentOrder)}
-                            className="tracking-wide text-neutral-800 dark:text-neutral-100 data-[highlighted]:opacity-80 transition-colors font-medium"
+                            className="tracking-wide text-neutral-800 dark:text-neutral-100 data-highlighted:opacity-80 transition-colors font-medium"
                             onClick={() => handleTypeChange(type)}
                         >
                             <div className="flex items-center">
@@ -697,7 +697,7 @@ export const SortSelector: React.FC<SortSelectorProps> = ({
                                 <CustomSelectItem
                                     key={order}
                                     value={getSortOption(currentType, order)}
-                                    className="tracking-wide text-neutral-800 dark:text-neutral-100 data-[highlighted]:opacity-80 transition-colors font-medium"
+                                    className="tracking-wide text-neutral-800 dark:text-neutral-100 data-highlighted:opacity-80 transition-colors font-medium"
                                     onClick={() => handleOrderChange(order)}
                                 >
                                     <div className="flex items-center">

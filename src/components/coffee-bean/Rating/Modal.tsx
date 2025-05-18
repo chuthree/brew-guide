@@ -67,7 +67,7 @@ const CoffeeBeanRatingModal: React.FC<CoffeeBeanRatingModalProps> = ({
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.265 }}
-                className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
+                className="fixed inset-0 z-50 bg-black/30 backdrop-blur-xs"
             >
                 <motion.div
                     initial={{ y: '100%' }}
@@ -128,7 +128,7 @@ const CoffeeBeanRatingModal: React.FC<CoffeeBeanRatingModalProps> = ({
                                             </button>
                                             {beanType === 'filter' && (
                                                 <div
-                                                    className="absolute bottom-[-1px] left-0 w-full h-[1px] bg-neutral-800 dark:bg-neutral-200"
+                                                    className="absolute -bottom-px left-0 w-full h-px bg-neutral-800 dark:bg-neutral-200"
                                                 ></div>
                                             )}
                                         </div>
@@ -147,7 +147,7 @@ const CoffeeBeanRatingModal: React.FC<CoffeeBeanRatingModalProps> = ({
                                             </button>
                                             {beanType === 'espresso' && (
                                                 <div
-                                                    className="absolute bottom-[-1px] left-0 w-full h-[1px] bg-neutral-800 dark:bg-neutral-200"
+                                                    className="absolute -bottom-px left-0 w-full h-px bg-neutral-800 dark:bg-neutral-200"
                                                 ></div>
                                             )}
                                         </div>
@@ -175,7 +175,7 @@ const CoffeeBeanRatingModal: React.FC<CoffeeBeanRatingModalProps> = ({
                                     value={ratingNotes}
                                     onChange={(e) => setRatingNotes(e.target.value)}
                                     placeholder="添加对这款咖啡豆的备注"
-                                    className="w-full py-2 bg-transparent outline-none border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400 min-h-[60px] resize-none"
+                                    className="w-full py-2 bg-transparent outline-hidden border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400 min-h-[60px] resize-none"
                                 />
                             </div>
 
