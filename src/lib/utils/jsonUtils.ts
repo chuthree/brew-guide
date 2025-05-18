@@ -337,7 +337,7 @@ export function parseMethodFromJson(jsonString: string): Method | null {
 					
 					// 如果是意式咖啡方案，为特定类型的步骤设置特殊属性
 					if (isEspresso) {
-						// 意式咖啡的萃取浓缩步骤不需要pourTime
+						// 意式咖啡的萃取浓缩步骤保留time，但不需要pourTime
 						if (pourType === 'extraction') {
 							// 确保没有pourTime字段
 							delete parsedStage.pourTime;
@@ -659,57 +659,65 @@ export function methodToReadableText(method: Method, customEquipment?: CustomEqu
 	if (params.stages && params.stages.length > 0) {
 		text += "\n冲煮步骤:\n\n";
 		params.stages.forEach((stage, index: number) => {
-			// 确保 stage.time 有值
-			const stageTime = stage.time || 0;
-			const timeText = `${Math.floor(stageTime / 60)}分${
-				stageTime % 60
-			}秒`;
+			            // 分别生成注水时间和注水方式文本
+            let pourTimeText = "";
+            let timeText = "";
+            
+            // 对于意式咖啡的饮料步骤，不显示时间
+            if (!(isEspresso && stage.pourType === "beverage")) {
+                // 确保 stage.time 有值
+                const stageTime = stage.time || 0;
+                timeText = `[${Math.floor(stageTime / 60)}分${
+                    stageTime % 60
+                }秒]`;
+                
+                // 只有非意式咖啡方案才显示注水时间
+                if (!isEspresso && stage.pourTime) {
+                    pourTimeText = ` (注水${stage.pourTime}秒)`;
+                }
+            }
 
-			// 分别生成注水时间和注水方式文本
-			let pourTimeText = "";
-			// 只有非意式咖啡方案才显示注水时间
-			if (!isEspresso && stage.pourTime) {
-				pourTimeText = ` (注水${stage.pourTime}秒)`;
-			}
+            // 添加注水方式信息 [注水方式]
+            let pourTypeText = "";
+            
+            // 处理pourType
+            if (stage.pourType) {
+                // 检查customEquipment中是否有对应的自定义注水方式
+                let pourTypeName = "";
+                
+                if (customEquipment?.customPourAnimations) {
+                    const customAnimation = customEquipment.customPourAnimations.find(
+                        (anim) => anim.id === stage.pourType
+                    );
+                    if (customAnimation && customAnimation.name) {
+                        pourTypeName = customAnimation.name;
+                    }
+                }
+                
+                // 如果没有找到自定义注水方式的名称，则使用系统默认名称
+                if (!pourTypeName) {
+                    // 系统默认注水方式
+                    if (stage.pourType === "center") pourTypeName = "中心注水";
+                    else if (stage.pourType === "circle") pourTypeName = "绕圈注水";
+                    else if (stage.pourType === "ice") pourTypeName = "添加冰块";
+                    else if (stage.pourType === "extraction") pourTypeName = "萃取浓缩";
+                    else if (stage.pourType === "beverage") pourTypeName = "饮料";
+                    else pourTypeName = stage.pourType;
+                }
+                
+                // 添加注水方式标记
+                pourTypeText = ` [${pourTypeName}]`;
+            }
 
-			// 添加注水方式信息 [注水方式]
-			let pourTypeText = "";
-			
-			// 处理pourType
-			if (stage.pourType) {
-				// 检查customEquipment中是否有对应的自定义注水方式
-				let pourTypeName = "";
-				
-				if (customEquipment?.customPourAnimations) {
-					const customAnimation = customEquipment.customPourAnimations.find(
-						(anim) => anim.id === stage.pourType
-					);
-					if (customAnimation && customAnimation.name) {
-						pourTypeName = customAnimation.name;
-					}
-				}
-				
-				// 如果没有找到自定义注水方式的名称，则使用系统默认名称
-				if (!pourTypeName) {
-					// 系统默认注水方式
-					if (stage.pourType === "center") pourTypeName = "中心注水";
-					else if (stage.pourType === "circle") pourTypeName = "绕圈注水";
-					else if (stage.pourType === "ice") pourTypeName = "添加冰块";
-					else if (stage.pourType === "extraction") pourTypeName = "萃取浓缩";
-					else if (stage.pourType === "beverage") pourTypeName = "饮料";
-					else pourTypeName = stage.pourType;
-				}
-				
-				// 添加注水方式标记
-				pourTypeText = ` [${pourTypeName}]`;
-			}
-
-			// 确保标签和详情是分开的
-			text += `${
-				index + 1
-			}. [${timeText}]${pourTimeText}${pourTypeText} ${stage.label} - ${
-				stage.water
-			}\n`;
+            // 构建步骤文本
+            text += `${index + 1}. `;
+            
+            // 只有在需要显示时间时才添加时间文本
+            if (timeText) {
+                text += `${timeText}`;
+            }
+            
+            text += `${pourTimeText}${pourTypeText} ${stage.label} - ${stage.water}\n`;
 
 			if (stage.detail) {
 				text += `   ${stage.detail}\n`;
@@ -1057,21 +1065,25 @@ function parseMethodText(text: string, customEquipment?: CustomEquipment): Metho
 		for (let i = 0; i < stageLines.length; i++) {
 			const line = stageLines[i];
 			// 如果是主步骤行
-			if (line.match(/^\d+\.\s*\[.*?\]/)) {
-				// 修改正则表达式以正确提取各部分
-				const stageMatch = line.match(
-					/\d+\.\s*\[(\d+)分(\d+)秒\](?:\s*\(注水(\d+)秒\))?(?:\s*\[(.*?)\])?\s*(.*?)\s*-\s*(.*?)(?:\n|$)/
-				);
-				if (stageMatch) {
-					const minutes = parseInt(stageMatch[1]);
-					const seconds = parseInt(stageMatch[2]);
+			if (line.match(/^\d+\./)) {
+				// 匹配带时间的格式：1. [0分25秒] [萃取浓缩] 萃取浓缩 - 36g
+				const timePattern = /^\d+\.\s*\[(\d+)分(\d+)秒\](?:\s*\(注水(\d+)秒\))?(?:\s*\[(.*?)\])?\s*(.*?)\s*-\s*(.*?)(?:\n|$)/;
+				
+				// 匹配不带时间的格式：1. [饮料] 加入牛奶 - 120g
+				const noTimePattern = /^\d+\.\s*\[(.*?)\]\s*(.*?)\s*-\s*(.*?)(?:\n|$)/;
+				
+				// 首先尝试匹配带时间的模式
+				const timeMatch = line.match(timePattern);
+				if (timeMatch) {
+					const minutes = parseInt(timeMatch[1]);
+					const seconds = parseInt(timeMatch[2]);
 					const time = minutes * 60 + seconds;
-					const pourTime = stageMatch[3]
-						? parseInt(stageMatch[3])
+					const pourTime = timeMatch[3]
+						? parseInt(timeMatch[3])
 						: Math.min(20, Math.ceil(time * 0.25));
-					const pourTypeText = stageMatch[4] || "";
-					const label = stageMatch[5].trim();
-					const water = stageMatch[6].trim();
+					const pourTypeText = timeMatch[4] || "";
+					const label = timeMatch[5].trim();
+					const water = timeMatch[6].trim();
 
 					// 创建步骤对象
 					const stage: ParsedStage = {
@@ -1089,40 +1101,67 @@ function parseMethodText(text: string, customEquipment?: CustomEquipment): Metho
 					
 					// 处理pourType
 					if (pourTypeText) {
-						// 查找自定义注水方式或使用系统默认注水方式
-						if (pourTypeText === "中心注水") {
+						if (pourTypeText === "萃取浓缩") {
+							stage.pourType = "extraction";
+						} else if (pourTypeText === "饮料") {
+							stage.pourType = "beverage";
+							stage.time = 0; // 饮料步骤时间设为0
+						} else if (pourTypeText === "中心注水") {
 							stage.pourType = "center";
 						} else if (pourTypeText === "绕圈注水") {
 							stage.pourType = "circle";
 						} else if (pourTypeText === "添加冰块") {
 							stage.pourType = "ice";
-						} else if (pourTypeText === "萃取浓缩") {
-							stage.pourType = "extraction";
-						} else if (pourTypeText === "饮料") {
-							stage.pourType = "beverage";
 						} else {
 							// 查找自定义注水方式
 							stage.pourType = findCustomPourTypeIdByName(pourTypeText, customEquipment);
 						}
 					}
 					
-					// 如果是意式咖啡，根据label推断pourType
-					if (isEspresso && !stage.pourType) {
-						// 默认为萃取
-						if (label.includes('饮料')) {
-							stage.pourType = 'beverage';
-						} else {
-							stage.pourType = 'extraction';
-						}
-					}
-
 					// 检查下一行是否是详细信息（以空格开头）
-					if (i + 1 < stageLines.length && stageLines[i + 1].trim().length > 0 && stageLines[i + 1].startsWith(" ")) {
+					if (i + 1 < stageLines.length && stageLines[i + 1].startsWith("   ")) {
 						stage.detail = stageLines[i + 1].trim();
 						i++; // 跳过详细信息行
 					}
-
+					
+					// 添加到步骤列表
 					method.params.stages.push(stage);
+				} else {
+					// 尝试匹配不带时间的模式（主要用于意式咖啡的饮料步骤）
+					const noTimeMatch = line.match(noTimePattern);
+					if (noTimeMatch && isEspresso) {
+						const pourTypeText = noTimeMatch[1].trim();
+						const label = noTimeMatch[2].trim();
+						const water = noTimeMatch[3].trim();
+						
+						// 创建步骤对象
+						const stage: ParsedStage = {
+							time: 0, // 不带时间的步骤，默认时间为0
+							label,
+							water,
+							detail: "",
+							pourType: "",
+						};
+						
+						// 设置pourType
+						if (pourTypeText === "饮料") {
+							stage.pourType = "beverage";
+						} else if (pourTypeText === "萃取浓缩") {
+							stage.pourType = "extraction";
+						} else {
+							// 查找自定义注水方式
+							stage.pourType = findCustomPourTypeIdByName(pourTypeText, customEquipment);
+						}
+						
+						// 检查下一行是否是详细信息（以空格开头）
+						if (i + 1 < stageLines.length && stageLines[i + 1].startsWith("   ")) {
+							stage.detail = stageLines[i + 1].trim();
+							i++; // 跳过详细信息行
+						}
+						
+						// 添加到步骤列表
+						method.params.stages.push(stage);
+					}
 				}
 			}
 		}
