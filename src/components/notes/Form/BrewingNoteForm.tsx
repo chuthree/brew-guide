@@ -821,7 +821,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                                             [&::-webkit-slider-thumb]:border-solid
                                             [&::-webkit-slider-thumb]:border-neutral-300
                                             [&::-webkit-slider-thumb]:bg-neutral-50
-                                            dark:[&::-webkit-slider-thumb]:border-neutral-60
+                                            dark:[&::-webkit-slider-thumb]:border-neutral-600
                                             dark:[&::-webkit-slider-thumb]:bg-neutral-900
                                             
                                             [&::-moz-range-thumb]:h-4 
@@ -879,7 +879,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                                 [&::-webkit-slider-thumb]:border-solid
                                 [&::-webkit-slider-thumb]:border-neutral-300
                                 [&::-webkit-slider-thumb]:bg-neutral-50
-                                dark:[&::-webkit-slider-thumb]:border-neutral-60
+                                dark:[&::-webkit-slider-thumb]:border-neutral-500
                                 dark:[&::-webkit-slider-thumb]:bg-neutral-900
                                 
                                 [&::-moz-range-thumb]:h-4 
@@ -890,7 +890,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                                 [&::-moz-range-thumb]:border-solid
                                 [&::-moz-range-thumb]:border-neutral-300
                                 [&::-moz-range-thumb]:bg-neutral-50
-                                dark:[&::-moz-range-thumb]:border-neutral-600
+                                dark:[&::-moz-range-thumb]:border-neutral-500
                                 dark:[&::-moz-range-thumb]:bg-neutral-900"
                             />
                         </div>
