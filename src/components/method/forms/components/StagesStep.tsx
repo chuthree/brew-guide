@@ -400,37 +400,41 @@ const StagesStep: React.FC<StagesStepProps> = ({
                     <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
                       累计时间
                     </label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="1"
-                      value={
-                        editingCumulativeTime && editingCumulativeTime.index === index
-                          ? editingCumulativeTime.value
-                          : stage.time
-                      }
-                      onChange={(e) => {
-                        // 先更新本地状态，保留用户输入的值
-                        setEditingCumulativeTime({
-                          index,
-                          value: e.target.value
-                        });
-
-                        // 确保输入的值为正整数
-                        const timeValue = parseInt(e.target.value) || 0;
-                        if (timeValue >= 0) {
-                          onStageChange(index, 'time', timeValue);
+                    <div className="relative">
+                      <span className="absolute left-0 bottom-2 text-neutral-500 dark:text-neutral-400">在</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={
+                          editingCumulativeTime && editingCumulativeTime.index === index
+                            ? editingCumulativeTime.value
+                            : stage.time
                         }
-                      }}
-                      onBlur={() => setEditingCumulativeTime(null)} // 失去焦点时清除本地状态
-                      placeholder="0"
-                      className="w-full py-2 bg-transparent outline-hidden border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
-                    />
+                        onChange={(e) => {
+                          // 先更新本地状态，保留用户输入的值
+                          setEditingCumulativeTime({
+                            index,
+                            value: e.target.value
+                          });
+
+                          // 确保输入的值为正整数
+                          const timeValue = parseInt(e.target.value) || 0;
+                          if (timeValue >= 0) {
+                            onStageChange(index, 'time', timeValue);
+                          }
+                        }}
+                        onBlur={() => setEditingCumulativeTime(null)} // 失去焦点时清除本地状态
+                        placeholder="0"
+                        className="w-full py-2 pl-5 pr-5 bg-transparent outline-hidden border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
+                      />
+                      <span className="absolute right-0 bottom-2 text-neutral-500 dark:text-neutral-400">秒时</span>
+                    </div>
                   </div>
 
                   <div className="space-y-2">
-                    <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                      注水时间
+                    <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-500">
+                      注水时间 (自动)
                     </label>
                     <input
                       type="number"
@@ -439,18 +443,56 @@ const StagesStep: React.FC<StagesStepProps> = ({
                       value={stage.pourTime || ''}
                       onChange={(e) => {
                         const pourTime = parseInt(e.target.value) || 0;
-                        const stageTime = stage.time || 0;
                         
-                        // 如果注水时间大于阶段总时间，则将注水时间设置为阶段总时间
-                        if (pourTime > stageTime) {
-                          onStageChange(index, 'pourTime', stageTime);
+                        // 获取当前阶段的时间
+                        const currentTime = stage.time || 0;
+                        
+                        // 获取上一个阶段的时间（如果存在）
+                        let previousTime = 0;
+                        if (index > 0) {
+                          const previousStage = stages[index - 1];
+                          previousTime = previousStage.time || 0;
+                        }
+                        
+                        // 计算阶段时间长度（当前阶段时间与上一阶段时间的差值）
+                        const stageDuration = Math.max(0, currentTime - previousTime);
+                        
+                        // 如果注水时间大于阶段时间长度，则将注水时间设置为阶段时间长度
+                        if (pourTime > stageDuration) {
+                          onStageChange(index, 'pourTime', stageDuration);
                         } else {
                           onStageChange(index, 'pourTime', pourTime);
                         }
                       }}
-                      placeholder="默认全部"
-                      className="w-full py-2 bg-transparent outline-hidden border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
+                      className="w-full py-2 bg-transparent outline-hidden border-b border-dashed border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
                     />
+                    
+                    {/* 等待时间显示 */}
+                    {(() => {
+                      // 获取当前阶段的时间
+                      const currentTime = stage.time || 0;
+                      
+                      // 获取上一个阶段的时间（如果存在）
+                      let previousTime = 0;
+                      if (index > 0) {
+                        const previousStage = stages[index - 1];
+                        previousTime = previousStage.time || 0;
+                      }
+                      
+                      // 计算阶段总时长
+                      const stageDuration = Math.max(0, currentTime - previousTime);
+                      
+                      // 计算等待时间
+                      const pourTime = stage.pourTime || 0;
+                      const waitTime = stageDuration - pourTime;
+                      
+                      // 只有当等待时间大于0时才显示
+                      return waitTime > 0 ? (
+                        <div className="text-[10px] text-neutral-500 dark:text-neutral-500 mt-1">
+                          等待时间：{waitTime}秒
+                        </div>
+                      ) : null;
+                    })()}
                   </div>
 
                   <div className="space-y-2">
@@ -489,6 +531,7 @@ const StagesStep: React.FC<StagesStepProps> = ({
                       </button>
                     </label>
                     <div className="relative">
+                      <span className="absolute left-0 bottom-2 text-neutral-500 dark:text-neutral-400">水量</span>
                       <input
                         type="text"
                         min="0"
@@ -616,9 +659,9 @@ const StagesStep: React.FC<StagesStepProps> = ({
                           }
                         }}
                         onFocus={(e) => e.target.select()}
-                        className="w-full py-2 bg-transparent outline-hidden border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
+                        className="w-full py-2 pl-9 pr-5 bg-transparent outline-hidden border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
                       />
-                      <span className="absolute right-0 bottom-2 text-neutral-500 dark:text-neutral-400">g</span>
+                      <span className="absolute right-0 bottom-2 text-neutral-500 dark:text-neutral-400">克</span>
                     </div>
                   </div>
                 </div>

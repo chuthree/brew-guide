@@ -416,6 +416,26 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     if (field === 'time' || field === 'pourTime') {
       // 数值类型
       stage[field] = value as number;
+      
+      // 当更新累计时间时，自动更新注水时间为阶段时间长度（当前阶段时间与上一阶段时间的差值）
+      if (field === 'time' && !isEspressoMachine(customEquipment)) {
+        // 获取当前阶段的索引和时间值
+        const currentTime = parseInt(value.toString()) || 0;
+        
+        // 获取上一个阶段的时间（如果存在）
+        let previousTime = 0;
+        if (index > 0) {
+          const previousStage = method.params.stages[index - 1];
+          previousTime = previousStage.time || 0;
+        }
+        
+        // 计算阶段时间长度（当前阶段时间与上一阶段时间的差值）
+        const stageDuration = currentTime - previousTime;
+        
+        // 将注水时间设置为阶段时间长度
+        stage.pourTime = stageDuration > 0 ? stageDuration : 0;
+      }
+      
       // 确保注水时间不超过总时间
       if (field === 'pourTime' && stage.time !== undefined && (stage.pourTime ?? 0) > stage.time) {
         stage.pourTime = stage.time;
@@ -464,9 +484,8 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
             } else if (method.params.stages.length === 0) {
                 return 30; // 第一个阶段默认30秒
             } else {
-                // 获取上一个阶段的时间
-                const lastStage = method.params.stages[method.params.stages.length - 1];
-                return (lastStage.time || 0) + 30; // 默认比上一阶段多30秒
+                // 新增步骤不预设时间，让用户自行输入
+                return undefined;
             }
         })();
             
@@ -492,8 +511,22 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                 newStage.pourTime = undefined;
             }
         } else {
-            // 非意式机默认添加pourTime
-            newStage.pourTime = 10;
+            // 非意式机，注水时间设置为该阶段的时间长度
+            if (method.params.stages.length > 0) {
+                // 获取上一个阶段的时间
+                const previousStage = method.params.stages[method.params.stages.length - 1];
+                const previousTime = previousStage.time || 0;
+                
+                // 计算阶段时间长度（当前阶段时间与上一阶段时间的差值）
+                const currentTime = defaultTime || 0;
+                const stageDuration = currentTime - previousTime;
+                
+                // 将注水时间设置为阶段时间长度
+                newStage.pourTime = stageDuration > 0 ? stageDuration : 0;
+            } else {
+                // 第一个阶段，注水时间等于当前时间（因为从0开始）
+                newStage.pourTime = defaultTime;
+            }
         }
         
         // 更新方法
