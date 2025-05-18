@@ -33,6 +33,14 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
         setRemainingValue(editingRemaining !== null ? editingRemaining : (bean.remaining || ''));
     }, [bean.capacity, bean.remaining, editingRemaining]);
     
+    // 自动填充年份
+    useEffect(() => {
+        if (!bean.roastDate) {
+            const currentYear = new Date().getFullYear().toString();
+            onBeanChange('roastDate')(currentYear);
+        }
+    }, [bean.roastDate, onBeanChange]);
+    
     // 处理容量变化
     const handleCapacityChange = (value: string) => {
         setCapacityValue(value);
@@ -305,6 +313,9 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
                                     const day = value.substring(6, 8);
                                     const formattedDate = `${year}-${month}-${day}`;
                                     onBeanChange('roastDate')(formattedDate);
+                                } else if (value.length === 0) {
+                                    // 如果清空了输入，则重置
+                                    onBeanChange('roastDate')('');
                                 } else {
                                     // 如果不是完整日期，只保存当前输入
                                     onBeanChange('roastDate')(value ? value : '');
