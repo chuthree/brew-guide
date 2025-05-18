@@ -836,25 +836,27 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                                             onTouchMove={handleTouchMove(key)}
                                             onTouchEnd={handleTouchEnd}
                                             className="relative h-[1px] w-full appearance-none bg-neutral-300 dark:bg-neutral-600 cursor-pointer touch-none 
-                                            [&::-webkit-slider-thumb]:h-3.5 
-                                            [&::-webkit-slider-thumb]:w-3.5 
+                                            [&::-webkit-slider-thumb]:h-4 
+                                            [&::-webkit-slider-thumb]:w-4
                                             [&::-webkit-slider-thumb]:appearance-none 
                                             [&::-webkit-slider-thumb]:rounded-full 
-                                            [&::-webkit-slider-thumb]:border 
-                                            [&::-webkit-slider-thumb]:border-white
-                                            [&::-webkit-slider-thumb]:bg-neutral-700 
-                                            dark:[&::-webkit-slider-thumb]:border-neutral-800
-                                            dark:[&::-webkit-slider-thumb]:bg-neutral-300
+                                            [&::-webkit-slider-thumb]:border-[1px] 
+                                            [&::-webkit-slider-thumb]:border-solid
+                                            [&::-webkit-slider-thumb]:border-neutral-300
+                                            [&::-webkit-slider-thumb]:bg-neutral-50
+                                            dark:[&::-webkit-slider-thumb]:border-neutral-60
+                                            dark:[&::-webkit-slider-thumb]:bg-neutral-900
                                             
-                                            [&::-moz-range-thumb]:h-3.5 
-                                            [&::-moz-range-thumb]:w-3.5 
+                                            [&::-moz-range-thumb]:h-4 
+                                            [&::-moz-range-thumb]:w-4
                                             [&::-moz-range-thumb]:appearance-none 
                                             [&::-moz-range-thumb]:rounded-full 
-                                            [&::-moz-range-thumb]:border 
-                                            [&::-moz-range-thumb]:border-white
-                                            [&::-moz-range-thumb]:bg-neutral-700
-                                            dark:[&::-moz-range-thumb]:border-neutral-800
-                                            dark:[&::-moz-range-thumb]:bg-neutral-300"
+                                            [&::-moz-range-thumb]:border-[1px]
+                                            [&::-moz-range-thumb]:border-solid
+                                            [&::-moz-range-thumb]:border-neutral-300
+                                            [&::-moz-range-thumb]:bg-neutral-50
+                                            dark:[&::-moz-range-thumb]:border-neutral-600
+                                            dark:[&::-moz-range-thumb]:bg-neutral-900"
                                         />
                                     </div>
                                 </div>
@@ -892,25 +894,27 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                                 onTouchMove={handleRatingTouchMove}
                                 onTouchEnd={handleRatingTouchEnd}
                                 className="relative h-[1px] w-full appearance-none bg-neutral-300 dark:bg-neutral-600 cursor-pointer touch-none 
-                                [&::-webkit-slider-thumb]:h-3.5 
-                                [&::-webkit-slider-thumb]:w-3.5 
+                                [&::-webkit-slider-thumb]:h-4 
+                                [&::-webkit-slider-thumb]:w-4
                                 [&::-webkit-slider-thumb]:appearance-none 
                                 [&::-webkit-slider-thumb]:rounded-full 
-                                [&::-webkit-slider-thumb]:border 
-                                [&::-webkit-slider-thumb]:border-white
-                                [&::-webkit-slider-thumb]:bg-neutral-700 
-                                dark:[&::-webkit-slider-thumb]:border-neutral-800
-                                dark:[&::-webkit-slider-thumb]:bg-neutral-300
+                                [&::-webkit-slider-thumb]:border-[1px] 
+                                [&::-webkit-slider-thumb]:border-solid
+                                [&::-webkit-slider-thumb]:border-neutral-300
+                                [&::-webkit-slider-thumb]:bg-neutral-50
+                                dark:[&::-webkit-slider-thumb]:border-neutral-60
+                                dark:[&::-webkit-slider-thumb]:bg-neutral-900
                                 
-                                [&::-moz-range-thumb]:h-3.5 
-                                [&::-moz-range-thumb]:w-3.5 
+                                [&::-moz-range-thumb]:h-4 
+                                [&::-moz-range-thumb]:w-4
                                 [&::-moz-range-thumb]:appearance-none 
                                 [&::-moz-range-thumb]:rounded-full 
-                                [&::-moz-range-thumb]:border 
-                                [&::-moz-range-thumb]:border-white
-                                [&::-moz-range-thumb]:bg-neutral-700
-                                dark:[&::-moz-range-thumb]:border-neutral-800
-                                dark:[&::-moz-range-thumb]:bg-neutral-300"
+                                [&::-moz-range-thumb]:border-[1px]
+                                [&::-moz-range-thumb]:border-solid
+                                [&::-moz-range-thumb]:border-neutral-300
+                                [&::-moz-range-thumb]:bg-neutral-50
+                                dark:[&::-moz-range-thumb]:border-neutral-600
+                                dark:[&::-moz-range-thumb]:bg-neutral-900"
                             />
                         </div>
                     </div>
