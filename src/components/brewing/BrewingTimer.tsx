@@ -1468,7 +1468,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                         
                         return (
                           <div
-                            key={`divider-${stage.startTime}`}
+                            key={`divider-${stage.startTime}-${index}`}
                             className="absolute top-0 bottom-0 z-10 w-[1.5px] bg-neutral-100 dark:bg-neutral-900"
                             style={{
                               left: `${percentage}%`,
