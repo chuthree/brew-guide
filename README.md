@@ -88,3 +88,11 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Lottie 动画
+
+项目中的彩蛋使用了Lottie动画。Lottie动画文件位于`public/animations/`目录下。
+
+如果想要替换动画，可以从[LottieFiles](https://lottiefiles.com/)下载或自行创建Lottie JSON文件，然后替换`public/animations/chuchu-animation.json`文件。
+
+在设置页面底部彩蛋中使用的是倒三角形眨眼动画，您可以自行设计更有趣的动画效果。

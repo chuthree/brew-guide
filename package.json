@@ -54,6 +54,7 @@
     "input-otp": "^1.4.2",
     "keshi": "^3.0.2",
     "lodash": "^4.17.21",
+    "lottie-react": "^2.4.1",
     "lucide-react": "^0.479.0",
     "nanoid": "^5.1.5",
     "next": "15.3.2",

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { APP_VERSION, sponsorsList } from '@/lib/core/config'
 import { Storage } from '@/lib/core/storage'
 import DataManager from '../common/data/DataManager'
@@ -11,6 +11,10 @@ import { LayoutSettings } from '../brewing/Timer/Settings'
 import { notifyLanguageChange } from '@/providers/TranslationsProvider'
 import Image from 'next/image'
 import GrinderSettings from './GrinderSettings'
+import { motion, AnimatePresence } from 'framer-motion'
+import Lottie from 'lottie-react'
+// 导入Lottie动画JSON文件
+import chuchuAnimation from '../../../public/animations/chuchu-animation.json'
 
 // 定义设置选项接口
 export interface SettingsOptions {
@@ -81,6 +85,22 @@ const Settings: React.FC<SettingsProps> = ({
     const [decrementPresets, setDecrementPresets] = useState<number[]>(
         settings.decrementPresets || defaultSettings.decrementPresets
     )
+
+    // 添加彩蛋动画状态
+    const [showEasterEgg, setShowEasterEgg] = useState(false)
+    const lottieRef = useRef<any>(null)
+    const [lottieKey, setLottieKey] = useState(0)
+    
+    // 创建音效播放引用
+    const audioRef = useRef<HTMLAudioElement | null>(null)
+    
+    // 初始化音频元素
+    useEffect(() => {
+        // 仅在客户端创建音频元素
+        if (typeof window !== 'undefined') {
+            audioRef.current = new Audio('/sounds/notification-pings.mp3')
+        }
+    }, [])
 
     // 当settings发生变化时更新decrementPresets状态
     useEffect(() => {
@@ -233,6 +253,43 @@ const handleChange = async <K extends keyof SettingsOptions>(
         // 提供触感反馈
         if (settings.hapticFeedback) {
             hapticsUtils.light()
+        }
+    }
+
+    // 处理Lottie动画完成事件
+    const handleAnimationComplete = () => {
+        // 立即停止音频播放
+        if (audioRef.current) {
+            audioRef.current.pause()
+            audioRef.current.currentTime = 0
+        }
+        
+        // 动画播放结束后关闭弹窗
+        setTimeout(() => {
+            setShowEasterEgg(false)
+        }, 500)
+    }
+
+    // 处理彩蛋动画 - 简化为一次点击即触发
+    const handleEasterEgg = () => {
+        if (showEasterEgg) return
+        
+        setShowEasterEgg(true)
+        setLottieKey(prev => prev + 1)
+        
+        // 触发震动反馈
+        if (settings.hapticFeedback) {
+            hapticsUtils.medium()
+        }
+        
+        // 播放音效
+        if (audioRef.current && settings.notificationSound) {
+            // 重置音频播放位置
+            audioRef.current.currentTime = 0
+            // 播放音效
+            audioRef.current.play().catch(err => {
+                console.log('音频播放失败:', err)
+            })
         }
     }
 
@@ -857,6 +914,59 @@ const handleChange = async <K extends keyof SettingsOptions>(
                             GitHub
                         </a>
                     </p>
+                    
+                    {/* 添加彩蛋按钮 */}
+                    <div className="mt-8 flex justify-center">
+                        <button 
+                            onClick={handleEasterEgg}
+                            className="opacity-30 hover:opacity-50 dark:opacity-20 dark:hover:opacity-40 transition-opacity duration-300 focus:outline-none"
+                            aria-label="Easter Egg"
+                        >
+                            <div className="w-0 h-0 border-l-[10px] border-r-[10px] border-t-[18px] border-l-transparent border-r-transparent border-t-neutral-400 dark:border-t-neutral-600" />
+                        </button>
+                    </div>
+                    
+                    {/* 彩蛋动画 - Lottie版本 */}
+                    <AnimatePresence>
+                        {showEasterEgg && (
+                            <motion.div 
+                                className="fixed inset-0 z-[100] flex items-center justify-center bg-black/20 dark:bg-black/40"
+                                initial={{ opacity: 0, backdropFilter: "blur(0px)" }}
+                                animate={{ opacity: 1, backdropFilter: "blur(3px)" }}
+                                exit={{ opacity: 0, backdropFilter: "blur(0px)" }}
+                                transition={{ duration: 0.4 }}
+                                onClick={() => setShowEasterEgg(false)}
+                            >
+                                <motion.div 
+                                    className="relative w-32 h-32"
+                                    initial={{ scale: 0.5, y: 20, filter: "blur(8px)" }}
+                                    animate={{ scale: 1, y: 0, filter: "blur(0px)" }}
+                                    exit={{ scale: 0.8, y: 10, filter: "blur(8px)" }}
+                                    transition={{ 
+                                        type: "spring", 
+                                        stiffness: 300, 
+                                        damping: 20,
+                                        filter: { duration: 0.3 } 
+                                    }}
+                                >
+                                    {/* Lottie动画 */}
+                                    <Lottie 
+                                        key={lottieKey}
+                                        lottieRef={lottieRef}
+                                        animationData={chuchuAnimation} 
+                                        loop={false}
+                                        autoplay={true}
+                                        onComplete={handleAnimationComplete}
+                                        style={{ width: '100%', height: '100%' }}
+                                        rendererSettings={{
+                                            preserveAspectRatio: 'xMidYMid slice',
+                                            progressiveLoad: true
+                                        }}
+                                    />
+                                </motion.div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
             </div>
 
