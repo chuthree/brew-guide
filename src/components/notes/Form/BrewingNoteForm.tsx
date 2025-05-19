@@ -697,7 +697,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                     <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
                         方案参数
                     </div>
-                    <div className="grid grid-cols-2 gap-6">
+                    <div className="grid grid-cols-4 gap-6">
                         <div>
                             <input
                                 type="text"
@@ -735,8 +735,6 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                                 placeholder="粉水比 (如: 1:15)"
                             />
                         </div>
-                    </div>
-                    <div className="grid grid-cols-3 gap-6">
                         <div>
                             <input
                                 type="text"
