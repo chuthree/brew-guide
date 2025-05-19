@@ -12,7 +12,6 @@ import { notifyLanguageChange } from '@/providers/TranslationsProvider'
 import Image from 'next/image'
 import GrinderSettings from './GrinderSettings'
 import { motion, AnimatePresence } from 'framer-motion'
-import Lottie from 'lottie-react'
 // 导入Lottie动画JSON文件
 import chuchuAnimation from '../../../public/animations/chuchu-animation.json'
 
@@ -89,16 +88,21 @@ const Settings: React.FC<SettingsProps> = ({
     // 添加彩蛋动画状态
     const [showEasterEgg, setShowEasterEgg] = useState(false)
     const lottieRef = useRef<any>(null)
-    const [lottieKey, setLottieKey] = useState(0)
+    const [LottieComponent, setLottieComponent] = useState<any>(null)
     
     // 创建音效播放引用
     const audioRef = useRef<HTMLAudioElement | null>(null)
     
-    // 初始化音频元素
+    // 初始化音频元素和Lottie组件
     useEffect(() => {
         // 仅在客户端创建音频元素
         if (typeof window !== 'undefined') {
             audioRef.current = new Audio('/sounds/notification-pings.mp3')
+            
+            // 预加载Lottie组件
+            import('lottie-react').then(module => {
+                setLottieComponent(() => module.default)
+            })
         }
     }, [])
 
@@ -111,6 +115,9 @@ const Settings: React.FC<SettingsProps> = ({
 
     // 添加主题颜色更新的 Effect
     useEffect(() => {
+        // 确保只在客户端执行
+        if (typeof window === 'undefined') return;
+        
         const updateThemeColor = () => {
             const themeColorMeta = document.querySelectorAll('meta[name="theme-color"]');
 
@@ -275,7 +282,6 @@ const handleChange = async <K extends keyof SettingsOptions>(
         if (showEasterEgg) return
         
         setShowEasterEgg(true)
-        setLottieKey(prev => prev + 1)
         
         // 触发震动反馈
         if (settings.hapticFeedback) {
@@ -928,7 +934,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                     
                     {/* 彩蛋动画 - Lottie版本 */}
                     <AnimatePresence>
-                        {showEasterEgg && (
+                        {showEasterEgg && typeof window !== 'undefined' && (
                             <motion.div 
                                 className="fixed inset-0 z-[100] flex items-center justify-center bg-black/20 dark:bg-black/40"
                                 initial={{ opacity: 0, backdropFilter: "blur(0px)" }}
@@ -950,19 +956,20 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                     }}
                                 >
                                     {/* Lottie动画 */}
-                                    <Lottie 
-                                        key={lottieKey}
-                                        lottieRef={lottieRef}
-                                        animationData={chuchuAnimation} 
-                                        loop={false}
-                                        autoplay={true}
-                                        onComplete={handleAnimationComplete}
-                                        style={{ width: '100%', height: '100%' }}
-                                        rendererSettings={{
-                                            preserveAspectRatio: 'xMidYMid slice',
-                                            progressiveLoad: true
-                                        }}
-                                    />
+                                    {LottieComponent && (
+                                        <LottieComponent 
+                                            lottieRef={lottieRef}
+                                            animationData={chuchuAnimation} 
+                                            loop={false}
+                                            autoplay={true}
+                                            onComplete={handleAnimationComplete}
+                                            style={{ width: '100%', height: '100%' }}
+                                            rendererSettings={{
+                                                preserveAspectRatio: 'xMidYMid slice',
+                                                progressiveLoad: true
+                                            }}
+                                        />
+                                    )}
                                 </motion.div>
                             </motion.div>
                         )}
