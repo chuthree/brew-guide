@@ -107,9 +107,6 @@ const pwaConfig = {
 
 // 创建基础配置
 const nextConfig = {
-    devIndicators: {
-        buildActivity: false
-    },
     reactStrictMode: true,
     // 为 Capacitor 启用静态导出模式
     output: 'export',

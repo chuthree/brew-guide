@@ -53,8 +53,8 @@ interface StagesStepProps {
   setEditingCumulativeWater: React.Dispatch<React.SetStateAction<{ index: number, value: string } | null>>;
   showWaterTooltip: number | null;
   setShowWaterTooltip: React.Dispatch<React.SetStateAction<number | null>>;
-  stagesContainerRef: React.RefObject<HTMLDivElement>;
-  newStageRef?: React.RefObject<HTMLDivElement>;
+  stagesContainerRef: React.RefObject<HTMLDivElement | null>;
+  newStageRef?: React.RefObject<HTMLDivElement | null>;
 }
 
 const StagesStep: React.FC<StagesStepProps> = ({
@@ -239,7 +239,6 @@ const StagesStep: React.FC<StagesStepProps> = ({
         {/* 顶部渐变阴影 - 作为导航的伪元素 */}
         <div className="absolute mt-[72px] left-0 right-0 h-12 -bottom-12 bg-linear-to-b from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none"></div>
       </div>
-
       {/* 步骤内容 */}
       <div className="space-y-10 pt-2 m-0" ref={stagesContainerRef}>
         {stages.map((stage, index) => (
@@ -284,7 +283,7 @@ const StagesStep: React.FC<StagesStepProps> = ({
                       </>
                     ) : (
                       /* 普通器具的注水方式 */
-                      <>
+                      (<>
                         {/* 显示自定义器具的自定义注水动画 */}
                         {customEquipment.customPourAnimations && customEquipment.customPourAnimations.length > 0 ? (
                           <>
@@ -348,7 +347,7 @@ const StagesStep: React.FC<StagesStepProps> = ({
                             )}
                           </>
                         )}
-                      </>
+                      </>)
                     )}
                   </select>
                 </div>
@@ -800,7 +799,6 @@ const StagesStep: React.FC<StagesStepProps> = ({
           </div>
         ))}
       </div>
-
       {/* 底部渐变阴影 - 提示有更多内容 */}
       <div className="sticky bottom-0 left-0 right-0 h-12 bg-linear-to-t from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none"></div>
     </motion.div>

@@ -6,7 +6,7 @@ import { Filesystem, Directory } from '@capacitor/filesystem'
 import { toPng } from 'html-to-image'
 
 interface StatsExporterProps {
-  statsContainerRef: React.RefObject<HTMLDivElement>
+  statsContainerRef: React.RefObject<HTMLDivElement | null>
   onSuccess: (message: string) => void
   onError: (message: string) => void
   onComplete: () => void

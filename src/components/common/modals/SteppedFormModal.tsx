@@ -157,7 +157,7 @@ const SteppedFormModal: React.FC<SteppedFormModalProps> = ({
         
         // 为咖啡豆选择器添加搜索查询参数和高亮ID
         return React.cloneElement(
-            currentStepContent.content as React.ReactElement,
+            currentStepContent.content as React.ReactElement<any>,
             { 
                 searchQuery,
                 highlightedBeanId  

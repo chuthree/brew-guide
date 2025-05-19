@@ -8,7 +8,7 @@ import { Storage } from '@/lib/core/storage'
 
 interface NotesExporterProps {
   selectedNotes: string[]
-  notesContainerRef: React.RefObject<HTMLDivElement>
+  notesContainerRef: React.RefObject<HTMLDivElement | null>
   onSuccess: (message: string) => void
   onError: (message: string) => void
   onComplete: () => void
