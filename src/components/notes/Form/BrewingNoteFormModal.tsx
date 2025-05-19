@@ -51,7 +51,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
     selectedMethod,
     availableMethods,
     customMethods,
-    handleMethodTypeChange,
+    handleMethodTypeChange: _handleMethodTypeChange,
     setSelectedMethod
   } = useMethodManagement({
     selectedEquipment,

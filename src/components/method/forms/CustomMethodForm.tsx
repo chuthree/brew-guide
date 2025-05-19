@@ -1,10 +1,8 @@
 'use client'
 
 import React, { useState, useRef, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
-import { type Method, CustomEquipment } from '@/lib/core/config'
-import { formatGrindSize } from '@/lib/utils/grindUtils'
+import { CustomEquipment } from '@/lib/core/config'
 import { isEspressoMachine, getDefaultPourType, getPourTypeName } from '@/lib/utils/equipmentUtils'
 import { SettingsOptions, defaultSettings } from '@/components/settings/Settings'
 import { Storage } from '@/lib/core/storage'
@@ -205,7 +203,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
 
     // 创建新方法
     return initializeNewMethod();
-    });
+  });
   
   // 获取设置
   const [localSettings, setLocalSettings] = useState<SettingsOptions>(defaultSettings);
@@ -243,7 +241,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
   
-  const formatWater = (water: string | number | undefined) => {
+  const _formatWater = (water: string | number | undefined) => {
     if (water === undefined || water === null || water === '') return '0g';
     if (typeof water === 'number') return `${water}g`;
     return water.endsWith('g') ? water : `${water}g`;
@@ -334,13 +332,8 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
   
   // 监听器具变化，重新初始化方法
   useEffect(() => {
-    // 忽略初始加载时的处理（已在初始 state 中处理）
-    // 或者已经有初始方案的情况（编辑现有方案）
-    if (initialMethod) return;
-    
     // 重新初始化方法
     setMethod(initializeNewMethod());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [customEquipment.animationType, customEquipment.hasValve, customEquipment.customPourAnimations, initialMethod]); // 监听器具相关属性的变化
   
   // ===== 数据计算函数 =====
@@ -465,7 +458,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
 
     const addStage = () => {
         // 获取器具类型
-        const equipmentType = customEquipment.animationType;
+        const _equipmentType = customEquipment.animationType;
         const isEspresso = isEspressoMachine(customEquipment);
         
         // 确定默认注水方式

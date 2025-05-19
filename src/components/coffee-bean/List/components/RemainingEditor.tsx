@@ -39,7 +39,7 @@ const RemainingEditor: React.FC<RemainingEditorProps> = ({
     const popoverRef = useRef<HTMLDivElement>(null)
     const isMounted = useRef(false)
     const safeTargetRef = useRef<HTMLElement | null>(null)
-    const isExiting = useRef(false)
+    const _isExiting = useRef(false)
     
     // 安全的状态更新函数
     const safeSetState = <T,>(setter: React.Dispatch<React.SetStateAction<T>>) => {

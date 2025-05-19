@@ -1,6 +1,17 @@
 import { Storage } from "@/lib/core/storage";
 import { CoffeeBean } from "@/types/app";
 import { nanoid } from "nanoid";
+import { db } from "@/lib/core/db";
+// @ts-expect-error - keshi类型声明问题，目前仍在使用其默认导出
+import Keshi from "keshi";
+
+// 创建Keshi缓存实例（高性能内存缓存）
+const beanCache = new Keshi();
+
+// 缓存键常量
+const BEAN_CACHE_KEY = "allBeans";
+const RATED_BEANS_CACHE_KEY = "ratedBeans";
+const BEANS_BY_TYPE_PREFIX = "beansByType_";
 
 /**
  * 咖啡豆管理工具类
@@ -11,13 +22,49 @@ export const CoffeeBeanManager = {
 	 * @returns 咖啡豆数组
 	 */
 	async getAllBeans(): Promise<CoffeeBean[]> {
-		try {
-			const data = await Storage.get("coffeeBeans");
-			if (!data) return [];
-			return JSON.parse(data) as CoffeeBean[];
-		} catch {
-			return [];
-		}
+		return beanCache.resolve(
+			BEAN_CACHE_KEY,
+			async () => {
+				try {
+					// 优先从IndexedDB加载
+					const beans = await db.coffeeBeans.toArray();
+					if (beans && beans.length > 0) {
+						return beans;
+					}
+					
+					// 如果IndexedDB中没有数据，尝试从Storage加载
+					const data = await Storage.get("coffeeBeans");
+					if (!data) return [];
+					
+					const parsedBeans = JSON.parse(data) as CoffeeBean[];
+					
+					// 将数据保存到IndexedDB以便下次使用
+					if (parsedBeans.length > 0) {
+						await db.coffeeBeans.bulkPut(parsedBeans);
+					}
+					
+					return parsedBeans;
+				} catch (error) {
+					console.error("加载咖啡豆数据失败:", error);
+					return [];
+				}
+			},
+			"10mins" // 缓存10分钟，减少重复查询
+		);
+	},
+
+	/**
+	 * 清除所有缓存
+	 */
+	clearCache() {
+		beanCache.clear();
+	},
+	
+	/**
+	 * 组件卸载时清理缓存资源
+	 */
+	teardownCache() {
+		beanCache.teardown();
 	},
 
 	/**
@@ -26,12 +73,26 @@ export const CoffeeBeanManager = {
 	 * @returns 咖啡豆对象，如果不存在则返回null
 	 */
 	async getBeanById(id: string): Promise<CoffeeBean | null> {
-		try {
-			const beans = await this.getAllBeans();
-			return beans.find((bean) => bean.id === id) || null;
-		} catch {
-			return null;
-		}
+		return beanCache.resolve(
+			`bean_${id}`,
+			async () => {
+				try {
+					// 优先从IndexedDB查询单个记录
+					const bean = await db.coffeeBeans.get(id);
+					if (bean) {
+						return bean;
+					}
+					
+					// 如果没有找到，尝试从所有豆子中查找
+					const beans = await this.getAllBeans();
+					return beans.find((bean) => bean.id === id) || null;
+				} catch (error) {
+					console.error(`获取咖啡豆[${id}]失败:`, error);
+					return null;
+				}
+			},
+			"10mins"
+		);
 	},
 
 	/**
@@ -61,13 +122,11 @@ export const CoffeeBeanManager = {
 			// 保存到存储
 			await Storage.set("coffeeBeans", JSON.stringify(beans));
 			
-			// 验证保存是否成功
-			const savedBeans = await this.getAllBeans();
-			const savedBean = savedBeans.find(b => b.id === newBean.id);
-			if (!savedBean) {
-				console.error('咖啡豆保存失败：无法在存储中找到新添加的咖啡豆');
-				throw new Error('添加咖啡豆失败：保存后未能验证数据');
-			}
+			// 保存到IndexedDB
+			await db.coffeeBeans.put(newBean);
+			
+			// 使缓存失效，确保下次获取最新数据
+			this._invalidateCaches();
 			
 			return newBean;
 		} catch (error) {
@@ -94,35 +153,28 @@ export const CoffeeBeanManager = {
 			// 不允许直接修改id，但允许更新timestamp为当前时间以反映修改时间
 			const { id: _id, ...validUpdates } = updates;
 
-			beans[index] = {
+			// 创建更新后的咖啡豆对象
+			const updatedBean = {
 				...beans[index],
 				...validUpdates,
 				// 更新timestamp为当前时间，反映最后修改时间
 				timestamp: Date.now()
 			};
+			
+			// 更新内存中的数组
+			beans[index] = updatedBean;
 
 			// 保存更新后的数据
 			await Storage.set("coffeeBeans", JSON.stringify(beans));
 			
-			// 验证更新是否成功
-			const updatedBeans = await this.getAllBeans();
-			const updatedBean = updatedBeans.find(b => b.id === id);
-			if (!updatedBean) {
-				console.error('咖啡豆更新失败：无法在存储中找到更新后的咖啡豆');
-				return null;
-			}
+			// 更新IndexedDB
+			await db.coffeeBeans.put(updatedBean);
 			
-			// 简单验证几个关键字段是否正确更新
-			for (const key in validUpdates) {
-				// 使用类型断言确保TypeScript理解这里的类型关系
-				const updateKey = key as keyof typeof validUpdates;
-				const beanKey = key as keyof typeof updatedBean;
-				
-				// 跳过可能的undefined值比较
-				if (validUpdates[updateKey] !== undefined && updatedBean[beanKey] !== validUpdates[updateKey]) {
-					console.warn(`咖啡豆字段 ${key} 更新可能不成功`);
-				}
-			}
+			// 使缓存失效，确保下次获取最新数据
+			this._invalidateCaches();
+			
+			// 特别使单个豆子的缓存失效
+			beanCache.delete(`bean_${id}`);
 			
 			return updatedBean;
 		} catch (error) {
@@ -146,9 +198,21 @@ export const CoffeeBeanManager = {
 				return false;
 			}
 
+			// 保存更新后的数组
 			await Storage.set("coffeeBeans", JSON.stringify(filtered));
+			
+			// 从IndexedDB删除
+			await db.coffeeBeans.delete(id);
+			
+			// 使缓存失效
+			this._invalidateCaches();
+			
+			// 特别使单个豆子的缓存失效
+			beanCache.delete(`bean_${id}`);
+			
 			return true;
-		} catch {
+		} catch (error) {
+			console.error('删除咖啡豆失败:', error);
 			return false;
 		}
 	},
@@ -206,7 +270,8 @@ export const CoffeeBeanManager = {
 			});
 
 			return result;
-		} catch {
+		} catch (error) {
+			console.error('更新咖啡豆剩余量失败:', error);
 			return null;
 		}
 	},
@@ -235,12 +300,15 @@ export const CoffeeBeanManager = {
 
 			// 更新咖啡豆
 			const updatedBean = await this.updateBean(id, ratings);
-
-			// 刷新所有已评分的咖啡豆列表（这里可以做一些额外的处理确保列表更新）
-			// 暂不实现缓存机制，每次调用都重新获取数据
+			
+			// 更新后清除已评分豆子相关的缓存
+			beanCache.delete(RATED_BEANS_CACHE_KEY);
+			beanCache.delete(`${BEANS_BY_TYPE_PREFIX}espresso`);
+			beanCache.delete(`${BEANS_BY_TYPE_PREFIX}filter`);
 
 			return updatedBean;
-		} catch {
+		} catch (error) {
+			console.error('更新咖啡豆评分失败:', error);
 			throw new Error("更新咖啡豆评分失败");
 		}
 	},
@@ -250,14 +318,21 @@ export const CoffeeBeanManager = {
 	 * @returns 已评分的咖啡豆数组
 	 */
 	async getRatedBeans(): Promise<CoffeeBean[]> {
-		try {
-			const beans = await this.getAllBeans();
-			return beans.filter(
-				(bean) => bean.overallRating && bean.overallRating > 0
-			);
-		} catch {
-			return [];
-		}
+		return beanCache.resolve(
+			RATED_BEANS_CACHE_KEY,
+			async () => {
+				try {
+					const beans = await this.getAllBeans();
+					return beans.filter(
+						(bean) => bean.overallRating && bean.overallRating > 0
+					);
+				} catch (error) {
+					console.error('获取已评分咖啡豆失败:', error);
+					return [];
+				}
+			},
+			"10mins"
+		);
 	},
 
 	/**
@@ -268,12 +343,19 @@ export const CoffeeBeanManager = {
 	async getRatedBeansByType(
 		type: "espresso" | "filter"
 	): Promise<CoffeeBean[]> {
-		try {
-			const beans = await this.getRatedBeans();
-			return beans.filter((bean) => bean.beanType === type);
-		} catch {
-			return [];
-		}
+		return beanCache.resolve(
+			`${BEANS_BY_TYPE_PREFIX}${type}`,
+			async () => {
+				try {
+					const beans = await this.getRatedBeans();
+					return beans.filter((bean) => bean.beanType === type);
+				} catch (error) {
+					console.error(`获取${type}类型已评分咖啡豆失败:`, error);
+					return [];
+				}
+			},
+			"10mins"
+		);
 	},
 
 	/**
@@ -282,11 +364,28 @@ export const CoffeeBeanManager = {
 	 * @returns 匹配的咖啡豆对象，如果不存在则返回null
 	 */
 	async getBeanByName(name: string): Promise<CoffeeBean | null> {
-		try {
-			const beans = await this.getAllBeans();
-			return beans.find((bean) => bean.name === name) || null;
-		} catch {
-			return null;
-		}
+		return beanCache.resolve(
+			`beanByName_${name}`,
+			async () => {
+				try {
+					const beans = await this.getAllBeans();
+					return beans.find((bean) => bean.name === name) || null;
+				} catch (error) {
+					console.error(`通过名称获取咖啡豆[${name}]失败:`, error);
+					return null;
+				}
+			},
+			"10mins"
+		);
 	},
+	
+	/**
+	 * 使所有相关缓存失效（私有方法）
+	 */
+	_invalidateCaches() {
+		beanCache.delete(BEAN_CACHE_KEY);
+		beanCache.delete(RATED_BEANS_CACHE_KEY);
+		beanCache.delete(`${BEANS_BY_TYPE_PREFIX}espresso`);
+		beanCache.delete(`${BEANS_BY_TYPE_PREFIX}filter`);
+	}
 };

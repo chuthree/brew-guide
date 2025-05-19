@@ -5,7 +5,7 @@ import AutocompleteInput from '@/components/common/forms/AutocompleteInput';
 import { ExtendedCoffeeBean } from '../types';
 import { pageVariants, pageTransition } from '../constants';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/coffee-bean/ui/select';
-import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator } from '@/components/common/ui/input-otp';
+import { InputOTP, InputOTPSlot } from '@/components/common/ui/input-otp';
 import { REGEXP_ONLY_DIGITS } from 'input-otp';
 
 interface BasicInfoProps {

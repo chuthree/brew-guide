@@ -2,8 +2,13 @@ import { type CustomEquipment, type Method } from "@/lib/core/config";
 import { saveCustomMethod, loadCustomMethodsForEquipment } from "@/lib/managers/customMethods";
 import { Storage } from "@/lib/core/storage";
 import { db } from "@/lib/core/db";
+// @ts-expect-error - keshi类型声明问题，目前仍在使用其默认导出
+import Keshi from "keshi";
 
 const STORAGE_KEY = "customEquipments";
+
+// 创建Keshi缓存实例（高性能内存缓存）
+const equipmentsCache = new Keshi();
 
 /**
  * 自定义器具操作错误类型
@@ -16,51 +21,58 @@ class CustomEquipmentError extends Error {
 }
 
 /**
+ * 强制使缓存失效，允许外部组件在需要时调用
+ */
+export function invalidateEquipmentsCache(): void {
+	equipmentsCache.delete("customEquipments");
+}
+
+/**
  * 从存储加载自定义器具
  * @returns 自定义器具数组
  */
 export async function loadCustomEquipments(): Promise<CustomEquipment[]> {
-	try {
-		console.log('[loadCustomEquipments] 开始从IndexedDB加载自定义器具');
-		
-		// 首先尝试从IndexedDB加载数据
-		const equipments = await db.customEquipments.toArray();
-		
-		if (equipments && equipments.length > 0) {
-			console.log(`[loadCustomEquipments] 从IndexedDB加载到${equipments.length}个自定义器具`);
-			return equipments;
-		}
-		
-		// 如果IndexedDB中没有数据，尝试从localStorage/Preferences迁移
-		console.log('[loadCustomEquipments] IndexedDB中没有数据，尝试从旧存储迁移');
-		const savedEquipments = await Storage.get(STORAGE_KEY);
-		if (savedEquipments) {
-			console.log('[loadCustomEquipments] 从旧存储中找到自定义器具数据，进行迁移');
-			const parsedEquipments = JSON.parse(savedEquipments) as CustomEquipment[];
-			
-			// 将数据保存到IndexedDB
-			if (parsedEquipments.length > 0) {
-				console.log(`[loadCustomEquipments] 迁移${parsedEquipments.length}个自定义器具到IndexedDB`);
-				await db.customEquipments.bulkPut(parsedEquipments);
+	// 使用Keshi的resolve方法处理缓存逻辑
+	// 第一个参数是缓存键，第二个参数是获取数据的函数，第三个参数是缓存时间（此处设为10分钟）
+	return equipmentsCache.resolve(
+		"customEquipments",
+		async () => {
+			try {
+				// 首先尝试从IndexedDB加载数据
+				const equipments = await db.customEquipments.toArray();
 				
-				// 验证迁移
-				const migratedCount = await db.customEquipments.count();
-				if (migratedCount === parsedEquipments.length) {
-					console.log(`[loadCustomEquipments] 迁移成功，现在IndexedDB中有${migratedCount}个器具`);
-				} else {
-					console.warn(`[loadCustomEquipments] 迁移部分完成：应有${parsedEquipments.length}个，实际只有${migratedCount}个`);
+				if (equipments && equipments.length > 0) {
+					return equipments;
 				}
+				
+				// 如果IndexedDB中没有数据，尝试从localStorage/Preferences迁移
+				const savedEquipments = await Storage.get(STORAGE_KEY);
+				if (savedEquipments) {
+					const parsedEquipments = JSON.parse(savedEquipments) as CustomEquipment[];
+					
+					// 将数据保存到IndexedDB
+					if (parsedEquipments.length > 0) {
+						await db.customEquipments.bulkPut(parsedEquipments);
+						
+						// 验证迁移
+						const migratedCount = await db.customEquipments.count();
+						if (migratedCount !== parsedEquipments.length) {
+							console.warn(`[loadCustomEquipments] 迁移部分完成：应有${parsedEquipments.length}个，实际只有${migratedCount}个`);
+						}
+					}
+					
+					return parsedEquipments;
+				}
+				
+				// 没有找到数据，返回空数组
+				return [];
+			} catch (error) {
+				console.error('[loadCustomEquipments] 加载自定义器具失败:', error);
+				throw new CustomEquipmentError("无法加载自定义器具", error);
 			}
-			
-			return parsedEquipments;
-		}
-	} catch (error) {
-		console.error('[loadCustomEquipments] 加载自定义器具失败:', error);
-		throw new CustomEquipmentError("无法加载自定义器具", error);
-	}
-	
-	console.log('[loadCustomEquipments] 没有找到自定义器具数据');
-	return [];
+		},
+		"10mins" // 缓存10分钟，防止频繁访问数据库
+	);
 }
 
 /**
@@ -71,7 +83,7 @@ export async function loadCustomEquipments(): Promise<CustomEquipment[]> {
 function generateCustomId(animationType: string): string {
 	return `custom-${animationType}-${Date.now()}-${Math.random()
 		.toString(36)
-		.substr(2, 9)}`;
+		.substring(2, 9)}`;
 }
 
 /**
@@ -84,40 +96,37 @@ export async function saveCustomEquipment(
 	methods?: Method[]
 ): Promise<void> {
 	try {
+		// 获取当前器具列表
 		const equipments = await loadCustomEquipments();
-
-		let updatedEquipments: CustomEquipment[];
 		let oldEquipmentName: string | undefined;
 
 		// 如果是更新现有器具
 		if (equipment.id) {
-			const existingEquipment = equipments.find(
-				(e) => e.id === equipment.id
-			);
-			if (existingEquipment) {
+			const existingIndex = equipments.findIndex(e => e.id === equipment.id);
+			
+			if (existingIndex >= 0) {
 				// 记录旧的器具名称，用于检查名称是否变更
-				oldEquipmentName = existingEquipment.name;
+				oldEquipmentName = equipments[existingIndex].name;
 
-				// 更新现有器具
-				updatedEquipments = equipments.map((e) =>
-					e.id === equipment.id
-						? { ...equipment, isCustom: true as const }
-						: e
-				);
+				// 准备更新的器具数据
+				const updatedEquipment = { 
+					...equipment, 
+					isCustom: true as const 
+				};
+				
+				// 更新内存中数组的相应项
+				equipments[existingIndex] = updatedEquipment;
 				
 				// 更新IndexedDB中的记录
-				await db.customEquipments.put({
-					...equipment,
-					isCustom: true as const
-				});
+				await db.customEquipments.put(updatedEquipment);
 			} else {
 				// 如果找不到对应ID的器具，但已有ID，保留原始ID
-				// 不再生成新ID，以确保导入导出时方案关联不丢失
 				const newEquipment = {
 					...equipment,
 					isCustom: true as const,
 				};
-				updatedEquipments = [...equipments, newEquipment];
+				
+				equipments.push(newEquipment);
 				
 				// 添加到IndexedDB
 				await db.customEquipments.put(newEquipment);
@@ -130,7 +139,8 @@ export async function saveCustomEquipment(
 				id: newId,
 				isCustom: true as const,
 			};
-			updatedEquipments = [...equipments, newEquipment];
+			
+			equipments.push(newEquipment);
 			
 			// 添加到IndexedDB
 			await db.customEquipments.put(newEquipment);
@@ -140,7 +150,10 @@ export async function saveCustomEquipment(
 		}
 
 		// 同时更新localStorage（作为备份，后期可移除）
-		await Storage.set(STORAGE_KEY, JSON.stringify(updatedEquipments));
+		await Storage.set(STORAGE_KEY, JSON.stringify(equipments));
+
+		// 使缓存失效，确保下次获取最新数据
+		invalidateEquipmentsCache();
 
 		// 检查器具名称是否变更
 		if (equipment.id && oldEquipmentName && oldEquipmentName !== equipment.name) {
@@ -186,20 +199,11 @@ export async function saveCustomEquipment(
 			}
 			
 			console.log(`[saveCustomEquipment] 器具${equipment.id}的方案保存完成`);
-		} else {
-			console.log(`[saveCustomEquipment] 没有方案需要保存，或者器具ID缺失:`, { 
-				hasId: !!equipment.id, 
-				id: equipment.id, 
-				hasMethods: !!methods, 
-				methodsCount: methods?.length 
-			});
 		}
 	} catch (error) {
 		console.error('[saveCustomEquipment] 保存器具失败:', error);
 		throw new CustomEquipmentError(
-			`${equipment.id ? "更新" : "创建"}自定义器具失败: ${
-				equipment.name
-			}`,
+			`${equipment.id ? "更新" : "创建"}自定义器具失败: ${equipment.name}`,
 			error
 		);
 	}
@@ -215,29 +219,30 @@ export async function updateCustomEquipment(
 	equipment: CustomEquipment
 ): Promise<void> {
 	try {
+		// 获取当前器具列表
 		const equipments = await loadCustomEquipments();
-		const index = equipments.findIndex((e) => e.id === id);
+		const index = equipments.findIndex(e => e.id === id);
 
 		if (index === -1) {
 			throw new CustomEquipmentError(`未找到ID为${id}的器具`);
 		}
 
+		// 准备更新的器具数据
 		const updatedEquipment = { ...equipment, id, isCustom: true as const };
 		
-		// 更新内存中的数组
-		const updatedEquipments = [
-			...equipments.slice(0, index),
-			updatedEquipment,
-			...equipments.slice(index + 1),
-		];
+		// 更新内存中数组的相应项
+		equipments[index] = updatedEquipment;
 
 		// 更新IndexedDB
 		await db.customEquipments.put(updatedEquipment);
 		console.log(`[updateCustomEquipment] 更新了IndexedDB中的器具: ${id}`);
 		
 		// 同时更新localStorage作为备份
-		await Storage.set(STORAGE_KEY, JSON.stringify(updatedEquipments));
+		await Storage.set(STORAGE_KEY, JSON.stringify(equipments));
 		console.log(`[updateCustomEquipment] 同时更新了localStorage作为备份`);
+		
+		// 使缓存失效
+		invalidateEquipmentsCache();
 	} catch (error) {
 		console.error('[updateCustomEquipment] 更新器具失败:', error);
 		throw new CustomEquipmentError(
@@ -253,15 +258,16 @@ export async function updateCustomEquipment(
  */
 export async function deleteCustomEquipment(id: string): Promise<void> {
 	try {
+		// 获取当前器具列表
 		const equipments = await loadCustomEquipments();
-		const equipment = equipments.find((e) => e.id === id);
+		const equipment = equipments.find(e => e.id === id);
 
 		if (!equipment) {
 			throw new CustomEquipmentError(`未找到ID为${id}的器具`);
 		}
 
-		// 从内存数组中移除
-		const filteredEquipments = equipments.filter((e) => e.id !== id);
+		// 从数组中移除要删除的器具
+		const filteredEquipments = equipments.filter(e => e.id !== id);
 		
 		// 从IndexedDB删除
 		await db.customEquipments.delete(id);
@@ -270,6 +276,9 @@ export async function deleteCustomEquipment(id: string): Promise<void> {
 		// 同时更新localStorage作为备份
 		await Storage.set(STORAGE_KEY, JSON.stringify(filteredEquipments));
 		console.log(`[deleteCustomEquipment] 同时更新了localStorage作为备份`);
+		
+		// 使缓存失效
+		invalidateEquipmentsCache();
 		
 		// 尝试清理相关方案
 		try {
@@ -303,11 +312,16 @@ export async function isEquipmentNameAvailable(
 ): Promise<boolean> {
 	try {
 		const equipments = await loadCustomEquipments();
-		return !equipments.some((e) => e.name === name && e.id !== currentId);
+		return !equipments.some(e => e.name === name && e.id !== currentId);
 	} catch (error) {
 		throw new CustomEquipmentError(
 			`验证器具名称是否可用失败: ${name}`,
 			error
 		);
 	}
+}
+
+// 组件卸载时清理缓存，释放内存
+export function teardownCache(): void {
+    equipmentsCache.teardown();
 }

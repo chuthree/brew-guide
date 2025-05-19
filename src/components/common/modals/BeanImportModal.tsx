@@ -106,7 +106,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
         y: 0
     });
     const [croppedImage, setCroppedImage] = useState<string | null>(null);
-    const [showCropper, setShowCropper] = useState(false);
+    const [_showCropper, setShowCropper] = useState(false);
     // 添加状态标记用户是否进行了裁剪操作
     const [isCropActive, setIsCropActive] = useState(false);
     const imgRef = useRef<HTMLImageElement>(null);

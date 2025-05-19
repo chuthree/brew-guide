@@ -25,7 +25,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
   const [ratioAmount, setRatioAmount] = useState<string>('15')
   const [waterAmount, setWaterAmount] = useState<string>('225g')
   const [grindSize, setGrindSize] = useState<string>('中细')
-  const [tempValue, setTempValue] = useState<string>('92')
+  const [_tempValue, setTempValue] = useState<string>('92')
 
   // 处理咖啡粉量变化
   const handleCoffeeAmountChange = (value: string, method: Method) => {
@@ -97,7 +97,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
   }
   
   // 处理水温变化
-  const handleTempChange = (value: string, method: Method) => {
+  const _handleTempChange = (value: string, method: Method) => {
     // 允许输入数字和小数点的正则表达式
     const regex = /^$|^[0-9]*\.?[0-9]*$/;
     if (regex.test(value)) {

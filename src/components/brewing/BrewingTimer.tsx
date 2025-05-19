@@ -1427,7 +1427,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                     transition={{ duration: 0.26, ease: [0.4, 0, 0.2, 1] }}
                     className="relative mb-3"
                   >
-                    {expandedStagesRef.current.map((stage) => {
+                    {expandedStagesRef.current.map((stage, index) => {
                       const totalTime =
                         expandedStagesRef.current[
                           expandedStagesRef.current.length - 1
@@ -1435,7 +1435,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                       const percentage = (stage.endTime / totalTime) * 100;
                       return localLayoutSettings?.showStageDivider ? (
                         <div
-                          key={stage.endTime}
+                          key={`divider-end-${stage.endTime}-${index}`}
                           className="absolute top-0 w-[2px] bg-neutral-50 dark:bg-neutral-900"
                           style={{
                             left: `${percentage}%`,
@@ -1479,7 +1479,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                       })}
                       
                       {/* 等待阶段的斜纹背景 */}
-                      {expandedStagesRef.current.map((stage) => {
+                      {expandedStagesRef.current.map((stage, index) => {
                         const totalTime =
                           expandedStagesRef.current[
                             expandedStagesRef.current.length - 1
@@ -1491,7 +1491,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
 
                         return stage.type === "wait" ? (
                           <div
-                            key={`waiting-${stage.endTime}`}
+                            key={`waiting-${stage.endTime}-${index}`}
                             className="absolute"
                             style={{
                               left: `${startPercentage}%`,
@@ -1540,7 +1540,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                       {/* 当前阶段时间标记 */}
                       {currentStage && (
                         <div
-                          key={`current-${currentStage.endTime}`}
+                          key={`current-${currentStage.endTime}-${currentExpandedStageIndex}`}
                           className="absolute top-0 font-medium text-[9px] text-neutral-600 dark:text-neutral-300"
                           style={{
                             left: `${(currentStage.endTime / expandedStagesRef.current[expandedStagesRef.current.length - 1].endTime) * 100}%`,

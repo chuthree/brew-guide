@@ -14,10 +14,10 @@ interface InventoryViewProps {
     selectedVariety: string | null
     showEmptyBeans: boolean
     selectedBeanType: BeanType
-    onVarietyClick: (variety: string | null) => void
-    onBeanTypeChange: (type: BeanType) => void
-    onToggleShowEmptyBeans: () => void
-    availableVarieties: string[]
+    _onVarietyClick: (variety: string | null) => void
+    _onBeanTypeChange: (type: BeanType) => void
+    _onToggleShowEmptyBeans: () => void
+    _availableVarieties: string[]
     beans: ExtendedCoffeeBean[]
     onEdit: (bean: ExtendedCoffeeBean) => void
     onDelete: (bean: ExtendedCoffeeBean) => void
@@ -33,10 +33,10 @@ const InventoryView: React.FC<InventoryViewProps> = ({
     selectedVariety,
     showEmptyBeans,
     selectedBeanType,
-    onVarietyClick,
-    onBeanTypeChange,
-    onToggleShowEmptyBeans,
-    availableVarieties,
+    _onVarietyClick,
+    _onBeanTypeChange,
+    _onToggleShowEmptyBeans,
+    _availableVarieties,
     beans,
     onEdit,
     onDelete,

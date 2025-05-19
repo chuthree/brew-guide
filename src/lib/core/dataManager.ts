@@ -1,9 +1,9 @@
 import { Storage } from "@/lib/core/storage";
-import { Method, CustomEquipment } from "@/lib/core/config";
-import { CoffeeBean, BlendComponent } from "@/types/app";
+import { Method as _Method, CustomEquipment } from "@/lib/core/config";
+import { CoffeeBean as _CoffeeBean, BlendComponent } from "@/types/app";
 import { APP_VERSION } from "@/lib/core/config";
-import { SettingsOptions } from "@/components/settings/Settings";
-import { LayoutSettings } from "@/components/brewing/Timer/Settings";
+import { SettingsOptions as _SettingsOptions } from "@/components/settings/Settings";
+import { LayoutSettings as _LayoutSettings } from "@/components/brewing/Timer/Settings";
 import { db } from "@/lib/core/db";
 
 // 检查是否在浏览器环境中
@@ -153,8 +153,8 @@ export const DataManager = {
 						}
 						
 						// 检查自定义器具数据
-						if (exportData.data.customEquipments && Array.isArray(exportData.data.customEquipments)) {
-							const customEquipments = exportData.data.customEquipments as CustomEquipment[];
+						if (exportData.data.customEquipments && Array.isArray(exportData.data._customEquipments)) {
+							const _customEquipments = exportData.data.customEquipments as CustomEquipment[];
 						}
 					}
 				} catch (dbError) {
@@ -250,9 +250,9 @@ export const DataManager = {
 				const customMethodsByEquipment = importData.data.customMethodsByEquipment as Record<string, unknown>;
 				
 				// 导入的自定义器具ID列表
-				let customEquipmentIds: string[] = [];
-				if (importData.data.customEquipments && Array.isArray(importData.data.customEquipments)) {
-					customEquipmentIds = (importData.data.customEquipments as CustomEquipment[]).map(e => e.id);
+				let _customEquipmentIds: string[] = [];
+				if (importData.data.customEquipments && Array.isArray(importData.data._customEquipments)) {
+					_customEquipmentIds = (importData.data.customEquipments as CustomEquipment[]).map(e => e.id);
 				}
 				
 				for (const equipmentId of Object.keys(customMethodsByEquipment)) {

@@ -16,6 +16,7 @@ import { Suspense } from 'react'
 import CapacitorInit from '@/providers/CapacitorProvider'
 import StorageInit from '@/providers/StorageProvider'
 import { TranslationsProvider } from '@/providers/TranslationsProvider'
+import { BaiduAnalytics } from '@/components/common/BaiduAnalytics'
 
 // 配置 Inter 字体
 const inter = Inter({
@@ -159,35 +160,16 @@ export default function RootLayout({
         <meta name="theme-color" content="#fafafa" media="(prefers-color-scheme: light)" />
         <meta name="theme-color" content="#171717" media="(prefers-color-scheme: dark)" />
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        {/* 百度统计代码 */}
+        <BaiduAnalytics />
         {isDevelopment && (
           <>
             <meta httpEquiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
             <meta httpEquiv="Pragma" content="no-cache" />
             <meta httpEquiv="Expires" content="0" />
-            <Script src="/sw-dev-unregister.js" strategy="beforeInteractive" />
+            <Script src="/sw-dev-unregister.js" strategy="afterInteractive" id="sw-unregister" />
           </>
         )}
-        {/* 百度统计代码 - 支持单页应用 */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              var _hmt = _hmt || [];
-              (function() {
-                var hm = document.createElement("script");
-                hm.src = "https://hm.baidu.com/hm.js?1d5ab7c4016b8737328359797bfaac08";
-                var s = document.getElementsByTagName("script")[0]; 
-                s.parentNode.insertBefore(hm, s);
-              })();
-              
-              // 添加单页应用支持
-              _hmt.push(['_requirePlugin', 'UrlChangeTracker', {
-                shouldTrackUrlChange: function (newPath, oldPath) {
-                  return newPath && oldPath;
-                }
-              }]);
-            `
-          }}
-        />
       </head>
       <body className={`${inter.className} bg-neutral-50 dark:bg-neutral-900 fixed inset-0 overflow-hidden`}>
         <ThemeProvider

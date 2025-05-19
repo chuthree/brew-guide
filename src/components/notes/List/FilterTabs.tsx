@@ -21,11 +21,11 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
     onSearchChange,
     onSearchKeyDown
 }) {
+    // 搜索输入框引用 - 移到条件语句前面
+    const searchInputRef = useRef<HTMLInputElement>(null);
+    
     // 如果没有可筛选的设备或咖啡豆，不渲染任何内容
     if (availableEquipments.length === 0 && availableBeans.length === 0) return null;
-    
-    // 搜索输入框引用
-    const searchInputRef = useRef<HTMLInputElement>(null);
     
     // 处理搜索图标点击
     const handleSearchClick = () => {

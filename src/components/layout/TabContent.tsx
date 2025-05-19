@@ -56,18 +56,18 @@ interface TabContentProps {
     showComplete: boolean;
     currentStage: number;
     isWaiting?: boolean;
-    isPourVisualizerPreloaded: boolean;
+    _isPourVisualizerPreloaded: boolean;
     selectedEquipment: string | null;
     selectedCoffeeBean?: string | null;
     selectedCoffeeBeanData?: CoffeeBean | null;
     countdownTime: number | null;
-    methodType: 'common' | 'custom';
+    _methodType: 'common' | 'custom';
     customMethods: Record<string, Method[]>;
     actionMenuStates: Record<string, boolean>;
     setActionMenuStates: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
-    showCustomForm: boolean;
+    _showCustomForm: boolean;
     setShowCustomForm: (show: boolean) => void;
-    showImportForm: boolean;
+    _showImportForm: boolean;
     setShowImportForm: (show: boolean) => void;
     settings: SettingsOptions;
     onEquipmentSelect: (name: string) => void;
@@ -110,18 +110,18 @@ const TabContent: React.FC<TabContentProps> = ({
     showComplete,
     currentStage,
     isWaiting = false,
-    isPourVisualizerPreloaded,
+    _isPourVisualizerPreloaded,
     selectedEquipment,
     selectedCoffeeBean,
     selectedCoffeeBeanData,
     countdownTime,
-    methodType,
+    _methodType,
     customMethods,
     actionMenuStates,
     setActionMenuStates,
-    showCustomForm,
+    _showCustomForm,
     setShowCustomForm,
-    showImportForm,
+    _showImportForm,
     setShowImportForm,
     settings,
     onEquipmentSelect,
@@ -182,7 +182,7 @@ const TabContent: React.FC<TabContentProps> = ({
     }, [activeTab]);
 
     // 处理方案类型切换
-    const handleMethodTypeChange = async (type: 'common' | 'custom') => {
+    const _handleMethodTypeChange = async (type: 'common' | 'custom') => {
         await triggerHapticFeedback();
         window.dispatchEvent(new CustomEvent('methodTypeChange', { detail: type }));
         localStorage.setItem('methodType', type);
@@ -323,8 +323,9 @@ const TabContent: React.FC<TabContentProps> = ({
         if (standardEquipment) return standardEquipment.name;
 
         try {
-            const { loadCustomEquipments } = await import('@/lib/managers/customEquipments');
-            const customEquipments = await loadCustomEquipments();
+            // 使用动态导入，但只导入一次模块
+            const customEquipmentsModule = await import('@/lib/managers/customEquipments');
+            const customEquipments = await customEquipmentsModule.loadCustomEquipments();
             return getEquipmentName(equipmentId, equipmentList, customEquipments) || equipmentId;
         } catch (error) {
             console.error('加载自定义设备失败:', error);

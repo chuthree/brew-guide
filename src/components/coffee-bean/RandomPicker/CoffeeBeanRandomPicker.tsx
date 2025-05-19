@@ -25,7 +25,7 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
   // 卡片容器控制器
   const controls = useAnimation()
   // 选中的豆子索引
-  const [selectedIndex, setSelectedIndex] = useState<number>(0)
+  const [_selectedIndex, setSelectedIndex] = useState<number>(0)
   // 容器引用
   const containerRef = useRef<HTMLDivElement>(null)
   // 卡片宽度(px)

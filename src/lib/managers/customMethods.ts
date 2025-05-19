@@ -169,8 +169,8 @@ export async function loadCustomMethodsForEquipment(
 		});
 
 		return methods;
-	} catch (error) {
-		console.error(`加载方案失败:`, error);
+	} catch (_error) {
+		console.error(`加载方案失败:`, _error);
 		return [];
 	}
 }
@@ -313,7 +313,7 @@ export async function saveCustomMethod(
 				newCustomMethods: allMethods, 
 				methodWithId 
 			};
-		} catch (error) {
+		} catch (_error) {
 			return { newCustomMethods, methodWithId };
 		}
 	}
@@ -407,7 +407,7 @@ export async function deleteCustomMethod(
 		try {
 			const allMethods = await loadCustomMethods();
 			return allMethods;
-		} catch (error) {
+		} catch (_error) {
 			return newCustomMethods;
 		}
 	}
@@ -543,7 +543,7 @@ export async function repairMethodsAssociation(): Promise<void> {
 		}
 		
 		console.log('[数据修复] 方案与器具关联检查修复完成');
-	} catch (error) {
-		console.error('[数据修复] 出错:', error);
+	} catch (_error) {
+		console.error('[数据修复] 出错:', _error);
 	}
 }

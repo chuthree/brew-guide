@@ -199,10 +199,10 @@ export default function DownloadPage(): React.ReactNode {
                                 <div>
                                     <p className="font-medium">即将发布的更新（尚未推送）</p>
                                     <ul className="mt-2 text-xs text-neutral-500 list-disc pl-4 space-y-1">
-                                        <li>修复：笔记搜索功能失效问题 <span className="text-xs opacity-70">chu3 © main</span></li>
+                                        <li>修复：笔记搜索功能失效问题 <span className="text-xs opacity-70">chu3 &copy; main</span></li>
                                         <li>优化：调整安全区域的填充和位置，以改善界面适应性 <span className="text-xs opacity-70">chus</span></li>
                                         <li>修复：替换数据时，自定义器具没有正常更新 <span className="text-xs opacity-70">chu3</span></li>
-                                        <li>优化：将冰手冲咖啡研磨大小从"细"调整为"中细" <span className="text-xs opacity-70">chu3</span></li>
+                                        <li>优化：将冰手冲咖啡研磨大小从&amp;quot;细&amp;quot;调整为&amp;quot;中细&amp;quot; <span className="text-xs opacity-70">chu3</span></li>
                                         <li>更新赞助榜 <span className="text-xs opacity-70">chu3</span></li>
                                     </ul>
                                 </div>
@@ -211,7 +211,7 @@ export default function DownloadPage(): React.ReactNode {
                                     <p className="font-medium">v1.2.4.7（最新版本）</p>
                                     <p className="text-xs text-neutral-500 mt-1">2025-05-12</p>
                                     <ul className="mt-2 text-xs text-neutral-500 list-disc pl-4 space-y-1">
-                                        <li>新增随机选择咖啡豆功能 "今天喝什么豆子"</li>
+                                        <li>新增随机选择咖啡豆功能 &amp;quot;今天喝什么豆子&amp;quot;</li>
                                         <li>图片上传时自动压缩（小于200KB保留原图）</li>
                                         <li>快捷扣除库存也会自动创建冲煮笔记</li>
                                         <li>自定义冲煮方案数据持久化，刷新页面不丢失</li>

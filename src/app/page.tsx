@@ -1559,7 +1559,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     const [showAlternativeHeader, setShowAlternativeHeader] = useState(false);
 
     // 添加处理编辑笔记时的导航栏内容切换
-    const handleEditNote = (note: BrewingNoteData) => {
+    const _handleEditNote = (_note: BrewingNoteData) => {
         // 创建笔记编辑头部内容
         const headerContent = (
             <NoteFormHeader
@@ -1590,7 +1590,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     };
 
     // 修改笔记保存成功时的回调
-    const handleSaveNoteSuccess = () => {
+    const _handleSaveNoteSuccess = () => {
         // 关闭替代头部显示
         setShowAlternativeHeader(false);
         setAlternativeHeaderContent(null);
@@ -1626,7 +1626,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     };
 
     // 添加一个辅助函数转换类型
-    const ensureMethodCompat = (method: Method | null): CompatMethod | null => {
+    const _ensureMethodCompat = (method: Method | null): CompatMethod | null => {
         if (!method) return null;
         
         // 创建一个新对象，确保stages中的所有time属性都有值
@@ -1687,18 +1687,18 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                         showComplete={showComplete}
                         currentStage={currentStage}
                         isWaiting={isStageWaiting}
-                        isPourVisualizerPreloaded={isPourVisualizerPreloaded}
+                        _isPourVisualizerPreloaded={isPourVisualizerPreloaded}
                         selectedEquipment={selectedEquipment}
                         selectedCoffeeBean={selectedCoffeeBean}
                         selectedCoffeeBeanData={selectedCoffeeBeanData}
                         countdownTime={countdownTime}
-                        methodType={methodType}
+                        _methodType={methodType}
                         customMethods={customMethods}
                         actionMenuStates={actionMenuStates}
                         setActionMenuStates={setActionMenuStates}
-                        showCustomForm={showCustomForm}
+                        _showCustomForm={showCustomForm}
                         setShowCustomForm={setShowCustomForm}
-                        showImportForm={showImportForm}
+                        _showImportForm={showImportForm}
                         setShowImportForm={setShowImportForm}
                         settings={settings}
                         onEquipmentSelect={handleEquipmentSelectWithName}

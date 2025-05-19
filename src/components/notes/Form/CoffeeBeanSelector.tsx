@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useMemo, useState, useRef, useEffect } from 'react'
+import React, { useMemo, useRef, useEffect } from 'react'
 import type { CoffeeBean } from '@/types/app'
 
 interface CoffeeBeanSelectorProps {

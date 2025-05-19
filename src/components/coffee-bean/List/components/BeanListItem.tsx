@@ -157,7 +157,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                     {/* 咖啡豆图片 - 只在有图片时显示 */}
                     {bean.image && (
                         <div 
-                            className="h-14 overflow-hidden shrink-0 relative cursor-pointer  border border-neutral-200 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800"
+                            className="h-14 relative shrink-0 cursor-pointer border border-neutral-200 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800 overflow-hidden"
                             onClick={() => !imageError && setImageViewerOpen(true)}
                         >
                             {imageError ? (
@@ -169,8 +169,10 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                                     src={bean.image}
                                     alt={bean.name || '咖啡豆图片'}
                                     height={56}
-                                    width={0}
-                                    className="h-14 w-auto object-cover"
+                                    width={56}
+                                    unoptimized
+                                    style={{ width: 'auto', height: '100%' }}
+                                    className="object-cover"
                                     sizes="56px"
                                     priority={false}
                                     loading="lazy"

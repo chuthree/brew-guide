@@ -25,18 +25,18 @@ export const createExpandedStages = (stages: Stage[] | undefined): ExpandedStage
     const extractionStages = stages.filter(stage => stage.pourType === 'extraction');
     
     // 处理萃取步骤，创建计时相关的阶段
-    extractionStages.forEach((stage, index) => {
+    extractionStages.forEach((_stage, _index) => {
       expandedStages.push({
         type: "pour", // 萃取步骤标记为pour类型
-        label: stage.label || `萃取浓缩`,
+        label: _stage.label || `萃取浓缩`,
         startTime: 0, // 萃取始终从0开始
-        endTime: stage.time || 25, // 使用设定时间，默认25秒
-        time: stage.time || 25, // 阶段持续时间
-        pourTime: stage.time || 25, // 整个阶段都是萃取时间
-        water: stage.water || "",
-        detail: stage.detail || "",
+        endTime: _stage.time || 25, // 使用设定时间，默认25秒
+        time: _stage.time || 25, // 阶段持续时间
+        pourTime: _stage.time || 25, // 整个阶段都是萃取时间
+        water: _stage.water || "",
+        detail: _stage.detail || "",
         pourType: "extraction",
-        originalIndex: stages.indexOf(stage), // 保留原始索引
+        originalIndex: stages.indexOf(_stage), // 保留原始索引
       });
     });
     
@@ -65,8 +65,8 @@ export const createExpandedStages = (stages: Stage[] | undefined): ExpandedStage
     }
     
     // 添加饮料步骤作为信息性显示，但不计入计时器
-    const beverageStages = stages.filter(stage => stage.pourType === 'beverage');
-    beverageStages.forEach(stage => {
+    const beverageStages = stages.filter(_stage => _stage.pourType === 'beverage');
+    beverageStages.forEach(_stage => {
       // 饮料步骤不添加到expandedStages中，因为它们不参与计时
       // 这些步骤会在界面上显示，但不会影响计时器
     });

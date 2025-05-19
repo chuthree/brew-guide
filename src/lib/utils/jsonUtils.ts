@@ -587,7 +587,7 @@ export function beanToReadableText(bean: CoffeeBean): string {
 }
 
 // 获取自定义注水方式的名称
-function getCustomPourTypeName(pourType: string, customEquipment?: CustomEquipment): string {
+function _getCustomPourTypeName(pourType: string, customEquipment?: CustomEquipment): string {
 	// 如果有自定义器具配置
 	if (customEquipment?.customPourAnimations) {
 		// 查找对应的自定义注水动画

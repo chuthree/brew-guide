@@ -2,9 +2,6 @@ import React from 'react';
 import AutocompleteInput from '@/components/common/forms/AutocompleteInput';
 import { BlendComponent } from '../types';
 import { 
-    ORIGINS, 
-    PROCESSES, 
-    VARIETIES, 
     isCustomPreset, 
     removeCustomPreset,
     getFullPresets
@@ -56,7 +53,7 @@ const BlendComponents: React.FC<BlendComponentsProps> = ({
     };
     
     // 添加forceUpdate状态以在删除预设时触发重新渲染
-    const [forceUpdate, setForceUpdate] = React.useState(0);
+    const [_forceUpdate, setForceUpdate] = React.useState(0);
     
     // 每次在渲染时获取最新的预设列表
     const currentOrigins = getFullPresets('origins');

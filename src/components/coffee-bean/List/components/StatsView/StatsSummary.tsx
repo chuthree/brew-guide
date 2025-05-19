@@ -33,7 +33,7 @@ export const calculateEstimatedFinishDate = (stats: StatsSummaryProps['stats'], 
     return `${month}-${day}`
 }
 
-const StatsSummary: React.FC<StatsSummaryProps> = ({ stats, todayConsumption }) => {
+const StatsSummary: React.FC<StatsSummaryProps> = ({ stats, todayConsumption: _todayConsumption }) => {
     return (
         <div className="p-4 text-justify text-sm font-medium max-w-xs mx-auto">
             目前已用{formatNumber(stats.consumedWeight)}克，

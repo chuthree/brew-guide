@@ -8,7 +8,7 @@ import { NoteItemProps } from '../types'
 import { formatDate, formatRating } from '../utils'
 import { Storage } from '@/lib/core/storage'
 import { SettingsOptions, defaultSettings } from '@/components/settings/Settings'
-import { formatGrindSize } from '@/lib/utils/grindUtils'
+import { formatGrindSize as _formatGrindSize } from '@/lib/utils/grindUtils'
 import { availableGrinders } from '@/lib/core/config'
 
 // 动态导入 ImageViewer 组件 - 移除加载占位符
@@ -28,8 +28,8 @@ const NoteItem: React.FC<NoteItemProps> = ({
     onToggleSelect
 }) => {
     // 添加用户设置状态
-    const [settings, setSettings] = useState<SettingsOptions>(defaultSettings);
-    const [grinderName, setGrinderName] = useState<string>("");
+    const [_settings, setSettings] = useState<SettingsOptions>(defaultSettings);
+    const [_grinderName, setGrinderName] = useState<string>("");
     // 图片查看器状态和错误状态
     const [imageViewerOpen, setImageViewerOpen] = useState(false);
     const [imageError, setImageError] = useState(false);
@@ -102,8 +102,10 @@ const NoteItem: React.FC<NoteItemProps> = ({
                                     src={note.image}
                                     alt={beanName || '笔记图片'}
                                     height={56}
-                                    width={0}
-                                    className="h-14 w-auto object-cover"
+                                    width={56}
+                                    unoptimized
+                                    style={{ width: 'auto', height: '100%' }}
+                                    className="object-cover"
                                     sizes="56px"
                                     priority={false}
                                     loading="lazy"

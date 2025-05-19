@@ -277,7 +277,7 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
             {/* 显示无搜索结果的提示 */}
             {filteredBeans.length === 0 && searchQuery.trim() !== '' && (
                 <div className="text-xs text-neutral-500 dark:text-neutral-400 border-l border-neutral-200 dark:border-neutral-800 pl-6">
-                    没有找到匹配"{searchQuery.trim()}"的咖啡豆
+                    没有找到匹配&amp;quot;{searchQuery.trim()}&amp;quot;的咖啡豆
                 </div>
             )}
 

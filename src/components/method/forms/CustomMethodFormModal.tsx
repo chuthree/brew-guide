@@ -28,8 +28,8 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
     onCloseCustomForm,
     onCloseImportForm,
 }) => {
-    const [validationError, setValidationError] = useState<string | null>(null)
-    const [customEquipments, setCustomEquipments] = useState<CustomEquipment[]>([])
+    const [_validationError, setValidationError] = useState<string | null>(null)
+    const [_customEquipments, setCustomEquipments] = useState<CustomEquipment[]>([])
     const [currentCustomEquipment, setCurrentCustomEquipment] = useState<CustomEquipment | null>(null)
 
     // 加载自定义器具 - 优化为仅在首次挂载和选择新器具时加载

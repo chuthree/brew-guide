@@ -25,8 +25,9 @@ export const getEquipmentName = async (equipmentId: string): Promise<string> => 
 
     // 如果没找到，加载自定义设备列表并查找
     try {
-        const { loadCustomEquipments } = await import('@/lib/managers/customEquipments');
-        const customEquipments = await loadCustomEquipments();
+        // 使用动态导入，但只导入一次模块
+        const customEquipmentsModule = await import('@/lib/managers/customEquipments');
+        const customEquipments = await customEquipmentsModule.loadCustomEquipments();
 
         // 先在自定义设备中按ID查找
         const customEquipment = customEquipments.find(e => e.id === equipmentId);

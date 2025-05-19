@@ -15,6 +15,7 @@ import { Stage as BaseStage } from '@/lib/core/config';
 // 扩展 Stage 类型，所有类型都使用pourType字段
 export interface Stage extends BaseStage {
   // pourType可以是普通器具的类型，也可以是意式机的类型
+  pourType?: RegularPourType | EspressoPourTypeValues;
 }
 
 // 修改 Method 接口以使用新的 Stage 类型
@@ -38,4 +39,5 @@ export interface MethodWithStages extends Omit<Method, 'params'> {
 export interface Step {
   name: string;
   component: React.ReactNode;
+  id?: string;
 } 

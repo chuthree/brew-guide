@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import {
 	Method,
 	brewingMethods as commonMethods,
@@ -10,7 +10,6 @@ import { formatGrindSize } from "@/lib/utils/grindUtils";
 import { SettingsOptions } from "@/components/settings/Settings";
 import { loadCustomMethodsForEquipment } from "@/lib/managers/customMethods";
 import { Stage } from '@/components/method/forms/components/types';
-import { isEspressoMachine } from '@/lib/utils/equipmentUtils';
 
 // 增强 Content.注水.steps 接口以支持 pourType
 declare module "./useBrewingState" {

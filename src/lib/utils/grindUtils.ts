@@ -91,7 +91,7 @@ export function convertToSpecificGrind(grindSize: string, grinderId: string): st
  */
 export function formatGrindSize(
 	grindSize: string,
-	grindType: string
+	_grindType: string
 ): string {
 	if (!grindSize) return "";
 	

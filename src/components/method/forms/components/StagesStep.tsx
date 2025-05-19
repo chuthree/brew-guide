@@ -1,11 +1,11 @@
-import React, { useRef, forwardRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Info } from 'lucide-react';
 import AutoResizeTextarea from '@/components/common/forms/AutoResizeTextarea';
 import AutocompleteInput from '@/components/common/forms/AutocompleteInput';
 import { CustomEquipment } from '@/lib/core/config';
 import { Stage } from './types';
-import { isEspressoMachine, getPourTypeName } from '@/lib/utils/equipmentUtils';
+import { isEspressoMachine, getPourTypeName as _getPourTypeName } from '@/lib/utils/equipmentUtils';
 
 // 预设饮料列表
 const PRESET_BEVERAGES = [
@@ -79,7 +79,7 @@ const StagesStep: React.FC<StagesStepProps> = ({
   newStageRef
 }) => {
   const innerNewStageRef = useRef<HTMLDivElement>(null);
-  const isCustomPreset = customEquipment.animationType === 'custom';
+  const _isCustomPreset = customEquipment.animationType === 'custom';
   
   // 添加状态来存储用户自定义的饮料建议列表
   const [beverageSuggestions, setBeverageSuggestions] = useState<string[]>(PRESET_BEVERAGES);
