@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useRef } from 'react'
+import React, { useRef, useState, useEffect } from 'react'
 import { ViewOption, VIEW_LABELS, VIEW_OPTIONS, BeanType, BloggerBeansYear } from '../types'
 import {
     Select,
@@ -11,6 +11,8 @@ import {
 } from '@/components/coffee-bean/ui/select'
 import { SortSelector, SortOption } from '../SortSelector'
 import { X, ArrowUpRight } from 'lucide-react'
+import { Storage } from '@/lib/core/storage'
+import { SettingsOptions } from '@/components/settings/Settings'
 
 interface ViewSwitcherProps {
     viewMode: ViewOption
@@ -77,6 +79,38 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
     rankingBeansCount,
     bloggerBeansCount,
 }) => {
+    // 添加极简模式状态
+    const [isMinimalistMode, setIsMinimalistMode] = useState(false);
+    
+    // 获取全局设置
+    useEffect(() => {
+        const loadSettings = async () => {
+            try {
+                const settingsStr = await Storage.get('brewGuideSettings');
+                if (settingsStr) {
+                    const parsedSettings = JSON.parse(settingsStr) as SettingsOptions;
+                    setIsMinimalistMode(parsedSettings.minimalistMode || false);
+                }
+            } catch (error) {
+                console.error('加载设置失败', error);
+            }
+        };
+        
+        loadSettings();
+        
+        // 监听设置变更
+        const handleSettingsChange = (e: CustomEvent) => {
+            if (e.detail?.key === 'brewGuideSettings') {
+                loadSettings();
+            }
+        };
+        
+        window.addEventListener('storageChange', handleSettingsChange as EventListener);
+        return () => {
+            window.removeEventListener('storageChange', handleSettingsChange as EventListener);
+        };
+    }, []);
+    
     // 搜索相关逻辑
     const searchInputRef = useRef<HTMLInputElement>(null);
     
@@ -124,7 +158,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                 <div className="flex items-center space-x-3">
                     <div className="text-xs tracking-wide text-neutral-800 dark:text-neutral-100 break-words">
                         {viewMode === VIEW_OPTIONS.INVENTORY
-                            ? `${beansCount} 款咖啡豆${totalWeight ? `，共 ${totalWeight}` : ''}`
+                            ? `${beansCount} 款咖啡豆${!isMinimalistMode && totalWeight ? `，共 ${totalWeight}` : ''}`
                             : viewMode === VIEW_OPTIONS.BLOGGER
                                 ? `${bloggerBeansCount || 0} 款 (${bloggerYear}) 咖啡豆`
                                 : viewMode === VIEW_OPTIONS.STATS

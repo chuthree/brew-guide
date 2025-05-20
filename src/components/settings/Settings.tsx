@@ -26,6 +26,7 @@ export interface SettingsOptions {
     showFlowRate: boolean // 添加显示流速选项
     username: string // 添加用户名
     decrementPresets: number[] // 添加咖啡豆库存快捷扣除量预设值
+    minimalistMode: boolean // 添加极简模式选项
 }
 
 // 默认设置
@@ -44,7 +45,8 @@ export const defaultSettings: SettingsOptions = {
     language: 'zh', // 默认使用中文
     showFlowRate: false, // 默认不显示流速
     username: '', // 默认用户名为空
-    decrementPresets: [15, 16, 18] // 默认的库存扣除量预设值
+    decrementPresets: [15, 16, 18], // 默认的库存扣除量预设值
+    minimalistMode: false // 默认不启用极简模式
 }
 
 interface SettingsProps {
@@ -654,6 +656,25 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                 </div>
                             </div>
                         )}
+
+                        {/* 极简模式开关 */}
+                        <div className="flex items-center justify-between">
+                            <div className="text-sm text-neutral-800 dark:text-neutral-200">
+                                极简模式
+                            </div>
+                            <label className="relative inline-flex cursor-pointer items-center">
+                                <input
+                                    type="checkbox"
+                                    checked={settings.minimalistMode || false}
+                                    onChange={(e) => handleChange('minimalistMode', e.target.checked)}
+                                    className="peer sr-only"
+                                />
+                                <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
+                            </label>
+                        </div>
+                        <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                            开启后将隐藏：咖啡豆列表中的风味标签和价格信息、豆子总重量显示等
+                        </p>
                     </div>
                 </div>
 
@@ -729,6 +750,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                     </h3>
                     
                     <div className="space-y-5">
+                       
                         {/* 阶段信息布局反转 */}
                         <div className="flex items-center justify-between">
                             <div className="text-sm text-neutral-800 dark:text-neutral-200">

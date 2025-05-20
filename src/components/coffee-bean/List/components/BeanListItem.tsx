@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
 import ActionMenu, { ActionMenuItem } from '@/components/coffee-bean/ui/action-menu'
@@ -8,6 +8,8 @@ import { ExtendedCoffeeBean } from '../types'
 import { isBeanEmpty } from '../globalCache'
 import { formatDate, parseDateToTimestamp } from '@/lib/utils/dateUtils'
 import HighlightText from '@/components/common/ui/HighlightText'
+import { Storage } from '@/lib/core/storage'
+import { defaultSettings, SettingsOptions } from '@/components/settings/Settings'
 
 // 动态导入 ImageViewer 组件 - 移除加载占位符
 const ImageViewer = dynamic(() => import('@/components/common/ui/ImageViewer'), {
@@ -38,6 +40,40 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
     // 图片查看器状态和错误状态
     const [imageViewerOpen, setImageViewerOpen] = useState(false);
     const [imageError, setImageError] = useState(false);
+    
+    // 添加设置状态
+    const [_settings, setSettings] = useState<SettingsOptions>(defaultSettings);
+    const [isMinimalistMode, setIsMinimalistMode] = useState(false);
+    
+    // 获取全局设置
+    useEffect(() => {
+        const loadSettings = async () => {
+            try {
+                const settingsStr = await Storage.get('brewGuideSettings');
+                if (settingsStr) {
+                    const parsedSettings = JSON.parse(settingsStr) as SettingsOptions;
+                    setSettings(parsedSettings);
+                    setIsMinimalistMode(parsedSettings.minimalistMode || false);
+                }
+            } catch (error) {
+                console.error('加载设置失败', error);
+            }
+        };
+        
+        loadSettings();
+        
+        // 监听设置变更
+        const handleSettingsChange = (e: CustomEvent) => {
+            if (e.detail?.key === 'brewGuideSettings') {
+                loadSettings();
+            }
+        };
+        
+        window.addEventListener('storageChange', handleSettingsChange as EventListener);
+        return () => {
+            window.removeEventListener('storageChange', handleSettingsChange as EventListener);
+        };
+    }, []);
 
     // 计算剩余百分比
     const remainingPercentage = useMemo(() => {
@@ -343,8 +379,8 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                     )}
                 </div>
 
-                {/* 风味标签 - 改进显示 */}
-                {bean.flavor && bean.flavor.length > 0 && (
+                {/* 风味标签 - 改进显示 - 在极简模式下不显示 */}
+                {!isMinimalistMode && bean.flavor && bean.flavor.length > 0 && (
                     <div className="flex flex-wrap gap-1">
                         {bean.flavor.map((flavor, idx) => (
                             <div
@@ -357,17 +393,18 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                     </div>
                 )}
 
-                {/* 底部信息布局优化 */}
-                <div className="flex items-baseline justify-between text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
-                    <div>
-                        {bean.roastDate && (
-                            <span>烘焙于 {formatDate(bean.roastDate)}</span>
+                {/* 底部信息布局优化 - 在极简模式下全都隐藏  */}
+                {!isMinimalistMode && (
+                    <div className="flex items-baseline justify-between text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
+                        <div>
+                            {bean.roastDate && (
+                                <span>烘焙于 {formatDate(bean.roastDate)}</span>
                         )}
-                    </div>
-                    <div>
-                        {bean.price && (
-                            <span>
-                                {bean.price}元
+                        </div>
+                        <div>
+                            {!isMinimalistMode && bean.price && (
+                                <span>
+                                    {bean.price}元
                                 {bean.capacity && (
                                     <span className="ml-1">
                                         [{(parseFloat(bean.price) / parseFloat(bean.capacity.replace('g', ''))).toFixed(2)}元/克]
@@ -375,8 +412,9 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                                 )}
                             </span>
                         )}
+                        </div>
                     </div>
-                </div>
+                )}
 
                 {/* 备注信息 */}
                 {bean.notes && (
