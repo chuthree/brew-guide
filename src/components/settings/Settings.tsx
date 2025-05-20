@@ -27,6 +27,12 @@ export interface SettingsOptions {
     username: string // 添加用户名
     decrementPresets: number[] // 添加咖啡豆库存快捷扣除量预设值
     minimalistMode: boolean // 添加极简模式选项
+    minimalistOptions: {
+        hideFlavors: boolean // 隐藏风味标签
+        hidePrice: boolean // 隐藏价格信息
+        hideRoastDate: boolean // 隐藏烘焙度信息
+        hideTotalWeight: boolean // 隐藏总重量显示
+    }
 }
 
 // 默认设置
@@ -46,7 +52,13 @@ export const defaultSettings: SettingsOptions = {
     showFlowRate: false, // 默认不显示流速
     username: '', // 默认用户名为空
     decrementPresets: [15, 16, 18], // 默认的库存扣除量预设值
-    minimalistMode: false // 默认不启用极简模式
+    minimalistMode: false, // 默认不启用极简模式
+    minimalistOptions: {
+        hideFlavors: true, // 默认隐藏风味标签
+        hidePrice: true, // 默认隐藏价格信息
+        hideRoastDate: false, // 默认不隐藏烘焙度信息
+        hideTotalWeight: true // 默认隐藏总重量显示
+    }
 }
 
 interface SettingsProps {
@@ -675,6 +687,107 @@ const handleChange = async <K extends keyof SettingsOptions>(
                         <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
                             开启后将隐藏：咖啡豆列表中的风味标签和价格信息、豆子总重量显示等
                         </p>
+                        
+                        {/* 极简模式详细设置 - 仅在极简模式开启时显示 */}
+                        {settings.minimalistMode && (
+                            <div className="mt-4 ml-3 space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <div className="text-xs font-medium text-neutral-700 dark:text-neutral-300">
+                                        隐藏风味标签
+                                    </div>
+                                    <label className="relative inline-flex cursor-pointer items-center">
+                                        <input
+                                            type="checkbox"
+                                            checked={settings.minimalistOptions?.hideFlavors || false}
+                                            onChange={(e) => {
+                                                const currentOptions = settings.minimalistOptions || defaultSettings.minimalistOptions;
+                                                const newOptions = {
+                                                    hideFlavors: e.target.checked,
+                                                    hidePrice: currentOptions.hidePrice,
+                                                    hideRoastDate: currentOptions.hideRoastDate,
+                                                    hideTotalWeight: currentOptions.hideTotalWeight
+                                                };
+                                                handleChange('minimalistOptions', newOptions);
+                                            }}
+                                            className="peer sr-only"
+                                        />
+                                        <div className="peer h-5 w-9 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
+                                    </label>
+                                </div>
+                                
+                                <div className="flex items-center justify-between">
+                                    <div className="text-xs font-medium text-neutral-700 dark:text-neutral-300">
+                                        隐藏价格信息
+                                    </div>
+                                    <label className="relative inline-flex cursor-pointer items-center">
+                                        <input
+                                            type="checkbox"
+                                            checked={settings.minimalistOptions?.hidePrice || false}
+                                            onChange={(e) => {
+                                                const currentOptions = settings.minimalistOptions || defaultSettings.minimalistOptions;
+                                                const newOptions = {
+                                                    hideFlavors: currentOptions.hideFlavors,
+                                                    hidePrice: e.target.checked,
+                                                    hideRoastDate: currentOptions.hideRoastDate,
+                                                    hideTotalWeight: currentOptions.hideTotalWeight
+                                                };
+                                                handleChange('minimalistOptions', newOptions);
+                                            }}
+                                            className="peer sr-only"
+                                        />
+                                        <div className="peer h-5 w-9 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
+                                    </label>
+                                </div>
+                                
+                                <div className="flex items-center justify-between">
+                                    <div className="text-xs font-medium text-neutral-700 dark:text-neutral-300">
+                                        隐藏烘焙日期
+                                    </div>
+                                    <label className="relative inline-flex cursor-pointer items-center">
+                                        <input
+                                            type="checkbox"
+                                            checked={settings.minimalistOptions?.hideRoastDate || false}
+                                            onChange={(e) => {
+                                                const currentOptions = settings.minimalistOptions || defaultSettings.minimalistOptions;
+                                                const newOptions = {
+                                                    hideFlavors: currentOptions.hideFlavors,
+                                                    hidePrice: currentOptions.hidePrice,
+                                                    hideRoastDate: e.target.checked,
+                                                    hideTotalWeight: currentOptions.hideTotalWeight
+                                                };
+                                                handleChange('minimalistOptions', newOptions);
+                                            }}
+                                            className="peer sr-only"
+                                        />
+                                        <div className="peer h-5 w-9 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
+                                    </label>
+                                </div>
+                                
+                                <div className="flex items-center justify-between">
+                                    <div className="text-xs font-medium text-neutral-700 dark:text-neutral-300">
+                                        隐藏总重量显示
+                                    </div>
+                                    <label className="relative inline-flex cursor-pointer items-center">
+                                        <input
+                                            type="checkbox"
+                                            checked={settings.minimalistOptions?.hideTotalWeight || false}
+                                            onChange={(e) => {
+                                                const currentOptions = settings.minimalistOptions || defaultSettings.minimalistOptions;
+                                                const newOptions = {
+                                                    hideFlavors: currentOptions.hideFlavors,
+                                                    hidePrice: currentOptions.hidePrice,
+                                                    hideRoastDate: currentOptions.hideRoastDate,
+                                                    hideTotalWeight: e.target.checked
+                                                };
+                                                handleChange('minimalistOptions', newOptions);
+                                            }}
+                                            className="peer sr-only"
+                                        />
+                                        <div className="peer h-5 w-9 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
+                                    </label>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
 

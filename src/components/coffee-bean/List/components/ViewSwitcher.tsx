@@ -80,7 +80,8 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
     bloggerBeansCount,
 }) => {
     // 添加极简模式状态
-    const [isMinimalistMode, setIsMinimalistMode] = useState(false);
+    const [_isMinimalistMode, setIsMinimalistMode] = useState(false);
+    const [hideTotalWeight, setHideTotalWeight] = useState(false);
     
     // 获取全局设置
     useEffect(() => {
@@ -90,6 +91,12 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                 if (settingsStr) {
                     const parsedSettings = JSON.parse(settingsStr) as SettingsOptions;
                     setIsMinimalistMode(parsedSettings.minimalistMode || false);
+                    
+                    // 根据极简模式和具体设置决定是否隐藏总重量
+                    setHideTotalWeight(
+                        parsedSettings.minimalistMode && 
+                        parsedSettings.minimalistOptions.hideTotalWeight
+                    );
                 }
             } catch (error) {
                 console.error('加载设置失败', error);
@@ -158,7 +165,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                 <div className="flex items-center space-x-3">
                     <div className="text-xs tracking-wide text-neutral-800 dark:text-neutral-100 break-words">
                         {viewMode === VIEW_OPTIONS.INVENTORY
-                            ? `${beansCount} 款咖啡豆${!isMinimalistMode && totalWeight ? `，共 ${totalWeight}` : ''}`
+                            ? `${beansCount} 款咖啡豆${!hideTotalWeight && totalWeight ? `，共 ${totalWeight}` : ''}`
                             : viewMode === VIEW_OPTIONS.BLOGGER
                                 ? `${bloggerBeansCount || 0} 款 (${bloggerYear}) 咖啡豆`
                                 : viewMode === VIEW_OPTIONS.STATS

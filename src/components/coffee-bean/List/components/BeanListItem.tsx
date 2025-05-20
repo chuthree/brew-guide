@@ -43,7 +43,10 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
     
     // 添加设置状态
     const [_settings, setSettings] = useState<SettingsOptions>(defaultSettings);
-    const [isMinimalistMode, setIsMinimalistMode] = useState(false);
+    const [_isMinimalistMode, setIsMinimalistMode] = useState(false);
+    const [hideFlavors, setHideFlavors] = useState(defaultSettings.minimalistOptions.hideFlavors);
+    const [hidePrice, setHidePrice] = useState(defaultSettings.minimalistOptions.hidePrice);
+    const [hideRoastDate, setHideRoastDate] = useState(defaultSettings.minimalistOptions.hideRoastDate);
     
     // 获取全局设置
     useEffect(() => {
@@ -54,6 +57,13 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                     const parsedSettings = JSON.parse(settingsStr) as SettingsOptions;
                     setSettings(parsedSettings);
                     setIsMinimalistMode(parsedSettings.minimalistMode || false);
+                    
+                    // 加载细粒度设置选项
+                    if (parsedSettings.minimalistOptions) {
+                        setHideFlavors(parsedSettings.minimalistMode && parsedSettings.minimalistOptions.hideFlavors);
+                        setHidePrice(parsedSettings.minimalistMode && parsedSettings.minimalistOptions.hidePrice);
+                        setHideRoastDate(parsedSettings.minimalistMode && parsedSettings.minimalistOptions.hideRoastDate);
+                    }
                 }
             } catch (error) {
                 console.error('加载设置失败', error);
@@ -379,8 +389,8 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                     )}
                 </div>
 
-                {/* 风味标签 - 改进显示 - 在极简模式下不显示 */}
-                {!isMinimalistMode && bean.flavor && bean.flavor.length > 0 && (
+                {/* 风味标签 - 改进显示 - 在极简模式且启用hideFlavors时不显示 */}
+                {!hideFlavors && bean.flavor && bean.flavor.length > 0 && (
                     <div className="flex flex-wrap gap-1">
                         {bean.flavor.map((flavor, idx) => (
                             <div
@@ -393,18 +403,17 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                     </div>
                 )}
 
-                {/* 底部信息布局优化 - 在极简模式下全都隐藏  */}
-                {!isMinimalistMode && (
-                    <div className="flex items-baseline justify-between text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
-                        <div>
-                            {bean.roastDate && (
-                                <span>烘焙于 {formatDate(bean.roastDate)}</span>
+                {/* 底部信息布局优化 - 根据设置控制显示 */}
+                <div className="flex items-baseline justify-between text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
+                    <div>
+                        {bean.roastDate && !hideRoastDate && (
+                            <span>烘焙于 {formatDate(bean.roastDate)}</span>
                         )}
-                        </div>
-                        <div>
-                            {!isMinimalistMode && bean.price && (
-                                <span>
-                                    {bean.price}元
+                    </div>
+                    <div>
+                        {!hidePrice && bean.price && (
+                            <span>
+                                {bean.price}元
                                 {bean.capacity && (
                                     <span className="ml-1">
                                         [{(parseFloat(bean.price) / parseFloat(bean.capacity.replace('g', ''))).toFixed(2)}元/克]
@@ -412,9 +421,8 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                                 )}
                             </span>
                         )}
-                        </div>
                     </div>
-                )}
+                </div>
 
                 {/* 备注信息 */}
                 {bean.notes && (
