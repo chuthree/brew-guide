@@ -1,4 +1,4 @@
-@import 'tailwindcss';
+@import "tailwindcss";
 
 @config '../../../tailwind.config.ts';
 
@@ -28,6 +28,7 @@
   --font-timer: var(--font-timer);
   --keyboard-height: 0px;
   --custom-shape-color: #000000;
+  --legacy-mode: 0;
 }
 
 /* 暗黑模式 */
@@ -35,6 +36,24 @@
   --foreground: #fff;
   --background: #171717;
   --custom-shape-color: #ffffff;
+}
+
+/* 兼容性样式 - 针对旧版WebView */
+.legacy-browser {
+  /* 确保使用简单的CSS特性 */
+  color-scheme: light dark;
+}
+
+/* 在旧浏览器模式时应用特殊样式 */
+html[style*="--legacy-mode: 1"] {
+  /* 使用简单的颜色方案，避免使用oklch */
+  --background: #fafafa;
+  --foreground: #000000;
+}
+
+html[style*="--legacy-mode: 1"].dark {
+  --background: #171717;
+  --foreground: #ffffff;
 }
 
 .dark .dark\:invert {
