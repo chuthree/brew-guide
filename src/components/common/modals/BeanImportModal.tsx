@@ -227,6 +227,21 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
         }
     }, [selectedImage, crop, handleCropComplete, isCropActive]);
 
+    // 增加图片加载后自动设置裁剪区域的效果
+    useEffect(() => {
+        if (selectedImage && !isCropActive) {
+            // 设置默认裁切框为图片中心的一个区域
+            setCrop({
+                unit: '%',
+                width: 60,
+                height: 60,
+                x: 20,
+                y: 20
+            });
+            setIsCropActive(true);
+        }
+    }, [selectedImage, isCropActive]);
+
     // 清除所有状态消息
     const clearMessages = () => {
         setError(null);
@@ -431,13 +446,16 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                     // 重置裁剪状态
                     setIsCropActive(false);
                     setCroppedImage(null);
+                    // 设置默认裁切框为图片中心的一个区域
                     setCrop({
                         unit: '%',
-                        width: 0,
-                        height: 0,
-                        x: 0,
-                        y: 0
+                        width: 60,
+                        height: 60,
+                        x: 20,
+                        y: 20
                     });
+                    // 设置裁剪状态为激活
+                    setIsCropActive(true);
                 };
                 reader.readAsDataURL(file);
             }
@@ -557,7 +575,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                             </details>
                         </div>
                     </div>
-                ) : selectedImage ? (
+                ) : !manualMode && selectedImage ? (
                     <div className="space-y-3">
                         <div className="relative w-full flex flex-col items-center">
                             <div className="w-full">
@@ -568,6 +586,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                                     onDragStart={handleCropStart}
                                     aspect={undefined}
                                     className="w-full flex justify-center"
+                                    ruleOfThirds={true}
                                 >
                                     {/* eslint-disable-next-line @next/next/no-img-element */}
                                     <img
@@ -615,13 +634,13 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                                 }}
                                 className="px-3 py-1 text-sm border border-neutral-300 dark:border-neutral-600 rounded-sm"
                             >
-                                取消
+                                重新选择
                             </button>
                             <button
                                 onClick={handleImageRecognition}
                                 className="px-3 py-1 text-sm bg-neutral-800 dark:bg-neutral-200 text-neutral-100 dark:text-neutral-800 rounded-sm"
                             >
-                                识别
+                                确认裁剪并识别
                             </button>
                         </div>
                     </div>
@@ -661,7 +680,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                         </svg>
-                        <span className="text-sm">识别中...</span>
+                        <span className="text-sm">处理中...</span>
                     </div>
                 )}
             </div>
@@ -676,7 +695,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.265 }}
-                    className="fixed inset-0 z-50 bg-black bg-opacity-30 backdrop-blur-xs"
+                    className="fixed inset-0 z-50 bg-black/30 backdrop-blur-xs"
                 >
                     <motion.div
                         initial={{ y: '100%' }}
