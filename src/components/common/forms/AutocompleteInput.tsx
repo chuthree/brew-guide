@@ -301,7 +301,7 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
                     <input
                         ref={inputRef}
                         type={inputType}
-                        inputMode={inputMode || (allowDecimal ? 'decimal' : 'numeric')}
+                        inputMode={inputMode || (inputType === 'number' || inputType === 'tel' ? (allowDecimal ? 'decimal' : 'numeric') : 'text')}
                         value={inputValue}
                         onChange={handleInputChange}
                         onFocus={handleFocus}

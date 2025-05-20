@@ -212,6 +212,7 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
                     suggestions={[]}
                     required
                     clearable
+                    inputMode="text"
                     onBlur={() => {
                         if (!bean.name?.trim()) {
                             onBeanChange('name')('未命名咖啡豆');
