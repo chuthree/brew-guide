@@ -34,7 +34,7 @@ const BeanImageGallery: React.FC<BeanImageGalleryProps> = ({ beansWithImages, im
                     // 计算旋转角度 - 使卡片垂直于半径向外
                     const rotate = (angle * (100 / Math.PI)) // 调整旋转角度，使其指向外侧
 
-                    // 计算动画延迟 - 按照从左到右的顺序
+                    // 计算动画延迟 - 按照从左到右的顺序，但大幅减少延迟时间
                     // 先获取所有豆子的x坐标，按照从左到右排序后获取当前豆子的序号
                     const allXPositions = beansWithImages.map((_, i) => {
                         const offset = (i - (totalBeans - 1) / 2)
@@ -42,14 +42,14 @@ const BeanImageGallery: React.FC<BeanImageGalleryProps> = ({ beansWithImages, im
                     })
                     const sortedIndices = [...allXPositions].map((x, i) => ({x, i})).sort((a, b) => a.x - b.x).map(item => item.i)
                     const orderIndex = sortedIndices.indexOf(index)
-                    const animationDelay = orderIndex * 150 // 每个豆子延迟150ms
+                    const animationDelay = orderIndex * 60 // 将每个豆子延迟减少到60ms
                     
                     return (
                         <div 
                             key={`bean-card-${bean.id}`}
-                            className="absolute w-14 h-20 transform -translate-x-1/2 -translate-y-1/2 shadow-xs rounded-sm border border-white/90 dark:border-neutral-700/90 overflow-hidden transition-all duration-700"
+                            className="absolute w-14 h-20 transform -translate-x-1/2 -translate-y-1/2 shadow-xs rounded-sm border border-white/90 dark:border-neutral-700/90 overflow-hidden transition-all duration-500"
                             style={{
-                                left: `calc(50% + ${x}px)`,
+                                left: `calc(50% + ${x}px + 28px)`,
                                 top: `calc(100% + ${y}px - -80px)`, // y 在顶部时为负，因此整体下移
                                 transform: `translate(-50%, 0%) rotate(${rotate}deg)`, // 使用新的旋转角度
                                 zIndex: index + 1,
@@ -65,8 +65,8 @@ const BeanImageGallery: React.FC<BeanImageGalleryProps> = ({ beansWithImages, im
                                 fill
                                 sizes="48px"
                                 className="object-cover"
-                                priority={false}
-                                loading="lazy"
+                                priority={true} // 设置为高优先级加载
+                                loading="eager" // 使用即时加载而不是懒加载
                             />
                             <div className="absolute inset-0 border-2 border-white/30 dark:border-neutral-700/30 rounded-sm"></div>
                         </div>

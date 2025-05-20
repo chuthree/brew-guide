@@ -38,7 +38,7 @@ const StatsCategories: React.FC<StatsCategoriesProps> = ({
                 <StatCategory 
                     number={2} 
                     title="库存" 
-                    animStyle={styles.statsAnimStyle(1)}
+                    animStyle={styles.statsAnimStyle(0)}
                 >
                     <StatItem label="总重量" value={`${formatNumber(stats.totalWeight)}`} unit="克" />
                     <StatItem label="剩余重量" value={`${formatNumber(stats.remainingWeight)}`} unit="克" />
@@ -51,7 +51,7 @@ const StatsCategories: React.FC<StatsCategoriesProps> = ({
                 <StatCategory 
                     number={3} 
                     title="费用数据" 
-                    animStyle={styles.statsAnimStyle(2)}
+                    animStyle={styles.statsAnimStyle(0)}
                 >
                     <StatItem label="总花费" value={`${formatNumber(stats.totalCost)}`} unit="元" />
                     <StatItem label="剩余咖啡价值" value={`${formatNumber(stats.remainingWeight * stats.averageGramPrice)}`} unit="元" />
@@ -65,7 +65,7 @@ const StatsCategories: React.FC<StatsCategoriesProps> = ({
                 <StatCategory 
                     number={4} 
                     title="分类" 
-                    animStyle={styles.statsAnimStyle(2)}
+                    animStyle={styles.statsAnimStyle(1)}
                 >
                     <StatItem 
                         label="单品豆" 
@@ -109,7 +109,7 @@ const StatsCategories: React.FC<StatsCategoriesProps> = ({
                 <StatCategory 
                     number={5} 
                     title="赏味期" 
-                    animStyle={styles.statsAnimStyle(3)}
+                    animStyle={styles.statsAnimStyle(1)}
                 >
                     <StatItem label="在赏味期内" value={`${stats.flavorPeriodStatus.inPeriod}`} unit="个" />
                     <StatItem label="尚未进入赏味期" value={`${stats.flavorPeriodStatus.beforePeriod}`} unit="个" />
@@ -121,7 +121,7 @@ const StatsCategories: React.FC<StatsCategoriesProps> = ({
                 <StatCategory 
                     number={6} 
                     title="烘焙度" 
-                    animStyle={styles.statsAnimStyle(4)}
+                    animStyle={styles.statsAnimStyle(2)}
                 >
                     {renderStatsRows(Object.entries(stats.roastLevelCount))}
                 </StatCategory>
@@ -130,7 +130,7 @@ const StatsCategories: React.FC<StatsCategoriesProps> = ({
                 <StatCategory 
                     number={7} 
                     title="产地" 
-                    animStyle={styles.statsAnimStyle(5)}
+                    animStyle={styles.statsAnimStyle(2)}
                 >
                     {renderStatsRows(Object.entries(stats.originCount))}
                 </StatCategory>
@@ -139,7 +139,7 @@ const StatsCategories: React.FC<StatsCategoriesProps> = ({
                 <StatCategory 
                     number={8} 
                     title="处理法" 
-                    animStyle={styles.statsAnimStyle(6)}
+                    animStyle={styles.statsAnimStyle(3)}
                 >
                     {renderStatsRows(Object.entries(stats.processCount))}
                 </StatCategory>
@@ -148,7 +148,7 @@ const StatsCategories: React.FC<StatsCategoriesProps> = ({
                 <StatCategory 
                     number={9} 
                     title="品种" 
-                    animStyle={styles.statsAnimStyle(7)}
+                    animStyle={styles.statsAnimStyle(3)}
                 >
                     {renderStatsRows(Object.entries(stats.varietyCount))}
                 </StatCategory>
@@ -157,7 +157,7 @@ const StatsCategories: React.FC<StatsCategoriesProps> = ({
                 <StatCategory 
                     number={10} 
                     title="风味" 
-                    animStyle={styles.statsAnimStyle(8)}
+                    animStyle={styles.statsAnimStyle(3)}
                 >
                     {renderStatsRows(stats.topFlavors, '次')}
                 </StatCategory>
