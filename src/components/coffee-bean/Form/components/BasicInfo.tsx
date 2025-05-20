@@ -224,20 +224,10 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
             <div className="grid grid-cols-2 gap-6 w-full">
                 <div className="space-y-2">
                     <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                        容量/剩余 (g)
+                        剩余/容量 (g)
                     </label>
                     <div className="flex items-center justify-start w-full">
                         <div className="flex items-center border-b border-neutral-300 dark:border-neutral-700 py-2 w-full">
-                            <input
-                                type="number"
-                                inputMode="decimal"
-                                step="0.1"
-                                value={capacityValue}
-                                onChange={(e) => handleCapacityChange(e.target.value)}
-                                placeholder="总量"
-                                className="bg-transparent outline-none w-1/2 text-center"
-                            />
-                            <span className="text-neutral-500 dark:text-neutral-400 px-1">/</span>
                             <input
                                 type="number"
                                 inputMode="decimal"
@@ -247,6 +237,16 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
                                 placeholder="剩余"
                                 className="bg-transparent outline-none w-1/2 text-center"
                                 onBlur={validateRemaining}
+                            />
+                            <span className="text-neutral-500 dark:text-neutral-400 px-1">/</span>
+                            <input
+                                type="number"
+                                inputMode="decimal"
+                                step="0.1"
+                                value={capacityValue}
+                                onChange={(e) => handleCapacityChange(e.target.value)}
+                                placeholder="总量"
+                                className="bg-transparent outline-none w-1/2 text-center"
                             />
                         </div>
                     </div>
