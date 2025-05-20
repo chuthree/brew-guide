@@ -12,8 +12,7 @@ interface CoffeeBeanListProps {
     highlightedBeanId?: string | null // 添加高亮咖啡豆ID参数
 }
 
-// 用于缓存咖啡豆数据
-let cachedBeans: CoffeeBean[] | null = null;
+// 移除全局缓存变量，确保每次都从CoffeeBeanManager获取最新数据
 
 const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
     onSelect,
@@ -21,9 +20,9 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
     searchQuery = '',  // 添加搜索查询参数默认值
     highlightedBeanId = null // 添加高亮咖啡豆ID默认值
 }) => {
-    const [beans, setBeans] = useState<CoffeeBean[]>(cachedBeans || [])
+    const [beans, setBeans] = useState<CoffeeBean[]>([])
     const [_isPending, startTransition] = useTransition()
-    const [isFirstLoad, setIsFirstLoad] = useState(!cachedBeans)
+    const [isFirstLoad, setIsFirstLoad] = useState(true)
     const [forceRefreshKey, setForceRefreshKey] = useState(0) // 添加强制刷新的key
     
     // 添加ref用于存储咖啡豆元素列表
@@ -134,10 +133,8 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
     // 加载咖啡豆数据
     const loadBeans = useCallback(async () => {
         try {
-            // 如果已有缓存数据，则不显示加载状态
-            if (!cachedBeans) {
-                setIsFirstLoad(true);
-            }
+            // 显示加载状态
+            setIsFirstLoad(true);
                 
             const loadedBeans = await CoffeeBeanManager.getAllBeans();
 
@@ -150,7 +147,6 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
             // 使用 useTransition 包裹状态更新，避免界面闪烁
             startTransition(() => {
                 setBeans(sortedBeans);
-                cachedBeans = sortedBeans; // 更新缓存
                 setIsFirstLoad(false);
             });
         } catch (error) {
@@ -181,8 +177,6 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
     useEffect(() => {
         // 处理自定义coffeeBeansUpdated事件
         const handleBeansUpdated = () => {
-            // 清除缓存以确保获取最新数据
-            cachedBeans = null;
             // 强制刷新
             setForceRefreshKey(prev => prev + 1);
         };

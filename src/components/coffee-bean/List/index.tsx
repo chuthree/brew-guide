@@ -329,8 +329,46 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
             loadBloggerBeans();
         } else if (viewMode === VIEW_OPTIONS.RANKING) {
             loadRatedBeans();
+        } else if (viewMode === VIEW_OPTIONS.INVENTORY) {
+            // 在切换到仓库视图时，应用当前的排序选项重新排序
+            if (beans.length > 0) {
+                const compatibleBeans = beans.map(bean => ({
+                    id: bean.id,
+                    name: bean.name,
+                    roastDate: bean.roastDate,
+                    startDay: bean.startDay,
+                    endDay: bean.endDay,
+                    roastLevel: bean.roastLevel,
+                    capacity: bean.capacity,
+                    remaining: bean.remaining,
+                    timestamp: bean.timestamp,
+                    overallRating: bean.overallRating,
+                    variety: bean.variety,
+                    price: bean.price,
+                    type: bean.type
+                }));
+                
+                const sortedBeans = sortBeans(compatibleBeans, sortOption);
+                
+                // 创建一个新的数组来存放排序后的原始豆子
+                const resultBeans: ExtendedCoffeeBean[] = [];
+                
+                // 按照排序后的顺序收集原始beans数组中的豆子
+                for (let i = 0; i < sortedBeans.length; i++) {
+                    const sortedBean = sortedBeans[i];
+                    const originalBean = beans.find(b => b.id === sortedBean.id);
+                    if (originalBean) {
+                        resultBeans.push(originalBean);
+                    }
+                }
+                
+                // 确保长度一致后更新
+                if (resultBeans.length === beans.length) {
+                    updateFilteredBeansAndCategories(resultBeans);
+                }
+            }
         }
-    }, [viewMode, loadBloggerBeans, loadRatedBeans]);
+    }, [viewMode, loadBloggerBeans, loadRatedBeans, beans, sortOption, updateFilteredBeansAndCategories]);
 
     // 确保在榜单beanType或年份变化时更新计数
     useEffect(() => {
@@ -397,26 +435,35 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                 capacity: bean.capacity,
                 remaining: bean.remaining,
                 timestamp: bean.timestamp,
-                rating: bean.overallRating,
+                overallRating: bean.overallRating, // 确保使用正确的评分字段名称
                 variety: bean.variety,
                 price: bean.price,
                 type: bean.type
             }));
+            
             const sortedBeans = sortBeans(compatibleBeans, sortOption);
             
-            // 保持原始引用以维护其他属性
-            const resultBeans = beans.slice();
+            // 创建一个新的数组来存放排序后的原始豆子
+            const resultBeans: ExtendedCoffeeBean[] = [];
             
-            // 按照排序后的顺序重新排列原始beans数组
+            // 按照排序后的顺序收集原始beans数组中的豆子
             for (let i = 0; i < sortedBeans.length; i++) {
                 const sortedBean = sortedBeans[i];
-                const originalIndex = beans.findIndex(b => b.id === sortedBean.id);
-                if (originalIndex !== -1) {
-                    resultBeans[i] = beans[originalIndex];
+                const originalBean = beans.find(b => b.id === sortedBean.id);
+                if (originalBean) {
+                    resultBeans.push(originalBean);
                 }
             }
             
-            updateFilteredBeansAndCategories(resultBeans);
+            // 确保长度一致
+            if (resultBeans.length === beans.length) {
+                // 更新过滤后的豆子和分类
+                updateFilteredBeansAndCategories(resultBeans);
+            } else {
+                console.error('排序后的豆子数量与原始豆子数量不一致', resultBeans.length, beans.length);
+                // 如果出现不一致，仍然进行更新，但是使用原始数组
+                updateFilteredBeansAndCategories(beans);
+            }
         }
     }, [sortOption, viewMode, beans, updateFilteredBeansAndCategories]);
 
@@ -733,7 +780,10 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
 
     // 搜索过滤逻辑
     const searchFilteredBeans = React.useMemo(() => {
-        if (!searchQuery.trim() || !isSearching) return filteredBeans;
+        if (!searchQuery.trim() || !isSearching) {
+            // 当没有搜索时，返回当前过滤和排序后的豆子列表
+            return filteredBeans;
+        }
         
         // 将查询拆分为多个关键词，移除空字符串
         const queryTerms = searchQuery.toLowerCase().trim().split(/\s+/).filter(term => term.length > 0);
@@ -1058,6 +1108,37 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
         }
     };
 
+    // 处理排序选项变更
+    const handleSortChange = (option: SortOption) => {
+        setSortOption(option);
+        
+        // 同时更新视图特定的排序选项
+        switch (viewMode) {
+            case VIEW_OPTIONS.INVENTORY:
+                setInventorySortOption(option);
+                globalCache.inventorySortOption = option;
+                saveInventorySortOptionPreference(option);
+                break;
+            case VIEW_OPTIONS.RANKING:
+                setRankingSortOption(option);
+                globalCache.rankingSortOption = option;
+                saveRankingSortOptionPreference(option);
+                break;
+            case VIEW_OPTIONS.BLOGGER:
+                setBloggerSortOption(option);
+                globalCache.bloggerSortOption = option;
+                saveBloggerSortOptionPreference(option);
+                break;
+        }
+        
+        // 更新全局缓存
+        globalCache.sortOption = option;
+        saveSortOptionPreference(option);
+        
+        // 强制清除缓存并重新加载数据
+        CoffeeBeanManager.clearCache();
+    };
+
     if (!isOpen) return null;
 
     return (
@@ -1101,31 +1182,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
                             // 视图模式的保存在effect中处理
                         }}
                         sortOption={sortOption}
-                        onSortChange={(newSortOption) => {
-                            // 根据当前视图类型保存对应的排序选项
-                            switch (viewMode) {
-                                case VIEW_OPTIONS.INVENTORY:
-                                    setInventorySortOption(newSortOption);
-                                    globalCache.inventorySortOption = newSortOption;
-                                    saveInventorySortOptionPreference(newSortOption);
-                                    break;
-                                case VIEW_OPTIONS.RANKING:
-                                    setRankingSortOption(newSortOption);
-                                    globalCache.rankingSortOption = newSortOption;
-                                    saveRankingSortOptionPreference(newSortOption);
-                                    break;
-                                case VIEW_OPTIONS.BLOGGER:
-                                    setBloggerSortOption(newSortOption);
-                                    globalCache.bloggerSortOption = newSortOption;
-                                    saveBloggerSortOptionPreference(newSortOption);
-                                    break;
-                            }
-                            
-                            // 更新全局排序选项
-                            setSortOption(newSortOption);
-                            globalCache.sortOption = newSortOption;
-                            saveSortOptionPreference(newSortOption);
-                        }}
+                        onSortChange={handleSortChange}
                         beansCount={isSearching ? searchFilteredBeans.length : filteredBeans.length}
                         totalBeans={beans.length}
                         totalWeight={calculateTotalWeight()}
