@@ -429,7 +429,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                     <div className="flex flex-col items-center">
                                         <div className="w-full aspect-square relative rounded-lg overflow-hidden">
                                             <Image 
-                                                src="/images/content/group-code.jpg" 
+                                                src="https://coffee.chu3.top/images/content/group-code.jpg" 
                                                 alt="交流群" 
                                                 fill
                                                 className="object-cover"
