@@ -169,7 +169,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
                                         >
                                             <SelectTrigger 
                                                 variant="minimal"
-                                                className="w-full py-2 px-3 text-sm font-medium rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 focus:outline-hidden focus:ring-2 focus:ring-neutral-500 border border-neutral-200 dark:border-neutral-700"
+                                                className="w-full py-2 px-3 text-sm font-medium rounded-lg bg-neutral-50 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 focus:outline-hidden focus:ring-2 focus:ring-neutral-500 border border-neutral-200 dark:border-neutral-700"
                                             >
                                                 <SelectValue placeholder="选择磨豆机" />
                                                 <svg 
