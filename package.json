@@ -1,6 +1,6 @@
 {
   "name": "brew-guide",
-  "version": "1.2.4.7",
+  "version": "1.2.4.8",
   "private": true,
   "type": "module",
   "engines": {
