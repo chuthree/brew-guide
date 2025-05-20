@@ -1043,6 +1043,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                         setShowWaterTooltip={setShowWaterTooltip}
                         stagesContainerRef={stagesContainerRef}
                         newStageRef={newStageRef}
+                        coffeeDosage={method.params.coffee}
                     />
                 );
 

@@ -55,6 +55,7 @@ interface StagesStepProps {
   setShowWaterTooltip: React.Dispatch<React.SetStateAction<number | null>>;
   stagesContainerRef: React.RefObject<HTMLDivElement | null>;
   newStageRef?: React.RefObject<HTMLDivElement | null>;
+  coffeeDosage?: string;
 }
 
 const StagesStep: React.FC<StagesStepProps> = ({
@@ -76,7 +77,8 @@ const StagesStep: React.FC<StagesStepProps> = ({
   showWaterTooltip,
   setShowWaterTooltip,
   stagesContainerRef,
-  newStageRef
+  newStageRef,
+  coffeeDosage = '15g'
 }) => {
   const innerNewStageRef = useRef<HTMLDivElement>(null);
   const _isCustomPreset = customEquipment.animationType === 'custom';
@@ -620,14 +622,16 @@ const StagesStep: React.FC<StagesStepProps> = ({
                           // 检查是否是倍数输入 (例如 "2倍"、"2x"、"x2"等)
                           // 匹配：数字+倍、数字+x/X、x/X+数字 格式
                           const multipleMatch = value.match(/^(\d+(\.\d+)?)(倍|[xX])$/) || 
-                                              value.match(/^(\d+(\.\d+)?)[\s]*(\d+(\.\d+)?)[\s]*$/) || 
                                               value.match(/^[xX][\s]*(\d+(\.\d+)?)[\s]*$/);
                           if (multipleMatch) {
-                            // 提取倍数值 - 根据匹配组的位置确定数值在哪个捕获组
+                            // 提取倍数值
+                            // 如果是 x数字 格式，倍率值在第二个正则的第一个捕获组
+                            // 如果是 数字倍 或 数字x 格式，倍率值在第一个正则的第一个捕获组
                             const multipleValue = parseFloat(multipleMatch[1]);
                             
-                                                     // 使用总水量
-                             const coffeeAmount = parseInt(totalWater.replace('g', '')) / 15; // 这是一个估计值，假设水粉比大约是1:15
+                            // 从coffeeDosage中提取咖啡粉量数值
+                            const coffeeMatch = coffeeDosage.match(/(\d+(\.\d+)?)/);
+                            const coffeeAmount = coffeeMatch ? parseFloat(coffeeMatch[1]) : 15; // 默认15g
                             
                             // 计算实际克数 (倍数 * 咖啡粉量)
                             const calculatedWater = Math.round(multipleValue * coffeeAmount);

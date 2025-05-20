@@ -22,7 +22,7 @@ def capacitor_pods
   pod 'CapacitorSplashScreen', :path => '../../node_modules/.pnpm/@capacitor+splash-screen@7.0.1_@capacitor+core@7.2.0/node_modules/@capacitor/splash-screen'
   pod 'CapacitorStatusBar', :path => '../../node_modules/.pnpm/@capacitor+status-bar@7.0.1_@capacitor+core@7.2.0/node_modules/@capacitor/status-bar'
   pod 'CapacitorTextZoom', :path => '../../node_modules/.pnpm/@capacitor+text-zoom@7.0.1_@capacitor+core@7.2.0/node_modules/@capacitor/text-zoom'
-  pod 'CapawesomeCapacitorFilePicker', :path => '../../node_modules/.pnpm/@capawesome+capacitor-file-picker@7.0.1_@capacitor+core@7.2.0/node_modules/@capawesome/capacitor-file-picker'
+  pod 'CapawesomeCapacitorFilePicker', :path => '../../node_modules/.pnpm/@capawesome+capacitor-file-picker@7.1.0_@capacitor+core@7.2.0/node_modules/@capawesome/capacitor-file-picker'
 end
 
 target 'App' do

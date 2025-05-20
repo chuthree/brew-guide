@@ -36,4 +36,4 @@ include ':capacitor-text-zoom'
 project(':capacitor-text-zoom').projectDir = new File('../node_modules/.pnpm/@capacitor+text-zoom@7.0.1_@capacitor+core@7.2.0/node_modules/@capacitor/text-zoom/android')
 
 include ':capawesome-capacitor-file-picker'
-project(':capawesome-capacitor-file-picker').projectDir = new File('../node_modules/.pnpm/@capawesome+capacitor-file-picker@7.0.1_@capacitor+core@7.2.0/node_modules/@capawesome/capacitor-file-picker/android')
+project(':capawesome-capacitor-file-picker').projectDir = new File('../node_modules/.pnpm/@capawesome+capacitor-file-picker@7.1.0_@capacitor+core@7.2.0/node_modules/@capawesome/capacitor-file-picker/android')
