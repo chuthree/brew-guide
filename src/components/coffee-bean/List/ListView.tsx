@@ -30,7 +30,20 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
 
     // 检查咖啡豆是否用完
     const isBeanEmpty = (bean: CoffeeBean): boolean => {
-        return (bean.remaining === "0" || bean.remaining === "0g") && bean.capacity !== undefined;
+        // 处理remaining可能是字符串或数字的情况
+        if (typeof bean.remaining === 'number') {
+            return bean.remaining <= 0;
+        }
+        
+        // 处理remaining是字符串的情况
+        if (typeof bean.remaining === 'string') {
+            // 移除所有非数字字符（除了小数点）并转换为数字
+            const numericValue = parseFloat(bean.remaining.replace(/[^\d.]/g, ''));
+            return isNaN(numericValue) || numericValue <= 0;
+        }
+        
+        // 如果remaining未定义或为null，也视为空
+        return true;
     }
 
     // 获取阶段数值用于排序
