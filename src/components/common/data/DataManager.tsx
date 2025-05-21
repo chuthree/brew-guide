@@ -160,6 +160,11 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
                 if (onDataChange) {
                     onDataChange()
                 }
+                
+                // 设置一个短暂延迟后刷新页面
+                setTimeout(() => {
+                    window.location.reload()
+                }, 1000) // 延迟1秒，让用户能看到成功消息
             } else {
                 setStatus({ type: 'error', message: result.message })
             }

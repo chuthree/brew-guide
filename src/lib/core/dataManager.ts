@@ -336,6 +336,13 @@ export const DataManager = {
 			// 清除列表中的数据
 			for (const key of APP_DATA_KEYS) {
 				await Storage.remove(key);
+				
+				// 确保IndexedDB中的主要表也被清理
+				if (key === 'brewingNotes') {
+					await db.brewingNotes.clear();
+				} else if (key === 'coffeeBeans') {
+					await db.coffeeBeans.clear();
+				}
 			}
 
 			// 如果是完全重置，还需要清除其他数据
@@ -359,6 +366,27 @@ export const DataManager = {
 						localStorage.removeItem(`${CUSTOM_PRESETS_PREFIX}${key}`);
 					}
 				}
+			}
+			
+			// 触发数据变更事件，通知应用中的组件重新加载数据
+			if (isBrowser && completeReset) {
+				// 触发自定义器具更新事件
+				const equipmentEvent = new CustomEvent('customEquipmentUpdate', {
+					detail: { source: 'resetAllData' }
+				});
+				window.dispatchEvent(equipmentEvent);
+				
+				// 触发自定义方案更新事件
+				const methodEvent = new CustomEvent('customMethodUpdate', {
+					detail: { source: 'resetAllData' }
+				});
+				window.dispatchEvent(methodEvent);
+				
+				// 触发一个通用的数据更改事件
+				const dataChangeEvent = new CustomEvent('storage:changed', { 
+					detail: { key: 'allData', action: 'reset' } 
+				});
+				window.dispatchEvent(dataChangeEvent);
 			}
 
 			return {
