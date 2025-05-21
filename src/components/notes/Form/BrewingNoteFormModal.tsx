@@ -209,12 +209,25 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
   const handleSaveNote = (note: BrewingNoteData) => {
     // 获取方案名称
     let methodName = selectedMethod
-    if (methodType === 'custom' && selectedMethod) {
-      const methodObj = availableMethods.find(m =>
+    
+    // 增强的方案名称查找逻辑
+    if (selectedMethod) {
+      // 尝试在所有可用方案中查找
+      const methodObj = availableMethods.find(m => 
         m.id === selectedMethod || m.name === selectedMethod
       )
+      
       if (methodObj) {
+        // 使用方案的名称，不使用ID
         methodName = methodObj.name
+      } else {
+        // 如果在availableMethods中找不到，尝试在customMethods中查找
+        const customMethodObj = customMethods.find(m => 
+          m.id === selectedMethod || m.name === selectedMethod
+        )
+        if (customMethodObj) {
+          methodName = customMethodObj.name
+        }
       }
     }
 

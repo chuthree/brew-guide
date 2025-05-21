@@ -198,15 +198,80 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                 loadEquipmentsAndBeans();
             }
         };
+
+        // 添加一次性修复，将笔记中的方案ID更正为方案名称
+        const fixMethodIdsInNotes = async () => {
+            try {
+                // 获取现有笔记
+                const savedNotes = await Storage.get('brewingNotes')
+                if (!savedNotes) return
+                
+                let parsedNotes: BrewingNote[] = JSON.parse(savedNotes)
+                let hasChanges = false
+                
+                // 加载自定义方案数据，用于查找ID对应的方案名称
+                let customMethods: Record<string, any[]> = {}
+                try {
+                    const customMethodsModule = await import('@/lib/managers/customMethods')
+                    customMethods = await customMethodsModule.loadCustomMethods()
+                } catch (error) {
+                    console.error('加载自定义方案失败:', error)
+                }
+                
+                // 检查每条笔记
+                parsedNotes = parsedNotes.map(note => {
+                    // 检查方案名称是否是ID格式 (以"method-"开头)
+                    if (note.method && typeof note.method === 'string' && note.method.startsWith('method-')) {
+                        const methodId = note.method
+                        
+                        // 查找对应的方案
+                        if (customMethods && Object.keys(customMethods).length > 0) {
+                            // 遍历所有设备的方案
+                            for (const equipmentId in customMethods) {
+                                const methods = customMethods[equipmentId]
+                                if (Array.isArray(methods)) {
+                                    // 查找匹配的方案
+                                    const method = methods.find(m => m.id === methodId)
+                                    if (method && method.name) {
+                                        // 更新为方案名称
+                                        note.method = method.name
+                                        hasChanges = true
+                                        console.log(`已修复笔记 ${note.id}：将方案ID ${methodId} 更新为方案名称 ${method.name}`)
+                                        break
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    return note
+                })
+                
+                // 如果有修改，保存更新后的笔记
+                if (hasChanges) {
+                    await Storage.set('brewingNotes', JSON.stringify(parsedNotes))
+                    console.log('已修复笔记中的方案ID问题')
+                    
+                    // 触发重新加载
+                    loadEquipmentsAndBeans()
+                }
+            } catch (error) {
+                console.error('修复笔记方案ID失败:', error)
+            }
+        }
         
-        window.addEventListener('storage', handleStorageChange);
-        window.addEventListener('customStorageChange', handleCustomStorageChange as EventListener);
+        // 如果是打开状态才执行修复
+        if (isOpen) {
+            fixMethodIdsInNotes()
+        }
+        
+        window.addEventListener('storage', handleStorageChange)
+        window.addEventListener('customStorageChange', handleCustomStorageChange as EventListener)
         
         return () => {
-            window.removeEventListener('storage', handleStorageChange);
-            window.removeEventListener('customStorageChange', handleCustomStorageChange as EventListener);
-        };
-    }, [loadEquipmentsAndBeans]);
+            window.removeEventListener('storage', handleStorageChange)
+            window.removeEventListener('customStorageChange', handleCustomStorageChange as EventListener)
+        }
+    }, [isOpen, loadEquipmentsAndBeans])
     
     // 显示消息提示
     const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
