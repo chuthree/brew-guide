@@ -145,7 +145,7 @@ const TabContent: React.FC<TabContentProps> = ({
     const [noteSaved, setNoteSaved] = useState(false);
     
     // 本地流速显示设置
-    const localShowFlowRate = settings.showFlowRate;
+    const [localShowFlowRate, setLocalShowFlowRate] = useState(settings.showFlowRate);
     
     // 添加高亮豆子ID状态
     const [highlightedBeanId, setHighlightedBeanId] = useState<string | null>(null);
@@ -156,6 +156,28 @@ const TabContent: React.FC<TabContentProps> = ({
     // 随机选择器状态
     const [showRandomPicker, setShowRandomPicker] = useState(false);
     const [allBeans, setAllBeans] = useState<CoffeeBean[]>([]);
+    
+    // 监听流速显示设置变化
+    useEffect(() => {
+        setLocalShowFlowRate(settings.showFlowRate);
+    }, [settings.showFlowRate]);
+    
+    // 监听流速设置变更事件
+    useEffect(() => {
+        const handleSettingsChange = (e: CustomEvent) => {
+            if (e.detail && e.detail.showFlowRate !== undefined) {
+                setLocalShowFlowRate(e.detail.showFlowRate);
+            }
+        };
+        
+        // 添加事件监听
+        window.addEventListener('brewing:settingsChange', handleSettingsChange as EventListener);
+        
+        // 清理函数
+        return () => {
+            window.removeEventListener('brewing:settingsChange', handleSettingsChange as EventListener);
+        };
+    }, []);
     
     // 触感反馈函数
     const triggerHapticFeedback = useCallback(async () => {
