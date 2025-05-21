@@ -21,7 +21,7 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
     // 获取今日消耗数据
     const { consumption: todayConsumption, cost: todayCost } = useConsumption(beans)
     
-    // 计算平均消耗和预计完成日期
+    // 计算平均消耗和预计用完日期
     const averageConsumption = useMemo(() => 
         calculateAverageConsumption(stats), [stats]);
     
@@ -135,7 +135,7 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
                                 <span className="float-right">{formatNumber(averageConsumption)}克/天</span>
                             </div>
                             <div>
-                                <span className="text-neutral-800 dark:text-white">预计完成</span>
+                                <span className="text-neutral-800 dark:text-white">预计用完</span>
                                 <span className="float-right">{estimatedFinishDate}</span>
                             </div>
                         </div>
