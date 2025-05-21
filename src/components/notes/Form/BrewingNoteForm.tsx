@@ -42,16 +42,15 @@ interface BrewingNoteFormProps {
 // 二次压缩函数：将base64图片再次压缩
 function compressBase64(base64: string, quality = 0.7, maxWidth = 800): Promise<string> {
   return new Promise((resolve, reject) => {
-    try {
-      // 计算base64字符串大小（近似值）
-      // base64字符串长度 * 0.75 = 字节数，因为base64编码会使文件大小增加约33%
-      const approximateSizeInBytes = base64.length * 0.75;
-      
-      // 如果图片小于200kb，直接返回原图，不进行压缩
-      if (approximateSizeInBytes <= 200 * 1024) {
-        resolve(base64);
-        return;
-      }
+      try {
+    // 计算base64字符串大小
+    const approximateSizeInBytes = base64.length * 0.75;
+    
+    // 如果图片小于200kb，直接返回原图
+    if (approximateSizeInBytes <= 200 * 1024) {
+      resolve(base64);
+      return;
+    }
       
       const img = document.createElement('img');
       
@@ -227,17 +226,34 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         setRatingCurrentValue(null);
     }
     
-    // 更新effect钩子，添加总体评分的触摸事件处理
+    // 添加事件监听
     useEffect(() => {
-        // 添加全局触摸事件处理
+        // 触摸事件处理
         document.addEventListener('touchend', handleTouchEnd);
         document.addEventListener('touchend', handleRatingTouchEnd);
+        
+        // 方案参数变化事件监听
+        const handleMethodParamsChange = (e: CustomEvent) => {
+            if (e.detail?.params) {
+                const params = e.detail.params;
+                setMethodParams({
+                    coffee: params.coffee || methodParams.coffee,
+                    water: params.water || methodParams.water,
+                    ratio: params.ratio || methodParams.ratio,
+                    grindSize: params.grindSize || methodParams.grindSize,
+                    temp: params.temp || methodParams.temp
+                });
+            }
+        };
+        
+        document.addEventListener('methodParamsChanged', handleMethodParamsChange as EventListener);
         
         return () => {
             document.removeEventListener('touchend', handleTouchEnd);
             document.removeEventListener('touchend', handleRatingTouchEnd);
+            document.removeEventListener('methodParamsChanged', handleMethodParamsChange as EventListener);
         }
-    }, []);
+    }, [methodParams]);
 
     // 使用useRef保存上一次的initialData，用于比较变化
     const prevInitialDataRef = useRef<typeof initialData>(initialData);
@@ -522,8 +538,17 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
             ...formData,
             equipment: initialData.equipment,
             method: initialData.method,
-            params: methodParams,
+            params: {
+                // 确保使用MethodSelector中更新的参数，而不是默认值
+                coffee: initialData.params?.coffee || methodParams.coffee,
+                water: initialData.params?.water || methodParams.water,
+                ratio: initialData.params?.ratio || methodParams.ratio,
+                grindSize: initialData.params?.grindSize || methodParams.grindSize,
+                temp: initialData.params?.temp || methodParams.temp
+            },
             totalTime: initialData.totalTime,
+            // 确保保留beanId，这是与咖啡豆的关联字段
+            beanId: initialData.beanId
         };
 
         try {

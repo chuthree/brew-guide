@@ -119,24 +119,30 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
 
   // 处理方法参数变化
   const handleMethodParamsChange = (method: Method) => {
-    // 强制重新渲染
-    setSelectedMethod(methodType === 'common' ? method.name : (method.id || method.name))
+    // 统一使用ID优先的方式标识方案
+    const methodIdentifier = method.id || method.name;
+    setSelectedMethod(methodIdentifier);
+    
+    // 动态更新参数到表单组件
+    const event = new CustomEvent('methodParamsChanged', { 
+      detail: { params: method.params }
+    });
+    document.dispatchEvent(event);
   }
 
   // 计算咖啡粉量
   const getCoffeeAmount = () => {
-    if (selectedMethod && availableMethods.length > 0) {
-      const method = availableMethods.find(m => {
-        return methodType === 'common' ?
-          m.name === selectedMethod :
-          (m.id === selectedMethod || m.name === selectedMethod)
-      })
+    if (selectedMethod) {
+      // 合并所有方案列表以确保查找全面
+      const allMethods = [...availableMethods, ...customMethods]
+      
+      // 同时检查ID和名称匹配
+      const method = allMethods.find(m => 
+        m.id === selectedMethod || m.name === selectedMethod)
 
-      if (method && method.params.coffee) {
+      if (method?.params?.coffee) {
         const match = method.params.coffee.match(/(\d+(\.\d+)?)/);
-        if (match) {
-          return parseFloat(match[0])
-        }
+        return match ? parseFloat(match[0]) : 0
       }
     }
     return 0
@@ -145,8 +151,13 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
   // 获取方案参数
   const getMethodParams = () => {
     if (selectedEquipment && selectedMethod) {
-      const methodObj = availableMethods.find(m =>
-        methodType === 'common' ? m.name === selectedMethod : m.id === selectedMethod)
+      // 合并所有方案列表以确保查找全面
+      const allMethods = [...availableMethods, ...customMethods]
+      
+      // 同时检查ID和名称匹配
+      const methodObj = allMethods.find(m => 
+        m.id === selectedMethod || m.name === selectedMethod)
+        
       if (methodObj) {
         return {
           coffee: methodObj.params.coffee,
@@ -210,24 +221,18 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
     // 获取方案名称
     let methodName = selectedMethod
     
-    // 增强的方案名称查找逻辑
     if (selectedMethod) {
-      // 尝试在所有可用方案中查找
-      const methodObj = availableMethods.find(m => 
+      // 合并所有方案以便查找
+      const allMethods = [...availableMethods, ...customMethods]
+      
+      // 在所有方案中查找匹配的方案
+      const methodObj = allMethods.find(m =>
         m.id === selectedMethod || m.name === selectedMethod
       )
       
       if (methodObj) {
-        // 使用方案的名称，不使用ID
+        // 如果找到匹配的方案，始终使用其名称
         methodName = methodObj.name
-      } else {
-        // 如果在availableMethods中找不到，尝试在customMethods中查找
-        const customMethodObj = customMethods.find(m => 
-          m.id === selectedMethod || m.name === selectedMethod
-        )
-        if (customMethodObj) {
-          methodName = customMethodObj.name
-        }
       }
     }
 
@@ -235,20 +240,22 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
     const completeNote: BrewingNoteData = {
       ...note,
       equipment: selectedEquipment,
-      method: methodName
+      method: methodName,
+      // 移除完整的coffeeBean对象，避免可能引起的问题
+      coffeeBean: undefined,
+      // 重新设置参数以确保使用最新的方案参数
+      params: note.params || getMethodParams()
     }
 
     // 处理咖啡豆关联
     if (selectedCoffeeBean?.id) {
       completeNote["beanId"] = selectedCoffeeBean.id
-      // 移除保存完整咖啡豆对象的代码，只保留beanId
-      // 确保coffeeBeanInfo中有必要的信息
-      if (!completeNote.coffeeBeanInfo) {
-        completeNote.coffeeBeanInfo = {
-          name: selectedCoffeeBean.name || '',
-          roastLevel: selectedCoffeeBean.roastLevel || '中度烘焙',
-          roastDate: selectedCoffeeBean.roastDate
-        }
+      
+      // 始终设置咖啡豆信息，无论是否已存在
+      completeNote.coffeeBeanInfo = {
+        name: selectedCoffeeBean.name || '',
+        roastLevel: selectedCoffeeBean.roastLevel || '中度烘焙',
+        roastDate: selectedCoffeeBean.roastDate || ''
       }
 
       // 减少咖啡豆剩余量

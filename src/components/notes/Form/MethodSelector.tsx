@@ -97,19 +97,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
   }
   
   // 处理水温变化
-  const _handleTempChange = (value: string, method: Method) => {
-    // 允许输入数字和小数点的正则表达式
-    const regex = /^$|^[0-9]*\.?[0-9]*$/;
-    if (regex.test(value)) {
-      setTempValue(value)
-      
-      // 更新方法参数
-      method.params.temp = `${value}°C`
-      
-      // 通知父组件参数已更改
-      onParamsChange(method)
-    }
-  }
+  // 未使用的水温变更处理函数，可以在将来实现
 
   // 当选择的方法变化时，初始化参数
   useEffect(() => {
@@ -170,7 +158,11 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
       >
         <div 
           className={`group relative border-l ${isSelected ? 'border-neutral-800 dark:border-white' : 'border-neutral-200 dark:border-neutral-800'} pl-6 cursor-pointer`}
-          onClick={() => onMethodSelect(isCustom ? (method.id || method.name) : method.name)}
+          onClick={() => {
+            // 统一优先使用ID作为标识符，确保一致性
+            const methodIdentifier = method.id || method.name;
+            onMethodSelect(methodIdentifier);
+          }}
         >
           {isSelected && (
             <div className="absolute -left-px top-0 h-full w-px bg-neutral-800 dark:bg-white"></div>

@@ -199,7 +199,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
             }
         };
 
-        // 添加一次性修复，将笔记中的方案ID更正为方案名称
+        // 修复笔记中的方案ID和咖啡豆信息
         const fixMethodIdsInNotes = async () => {
             try {
                 // 获取现有笔记
@@ -208,6 +208,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                 
                 let parsedNotes: BrewingNote[] = JSON.parse(savedNotes)
                 let hasChanges = false
+                
+
                 
                 // 加载自定义方案数据，用于查找ID对应的方案名称
                 let customMethods: Record<string, any[]> = {}
@@ -220,8 +222,12 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                 
                 // 检查每条笔记
                 parsedNotes = parsedNotes.map(note => {
-                    // 检查方案名称是否是ID格式 (以"method-"开头)
-                    if (note.method && typeof note.method === 'string' && note.method.startsWith('method-')) {
+                    let noteFixed = false
+                    
+                    // 1. 检查方案名称是否是ID格式 (UUID格式或以"method-"开头)
+                    if (note.method && typeof note.method === 'string' && 
+                        (note.method.startsWith('method-') || 
+                         /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(note.method))) {
                         const methodId = note.method
                         
                         // 查找对应的方案
@@ -235,27 +241,44 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                                     if (method && method.name) {
                                         // 更新为方案名称
                                         note.method = method.name
-                                        hasChanges = true
-                                        console.log(`已修复笔记 ${note.id}：将方案ID ${methodId} 更新为方案名称 ${method.name}`)
+                                        noteFixed = true
                                         break
                                     }
                                 }
                             }
                         }
                     }
+                    
+                    // 2. 检查咖啡豆信息是否完整
+                    // 如果有beanId但coffeeBeanInfo不完整，尝试加载咖啡豆信息
+                    if (note.beanId && (!note.coffeeBeanInfo || !note.coffeeBeanInfo.name)) {
+                        console.log(`笔记 ${note.id} 有beanId但咖啡豆信息不完整`)
+                        noteFixed = true
+                    }
+                    
+                    // 3. 移除多余的coffeeBean对象 (使用类型断言处理)
+                    if ((note as any).coffeeBean) {
+                        delete (note as any).coffeeBean
+                        noteFixed = true
+                    }
+                    
+                    if (noteFixed) {
+                        hasChanges = true
+                    }
+                    
                     return note
                 })
                 
                 // 如果有修改，保存更新后的笔记
                 if (hasChanges) {
                     await Storage.set('brewingNotes', JSON.stringify(parsedNotes))
-                    console.log('已修复笔记中的方案ID问题')
+                    console.log('已修复笔记数据问题')
                     
                     // 触发重新加载
                     loadEquipmentsAndBeans()
                 }
             } catch (error) {
-                console.error('修复笔记方案ID失败:', error)
+                console.error('修复笔记数据失败:', error)
             }
         }
         
