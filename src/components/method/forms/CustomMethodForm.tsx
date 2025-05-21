@@ -186,21 +186,6 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
   
   // 初始化方法状态
   const [method, setMethod] = useState<MethodWithStages>(() => {
-    if (initialMethod) {
-      // 使用初始方法
-      const normalizedMethod = normalizeMethodData(initialMethod);
-      
-      // 处理聪明杯标签特殊情况
-      if (customEquipment.hasValve && normalizedMethod.params.stages) {
-        normalizedMethod.params.stages = normalizedMethod.params.stages.map(stage => ({
-          ...stage,
-          label: stage.label.replace(/\s*\[开阀\]|\s*\[关阀\]/g, '').trim()
-        }));
-      }
-      
-      return normalizedMethod;
-    }
-
     // 创建新方法
     return initializeNewMethod();
   });
@@ -332,9 +317,29 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
   
   // 监听器具变化，重新初始化方法
   useEffect(() => {
-    // 重新初始化方法
-    setMethod(initializeNewMethod());
-  }, [customEquipment.animationType, customEquipment.hasValve, customEquipment.customPourAnimations, initialMethod]); // 监听器具相关属性的变化
+    // 只有在没有初始化方法的情况下才重新初始化
+    if (!initialMethod) {
+      setMethod(initializeNewMethod());
+    }
+  }, [customEquipment.animationType, customEquipment.hasValve, customEquipment.customPourAnimations]); // 从依赖项中移除initialMethod
+  
+  // 监听initialMethod变化
+  useEffect(() => {
+    if (initialMethod) {
+      // 使用初始方法
+      const normalizedMethod = normalizeMethodData(initialMethod);
+      
+      // 处理聪明杯标签特殊情况
+      if (customEquipment.hasValve && normalizedMethod.params.stages) {
+        normalizedMethod.params.stages = normalizedMethod.params.stages.map(stage => ({
+          ...stage,
+          label: stage.label.replace(/\s*\[开阀\]|\s*\[关阀\]/g, '').trim()
+        }));
+      }
+      
+      setMethod(normalizedMethod);
+    }
+  }, [initialMethod, customEquipment.hasValve]);
   
   // ===== 数据计算函数 =====
   
