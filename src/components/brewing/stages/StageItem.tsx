@@ -12,6 +12,9 @@ interface StageItemProps {
         isDivider?: boolean;
         dividerText?: string;
         onToggleCollapse?: (isCollapsed: boolean) => void;
+        time?: number;
+        pourTime?: number;
+        valveStatus?: string;
     }
     index: number
     onClick: () => void
@@ -30,8 +33,10 @@ interface StageItemProps {
 
 // 辅助函数：格式化时间
 const formatTime = (seconds: number, compact: boolean = false) => {
-    const mins = Math.floor(seconds / 60)
-    const secs = seconds % 60
+    // 确保秒数为非负数
+    const positiveSeconds = Math.max(0, seconds);
+    const mins = Math.floor(positiveSeconds / 60)
+    const secs = positiveSeconds % 60
 
     if (compact) {
         // 简洁模式: 1'20" 或 45"
@@ -231,12 +236,25 @@ const StageItem: React.FC<StageItemProps> = ({
                                 {step.title}
                             </h3>
                             {/* 注水阶段显示时间和水量 */}
-                            {activeTab === '注水' && selectedMethod && step.originalIndex !== undefined && step.items && step.note && step.type === 'pour' && (
+                            {activeTab === '注水' && selectedMethod && step.originalIndex !== undefined && step.items && (
                                 <div className="flex items-baseline gap-3 text-[10px] text-neutral-600 dark:text-neutral-400 shrink-0">
-                                    <span>{step.endTime ? formatTime(step.endTime, true) : formatTime(parseInt(step.note), true)}</span>
-                                    <span>·</span>
+                                    {/* 显示时间：优先使用endTime，其次是note，再次是time属性 */}
+                                    {(step.endTime !== undefined || step.note || step.time !== undefined) && (
+                                        <>
+                                            <span>
+                                                {step.endTime !== undefined 
+                                                    ? formatTime(step.endTime, true) 
+                                                    : step.note 
+                                                        ? formatTime(parseInt(String(step.note)), true)
+                                                        : step.time !== undefined 
+                                                            ? formatTime(step.time, true)
+                                                            : ""}
+                                            </span>
+                                            <span>·</span>
+                                        </>
+                                    )}
                                     <span>{step.items[0]}</span>
-                                    {showFlowRate && (
+                                    {showFlowRate && step.type === 'pour' && step.note && (
                                         <>
                                             <span>·</span>
                                             <span>
@@ -246,13 +264,6 @@ const StageItem: React.FC<StageItemProps> = ({
                                             </span>
                                         </>
                                     )}
-                                </div>
-                            )}
-                            {/* 饮料显示水量 */}
-                            {activeTab === '注水' && selectedMethod && step.items && step.items.length > 0 && (step.type === 'wait' || step.pourType === 'beverage') && (
-                                <div className="flex items-baseline gap-3 text-[10px] text-neutral-600 dark:text-neutral-400 shrink-0">
-                                    <span>·</span>
-                                    <span>{step.items[0]}</span>
                                 </div>
                             )}
                         </div>
