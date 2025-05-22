@@ -152,14 +152,17 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
         try {
             // 检查是否是需要显示阀门的器具（自定义带阀门的器具或标准聪明杯）
             const hasValveSupport = equipmentId === 'CleverDripper' || customEquipment?.hasValve;
-
+            
+            // 如果不支持阀门，返回null表示不需要显示阀门
             if (!hasValveSupport) return null;
 
+            // 根据阀门状态返回对应图片路径，确保始终返回有效路径
             return valveStatus === 'open'
                 ? '/images/icons/ui/valve-open.svg'
                 : '/images/icons/ui/valve-closed.svg';
         } catch (_error) {
-            return '/images/icons/ui/valve-closed.svg'; // 默认返回关闭阀门图片
+            // 捕获任何可能的错误，返回默认阀门关闭图片，确保显示
+            return '/images/icons/ui/valve-closed.svg';
         }
     }
 
@@ -395,29 +398,21 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
             return;
         }
 
-        // 使用阶段中的valveStatus字段
+        // 优先使用阶段中的valveStatus字段
         const currentValveStatus = stages[currentStage]?.valveStatus;
-        if (currentValveStatus) {
-            setValveStatus(prev => {
-                if (prev !== currentValveStatus) return currentValveStatus;
-                return prev;
-            });
-        } else {
-            // 如果没有明确设置，则从标签中判断（向后兼容）
-            const currentLabel = stages[currentStage]?.label || '';
-            if (currentLabel.includes('[开阀]')) {
-                setValveStatus(prev => {
-                    if (prev !== 'open') return 'open';
-                    return prev;
-                });
-            } else if (currentLabel.includes('[关阀]')) {
-                setValveStatus(prev => {
-                    if (prev !== 'closed') return 'closed';
-                    return prev;
-                });
-            }
+        if (currentValveStatus && currentValveStatus !== valveStatus) {
+            setValveStatus(currentValveStatus);
+            return;
         }
-    }, [equipmentId, currentStage, stages, customEquipment]);
+
+        // 如果没有明确设置，则从标签中判断（向后兼容）
+        const currentLabel = stages[currentStage]?.label || '';
+        if (currentLabel.includes('[开阀]') && valveStatus !== 'open') {
+            setValveStatus('open');
+        } else if (currentLabel.includes('[关阀]') && valveStatus !== 'closed') {
+            setValveStatus('closed');
+        }
+    }, [equipmentId, currentStage, stages, customEquipment, valveStatus]);
 
     // 检查是否使用自定义SVG
     const hasCustomSvg = Boolean(customEquipment?.customShapeSvg);
@@ -452,6 +447,48 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
             return null;
         }
     }, [isRunning, getCurrentPourType, currentMotionIndex, availableAnimations]);
+
+    // 渲染静态视图的辅助函数（用于倒计时、未运行和无当前阶段的情况）
+    const renderStaticView = () => {
+        return (
+            <div className="relative w-full aspect-square max-w-[300px] mx-auto ">
+                {/* 底部杯体 - 使用自定义SVG或图片 */}
+                {hasCustomSvg ? (
+                    <div
+                        className={`absolute inset-0 ${equipmentOpacity} transition-opacity duration-300 custom-shape-svg-container outline-only custom-cup-shape`}
+                        dangerouslySetInnerHTML={{
+                            __html: processCustomSvg(customEquipment?.customShapeSvg || '')
+                        }}
+                    />
+                ) : (
+                    <Image
+                        src={equipmentImageSrc || '/images/icons/ui/v60-base.svg'}
+                        alt={equipmentId}
+                        fill
+                        className={`object-contain invert-0 dark:invert ${equipmentOpacity} transition-opacity duration-300`}
+                        priority
+                        sizes="(max-width: 768px) 100vw, 300px"
+                        quality={85}
+                        onError={() => { }}
+                    />
+                )}
+                {/* 阀门显示 */}
+                {(equipmentId === 'CleverDripper' || customEquipment?.hasValve) && getValveImageSrc() && (
+                    <div className="absolute inset-0">
+                        <Image
+                            src={getValveImageSrc() || ''}
+                            alt={`Valve ${valveStatus}`}
+                            fill
+                            className="object-contain invert-0 dark:invert opacity-50 transition-opacity duration-300"
+                            sizes="(max-width: 768px) 100vw, 300px"
+                            quality={85}
+                            onError={() => { }}
+                        />
+                    </div>
+                )}
+            </div>
+        );
+    };
 
     // 更新 processCustomSvg 函数
     const processCustomSvg = (svgContent: string) => {
@@ -516,131 +553,10 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
         return processedSvg;
     };
 
-    // 如果在倒计时期间，立即返回静态视图
-    if (countdownTime !== null) {
-        return (
-            <div className="relative w-full aspect-square max-w-[300px] mx-auto ">
-                {/* 底部杯体 - 使用自定义SVG或图片 */}
-                {hasCustomSvg ? (
-                    <div
-                        className={`absolute inset-0 ${equipmentOpacity} transition-opacity duration-300 custom-shape-svg-container outline-only custom-cup-shape`}
-                        dangerouslySetInnerHTML={{
-                            __html: processCustomSvg(customEquipment?.customShapeSvg || '')
-                        }}
-                    />
-                ) : (
-                    <Image
-                        src={equipmentImageSrc || '/images/icons/ui/v60-base.svg'}
-                        alt={equipmentId}
-                        fill
-                        className={`object-contain invert-0 dark:invert ${equipmentOpacity} transition-opacity duration-300`}
-                        priority
-                        sizes="(max-width: 768px) 100vw, 300px"
-                        quality={85}
-                        onError={() => { }}
-                    />
-                )}
-                {/* 显示阀门（如果器具支持） */}
-                {(equipmentId === 'CleverDripper' || customEquipment?.hasValve) && getValveImageSrc() && (
-                    <div className="absolute inset-0">
-                        <Image
-                            src={getValveImageSrc() || ''}
-                            alt={`Valve ${valveStatus}`}
-                            fill
-                            className="object-contain invert-0 dark:invert opacity-50 transition-opacity duration-300"
-                            sizes="(max-width: 768px) 100vw, 300px"
-                            quality={85}
-                            onError={() => { }}
-                        />
-                    </div>
-                )}
-            </div>
-        );
-    }
-
-    // 如果不在运行中或阶段无效，也返回静态视图
-    if (!isRunning || currentStage < 0) {
-        return (
-            <div className="relative w-full aspect-square max-w-[300px] mx-auto ">
-                {/* 底部杯体 - 使用自定义SVG或图片 */}
-                {hasCustomSvg ? (
-                    <div
-                        className={`absolute inset-0 ${equipmentOpacity} transition-opacity duration-300 custom-shape-svg-container outline-only custom-cup-shape`}
-                        dangerouslySetInnerHTML={{
-                            __html: processCustomSvg(customEquipment?.customShapeSvg || '')
-                        }}
-                    />
-                ) : (
-                    <Image
-                        src={equipmentImageSrc || '/images/icons/ui/v60-base.svg'}
-                        alt={equipmentId}
-                        fill
-                        className={`object-contain invert-0 dark:invert ${equipmentOpacity} transition-opacity duration-300`}
-                        priority
-                        sizes="(max-width: 768px) 100vw, 300px"
-                        quality={85}
-                        onError={() => { }}
-                    />
-                )}
-                {/* 显示阀门（如果器具支持） */}
-                {(equipmentId === 'CleverDripper' || customEquipment?.hasValve) && getValveImageSrc() && (
-                    <div className="absolute inset-0">
-                        <Image
-                            src={getValveImageSrc() || ''}
-                            alt={`Valve closed`}
-                            fill
-                            className="object-contain invert-0 dark:invert opacity-50 transition-opacity duration-300"
-                            sizes="(max-width: 768px) 100vw, 300px"
-                            quality={85}
-                            onError={() => { }}
-                        />
-                    </div>
-                )}
-            </div>
-        );
-    }
-
     // 检查当前阶段是否存在
     const currentStageData = stages[currentStage];
     if (!currentStageData) {
-        return (
-            <div className="relative w-full aspect-square max-w-[300px] mx-auto ">
-                {/* 底部杯体 - 使用自定义SVG或图片 */}
-                {hasCustomSvg ? (
-                    <div
-                        className={`absolute inset-0 ${equipmentOpacity} transition-opacity duration-300 custom-shape-svg-container outline-only custom-cup-shape`}
-                        dangerouslySetInnerHTML={{
-                            __html: processCustomSvg(customEquipment?.customShapeSvg || '')
-                        }}
-                    />
-                ) : (
-                    <Image
-                        src={equipmentImageSrc || '/images/icons/ui/v60-base.svg'}
-                        alt={equipmentId}
-                        fill
-                        className={`object-contain invert-0 dark:invert ${equipmentOpacity} transition-opacity duration-300`}
-                        priority
-                        sizes="(max-width: 768px) 100vw, 300px"
-                        quality={85}
-                        onError={() => { }}
-                    />
-                )}
-                {/* 显示阀门（如果器具支持） */}
-                {(equipmentId === 'CleverDripper' || customEquipment?.hasValve) && getValveImageSrc() && (
-                    <div className="absolute inset-0">
-                        <Image
-                            src={getValveImageSrc() || ''}
-                            alt={`Valve closed`}
-                            fill
-                            className="object-contain invert-0 dark:invert opacity-50 transition-opacity duration-300"
-                            sizes="(max-width: 768px) 100vw, 300px"
-                            quality={85}
-                            onError={() => { }}
-                        />
-                    </div>
-                )}
-            </div>
-        );
+        return renderStaticView();
     }
 
     // 当 pourType 未设置或 pourTime 为 0 时，默认使用 center 类型
@@ -652,6 +568,16 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
 
     // 再次检查倒计时状态，双重保险
     const shouldShowAnimation = isPouring && imagesPreloaded && isValidAnimation && countdownTime === null;
+
+    // 如果在倒计时期间，立即返回静态视图
+    if (countdownTime !== null) {
+        return renderStaticView();
+    }
+
+    // 如果不在运行中或阶段无效，也返回静态视图
+    if (!isRunning || currentStage < 0) {
+        return renderStaticView();
+    }
 
     return (
         <motion.div 
@@ -698,16 +624,16 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                 </motion.div>
             </AnimatePresence>
 
-            {/* 阀门（如果适用） */}
-            {valveStatus === 'open' && getValveImageSrc() && (
-                <div className="absolute inset-x-0 bottom-0 h-1/4 flex items-center justify-center">
+            {/* 阀门显示 */}
+            {(equipmentId === 'CleverDripper' || customEquipment?.hasValve) && getValveImageSrc() && (
+                <div className="absolute inset-0">
                     <Image
                         src={getValveImageSrc() || ''}
                         alt={`Valve ${valveStatus}`}
-                        width={40}
-                        height={8}
-                        className="object-contain invert-0 dark:invert"
-                        quality={90}
+                        fill
+                        className="object-contain invert-0 dark:invert opacity-50 transition-opacity duration-300"
+                        sizes="(max-width: 768px) 100vw, 300px"
+                        quality={85}
                         onError={() => { }}
                     />
                 </div>
