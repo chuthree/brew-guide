@@ -53,15 +53,15 @@ export async function exportSelectedNotes({
     }
     
     // 添加标题
-    const title = document.createElement('h2');
-    title.innerText = `${selectedNotes.length}条咖啡冲煮笔记`;
-    title.style.textAlign = 'left';
-    title.style.marginBottom = '8px';
-    title.style.fontSize = '12px';
-    title.style.color = isDarkMode ? '#f5f5f5' : '#262626';
-    title.style.padding = '24px 24px 0 24px';
+    // const title = document.createElement('h2');
+    // title.innerText = `${selectedNotes.length}条咖啡冲煮笔记`;
+    // title.style.textAlign = 'left';
+    // title.style.marginBottom = '8px';
+    // title.style.fontSize = '12px';
+    // title.style.color = isDarkMode ? '#f5f5f5' : '#262626';
+    // title.style.padding = '24px 24px 0 24px';
     
-    tempContainer.appendChild(title);
+    // tempContainer.appendChild(title);
     
     // 复制选中的笔记到临时容器
     const selectedNoteElements: HTMLElement[] = [];
