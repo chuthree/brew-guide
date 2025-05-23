@@ -321,7 +321,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                                     style={{ 
                                         width: `${remainingPercentage}%` 
                                     }}
-                                    className="h-full bg-neutral-800 dark:bg-neutral-100"
+                                    className="h-full bg-neutral-600 dark:bg-neutral-400"
                                 />
                             </div>
                         </div>

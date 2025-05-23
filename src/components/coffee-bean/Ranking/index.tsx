@@ -381,7 +381,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                                             +{bean.overallRating !== undefined ? bean.overallRating : 0}
                                         </div>
                                     </div>
-                                    <div className="text-[10px] text-neutral-600 dark:text-neutral-400 mt-1 text-justify">
+                                    <div className="text-[10px] text-neutral-600 dark:text-neutral-400 mt-1.5 text-justify">
                                         {(() => {
                                             // 显示信息数组
                                             const infoArray: (React.ReactNode | string)[] = [];

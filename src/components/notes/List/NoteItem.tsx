@@ -147,7 +147,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
                                 
                                 {/* 方案信息 - 移动到图片右侧标题下方 */}
                                 {note.params && (
-                                    <div className="text-[10px] mt-0.5 tracking-widest text-neutral-600 dark:text-neutral-400 space-x-1 leading-relaxed">
+                                    <div className="text-[10px] mt-1 tracking-widest text-neutral-600 dark:text-neutral-400 space-x-1 leading-relaxed">
                                         {beanName && (
                                             <>
                                                 <span>{equipmentName}</span>
@@ -273,7 +273,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
                                     <div className="h-px w-full overflow-hidden bg-neutral-200/50 dark:bg-neutral-800">
                                         <div
                                             style={{ width: `${value === 0 ? 0 : (value / 5) * 100}%` }}
-                                            className="h-full bg-neutral-800 dark:bg-neutral-100"
+                                            className="h-full bg-neutral-600 dark:bg-neutral-400"
                                         />
                                     </div>
                                 </div>
@@ -305,7 +305,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
                             <div className="h-px w-full overflow-hidden bg-neutral-200/50 dark:bg-neutral-800">
                                 <div
                                     style={{ width: `${note.rating === 0 ? 0 : (note.rating / 5) * 100}%` }}
-                                    className="h-full bg-neutral-800 dark:bg-neutral-100"
+                                    className="h-full bg-neutral-600 dark:bg-neutral-400"
                                 />
                             </div>
                         </div>
