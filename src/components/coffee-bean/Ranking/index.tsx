@@ -367,15 +367,15 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                             key={bean.id}
                             className={`border-b border-neutral-200/60 dark:border-neutral-800/40 last:border-none transition-colors ${updatedBeanId === bean.id ? 'bg-neutral-100/50 dark:bg-neutral-800' : ''}`}
                         >
-                            <div className="flex items-start px-6 py-2.5">
+                            <div className="flex items-start px-6 py-3">
                                 {/* 序号 - 极简风格 */}
-                                <div className="text-[11px] text-neutral-600 dark:text-neutral-400 w-4 mr-2 shrink-0">
+                                <div className="text-[11px] text-neutral-600 dark:text-neutral-400 w-4 mr-2 shrink-0 leading-none">
                                     {index + 1}
                                 </div>
 
                                 {/* 咖啡豆信息 */}
-                                <div className="cursor-pointer flex-1 min-w-0">
-                                    <div className="flex items-center">
+                                <div className="cursor-pointer flex-1 min-w-0 ">
+                                    <div className="flex items-center leading-none">
                                         <div className="text-[11px] text-neutral-800 dark:text-neutral-100 truncate">{bean.name}</div>
                                         <div className="ml-2 text-[11px] text-neutral-800 dark:text-neutral-100 shrink-0">
                                             +{bean.overallRating !== undefined ? bean.overallRating : 0}
@@ -469,7 +469,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                                 {editMode && (
                                     <button
                                         onClick={() => handleRateBeanClick(bean as CoffeeBean)}
-                                        className="text-[10px] text-neutral-600 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-100"
+                                        className="text-[10px] text-neutral-600 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-100 leading-none"
                                     >
                                         编辑
                                     </button>

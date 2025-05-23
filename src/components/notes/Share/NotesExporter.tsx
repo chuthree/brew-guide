@@ -46,6 +46,7 @@ export async function exportSelectedNotes({
     // 设置样式
     tempContainer.style.backgroundColor = backgroundColor;
     tempContainer.style.maxWidth = '100%';
+    tempContainer.style.width = '330px';
     tempContainer.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
     
     if (isDarkMode) {
@@ -53,15 +54,15 @@ export async function exportSelectedNotes({
     }
     
     // 添加标题
-    // const title = document.createElement('h2');
-    // title.innerText = `${selectedNotes.length}条咖啡冲煮笔记`;
-    // title.style.textAlign = 'left';
-    // title.style.marginBottom = '8px';
-    // title.style.fontSize = '12px';
-    // title.style.color = isDarkMode ? '#f5f5f5' : '#262626';
-    // title.style.padding = '24px 24px 0 24px';
+    const title = document.createElement('h2');
+    title.innerText = selectedNotes.length === 1 ? '咖啡冲煮笔记' : `${selectedNotes.length}条咖啡冲煮笔记`;
+    title.style.textAlign = 'left';
+    title.style.marginBottom = '8px';
+    title.style.fontSize = '12px';
+    title.style.color = isDarkMode ? '#f5f5f5' : '#262626';
+    title.style.padding = '24px 24px 0 24px';
     
-    // tempContainer.appendChild(title);
+    tempContainer.appendChild(title);
     
     // 复制选中的笔记到临时容器
     const selectedNoteElements: HTMLElement[] = [];

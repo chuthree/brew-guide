@@ -909,6 +909,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({ isOpen, showBeanForm, onShowI
             // 设置样式
             tempContainer.style.backgroundColor = backgroundColor;
             tempContainer.style.maxWidth = '100%';
+            tempContainer.style.width = '350px';
             tempContainer.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
             
             if (isDarkMode) {
