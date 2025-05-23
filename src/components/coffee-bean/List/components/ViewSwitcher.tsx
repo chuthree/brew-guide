@@ -223,7 +223,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                     </Select>
 
                     {/* 排序组件 */}
-                    {beansCount > 0 && viewMode !== VIEW_OPTIONS.STATS && (
+                    {(beansCount > 0 || viewMode === VIEW_OPTIONS.BLOGGER) && viewMode !== VIEW_OPTIONS.STATS && (
                         <SortSelector
                             viewMode={viewMode}
                             sortOption={sortOption}
