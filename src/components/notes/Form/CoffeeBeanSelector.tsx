@@ -157,9 +157,6 @@ const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
   return (
     <div className="py-3">
       <div>
-        <label className="text-xs font-medium text-neutral-800 dark:text-neutral-200 mb-6 block">
-          选择咖啡豆
-        </label>
         <div className="space-y-5">
           {/* 不选择咖啡豆选项 */}
           <div 

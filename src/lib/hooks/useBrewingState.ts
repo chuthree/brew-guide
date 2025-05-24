@@ -22,13 +22,17 @@ import { getStringState, saveStringState } from "@/lib/core/statePersistence";
 const MODULE_NAME = 'brewing-equipment';
 const DEFAULT_EQUIPMENT = 'v60'; // 默认选择 V60
 
-// 器具选择缓存函数
-const getSelectedEquipmentPreference = (): string => {
+// 器具选择缓存函数 - 导出供其他组件使用
+export const getSelectedEquipmentPreference = (): string => {
     return getStringState(MODULE_NAME, 'selectedEquipment', DEFAULT_EQUIPMENT);
 };
 
-const saveSelectedEquipmentPreference = (equipmentId: string): void => {
+export const saveSelectedEquipmentPreference = (equipmentId: string): void => {
     saveStringState(MODULE_NAME, 'selectedEquipment', equipmentId);
+    // 触发自定义事件，通知其他组件缓存已更新
+    window.dispatchEvent(new CustomEvent('equipmentCacheChanged', {
+        detail: { equipmentId }
+    }));
 };
 
 // 定义标签类型
@@ -152,6 +156,24 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 
 		loadEquipments();
 	}, []);
+
+	// 监听器具缓存变化，实现跨组件同步
+	useEffect(() => {
+		const handleEquipmentCacheChange = (e: CustomEvent<{ equipmentId: string }>) => {
+			const newEquipment = e.detail.equipmentId;
+			// 只有当缓存中的值与当前状态不同时才更新
+			if (newEquipment !== selectedEquipment) {
+				setSelectedEquipment(newEquipment);
+			}
+		};
+
+		// 监听自定义事件
+		window.addEventListener('equipmentCacheChanged', handleEquipmentCacheChange as EventListener);
+
+		return () => {
+			window.removeEventListener('equipmentCacheChanged', handleEquipmentCacheChange as EventListener);
+		};
+	}, [selectedEquipment]);
 
 	// 检查步骤导航前置条件
 	const checkPrerequisites = useCallback(

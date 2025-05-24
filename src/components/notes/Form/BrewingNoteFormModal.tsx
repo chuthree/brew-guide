@@ -1,15 +1,17 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import BrewingNoteForm from './BrewingNoteForm'
-import { MethodSelector, CoffeeBeanSelector, EquipmentSelector } from '@/components/notes/Form'
+import { MethodSelector, CoffeeBeanSelector } from '@/components/notes/Form'
+import EquipmentCategoryBar from './EquipmentCategoryBar'
 import { useMethodManagement } from '@/components/notes/Form/hooks/useMethodManagement'
 import type { BrewingNoteData, CoffeeBean } from '@/types/app'
-import { equipmentList, brewingMethods as commonMethods } from '@/lib/core/config'
+import { brewingMethods as commonMethods } from '@/lib/core/config'
 import SteppedFormModal, { Step } from '@/components/common/modals/SteppedFormModal'
 import { type Method, type CustomEquipment } from '@/lib/core/config'
 import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager'
 import { loadCustomEquipments } from '@/lib/managers/customEquipments'
+import { getSelectedEquipmentPreference, saveSelectedEquipmentPreference } from '@/lib/hooks/useBrewingState'
 // 导入随机选择器组件
 import CoffeeBeanRandomPicker from '@/components/coffee-bean/RandomPicker/CoffeeBeanRandomPicker'
 
@@ -35,8 +37,10 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
   const [selectedCoffeeBean, setSelectedCoffeeBean] = useState<CoffeeBean | null>(initialNote?.coffeeBean || null)
   const [coffeeBeans, setCoffeeBeans] = useState<CoffeeBean[]>([])
 
-  // 器具状态
-  const [selectedEquipment, setSelectedEquipment] = useState<string>(initialNote?.equipment || '')
+  // 器具状态 - 使用缓存逻辑，优先使用初始笔记的器具，否则使用缓存中的器具
+  const [selectedEquipment, setSelectedEquipment] = useState<string>(
+    initialNote?.equipment || getSelectedEquipmentPreference()
+  )
   const [customEquipments, setCustomEquipments] = useState<CustomEquipment[]>([])
 
   // 步骤控制
@@ -87,22 +91,40 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
     }
   }, [showForm])
 
-  // 处理器具选择
-  const handleEquipmentSelect = (equipmentId: string) => {
+  // 监听器具缓存变化，实现与冲煮界面的实时同步
+  useEffect(() => {
+    const handleEquipmentCacheChange = (e: CustomEvent<{ equipmentId: string }>) => {
+      const newEquipment = e.detail.equipmentId
+      // 只有当缓存中的值与当前状态不同时才更新
+      if (newEquipment !== selectedEquipment) {
+        setSelectedEquipment(newEquipment)
+      }
+    }
+
+    // 监听自定义事件
+    window.addEventListener('equipmentCacheChanged', handleEquipmentCacheChange as EventListener)
+
+    return () => {
+      window.removeEventListener('equipmentCacheChanged', handleEquipmentCacheChange as EventListener)
+    }
+  }, [selectedEquipment])
+
+  // 处理器具选择 - 使用 useCallback 优化性能
+  const handleEquipmentSelect = useCallback((equipmentId: string) => {
     if (equipmentId === selectedEquipment) return
     setSelectedEquipment(equipmentId)
-    // 选择器具后自动前进到下一步
-    const nextStep = currentStep + 1
-    setCurrentStep(nextStep)
-  }
+    // 保存器具选择到缓存 - 与冲煮界面保持一致
+    saveSelectedEquipmentPreference(equipmentId)
+    // 在笔记模态框中，选择器具只更新方案列表，不自动跳转
+  }, [selectedEquipment])
 
-  // 处理咖啡豆选择
-  const handleCoffeeBeanSelect = (bean: CoffeeBean | null) => {
+  // 处理咖啡豆选择 - 使用 useCallback 优化性能
+  const handleCoffeeBeanSelect = useCallback((bean: CoffeeBean | null) => {
     setSelectedCoffeeBean(bean)
     // 选择咖啡豆后自动前进到下一步
     const nextStep = currentStep + 1
     setCurrentStep(nextStep)
-  }
+  }, [currentStep])
 
   // 打开随机选择器
   const handleOpenRandomPicker = () => {
@@ -296,12 +318,11 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
       label: '选择方案',
       content: (
         <div>
-          {/* 器具选择 */}
-          <EquipmentSelector
-            equipmentList={equipmentList}
-            customEquipments={customEquipments}
+          {/* 器具分类栏 */}
+          <EquipmentCategoryBar
             selectedEquipment={selectedEquipment}
-            onSelect={handleEquipmentSelect}
+            customEquipments={customEquipments}
+            onEquipmentSelect={handleEquipmentSelect}
           />
           {/* 方案选择 */}
           {selectedEquipment && (

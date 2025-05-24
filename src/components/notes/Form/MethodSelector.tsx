@@ -261,9 +261,6 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
   return (
     <div className="py-3">
       <div>
-        <label className="text-xs font-medium text-neutral-800 dark:text-neutral-200 mb-6 block">
-          选择冲煮方案
-        </label>
         {selectedEquipment ? (
           <div className="space-y-5">
             {/* 自定义方案 */}
