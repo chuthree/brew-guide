@@ -964,7 +964,7 @@ export const brewingMethods: BrewingMethods = {
 			params: {
 				coffee: "18g",
 				water: "36g",
-				ratio: "1:10",
+				ratio: "1:2",
 				grindSize: "意式",
 				temp: "93°C",
 				videoUrl: "",
@@ -997,7 +997,7 @@ export const brewingMethods: BrewingMethods = {
 			params: {
 				coffee: "18g",
 				water: "36g",
-				ratio: "1:10",
+				ratio: "1:2",
 				grindSize: "意式",
 				temp: "93°C",
 				videoUrl: "",
@@ -1031,7 +1031,7 @@ export const brewingMethods: BrewingMethods = {
 			params: {
 				coffee: "18g",
 				water: "36g",
-				ratio: "1:10",
+				ratio: "1:2",
 				grindSize: "意式",
 				temp: "93°C",
 				videoUrl: "",
@@ -1064,7 +1064,7 @@ export const brewingMethods: BrewingMethods = {
 			params: {
 				coffee: "18g",
 				water: "36g",
-				ratio: "1:10",
+				ratio: "1:2",
 				grindSize: "意式",
 				temp: "93°C",
 				videoUrl: "",
@@ -1097,7 +1097,7 @@ export const brewingMethods: BrewingMethods = {
 			params: {
 				coffee: "18g",
 				water: "36g",
-				ratio: "1:10",
+				ratio: "1:2",
 				grindSize: "意式",
 				temp: "93°C",
 				videoUrl: "",
@@ -1142,7 +1142,7 @@ export const brewingMethods: BrewingMethods = {
 			params: {
 				coffee: "18g",
 				water: "36g",
-				ratio: "1:10",
+				ratio: "1:2",
 				grindSize: "意式",
 				temp: "93°C",
 				videoUrl: "",
@@ -1181,7 +1181,7 @@ export const brewingMethods: BrewingMethods = {
 			params: {
 				coffee: "18g",
 				water: "36g",
-				ratio: "1:10",
+				ratio: "1:2",
 				grindSize: "意式",
 				temp: "93°C",
 				videoUrl: "",
@@ -1220,7 +1220,7 @@ export const brewingMethods: BrewingMethods = {
 			params: {
 				coffee: "18g",
 				water: "36g",
-				ratio: "1:10",
+				ratio: "1:2",
 				grindSize: "意式",
 				temp: "93°C",
 				videoUrl: "",

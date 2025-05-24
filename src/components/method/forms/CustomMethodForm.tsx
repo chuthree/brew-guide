@@ -392,24 +392,6 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     const newStages = [...method.params.stages];
     const stage = { ...newStages[index] };
 
-    // 水量特殊处理 - 更新总水量
-    if (field === 'water') {
-      const oldWater = stage.water ? parseInt(stage.water) : 0;
-      const newWater = typeof value === 'string' && value ? parseInt(value) : 0;
-      const diff = newWater - oldWater;
-
-      if (method.params.water) {
-        const totalWater = parseInt(method.params.water);
-        setMethod({
-          ...method,
-          params: {
-            ...method.params,
-            water: `${totalWater + diff}g`,
-          },
-        });
-      }
-    }
-
     // 根据字段类型处理值
     if (field === 'time' || field === 'pourTime') {
       // 数值类型
@@ -452,12 +434,50 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
 
     // 更新method状态
     newStages[index] = stage;
+
+    // 水量特殊处理 - 更新总水量
+    let updatedParams = { ...method.params, stages: newStages };
+    
+    if (field === 'water' && !isEspressoMachine(customEquipment)) {
+      // 手冲模式：计算更新后的总水量（最大累计水量）
+      let maxWater = 0;
+      for (const s of newStages) {
+        if (s.water) {
+          const stageWater = typeof s.water === 'number' 
+            ? s.water 
+            : parseInt(s.water.replace('g', '') || '0');
+          
+          if (stageWater > maxWater) {
+            maxWater = stageWater;
+          }
+        }
+      }
+      
+      // 更新总水量
+      updatedParams.water = `${maxWater}g`;
+    } else if (field === 'water' && isEspressoMachine(customEquipment)) {
+      // 意式机模式：如果修改的是萃取步骤的水量，更新总水量
+      if (stage.pourType === 'extraction') {
+        updatedParams.water = stage.water as string;
+        
+        // 根据咖啡粉量和液重计算新的水粉比
+        const coffee = parseFloat(method.params.coffee.replace('g', ''));
+        const liquid = parseInt((stage.water as string).replace('g', '') || '0');
+        
+        // 计算比值
+        const ratio = liquid / coffee;
+        // 如果比值是整数，则不显示小数点
+        const newRatio = coffee > 0 
+          ? `1:${Number.isInteger(ratio) ? ratio.toString() : ratio.toFixed(1)}` 
+          : method.params.ratio;
+          
+        updatedParams.ratio = newRatio;
+      }
+    }
+
     setMethod({
       ...method,
-      params: {
-        ...method.params,
-        stages: newStages,
-      },
+      params: updatedParams
     });
   };
 
@@ -651,21 +671,49 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
             totalWater = `${Math.round(parseFloat(coffee) * parseFloat(ratio))}g`
         }
 
-        // 更新第一个步骤的水量
-        const newStages = [...method.params.stages];
+        // 获取旧总水量
+        const oldTotalWater = parseInt(method.params.water.replace('g', '') || '0')
+        // 获取新总水量
+        const newTotalWater = totalWater ? parseInt(totalWater.replace('g', '')) : 0
         
-        if (isEspressoMachine(customEquipment)) {
-            // 意式机：第一个萃取步骤的液重与总水量相同
-            if (newStages.length > 0 && coffee && ratio) {
-                newStages[0].water = totalWater;
+        // 计算水量调整比例
+        const waterRatio = oldTotalWater > 0 && newTotalWater > 0 
+            ? newTotalWater / oldTotalWater 
+            : 1
+        
+        // 更新所有步骤的水量
+        const newStages = [...method.params.stages].map((stage, index) => {
+            const updatedStage = { ...stage }
+            
+            if (isEspressoMachine(customEquipment)) {
+                // 意式机：只更新萃取步骤的液重与总水量相同
+                if (stage.pourType === 'extraction' && coffee && ratio) {
+                    updatedStage.water = totalWater
+                }
+            } else {
+                // 手冲模式处理
+                
+                // 如果是第一个步骤，并且没有水量或水量为0，则设置默认值（咖啡粉量的2倍）
+                if (index === 0 && (!updatedStage.water || parseInt((updatedStage.water as string).replace('g', '')) === 0)) {
+                    if (coffee) {
+                        const waterAmount = Math.round(parseFloat(coffee) * 2);
+                        updatedStage.water = `${waterAmount}g`;
+                    }
+                } 
+                // 否则按比例更新所有步骤的水量
+                else if (updatedStage.water) {
+                    const stageWater = typeof updatedStage.water === 'number' 
+                        ? updatedStage.water 
+                        : parseInt(updatedStage.water.replace('g', '') || '0')
+                    
+                    // 按比例调整水量
+                    const adjustedWater = Math.round(stageWater * waterRatio)
+                    updatedStage.water = `${adjustedWater}g`
+                }
             }
-        } else {
-            // 手冲：第一个步骤的水量是咖啡粉量的2倍
-        if (newStages.length > 0 && coffee) {
-            const waterAmount = Math.round(parseFloat(coffee) * 2);
-            newStages[0].water = `${waterAmount}g`;
-            }
-        }
+            
+            return updatedStage
+        })
 
         setMethod({
             ...method,
@@ -688,21 +736,49 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
             totalWater = `${Math.round(parseFloat(coffee) * parseFloat(ratio))}g`
         }
 
-        // 更新第一个步骤的水量
-        const newStages = [...method.params.stages];
+        // 获取旧总水量
+        const oldTotalWater = parseInt(method.params.water.replace('g', '') || '0')
+        // 获取新总水量
+        const newTotalWater = totalWater ? parseInt(totalWater.replace('g', '')) : 0
         
-        if (isEspressoMachine(customEquipment)) {
-            // 意式机：第一个萃取步骤的液重与总水量相同
-            if (newStages.length > 0 && coffee && ratio) {
-                newStages[0].water = totalWater;
+        // 计算水量调整比例
+        const waterRatio = oldTotalWater > 0 && newTotalWater > 0 
+            ? newTotalWater / oldTotalWater 
+            : 1
+        
+        // 更新所有步骤的水量
+        const newStages = [...method.params.stages].map((stage, index) => {
+            const updatedStage = { ...stage }
+            
+            if (isEspressoMachine(customEquipment)) {
+                // 意式机：只更新萃取步骤的液重与总水量相同
+                if (stage.pourType === 'extraction' && coffee && ratio) {
+                    updatedStage.water = totalWater
+                }
+            } else {
+                // 手冲模式处理
+
+                // 如果是第一个步骤，并且没有水量或水量为0，则设置默认值（咖啡粉量的2倍）
+                if (index === 0 && (!updatedStage.water || parseInt((updatedStage.water as string).replace('g', '')) === 0)) {
+                    if (coffee) {
+                        const waterAmount = Math.round(parseFloat(coffee) * 2);
+                        updatedStage.water = `${waterAmount}g`;
+                    }
+                } 
+                // 否则按比例更新所有步骤的水量
+                else if (updatedStage.water) {
+                    const stageWater = typeof updatedStage.water === 'number' 
+                        ? updatedStage.water 
+                        : parseInt(updatedStage.water.replace('g', '') || '0')
+                    
+                    // 按比例调整水量
+                    const adjustedWater = Math.round(stageWater * waterRatio)
+                    updatedStage.water = `${adjustedWater}g`
+                }
             }
-        } else {
-            // 手冲：第一个步骤的水量是咖啡粉量的2倍
-        if (newStages.length > 0 && coffee) {
-            const waterAmount = Math.round(parseFloat(coffee) * 2);
-            newStages[0].water = `${waterAmount}g`;
-            }
-        }
+            
+            return updatedStage
+        })
 
         setMethod({
             ...method,
@@ -749,15 +825,37 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     const handleLiquidWeightChange = (liquidWeight: string) => {
         if (!isEspressoMachine(customEquipment) || method.params.stages.length === 0) return;
 
-        // 更新第一个萃取步骤的液重以及方法的总水量
-        const newStages = [...method.params.stages];
-        const firstStage = { ...newStages[0] };
-        firstStage.water = liquidWeight;
-        newStages[0] = firstStage;
+        // 获取旧液重（第一个萃取步骤的水量）
+        const extractionStage = method.params.stages.find(stage => stage.pourType === 'extraction');
+        const oldLiquidWeight = extractionStage?.water 
+            ? (typeof extractionStage.water === 'number' 
+                ? extractionStage.water 
+                : parseInt(extractionStage.water.replace('g', '') || '0'))
+            : 0;
+        
+        // 获取新液重
+        const newLiquidWeight = parseInt(liquidWeight.replace('g', '') || '0');
+        
+        // 计算液重调整比例
+        const liquidRatio = oldLiquidWeight > 0 && newLiquidWeight > 0 
+            ? newLiquidWeight / oldLiquidWeight
+            : 1;
+            
+        // 更新所有萃取步骤的水量
+        const newStages = [...method.params.stages].map(stage => {
+            const updatedStage = { ...stage };
+            
+            // 只更新萃取类型步骤的水量
+            if (stage.pourType === 'extraction') {
+                updatedStage.water = liquidWeight;
+            }
+            
+            return updatedStage;
+        });
 
         // 根据咖啡粉量和液重计算新的水粉比
         const coffee = parseFloat(method.params.coffee.replace('g', ''));
-        const liquid = parseFloat(liquidWeight.replace('g', ''));
+        const liquid = newLiquidWeight;
         
         // 计算比值
         const ratio = liquid / coffee;
