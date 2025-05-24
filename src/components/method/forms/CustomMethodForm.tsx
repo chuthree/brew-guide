@@ -6,13 +6,13 @@ import { CustomEquipment } from '@/lib/core/config'
 import { isEspressoMachine, getDefaultPourType, getPourTypeName } from '@/lib/utils/equipmentUtils'
 import { SettingsOptions, defaultSettings } from '@/components/settings/Settings'
 import { Storage } from '@/lib/core/storage'
-import { 
-    Steps, 
-    NameStep, 
-    ParamsStep, 
-    StagesStep, 
+import {
+    Steps,
+    NameStep,
+    ParamsStep,
+    StagesStep,
     CompleteStep,
-    MethodWithStages, 
+    MethodWithStages,
     Stage
 } from './components'
 import type { Step } from './components'
@@ -21,7 +21,7 @@ import type { Step } from './components'
 // 数据规范化辅助函数
 const normalizeMethodData = (method: any): MethodWithStages => {
     const normalizedMethod = { ...method };
-    
+
     // 确保params存在
     if (!normalizedMethod.params) {
         normalizedMethod.params = {
@@ -36,7 +36,7 @@ const normalizeMethodData = (method: any): MethodWithStages => {
     } else {
         // 规范化params对象
         normalizedMethod.params = { ...normalizedMethod.params };
-        
+
         // 确保水量、咖啡粉量是字符串格式
         ['water', 'coffee'].forEach(field => {
             if (normalizedMethod.params[field] !== undefined) {
@@ -47,7 +47,7 @@ const normalizeMethodData = (method: any): MethodWithStages => {
                 }
             }
         });
-        
+
         // 确保温度是字符串格式
         if (normalizedMethod.params.temp !== undefined) {
             if (typeof normalizedMethod.params.temp === 'number') {
@@ -56,7 +56,7 @@ const normalizeMethodData = (method: any): MethodWithStages => {
                 normalizedMethod.params.temp = `${normalizedMethod.params.temp}°C`;
             }
         }
-        
+
         // 规范化每个阶段的水量
         if (Array.isArray(normalizedMethod.params.stages)) {
             normalizedMethod.params.stages = normalizedMethod.params.stages.map((stage: Record<string, any>) => {
@@ -72,7 +72,7 @@ const normalizeMethodData = (method: any): MethodWithStages => {
             });
         }
     }
-    
+
     return normalizedMethod as MethodWithStages;
 };
 
@@ -105,14 +105,14 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
   const [editingCumulativeTime, setEditingCumulativeTime] = useState<{index: number, value: string} | null>(null);
   const [editingCumulativeWater, setEditingCumulativeWater] = useState<{index: number, value: string} | null>(null);
   const [showWaterTooltip, setShowWaterTooltip] = useState<number | null>(null);
-  
+
   // ===== DOM引用 =====
   const inputRef = useRef<HTMLInputElement>(null);
   const stagesContainerRef = useRef<HTMLDivElement>(null);
   const newStageRef = useRef<HTMLDivElement>(null);
-  
+
   // ===== 工具函数 =====
-  
+
   // 初始化新方法
   const initializeNewMethod = (): MethodWithStages => {
     const isCustomPreset = customEquipment.animationType === 'custom';
@@ -133,7 +133,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         },
       };
     }
-    
+
     // 意式机类型
     if (isEspresso) {
       return {
@@ -158,7 +158,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
 
     // 手冲类型 - 获取默认注水方式
     const defaultPourType = getDefaultPourType(customEquipment);
-    
+
     // 创建初始步骤
     const initialStage: Stage = {
       time: 25,
@@ -183,13 +183,13 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
       },
     };
   };
-  
+
   // 初始化方法状态
   const [method, setMethod] = useState<MethodWithStages>(() => {
     // 创建新方法
     return initializeNewMethod();
   });
-  
+
   // 获取设置
   const [localSettings, setLocalSettings] = useState<SettingsOptions>(defaultSettings);
 
@@ -203,14 +203,14 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
 
   // ===== 基本功能函数 =====
   const getCurrentStepIndex = () => steps.findIndex(step => step.id === currentStep);
-  
+
   const handleNextStep = () => {
     const currentIndex = getCurrentStepIndex();
     if (currentIndex < steps.length - 1) {
       setCurrentStep(steps[currentIndex + 1].id);
     }
   };
-  
+
   const handleBack = () => {
     const currentIndex = getCurrentStepIndex();
     if (currentIndex > 0) {
@@ -219,37 +219,37 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
       onBack();
     }
   };
-  
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
-  
+
   const _formatWater = (water: string | number | undefined) => {
     if (water === undefined || water === null || water === '') return '0g';
     if (typeof water === 'number') return `${water}g`;
     return water.endsWith('g') ? water : `${water}g`;
   };
-  
+
   // ===== 注水步骤辅助函数 =====
   const getDefaultStageLabel = (pourType: string) => {
     const isCustomPreset = customEquipment.animationType === 'custom';
-    
+
     // 特殊情况处理
     if (isCustomPreset && pourType === 'other') return '';
-    
+
     // 检查自定义注水动画
     if (customEquipment.customPourAnimations) {
       // 先检查ID匹配
       const idMatch = customEquipment.customPourAnimations.find(anim => anim.id === pourType);
       if (idMatch) return idMatch.name;
-      
+
       // 再检查pourType匹配
       const typeMatch = customEquipment.customPourAnimations.find(anim => anim.pourType === pourType);
       if (typeMatch?.name) return typeMatch.name;
     }
-    
+
     // 默认标签
     switch (pourType) {
       case 'circle': return '绕圈注水';
@@ -262,16 +262,16 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
 
   const getDefaultStageDetail = (pourType: string) => {
     const isCustomPreset = customEquipment.animationType === 'custom';
-    
+
     // 特殊情况处理
     if (isCustomPreset && pourType === 'other') return '';
-    
+
     // 检查自定义注水动画
     if (customEquipment.customPourAnimations) {
       const customAnimation = customEquipment.customPourAnimations.find(anim => anim.id === pourType);
       if (customAnimation) return `使用${customAnimation.name}注水`;
     }
-    
+
     // 默认详情
     switch (pourType) {
       case 'circle': return '中心向外缓慢画圈注水，均匀萃取咖啡风味';
@@ -281,15 +281,15 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
       default: return '注水';
     }
   };
-  
+
   // ===== 副作用 =====
-  
+
   // 加载设置
   useEffect(() => {
     const loadSettings = async () => {
       const savedSettings = await Storage.get('brewGuideSettings');
       if (!savedSettings) return;
-      
+
       try {
         const parsedSettings = JSON.parse(savedSettings) as SettingsOptions;
         // 确保必要设置存在
@@ -304,7 +304,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         console.error("Failed to parse settings from storage:", e);
       }
     };
-    
+
     loadSettings();
   }, []);
 
@@ -314,7 +314,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
       inputRef.current.focus();
     }
   }, [currentStep]);
-  
+
   // 监听器具变化，重新初始化方法
   useEffect(() => {
     // 只有在没有初始化方法的情况下才重新初始化
@@ -322,13 +322,13 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
       setMethod(initializeNewMethod());
     }
   }, [customEquipment.animationType, customEquipment.hasValve, customEquipment.customPourAnimations]); // 从依赖项中移除initialMethod
-  
+
   // 监听initialMethod变化
   useEffect(() => {
     if (initialMethod) {
       // 使用初始方法
       const normalizedMethod = normalizeMethodData(initialMethod);
-      
+
       // 处理聪明杯标签特殊情况
       if (customEquipment.hasValve && normalizedMethod.params.stages) {
         normalizedMethod.params.stages = normalizedMethod.params.stages.map(stage => ({
@@ -336,20 +336,20 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
           label: stage.label.replace(/\s*\[开阀\]|\s*\[关阀\]/g, '').trim()
         }));
       }
-      
+
       setMethod(normalizedMethod);
     }
   }, [initialMethod, customEquipment.hasValve]);
-  
+
   // ===== 数据计算函数 =====
-  
+
   // 计算总冲泡时间
   const calculateTotalTime = () => {
     if (method.params.stages.length === 0) return 0;
-    
+
     // 检查是否为意式咖啡方案
     const isEspresso = isEspressoMachine(customEquipment);
-    
+
     if (isEspresso) {
       // 意式咖啡只计算萃取步骤的时间
       const extractionStage = method.params.stages.find(stage => stage.pourType === 'extraction');
@@ -362,14 +362,14 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         }
       }
     }
-    
+
     return 0;
   };
-  
+
   // 计算当前已使用的水量
   const calculateCurrentWater = () => {
     if (method.params.stages.length === 0) return 0;
-    
+
     // 找到最后一个有水量的步骤
     for (let i = method.params.stages.length - 1; i >= 0; i--) {
       const stage = method.params.stages[i];
@@ -381,12 +381,12 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         }
       }
     }
-    
+
     return 0;
   };
-  
+
   // ===== 事件处理函数 =====
-  
+
   // 处理步骤变更
   const handleStageChange = (index: number, field: keyof Stage, value: string | number) => {
     const newStages = [...method.params.stages];
@@ -396,26 +396,26 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     if (field === 'time' || field === 'pourTime') {
       // 数值类型
       stage[field] = value as number;
-      
+
       // 当更新累计时间时，自动更新注水时间为阶段时间长度（当前阶段时间与上一阶段时间的差值）
       if (field === 'time' && !isEspressoMachine(customEquipment)) {
         // 获取当前阶段的索引和时间值
         const currentTime = parseInt(value.toString()) || 0;
-        
+
         // 获取上一个阶段的时间（如果存在）
         let previousTime = 0;
         if (index > 0) {
           const previousStage = method.params.stages[index - 1];
           previousTime = previousStage.time || 0;
         }
-        
+
         // 计算阶段时间长度（当前阶段时间与上一阶段时间的差值）
         const stageDuration = currentTime - previousTime;
-        
+
         // 将注水时间设置为阶段时间长度
         stage.pourTime = stageDuration > 0 ? stageDuration : 0;
       }
-      
+
       // 确保注水时间不超过总时间
       if (field === 'pourTime' && stage.time !== undefined && (stage.pourTime ?? 0) > stage.time) {
         stage.pourTime = stage.time;
@@ -436,41 +436,41 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     newStages[index] = stage;
 
     // 水量特殊处理 - 更新总水量
-    let updatedParams = { ...method.params, stages: newStages };
-    
+    const updatedParams = { ...method.params, stages: newStages };
+
     if (field === 'water' && !isEspressoMachine(customEquipment)) {
       // 手冲模式：计算更新后的总水量（最大累计水量）
       let maxWater = 0;
       for (const s of newStages) {
         if (s.water) {
-          const stageWater = typeof s.water === 'number' 
-            ? s.water 
+          const stageWater = typeof s.water === 'number'
+            ? s.water
             : parseInt(s.water.replace('g', '') || '0');
-          
+
           if (stageWater > maxWater) {
             maxWater = stageWater;
           }
         }
       }
-      
+
       // 更新总水量
       updatedParams.water = `${maxWater}g`;
     } else if (field === 'water' && isEspressoMachine(customEquipment)) {
       // 意式机模式：如果修改的是萃取步骤的水量，更新总水量
       if (stage.pourType === 'extraction') {
         updatedParams.water = stage.water as string;
-        
+
         // 根据咖啡粉量和液重计算新的水粉比
         const coffee = parseFloat(method.params.coffee.replace('g', ''));
         const liquid = parseInt((stage.water as string).replace('g', '') || '0');
-        
+
         // 计算比值
         const ratio = liquid / coffee;
         // 如果比值是整数，则不显示小数点
-        const newRatio = coffee > 0 
-          ? `1:${Number.isInteger(ratio) ? ratio.toString() : ratio.toFixed(1)}` 
+        const newRatio = coffee > 0
+          ? `1:${Number.isInteger(ratio) ? ratio.toString() : ratio.toFixed(1)}`
           : method.params.ratio;
-          
+
         updatedParams.ratio = newRatio;
       }
     }
@@ -485,15 +485,15 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         // 获取器具类型
         const _equipmentType = customEquipment.animationType;
         const isEspresso = isEspressoMachine(customEquipment);
-        
+
         // 确定默认注水方式
         let defaultPourType = getDefaultPourType(customEquipment);
-        
+
         // 对于意式机，检查是否已有步骤，有则新步骤默认为"饮料"类型
         if (isEspresso && method.params.stages.length > 0) {
             defaultPourType = 'beverage';
         }
-        
+
         // 根据器具类型和阶段设置默认时间
         const defaultTime = (() => {
             if (isEspresso) {
@@ -506,21 +506,21 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                 return undefined;
             }
         })();
-            
+
         // 创建新阶段
             const newStage: Stage = {
             time: defaultTime,
             // 当是意式机且为饮料类型时，不自动设置标签名称，留空让用户自行填写
             // 非意式机则使用默认的步骤名称
-            label: isEspresso 
-                ? (defaultPourType === 'beverage' ? '' : getPourTypeName(defaultPourType)) 
+            label: isEspresso
+                ? (defaultPourType === 'beverage' ? '' : getPourTypeName(defaultPourType))
                 : getDefaultStageLabel(defaultPourType),
                 water: '',
                 // 非意式机设置默认的详细说明
                 detail: isEspresso ? '' : getDefaultStageDetail(defaultPourType),
             pourType: defaultPourType,
         };
-        
+
         // 为意式机和非意式机配置特殊属性
         if (isEspresso) {
             // 如果是饮料类型，清除时间
@@ -534,11 +534,11 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                 // 获取上一个阶段的时间
                 const previousStage = method.params.stages[method.params.stages.length - 1];
                 const previousTime = previousStage.time || 0;
-                
+
                 // 计算阶段时间长度（当前阶段时间与上一阶段时间的差值）
                 const currentTime = defaultTime || 0;
                 const stageDuration = currentTime - previousTime;
-                
+
                 // 将注水时间设置为阶段时间长度
                 newStage.pourTime = stageDuration > 0 ? stageDuration : 0;
             } else {
@@ -546,7 +546,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                 newStage.pourTime = defaultTime;
             }
         }
-        
+
         // 更新方法
             setMethod({
                 ...method,
@@ -561,7 +561,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
             // 首先尝试使用直接引用的方式滚动到新步骤
             if (newStageRef.current) {
                 newStageRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                
+
                 // 额外向上滚动一些距离，确保底部阴影不会遮挡新添加的步骤
                 setTimeout(() => {
                     const container = stagesContainerRef.current?.parentElement;
@@ -569,13 +569,13 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                         container.scrollTop += 20; // 向下额外滚动20px，确保新步骤完全可见
                     }
                 }, 300);
-            } 
+            }
             // 如果没有直接引用，则尝试使用容器的最后一个子元素
             else if (stagesContainerRef.current) {
                 const newStageElement = stagesContainerRef.current.lastElementChild as HTMLElement;
                 if (newStageElement) {
                     newStageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    
+
                     // 额外向上滚动一些距离，确保底部阴影不会遮挡新添加的步骤
                     setTimeout(() => {
                         const container = stagesContainerRef.current?.parentElement;
@@ -628,21 +628,21 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                     .filter(stage => stage.pourType === 'beverage')
                     .map(stage => stage.label)
                     .filter(label => label.trim() !== ''); // 排除空名称
-                
+
                 if (beverageNames.length > 0) {
                     // 从localStorage读取已保存的饮料名称
                     const savedSuggestions = localStorage.getItem('userBeverageSuggestions');
                     let userBeverages: string[] = [];
-                    
+
                     if (savedSuggestions) {
                         userBeverages = JSON.parse(savedSuggestions);
                     }
-                    
+
                     // 添加新的饮料名称，去重
                     const uniqueBeverages = Array.from(
                         new Set([...userBeverages, ...beverageNames])
                     );
-                    
+
                     // 保存回localStorage
                     localStorage.setItem('userBeverageSuggestions', JSON.stringify(uniqueBeverages));
                 }
@@ -675,16 +675,16 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         const oldTotalWater = parseInt(method.params.water.replace('g', '') || '0')
         // 获取新总水量
         const newTotalWater = totalWater ? parseInt(totalWater.replace('g', '')) : 0
-        
+
         // 计算水量调整比例
-        const waterRatio = oldTotalWater > 0 && newTotalWater > 0 
-            ? newTotalWater / oldTotalWater 
+        const waterRatio = oldTotalWater > 0 && newTotalWater > 0
+            ? newTotalWater / oldTotalWater
             : 1
-        
+
         // 更新所有步骤的水量
         const newStages = [...method.params.stages].map((stage, index) => {
             const updatedStage = { ...stage }
-            
+
             if (isEspressoMachine(customEquipment)) {
                 // 意式机：只更新萃取步骤的液重与总水量相同
                 if (stage.pourType === 'extraction' && coffee && ratio) {
@@ -692,26 +692,26 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                 }
             } else {
                 // 手冲模式处理
-                
+
                 // 如果是第一个步骤，并且没有水量或水量为0，则设置默认值（咖啡粉量的2倍）
                 if (index === 0 && (!updatedStage.water || parseInt((updatedStage.water as string).replace('g', '')) === 0)) {
                     if (coffee) {
                         const waterAmount = Math.round(parseFloat(coffee) * 2);
                         updatedStage.water = `${waterAmount}g`;
                     }
-                } 
+                }
                 // 否则按比例更新所有步骤的水量
                 else if (updatedStage.water) {
-                    const stageWater = typeof updatedStage.water === 'number' 
-                        ? updatedStage.water 
+                    const stageWater = typeof updatedStage.water === 'number'
+                        ? updatedStage.water
                         : parseInt(updatedStage.water.replace('g', '') || '0')
-                    
+
                     // 按比例调整水量
                     const adjustedWater = Math.round(stageWater * waterRatio)
                     updatedStage.water = `${adjustedWater}g`
                 }
             }
-            
+
             return updatedStage
         })
 
@@ -740,16 +740,16 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         const oldTotalWater = parseInt(method.params.water.replace('g', '') || '0')
         // 获取新总水量
         const newTotalWater = totalWater ? parseInt(totalWater.replace('g', '')) : 0
-        
+
         // 计算水量调整比例
-        const waterRatio = oldTotalWater > 0 && newTotalWater > 0 
-            ? newTotalWater / oldTotalWater 
+        const waterRatio = oldTotalWater > 0 && newTotalWater > 0
+            ? newTotalWater / oldTotalWater
             : 1
-        
+
         // 更新所有步骤的水量
         const newStages = [...method.params.stages].map((stage, index) => {
             const updatedStage = { ...stage }
-            
+
             if (isEspressoMachine(customEquipment)) {
                 // 意式机：只更新萃取步骤的液重与总水量相同
                 if (stage.pourType === 'extraction' && coffee && ratio) {
@@ -764,19 +764,19 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                         const waterAmount = Math.round(parseFloat(coffee) * 2);
                         updatedStage.water = `${waterAmount}g`;
                     }
-                } 
+                }
                 // 否则按比例更新所有步骤的水量
                 else if (updatedStage.water) {
-                    const stageWater = typeof updatedStage.water === 'number' 
-                        ? updatedStage.water 
+                    const stageWater = typeof updatedStage.water === 'number'
+                        ? updatedStage.water
                         : parseInt(updatedStage.water.replace('g', '') || '0')
-                    
+
                     // 按比例调整水量
                     const adjustedWater = Math.round(stageWater * waterRatio)
                     updatedStage.water = `${adjustedWater}g`
                 }
             }
-            
+
             return updatedStage
         })
 
@@ -805,7 +805,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     // 意式机特有 - 处理萃取时间变更
     const handleExtractionTimeChange = (time: number) => {
         if (!isEspressoMachine(customEquipment) || method.params.stages.length === 0) return;
-        
+
         // 更新第一个萃取步骤的时间
         const newStages = [...method.params.stages];
         const firstStage = { ...newStages[0] };
@@ -827,36 +827,36 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
 
         // 获取旧液重（第一个萃取步骤的水量）
         const extractionStage = method.params.stages.find(stage => stage.pourType === 'extraction');
-        const oldLiquidWeight = extractionStage?.water 
-            ? (typeof extractionStage.water === 'number' 
-                ? extractionStage.water 
+        const oldLiquidWeight = extractionStage?.water
+            ? (typeof extractionStage.water === 'number'
+                ? extractionStage.water
                 : parseInt(extractionStage.water.replace('g', '') || '0'))
             : 0;
-        
+
         // 获取新液重
         const newLiquidWeight = parseInt(liquidWeight.replace('g', '') || '0');
-        
+
         // 计算液重调整比例
-        const liquidRatio = oldLiquidWeight > 0 && newLiquidWeight > 0 
+        const _liquidRatio = oldLiquidWeight > 0 && newLiquidWeight > 0
             ? newLiquidWeight / oldLiquidWeight
             : 1;
-            
+
         // 更新所有萃取步骤的水量
         const newStages = [...method.params.stages].map(stage => {
             const updatedStage = { ...stage };
-            
+
             // 只更新萃取类型步骤的水量
             if (stage.pourType === 'extraction') {
                 updatedStage.water = liquidWeight;
             }
-            
+
             return updatedStage;
         });
 
         // 根据咖啡粉量和液重计算新的水粉比
         const coffee = parseFloat(method.params.coffee.replace('g', ''));
         const liquid = newLiquidWeight;
-        
+
         // 计算比值
         const ratio = liquid / coffee;
         // 如果比值是整数，则不显示小数点
@@ -881,25 +881,25 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         const stage = { ...newStages[index] } as Stage;
         const isCustomPreset = customEquipment.animationType === 'custom';
         const isEspresso = isEspressoMachine(customEquipment);
-        
+
         // 设置pourType，对所有器具类型通用
         stage.pourType = value;
-        
+
         // 对于意式机的特殊处理
         if (isEspresso) {
             // 获取注水方式的显示名称
             const pourTypeName = getPourTypeName(value);
-            
+
             // 获取所有可能的默认注水方式标签
             const allDefaultLabels = ['萃取浓缩', '饮料', '其他', ''];
-            
+
             // 检查当前标签是否与任何默认标签匹配，或者是否为特定切换场景（从饮料切换到萃取，或从萃取切换到饮料）
-            const isLabelDefault = !stage.label || 
-                                stage.label === '' || 
-                                allDefaultLabels.includes(stage.label) || 
-                                (value === 'extraction' && stage.label === '饮料') || 
+            const isLabelDefault = !stage.label ||
+                                stage.label === '' ||
+                                allDefaultLabels.includes(stage.label) ||
+                                (value === 'extraction' && stage.label === '饮料') ||
                                 (value === 'beverage' && stage.label === '萃取浓缩');
-            
+
             // 根据不同的注水方式处理默认值
             switch (value) {
                 case 'extraction':
@@ -935,7 +935,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
             const allDefaultLabels = ['绕圈注水', '中心注水', '添加冰块', '注水', ''];
             // 获取所有可能的默认注水方式详细信息
             const allDefaultDetails = ['中心向外缓慢画圈注水，均匀萃取咖啡风味', '中心定点注水，降低萃取率', '添加冰块，降低温度进行冷萃', '注水', ''];
-            
+
             // 如果有自定义注水动画，将它们的名称添加到默认标签列表中
             if (customEquipment.customPourAnimations) {
                 customEquipment.customPourAnimations.forEach(anim => {
@@ -943,24 +943,24 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                     if (anim.name) allDefaultDetails.push(`使用${anim.name}注水`);
                 });
             }
-            
+
             const isCustomAnimation = value !== 'center' && value !== 'circle' && value !== 'ice' && value !== 'other';
-            
+
             // 检查当前标签是否与任何默认标签匹配
             const isLabelDefault = !stage.label || stage.label === '' || allDefaultLabels.includes(stage.label);
             // 检查当前详细说明是否与任何默认详细说明匹配
             const isDetailDefault = !stage.detail || stage.detail === '' || allDefaultDetails.includes(stage.detail);
-            
+
             if (isCustomAnimation) {
                 // 查找对应的自定义注水动画
                 const customAnimation = customEquipment.customPourAnimations?.find(anim => anim.id === value);
-                
+
                 if (customAnimation) {
                     // 更新标签和详细信息，如果它们是默认值之一或为空
                     if (isLabelDefault) {
                         stage.label = customAnimation.name || getDefaultStageLabel(value);
                     }
-                    
+
                     if (isDetailDefault) {
                         stage.detail = getDefaultStageDetail(value);
                     }
@@ -970,19 +970,19 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                 if (isLabelDefault) {
                     stage.label = getDefaultStageLabel(value);
                 }
-                
+
                 if (isDetailDefault) {
                     stage.detail = getDefaultStageDetail(value);
                 }
             }
-        } 
+        }
         // 常规器具处理
         else {
             // 获取所有可能的默认注水方式标签
             const allDefaultLabels = ['绕圈注水', '中心注水', '添加冰块', '注水', ''];
             // 获取所有可能的默认注水方式详细信息
             const allDefaultDetails = ['中心向外缓慢画圈注水，均匀萃取咖啡风味', '中心定点注水，降低萃取率', '添加冰块，降低温度进行冷萃', '注水', ''];
-            
+
             // 如果有自定义注水动画，将它们的名称添加到默认标签列表中
             if (customEquipment.customPourAnimations) {
                 customEquipment.customPourAnimations.forEach(anim => {
@@ -990,12 +990,12 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                     if (anim.name) allDefaultDetails.push(`使用${anim.name}注水`);
                 });
             }
-            
+
             // 检查当前标签是否与任何默认标签匹配
             const isLabelDefault = !stage.label || stage.label === '' || allDefaultLabels.includes(stage.label);
             // 检查当前详细说明是否与任何默认详细说明匹配
             const isDetailDefault = !stage.detail || stage.detail === '' || allDefaultDetails.includes(stage.detail);
-            
+
             // 如果标签是默认值之一或为空，更新它
             if (isLabelDefault) {
                 stage.label = getDefaultStageLabel(value);
@@ -1009,7 +1009,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
 
         // 更新stages
         newStages[index] = stage;
-        
+
         // 更新方法
         setMethod({
             ...method,
@@ -1060,25 +1060,25 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         // 找到萃取步骤
         const extractionStage = allStages.find(stage => stage.pourType === 'extraction');
         const extractionAmount = extractionStage ? parseFloat(extractionStage.water) || 0 : 0;
-            
+
         // 找到饮料步骤
         const beverageStages = allStages
             .filter(stage => stage.pourType === 'beverage')
             .map(stage => parseFloat(stage.water) || 0);
         const beverageAmount = beverageStages.length > 0 ? Math.max(...beverageStages) : 0;
-        
+
         // 使用较大的值
         return `${Math.max(extractionAmount, beverageAmount)}g`;
     };
 
     // ===== 渲染函数 =====
-    
+
     // 渲染步骤内容
     const renderStepContent = () => {
         switch (currentStep) {
             case 'name':
                 return (
-                    <NameStep 
+                    <NameStep
                         name={method.name}
                         onChange={(name) => setMethod({ ...method, name })}
                         isEdit={!!initialMethod}
@@ -1087,7 +1087,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
 
             case 'params':
                 return (
-                    <ParamsStep 
+                    <ParamsStep
                         params={{
                             coffee: method.params.coffee,
                             water: method.params.water,
@@ -1095,11 +1095,11 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                             grindSize: method.params.grindSize,
                             temp: method.params.temp,
                             // 添加意式机特有参数
-                            extractionTime: isEspressoMachine(customEquipment) 
-                                ? method.params.stages[0]?.time 
+                            extractionTime: isEspressoMachine(customEquipment)
+                                ? method.params.stages[0]?.time
                                 : undefined,
-                            liquidWeight: isEspressoMachine(customEquipment) 
-                                ? method.params.stages[0]?.water 
+                            liquidWeight: isEspressoMachine(customEquipment)
+                                ? method.params.stages[0]?.water
                                 : undefined
                         }}
                         onCoffeeChange={handleCoffeeChange}
@@ -1113,11 +1113,11 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                         })}
                         onTempChange={handleTempChange}
                         // 添加意式机特有参数处理函数
-                        onExtractionTimeChange={isEspressoMachine(customEquipment) 
-                            ? handleExtractionTimeChange 
+                        onExtractionTimeChange={isEspressoMachine(customEquipment)
+                            ? handleExtractionTimeChange
                             : undefined}
-                        onLiquidWeightChange={isEspressoMachine(customEquipment) 
-                            ? handleLiquidWeightChange 
+                        onLiquidWeightChange={isEspressoMachine(customEquipment)
+                            ? handleLiquidWeightChange
                             : undefined}
                         settings={localSettings}
                         customEquipment={customEquipment}
@@ -1126,7 +1126,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
 
             case 'stages':
                 return (
-                    <StagesStep 
+                    <StagesStep
                         stages={method.params.stages}
                         totalWater={method.params.water}
                         customEquipment={customEquipment}
@@ -1152,7 +1152,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
 
             case 'complete':
                 return (
-                    <CompleteStep 
+                    <CompleteStep
                         methodName={method.name}
                         coffee={method.params.coffee}
                         water={method.params.water}
@@ -1181,7 +1181,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
             switch (currentStep) {
                 case 'name':
                     return !!method.name.trim();
-                    
+
                 case 'params':
                     // 基本参数验证
                     return !!method.params.coffee.trim() &&
@@ -1189,20 +1189,20 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                            !!method.params.ratio.trim() &&
                            !!method.params.temp.trim() &&
                            !!method.params.grindSize.trim();
-                    
+
                 case 'stages':
                     if (method.params.stages.length === 0) return false;
-                    
+
                     return method.params.stages.every(stage => {
                         // 意式机特殊验证
                         if (isEspresso) {
                             switch (stage.pourType) {
                                 case 'extraction': // 萃取类型
-                                    return (stage.time ?? 0) > 0 && 
-                                           !!stage.label.trim() && 
+                                    return (stage.time ?? 0) > 0 &&
+                                           !!stage.label.trim() &&
                                            !!stage.water.trim();
                                 case 'beverage': // 饮料类型
-                                    return !!stage.label.trim() && 
+                                    return !!stage.label.trim() &&
                                            !!stage.water.trim();
                                 case 'other': // 其他类型
                                     return true;
@@ -1210,39 +1210,39 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                                     return !!stage.pourType;
                             }
                         }
-                        
+
                         // 自定义预设验证
                         if (isCustomPreset) {
                             const basicValidation = (stage.time ?? 0) > 0 && !!stage.water.trim();
-                            
+
                             // 聪明杯验证阀门状态
                             if (customEquipment.hasValve) {
                                 return basicValidation &&
                                     (stage.valveStatus === 'open' || stage.valveStatus === 'closed');
                             }
-                            
+
                             return basicValidation;
-                        } 
-                        
+                        }
+
                         // 标准器具验证
                         const basicValidation =
                           (stage.time ?? 0) > 0 &&
                           !!stage.label.trim() &&
                           !!stage.water.trim() &&
                           !!stage.pourType;
-                        
+
                         // 聪明杯验证阀门状态
                         if (customEquipment.hasValve) {
                           return basicValidation &&
                               (stage.valveStatus === 'open' || stage.valveStatus === 'closed');
                         }
-                        
+
                         return basicValidation;
                     });
-                    
+
                 case 'complete':
                     return true;
-                    
+
                 default:
                     return true;
             }
@@ -1295,7 +1295,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     return (
         <>
             {/* 顶部导航栏 */}
-            <Steps 
+            <Steps
                 steps={steps}
                 currentStep={currentStep}
                 onBack={handleBack}
