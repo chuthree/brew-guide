@@ -36,7 +36,7 @@ const SwipeBackGesture: React.FC<SwipeBackGestureProps> = ({
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
   const touchCurrentRef = useRef<{ x: number; y: number } | null>(null);
   const isNative = Capacitor.isNativePlatform();
-  
+
   // 滑动阈值：屏幕宽度的30%
   const THRESHOLD_PERCENTAGE = 0.3;
   // 边缘宽度：屏幕左侧20dp内视为边缘开始
@@ -44,16 +44,15 @@ const SwipeBackGesture: React.FC<SwipeBackGestureProps> = ({
   // 以下步骤支持返回导航
   const NAVIGABLE_STEPS: Record<BrewingStep, BrewingStep | null> = {
     'brewing': 'method', // 从注水步骤返回到方案步骤
-    'method': 'equipment', // 从方案步骤返回到器具步骤
-    'equipment': 'coffeeBean', // 从器具步骤返回到咖啡豆步骤
+    'method': 'coffeeBean', // 从方案步骤返回到咖啡豆步骤
     'coffeeBean': null, // 咖啡豆步骤是第一步，没有返回步骤
     'notes': 'brewing' // 从记录步骤返回到注水步骤
   };
 
   // 确定当前步骤是否可以返回，以及应返回到哪个步骤
   const getBackStep = (): BrewingStep | null => {
-    // 如果当前是器具步骤且没有咖啡豆，则不允许返回到咖啡豆步骤
-    if (activeBrewingStep === 'equipment' && !hasCoffeeBeans) {
+    // 如果当前是方案步骤且没有咖啡豆，则不允许返回到咖啡豆步骤
+    if (activeBrewingStep === 'method' && !hasCoffeeBeans) {
       return null;
     }
     return NAVIGABLE_STEPS[activeBrewingStep];
@@ -69,13 +68,13 @@ const SwipeBackGesture: React.FC<SwipeBackGestureProps> = ({
     const touch = e.touches[0];
     const x = touch.clientX;
     const y = touch.clientY;
-    
+
     // 只有当触摸开始位置在屏幕左侧边缘时才启用滑动返回
     if (x <= EDGE_ZONE_WIDTH) {
       // 记录起始位置和时间
       touchStartRef.current = { x, y, time: Date.now() };
       touchCurrentRef.current = { x, y };
-      
+
       // 获取目标步骤，如果没有可返回的步骤，不启用滑动
       const backStep = getBackStep();
       if (backStep) {
@@ -94,13 +93,13 @@ const SwipeBackGesture: React.FC<SwipeBackGestureProps> = ({
     const touch = e.touches[0];
     const x = touch.clientX;
     const y = touch.clientY;
-    
+
     // 更新当前位置
     touchCurrentRef.current = { x, y };
-    
+
     // 计算水平方向的滑动距离
     const deltaX = x - touchStartRef.current.x;
-    
+
     // 计算垂直方向的滑动距离，如果垂直滑动过大，取消水平滑动
     const deltaY = Math.abs(y - touchStartRef.current.y);
     if (deltaY > 50 && deltaY > deltaX * 0.8) {
@@ -108,17 +107,17 @@ const SwipeBackGesture: React.FC<SwipeBackGestureProps> = ({
       resetGesture();
       return;
     }
-    
+
     // 只处理向右滑动（正向deltaX）
     if (deltaX > 0) {
       // 计算滑动进度，受屏幕宽度和阈值影响
       const screenWidth = window.innerWidth;
       const thresholdWidth = screenWidth * THRESHOLD_PERCENTAGE;
       const newProgress = Math.min(deltaX / thresholdWidth, 1);
-      
+
       // 更新进度状态
       setProgress(newProgress);
-      
+
       // 在接近触发阈值时提供轻微触感反馈
       if (newProgress >= 0.9 && progress < 0.9) {
         hapticsUtils.light();
@@ -135,10 +134,10 @@ const SwipeBackGesture: React.FC<SwipeBackGestureProps> = ({
     const deltaX = touchCurrentRef.current.x - touchStartRef.current.x;
     const deltaTime = Date.now() - touchStartRef.current.time;
     const velocity = deltaX / deltaTime; // 像素/毫秒
-    
+
     // 获取返回目标步骤
     const backStep = getBackStep();
-    
+
     // 滑动完成的条件：
     // 1. 滑动距离达到阈值
     // 2. 或者滑动速度快（快速滑动即使距离不够也触发）
@@ -146,16 +145,16 @@ const SwipeBackGesture: React.FC<SwipeBackGestureProps> = ({
     const screenWidth = window.innerWidth;
     const thresholdWidth = screenWidth * THRESHOLD_PERCENTAGE;
     const isFastSwipe = velocity > 0.5; // 快速滑动阈值：0.5像素/毫秒
-    
+
     if ((deltaX >= thresholdWidth || isFastSwipe) && backStep) {
       // 触发返回操作
       hapticsUtils.medium(); // 提供中等强度的触感反馈
-      
+
       // 处理从注水步骤返回到方案步骤的特殊情况
       if (activeBrewingStep === 'brewing' && backStep === 'method') {
         // 设置特殊标记，确保可以正常导航
         localStorage.setItem("fromMethodToBrewing", "true");
-        
+
         // 使用navigateToStep返回到前一个步骤
         navigateToStep(backStep, {
           force: true,
@@ -168,7 +167,7 @@ const SwipeBackGesture: React.FC<SwipeBackGestureProps> = ({
         // 其他步骤的返回导航
         navigateToStep(backStep, {
           preserveCoffeeBean: true,
-          preserveEquipment: activeBrewingStep !== 'equipment',
+          preserveEquipment: activeBrewingStep !== 'method',
           preserveMethod: activeBrewingStep === 'notes'
         });
       }
@@ -176,7 +175,7 @@ const SwipeBackGesture: React.FC<SwipeBackGestureProps> = ({
       // 没有达到滑动阈值，重置手势状态
       hapticsUtils.light(); // 提供轻微触感反馈，表明取消操作
     }
-    
+
     // 重置手势状态
     resetGesture();
   };
@@ -222,12 +221,12 @@ const SwipeBackGesture: React.FC<SwipeBackGestureProps> = ({
             animate={{ opacity: progress * 0.25 }}
             exit={{ opacity: 0 }}
           />
-          
+
           {/* 返回指示器 */}
           <motion.div
             className="fixed left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center z-1000 pointer-events-none"
             initial={{ opacity: 0, x: -20 }}
-            animate={{ 
+            animate={{
               opacity: Math.min(progress * 1.5, 1),
               x: progress * 40 - 20,
               scale: 0.8 + progress * 0.2
@@ -242,4 +241,4 @@ const SwipeBackGesture: React.FC<SwipeBackGestureProps> = ({
   );
 };
 
-export default SwipeBackGesture; 
+export default SwipeBackGesture;

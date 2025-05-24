@@ -18,7 +18,7 @@ import { emitEvent } from "../brewing/events";
 import { updateParameterInfo } from "../brewing/parameters";
 
 // 定义标签类型
-export type TabType = "咖啡豆" | "器具" | "方案" | "注水" | "记录";
+export type TabType = "咖啡豆" | "方案" | "注水" | "记录";
 
 // 添加新的主导航类型
 export type MainTabType = "冲煮" | "笔记" | "咖啡豆";
@@ -26,7 +26,6 @@ export type MainTabType = "冲煮" | "笔记" | "咖啡豆";
 // 修改冲煮步骤类型
 export type BrewingStep =
 	| "coffeeBean"
-	| "equipment"
 	| "method"
 	| "brewing"
 	| "notes";
@@ -56,9 +55,6 @@ export interface Content {
 	咖啡豆: {
 		steps: Step[];
 	};
-	器具: {
-		steps: Step[];
-	};
 	方案: {
 		steps: Step[];
 		type: "common" | "custom";
@@ -74,12 +70,12 @@ export interface Content {
 export function useBrewingState(initialBrewingStep?: BrewingStep) {
 	// 添加主导航状态
 	const [activeMainTab, setActiveMainTab] = useState<MainTabType>("冲煮");
-	// 修改默认步骤为器具或传入的参数
+	// 修改默认步骤为方案或传入的参数
 	const [activeBrewingStep, setActiveBrewingStep] = useState<BrewingStep>(
-		initialBrewingStep || "equipment"
+		initialBrewingStep || "method"
 	);
 	const [activeTab, setActiveTab] = useState<TabType>(
-		initialBrewingStep === "coffeeBean" ? "咖啡豆" : "器具"
+		initialBrewingStep === "coffeeBean" ? "咖啡豆" : "方案"
 	);
 
 	// 添加咖啡豆选择状态
@@ -150,9 +146,6 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 
 			// 检查每个前置条件
 			for (const prereq of prerequisites) {
-				if (prereq === "equipment" && !selectedEquipment) {
-					return false;
-				}
 				if (prereq === "method" && !selectedMethod) {
 					return false;
 				}
@@ -474,10 +467,10 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 			if (!preserveMethod) {
 				// 完全重置所有状态
 
-				navigateToStep("equipment", { resetParams: true });
+				navigateToStep("method", { resetParams: true });
 
 				// 确保参数栏信息被清空，传入自定义器具列表
-				updateParameterInfo("equipment", null, null, equipmentList, customEquipments);
+				updateParameterInfo("method", null, null, equipmentList, customEquipments);
 			} else {
 				// 部分重置状态，但保留已选方案、咖啡豆和参数
 
@@ -514,19 +507,19 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 						customEquipments
 					);
 				} else if (selectedCoffeeBean) {
-					// 只有咖啡豆，返回到设备步骤
-					navigateToStep("equipment", {
+					// 只有咖啡豆，返回到方案步骤
+					navigateToStep("method", {
 						preserveCoffeeBean: true,
 					});
 
 					// 确保参数栏被清空，传入自定义器具列表
-					updateParameterInfo("equipment", null, null, equipmentList, customEquipments);
+					updateParameterInfo("method", null, null, equipmentList, customEquipments);
 				} else {
 					// 没有任何选择，从头开始
-					navigateToStep("equipment", { resetParams: true });
+					navigateToStep("method", { resetParams: true });
 
 					// 确保参数栏被清空，传入自定义器具列表
-					updateParameterInfo("equipment", null, null, equipmentList, customEquipments);
+					updateParameterInfo("method", null, null, equipmentList, customEquipments);
 				}
 			}
 		},
@@ -723,7 +716,7 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 				const savedMethod = updatedMethods.find(m => m.name === method.name);
 				if (savedMethod) setSelectedMethod(savedMethod);
 				else setSelectedMethod(method);
-				
+
 				// 关闭表单
 				setShowCustomForm(false);
 				setEditingMethod(undefined);
@@ -774,7 +767,7 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 					if (selectedMethod && selectedMethod.id === method.id) {
 						setSelectedMethod(null);
 					}
-					
+
 					// 更新UI上的方案列表
 					const updatedMethods = methods[selectedEquipment || ''] || [];
 					setContent((prevContent) => ({
@@ -811,9 +804,9 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 			setSelectedCoffeeBean(beanId);
 			setSelectedCoffeeBeanData(bean);
 
-			// 当选择了咖啡豆后（或者选择了"不使用咖啡豆"），引导用户进入下一步（器具选择）
-			setActiveBrewingStep("equipment");
-			setActiveTab("器具");
+			// 当选择了咖啡豆后（或者选择了"不使用咖啡豆"），引导用户进入下一步（方案选择）
+			setActiveBrewingStep("method");
+			setActiveTab("方案");
 		},
 		[showComplete, resetBrewingState]
 	);
@@ -821,7 +814,6 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 	// 添加 content 状态
 	const [content, setContent] = useState<Content>({
 		咖啡豆: { steps: [] },
-		器具: { steps: [] },
 		方案: { steps: [], type: 'common' },
 		注水: { steps: [] },
 		记录: { steps: [] },
@@ -848,20 +840,7 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 			咖啡豆: {
 				steps: [],
 			},
-			器具: {
-				steps: [
-					...equipmentList.map((equipment) => ({
-						title: equipment.name,
-						description: equipment.description,
-						isCustom: false,
-					})),
-					...customEquipments.map((equipment) => ({
-						title: equipment.name,
-						description: equipment.description,
-						isCustom: true,
-					})),
-				],
-			},
+
 			方案: {
 				steps:
 					selectedEquipment && methodType === "common"

@@ -14,6 +14,7 @@ import { getEquipmentName } from '@/lib/brewing/parameters';
 import BottomActionBar from '@/components/layout/BottomActionBar';
 import CoffeeBeanList from '@/components/coffee-bean/List/ListView';
 import MethodShareModal from '@/components/method/share/MethodShareModal';
+
 import { saveCustomMethod } from '@/lib/managers/customMethods';
 import { Search, X, Shuffle } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -143,25 +144,25 @@ const TabContent: React.FC<TabContentProps> = ({
 }) => {
     // 笔记表单状态
     const [noteSaved, setNoteSaved] = useState(false);
-    
+
     // 本地流速显示设置
     const [localShowFlowRate, setLocalShowFlowRate] = useState(settings.showFlowRate);
-    
+
     // 添加高亮豆子ID状态
     const [highlightedBeanId, setHighlightedBeanId] = useState<string | null>(null);
-    
+
     // 添加随机按钮禁用状态
     const [isRandomButtonDisabled, setIsRandomButtonDisabled] = useState(false);
-    
+
     // 随机选择器状态
     const [showRandomPicker, setShowRandomPicker] = useState(false);
     const [allBeans, setAllBeans] = useState<CoffeeBean[]>([]);
-    
+
     // 监听流速显示设置变化
     useEffect(() => {
         setLocalShowFlowRate(settings.showFlowRate);
     }, [settings.showFlowRate]);
-    
+
     // 监听流速设置变更事件
     useEffect(() => {
         const handleSettingsChange = (e: CustomEvent) => {
@@ -169,16 +170,16 @@ const TabContent: React.FC<TabContentProps> = ({
                 setLocalShowFlowRate(e.detail.showFlowRate);
             }
         };
-        
+
         // 添加事件监听
         window.addEventListener('brewing:settingsChange', handleSettingsChange as EventListener);
-        
+
         // 清理函数
         return () => {
             window.removeEventListener('brewing:settingsChange', handleSettingsChange as EventListener);
         };
     }, []);
-    
+
     // 触感反馈函数
     const triggerHapticFeedback = useCallback(async () => {
         if (settings?.hapticFeedback) {
@@ -197,7 +198,7 @@ const TabContent: React.FC<TabContentProps> = ({
                 console.error('加载咖啡豆失败:', error);
             }
         };
-        
+
         if (activeTab === '咖啡豆') {
             loadBeans();
         }
@@ -216,13 +217,13 @@ const TabContent: React.FC<TabContentProps> = ({
             const Storage = (await import('@/lib/core/storage')).Storage;
             const existingNotesStr = await Storage.get('brewingNotes');
             const existingNotes = existingNotesStr ? JSON.parse(existingNotesStr) : [];
-            
+
             const newNote = {
                 ...note,
                 id: Date.now().toString(),
                 timestamp: Date.now(),
             };
-            
+
             await Storage.set('brewingNotes', JSON.stringify([newNote, ...existingNotes]));
             setNoteSaved(true);
 
@@ -356,17 +357,17 @@ const TabContent: React.FC<TabContentProps> = ({
     };
 
     // 检查当前是否为意式咖啡方案
-    const isEspressoMethod = currentBrewingMethod?.name?.toLowerCase().includes('意式') || 
+    const isEspressoMethod = currentBrewingMethod?.name?.toLowerCase().includes('意式') ||
                             currentBrewingMethod?.name?.toLowerCase().includes('espresso') ||
-                            expandedStages?.some(stage => 
-                              stage.pourType === 'extraction' || 
+                            expandedStages?.some(stage =>
+                              stage.pourType === 'extraction' ||
                               stage.pourType === 'beverage');
 
     // 搜索相关状态和处理
     const [isSearching, setIsSearching] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const searchInputRef = useRef<HTMLInputElement>(null);
-    
+
     const buttonBaseClass = "rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100";
     const springTransition = { type: "spring", stiffness: 500, damping: 25 };
 
@@ -375,7 +376,7 @@ const TabContent: React.FC<TabContentProps> = ({
         setIsSearching(true);
         setTimeout(() => searchInputRef.current?.focus(), 100);
     };
-    
+
     const handleCloseSearch = async (e?: React.MouseEvent) => {
         e?.stopPropagation();
         await triggerHapticFeedback();
@@ -386,7 +387,7 @@ const TabContent: React.FC<TabContentProps> = ({
     // 获取编辑器具方法
     const getEditEquipmentHandler = (step: Step) => {
         if (!step.isCustom) return undefined;
-        
+
         return () => {
             const equipment = customEquipments.find(e => e.name === step.title);
             if (equipment) {
@@ -399,7 +400,7 @@ const TabContent: React.FC<TabContentProps> = ({
     // 获取删除器具方法
     const getDeleteEquipmentHandler = (step: Step) => {
         if (!step.isCustom) return undefined;
-        
+
         return () => {
             const equipment = customEquipments.find(e => e.name === step.title);
             if (equipment) {
@@ -411,7 +412,7 @@ const TabContent: React.FC<TabContentProps> = ({
     // 获取分享器具方法
     const getShareEquipmentHandler = (step: Step) => {
         if (!step.isCustom) return undefined;
-        
+
         return () => {
             const equipment = customEquipments.find(e => e.name === step.title);
             if (equipment) {
@@ -427,7 +428,7 @@ const TabContent: React.FC<TabContentProps> = ({
     const handleRandomBean = async () => {
         // 如果按钮被禁用，直接返回
         if (isRandomButtonDisabled) return;
-        
+
         await triggerHapticFeedback();
         try {
             // 如果没有豆子数据，先加载
@@ -435,34 +436,34 @@ const TabContent: React.FC<TabContentProps> = ({
                 const beans = await CoffeeBeanManager.getAllBeans();
                 setAllBeans(beans);
             }
-            
+
             // 过滤掉已经用完的豆子
-            const availableBeans = allBeans.filter(bean => 
+            const availableBeans = allBeans.filter(bean =>
                 !(bean.remaining === "0" || bean.remaining === "0g") || !bean.capacity
             );
-            
+
             if (availableBeans.length > 0) {
                 // 打开随机选择器
                 setShowRandomPicker(true);
-                
+
                 // 禁用随机按钮3秒，避免重复点击
                 setIsRandomButtonDisabled(true);
                 setTimeout(() => {
                     setIsRandomButtonDisabled(false);
                 }, 3000);
             } else {
-                showToast({ 
-                    type: 'info', 
-                    title: '没有可用的咖啡豆', 
-                    duration: 2000 
+                showToast({
+                    type: 'info',
+                    title: '没有可用的咖啡豆',
+                    duration: 2000
                 });
             }
         } catch (error) {
             console.error('随机选择咖啡豆失败:', error);
-            showToast({ 
-                type: 'error', 
-                title: '随机选择失败', 
-                duration: 2000 
+            showToast({
+                type: 'error',
+                title: '随机选择失败',
+                duration: 2000
             });
         }
     };
@@ -481,7 +482,7 @@ const TabContent: React.FC<TabContentProps> = ({
                     searchQuery={searchQuery}
                     highlightedBeanId={highlightedBeanId}
                 />
-                
+
                 {/* 随机选豆按钮 - 单独放置在搜索工具栏上方 */}
                 <div className="fixed bottom-[60px] left-0 right-0 p-6 flex justify-end items-center z-10 max-w-[500px] mx-auto pb-safe-bottom pointer-events-none">
                     <motion.button
@@ -498,7 +499,7 @@ const TabContent: React.FC<TabContentProps> = ({
                         <Shuffle className="w-4 h-4" strokeWidth="3" />
                     </motion.button>
                 </div>
-                
+
                 {/* 底部搜索工具栏 */}
                 <div className="fixed bottom-0 left-0 right-0 p-6 flex justify-end items-center z-10 max-w-[500px] mx-auto pb-safe-bottom pointer-events-none">
                     <div className="flex items-center justify-center gap-2 pointer-events-none">
@@ -542,7 +543,7 @@ const TabContent: React.FC<TabContentProps> = ({
                         </motion.button>
                     </div>
                 </div>
-                
+
                 {/* 随机选择器 */}
                 <CoffeeBeanRandomPicker
                     beans={allBeans}
@@ -588,12 +589,12 @@ const TabContent: React.FC<TabContentProps> = ({
     }
 
     // 处理方案为空的情况
-    const showEmptyMethodsMessage = activeTab === '方案' && 
-                                    selectedEquipment && 
+    const showEmptyMethodsMessage = activeTab === '方案' &&
+                                    selectedEquipment &&
                                     (!customMethods[selectedEquipment] || customMethods[selectedEquipment].length === 0) &&
                                     (!commonMethods[selectedEquipment] || commonMethods[selectedEquipment].length === 0) &&
                                     (content[activeTab]?.steps.length === 0);
-    
+
     // 渲染默认列表内容
     return (
         <>
@@ -607,16 +608,16 @@ const TabContent: React.FC<TabContentProps> = ({
                         // 如果是通用方案分隔符之后的项目，且折叠状态为true，则不显示
                         const isDividerFound = content[activeTab]?.steps.findIndex((s: Step) => s.isDivider) !== -1;
                         const dividerIndex = content[activeTab]?.steps.findIndex((s: Step) => s.isDivider);
-                        
+
                         // 如果通用方案被折叠，且当前项在分隔符之后，则跳过渲染
                         if (isDividerFound && dividerIndex !== -1 && index > dividerIndex && isCommonMethodsCollapsed) {
                             return null;
                         }
-                        
+
                         // 如果是注水标签，检查originalIndex变化来添加阶段分隔线
-                        const showStageDivider = activeTab === '注水' && 
-                                index > 0 && 
-                                step.originalIndex !== undefined && 
+                        const showStageDivider = activeTab === '注水' &&
+                                index > 0 &&
+                                step.originalIndex !== undefined &&
                                 content[activeTab]?.steps[index-1]?.originalIndex !== undefined &&
                                 step.originalIndex !== content[activeTab]?.steps[index-1]?.originalIndex &&
                                 (settings?.layoutSettings?.showStageDivider !== false);
@@ -626,10 +627,10 @@ const TabContent: React.FC<TabContentProps> = ({
                         if (activeTab === '方案') {
                             // 判断是否为自定义方案
                             const isCustomMethod = step.isCustom;
-                            
+
                             if (isCustomMethod && customMethods[selectedEquipment!]) {
                                 // 自定义方案可以直接编辑
-                                const methodIndex = customMethods[selectedEquipment!].findIndex(m => 
+                                const methodIndex = customMethods[selectedEquipment!].findIndex(m =>
                                     m.id === step.methodId || m.name === step.title);
                                 if (methodIndex !== -1) {
                                     editHandler = () => onEditMethod(customMethods[selectedEquipment!][methodIndex]);
@@ -638,9 +639,9 @@ const TabContent: React.FC<TabContentProps> = ({
                                 // 通用方案需要先复制到自定义列表
                                 editHandler = () => {
                                     const commonMethodsList = commonMethods[selectedEquipment];
-                                    
+
                                     // 直接使用step.methodIndex获取正确的方案索引
-                                    if (commonMethodsList && step.methodIndex !== undefined && step.methodIndex >= 0 && 
+                                    if (commonMethodsList && step.methodIndex !== undefined && step.methodIndex >= 0 &&
                                         step.methodIndex < commonMethodsList.length) {
                                         console.log('使用methodIndex编辑通用方案:', step.methodIndex, commonMethodsList[step.methodIndex].name);
                                         const methodCopy = createEditableMethodFromCommon(commonMethodsList[step.methodIndex]);
@@ -662,9 +663,9 @@ const TabContent: React.FC<TabContentProps> = ({
                                             });
                                     } else {
                                         // 回退到原来的查找方式，作为备用措施
-                                        const commonMethodIndex = commonMethodsList?.findIndex(m => 
+                                        const commonMethodIndex = commonMethodsList?.findIndex(m =>
                                             m.id === step.methodId || m.name === step.title);
-                                            
+
                                         if (commonMethodsList && commonMethodIndex !== undefined && commonMethodIndex !== -1) {
                                             console.log('回退查找编辑通用方案:', commonMethodIndex, commonMethodsList[commonMethodIndex].name);
                                             const methodCopy = createEditableMethodFromCommon(commonMethodsList[commonMethodIndex]);
@@ -696,7 +697,7 @@ const TabContent: React.FC<TabContentProps> = ({
                         let deleteHandler;
                         if (activeTab === '方案' && step.isCustom && customMethods[selectedEquipment!]) {
                             // 找到匹配的自定义方案
-                            const methodIndex = customMethods[selectedEquipment!].findIndex(m => 
+                            const methodIndex = customMethods[selectedEquipment!].findIndex(m =>
                                 m.id === step.methodId || m.name === step.title);
                             if (methodIndex !== -1) {
                                 deleteHandler = () => onDeleteMethod(customMethods[selectedEquipment!][methodIndex]);
@@ -712,7 +713,7 @@ const TabContent: React.FC<TabContentProps> = ({
                                 // 判断是自定义方案还是通用方案
                                 if (step.isCustom && customMethods[selectedEquipment!]) {
                                     // 查找匹配的自定义方案
-                                    const methodIndex = customMethods[selectedEquipment!].findIndex(m => 
+                                    const methodIndex = customMethods[selectedEquipment!].findIndex(m =>
                                         m.id === step.methodId || m.name === step.title);
                                     if (methodIndex !== -1) {
                                         console.log('使用methodIndex分享自定义方案:', methodIndex, customMethods[selectedEquipment!][methodIndex].name);
@@ -721,15 +722,15 @@ const TabContent: React.FC<TabContentProps> = ({
                                 } else if (!step.isCustom && selectedEquipment) {
                                     // 使用通用方案的methodIndex
                                     const commonMethodsList = commonMethods[selectedEquipment];
-                                    
+
                                     // 直接使用step.methodIndex获取正确的方案索引
-                                    if (commonMethodsList && step.methodIndex !== undefined && step.methodIndex >= 0 && 
+                                    if (commonMethodsList && step.methodIndex !== undefined && step.methodIndex >= 0 &&
                                         step.methodIndex < commonMethodsList.length) {
                                         console.log('使用methodIndex分享通用方案:', step.methodIndex, commonMethodsList[step.methodIndex].name);
                                         handleShareMethod(commonMethodsList[step.methodIndex]);
                                     } else {
                                         // 回退到原来的查找方式
-                                        const commonMethodIndex = commonMethodsList?.findIndex(m => 
+                                        const commonMethodIndex = commonMethodsList?.findIndex(m =>
                                             m.id === step.methodId || m.name === step.title);
                                         if (commonMethodsList && commonMethodIndex !== undefined && commonMethodIndex !== -1) {
                                             console.log('回退查找分享通用方案:', commonMethodIndex, commonMethodsList[commonMethodIndex].name);
@@ -751,20 +752,18 @@ const TabContent: React.FC<TabContentProps> = ({
                                     step={step.isDivider ? {...step, onToggleCollapse: setIsCommonMethodsCollapsed} : step}
                                     index={index}
                                     onClick={() => {
-                                        if (activeTab === '器具') {
-                                            onEquipmentSelect(step.title);
-                                        } else if (activeTab === '方案') {
+                                        if (activeTab === '方案') {
                                             // 如果是分隔符，不处理点击事件
                                             if (step.isDivider) {
                                                 return;
                                             }
-                                            
+
                                             // 根据方案类型确定正确的索引
                                             if (step.isCustom) {
                                                 // 自定义方案：在customMethods中查找匹配的方案
                                                 const methodId = step.methodId;
                                                 if (methodId && selectedEquipment && customMethods[selectedEquipment]) {
-                                                    const methodIndex = customMethods[selectedEquipment].findIndex(m => 
+                                                    const methodIndex = customMethods[selectedEquipment].findIndex(m =>
                                                         m.id === methodId || m.name === step.title);
                                                     if (methodIndex !== -1) {
                                                         // 使用找到的自定义方案索引，并明确传递"custom"类型
@@ -783,7 +782,7 @@ const TabContent: React.FC<TabContentProps> = ({
                                                 });
                                                 return;
                                             }
-                                            
+
                                             // 如果不能确定特定类型，使用传统的索引方式
                                             // 默认根据当前类型传递
                                             onMethodSelect(index, step);
@@ -829,25 +828,7 @@ const TabContent: React.FC<TabContentProps> = ({
                 />
             )}
 
-            {/* 添加器具按钮 */}
-            {activeTab === '器具' && (
-                <BottomActionBar
-                    buttons={[
-                        {
-                            icon: '+',
-                            text: '添加器具',
-                            onClick: () => setShowEquipmentForm(true),
-                            highlight: true
-                        },
-                        {
-                            icon: '↓',
-                            text: '导入器具',
-                            onClick: () => setShowEquipmentImportForm(true),
-                            highlight: true
-                        }
-                    ]}
-                />
-            )}
+
 
             {/* 分享模态框 */}
             {sharingEquipment && (

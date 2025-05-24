@@ -5,7 +5,7 @@ import BrewingNoteForm from './BrewingNoteForm'
 import { MethodSelector, CoffeeBeanSelector, EquipmentSelector } from '@/components/notes/Form'
 import { useMethodManagement } from '@/components/notes/Form/hooks/useMethodManagement'
 import type { BrewingNoteData, CoffeeBean } from '@/types/app'
-import { equipmentList } from '@/lib/core/config'
+import { equipmentList, brewingMethods as commonMethods } from '@/lib/core/config'
 import SteppedFormModal, { Step } from '@/components/common/modals/SteppedFormModal'
 import { type Method, type CustomEquipment } from '@/lib/core/config'
 import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager'
@@ -41,13 +41,13 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
 
   // 步骤控制
   const [currentStep, setCurrentStep] = useState<number>(0)
-  
+
   // 随机选择器状态
   const [isRandomPickerOpen, setIsRandomPickerOpen] = useState(false)
 
   // 使用方法管理Hook
   const {
-    methodType,
+    methodType: _methodType,
     selectedMethod,
     availableMethods,
     customMethods,
@@ -103,12 +103,12 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
     const nextStep = currentStep + 1
     setCurrentStep(nextStep)
   }
-  
+
   // 打开随机选择器
   const handleOpenRandomPicker = () => {
     setIsRandomPickerOpen(true)
   }
-  
+
   // 处理随机选择咖啡豆
   const handleRandomBeanSelect = (bean: CoffeeBean) => {
     setSelectedCoffeeBean(bean)
@@ -118,13 +118,13 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
   }
 
   // 处理方法参数变化
-  const handleMethodParamsChange = (method: Method) => {
+  const _handleMethodParamsChange = (method: Method) => {
     // 统一使用ID优先的方式标识方案
     const methodIdentifier = method.id || method.name;
     setSelectedMethod(methodIdentifier);
-    
+
     // 动态更新参数到表单组件
-    const event = new CustomEvent('methodParamsChanged', { 
+    const event = new CustomEvent('methodParamsChanged', {
       detail: { params: method.params }
     });
     document.dispatchEvent(event);
@@ -135,9 +135,9 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
     if (selectedMethod) {
       // 合并所有方案列表以确保查找全面
       const allMethods = [...availableMethods, ...customMethods]
-      
+
       // 同时检查ID和名称匹配
-      const method = allMethods.find(m => 
+      const method = allMethods.find(m =>
         m.id === selectedMethod || m.name === selectedMethod)
 
       if (method?.params?.coffee) {
@@ -153,11 +153,11 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
     if (selectedEquipment && selectedMethod) {
       // 合并所有方案列表以确保查找全面
       const allMethods = [...availableMethods, ...customMethods]
-      
+
       // 同时检查ID和名称匹配
-      const methodObj = allMethods.find(m => 
+      const methodObj = allMethods.find(m =>
         m.id === selectedMethod || m.name === selectedMethod)
-        
+
       if (methodObj) {
         return {
           coffee: methodObj.params.coffee,
@@ -181,7 +181,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
   const getDefaultNote = (): Partial<BrewingNoteData> => {
     const params = getMethodParams()
     const isNewNote = !initialNote?.id
-    
+
     return {
       equipment: selectedEquipment,
       method: selectedMethod,
@@ -220,16 +220,16 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
   const handleSaveNote = (note: BrewingNoteData) => {
     // 获取方案名称
     let methodName = selectedMethod
-    
+
     if (selectedMethod) {
       // 合并所有方案以便查找
       const allMethods = [...availableMethods, ...customMethods]
-      
+
       // 在所有方案中查找匹配的方案
       const methodObj = allMethods.find(m =>
         m.id === selectedMethod || m.name === selectedMethod
       )
-      
+
       if (methodObj) {
         // 如果找到匹配的方案，始终使用其名称
         methodName = methodObj.name
@@ -250,7 +250,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
     // 处理咖啡豆关联
     if (selectedCoffeeBean?.id) {
       completeNote["beanId"] = selectedCoffeeBean.id
-      
+
       // 始终设置咖啡豆信息，无论是否已存在
       completeNote.coffeeBeanInfo = {
         name: selectedCoffeeBean.name || '',
@@ -269,7 +269,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
     // 保存并关闭
     onSave(completeNote)
     handleClose()
-    
+
     // 如果提供了保存成功回调，则调用它
     if (onSaveSuccess) {
       onSaveSuccess()
@@ -292,32 +292,31 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
       isValid: true // 咖啡豆选择为可选
     }] : []),
     {
-      id: 'equipment',
-      label: '选择器具',
-      content: (
-        <EquipmentSelector
-          equipmentList={equipmentList}
-          customEquipments={customEquipments}
-          selectedEquipment={selectedEquipment}
-          onSelect={handleEquipmentSelect}
-        />
-      ),
-      isValid: !!selectedEquipment
-    },
-    {
       id: 'method',
       label: '选择方案',
       content: (
-        <MethodSelector
-          selectedEquipment={selectedEquipment}
-          selectedMethod={selectedMethod}
-          customMethods={methodType === 'custom' ? availableMethods : customMethods}
-          commonMethods={methodType === 'common' ? availableMethods : []}
-          onMethodSelect={setSelectedMethod}
-          onParamsChange={handleMethodParamsChange}
-        />
+        <div>
+          {/* 器具选择 */}
+          <EquipmentSelector
+            equipmentList={equipmentList}
+            customEquipments={customEquipments}
+            selectedEquipment={selectedEquipment}
+            onSelect={handleEquipmentSelect}
+          />
+          {/* 方案选择 */}
+          {selectedEquipment && (
+            <MethodSelector
+              selectedEquipment={selectedEquipment}
+              selectedMethod={selectedMethod}
+              customMethods={selectedEquipment ? (customMethods as any)[selectedEquipment] || [] : []}
+              commonMethods={selectedEquipment ? (commonMethods as any)[selectedEquipment] || [] : []}
+              onMethodSelect={setSelectedMethod}
+              onParamsChange={_handleMethodParamsChange}
+            />
+          )}
+        </div>
       ),
-      isValid: !!selectedMethod
+      isValid: !!selectedEquipment && !!selectedMethod
     },
     {
       id: 'note-form',
@@ -351,7 +350,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
         setCurrentStep={setCurrentStep}
         onRandomBean={handleOpenRandomPicker}
       />
-      
+
       {/* 随机选择器 */}
       <CoffeeBeanRandomPicker
         beans={coffeeBeans}
@@ -363,4 +362,4 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
   )
 }
 
-export default BrewingNoteFormModal 
+export default BrewingNoteFormModal

@@ -9,13 +9,15 @@ interface CustomEquipmentFormModalProps {
     onClose: () => void;
     onSave: (equipment: CustomEquipment) => void;
     editingEquipment?: CustomEquipment;
+    onImport?: () => void;
 }
 
 const CustomEquipmentFormModal: React.FC<CustomEquipmentFormModalProps> = ({
     showForm,
     onClose,
     onSave,
-    editingEquipment
+    editingEquipment,
+    onImport
 }) => {
     const _handleExport = async (equipment: CustomEquipment) => {
         try {
@@ -103,7 +105,20 @@ const CustomEquipmentFormModal: React.FC<CustomEquipmentFormModalProps> = ({
                                     <h3 className="text-base font-medium">
                                         {editingEquipment ? '编辑器具' : '添加器具'}
                                     </h3>
-                                    <div className="w-8"></div>
+                                    {/* 导入按钮 */}
+                                    {!editingEquipment && onImport && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                onImport();
+                                                onClose(); // 关闭当前添加器具模态框
+                                            }}
+                                            className="px-3 py-1.5 text-sm text-neutral-600 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200 transition-colors"
+                                        >
+                                            导入
+                                        </button>
+                                    )}
+                                    {(editingEquipment || !onImport) && <div className="w-8"></div>}
                                 </div>
 
                                 {/* 表单内容 */}

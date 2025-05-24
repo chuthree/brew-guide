@@ -26,11 +26,11 @@ export const getEquipmentName = (
 	// 首先在系统预设器具中查找
 	const standardEquipment = equipmentList.find((e) => e.id === equipmentId);
 	if (standardEquipment) return standardEquipment.name;
-	
+
 	// 如果没找到，再在自定义器具中查找
 	const customEquipment = customEquipments.find((e) => e.id === equipmentId);
 	if (customEquipment) return customEquipment.name;
-	
+
 	// 如果都没找到，则返回ID本身
 	return equipmentId;
 };
@@ -86,13 +86,6 @@ export function updateParameterInfo(
 		case "coffeeBean":
 			paramInfo = {
 				equipment: null,
-				method: null,
-				params: null,
-			};
-			break;
-		case "equipment":
-			paramInfo = {
-				equipment: equipmentName,
 				method: null,
 				params: null,
 			};

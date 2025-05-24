@@ -8,10 +8,9 @@
     },
     "steps": {
       "beans": "咖啡豆",
-      "equipment": "器具",
       "method": "方案",
       "pour": "注水",
       "record": "记录"
     }
   }
-} 
+}

@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import {
 	Method,
 	brewingMethods as commonMethods,
-	equipmentList,
 	CustomEquipment,
 } from "@/lib/core/config";
 import { Content } from "./useBrewingState";
@@ -60,21 +59,6 @@ export function useBrewingContent({
 				},
 			],
 		},
-		器具: {
-			steps: [
-				...equipmentList.map((equipment) => ({
-					title: equipment.name,
-					items: [equipment.description],
-					note: equipment.note || "",
-				})),
-				...customEquipments.map((equipment) => ({
-					title: equipment.name,
-					items: [equipment.description || "自定义器具"],
-					note: equipment.note || "",
-					isCustom: true, // 标记为自定义器具
-				})),
-			],
-		},
 		方案: {
 			steps: [],
 			type: "common",
@@ -91,27 +75,7 @@ export function useBrewingContent({
 	// 添加状态保存当前设备的自定义方法
 	const [currentEquipmentCustomMethods, setCurrentEquipmentCustomMethods] = useState<Method[]>([]);
 
-	// 更新器具列表内容
-	useEffect(() => {
-		setContent((prev) => ({
-			...prev,
-			器具: {
-				steps: [
-					...equipmentList.map((equipment) => ({
-						title: equipment.name,
-						items: [equipment.description],
-						note: equipment.note || "",
-					})),
-					...customEquipments.map((equipment) => ({
-						title: equipment.name,
-						items: [equipment.description || "自定义器具"],
-						note: equipment.note || "",
-						isCustom: true, // 标记为自定义器具
-					})),
-				],
-			},
-		}));
-	}, [customEquipments]);
+
 
 	// 当选择器具改变或customMethods改变时，获取自定义方法
 	useEffect(() => {
@@ -119,7 +83,7 @@ export function useBrewingContent({
 			if (selectedEquipment) {
 				// 首先检查传入的customMethods中是否有当前器具的方法
 				const methodsFromProps = customMethods[selectedEquipment] || [];
-				
+
 				if (methodsFromProps.length > 0) {
 					// 如果传入的customMethods中有数据，优先使用它
 					setCurrentEquipmentCustomMethods(methodsFromProps);
@@ -135,7 +99,7 @@ export function useBrewingContent({
 				}
 			}
 		};
-		
+
 		updateCustomMethods();
 	}, [selectedEquipment, customMethods]); // 添加customMethods作为依赖
 
@@ -145,41 +109,41 @@ export function useBrewingContent({
 			setContent((prev) => {
 				// 首先，尝试通过ID查找自定义器具（优先使用ID匹配）
 				const customEquipmentById = customEquipments?.find(e => e.id === selectedEquipment);
-				
+
 				// 如果通过ID没找到，再尝试通过名称查找
-				const customEquipmentByName = !customEquipmentById 
-					? customEquipments?.find(e => e.name === selectedEquipment) 
+				const customEquipmentByName = !customEquipmentById
+					? customEquipments?.find(e => e.name === selectedEquipment)
 					: null;
-				
+
 				// 合并结果，优先使用ID匹配的结果
 				const customEquipment = customEquipmentById || customEquipmentByName;
-				
+
 				// 确认是否为自定义器具
 				const isCustomEquipment = !!customEquipment;
-				
+
 				// 检查是否是自定义预设器具（animationType === 'custom'）
 				const isCustomPresetEquipment = customEquipment?.animationType === 'custom';
-				
+
 				// 检查是否是意式机类型（animationType === 'espresso'）
 				const isEspressoEquipment = customEquipment?.animationType === 'espresso';
-				
+
 				// 现在我们将获取两种方案列表
 				let customMethodsForEquipment: Method[] = [];
 				let commonMethodsForEquipment: Method[] = [];
-				
+
 				// 如果是自定义预设器具或意式机，只获取自定义方案
 				if (isCustomPresetEquipment || isEspressoEquipment) {
 					customMethodsForEquipment = currentEquipmentCustomMethods;
 				} else {
 					// 总是获取自定义方案
 					customMethodsForEquipment = currentEquipmentCustomMethods;
-					
+
 					// 获取通用方案
 					if (isCustomEquipment && customEquipment) {
 						// 自定义器具，根据animationType获取对应的通用方案
 						let baseEquipmentId = '';
 						const animationType = customEquipment.animationType.toLowerCase();
-						
+
 						switch (animationType) {
 							case 'v60':
 								baseEquipmentId = 'V60';
@@ -200,7 +164,7 @@ export function useBrewingContent({
 							default:
 								baseEquipmentId = 'V60'; // 默认使用 V60 的方案
 						}
-						
+
 						if (baseEquipmentId) {
 							commonMethodsForEquipment = commonMethods[baseEquipmentId] || [];
 						} else {
@@ -209,11 +173,11 @@ export function useBrewingContent({
 					} else {
 						// 预定义器具，直接使用其通用方案
 						commonMethodsForEquipment = commonMethods[selectedEquipment as keyof typeof commonMethods] || [];
-						
+
 						// 从ID推断器具类型的逻辑保持不变
 						if (commonMethodsForEquipment.length === 0 && selectedEquipment && selectedEquipment.startsWith('custom-')) {
 							let baseEquipmentId = '';
-							
+
 							if (selectedEquipment.includes('-v60-')) {
 								baseEquipmentId = 'V60';
 							} else if (selectedEquipment.includes('-clever-')) {
@@ -226,7 +190,7 @@ export function useBrewingContent({
 								// 意式机类型，不使用任何基础器具的方案
 								baseEquipmentId = '';
 							}
-							
+
 							if (baseEquipmentId && commonMethods[baseEquipmentId]) {
 								commonMethodsForEquipment = commonMethods[baseEquipmentId] || [];
 							}
@@ -237,11 +201,11 @@ export function useBrewingContent({
 				// 准备两个方案列表
 				const customMethodSteps = customMethodsForEquipment.map(method => {
 					// 检查是否是意式咖啡方案
-					const isEspressoMethod = method.params.stages.some(stage => 
-						stage.pourType === 'extraction' || 
+					const isEspressoMethod = method.params.stages.some(stage =>
+						stage.pourType === 'extraction' ||
 						stage.pourType === 'beverage'
 					);
-					
+
 					// 计算总时长
 					let totalTime = 0;
 					if (isEspressoMethod) {
@@ -252,7 +216,7 @@ export function useBrewingContent({
 						// 对于常规方法，使用最后一个步骤的时间
 						totalTime = method.params.stages[method.params.stages.length - 1]?.time || 0;
 					}
-					
+
 					// 针对不同类型的方案显示不同的信息
 					let items: string[] = [];
 					if (isEspressoMethod) {
@@ -271,7 +235,7 @@ export function useBrewingContent({
 							`研磨度 ${formatGrindSize(method.params.grindSize, settings.grindType)}`,
 						];
 					}
-					
+
 					return {
 						title: method.name,
 						methodId: method.id,
@@ -280,15 +244,15 @@ export function useBrewingContent({
 						isCustom: true, // 标记为自定义方案
 					};
 				});
-				
+
 				// 通用方案列表（如果不是自定义预设器具）
 				const commonMethodSteps = !isCustomPresetEquipment ? commonMethodsForEquipment.map((method, methodIndex) => {
 					// 检查是否是意式咖啡方案
-					const isEspressoMethod = method.params.stages.some(stage => 
-						stage.pourType === 'extraction' || 
+					const isEspressoMethod = method.params.stages.some(stage =>
+						stage.pourType === 'extraction' ||
 						stage.pourType === 'beverage'
 					);
-					
+
 					// 计算总时长
 					let totalTime = 0;
 					if (isEspressoMethod) {
@@ -299,7 +263,7 @@ export function useBrewingContent({
 						// 对于常规方法，使用最后一个步骤的时间
 						totalTime = method.params.stages[method.params.stages.length - 1]?.time || 0;
 					}
-					
+
 					// 针对不同类型的方案显示不同的信息
 					let items: string[] = [];
 					if (isEspressoMethod) {
@@ -318,7 +282,7 @@ export function useBrewingContent({
 							`研磨度 ${formatGrindSize(method.params.grindSize, settings.grindType)}`,
 						];
 					}
-					
+
 					return {
 						title: method.name,
 						methodId: method.id,
@@ -328,7 +292,7 @@ export function useBrewingContent({
 						note: "",
 					};
 				}) : [];
-				
+
 				// 添加分隔符（只有当两个列表都有内容时）
 				const dividerStep = (customMethodSteps.length > 0 && commonMethodSteps.length > 0) ? [{
 					title: "",
@@ -337,14 +301,14 @@ export function useBrewingContent({
 					isDivider: true,
 					dividerText: "通用方案",
 				}] : [];
-				
+
 				// 合并所有步骤
 				const steps = [
 					...customMethodSteps,  // 先显示自定义方案
 					...dividerStep,        // 添加分隔符
 					...commonMethodSteps   // 再显示通用方案
 				];
-				
+
 				const result = {
 					...prev,
 					方案: {
@@ -354,7 +318,7 @@ export function useBrewingContent({
 						steps: steps
 					},
 				};
-				
+
 				return result;
 			});
 		}
@@ -369,11 +333,11 @@ export function useBrewingContent({
 	// 更新注水步骤内容
 	const updateBrewingSteps = (stages: Stage[]) => {
 		// 检查是否是意式机预设的步骤
-		const isEspressoStages = stages.some(stage => 
-			stage.pourType === 'extraction' || 
+		const isEspressoStages = stages.some(stage =>
+			stage.pourType === 'extraction' ||
 			stage.pourType === 'beverage'
 		);
-		
+
 		// 如果是意式机，使用特殊的处理逻辑
 		if (isEspressoStages) {
 			// 意式机的步骤不需要拆分注水和等待
@@ -381,13 +345,13 @@ export function useBrewingContent({
 				// 基本步骤信息
 				const baseStep = {
 					title: stage.label,
-					items: stage.pourType === 'other' 
+					items: stage.pourType === 'other'
 						? [stage.detail] // other类型只显示说明
 						: [`${stage.water}`, stage.detail], // 其他类型显示水量和说明
 					originalIndex: stages.indexOf(stage), // 保留原始索引以便于参考
 					pourType: stage.pourType, // 使用统一的pourType字段
 				};
-				
+
 				// 根据pourType类型添加不同的属性
 				if (stage.pourType === 'extraction') {
 					return {
@@ -408,7 +372,7 @@ export function useBrewingContent({
 					};
 				}
 			});
-			
+
 			// 更新content的注水部分
 			setContent((prev) => ({
 				...prev,
@@ -416,10 +380,10 @@ export function useBrewingContent({
 					steps: espressoSteps,
 				},
 			}));
-			
+
 			return;
 		}
-		
+
 		// 创建扩展阶段数组
 		const expandedStages: {
 			type: "pour" | "wait";

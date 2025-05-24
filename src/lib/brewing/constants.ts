@@ -12,8 +12,7 @@ export const STEP_RULES = {
 	// 每个步骤的前置条件
 	prerequisites: {
 		coffeeBean: [], // 咖啡豆步骤没有前置条件
-		equipment: [], // 器具步骤可以直接访问
-		method: ["equipment"], // 需要先完成器具步骤
+		method: [], // 方案步骤可以直接访问（合并了器具选择）
 		brewing: ["method"], // 需要先完成方案步骤
 		notes: ["brewing", "showComplete"], // 需要完成冲煮且显示完成
 	},
@@ -21,12 +20,10 @@ export const STEP_RULES = {
 	// 每个步骤需要保留的状态
 	preservedStates: {
 		coffeeBean: [], // 咖啡豆步骤不保留任何状态
-		equipment: ["selectedCoffeeBean", "selectedCoffeeBeanData"], // 器具步骤保留咖啡豆状态
 		method: [
 			"selectedCoffeeBean",
 			"selectedCoffeeBeanData",
-			"selectedEquipment",
-		], // 方案步骤保留咖啡豆和器具状态
+		], // 方案步骤保留咖啡豆状态（包含器具选择）
 		brewing: [
 			"selectedCoffeeBean",
 			"selectedCoffeeBeanData",
@@ -40,7 +37,6 @@ export const STEP_RULES = {
 	// 步骤对应的标签映射
 	tabMapping: {
 		coffeeBean: "咖啡豆" as TabType,
-		equipment: "器具" as TabType,
 		method: "方案" as TabType,
 		brewing: "注水" as TabType,
 		notes: "记录" as TabType,
@@ -49,7 +45,6 @@ export const STEP_RULES = {
 	// 定义参数规则类型
 	parameterRules: {
 		coffeeBean: { clear: true } as ParameterRule, // 咖啡豆步骤清空参数
-		equipment: { clear: true } as ParameterRule, // 器具步骤清空参数
 		method: { showEquipment: true } as ParameterRule, // 方案步骤显示器具名称
 		brewing: { showAll: true } as ParameterRule, // 注水步骤显示完整参数
 		notes: { preserve: true } as ParameterRule, // 记录步骤保持参数不变
