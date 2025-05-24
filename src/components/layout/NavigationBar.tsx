@@ -119,6 +119,7 @@ const EquipmentIndicator: React.FC<EquipmentIndicatorProps> = ({
 }) => {
     const triggerHaptic = useHapticFeedback(settings)
     const { showCustomMenu, menuPosition, toggleMenu, closeMenu } = useCustomMenu()
+    const scrollContainerRef = React.useRef<HTMLDivElement>(null)
 
     // 合并所有器具数据
     const allEquipments = [
@@ -167,6 +168,39 @@ const EquipmentIndicator: React.FC<EquipmentIndicatorProps> = ({
         }
     }, [showCustomMenu, closeMenu])
 
+    // 滚动到选中项的函数
+    const scrollToSelected = React.useCallback(() => {
+        if (!scrollContainerRef.current || !selectedEquipment) return
+
+        const selectedElement = scrollContainerRef.current.querySelector(`[data-tab="${selectedEquipment}"]`)
+        if (!selectedElement) return
+
+        const container = scrollContainerRef.current
+        const containerRect = container.getBoundingClientRect()
+        const elementRect = selectedElement.getBoundingClientRect()
+
+        // 计算元素相对于容器的位置
+        const elementLeft = elementRect.left - containerRect.left + container.scrollLeft
+        const elementWidth = elementRect.width
+        const containerWidth = containerRect.width
+
+        // 计算目标滚动位置（将选中项居中）
+        const targetScrollLeft = elementLeft - (containerWidth - elementWidth) / 2
+
+        // 平滑滚动到目标位置
+        container.scrollTo({
+            left: Math.max(0, targetScrollLeft),
+            behavior: 'smooth'
+        })
+    }, [selectedEquipment])
+
+    // 当选中项变化时滚动到选中项
+    React.useEffect(() => {
+        // 延迟执行以确保DOM已更新
+        const timer = setTimeout(scrollToSelected, 100)
+        return () => clearTimeout(timer)
+    }, [scrollToSelected])
+
     // 构建所有项目数据
     const allItems = [
         ...allEquipments.map(equipment => ({
@@ -190,6 +224,7 @@ const EquipmentIndicator: React.FC<EquipmentIndicatorProps> = ({
     return (
         <div className="relative w-full overflow-hidden">
             <div
+                ref={scrollContainerRef}
                 className="flex items-center gap-4 overflow-x-auto"
                 style={{
                     scrollbarWidth: 'none',

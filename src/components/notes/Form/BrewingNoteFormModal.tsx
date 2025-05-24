@@ -63,10 +63,11 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
     customEquipments
   })
 
-  // 处理关闭
+  // 处理关闭 - 保持器具选择状态，只重置其他状态
   const handleClose = () => {
     setSelectedCoffeeBean(null)
-    setSelectedEquipment('')
+    // 不重置器具选择，保持用户的选择状态
+    // setSelectedEquipment('') // 移除这行
     setSelectedMethod('')
     onClose()
   }
@@ -109,48 +110,52 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
     }
   }, [selectedEquipment])
 
-  // 处理器具选择 - 使用 useCallback 优化性能
+  // 处理器具选择 - 移除selectedEquipment依赖以避免频繁重新创建
   const handleEquipmentSelect = useCallback((equipmentId: string) => {
-    if (equipmentId === selectedEquipment) return
-    setSelectedEquipment(equipmentId)
-    // 保存器具选择到缓存 - 与冲煮界面保持一致
-    saveSelectedEquipmentPreference(equipmentId)
+    setSelectedEquipment(prev => {
+      if (equipmentId === prev) return prev
+      // 延迟保存器具选择到缓存，避免在渲染期间触发其他组件更新
+      setTimeout(() => {
+        saveSelectedEquipmentPreference(equipmentId)
+      }, 0)
+      return equipmentId
+    })
     // 在笔记模态框中，选择器具只更新方案列表，不自动跳转
-  }, [selectedEquipment])
+  }, [])
 
-  // 处理咖啡豆选择 - 使用 useCallback 优化性能
+  // 处理咖啡豆选择 - 使用函数式更新避免依赖currentStep
   const handleCoffeeBeanSelect = useCallback((bean: CoffeeBean | null) => {
     setSelectedCoffeeBean(bean)
     // 选择咖啡豆后自动前进到下一步
-    const nextStep = currentStep + 1
-    setCurrentStep(nextStep)
-  }, [currentStep])
+    setCurrentStep(prev => prev + 1)
+  }, [])
 
   // 打开随机选择器
   const handleOpenRandomPicker = () => {
     setIsRandomPickerOpen(true)
   }
 
-  // 处理随机选择咖啡豆
-  const handleRandomBeanSelect = (bean: CoffeeBean) => {
+  // 处理随机选择咖啡豆 - 使用useCallback和函数式更新
+  const handleRandomBeanSelect = useCallback((bean: CoffeeBean) => {
     setSelectedCoffeeBean(bean)
     // 选择随机咖啡豆后自动前进到下一步
-    const nextStep = currentStep + 1
-    setCurrentStep(nextStep)
-  }
+    setCurrentStep(prev => prev + 1)
+  }, [])
 
-  // 处理方法参数变化
-  const _handleMethodParamsChange = (method: Method) => {
+  // 处理方法参数变化 - 使用useCallback优化并延迟事件触发
+  const _handleMethodParamsChange = useCallback((method: Method) => {
     // 统一使用ID优先的方式标识方案
     const methodIdentifier = method.id || method.name;
     setSelectedMethod(methodIdentifier);
 
-    // 动态更新参数到表单组件
-    const event = new CustomEvent('methodParamsChanged', {
-      detail: { params: method.params }
-    });
-    document.dispatchEvent(event);
-  }
+    // 延迟触发事件，避免在渲染期间触发
+    setTimeout(() => {
+      const event = new CustomEvent('methodParamsChanged', {
+        detail: { params: method.params }
+      });
+      document.dispatchEvent(event);
+    }, 0);
+  }, [])
 
   // 计算咖啡粉量
   const getCoffeeAmount = () => {
@@ -199,7 +204,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
     }
   }
 
-  // 设置默认值
+  // 设置默认值 - 简化为函数调用，避免复杂的useMemo依赖
   const getDefaultNote = (): Partial<BrewingNoteData> => {
     const params = getMethodParams()
     const isNewNote = !initialNote?.id
@@ -230,13 +235,15 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
     }
   }
 
-  // 处理步骤完成
-  const handleStepComplete = () => {
-    const form = document.querySelector('form')
-    if (form) {
-      form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }))
-    }
-  }
+  // 处理步骤完成 - 使用useCallback优化并延迟事件触发
+  const handleStepComplete = useCallback(() => {
+    setTimeout(() => {
+      const form = document.querySelector('form')
+      if (form) {
+        form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }))
+      }
+    }, 0)
+  }, [])
 
   // 处理保存笔记
   const handleSaveNote = (note: BrewingNoteData) => {
@@ -366,7 +373,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
         onComplete={handleStepComplete}
         steps={steps}
         initialStep={0}
-        preserveState={false}
+        preserveState={true}
         currentStep={currentStep}
         setCurrentStep={setCurrentStep}
         onRandomBean={handleOpenRandomPicker}

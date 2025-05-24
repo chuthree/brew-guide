@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useRef, useEffect } from 'react'
 import { equipmentList, type CustomEquipment } from '@/lib/core/config'
 
 interface EquipmentCategoryBarProps {
@@ -48,6 +48,8 @@ const EquipmentCategoryBar: React.FC<EquipmentCategoryBarProps> = ({
   customEquipments,
   onEquipmentSelect
 }) => {
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+
   // 合并所有器具数据
   const allEquipments = [
     ...equipmentList.map((eq) => ({ ...eq, isCustom: false })),
@@ -64,10 +66,44 @@ const EquipmentCategoryBar: React.FC<EquipmentCategoryBarProps> = ({
     onClick: () => onEquipmentSelect(equipment.id)
   }))
 
+  // 滚动到选中项的函数
+  const scrollToSelected = () => {
+    if (!scrollContainerRef.current || !selectedEquipment) return
+
+    const selectedElement = scrollContainerRef.current.querySelector(`[data-tab="${selectedEquipment}"]`)
+    if (!selectedElement) return
+
+    const container = scrollContainerRef.current
+    const containerRect = container.getBoundingClientRect()
+    const elementRect = selectedElement.getBoundingClientRect()
+
+    // 计算元素相对于容器的位置
+    const elementLeft = elementRect.left - containerRect.left + container.scrollLeft
+    const elementWidth = elementRect.width
+    const containerWidth = containerRect.width
+
+    // 计算目标滚动位置（将选中项居中）
+    const targetScrollLeft = elementLeft - (containerWidth - elementWidth) / 2
+
+    // 平滑滚动到目标位置
+    container.scrollTo({
+      left: Math.max(0, targetScrollLeft),
+      behavior: 'smooth'
+    })
+  }
+
+  // 当选中项变化时滚动到选中项
+  useEffect(() => {
+    // 延迟执行以确保DOM已更新
+    const timer = setTimeout(scrollToSelected, 100)
+    return () => clearTimeout(timer)
+  }, [selectedEquipment])
+
   return (
-    <div className="relative w-full overflow-hidden mb-6">
+    <div className="relative w-full overflow-hidden mb-3">
       <div
-        className="flex items-center gap-4 overflow-x-auto"
+        ref={scrollContainerRef}
+        className="flex items-center gap-4 overflow-x-auto border-b border-neutral-200 dark:border-neutral-800"
         style={{
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
