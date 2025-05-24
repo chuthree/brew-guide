@@ -1092,25 +1092,32 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         }
     };
 
-    // 处理选择器具但从参数传入设备名称的情况
-    const handleEquipmentSelectWithName = useCallback((equipmentName: string) => {
-        // 首先，尝试通过名称在标准设备中查找
-        const standardEquipment = equipmentList.find(e => e.name === equipmentName);
+    // 处理选择器具但从参数传入设备ID或名称的情况
+    const handleEquipmentSelectWithName = useCallback((equipmentIdOrName: string) => {
+        // 首先，尝试通过ID在标准设备中查找
+        let standardEquipment = equipmentList.find(e => e.id === equipmentIdOrName);
+
+        // 如果通过ID没找到，再尝试通过名称查找
+        if (!standardEquipment) {
+            standardEquipment = equipmentList.find(e => e.name === equipmentIdOrName);
+        }
 
         // 然后，尝试在自定义设备中查找 - 优先找最近添加的（倒序查找）
         let customEquipment = null;
         for (let i = customEquipments.length - 1; i >= 0; i--) {
-            if (customEquipments[i].name === equipmentName) {
+            // 先通过ID查找，再通过名称查找
+            if (customEquipments[i].id === equipmentIdOrName || customEquipments[i].name === equipmentIdOrName) {
                 customEquipment = customEquipments[i];
-                console.log(`找到匹配的自定义器具: ${equipmentName}, ID=${customEquipment.id}`);
+                console.log(`找到匹配的自定义器具: ${equipmentIdOrName}, ID=${customEquipment.id}, 名称=${customEquipment.name}`);
                 break;
             }
         }
 
-        // 确定最终使用的设备ID
-        const equipmentId = customEquipment?.id || standardEquipment?.id || equipmentName;
+        // 确定最终使用的设备ID和名称
+        const equipmentId = customEquipment?.id || standardEquipment?.id || equipmentIdOrName;
+        const equipmentName = customEquipment?.name || standardEquipment?.name || equipmentIdOrName;
 
-        // 更新parameterInfo，添加设备信息
+        // 更新parameterInfo，使用设备名称而不是ID
         setParameterInfo({
             equipment: equipmentName,
             method: null,
@@ -1129,7 +1136,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         // 使用确定的equipmentId调用handleEquipmentSelect
         handleEquipmentSelect(equipmentId);
 
-        console.log(`设备选择: 名称=${equipmentName}, ID=${equipmentId}, 是否自定义=${!!customEquipment}, 是否预设器具=${isCustomPresetEquipment}`);
+        console.log(`设备选择: 输入=${equipmentIdOrName}, 名称=${equipmentName}, ID=${equipmentId}, 是否自定义=${!!customEquipment}, 是否预设器具=${isCustomPresetEquipment}`);
     }, [handleEquipmentSelect, setParameterInfo, customEquipments, equipmentList, setMethodType]);
 
     // 当前页面相关初始化
@@ -1283,6 +1290,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         const handleEquipmentSelection = (e: CustomEvent) => {
             const { equipmentName } = e.detail;
             if (equipmentName) {
+                // equipmentName 实际上可能是ID或名称，函数会自动处理
                 handleEquipmentSelectWithName(equipmentName);
             }
         };
