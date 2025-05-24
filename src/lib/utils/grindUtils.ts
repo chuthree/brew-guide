@@ -94,12 +94,12 @@ export function formatGrindSize(
 	grindType: string
 ): string {
 	if (!grindSize) return "";
-	
+
 	// 如果不是通用类型，则尝试转换
 	if (grindType !== 'generic') {
 		return convertToSpecificGrind(grindSize, grindType);
 	}
-	
+
 	// 如果是通用类型，直接返回
 	return grindSize;
 }
@@ -108,16 +108,26 @@ export function formatGrindSize(
  * 获取指定磨豆机的参考研磨度列表（用于设置页面显示）
  * 这是参考研磨度功能，只在设置页面显示，提供参考信息
  * @param grinderId 磨豆机ID
+ * @param customGrinders 自定义磨豆机列表
  * @returns 研磨度映射对象，如果未找到则返回空对象
  */
-export function getReferenceGrindSizes(grinderId: string): Record<string, string> {
+export function getReferenceGrindSizes(grinderId: string, customGrinders?: any[]): Record<string, string> {
+	// 先在内置磨豆机中查找
 	const grinder = availableGrinders.find(g => g.id === grinderId);
-	
+
 	// 如果找到磨豆机且有研磨度映射，返回映射对象
 	if (grinder && grinder.grindSizes) {
 		return grinder.grindSizes;
 	}
-	
+
+	// 在自定义磨豆机中查找
+	if (customGrinders) {
+		const customGrinder = customGrinders.find(g => g.id === grinderId);
+		if (customGrinder && customGrinder.grindSizes) {
+			return customGrinder.grindSizes;
+		}
+	}
+
 	// 否则返回空对象
 	return {};
 }
@@ -125,21 +135,22 @@ export function getReferenceGrindSizes(grinderId: string): Record<string, string
 /**
  * 获取分类后的研磨度参考表
  * @param grinderId 磨豆机ID
+ * @param customGrinders 自定义磨豆机列表
  * @returns 包含基础研磨度和特定应用研磨度两个分类的对象
  */
-export function getCategorizedGrindSizes(grinderId: string): {
+export function getCategorizedGrindSizes(grinderId: string, customGrinders?: any[]): {
 	basicGrindSizes: Record<string, string>;
 	applicationGrindSizes: Record<string, string>;
 } {
-	const grindSizes = getReferenceGrindSizes(grinderId);
+	const grindSizes = getReferenceGrindSizes(grinderId, customGrinders);
 	const basicGrindSizes: Record<string, string> = {};
 	const applicationGrindSizes: Record<string, string> = {};
-	
+
 	// 基础研磨度关键词
 	const basicKeywords = ['极细', '特细', '细', '中细', '中细偏粗', '中粗', '粗', '特粗'];
 	// 特定应用关键词
 	const appKeywords = ['意式', '摩卡壶', '手冲', '法压壶', '冷萃'];
-	
+
 	Object.entries(grindSizes).forEach(([key, value]) => {
 		if (basicKeywords.includes(key)) {
 			basicGrindSizes[key] = value;
@@ -147,6 +158,6 @@ export function getCategorizedGrindSizes(grinderId: string): {
 			applicationGrindSizes[key] = value;
 		}
 	});
-	
+
 	return { basicGrindSizes, applicationGrindSizes };
 }

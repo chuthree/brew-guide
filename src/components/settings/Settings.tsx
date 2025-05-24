@@ -15,6 +15,14 @@ import { motion, AnimatePresence } from 'framer-motion'
 // 导入Lottie动画JSON文件
 import chuchuAnimation from '../../../public/animations/chuchu-animation.json'
 
+// 自定义磨豆机接口
+export interface CustomGrinder {
+    id: string
+    name: string
+    grindSizes: Record<string, string>
+    isCustom: true
+}
+
 // 定义设置选项接口
 export interface SettingsOptions {
     notificationSound: boolean
@@ -33,6 +41,7 @@ export interface SettingsOptions {
         hideRoastDate: boolean // 隐藏烘焙度信息
         hideTotalWeight: boolean // 隐藏总重量显示
     }
+    customGrinders?: CustomGrinder[] // 添加自定义磨豆机列表
 }
 
 // 默认设置
@@ -58,7 +67,8 @@ export const defaultSettings: SettingsOptions = {
         hidePrice: true, // 默认隐藏价格信息
         hideRoastDate: false, // 默认不隐藏烘焙度信息
         hideTotalWeight: true // 默认隐藏总重量显示
-    }
+    },
+    customGrinders: [] // 默认无自定义磨豆机
 }
 
 interface SettingsProps {
@@ -103,16 +113,16 @@ const Settings: React.FC<SettingsProps> = ({
     const [showEasterEgg, setShowEasterEgg] = useState(false)
     const lottieRef = useRef<any>(null)
     const [LottieComponent, setLottieComponent] = useState<any>(null)
-    
+
     // 创建音效播放引用
     const audioRef = useRef<HTMLAudioElement | null>(null)
-    
+
     // 初始化音频元素和Lottie组件
     useEffect(() => {
         // 仅在客户端创建音频元素
         if (typeof window !== 'undefined') {
             audioRef.current = new Audio('/sounds/notification-pings.mp3')
-            
+
             // 预加载Lottie组件
             import('lottie-react').then(module => {
                 setLottieComponent(() => module.default)
@@ -131,7 +141,7 @@ const Settings: React.FC<SettingsProps> = ({
     useEffect(() => {
         // 确保只在客户端执行
         if (typeof window === 'undefined') return;
-        
+
         const updateThemeColor = () => {
             const themeColorMeta = document.querySelectorAll('meta[name="theme-color"]');
 
@@ -249,14 +259,14 @@ const handleChange = async <K extends keyof SettingsOptions>(
         if (!isNaN(value) && value > 0) {
             // 保留一位小数
             const formattedValue = parseFloat(value.toFixed(1))
-            
+
             // 检查是否已经存在该预设值
             if (!decrementPresets.includes(formattedValue)) {
                 const newPresets = [...decrementPresets, formattedValue].sort((a, b) => a - b)
                 setDecrementPresets(newPresets)
                 handleChange('decrementPresets', newPresets)
                 setDecrementValue('')
-                
+
                 // 提供触感反馈
                 if (settings.hapticFeedback) {
                     hapticsUtils.light()
@@ -270,7 +280,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
         const newPresets = decrementPresets.filter(v => v !== value)
         setDecrementPresets(newPresets)
         handleChange('decrementPresets', newPresets)
-        
+
         // 提供触感反馈
         if (settings.hapticFeedback) {
             hapticsUtils.light()
@@ -284,7 +294,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
             audioRef.current.pause()
             audioRef.current.currentTime = 0
         }
-        
+
         // 动画播放结束后关闭弹窗
         setTimeout(() => {
             setShowEasterEgg(false)
@@ -294,14 +304,14 @@ const handleChange = async <K extends keyof SettingsOptions>(
     // 处理彩蛋动画 - 简化为一次点击即触发
     const handleEasterEgg = () => {
         if (showEasterEgg) return
-        
+
         setShowEasterEgg(true)
-        
+
         // 触发震动反馈
         if (settings.hapticFeedback) {
             hapticsUtils.medium()
         }
-        
+
         // 播放音效
         if (audioRef.current && settings.notificationSound) {
             // 重置音频播放位置
@@ -319,7 +329,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
     return (
         <div className="fixed inset-0 z-50 flex flex-col bg-neutral-50 dark:bg-neutral-900 max-w-[500px] mx-auto">
             {/* 头部导航栏 */}
-            <div 
+            <div
                 className="relative flex items-center justify-center py-4 pt-safe-top border-b border-neutral-200 dark:border-neutral-800"
             >
                 <button
@@ -365,18 +375,18 @@ const handleChange = async <K extends keyof SettingsOptions>(
                             className="flex items-center justify-between py-3 px-4 text-sm font-medium text-neutral-800 bg-neutral-100 rounded-lg transition-colors hover:bg-neutral-200 dark:text-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700"
                         >
                             <span>{qrCodeType === 'appreciation' ? '收起二维码' : '赞赏码'}</span>
-                            <svg 
-                                xmlns="http://www.w3.org/2000/svg" 
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
                                 className={`h-4 w-4 ml-2 text-neutral-600 dark:text-neutral-400 transition-transform ${qrCodeType === 'appreciation' ? 'rotate-180' : ''}`}
-                                fill="none" 
-                                viewBox="0 0 24 24" 
+                                fill="none"
+                                viewBox="0 0 24 24"
                                 stroke="currentColor"
                             >
-                                <path 
-                                    strokeLinecap="round" 
-                                    strokeLinejoin="round" 
-                                    strokeWidth={1.5} 
-                                    d="M19 9l-7 7-7-7" 
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={1.5}
+                                    d="M19 9l-7 7-7-7"
                                 />
                             </svg>
                         </button>
@@ -393,32 +403,32 @@ const handleChange = async <K extends keyof SettingsOptions>(
                             className="flex items-center justify-between py-3 px-4 text-sm font-medium text-neutral-800 bg-neutral-100 rounded-lg transition-colors hover:bg-neutral-200 dark:text-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700"
                         >
                             <span>{qrCodeType === 'group' ? '收起二维码' : '交流群'}</span>
-                            <svg 
-                                xmlns="http://www.w3.org/2000/svg" 
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
                                 className={`h-4 w-4 ml-2 text-neutral-600 dark:text-neutral-400 transition-transform ${qrCodeType === 'group' ? 'rotate-180' : ''}`}
-                                fill="none" 
-                                viewBox="0 0 24 24" 
+                                fill="none"
+                                viewBox="0 0 24 24"
                                 stroke="currentColor"
                             >
-                                <path 
-                                    strokeLinecap="round" 
-                                    strokeLinejoin="round" 
-                                    strokeWidth={1.5} 
-                                    d="M19 9l-7 7-7-7" 
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={1.5}
+                                    d="M19 9l-7 7-7-7"
                                 />
                             </svg>
                         </button>
                     </div>
-                    
+
                     {showQRCodes && (
                         <div className="mt-4 grid grid-cols-2 gap-4">
                             {qrCodeType === 'appreciation' ? (
                                 <>
                                     <div className="flex flex-col items-center">
                                         <div className="w-full aspect-square relative rounded-lg overflow-hidden">
-                                            <Image 
-                                                src="/images/content/appreciation-code.jpg" 
-                                                alt="赞赏码" 
+                                            <Image
+                                                src="/images/content/appreciation-code.jpg"
+                                                alt="赞赏码"
                                                 fill
                                                 className="object-cover"
                                             />
@@ -442,9 +452,9 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                     </div>
                                     <div className="flex flex-col items-center">
                                         <div className="w-full aspect-square relative rounded-lg overflow-hidden">
-                                            <Image 
-                                                src="https://coffee.chu3.top/images/content/group-code.jpg" 
-                                                alt="交流群" 
+                                            <Image
+                                                src="https://coffee.chu3.top/images/content/group-code.jpg"
+                                                alt="交流群"
                                                 fill
                                                 className="object-cover"
                                             />
@@ -458,7 +468,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                 </div>
 
                 {/* 个人信息设置组 */}
-                <div className="px-6 py-4">                  
+                <div className="px-6 py-4">
                     <div className="space-y-4">
                         {/* 用户名 */}
                         <div>
@@ -485,7 +495,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                     <h3 className="text-sm uppercase font-medium tracking-wider text-neutral-500 dark:text-neutral-400 mb-3">
                         通知
                     </h3>
-                    
+
                     {/* 统一样式的设置项 */}
                     <div className="space-y-5">
                         {/* 提示音 */}
@@ -505,7 +515,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                 <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
                             </label>
                         </div>
-                        
+
                         {/* 震动反馈 */}
                         <div className="flex items-center justify-between">
                             <div className="text-sm text-neutral-800 dark:text-neutral-200">
@@ -577,7 +587,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                 </div>
                             </div>
                         </div>
-                        
+
                         {/* 外观模式 */}
                         <div className="flex items-center justify-between">
                             <div className="text-sm text-neutral-800 dark:text-neutral-200">
@@ -633,7 +643,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                 </div>
                             </div>
                         </div>
-                        
+
                         {/* 文本缩放设置 - 只在原生应用中显示 */}
                         {isTextZoomEnabled && (
                             <div className="mb-4">
@@ -657,7 +667,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                     />
                                     <div className="flex justify-between mt-1 text-xs text-neutral-500">
                                         <span>小</span>
-                                        <span 
+                                        <span
                                             className={`px-2 py-0.5 rounded-sm ${Math.abs(zoomLevel - 1.0) < 0.05 ? 'bg-neutral-800 text-neutral-100 dark:bg-neutral-200 dark:text-neutral-900' : ''}`}
                                             onClick={() => handleTextZoomChange(1.0)}
                                         >
@@ -687,7 +697,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                         <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
                             开启后将隐藏：咖啡豆列表中的风味标签和价格信息、豆子总重量显示等
                         </p>
-                        
+
                         {/* 极简模式详细设置 - 仅在极简模式开启时显示 */}
                         {settings.minimalistMode && (
                             <div className="mt-4 ml-3 space-y-3">
@@ -714,7 +724,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                         <div className="peer h-5 w-9 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
                                     </label>
                                 </div>
-                                
+
                                 <div className="flex items-center justify-between">
                                     <div className="text-xs font-medium text-neutral-700 dark:text-neutral-300">
                                         隐藏价格信息
@@ -738,7 +748,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                         <div className="peer h-5 w-9 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
                                     </label>
                                 </div>
-                                
+
                                 <div className="flex items-center justify-between">
                                     <div className="text-xs font-medium text-neutral-700 dark:text-neutral-300">
                                         隐藏烘焙日期
@@ -762,7 +772,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                         <div className="peer h-5 w-9 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
                                     </label>
                                 </div>
-                                
+
                                 <div className="flex items-center justify-between">
                                     <div className="text-xs font-medium text-neutral-700 dark:text-neutral-300">
                                         隐藏总重量显示
@@ -792,7 +802,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                 </div>
 
                 {/* 研磨度设置组 */}
-<GrinderSettings 
+<GrinderSettings
     settings={settings}
     handleChange={handleChange}
 />
@@ -802,7 +812,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                     <h3 className="text-sm uppercase font-medium tracking-wider text-neutral-500 dark:text-neutral-400 mb-3">
                         库存扣除预设值
                     </h3>
-                    
+
                     <div className="flex gap-2 mb-3 flex-wrap">
                         {decrementPresets.map((value) => (
                             <button
@@ -813,7 +823,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                 -{value}g ×
                             </button>
                         ))}
-                        
+
                         <div className="flex h-9">
                             <input
                                 type="tel"
@@ -821,19 +831,19 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                 onChange={(e) => {
                                     // 限制只能输入数字和小数点
                                     const value = e.target.value.replace(/[^0-9.]/g, '');
-                                    
+
                                     // 确保只有一个小数点
                                     const dotCount = (value.match(/\./g) || []).length;
-                                    let sanitizedValue = dotCount > 1 ? 
-                                        value.substring(0, value.lastIndexOf('.')) : 
+                                    let sanitizedValue = dotCount > 1 ?
+                                        value.substring(0, value.lastIndexOf('.')) :
                                         value;
-                                        
+
                                     // 限制小数点后只能有一位数字
                                     const dotIndex = sanitizedValue.indexOf('.');
                                     if (dotIndex !== -1 && dotIndex < sanitizedValue.length - 2) {
                                         sanitizedValue = sanitizedValue.substring(0, dotIndex + 2);
                                     }
-                                    
+
                                     setDecrementValue(sanitizedValue);
                                 }}
                                 onKeyDown={(e) => {
@@ -861,9 +871,9 @@ const handleChange = async <K extends keyof SettingsOptions>(
                     <h3 className="text-sm uppercase font-medium tracking-wider text-neutral-500 dark:text-neutral-400 mb-3">
                         计时器布局
                     </h3>
-                    
+
                     <div className="space-y-5">
-                       
+
                         {/* 阶段信息布局反转 */}
                         <div className="flex items-center justify-between">
                             <div className="text-sm text-neutral-800 dark:text-neutral-200">
@@ -885,7 +895,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                 <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
                             </label>
                         </div>
-                        
+
                         {/* 控制区布局反转 */}
                         <div className="flex items-center justify-between">
                             <div className="text-sm text-neutral-800 dark:text-neutral-200">
@@ -907,7 +917,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                 <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
                             </label>
                         </div>
-                        
+
                         {/* 始终显示计时器信息 */}
                         <div className="flex items-center justify-between">
                             <div className="text-sm text-neutral-800 dark:text-neutral-200">
@@ -929,7 +939,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                 <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
                             </label>
                         </div>
-                        
+
                         {/* 显示阶段分隔线 */}
                         <div className="flex items-center justify-between">
                             <div className="text-sm text-neutral-800 dark:text-neutral-200">
@@ -967,7 +977,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                 <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
                             </label>
                         </div>
-                        
+
                         {/* 进度条高度 */}
                         <div className="flex items-center justify-between mb-2">
                             <div className="text-sm text-neutral-800 dark:text-neutral-200">
@@ -1021,7 +1031,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
 
                     <p className='mt-12'>[来自开发者的小废话]</p>
                     <div className="mt-4 whitespace-pre-wrap text-left mx-auto max-w-52 leading-relaxed">
-                       Hi！感谢你愿意尝试这个小工具，还看到了这里， 
+                       Hi！感谢你愿意尝试这个小工具，还看到了这里，
                        <br /><br />
                        起初，因为自己记不住方案，也把握不好注水节奏，就开发了这个小工具
                        <br /> <br />
@@ -1038,7 +1048,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                             .sort((a, b) => {
                                 const isAEnglish = /^[A-Za-z0-9\s:]+$/.test(a.charAt(0));
                                 const isBEnglish = /^[A-Za-z0-9\s:]+$/.test(b.charAt(0));
-                                
+
                                 if (isAEnglish && !isBEnglish) return -1;
                                 if (!isAEnglish && isBEnglish) return 1;
                                 return a.localeCompare(b, 'zh-CN');
@@ -1048,17 +1058,17 @@ const handleChange = async <K extends keyof SettingsOptions>(
                     </p>
                     <p className="mt-12">
                         <a
-                            href="https://github.com/chu3/brew-guide" 
+                            href="https://github.com/chu3/brew-guide"
                             target="_blank"
                             rel="noopener noreferrer"
                         >
                             GitHub
                         </a>
                     </p>
-                    
+
                     {/* 添加彩蛋按钮 */}
                     <div className="mt-8 flex justify-center">
-                        <button 
+                        <button
                             onClick={handleEasterEgg}
                             className="opacity-30 hover:opacity-50 dark:opacity-20 dark:hover:opacity-40 transition-opacity duration-300 focus:outline-none"
                             aria-label="Easter Egg"
@@ -1066,11 +1076,11 @@ const handleChange = async <K extends keyof SettingsOptions>(
                             <div className="w-0 h-0 border-l-[10px] border-r-[10px] border-t-[18px] border-l-transparent border-r-transparent border-t-neutral-400 dark:border-t-neutral-600" />
                         </button>
                     </div>
-                    
+
                     {/* 彩蛋动画 - Lottie版本 */}
                     <AnimatePresence>
                         {showEasterEgg && typeof window !== 'undefined' && (
-                            <motion.div 
+                            <motion.div
                                 className="fixed inset-0 z-[100] flex items-center justify-center bg-black/20 dark:bg-black/40"
                                 initial={{ opacity: 0, backdropFilter: "blur(0px)" }}
                                 animate={{ opacity: 1, backdropFilter: "blur(3px)" }}
@@ -1078,23 +1088,23 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                 transition={{ duration: 0.4 }}
                                 onClick={() => setShowEasterEgg(false)}
                             >
-                                <motion.div 
+                                <motion.div
                                     className="relative w-32 h-32"
                                     initial={{ scale: 0.5, y: 20, filter: "blur(8px)" }}
                                     animate={{ scale: 1, y: 0, filter: "blur(0px)" }}
                                     exit={{ scale: 0.8, y: 10, filter: "blur(8px)" }}
-                                    transition={{ 
-                                        type: "spring", 
-                                        stiffness: 300, 
+                                    transition={{
+                                        type: "spring",
+                                        stiffness: 300,
                                         damping: 20,
-                                        filter: { duration: 0.3 } 
+                                        filter: { duration: 0.3 }
                                     }}
                                 >
                                     {/* Lottie动画 */}
                                     {LottieComponent && (
-                                        <LottieComponent 
+                                        <LottieComponent
                                             lottieRef={lottieRef}
-                                            animationData={chuchuAnimation} 
+                                            animationData={chuchuAnimation}
                                             loop={false}
                                             autoplay={true}
                                             onComplete={handleAnimationComplete}
@@ -1124,4 +1134,4 @@ const handleChange = async <K extends keyof SettingsOptions>(
     )
 }
 
-export default Settings 
+export default Settings
