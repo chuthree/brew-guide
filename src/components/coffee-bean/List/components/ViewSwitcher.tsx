@@ -82,7 +82,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
     // 添加极简模式状态
     const [_isMinimalistMode, setIsMinimalistMode] = useState(false);
     const [hideTotalWeight, setHideTotalWeight] = useState(false);
-    
+
     // 获取全局设置
     useEffect(() => {
         const loadSettings = async () => {
@@ -91,10 +91,10 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                 if (settingsStr) {
                     const parsedSettings = JSON.parse(settingsStr) as SettingsOptions;
                     setIsMinimalistMode(parsedSettings.minimalistMode || false);
-                    
+
                     // 根据极简模式和具体设置决定是否隐藏总重量
                     setHideTotalWeight(
-                        parsedSettings.minimalistMode && 
+                        parsedSettings.minimalistMode &&
                         parsedSettings.minimalistOptions.hideTotalWeight
                     );
                 }
@@ -102,25 +102,25 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                 console.error('加载设置失败', error);
             }
         };
-        
+
         loadSettings();
-        
+
         // 监听设置变更
         const handleSettingsChange = (e: CustomEvent) => {
             if (e.detail?.key === 'brewGuideSettings') {
                 loadSettings();
             }
         };
-        
+
         window.addEventListener('storageChange', handleSettingsChange as EventListener);
         return () => {
             window.removeEventListener('storageChange', handleSettingsChange as EventListener);
         };
     }, []);
-    
+
     // 搜索相关逻辑
     const searchInputRef = useRef<HTMLInputElement>(null);
-    
+
     // 处理搜索图标点击
     const handleSearchClick = () => {
         if (setIsSearching) {
@@ -131,7 +131,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
             }, 50);
         }
     };
-    
+
     // 处理搜索框关闭
     const handleCloseSearch = () => {
         if (setIsSearching && setSearchQuery) {
@@ -139,7 +139,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
             setSearchQuery('');
         }
     };
-    
+
     // 处理搜索输入变化
     const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (setSearchQuery) {
@@ -148,7 +148,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
             onSearchChange(e);
         }
     };
-    
+
     // 处理搜索框键盘事件
     const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (onSearchKeyDown) {
@@ -306,7 +306,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                                     )}
                                 </button>
                             )}
-                            
+
                             {/* 分享按钮 - 仅在个人榜单视图中显示 */}
                             {viewMode === VIEW_OPTIONS.RANKING && onRankingShare && (
                                 <button
@@ -327,9 +327,20 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                 <div className="relative">
                     <div className="border-b border-neutral-200 dark:border-neutral-800 px-6 relative">
                         {!isSearching ? (
-                            <div className="flex overflow-x-auto no-scrollbar pr-28 h-[24px]">
+                            <div
+                                className="flex overflow-x-auto pr-20 h-[24px]"
+                                style={{
+                                    scrollbarWidth: 'none',
+                                    msOverflowStyle: 'none',
+                                    WebkitOverflowScrolling: 'touch'
+                                }}
+                            >
+                                <style jsx>{`
+                                    div::-webkit-scrollbar {
+                                        display: none;
+                                    }
+                                `}</style>
                                 {/* 豆子类型筛选按钮 */}
-                                
                                 <button
                                     onClick={() => onBeanTypeChange?.('espresso')}
                                     className={`pb-1.5 mr-3 text-[11px] whitespace-nowrap relative ${selectedBeanType === 'espresso' ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
@@ -339,7 +350,6 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                                         <span className="absolute bottom-0 left-0 w-full h-px bg-neutral-800 dark:bg-white"></span>
                                     )}
                                 </button>
-                                
                                 <button
                                     onClick={() => onBeanTypeChange?.('filter')}
                                     className={`pb-1.5 mr-3 text-[11px] whitespace-nowrap relative ${selectedBeanType === 'filter' ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
@@ -359,8 +369,8 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                                         <span className="absolute bottom-0 left-0 w-full h-px bg-neutral-800 dark:bg-white"></span>
                                     )}
                                 </button>
-                                
-                                
+
+
                                 {/* 品种筛选按钮 */}
                                 {availableVarieties?.map((variety: string) => (
                                     <button
@@ -376,7 +386,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                                 ))}
                             </div>
                         ) : (
-                            <div className="flex items-center pb-1.5 h-[24px]">
+                            <div className="flex items-center pb-1.5 min-h-[30px]">
                                 <div className="flex-1 relative flex items-center">
                                     <input
                                         ref={searchInputRef}
@@ -389,7 +399,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                                         autoComplete="off"
                                     />
                                 </div>
-                                <button 
+                                <button
                                     onClick={handleCloseSearch}
                                     className="ml-1 text-neutral-500 dark:text-neutral-400 flex items-center "
                                 >
@@ -425,4 +435,4 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
     )
 }
 
-export default ViewSwitcher 
+export default ViewSwitcher

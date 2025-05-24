@@ -10,7 +10,7 @@ import { BREWING_EVENTS, ParameterInfo } from '@/lib/brewing/constants'
 import { listenToEvent } from '@/lib/brewing/events'
 import { updateParameterInfo } from '@/lib/brewing/parameters'
 import { useTranslations } from 'next-intl'
-import { Equal, ChevronLeft } from 'lucide-react'
+import { Equal, ArrowLeft } from 'lucide-react'
 import { saveStringState } from '@/lib/core/statePersistence'
 
 // 统一类型定义
@@ -225,7 +225,7 @@ const EquipmentIndicator: React.FC<EquipmentIndicatorProps> = ({
         <div className="relative w-full overflow-hidden">
             <div
                 ref={scrollContainerRef}
-                className="flex items-center gap-4 overflow-x-auto"
+                className="flex items-center gap-4 overflow-x-auto mt-2"
                 style={{
                     scrollbarWidth: 'none',
                     msOverflowStyle: 'none',
@@ -256,7 +256,7 @@ const EquipmentIndicator: React.FC<EquipmentIndicatorProps> = ({
                                     dataTab={item.id}
                                 />
 
-                                {item.isCustom && item.isSelected && (
+                                {/* {item.isCustom && item.isSelected && (
                                     <span
                                         onClick={(e) => handlers.menuToggle(item.id, e)}
                                         className="ml-2 pb-3 text-[12px] tracking-widest text-neutral-400 dark:text-neutral-500 cursor-pointer"
@@ -272,7 +272,7 @@ const EquipmentIndicator: React.FC<EquipmentIndicatorProps> = ({
                                     >
                                         选项
                                     </span>
-                                )}
+                                )} */}
                             </div>
                         )}
                     </div>
@@ -605,7 +605,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                         // 替代头部 - 使用绝对定位
                         <motion.div
                             key="alternative-header"
-                            className="absolute top-0 left-0 right-0 w-full px-6 pb-4"
+                            className="absolute top-0 left-0 right-0 w-full px-6"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
@@ -617,7 +617,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                         // 默认头部 - 使用绝对定位
                         <motion.div
                             key="default-header"
-                            className="absolute top-0 left-0 right-0 w-full px-6 pb-4"
+                            className="absolute top-0 left-0 right-0 w-full px-6"
                             initial={{ opacity: shouldHideHeader ? 0 : 1 }}
                             animate={{ opacity: shouldHideHeader ? 0 : 1 }}
                             exit={{ opacity: 0 }}
@@ -630,7 +630,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                     className="cursor-pointer text-[12px] tracking-widest text-neutral-500 dark:text-neutral-400 flex items-center"
                                 >
                                     {canGoBack() && onBackClick ? (
-                                        <ChevronLeft className="w-4 h-4 mr-1" />
+                                        <ArrowLeft className="w-4 h-4 mr-1" />
                                     ) : (
                                         <Equal className="w-4 h-4 mr-1" />
                                     )}
@@ -650,7 +650,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                             isActive={activeMainTab === '冲煮'}
                                             onClick={() => handleMainTabClick('冲煮')}
                                             dataTab="冲煮"
-                                            hideIndicator={true}
+                                            hideIndicator={activeMainTab === '冲煮' && activeBrewingStep === 'method'}
                                         />
                                     </div>
                                     <div
@@ -664,7 +664,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                             isActive={activeMainTab === '咖啡豆'}
                                             onClick={() => handleMainTabClick('咖啡豆')}
                                             dataTab="咖啡豆"
-                                            hideIndicator={true}
+                                            hideIndicator={false}
                                         />
                                     </div>
                                     <div
@@ -678,7 +678,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                             isActive={activeMainTab === '笔记'}
                                             onClick={() => handleMainTabClick('笔记')}
                                             dataTab="笔记"
-                                            hideIndicator={true}
+                                            hideIndicator={false}
                                         />
                                     </div>
                                 </div>
@@ -718,7 +718,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                         }}
                                         className="overflow-hidden"
                                     >
-                                        <div className="px-6 py-2 bg-neutral-100 dark:bg-neutral-800 text-[10px] text-neutral-500 dark:text-neutral-400 relative">
+                                        <div className="px-6 py-2 mt-2 bg-neutral-100 dark:bg-neutral-800 text-[10px] text-neutral-500 dark:text-neutral-400 relative">
                                             <div className="flex items-center min-w-0 overflow-x-auto no-scrollbar max-w-full">
                                                 {parameterInfo.method && (
                                                     <span

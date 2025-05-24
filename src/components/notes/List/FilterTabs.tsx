@@ -23,10 +23,10 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
 }) {
     // 搜索输入框引用 - 移到条件语句前面
     const searchInputRef = useRef<HTMLInputElement>(null);
-    
+
     // 如果没有可筛选的设备或咖啡豆，不渲染任何内容
     if (availableEquipments.length === 0 && availableBeans.length === 0) return null;
-    
+
     // 处理搜索图标点击
     const handleSearchClick = () => {
         if (onSearchClick) {
@@ -37,13 +37,13 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
             }, 50);
         }
     };
-    
+
     return (
         <div className="relative">
             <div className="border-b border-neutral-200 dark:border-neutral-800 px-6 relative">
                 {isSearching ? (
                     // 搜索模式 - 使用完全独立的容器，不受pr-14影响，参考咖啡豆搜索实现
-                    <div className="flex items-center pb-1.5 h-[24px] w-full">
+                    <div className="flex items-center pb-1.5 min-h-[30px] w-full">
                         <div className="flex-1 relative flex items-center">
                             <input
                                 ref={searchInputRef}
@@ -56,7 +56,7 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                                 autoComplete="off"
                             />
                         </div>
-                        <button 
+                        <button
                             onClick={handleSearchClick}
                             className="ml-1 text-neutral-500 dark:text-neutral-400 flex items-center"
                         >
@@ -65,7 +65,19 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                     </div>
                 ) : (
                     // 非搜索模式 - 保持原有布局
-                    <div className="flex overflow-x-auto no-scrollbar pr-20 h-[24px]">
+                    <div
+                        className="flex overflow-x-auto pr-20 h-[24px]"
+                        style={{
+                            scrollbarWidth: 'none',
+                            msOverflowStyle: 'none',
+                            WebkitOverflowScrolling: 'touch'
+                        }}
+                    >
+                        <style jsx>{`
+                            div::-webkit-scrollbar {
+                                display: none;
+                            }
+                        `}</style>
                         {filterMode === 'equipment' ? (
                             <>
                                 <button
@@ -127,7 +139,7 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                         >
                             <span className="relative">{filterMode === 'equipment' ? '按器具' : '按豆子'}</span>
                         </button>
-                        
+
                         {/* 搜索按钮 - 使用"找笔记"文字代替图标 */}
                         <button
                             onClick={handleSearchClick}
@@ -142,4 +154,4 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
     )
 })
 
-export default FilterTabs 
+export default FilterTabs
