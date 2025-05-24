@@ -16,6 +16,20 @@ import {
 } from "../brewing/constants";
 import { emitEvent } from "../brewing/events";
 import { updateParameterInfo } from "../brewing/parameters";
+import { getStringState, saveStringState } from "@/lib/core/statePersistence";
+
+// 器具选择缓存相关常量
+const MODULE_NAME = 'brewing-equipment';
+const DEFAULT_EQUIPMENT = 'v60'; // 默认选择 V60
+
+// 器具选择缓存函数
+const getSelectedEquipmentPreference = (): string => {
+    return getStringState(MODULE_NAME, 'selectedEquipment', DEFAULT_EQUIPMENT);
+};
+
+const saveSelectedEquipmentPreference = (equipmentId: string): void => {
+    saveStringState(MODULE_NAME, 'selectedEquipment', equipmentId);
+};
 
 // 定义标签类型
 export type TabType = "咖啡豆" | "方案" | "注水" | "记录";
@@ -86,7 +100,7 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 		useState<CoffeeBean | null>(null);
 
 	const [selectedEquipment, setSelectedEquipment] = useState<string | null>(
-		null
+		getSelectedEquipmentPreference()
 	);
 	const [selectedMethod, setSelectedMethod] = useState<Method | null>(null);
 	const [currentBrewingMethod, setCurrentBrewingMethod] =
@@ -558,6 +572,9 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 
 			// 设置新的设备
 			setSelectedEquipment(equipment);
+
+			// 保存器具选择到缓存
+			saveSelectedEquipmentPreference(equipment);
 
 			// 设置步骤和标签
 			setActiveTab("方案");

@@ -11,6 +11,7 @@ import { listenToEvent } from '@/lib/brewing/events'
 import { updateParameterInfo } from '@/lib/brewing/parameters'
 import { useTranslations } from 'next-intl'
 import { Equal, ChevronLeft } from 'lucide-react'
+import { saveStringState } from '@/lib/core/statePersistence'
 
 // 统一类型定义
 type TabType = '方案' | '注水' | '记录'
@@ -33,10 +34,11 @@ interface TabButtonProps {
     onClick?: () => void
     className?: string
     dataTab?: string
+    hideIndicator?: boolean // 添加隐藏指示器的选项
 }
 
 const TabButton: React.FC<TabButtonProps> = ({
-    tab, isActive, isDisabled = false, onClick, className = '', dataTab
+    tab, isActive, isDisabled = false, onClick, className = '', dataTab, hideIndicator = false
 }) => {
     const baseClasses = 'text-[12px] tracking-widest whitespace-nowrap pb-3'
     const stateClasses = isActive
@@ -46,7 +48,7 @@ const TabButton: React.FC<TabButtonProps> = ({
             : 'cursor-pointer text-neutral-500 dark:text-neutral-400'
 
     const indicatorClasses = `absolute -bottom-3 left-0 right-0 z-10 h-px bg-neutral-800 dark:bg-neutral-100 ${
-        isActive ? 'opacity-100 w-full' : 'opacity-0 w-0'
+        isActive && !hideIndicator ? 'opacity-100 w-full' : 'opacity-0 w-0'
     }`
 
     return (
@@ -57,7 +59,7 @@ const TabButton: React.FC<TabButtonProps> = ({
         >
             <span className="relative inline-block">
                 {tab}
-                <span className={indicatorClasses} />
+                {!hideIndicator && <span className={indicatorClasses} />}
             </span>
         </div>
     )
@@ -132,7 +134,11 @@ const EquipmentIndicator: React.FC<EquipmentIndicatorProps> = ({
 
     // 使用工厂函数创建处理器
     const handlers = {
-        equipment: createHandler((id: string) => onEquipmentSelect(id)),
+        equipment: createHandler((id: string) => {
+            onEquipmentSelect(id);
+            // 保存器具选择到缓存
+            saveStringState('brewing-equipment', 'selectedEquipment', id);
+        }),
         add: createHandler(() => onAddEquipment()),
         menuToggle: async (equipmentId: string, e: React.MouseEvent) => {
             await triggerHaptic()
@@ -609,6 +615,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                             isActive={activeMainTab === '冲煮'}
                                             onClick={() => handleMainTabClick('冲煮')}
                                             dataTab="冲煮"
+                                            hideIndicator={true}
                                         />
                                     </div>
                                     <div
@@ -622,6 +629,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                             isActive={activeMainTab === '咖啡豆'}
                                             onClick={() => handleMainTabClick('咖啡豆')}
                                             dataTab="咖啡豆"
+                                            hideIndicator={true}
                                         />
                                     </div>
                                     <div
@@ -635,6 +643,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                             isActive={activeMainTab === '笔记'}
                                             onClick={() => handleMainTabClick('笔记')}
                                             dataTab="笔记"
+                                            hideIndicator={true}
                                         />
                                     </div>
                                 </div>
@@ -661,15 +670,16 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                             }}
                         >
                             {/* 参数栏 - 添加高度动画 */}
-                            <AnimatePresence mode="sync">
+                            <AnimatePresence mode="wait">
                                 {shouldShowParams && (
                                     <motion.div
                                         initial={{ height: 0, opacity: 0 }}
                                         animate={{ height: "auto", opacity: 1 }}
                                         exit={{ height: 0, opacity: 0 }}
                                         transition={{
-                                            duration: 0.2,
-                                            ease: "easeOut"
+                                            duration: 0.3,
+                                            ease: [0.4, 0, 0.2, 1],
+                                            opacity: { duration: 0.2 }
                                         }}
                                         className="overflow-hidden"
                                     >
@@ -808,21 +818,33 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                 )}
                             </AnimatePresence>
 
-                            {/* 器具分类栏 - 只在方案步骤时显示 */}
-                            {activeBrewingStep === 'method' && (
-                                <div className="mx-6">
-                                    <EquipmentIndicator
-                                        selectedEquipment={selectedEquipment}
-                                        customEquipments={customEquipments}
-                                        onEquipmentSelect={onEquipmentSelect || (() => {})}
-                                        onAddEquipment={onAddEquipment || (() => {})}
-                                        onEditEquipment={onEditEquipment || (() => {})}
-                                        onDeleteEquipment={onDeleteEquipment || (() => {})}
-                                        onShareEquipment={onShareEquipment || (() => {})}
-                                        settings={settings}
-                                    />
-                                </div>
-                            )}
+                            {/* 器具分类栏 - 只在方案步骤时显示，添加动画效果 */}
+                            <AnimatePresence mode="wait">
+                                {activeBrewingStep === 'method' && (
+                                    <motion.div
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: "auto", opacity: 1 }}
+                                        exit={{ height: 0, opacity: 0 }}
+                                        transition={{
+                                            duration: 0.3,
+                                            ease: [0.4, 0, 0.2, 1],
+                                            opacity: { duration: 0.2 }
+                                        }}
+                                        className="overflow-hidden mx-6"
+                                    >
+                                            <EquipmentIndicator
+                                                selectedEquipment={selectedEquipment}
+                                                customEquipments={customEquipments}
+                                                onEquipmentSelect={onEquipmentSelect || (() => {})}
+                                                onAddEquipment={onAddEquipment || (() => {})}
+                                                onEditEquipment={onEditEquipment || (() => {})}
+                                                onDeleteEquipment={onDeleteEquipment || (() => {})}
+                                                onShareEquipment={onShareEquipment || (() => {})}
+                                                settings={settings}
+                                            />
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
                         </motion.div>
                     )}
                 </AnimatePresence>
