@@ -125,7 +125,7 @@ const TabContent: React.FC<TabContentProps> = ({
     _showImportForm,
     setShowImportForm,
     settings,
-    onEquipmentSelect,
+    onEquipmentSelect: _onEquipmentSelect,
     onMethodSelect,
     onCoffeeBeanSelect,
     onEditMethod,
@@ -140,7 +140,7 @@ const TabContent: React.FC<TabContentProps> = ({
     handleSaveEquipment: _handleSaveEquipment,
     handleDeleteEquipment,
     _onShareMethod,
-    setShowEquipmentImportForm,
+    setShowEquipmentImportForm: _setShowEquipmentImportForm,
 }) => {
     // 笔记表单状态
     const [noteSaved, setNoteSaved] = useState(false);

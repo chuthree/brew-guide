@@ -145,4 +145,4 @@ const nextConfig = {
 // 应用 PWA 配置
 const withPWAConfig = nextPWA(pwaConfig);
 // next-pwa 类型定义问题
-export default withPWAConfig(nextConfig); 
+export default withPWAConfig(nextConfig);
