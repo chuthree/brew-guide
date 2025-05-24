@@ -46,12 +46,11 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({
         if (pendingGrinderId && settings.customGrinders) {
             const grinder = settings.customGrinders.find(g => g.id === pendingGrinderId)
             if (grinder) {
-                console.log('检测到新磨豆机已添加，自动选择:', pendingGrinderId, grinder.name)
                 handleChange('grindType', pendingGrinderId)
                 setPendingGrinderId(null)
             }
         }
-    }, [settings.customGrinders, pendingGrinderId]) // 移除 handleChange 依赖
+    }, [settings.customGrinders, pendingGrinderId])
 
     // 获取所有磨豆机（包括自定义的和添加选项）- 使用 useMemo 缓存
     const allGrinders = useMemo(() => {
@@ -145,8 +144,6 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({
                     : grinder
             )
 
-            console.log('更新自定义磨豆机:', editingCustomId, updatedGrinders)
-
             // 设置待处理的磨豆机ID
             setPendingGrinderId(editingCustomId)
             // 更新磨豆机列表
@@ -162,7 +159,6 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({
             }
 
             const updatedGrinders = [...customGrinders, newGrinder]
-            console.log('创建新自定义磨豆机:', newGrinderId, updatedGrinders)
 
             // 设置待处理的磨豆机ID
             setPendingGrinderId(newGrinderId)
@@ -173,12 +169,10 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({
         // 重置表单
         setIsCreatingCustom(false)
         setEditingCustomId(null)
-
-        console.log('保存完成，当前磨豆机类型:', settings.grindType)
     }
 
     // 删除自定义磨豆机
-    const deleteCustomGrinder = async (grinderId: string) => {
+    const deleteCustomGrinder = (grinderId: string) => {
         if (confirm('确定要删除这个自定义磨豆机吗？')) {
             const customGrinders = settings.customGrinders || []
             const updatedGrinders = customGrinders.filter(grinder => grinder.id !== grinderId)
@@ -190,8 +184,6 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({
 
             // 然后删除磨豆机
             handleChange('customGrinders', updatedGrinders)
-
-            console.log('删除磨豆机:', grinderId, '剩余磨豆机:', updatedGrinders.length)
         }
     }
 
@@ -320,27 +312,15 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({
         }
 
         const selectedGrinder = allGrinders.find(g => g.id === settings.grindType);
-
-        // 只在找不到磨豆机时输出调试信息
-        if (!selectedGrinder && settings.grindType !== 'generic') {
-            console.log('未找到磨豆机:', {
-                grindType: settings.grindType,
-                availableIds: allGrinders.map(g => g.id),
-                customGrinders: settings.customGrinders?.map(g => ({ id: g.id, name: g.name })) || []
-            });
-        }
-
         return selectedGrinder ? selectedGrinder.name : '选择磨豆机';
     }, [settings.grindType, allGrinders, editingCustomId]);
 
     // 处理磨豆机类型变更
     const handleGrinderChange = (value: string) => {
-        console.log('磨豆机类型变更:', value);
-
         // 如果选择的是"添加自定义磨豆机"，则开始创建流程
         if (value === 'add_custom') {
             startCreatingCustomGrinder();
-            handleChange('grindType', 'add_custom'); // 设置为 add_custom 以显示正确的名称
+            handleChange('grindType', 'add_custom');
             return;
         }
 
@@ -360,6 +340,118 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({
                 hapticsUtils.medium();
             }
         }
+    };
+
+    // 渲染磨豆机参考信息
+    const renderGrinderReference = () => {
+        if (settings.grindType === 'add_custom') {
+            return null;
+        }
+
+        const selectedGrinder = allGrinders.find(g => g.id === settings.grindType);
+
+        if (!selectedGrinder || !selectedGrinder.grindSizes || Object.keys(selectedGrinder.grindSizes).length === 0) {
+            return null;
+        }
+
+        const { basicGrindSizes, applicationGrindSizes } = getCategorizedGrindSizes(settings.grindType, settings.customGrinders);
+
+        const elements = [];
+
+        // 基础研磨度部分
+        elements.push(
+            <div key="basic-grind-sizes" className="mb-3">
+                <p className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-2">
+                    基础研磨度:
+                </p>
+                <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+                    {Object.entries(basicGrindSizes).map(([key, value]) => (
+                        <div key={key} className="flex justify-between text-sm text-neutral-700 dark:text-neutral-300">
+                            <span className="font-medium">{key}</span>
+                            <span>{value}</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+
+        // 特定应用研磨度部分
+        if (Object.keys(applicationGrindSizes).length > 0) {
+            elements.push(
+                <div key="application-grind-sizes" className="mb-3">
+                    <p className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-2">
+                        特定应用研磨度:
+                    </p>
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+                        {Object.entries(applicationGrindSizes).map(([key, value]) => (
+                            <div key={key} className="flex justify-between text-sm text-neutral-700 dark:text-neutral-300">
+                                <span className="font-medium">{key}</span>
+                                <span>{value as string}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
+        // 自定义磨豆机操作按钮
+        if ('isCustom' in selectedGrinder && selectedGrinder.isCustom) {
+            elements.push(
+                <div key="custom-grinder-actions" className="mt-3 pt-3 border-t border-neutral-200 dark:border-neutral-700">
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-3">
+                        自定义磨豆机操作
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                        <button
+                            onClick={() => startEditingCustomGrinder(selectedGrinder as CustomGrinder)}
+                            className="px-3 py-1.5 text-xs font-medium bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+                        >
+                            编辑
+                        </button>
+                        <button
+                            onClick={() => deleteCustomGrinder(selectedGrinder.id)}
+                            className="px-3 py-1.5 text-xs font-medium bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+                        >
+                            删除
+                        </button>
+                        <button
+                            onClick={() => exportCustomGrinder(selectedGrinder as CustomGrinder)}
+                            className="px-3 py-1.5 text-xs font-medium bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+                        >
+                            导出
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        // 数据来源和用户调研信息 - 对所有磨豆机显示
+        elements.push(
+            <div key="data-source" className="mt-3 pt-3 border-t border-neutral-200 dark:border-neutral-700">
+                <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                    数据来源：网络收集和用户调研，仅供参考
+                </p>
+                <div className="mt-2">
+                    <a
+                        href="https://wj.qq.com/s2/19815833/44ae/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-blue-600 dark:text-blue-400 flex items-center"
+                    >
+                        <span>→ 参与研磨度调研问卷</span>
+                    </a>
+                </div>
+            </div>
+        );
+
+        return (
+            <div className="mt-3 border-l-2 border-neutral-300 dark:border-neutral-700 pl-4 py-2">
+                <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-3">
+                    {selectedGrinder.name} 研磨度参考
+                </p>
+                {elements}
+            </div>
+        );
     };
 
     return (
@@ -432,209 +524,106 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({
             </div>
 
             {/* Display grinder specific reference grind sizes if available */}
-            {(() => {
-                // 如果选择的是"添加自定义磨豆机"，显示编辑界面
-                if (settings.grindType === 'add_custom') {
-                    return (
-                        <div className="mt-3 border-l-2 border-blue-300 dark:border-blue-700 pl-4 py-2">
-                            <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-3">
-                                {editingCustomId ? '编辑自定义磨豆机' : '创建自定义磨豆机'}
-                            </p>
+            {settings.grindType === 'add_custom' && (
+                <div className="mt-3 border-l-2 border-neutral-300 dark:border-neutral-700 pl-4 py-2">
+                    <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-3">
+                        {editingCustomId ? '编辑自定义磨豆机' : '创建自定义磨豆机'}
+                    </p>
 
-                            {/* 磨豆机名称输入 */}
-                            <div className="mb-4">
-                                <label className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-2 block">
-                                    磨豆机名称:
-                                </label>
-                                <input
-                                    type="text"
-                                    value={customGrinderForm.name}
-                                    onChange={(e) => setCustomGrinderForm(prev => ({ ...prev, name: e.target.value }))}
-                                    placeholder="请输入磨豆机名称"
-                                    className="w-full px-3 py-2 text-sm bg-neutral-100 dark:bg-neutral-800 border border-neutral-200/50 dark:border-neutral-700 rounded-lg text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-1 focus:ring-neutral-500"
-                                />
-                            </div>
+                    {/* 磨豆机名称输入 */}
+                    <div className="mb-4">
+                        <label className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-2 block">
+                            磨豆机名称:
+                        </label>
+                        <input
+                            type="text"
+                            value={customGrinderForm.name}
+                            onChange={(e) => setCustomGrinderForm(prev => ({ ...prev, name: e.target.value }))}
+                            placeholder="请输入磨豆机名称"
+                            className="w-full px-3 py-2 text-sm bg-neutral-100 dark:bg-neutral-800 border border-neutral-200/50 dark:border-neutral-700 rounded-lg text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-1 focus:ring-neutral-500"
+                        />
+                    </div>
 
-                            {/* 基础研磨度部分 */}
-                            <div className="mb-3">
-                                <p className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-2">
-                                    基础研磨度:
-                                </p>
-                                <div className="grid grid-cols-2 gap-x-6 gap-y-2">
-                                    {['极细', '特细', '细', '中细', '中细偏粗', '中粗', '粗', '特粗'].map((key) => (
-                                        <div key={key} className="flex justify-between text-sm text-neutral-700 dark:text-neutral-300">
-                                            <span className="font-medium">{key}</span>
-                                            <input
-                                                type="text"
-                                                value={customGrinderForm.grindSizes[key as keyof typeof customGrinderForm.grindSizes]}
-                                                onChange={(e) => setCustomGrinderForm(prev => ({
-                                                    ...prev,
-                                                    grindSizes: {
-                                                        ...prev.grindSizes,
-                                                        [key]: e.target.value
-                                                    }
-                                                }))}
-                                                placeholder="如: 1-2格"
-                                                className="w-20 px-2 py-1 text-xs bg-neutral-100 dark:bg-neutral-800 border border-neutral-200/50 dark:border-neutral-700 rounded text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-1 focus:ring-neutral-500"
-                                            />
-                                        </div>
-                                    ))}
+                    {/* 基础研磨度部分 */}
+                    <div className="mb-3">
+                        <p className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-2">
+                            基础研磨度:
+                        </p>
+                        <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+                            {['极细', '特细', '细', '中细', '中细偏粗', '中粗', '粗', '特粗'].map((key) => (
+                                <div key={key} className="flex justify-between text-sm text-neutral-700 dark:text-neutral-300">
+                                    <span className="font-medium">{key}</span>
+                                    <input
+                                        type="text"
+                                        value={customGrinderForm.grindSizes[key as keyof typeof customGrinderForm.grindSizes]}
+                                        onChange={(e) => setCustomGrinderForm(prev => ({
+                                            ...prev,
+                                            grindSizes: {
+                                                ...prev.grindSizes,
+                                                [key]: e.target.value
+                                            }
+                                        }))}
+                                        placeholder="如: 1-2格"
+                                        className="w-20 px-2 py-1 text-xs bg-neutral-100 dark:bg-neutral-800 border border-neutral-200/50 dark:border-neutral-700 rounded text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-1 focus:ring-neutral-500"
+                                    />
                                 </div>
-                            </div>
-
-                            {/* 特定应用研磨度部分 */}
-                            <div className="mb-3">
-                                <p className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-2">
-                                    特定应用研磨度:
-                                </p>
-                                <div className="grid grid-cols-2 gap-x-6 gap-y-2">
-                                    {['意式', '摩卡壶', '手冲', '法压壶', '冷萃'].map((key) => (
-                                        <div key={key} className="flex justify-between text-sm text-neutral-700 dark:text-neutral-300">
-                                            <span className="font-medium">{key}</span>
-                                            <input
-                                                type="text"
-                                                value={customGrinderForm.grindSizes[key as keyof typeof customGrinderForm.grindSizes]}
-                                                onChange={(e) => setCustomGrinderForm(prev => ({
-                                                    ...prev,
-                                                    grindSizes: {
-                                                        ...prev.grindSizes,
-                                                        [key]: e.target.value
-                                                    }
-                                                }))}
-                                                placeholder="如: 2-4格"
-                                                className="w-20 px-2 py-1 text-xs bg-neutral-100 dark:bg-neutral-800 border border-neutral-200/50 dark:border-neutral-700 rounded text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-1 focus:ring-neutral-500"
-                                            />
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* 操作按钮 */}
-                            <div className="flex gap-2 mt-4">
-                                <button
-                                    onClick={saveCustomGrinder}
-                                    className="px-3 py-1.5 text-xs font-medium bg-neutral-700 dark:bg-neutral-600 text-white rounded-lg hover:bg-neutral-800 dark:hover:bg-neutral-500 transition-colors"
-                                >
-                                    保存
-                                </button>
-                                <button
-                                    onClick={cancelEditing}
-                                    className="px-3 py-1.5 text-xs font-medium bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
-                                >
-                                    取消
-                                </button>
-                                <button
-                                    onClick={importCustomGrinder}
-                                    className="px-3 py-1.5 text-xs font-medium bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
-                                >
-                                    导入配置
-                                </button>
-                            </div>
+                            ))}
                         </div>
-                    );
-                }
+                    </div>
 
-                // 显示选中磨豆机的参考研磨度
-                const selectedGrinder = allGrinders.find(g => g.id === settings.grindType);
-
-                if (selectedGrinder && selectedGrinder.grindSizes && Object.keys(selectedGrinder.grindSizes).length > 0) {
-                    const { basicGrindSizes, applicationGrindSizes } = getCategorizedGrindSizes(settings.grindType, settings.customGrinders);
-
-                    return (
-                        <div className="mt-3 border-l-2 border-neutral-300 dark:border-neutral-700 pl-4 py-2">
-                            <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-3">
-                                {selectedGrinder.name} 研磨度参考
-                            </p>
-
-                            {/* 基础研磨度部分 */}
-                            <div className="mb-3">
-                                <p className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-2">
-                                    基础研磨度:
-                                </p>
-                                <div className="grid grid-cols-2 gap-x-6 gap-y-2">
-                                    {Object.entries(basicGrindSizes).map(([key, value]) => (
-                                        <div key={key} className="flex justify-between text-sm text-neutral-700 dark:text-neutral-300">
-                                            <span className="font-medium">{key}</span>
-                                            <span>{value}</span>
-                                        </div>
-                                    ))}
+                    {/* 特定应用研磨度部分 */}
+                    <div className="mb-3">
+                        <p className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-2">
+                            特定应用研磨度:
+                        </p>
+                        <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+                            {['意式', '摩卡壶', '手冲', '法压壶', '冷萃'].map((key) => (
+                                <div key={key} className="flex justify-between text-sm text-neutral-700 dark:text-neutral-300">
+                                    <span className="font-medium">{key}</span>
+                                    <input
+                                        type="text"
+                                        value={customGrinderForm.grindSizes[key as keyof typeof customGrinderForm.grindSizes]}
+                                        onChange={(e) => setCustomGrinderForm(prev => ({
+                                            ...prev,
+                                            grindSizes: {
+                                                ...prev.grindSizes,
+                                                [key]: e.target.value
+                                            }
+                                        }))}
+                                        placeholder="如: 2-4格"
+                                        className="w-20 px-2 py-1 text-xs bg-neutral-100 dark:bg-neutral-800 border border-neutral-200/50 dark:border-neutral-700 rounded text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-1 focus:ring-neutral-500"
+                                    />
                                 </div>
-                            </div>
-
-                            {/* 特定应用研磨度部分 */}
-                            {(() => {
-                                if (Object.keys(applicationGrindSizes).length > 0) {
-                                    return (
-                                        <div className="mb-3">
-                                            <p className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-2">
-                                                特定应用研磨度:
-                                            </p>
-                                            <div className="grid grid-cols-2 gap-x-6 gap-y-2">
-                                                {Object.entries(applicationGrindSizes).map(([key, value]) => (
-                                                    <div key={key} className="flex justify-between text-sm text-neutral-700 dark:text-neutral-300">
-                                                        <span className="font-medium">{key}</span>
-                                                        <span>{value}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    );
-                                }
-                                return null;
-                            })()}
-
-                            {/* 自定义磨豆机操作按钮 */}
-                            {'isCustom' in selectedGrinder && selectedGrinder.isCustom && (
-                                <div className="mt-3 pt-3 border-t border-neutral-200 dark:border-neutral-700">
-                                    <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-3">
-                                        自定义磨豆机操作
-                                    </p>
-                                    <div className="flex flex-wrap gap-2">
-                                        <button
-                                            onClick={() => startEditingCustomGrinder(selectedGrinder as CustomGrinder)}
-                                            className="px-3 py-1.5 text-xs font-medium bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
-                                        >
-                                            编辑
-                                        </button>
-                                        <button
-                                            onClick={() => deleteCustomGrinder(selectedGrinder.id)}
-                                            className="px-3 py-1.5 text-xs font-medium bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
-                                        >
-                                            删除
-                                        </button>
-                                        <button
-                                            onClick={() => exportCustomGrinder(selectedGrinder as CustomGrinder)}
-                                            className="px-3 py-1.5 text-xs font-medium bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
-                                        >
-                                            导出
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* 数据来源和用户调研信息 - 仅对非自定义磨豆机显示 */}
-                            {!('isCustom' in selectedGrinder) && (
-                                <div className="mt-3 pt-3 border-t border-neutral-200 dark:border-neutral-700">
-                                    <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                                        数据来源：网络收集和用户调研，仅供参考
-                                    </p>
-                                    <div className="mt-2">
-                                        <a
-                                            href="https://wj.qq.com/s2/19815833/44ae/"
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-xs text-blue-600 dark:text-blue-400 flex items-center"
-                                        >
-                                            <span>→ 参与研磨度调研问卷</span>
-                                        </a>
-                                    </div>
-                                </div>
-                            )}
+                            ))}
                         </div>
-                    );
-                }
-                return null;
-            })()}
+                    </div>
+
+                    {/* 操作按钮 */}
+                    <div className="flex gap-2 mt-4">
+                        <button
+                            onClick={saveCustomGrinder}
+                            className="px-3 py-1.5 text-xs font-medium bg-neutral-700 dark:bg-neutral-600 text-white rounded-lg hover:bg-neutral-800 dark:hover:bg-neutral-500 transition-colors"
+                        >
+                            保存
+                        </button>
+                        <button
+                            onClick={cancelEditing}
+                            className="px-3 py-1.5 text-xs font-medium bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+                        >
+                            取消
+                        </button>
+                        <button
+                            onClick={importCustomGrinder}
+                            className="px-3 py-1.5 text-xs font-medium bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+                        >
+                            导入配置
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* 显示选中磨豆机的参考研磨度 */}
+            {renderGrinderReference()}
         </div>
     );
 };
