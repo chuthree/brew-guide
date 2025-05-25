@@ -157,6 +157,14 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
     }, 0);
   }, [])
 
+  // 处理跳过方案选择
+  const handleSkipMethodSelection = useCallback(() => {
+    // 清空方案选择
+    setSelectedMethod('')
+    // 直接跳转到笔记表单步骤
+    setCurrentStep(2) // 假设笔记表单是第3步（索引为2）
+  }, [])
+
   // 计算咖啡粉量
   const getCoffeeAmount = () => {
     if (selectedMethod) {
@@ -211,7 +219,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
 
     return {
       equipment: selectedEquipment,
-      method: selectedMethod,
+      method: selectedMethod || '', // 如果没有选择方案，使用空字符串
       coffeeBean: selectedCoffeeBean,
       coffeeBeanInfo: selectedCoffeeBean ? {
         name: selectedCoffeeBean.name || '',
@@ -248,7 +256,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
   // 处理保存笔记
   const handleSaveNote = (note: BrewingNoteData) => {
     // 获取方案名称
-    let methodName = selectedMethod
+    let methodName = selectedMethod || '' // 如果没有选择方案，使用空字符串
 
     if (selectedMethod) {
       // 合并所有方案以便查找
@@ -340,11 +348,12 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
               commonMethods={selectedEquipment ? (commonMethods as any)[selectedEquipment] || [] : []}
               onMethodSelect={setSelectedMethod}
               onParamsChange={_handleMethodParamsChange}
+              onSkipMethodSelection={handleSkipMethodSelection}
             />
           )}
         </div>
       ),
-      isValid: !!selectedEquipment && !!selectedMethod
+      isValid: !!selectedEquipment // 只要选择了设备就有效，方案选择是可选的
     },
     {
       id: 'note-form',

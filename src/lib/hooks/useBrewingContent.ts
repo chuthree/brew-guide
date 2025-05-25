@@ -159,8 +159,8 @@ export function useBrewingContent({
 								baseEquipmentId = '';
 								break;
 							case 'custom':
-								// 自定义预设器具默认使用V60方案
-								baseEquipmentId = 'V60';
+								// 自定义预设器具不使用任何通用方案
+								baseEquipmentId = '';
 								break;
 							default:
 								baseEquipmentId = 'V60'; // 默认使用 V60 的方案

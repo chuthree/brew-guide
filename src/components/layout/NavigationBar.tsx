@@ -496,11 +496,20 @@ const NAVIGABLE_STEPS: Record<BrewingStep, BrewingStep | null> = {
 }
 
 // 自定义Hook：处理导航逻辑
-const useNavigation = (activeBrewingStep: BrewingStep, hasCoffeeBeans?: boolean) => {
+const useNavigation = (activeBrewingStep: BrewingStep, activeMainTab: MainTabType, hasCoffeeBeans?: boolean) => {
     const canGoBack = useCallback((): boolean => {
+        // 如果当前在笔记页面，不显示返回按钮
+        if (activeMainTab === '笔记') return false
+
+        // 如果当前在咖啡豆页面，不显示返回按钮
+        if (activeMainTab === '咖啡豆') return false
+
+        // 只有在冲煮页面才考虑返回逻辑
+        if (activeMainTab !== '冲煮') return false
+
         if (activeBrewingStep === 'method' && !hasCoffeeBeans) return false
         return NAVIGABLE_STEPS[activeBrewingStep] !== null
-    }, [activeBrewingStep, hasCoffeeBeans])
+    }, [activeBrewingStep, activeMainTab, hasCoffeeBeans])
 
     return { canGoBack }
 }
@@ -515,7 +524,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
     onAddEquipment, onEditEquipment, onDeleteEquipment, onShareEquipment, onBackClick,
 }) => {
     const t = useTranslations('nav')
-    const { canGoBack } = useNavigation(activeBrewingStep, hasCoffeeBeans)
+    const { canGoBack } = useNavigation(activeBrewingStep, activeMainTab, hasCoffeeBeans)
 
 
 

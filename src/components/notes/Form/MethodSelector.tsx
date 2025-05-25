@@ -10,6 +10,7 @@ interface MethodSelectorProps {
   commonMethods: Method[]
   onMethodSelect: (methodId: string) => void
   onParamsChange: (method: Method) => void
+  onSkipMethodSelection?: () => void // 新增：跳过方案选择的回调
 }
 
 const MethodSelector: React.FC<MethodSelectorProps> = ({
@@ -18,7 +19,8 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
   customMethods,
   commonMethods,
   onMethodSelect,
-  onParamsChange
+  onParamsChange,
+  onSkipMethodSelection
 }) => {
   // 本地状态管理参数
   const [coffeeAmount, setCoffeeAmount] = useState<string>('15')
@@ -33,15 +35,15 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
     const regex = /^$|^[0-9]*\.?[0-9]*$/;
     if (regex.test(value)) {
       setCoffeeAmount(value)
-      
+
       // 更新方法参数
       method.params.coffee = `${value}g`
-      
+
       // 计算并更新水量
       if (value && ratioAmount && value !== '.') {
         const coffeeValue = parseFloat(value)
         const ratioValue = parseFloat(ratioAmount)
-        
+
         if (!isNaN(coffeeValue) && !isNaN(ratioValue) && coffeeValue > 0) {
           const waterValue = coffeeValue * ratioValue
           // 四舍五入到整数
@@ -50,7 +52,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
           setWaterAmount(`${roundedWaterValue}g`)
         }
       }
-      
+
       // 通知父组件参数已更改
       onParamsChange(method)
     }
@@ -62,15 +64,15 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
     const regex = /^$|^[0-9]*\.?[0-9]*$/;
     if (regex.test(value)) {
       setRatioAmount(value)
-      
+
       // 更新方法参数
       method.params.ratio = `1:${value}`
-      
+
       // 计算并更新水量
       if (coffeeAmount && value && value !== '.') {
         const coffeeValue = parseFloat(coffeeAmount)
         const ratioValue = parseFloat(value)
-        
+
         if (!isNaN(coffeeValue) && !isNaN(ratioValue) && coffeeValue > 0) {
           const waterValue = coffeeValue * ratioValue
           // 四舍五入到整数
@@ -79,7 +81,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
           setWaterAmount(`${roundedWaterValue}g`)
         }
       }
-      
+
       // 通知父组件参数已更改
       onParamsChange(method)
     }
@@ -88,14 +90,14 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
   // 处理研磨度变化
   const handleGrindSizeChange = (value: string, method: Method) => {
     setGrindSize(value)
-    
+
     // 更新方法参数
     method.params.grindSize = value
-    
+
     // 通知父组件参数已更改
     onParamsChange(method)
   }
-  
+
   // 处理水温变化
   // 未使用的水温变更处理函数，可以在将来实现
 
@@ -105,13 +107,13 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
       // 在所有方案中查找选中的方案
       const allMethods = [...customMethods, ...commonMethods];
       const method = allMethods.find(m => m.id === selectedMethod || m.name === selectedMethod);
-      
+
       if (method) {
         // 提取参数到本地状态
         const coffee = extractNumber(method.params.coffee)
         const ratio = extractRatioNumber(method.params.ratio)
         const temp = method.params.temp.replace('°C', '')
-        
+
         setCoffeeAmount(coffee)
         setRatioAmount(ratio)
         setWaterAmount(method.params.water)
@@ -126,7 +128,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
     const match = str.match(/(\d+(\.\d+)?)/);
     return match ? match[0] : '';
   }
-  
+
   // 辅助函数：从水粉比中提取数字部分
   function extractRatioNumber(ratio: string): string {
     const match = ratio.match(/1:(\d+(\.\d+)?)/);
@@ -150,13 +152,13 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
   // 渲染单个方案
   const renderMethod = (method: Method, isCustom: boolean) => {
     const isSelected = isMethodSelected(method);
-    
+
     return (
       <div
         key={isCustom ? (method.id || method.name) : method.name}
         className="group relative text-neutral-500 dark:text-neutral-400"
       >
-        <div 
+        <div
           className={`group relative border-l ${isSelected ? 'border-neutral-800 dark:border-white' : 'border-neutral-200 dark:border-neutral-800'} pl-6 cursor-pointer`}
           onClick={() => {
             // 统一优先使用ID作为标识符，确保一致性
@@ -174,7 +176,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
               </h3>
             </div>
           </div>
-          
+
           {!isSelected && (
             <div className="mt-1.5 space-y-0.5">
               <div className="flex items-center">
@@ -195,7 +197,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
               </div>
             </div>
           )}
-          
+
           {isSelected && (
             <div className="mt-2 pt-2 border-t border-dashed border-neutral-200 dark:border-neutral-700" onClick={(e) => e.stopPropagation()}>
               <div className="space-y-2">
@@ -213,7 +215,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
                     <span className="ml-0.5 text-xs text-neutral-600 dark:text-neutral-400">g</span>
                   </div>
                 </div>
-                
+
                 {/* 水量 - 不可编辑，仅显示计算结果 */}
                 <div className="flex items-center">
                   <label className="text-xs text-neutral-600 dark:text-neutral-400 w-14">水量:</label>
@@ -221,7 +223,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
                     <span className="text-xs text-neutral-700 dark:text-neutral-300">{waterAmount}</span>
                   </div>
                 </div>
-                
+
                 {/* 粉水比 */}
                 <div className="flex items-center">
                   <label className="text-xs text-neutral-600 dark:text-neutral-400 w-14">粉水比:</label>
@@ -236,7 +238,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
                     />
                   </div>
                 </div>
-                
+
                 {/* 研磨度 */}
                 <div className="flex items-center">
                   <label className="text-xs text-neutral-600 dark:text-neutral-400 w-14">研磨度:</label>
@@ -267,19 +269,40 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
             {customMethods.length > 0 && (
               customMethods.map((method) => renderMethod(method, true))
             )}
-            
+
             {/* 分隔符 */}
             {divider}
-            
+
             {/* 通用方案 */}
             {commonMethods.length > 0 ? (
               commonMethods.map((method) => renderMethod(method, false))
             ) : (
               !customMethods.length && (
                 <div className="text-xs text-neutral-500 dark:text-neutral-400 border-l border-neutral-200 dark:border-neutral-800 pl-6">
-                  没有可用的冲煮方案
+                  没有可用的冲煮方案，请前往“冲煮”页面添加
                 </div>
               )
+            )}
+
+            {/* 跳过方案选择选项 - 始终显示（如果提供了回调函数） */}
+            {onSkipMethodSelection && (
+              <div
+                className="group relative border-l border-neutral-200 dark:border-neutral-800 pl-6 cursor-pointer text-neutral-500 dark:text-neutral-400 mt-4"
+                onClick={onSkipMethodSelection}
+              >
+                <div className="cursor-pointer">
+                  <div className="flex items-baseline justify-between">
+                    <div className="flex items-baseline gap-3 min-w-0 overflow-hidden">
+                      <h3 className="text-xs font-normal tracking-wider truncate">
+                        跳过方案选择
+                      </h3>
+                    </div>
+                  </div>
+                  <div className="mt-2">
+                    <p className="text-xs font-light">直接跳到记录</p>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
         ) : (
@@ -292,4 +315,4 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
   )
 }
 
-export default MethodSelector 
+export default MethodSelector

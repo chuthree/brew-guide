@@ -284,38 +284,44 @@ export function useMethodSelector({
 				step ? `带自定义参数: ${JSON.stringify(step.customParams)}` : "无自定义参数"
 			);
 
+			// 检查设备选择是否有效
+			if (!selectedEquipment || selectedEquipment.trim() === '') {
+				console.error("设备选择无效:", { selectedEquipment, methodIndex, methodType });
+				return null;
+			}
+
 			// 创建一个辅助函数来应用自定义参数
 			const applyCustomParams = async (method: Method, customParams?: Record<string, string>, isCustomMethod: boolean = false) => {
 				if (customParams) {
 					// 创建方法的浅拷贝
 					const methodCopy = { ...method };
-					
+
 					// 创建参数的浅拷贝
 					methodCopy.params = { ...method.params };
-					
+
 					// 应用自定义参数到方法参数中
 					Object.entries(customParams).forEach(([key, value]) => {
 						// 直接检查关键字段并跳过stages
 						if (key === 'stages') {
 							return; // 跳过stages字段
 						}
-						
+
 						if (key in methodCopy.params) {
 							// 使用类型断言避开TypeScript类型检查
 							// @ts-expect-error 自定义参数只应用于标量值，不应应用于stages数组
 							methodCopy.params[key] = String(value);
 						}
 					});
-					
+
 					console.log(
-						isCustomMethod ? "应用自定义参数到自定义方法:" : "应用自定义参数:", 
+						isCustomMethod ? "应用自定义参数到自定义方法:" : "应用自定义参数:",
 						customParams
 					);
 					console.log(
-						isCustomMethod ? "修改后的自定义方法参数:" : "修改后的方法参数:", 
+						isCustomMethod ? "修改后的自定义方法参数:" : "修改后的方法参数:",
 						methodCopy.params
 					);
-					
+
 					// 使用修改后的方法
 					await processSelectedMethod(methodCopy);
 					return methodCopy;
@@ -337,7 +343,7 @@ export function useMethodSelector({
 					) {
 						method =
 							customMethods[selectedEquipment][methodIndex];
-						
+
 						// 使用辅助函数应用自定义参数
 						method = await applyCustomParams(method, step?.customParams);
 					} else {
@@ -364,15 +370,15 @@ export function useMethodSelector({
 						commonMethods[selectedEquipment][methodIndex]
 					) {
 						method = commonMethods[selectedEquipment][methodIndex];
-						
+
 						// 使用辅助函数应用自定义参数
 						method = await applyCustomParams(method, step?.customParams);
-					} 
+					}
 					// 如果直接获取失败，检查是否为自定义器具的通用方法
 					else if (selectedEquipment && selectedEquipment.startsWith('custom-')) {
 						// 尝试解析自定义器具类型
 						let baseEquipmentId = '';
-						
+
 						// 从自定义器具ID中识别其基础类型
 						if (selectedEquipment.includes('-v60-')) {
 							baseEquipmentId = 'V60';
@@ -383,17 +389,17 @@ export function useMethodSelector({
 						} else if (selectedEquipment.includes('-origami-')) {
 							baseEquipmentId = 'Origami';
 						}
-						
+
 						// 如果识别出基础器具类型，尝试获取对应的通用方法
 						if (
-							baseEquipmentId && 
-							commonMethods && 
-							commonMethods[baseEquipmentId] && 
+							baseEquipmentId &&
+							commonMethods &&
+							commonMethods[baseEquipmentId] &&
 							commonMethods[baseEquipmentId][methodIndex]
 						) {
 							console.log(`使用${baseEquipmentId}的通用方法`);
 							method = commonMethods[baseEquipmentId][methodIndex];
-							
+
 							// 使用辅助函数应用自定义参数
 							method = await applyCustomParams(method, step?.customParams);
 						} else {
@@ -426,7 +432,7 @@ export function useMethodSelector({
 					) {
 						method =
 							customMethods[selectedEquipment][methodIndex];
-						
+
 						// 使用辅助函数应用自定义参数（标记为自定义方法）
 						method = await applyCustomParams(method, step?.customParams, true);
 					} else {

@@ -679,6 +679,14 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
         // 确定当前步骤是否可以返回，以及应返回到哪个步骤
         const getBackStep = (): BrewingStep | null => {
+            // 特殊处理：如果是从方案步骤跳过到记录步骤，返回时应该回到方案步骤
+            if (activeBrewingStep === 'notes') {
+                const skipMethodToNotes = localStorage.getItem('skipMethodToNotes');
+                if (skipMethodToNotes === 'true') {
+                    return 'method';
+                }
+            }
+
             // 如果当前是方案步骤且没有咖啡豆，则不允许返回到咖啡豆步骤
             if (activeBrewingStep === 'method' && !hasCoffeeBeans) {
                 return null;
@@ -689,8 +697,22 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         const backStep = getBackStep();
         if (!backStep) return;
 
+        // 处理从记录步骤返回到方案步骤的特殊情况（跳过方案选择）
+        if (activeBrewingStep === 'notes' && backStep === 'method') {
+            // 清除跳过方案选择的标记
+            localStorage.removeItem('skipMethodToNotes');
+
+            // 使用navigateToStep返回到方案步骤
+            navigateToStep(backStep, {
+                force: true,
+                preserveStates: ["all"],
+                preserveCoffeeBean: true,
+                preserveEquipment: true,
+                preserveMethod: false // 不保留方案，因为用户跳过了方案选择
+            });
+        }
         // 处理从注水步骤返回到方案步骤的特殊情况
-        if (activeBrewingStep === 'brewing' && backStep === 'method') {
+        else if (activeBrewingStep === 'brewing' && backStep === 'method') {
             // 设置特殊标记，确保可以正常导航
             localStorage.setItem("fromMethodToBrewing", "true");
 
@@ -720,14 +742,35 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             setIsCoffeeBrewed(false);
         }
 
+        // 确保有有效的设备选择
+        if (!selectedEquipment || selectedEquipment.trim() === '') {
+            console.error("尝试选择方法但没有有效的设备选择:", { selectedEquipment, index, methodType });
+            // 尝试从缓存恢复设备选择
+            const { getSelectedEquipmentPreference } = await import('@/lib/hooks/useBrewingState');
+            const cachedEquipment = getSelectedEquipmentPreference();
+            if (cachedEquipment) {
+                console.log("从缓存恢复设备选择:", cachedEquipment);
+                // 直接使用handleEquipmentSelect来恢复状态
+                handleEquipmentSelect(cachedEquipment);
+                // 延迟执行方法选择，等待设备状态更新
+                setTimeout(() => {
+                    handleMethodSelectWrapper(index, step);
+                }, 100);
+                return;
+            } else {
+                console.error("无法恢复设备选择，缓存中也没有设备信息");
+                return;
+            }
+        }
+
         // 确定使用哪种方法类型：
         // 1. 优先使用step中明确指定的方法类型（使用类型断言访问explicitMethodType）
         // 2. 如果没有明确指定，则使用全局methodType状态
         const effectiveMethodType = (step as ExtendedStep)?.explicitMethodType || methodType;
 
         // 将正确的参数传递给 handleMethodSelect
-        await handleMethodSelect(selectedEquipment || "", index, effectiveMethodType, step);
-    }, [handleMethodSelect, isCoffeeBrewed, setIsCoffeeBrewed, selectedEquipment, methodType]);
+        await handleMethodSelect(selectedEquipment, index, effectiveMethodType, step);
+    }, [handleMethodSelect, isCoffeeBrewed, setIsCoffeeBrewed, selectedEquipment, methodType, handleEquipmentSelect]);
 
     // 处理冲煮完成后自动切换到笔记页面
     useEffect(() => {
@@ -1775,6 +1818,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                         onDeleteMethod={handleDeleteCustomMethod}
                         setActiveMainTab={setActiveMainTab}
                         resetBrewingState={resetBrewingState}
+                        setIsNoteSaved={setIsNoteSaved}
                         customEquipments={customEquipments}
                         setCustomEquipments={setCustomEquipments}
                         expandedStages={expandedStagesRef.current}

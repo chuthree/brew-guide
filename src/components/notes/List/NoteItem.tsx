@@ -17,11 +17,11 @@ const ImageViewer = dynamic(() => import('@/components/common/ui/ImageViewer'), 
 })
 
 // 优化笔记项组件以避免不必要的重渲染
-const NoteItem: React.FC<NoteItemProps> = ({ 
-    note, 
-    equipmentNames, 
-    onEdit, 
-    onDelete, 
+const NoteItem: React.FC<NoteItemProps> = ({
+    note,
+    equipmentNames,
+    onEdit,
+    onDelete,
     unitPriceCache,
     isShareMode = false,
     isSelected = false,
@@ -40,7 +40,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
     const equipmentName = equipmentNames[note.equipment] || note.equipment;
     const beanName = note.coffeeBeanInfo?.name;
     const beanUnitPrice = beanName ? (unitPriceCache[beanName] || 0) : 0;
-    
+
     // 获取用户设置
     useEffect(() => {
         const loadSettings = async () => {
@@ -49,7 +49,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
                 if (settingsStr) {
                     const parsedSettings = JSON.parse(settingsStr) as SettingsOptions;
                     setSettings(parsedSettings);
-                    
+
                     // 获取磨豆机名称
                     if (parsedSettings.grindType !== 'generic') {
                         const grinder = availableGrinders.find(g => g.id === parsedSettings.grindType);
@@ -62,10 +62,10 @@ const NoteItem: React.FC<NoteItemProps> = ({
                 console.error('加载用户设置失败', error);
             }
         };
-        
+
         loadSettings();
     }, []);
-    
+
     // 处理笔记点击事件
     const handleNoteClick = () => {
         if (isShareMode && onToggleSelect) {
@@ -74,9 +74,9 @@ const NoteItem: React.FC<NoteItemProps> = ({
             onEdit(note);
         }
     };
-    
+
     return (
-        <div 
+        <div
             className={`group space-y-3 px-6 py-3 border-b border-neutral-200/60 dark:border-neutral-800/40 last:border-b-0 ${isShareMode ? 'cursor-pointer' : ''} note-item`}
             onClick={isShareMode ? handleNoteClick : undefined}
             data-note-id={note.id}
@@ -86,7 +86,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
                 <div className="flex gap-4">
                     {/* 笔记图片 - 只在有图片时显示 */}
                     {note.image && (
-                        <div 
+                        <div
                             className="h-14 overflow-hidden shrink-0 relative cursor-pointer border border-neutral-200 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800"
                             onClick={(e) => {
                                 e.stopPropagation();
@@ -130,23 +130,45 @@ const NoteItem: React.FC<NoteItemProps> = ({
                         <div className="flex justify-between items-start">
                             <div className="flex-1 min-w-0 overflow-hidden">
                                 <div className="text-[11px] font-normal break-words text-neutral-800 dark:text-neutral-100 pr-2">
-                                    {beanName ? (
-                                        <>
-                                            {beanName}
-                                            <span className="text-neutral-600 dark:text-neutral-400 mx-1">·</span>
-                                            <span className="text-neutral-600 dark:text-neutral-400">{note.method}</span>
-                                        </>
+                                    {/* 根据是否有方案来决定显示内容 */}
+                                    {note.method && note.method.trim() !== '' ? (
+                                        // 有方案时的显示逻辑
+                                        beanName ? (
+                                            <>
+                                                {beanName}
+                                                <span className="text-neutral-600 dark:text-neutral-400 mx-1">·</span>
+                                                <span className="text-neutral-600 dark:text-neutral-400">{note.method}</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                {equipmentName}
+                                                <span className="text-neutral-600 dark:text-neutral-400 mx-1">·</span>
+                                                <span className="text-neutral-600 dark:text-neutral-400">{note.method}</span>
+                                            </>
+                                        )
                                     ) : (
-                                        <>
-                                            {equipmentName}
-                                            <span className="text-neutral-600 dark:text-neutral-400 mx-1">·</span>
-                                            <span className="text-neutral-600 dark:text-neutral-400">{note.method}</span>
-                                        </>
+                                        // 没有方案时的显示逻辑：合并咖啡豆和器具信息
+                                        beanName ? (
+                                            beanName === equipmentName ? (
+                                                // 如果咖啡豆名称和器具名称相同，只显示一个
+                                                beanName
+                                            ) : (
+                                                // 显示咖啡豆和器具，用分割符连接
+                                                <>
+                                                    {beanName}
+                                                    <span className="text-neutral-600 dark:text-neutral-400 mx-1">·</span>
+                                                    <span className="text-neutral-600 dark:text-neutral-400">{equipmentName}</span>
+                                                </>
+                                            )
+                                        ) : (
+                                            // 只有器具信息
+                                            equipmentName
+                                        )
                                     )}
                                 </div>
-                                
-                                {/* 方案信息 - 移动到图片右侧标题下方 */}
-                                {note.params && (
+
+                                {/* 方案信息 - 只在有方案时显示 */}
+                                {note.params && note.method && note.method.trim() !== '' && (
                                     <div className="text-[10px] mt-1 tracking-widest text-neutral-600 dark:text-neutral-400 space-x-1 leading-relaxed">
                                         {beanName && (
                                             <>
@@ -202,8 +224,8 @@ const NoteItem: React.FC<NoteItemProps> = ({
                             </div>
                             <div className="shrink-0 ml-1 relative">
                                 {isShareMode ? (
-                                    <input 
-                                        type="checkbox" 
+                                    <input
+                                        type="checkbox"
                                         checked={isSelected}
                                         onChange={(e) => {
                                             e.stopPropagation();
@@ -326,4 +348,4 @@ const NoteItem: React.FC<NoteItemProps> = ({
     )
 }
 
-export default NoteItem 
+export default NoteItem

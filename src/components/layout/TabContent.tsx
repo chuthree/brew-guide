@@ -19,6 +19,7 @@ import { saveCustomMethod } from '@/lib/managers/customMethods';
 import { Search, X, Shuffle } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 
+
 // 导入随机咖啡豆选择器组件
 const CoffeeBeanRandomPicker = dynamic(() => import('@/components/coffee-bean/RandomPicker/CoffeeBeanRandomPicker'), {
     ssr: false,
@@ -78,6 +79,7 @@ interface TabContentProps {
     onDeleteMethod: (method: Method) => void;
     setActiveMainTab?: (tab: MainTabType) => void;
     resetBrewingState?: (shouldReset: boolean) => void;
+    setIsNoteSaved?: (saved: boolean) => void;
     expandedStages?: {
         type: 'pour' | 'wait';
         label: string;
@@ -132,6 +134,7 @@ const TabContent: React.FC<TabContentProps> = ({
     onDeleteMethod,
     setActiveMainTab,
     resetBrewingState,
+    setIsNoteSaved,
     expandedStages,
     customEquipments,
     setCustomEquipments: _setCustomEquipments,
@@ -227,6 +230,11 @@ const TabContent: React.FC<TabContentProps> = ({
             await Storage.set('brewingNotes', JSON.stringify([newNote, ...existingNotes]));
             setNoteSaved(true);
 
+            // 设置全局笔记保存状态
+            if (setIsNoteSaved) {
+                setIsNoteSaved(true);
+            }
+
             // 减少咖啡豆剩余量
             if (selectedCoffeeBean && currentBrewingMethod?.params.coffee) {
                 try {
@@ -236,6 +244,12 @@ const TabContent: React.FC<TabContentProps> = ({
                     }
                 } catch {}
             }
+
+            // 清除跳过方案选择的标记（如果存在）
+            localStorage.removeItem('skipMethodToNotes');
+
+            // 清除笔记进行中的标记
+            localStorage.removeItem('brewingNoteInProgress');
 
             if (setActiveMainTab) {
                 setActiveMainTab('笔记');
@@ -253,6 +267,12 @@ const TabContent: React.FC<TabContentProps> = ({
     // 处理关闭笔记表单
     const handleCloseNoteForm = () => {
         if (noteSaved && setActiveMainTab) {
+            // 清除跳过方案选择的标记（如果存在）
+            localStorage.removeItem('skipMethodToNotes');
+
+            // 清除笔记进行中的标记
+            localStorage.removeItem('brewingNoteInProgress');
+
             setActiveMainTab('笔记');
             if (resetBrewingState) {
                 resetBrewingState(false);
@@ -331,9 +351,17 @@ const TabContent: React.FC<TabContentProps> = ({
                 inBrewPage={true}
                 initialData={{
                     equipment: equipmentName || selectedEquipment || '',
-                    method: currentBrewingMethod!.name,
-                    params: currentBrewingMethod!.params,
-                    totalTime: showComplete ? currentBrewingMethod!.params.stages[currentBrewingMethod!.params.stages.length - 1].time : 0,
+                    method: currentBrewingMethod?.name || '',
+                    params: currentBrewingMethod?.params || {
+                        coffee: '15g',
+                        water: '225g',
+                        ratio: '1:15',
+                        grindSize: '中细',
+                        temp: '92°C',
+                        videoUrl: '',
+                        stages: []
+                    },
+                    totalTime: showComplete && currentBrewingMethod ? currentBrewingMethod.params.stages[currentBrewingMethod.params.stages.length - 1].time : 0,
                     coffeeBean: selectedCoffeeBeanData || undefined
                 }}
             />
@@ -564,7 +592,7 @@ const TabContent: React.FC<TabContentProps> = ({
     }
 
     // 渲染笔记表单
-    if (activeTab === '记录' && currentBrewingMethod) {
+    if (activeTab === '记录') {
         return <NoteFormWrapper />;
     }
 
@@ -600,19 +628,49 @@ const TabContent: React.FC<TabContentProps> = ({
         <>
             <div className="space-y-4 content-area">
                 {showEmptyMethodsMessage ? (
-                    <div className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
-                        [ 当前器具暂无自定义方案，请点击下方按钮添加 ]
-                    </div>
-                ) : (
-                    content[activeTab]?.steps.map((step: Step, index: number) => {
-                        // 如果是通用方案分隔符之后的项目，且折叠状态为true，则不显示
-                        const isDividerFound = content[activeTab]?.steps.findIndex((s: Step) => s.isDivider) !== -1;
-                        const dividerIndex = content[activeTab]?.steps.findIndex((s: Step) => s.isDivider);
+                    <>
+                        {/* 跳过方案选择选项 - 在没有方案时显示在上面 */}
+                        {activeTab === '方案' && selectedEquipment && (
+                            <div
+                                className="group relative border-l border-neutral-200 dark:border-neutral-800 pl-6 cursor-pointer text-neutral-500 dark:text-neutral-400"
+                                onClick={async () => {
+                                    await triggerHapticFeedback();
+                                    // 触发自定义事件，通知 page.tsx 跳转到记录步骤
+                                    document.dispatchEvent(new CustomEvent('brewing:navigateToStep', {
+                                        detail: { step: 'notes', fromHistory: true }
+                                    }));
+                                }}
+                            >
+                                <div className="cursor-pointer">
+                                    <div className="flex items-baseline justify-between">
+                                        <div className="flex items-baseline gap-3 min-w-0 overflow-hidden">
+                                            <h3 className="text-xs font-normal tracking-wider truncate">
+                                                跳过方案选择
+                                            </h3>
+                                        </div>
+                                    </div>
+                                    <div className="mt-2">
+                                        <p className="text-xs font-light">直接跳到记录</p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
-                        // 如果通用方案被折叠，且当前项在分隔符之后，则跳过渲染
-                        if (isDividerFound && dividerIndex !== -1 && index > dividerIndex && isCommonMethodsCollapsed) {
-                            return null;
-                        }
+                        <div className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400 mt-4">
+                            [ 当前器具暂无自定义方案，请点击下方按钮添加 ]
+                        </div>
+                    </>
+                ) : (
+                    <>
+                        {content[activeTab]?.steps.map((step: Step, index: number) => {
+                            // 如果是通用方案分隔符之后的项目，且折叠状态为true，则不显示
+                            const isDividerFound = content[activeTab]?.steps.findIndex((s: Step) => s.isDivider) !== -1;
+                            const dividerIndex = content[activeTab]?.steps.findIndex((s: Step) => s.isDivider);
+
+                            // 如果通用方案被折叠，且当前项在分隔符之后，则跳过渲染
+                            if (isDividerFound && dividerIndex !== -1 && index > dividerIndex && isCommonMethodsCollapsed) {
+                                return null;
+                            }
 
                         // 如果是注水标签，检查originalIndex变化来添加阶段分隔线
                         const showStageDivider = activeTab === '注水' &&
@@ -781,65 +839,93 @@ const TabContent: React.FC<TabContentProps> = ({
                             shareHandler = getShareEquipmentHandler(step);
                         }
 
-                        return (
-                            <React.Fragment key={step.methodId ? `${step.methodId}-${index}` : `${step.title}-${index}`}>
-                                {showStageDivider && (
-                                    <StageDivider stageNumber={step.originalIndex! + 1} key={`divider-${index}`} />
-                                )}
-                                <StageItem
-                                    step={step.isDivider ? {...step, onToggleCollapse: setIsCommonMethodsCollapsed} : step}
-                                    index={index}
-                                    onClick={() => {
-                                        if (activeTab === '方案') {
-                                            // 如果是分隔符，不处理点击事件
-                                            if (step.isDivider) {
-                                                return;
-                                            }
-
-                                            // 根据方案类型确定正确的索引
-                                            if (step.isCustom) {
-                                                // 自定义方案：在customMethods中查找匹配的方案
-                                                const methodId = step.methodId;
-                                                if (methodId && selectedEquipment && customMethods[selectedEquipment]) {
-                                                    const methodIndex = customMethods[selectedEquipment].findIndex(m =>
-                                                        m.id === methodId || m.name === step.title);
-                                                    if (methodIndex !== -1) {
-                                                        // 使用找到的自定义方案索引，并明确传递"custom"类型
-                                                        onMethodSelect(methodIndex, {
-                                                            ...step,
-                                                            explicitMethodType: 'custom'
-                                                        });
-                                                        return;
-                                                    }
+                            return (
+                                <React.Fragment key={step.methodId ? `${step.methodId}-${index}` : `${step.title}-${index}`}>
+                                    {showStageDivider && (
+                                        <StageDivider stageNumber={step.originalIndex! + 1} key={`divider-${index}`} />
+                                    )}
+                                    <StageItem
+                                        step={step.isDivider ? {...step, onToggleCollapse: setIsCommonMethodsCollapsed} : step}
+                                        index={index}
+                                        onClick={() => {
+                                            if (activeTab === '方案') {
+                                                // 如果是分隔符，不处理点击事件
+                                                if (step.isDivider) {
+                                                    return;
                                                 }
-                                            } else if (step.isCommonMethod && step.methodIndex !== undefined) {
-                                                // 通用方案：使用预先存储的methodIndex，并明确传递"common"类型
-                                                onMethodSelect(step.methodIndex, {
-                                                    ...step,
-                                                    explicitMethodType: 'common'
-                                                });
-                                                return;
-                                            }
 
-                                            // 如果不能确定特定类型，使用传统的索引方式
-                                            // 默认根据当前类型传递
-                                            onMethodSelect(index, step);
-                                        }
-                                    }}
-                                    activeTab={activeTab}
-                                    selectedMethod={selectedMethod}
-                                    currentStage={currentStage}
-                                    onEdit={editHandler}
-                                    onDelete={deleteHandler}
-                                    onShare={shareHandler}
-                                    actionMenuStates={actionMenuStates}
-                                    setActionMenuStates={setActionMenuStates}
-                                    showFlowRate={localShowFlowRate}
-                                    allSteps={content[activeTab]?.steps || []}
-                                />
-                            </React.Fragment>
-                        );
-                    })
+                                                // 根据方案类型确定正确的索引
+                                                if (step.isCustom) {
+                                                    // 自定义方案：在customMethods中查找匹配的方案
+                                                    const methodId = step.methodId;
+                                                    if (methodId && selectedEquipment && customMethods[selectedEquipment]) {
+                                                        const methodIndex = customMethods[selectedEquipment].findIndex(m =>
+                                                            m.id === methodId || m.name === step.title);
+                                                        if (methodIndex !== -1) {
+                                                            // 使用找到的自定义方案索引，并明确传递"custom"类型
+                                                            onMethodSelect(methodIndex, {
+                                                                ...step,
+                                                                explicitMethodType: 'custom'
+                                                            });
+                                                            return;
+                                                        }
+                                                    }
+                                                } else if (step.isCommonMethod && step.methodIndex !== undefined) {
+                                                    // 通用方案：使用预先存储的methodIndex，并明确传递"common"类型
+                                                    onMethodSelect(step.methodIndex, {
+                                                        ...step,
+                                                        explicitMethodType: 'common'
+                                                    });
+                                                    return;
+                                                }
+
+                                                // 如果不能确定特定类型，使用传统的索引方式
+                                                // 默认根据当前类型传递
+                                                onMethodSelect(index, step);
+                                            }
+                                        }}
+                                        activeTab={activeTab}
+                                        selectedMethod={selectedMethod}
+                                        currentStage={currentStage}
+                                        onEdit={editHandler}
+                                        onDelete={deleteHandler}
+                                        onShare={shareHandler}
+                                        actionMenuStates={actionMenuStates}
+                                        setActionMenuStates={setActionMenuStates}
+                                        showFlowRate={localShowFlowRate}
+                                        allSteps={content[activeTab]?.steps || []}
+                                    />
+                                </React.Fragment>
+                            );
+                        })}
+
+                        {/* 跳过方案选择选项 - 放在方案列表最下面（仅在有方案时显示） */}
+                        {activeTab === '方案' && selectedEquipment && !showEmptyMethodsMessage && (
+                            <div
+                                className="group relative border-l border-neutral-200 dark:border-neutral-800 pl-6 cursor-pointer text-neutral-500 dark:text-neutral-400 mt-4"
+                                onClick={async () => {
+                                    await triggerHapticFeedback();
+                                    // 触发自定义事件，通知 page.tsx 跳转到记录步骤
+                                    document.dispatchEvent(new CustomEvent('brewing:navigateToStep', {
+                                        detail: { step: 'notes', fromHistory: true }
+                                    }));
+                                }}
+                            >
+                                <div className="cursor-pointer">
+                                    <div className="flex items-baseline justify-between">
+                                        <div className="flex items-baseline gap-3 min-w-0 overflow-hidden">
+                                            <h3 className="text-xs font-normal tracking-wider truncate">
+                                                跳过方案选择
+                                            </h3>
+                                        </div>
+                                    </div>
+                                    <div className="mt-2">
+                                        <p className="text-xs font-light">直接跳到记录</p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
 

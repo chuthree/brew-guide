@@ -260,6 +260,36 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 				return true;
 			}
 
+			// 特殊情况3：跳过方案选择直接到记录（从方案步骤）
+			if (
+				activeBrewingStep === "method" &&
+				step === "notes"
+			) {
+				// 设置标记，表示是从方案步骤直接跳转到记录的
+				localStorage.setItem("skipMethodToNotes", "true");
+
+				// 直接跳转到记录步骤
+				setActiveBrewingStep("notes");
+				setActiveTab("记录");
+
+				// 显示记录表单，使用正确的事件名
+				emitEvent("showBrewingNoteForm", {});
+
+				// 确保在localStorage中记录状态
+				localStorage.setItem("brewingNoteInProgress", "true");
+
+				// 更新参数栏信息 - 只显示器具信息，传入自定义器具列表
+				updateParameterInfo(
+					"notes",
+					selectedEquipment,
+					null, // 没有选择方案
+					equipmentList,
+					customEquipments
+				);
+
+				return true;
+			}
+
 			return false;
 		},
 		[
@@ -501,12 +531,21 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 			}
 
 			if (!preserveMethod) {
-				// 完全重置所有状态
+				// 完全重置所有状态，但尝试恢复设备选择
+				const cachedEquipment = getSelectedEquipmentPreference();
 
-				navigateToStep("method", { resetParams: true });
+				navigateToStep("method", {
+					resetParams: true,
+					preserveEquipment: !!cachedEquipment // 如果有缓存的设备，保留设备状态
+				});
+
+				// 如果有缓存的设备，恢复设备选择
+				if (cachedEquipment && !selectedEquipment) {
+					setSelectedEquipment(cachedEquipment);
+				}
 
 				// 确保参数栏信息被清空，传入自定义器具列表
-				updateParameterInfo("method", null, null, equipmentList, customEquipments);
+				updateParameterInfo("method", selectedEquipment || cachedEquipment, null, equipmentList, customEquipments);
 			} else {
 				// 部分重置状态，但保留已选方案、咖啡豆和参数
 
@@ -544,22 +583,41 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 					);
 				} else if (selectedCoffeeBean) {
 					// 只有咖啡豆，返回到方案步骤
+					// 尝试恢复缓存的设备选择
+					const cachedEquipment = getSelectedEquipmentPreference();
+
 					navigateToStep("method", {
 						preserveCoffeeBean: true,
+						preserveEquipment: !!cachedEquipment
 					});
 
-					// 确保参数栏被清空，传入自定义器具列表
-					updateParameterInfo("method", null, null, equipmentList, customEquipments);
+					// 如果有缓存的设备，恢复设备选择
+					if (cachedEquipment) {
+						setSelectedEquipment(cachedEquipment);
+						updateParameterInfo("method", cachedEquipment, null, equipmentList, customEquipments);
+					} else {
+						updateParameterInfo("method", null, null, equipmentList, customEquipments);
+					}
 				} else {
-					// 没有任何选择，从头开始
-					navigateToStep("method", { resetParams: true });
+					// 没有任何选择，尝试恢复缓存的设备选择
+					const cachedEquipment = getSelectedEquipmentPreference();
 
-					// 确保参数栏被清空，传入自定义器具列表
-					updateParameterInfo("method", null, null, equipmentList, customEquipments);
+					navigateToStep("method", {
+						resetParams: true,
+						preserveEquipment: !!cachedEquipment
+					});
+
+					// 如果有缓存的设备，恢复设备选择
+					if (cachedEquipment) {
+						setSelectedEquipment(cachedEquipment);
+						updateParameterInfo("method", cachedEquipment, null, equipmentList, customEquipments);
+					} else {
+						updateParameterInfo("method", null, null, equipmentList, customEquipments);
+					}
 				}
 			}
 		},
-		[navigateToStep, selectedMethod, selectedEquipment, selectedCoffeeBean, customEquipments]
+		[navigateToStep, selectedMethod, selectedEquipment, selectedCoffeeBean, customEquipments, setSelectedEquipment]
 	);
 
 	// 处理器具选择
