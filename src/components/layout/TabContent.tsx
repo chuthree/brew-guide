@@ -633,17 +633,39 @@ const TabContent: React.FC<TabContentProps> = ({
                                 const methodIndex = customMethods[selectedEquipment!].findIndex(m =>
                                     m.id === step.methodId || m.name === step.title);
                                 if (methodIndex !== -1) {
-                                    editHandler = () => onEditMethod(customMethods[selectedEquipment!][methodIndex]);
+                                    editHandler = () => {
+                                        onEditMethod(customMethods[selectedEquipment!][methodIndex]);
+                                    };
                                 }
                             } else if (!isCustomMethod && selectedEquipment) {
                                 // 通用方案需要先复制到自定义列表
                                 editHandler = () => {
-                                    const commonMethodsList = commonMethods[selectedEquipment];
+                                    // 获取正确的通用方案列表
+                                    let commonMethodsList = commonMethods[selectedEquipment];
+
+                                    // 如果是自定义器具，需要根据其基础类型获取通用方案
+                                    if (!commonMethodsList && selectedEquipment.startsWith('custom-')) {
+                                        let baseEquipmentId = '';
+
+                                        if (selectedEquipment.includes('-v60-')) {
+                                            baseEquipmentId = 'V60';
+                                        } else if (selectedEquipment.includes('-clever-')) {
+                                            baseEquipmentId = 'CleverDripper';
+                                        } else if (selectedEquipment.includes('-kalita-')) {
+                                            baseEquipmentId = 'Kalita';
+                                        } else if (selectedEquipment.includes('-origami-')) {
+                                            baseEquipmentId = 'Origami';
+                                        } else {
+                                            // 默认使用V60方案
+                                            baseEquipmentId = 'V60';
+                                        }
+
+                                        commonMethodsList = commonMethods[baseEquipmentId];
+                                    }
 
                                     // 直接使用step.methodIndex获取正确的方案索引
                                     if (commonMethodsList && step.methodIndex !== undefined && step.methodIndex >= 0 &&
                                         step.methodIndex < commonMethodsList.length) {
-                                        console.log('使用methodIndex编辑通用方案:', step.methodIndex, commonMethodsList[step.methodIndex].name);
                                         const methodCopy = createEditableMethodFromCommon(commonMethodsList[step.methodIndex]);
                                         saveCustomMethod(selectedEquipment, methodCopy)
                                             .then(() => {
@@ -667,7 +689,6 @@ const TabContent: React.FC<TabContentProps> = ({
                                             m.id === step.methodId || m.name === step.title);
 
                                         if (commonMethodsList && commonMethodIndex !== undefined && commonMethodIndex !== -1) {
-                                            console.log('回退查找编辑通用方案:', commonMethodIndex, commonMethodsList[commonMethodIndex].name);
                                             const methodCopy = createEditableMethodFromCommon(commonMethodsList[commonMethodIndex]);
                                             saveCustomMethod(selectedEquipment, methodCopy)
                                                 .then(() => {
@@ -716,24 +737,41 @@ const TabContent: React.FC<TabContentProps> = ({
                                     const methodIndex = customMethods[selectedEquipment!].findIndex(m =>
                                         m.id === step.methodId || m.name === step.title);
                                     if (methodIndex !== -1) {
-                                        console.log('使用methodIndex分享自定义方案:', methodIndex, customMethods[selectedEquipment!][methodIndex].name);
                                         handleShareMethod(customMethods[selectedEquipment!][methodIndex]);
                                     }
                                 } else if (!step.isCustom && selectedEquipment) {
-                                    // 使用通用方案的methodIndex
-                                    const commonMethodsList = commonMethods[selectedEquipment];
+                                    // 获取正确的通用方案列表
+                                    let commonMethodsList = commonMethods[selectedEquipment];
+
+                                    // 如果是自定义器具，需要根据其基础类型获取通用方案
+                                    if (!commonMethodsList && selectedEquipment.startsWith('custom-')) {
+                                        let baseEquipmentId = '';
+
+                                        if (selectedEquipment.includes('-v60-')) {
+                                            baseEquipmentId = 'V60';
+                                        } else if (selectedEquipment.includes('-clever-')) {
+                                            baseEquipmentId = 'CleverDripper';
+                                        } else if (selectedEquipment.includes('-kalita-')) {
+                                            baseEquipmentId = 'Kalita';
+                                        } else if (selectedEquipment.includes('-origami-')) {
+                                            baseEquipmentId = 'Origami';
+                                        } else {
+                                            // 默认使用V60方案
+                                            baseEquipmentId = 'V60';
+                                        }
+
+                                        commonMethodsList = commonMethods[baseEquipmentId];
+                                    }
 
                                     // 直接使用step.methodIndex获取正确的方案索引
                                     if (commonMethodsList && step.methodIndex !== undefined && step.methodIndex >= 0 &&
                                         step.methodIndex < commonMethodsList.length) {
-                                        console.log('使用methodIndex分享通用方案:', step.methodIndex, commonMethodsList[step.methodIndex].name);
                                         handleShareMethod(commonMethodsList[step.methodIndex]);
                                     } else {
                                         // 回退到原来的查找方式
                                         const commonMethodIndex = commonMethodsList?.findIndex(m =>
                                             m.id === step.methodId || m.name === step.title);
                                         if (commonMethodsList && commonMethodIndex !== undefined && commonMethodIndex !== -1) {
-                                            console.log('回退查找分享通用方案:', commonMethodIndex, commonMethodsList[commonMethodIndex].name);
                                             handleShareMethod(commonMethodsList[commonMethodIndex]);
                                         }
                                     }

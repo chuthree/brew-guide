@@ -131,14 +131,11 @@ export function useBrewingContent({
 				let customMethodsForEquipment: Method[] = [];
 				let commonMethodsForEquipment: Method[] = [];
 
-				// 如果是自定义预设器具或意式机，只获取自定义方案
-				if (isCustomPresetEquipment || isEspressoEquipment) {
-					customMethodsForEquipment = currentEquipmentCustomMethods;
-				} else {
-					// 总是获取自定义方案
-					customMethodsForEquipment = currentEquipmentCustomMethods;
+				// 总是获取自定义方案
+				customMethodsForEquipment = currentEquipmentCustomMethods;
 
-					// 获取通用方案
+				// 获取通用方案（除了意式机类型）
+				if (!isEspressoEquipment) {
 					if (isCustomEquipment && customEquipment) {
 						// 自定义器具，根据animationType获取对应的通用方案
 						let baseEquipmentId = '';
@@ -160,6 +157,10 @@ export function useBrewingContent({
 							case 'espresso':
 								// 意式机不继承任何通用方案
 								baseEquipmentId = '';
+								break;
+							case 'custom':
+								// 自定义预设器具默认使用V60方案
+								baseEquipmentId = 'V60';
 								break;
 							default:
 								baseEquipmentId = 'V60'; // 默认使用 V60 的方案
@@ -196,6 +197,9 @@ export function useBrewingContent({
 							}
 						}
 					}
+				} else {
+					// 意式机不显示通用方案
+					commonMethodsForEquipment = [];
 				}
 
 				// 准备两个方案列表
@@ -245,8 +249,8 @@ export function useBrewingContent({
 					};
 				});
 
-				// 通用方案列表（如果不是自定义预设器具）
-				const commonMethodSteps = !isCustomPresetEquipment ? commonMethodsForEquipment.map((method, methodIndex) => {
+				// 通用方案列表
+				const commonMethodSteps = commonMethodsForEquipment.map((method, methodIndex) => {
 					// 检查是否是意式咖啡方案
 					const isEspressoMethod = method.params.stages.some(stage =>
 						stage.pourType === 'extraction' ||
@@ -291,9 +295,9 @@ export function useBrewingContent({
 						items: items,
 						note: "",
 					};
-				}) : [];
+				});
 
-				// 添加分隔符（只有当两个列表都有内容时）
+				// 合并所有步骤：自定义方案 + 分隔符 + 通用方案
 				const dividerStep = (customMethodSteps.length > 0 && commonMethodSteps.length > 0) ? [{
 					title: "",
 					items: [],
@@ -302,7 +306,6 @@ export function useBrewingContent({
 					dividerText: "通用方案",
 				}] : [];
 
-				// 合并所有步骤
 				const steps = [
 					...customMethodSteps,  // 先显示自定义方案
 					...dividerStep,        // 添加分隔符
@@ -314,7 +317,7 @@ export function useBrewingContent({
 					方案: {
 						// 由于已经合并了两种方案，这里的type不再那么重要
 						// 但为了兼容性，保留此属性
-						type: isCustomPresetEquipment ? 'custom' : methodType,
+						type: methodType,
 						steps: steps
 					},
 				};
