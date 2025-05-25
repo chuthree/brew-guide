@@ -121,9 +121,6 @@ export function useBrewingContent({
 				// 确认是否为自定义器具
 				const isCustomEquipment = !!customEquipment;
 
-				// 检查是否是自定义预设器具（animationType === 'custom'）
-				const isCustomPresetEquipment = customEquipment?.animationType === 'custom';
-
 				// 检查是否是意式机类型（animationType === 'espresso'）
 				const isEspressoEquipment = customEquipment?.animationType === 'espresso';
 
