@@ -120,6 +120,8 @@ const EquipmentIndicator: React.FC<EquipmentIndicatorProps> = ({
     const triggerHaptic = useHapticFeedback(settings)
     const { showCustomMenu, menuPosition, toggleMenu, closeMenu } = useCustomMenu()
     const scrollContainerRef = React.useRef<HTMLDivElement>(null)
+    const [showLeftBorder, setShowLeftBorder] = React.useState(false)
+    const [showRightBorder, setShowRightBorder] = React.useState(false)
 
     // 合并所有器具数据
     const allEquipments = [
@@ -221,6 +223,38 @@ const EquipmentIndicator: React.FC<EquipmentIndicatorProps> = ({
         }
     ]
 
+    // 监听滚动事件来控制左右边框显示
+    React.useEffect(() => {
+        const container = scrollContainerRef.current
+        if (!container) return
+
+        const handleScroll = () => {
+            const scrollLeft = container.scrollLeft
+            const scrollWidth = container.scrollWidth
+            const clientWidth = container.clientWidth
+
+            // 左边框：当向右滚动时显示
+            setShowLeftBorder(scrollLeft > 0)
+
+            // 右边框：当还能继续向右滚动时显示
+            const maxScrollLeft = scrollWidth - clientWidth
+            const canScrollRight = maxScrollLeft > 0 && scrollLeft < maxScrollLeft - 1
+            setShowRightBorder(canScrollRight)
+        }
+
+        // 延迟初始检查，确保DOM已完全渲染
+        const timer = setTimeout(handleScroll, 100)
+
+        container.addEventListener('scroll', handleScroll)
+        window.addEventListener('resize', handleScroll)
+
+        return () => {
+            clearTimeout(timer)
+            container.removeEventListener('scroll', handleScroll)
+            window.removeEventListener('resize', handleScroll)
+        }
+    }, [allItems.length])
+
     return (
         <div className="relative w-full overflow-hidden">
             <div
@@ -278,9 +312,19 @@ const EquipmentIndicator: React.FC<EquipmentIndicatorProps> = ({
                     </div>
                 ))}
 
-                {allItems.length > 3 && (
-                    <div className="absolute top-0 right-0 w-6 h-full bg-gradient-to-l from-neutral-50/95 dark:from-neutral-900/95 to-transparent pointer-events-none" />
-                )}
+                {/* 左边框指示器 */}
+                <div
+                    className={`absolute top-0 left-0 w-6 h-full bg-gradient-to-r from-neutral-50/95 dark:from-neutral-900/95 to-transparent pointer-events-none transition-opacity duration-200 ease-out ${
+                        showLeftBorder ? 'opacity-100' : 'opacity-0'
+                    }`}
+                />
+
+                {/* 右边框指示器 */}
+                <div
+                    className={`absolute top-0 right-0 w-6 h-full bg-gradient-to-l from-neutral-50/95 dark:from-neutral-900/95 to-transparent pointer-events-none transition-opacity duration-200 ease-out ${
+                        showRightBorder ? 'opacity-100' : 'opacity-0'
+                    }`}
+                />
             </div>
 
             {/* 自定义器具菜单 - 简洁文字风格 */}
