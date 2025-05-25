@@ -332,6 +332,21 @@ const TabContent: React.FC<TabContentProps> = ({
         }
     };
 
+    // 监听器具分享事件
+    useEffect(() => {
+        const handleEquipmentShareEvent = (e: Event) => {
+            const customEvent = e as CustomEvent;
+            if (customEvent.detail?.equipment) {
+                handleShareEquipment(customEvent.detail.equipment);
+            }
+        };
+
+        document.addEventListener('equipment:share', handleEquipmentShareEvent);
+        return () => {
+            document.removeEventListener('equipment:share', handleEquipmentShareEvent);
+        };
+    }, [customMethods]);
+
     // 笔记表单包装组件
     const NoteFormWrapper = () => {
         const [equipmentName, setEquipmentName] = useState('');

@@ -47,6 +47,7 @@ const TabButton: React.FC<TabButtonProps> = ({
             ? 'text-neutral-300 dark:text-neutral-600'
             : 'cursor-pointer text-neutral-500 dark:text-neutral-400'
 
+    // 统一使用实线边框
     const indicatorClasses = `absolute -bottom-3 left-0 right-0 z-10 h-px bg-neutral-800 dark:bg-neutral-100 ${
         isActive && !hideIndicator ? 'opacity-100 w-full' : 'opacity-0 w-0'
     }`
@@ -71,34 +72,19 @@ const useHapticFeedback = (settings: { hapticFeedback?: boolean }) =>
         if (settings?.hapticFeedback) hapticsUtils.light()
     }, [settings?.hapticFeedback])
 
-// 自定义Hook：处理菜单状态
-const useCustomMenu = () => {
-    const [showCustomMenu, setShowCustomMenu] = useState<string | null>(null)
-    const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null)
+// 自定义Hook：处理编辑模式状态
+const useEditMode = () => {
+    const [editingEquipment, setEditingEquipment] = useState<string | null>(null)
 
-    const toggleMenu = useCallback((equipmentId: string, e: React.MouseEvent) => {
-        e.stopPropagation()
-
-        if (showCustomMenu === equipmentId) {
-            setShowCustomMenu(null)
-            setMenuPosition(null)
-        } else {
-            const target = e.currentTarget as HTMLElement
-            const rect = target.getBoundingClientRect()
-            setMenuPosition({
-                top: rect.bottom + 8,
-                right: window.innerWidth - rect.right
-            })
-            setShowCustomMenu(equipmentId)
-        }
-    }, [showCustomMenu])
-
-    const closeMenu = useCallback(() => {
-        setShowCustomMenu(null)
-        setMenuPosition(null)
+    const enterEditMode = useCallback((equipmentId: string) => {
+        setEditingEquipment(equipmentId)
     }, [])
 
-    return { showCustomMenu, menuPosition, toggleMenu, closeMenu }
+    const exitEditMode = useCallback(() => {
+        setEditingEquipment(null)
+    }, [])
+
+    return { editingEquipment, enterEditMode, exitEditMode }
 }
 
 // 器具指示器组件接口
@@ -118,7 +104,7 @@ const EquipmentIndicator: React.FC<EquipmentIndicatorProps> = ({
     onEditEquipment, onDeleteEquipment, onShareEquipment, settings
 }) => {
     const triggerHaptic = useHapticFeedback(settings)
-    const { showCustomMenu, menuPosition, toggleMenu, closeMenu } = useCustomMenu()
+    const { editingEquipment, enterEditMode, exitEditMode } = useEditMode()
     const scrollContainerRef = React.useRef<HTMLDivElement>(null)
     const [showLeftBorder, setShowLeftBorder] = React.useState(false)
     const [showRightBorder, setShowRightBorder] = React.useState(false)
@@ -138,37 +124,26 @@ const EquipmentIndicator: React.FC<EquipmentIndicatorProps> = ({
     // 使用工厂函数创建处理器
     const handlers = {
         equipment: createHandler((id: string) => {
-            onEquipmentSelect(id);
-            // 保存器具选择到缓存
-            saveStringState('brewing-equipment', 'selectedEquipment', id);
+            // 检查是否是自定义器具且已选中，如果是则进入编辑模式
+            const equipment = allEquipments.find(eq => eq.id === id)
+            if (equipment?.isCustom && selectedEquipment === id) {
+                enterEditMode(id)
+            } else {
+                onEquipmentSelect(id)
+                // 保存器具选择到缓存
+                saveStringState('brewing-equipment', 'selectedEquipment', id)
+            }
         }),
         add: createHandler(() => onAddEquipment()),
-        menuToggle: async (equipmentId: string, e: React.MouseEvent) => {
-            await triggerHaptic()
-            toggleMenu(equipmentId, e)
-        },
-        menuAction: async (action: () => void, e: React.MouseEvent) => {
-            e.stopPropagation()
-            await triggerHaptic()
-            action()
-            closeMenu()
-        }
+        edit: createHandler((equipment: any) => onEditEquipment(equipment)),
+        delete: createHandler((equipment: any) => onDeleteEquipment(equipment)),
+        share: createHandler((equipment: any) => onShareEquipment(equipment)),
+        exitEdit: createHandler(() => {
+            exitEditMode()
+            // 退出编辑模式后滚动到选中的器具
+            setTimeout(scrollToSelected, 100)
+        })
     }
-
-    // 点击外部关闭菜单
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            const target = event.target as HTMLElement
-            if (!target.closest('[data-menu-trigger]') && !target.closest('[data-custom-menu]')) {
-                closeMenu()
-            }
-        }
-
-        if (showCustomMenu) {
-            document.addEventListener('click', handleClickOutside)
-            return () => document.removeEventListener('click', handleClickOutside)
-        }
-    }, [showCustomMenu, closeMenu])
 
     // 滚动到选中项的函数
     const scrollToSelected = React.useCallback(() => {
@@ -195,6 +170,23 @@ const EquipmentIndicator: React.FC<EquipmentIndicatorProps> = ({
             behavior: 'smooth'
         })
     }, [selectedEquipment])
+
+    // 点击外部退出编辑模式
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            const target = event.target as HTMLElement
+            if (!target.closest('[data-edit-mode]') && editingEquipment) {
+                exitEditMode()
+                // 退出编辑模式后滚动到选中的器具
+                setTimeout(scrollToSelected, 100)
+            }
+        }
+
+        if (editingEquipment) {
+            document.addEventListener('click', handleClickOutside)
+            return () => document.removeEventListener('click', handleClickOutside)
+        }
+    }, [editingEquipment, exitEditMode, scrollToSelected])
 
     // 当选中项变化时滚动到选中项
     React.useEffect(() => {
@@ -272,45 +264,69 @@ const EquipmentIndicator: React.FC<EquipmentIndicatorProps> = ({
                     }
                 `}</style>
 
-                {allItems.map((item) => (
-                    <div key={item.id} className="flex-shrink-0 flex items-center">
-                        {item.type === 'addButton' ? (
-                            <div
-                                onClick={item.onClick}
-                                className="text-[12px] tracking-widest cursor-pointer text-neutral-500 dark:text-neutral-400 flex items-center whitespace-nowrap pb-3"
-                            >
-                                添加器具
-                            </div>
-                        ) : (
-                            <div className="whitespace-nowrap flex items-center relative">
-                                <TabButton
-                                    tab={item.name}
-                                    isActive={item.isSelected}
-                                    onClick={item.onClick}
-                                    dataTab={item.id}
-                                />
-
-                                {/* {item.isCustom && item.isSelected && (
-                                    <span
-                                        onClick={(e) => handlers.menuToggle(item.id, e)}
-                                        className="ml-2 pb-3 text-[12px] tracking-widest text-neutral-400 dark:text-neutral-500 cursor-pointer"
-                                        role="button"
-                                        tabIndex={0}
-                                        data-menu-trigger
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter' || e.key === ' ') {
-                                                e.preventDefault()
-                                                handlers.menuToggle(item.id, e as any)
-                                            }
-                                        }}
-                                    >
-                                        选项
+                {/* 编辑模式 */}
+                {editingEquipment ? (
+                    <div className="flex items-center gap-2 whitespace-nowrap" data-edit-mode>
+                        {(() => {
+                            const equipment = allEquipments.find(eq => eq.id === editingEquipment)
+                            return equipment ? (
+                                <>
+                                    <span className="text-[12px] tracking-widest text-neutral-800 dark:text-neutral-100 pb-3">
+                                        {equipment.name}：
                                     </span>
-                                )} */}
-                            </div>
-                        )}
+                                    <button
+                                        onClick={() => handlers.edit(equipment)}
+                                        className="text-[12px] tracking-widest cursor-pointer text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-100 pb-3"
+                                    >
+                                        编辑
+                                    </button>
+                                    <button
+                                        onClick={() => handlers.delete(equipment)}
+                                        className="text-[12px] tracking-widest cursor-pointer text-neutral-500 dark:text-neutral-400 hover:text-red-600 dark:hover:text-red-400 pb-3"
+                                    >
+                                        删除
+                                    </button>
+                                    <button
+                                        onClick={() => handlers.share(equipment)}
+                                        className="text-[12px] tracking-widest cursor-pointer text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-100 pb-3"
+                                    >
+                                        分享
+                                    </button>
+                                    <span className="text-[12px] tracking-widest text-neutral-400 dark:text-neutral-500 pb-3">｜</span>
+                                    <button
+                                        onClick={handlers.exitEdit}
+                                        className="text-[12px] tracking-widest cursor-pointer text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-100 pb-3"
+                                    >
+                                        返回
+                                    </button>
+                                </>
+                            ) : null
+                        })()}
                     </div>
-                ))}
+                ) : (
+                    /* 正常模式 */
+                    allItems.map((item) => (
+                        <div key={item.id} className="flex-shrink-0 flex items-center">
+                            {item.type === 'addButton' ? (
+                                <div
+                                    onClick={item.onClick}
+                                    className="text-[12px] tracking-widest cursor-pointer text-neutral-500 dark:text-neutral-400 flex items-center whitespace-nowrap pb-3"
+                                >
+                                    添加器具
+                                </div>
+                            ) : (
+                                <div className="whitespace-nowrap flex items-center relative">
+                                    <TabButton
+                                        tab={item.name}
+                                        isActive={item.isSelected}
+                                        onClick={item.onClick}
+                                        dataTab={item.id}
+                                    />
+                                </div>
+                            )}
+                        </div>
+                    ))
+                )}
 
                 {/* 左边框指示器 */}
                 <div
@@ -327,55 +343,7 @@ const EquipmentIndicator: React.FC<EquipmentIndicatorProps> = ({
                 />
             </div>
 
-            {/* 自定义器具菜单 - 简洁文字风格 */}
-            <AnimatePresence>
-                {showCustomMenu && menuPosition && (
-                    <motion.div
-                        initial={{ opacity: 0, y: -4 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -4 }}
-                        transition={{ duration: 0.15, ease: "easeOut" }}
-                        className="fixed z-50 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded shadow-sm"
-                        style={{
-                            top: menuPosition.top,
-                            right: menuPosition.right,
-                            minWidth: '80px'
-                        }}
-                        data-custom-menu
-                    >
-                        <div className="py-1">
-                            <button
-                                onClick={(e) => {
-                                    const equipment = customEquipments.find(eq => eq.id === showCustomMenu);
-                                    if (equipment) handlers.menuAction(() => onEditEquipment(equipment), e);
-                                }}
-                                className="w-full px-3 py-1.5 text-left text-[12px] tracking-widest text-neutral-600 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200 hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors"
-                            >
-                                编辑
-                            </button>
-                            <button
-                                onClick={(e) => {
-                                    const equipment = customEquipments.find(eq => eq.id === showCustomMenu);
-                                    if (equipment) handlers.menuAction(() => onShareEquipment(equipment), e);
-                                }}
-                                className="w-full px-3 py-1.5 text-left text-[12px] tracking-widest text-neutral-600 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200 hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors"
-                            >
-                                分享
-                            </button>
-                            <div className="h-px bg-neutral-200 dark:bg-neutral-700 mx-2 my-1" />
-                            <button
-                                onClick={(e) => {
-                                    const equipment = customEquipments.find(eq => eq.id === showCustomMenu);
-                                    if (equipment) handlers.menuAction(() => onDeleteEquipment(equipment), e);
-                                }}
-                                className="w-full px-3 py-1.5 text-left text-[12px] tracking-widest text-red-500 dark:text-red-400 hover:text-red-600 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                            >
-                                删除
-                            </button>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+
         </div>
     );
 };

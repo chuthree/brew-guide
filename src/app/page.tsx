@@ -1776,8 +1776,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 }}
                 onDeleteEquipment={handleDeleteEquipment}
                 onShareEquipment={(equipment) => {
-                    // 这里可以添加分享器具的逻辑
-                    console.log('分享器具:', equipment);
+                    // 触发分享器具事件，让TabContent处理
+                    document.dispatchEvent(new CustomEvent('equipment:share', {
+                        detail: { equipment }
+                    }));
                 }}
                 onBackClick={handleBackClick}
             />
