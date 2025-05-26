@@ -23,6 +23,7 @@ import CoffeeBeanFormModal from '@/components/coffee-bean/Form/Modal'
 import ImportModal from '@/components/common/modals/BeanImportModal'
 import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager'
 import textZoomUtils from '@/lib/utils/textZoomUtils'
+import { saveMainTabPreference } from '@/lib/navigation/navigationCache'
 import { BREWING_EVENTS } from '@/lib/brewing/constants'
 import type { BrewingNoteData } from '@/types/app'
 import { updateParameterInfo } from '@/lib/brewing/parameters'
@@ -795,6 +796,9 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             return;
         }
 
+        // 保存主标签页选择到缓存
+        saveMainTabPreference(tab);
+
         // 更新主标签
         setActiveMainTab(tab);
     };
@@ -1106,8 +1110,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             // 如果当前在咖啡豆标签页，触发一次标签切换来刷新列表
             if (activeMainTab === '咖啡豆') {
                 // 通过临时切换到其他标签再切回来，触发组件重新加载
+                saveMainTabPreference('冲煮');
                 setActiveMainTab('冲煮');
                 setTimeout(() => {
+                    saveMainTabPreference('咖啡豆');
                     setActiveMainTab('咖啡豆');
                 }, 10);
             }
@@ -1287,6 +1293,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         const handleMainTabNavigation = (e: CustomEvent) => {
             const { tab } = e.detail;
             if (tab) {
+                // 保存主标签页选择到缓存
+                saveMainTabPreference(tab);
                 setActiveMainTab(tab);
             }
         };
@@ -1528,6 +1536,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             setCurrentEditingNote({});
 
             // 切换到笔记选项卡
+            saveMainTabPreference('笔记');
             setActiveMainTab('笔记');
         } catch (error) {
             console.error('保存冲煮笔记失败:', error);
@@ -1836,6 +1845,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 <BrewingHistory
                     isOpen={true}
                     onClose={() => {
+                        saveMainTabPreference('冲煮');
                         setActiveMainTab('冲煮');
                         setShowHistory(false);
                     }}

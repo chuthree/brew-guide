@@ -7,7 +7,8 @@ import { SettingsOptions } from '../settings/Settings';
 import { TabType, MainTabType, Content, Step as BaseStep } from '@/lib/hooks/useBrewingState';
 import { CoffeeBean } from '@/types/app';
 import type { BrewingNoteData } from '@/types/app';
-import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager';
+import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager'
+import { saveMainTabPreference } from '@/lib/navigation/navigationCache';
 import { showToast } from "@/components/common/feedback/GlobalToast";
 import EquipmentShareModal from '@/components/equipment/share/EquipmentShareModal';
 import { getEquipmentName } from '@/lib/brewing/parameters';
@@ -252,6 +253,7 @@ const TabContent: React.FC<TabContentProps> = ({
             localStorage.removeItem('brewingNoteInProgress');
 
             if (setActiveMainTab) {
+                saveMainTabPreference('笔记');
                 setActiveMainTab('笔记');
             }
 
@@ -273,6 +275,7 @@ const TabContent: React.FC<TabContentProps> = ({
             // 清除笔记进行中的标记
             localStorage.removeItem('brewingNoteInProgress');
 
+            saveMainTabPreference('笔记');
             setActiveMainTab('笔记');
             if (resetBrewingState) {
                 resetBrewingState(false);

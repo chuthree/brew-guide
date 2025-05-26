@@ -12,6 +12,7 @@ import { updateParameterInfo } from '@/lib/brewing/parameters'
 import { useTranslations } from 'next-intl'
 import { Equal, ArrowLeft } from 'lucide-react'
 import { saveStringState } from '@/lib/core/statePersistence'
+import { saveMainTabPreference } from '@/lib/navigation/navigationCache'
 
 // 统一类型定义
 type TabType = '方案' | '注水' | '记录'
@@ -613,6 +614,9 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
         if (settings.hapticFeedback) {
             hapticsUtils.light()
         }
+
+        // 保存主标签页选择到缓存
+        saveMainTabPreference(tab)
 
         setActiveMainTab(tab)
         if (tab === '笔记') {

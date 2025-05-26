@@ -17,6 +17,7 @@ import {
 import { emitEvent } from "../brewing/events";
 import { updateParameterInfo } from "../brewing/parameters";
 import { getStringState, saveStringState } from "@/lib/core/statePersistence";
+import { getMainTabPreference, saveMainTabPreference } from "@/lib/navigation/navigationCache";
 
 // 器具选择缓存相关常量
 const MODULE_NAME = 'brewing-equipment';
@@ -86,8 +87,14 @@ export interface Content {
 }
 
 export function useBrewingState(initialBrewingStep?: BrewingStep) {
-	// 添加主导航状态
-	const [activeMainTab, setActiveMainTab] = useState<MainTabType>("冲煮");
+	// 添加主导航状态 - 从缓存中加载上次选择的主标签页
+	const [activeMainTab, setActiveMainTab] = useState<MainTabType>(() => {
+		// 在客户端运行时从缓存加载，服务器端渲染时使用默认值
+		if (typeof window !== 'undefined') {
+			return getMainTabPreference();
+		}
+		return "冲煮";
+	});
 	// 修改默认步骤为方案或传入的参数
 	const [activeBrewingStep, setActiveBrewingStep] = useState<BrewingStep>(
 		initialBrewingStep || "method"
@@ -393,6 +400,7 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 
 			// 如果当前不在冲煮标签，先切换回冲煮标签
 			if (activeMainTab !== "冲煮") {
+				saveMainTabPreference("冲煮");
 				setActiveMainTab("冲煮");
 				setShowHistory(false);
 				// 在状态更新后再处理步骤点击，避免状态不一致
@@ -625,6 +633,7 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 		(equipmentName: string) => {
 			// 如果当前在笔记标签，先切换回冲煮标签
 			if (activeMainTab !== "冲煮") {
+				saveMainTabPreference("冲煮");
 				setActiveMainTab("冲煮");
 				setShowHistory(false);
 				// 在状态更新后再处理器具选择，避免状态不一致
