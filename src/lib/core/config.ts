@@ -1315,4 +1315,6 @@ export const sponsorsList = [
 	"Nicole",
 	"Azkabaner",
 	"薄荷蘑菇汤",
+	"▲",
+	"古神",
 ];
