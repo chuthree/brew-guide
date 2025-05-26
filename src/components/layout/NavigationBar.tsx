@@ -264,69 +264,89 @@ const EquipmentIndicator: React.FC<EquipmentIndicatorProps> = ({
                     }
                 `}</style>
 
-                {/* 编辑模式 */}
-                {editingEquipment ? (
-                    <div className="flex items-center gap-2 whitespace-nowrap" data-edit-mode>
-                        {(() => {
-                            const equipment = allEquipments.find(eq => eq.id === editingEquipment)
-                            return equipment ? (
-                                <>
-                                    <span className="text-[12px] tracking-widest text-neutral-800 dark:text-neutral-100 pb-3">
-                                        {equipment.name}：
-                                    </span>
-                                    <button
-                                        onClick={() => handlers.edit(equipment)}
-                                        className="text-[12px] tracking-widest cursor-pointer text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-100 pb-3"
-                                    >
-                                        编辑
-                                    </button>
-                                    <button
-                                        onClick={() => handlers.delete(equipment)}
-                                        className="text-[12px] tracking-widest cursor-pointer text-neutral-500 dark:text-neutral-400 hover:text-red-600 dark:hover:text-red-400 pb-3"
-                                    >
-                                        删除
-                                    </button>
-                                    <button
-                                        onClick={() => handlers.share(equipment)}
-                                        className="text-[12px] tracking-widest cursor-pointer text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-100 pb-3"
-                                    >
-                                        分享
-                                    </button>
-                                    <span className="text-[12px] tracking-widest text-neutral-400 dark:text-neutral-500 pb-3">｜</span>
-                                    <button
-                                        onClick={handlers.exitEdit}
-                                        className="text-[12px] tracking-widest cursor-pointer text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-100 pb-3"
-                                    >
-                                        返回
-                                    </button>
-                                </>
-                            ) : null
-                        })()}
-                    </div>
-                ) : (
-                    /* 正常模式 */
-                    allItems.map((item) => (
-                        <div key={item.id} className="flex-shrink-0 flex items-center">
-                            {item.type === 'addButton' ? (
-                                <div
-                                    onClick={item.onClick}
-                                    className="text-[12px] tracking-widest cursor-pointer text-neutral-500 dark:text-neutral-400 flex items-center whitespace-nowrap pb-3"
-                                >
-                                    添加器具
+                {/* 编辑模式和正常模式的简洁切换 */}
+                <AnimatePresence mode="wait">
+                    {editingEquipment ? (
+                        <motion.div
+                            key="edit-mode"
+                            className="flex items-center gap-2 whitespace-nowrap"
+                            data-edit-mode
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                        >
+                            {(() => {
+                                const equipment = allEquipments.find(eq => eq.id === editingEquipment)
+                                return equipment ? (
+                                    <>
+                                        <span className="text-[12px] tracking-widest text-neutral-800 dark:text-neutral-100 pb-3">
+                                            {equipment.name}
+                                        </span>
+                                        <span className="text-[12px] tracking-widest text-neutral-400 dark:text-neutral-500 pb-3">｜</span>
+                                        <button
+                                            onClick={() => handlers.edit(equipment)}
+                                            className="text-[12px] tracking-widest cursor-pointer text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-100 pb-3 transition-colors duration-150"
+                                        >
+                                            编辑
+                                        </button>
+                                        <button
+                                            onClick={() => handlers.delete(equipment)}
+                                            className="text-[12px] tracking-widest cursor-pointer text-neutral-500 dark:text-neutral-400 hover:text-red-600 dark:hover:text-red-400 pb-3 transition-colors duration-150"
+                                        >
+                                            删除
+                                        </button>
+                                        <button
+                                            onClick={() => handlers.share(equipment)}
+                                            className="text-[12px] tracking-widest cursor-pointer text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-100 pb-3 transition-colors duration-150"
+                                        >
+                                            分享
+                                        </button>
+                                        <span className="text-[12px] tracking-widest text-neutral-400 dark:text-neutral-500 pb-3">｜</span>
+                                        <button
+                                            onClick={handlers.exitEdit}
+                                            className="text-[12px] tracking-widest cursor-pointer text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-100 pb-3 transition-colors duration-150"
+                                        >
+                                            返回
+                                        </button>
+                                    </>
+                                ) : null
+                            })()}
+                        </motion.div>
+                    ) : (
+                        /* 正常模式 */
+                        <motion.div
+                            key="normal-mode"
+                            className="flex items-center gap-4"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                        >
+                            {allItems.map((item) => (
+                                <div key={item.id} className="flex-shrink-0 flex items-center">
+                                    {item.type === 'addButton' ? (
+                                        <div
+                                            onClick={item.onClick}
+                                            className="text-[12px] tracking-widest cursor-pointer text-neutral-500 dark:text-neutral-400 flex items-center whitespace-nowrap pb-3 transition-colors duration-150"
+                                        >
+                                            添加器具
+                                        </div>
+                                    ) : (
+                                        <div className="whitespace-nowrap flex items-center relative">
+                                            <TabButton
+                                                tab={item.name}
+                                                isActive={item.isSelected}
+                                                onClick={item.onClick}
+                                                dataTab={item.id}
+                                            />
+                                        </div>
+                                    )}
                                 </div>
-                            ) : (
-                                <div className="whitespace-nowrap flex items-center relative">
-                                    <TabButton
-                                        tab={item.name}
-                                        isActive={item.isSelected}
-                                        onClick={item.onClick}
-                                        dataTab={item.id}
-                                    />
-                                </div>
-                            )}
-                        </div>
-                    ))
-                )}
+                            ))}
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
                 {/* 左边框指示器 */}
                 <div
