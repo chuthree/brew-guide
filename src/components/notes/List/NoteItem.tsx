@@ -222,7 +222,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
                                     </div>
                                 )}
                             </div>
-                            <div className="shrink-0 ml-1 relative">
+                            <div className="shrink-0 ml-1 relative h-[16.5px]">
                                 {isShareMode ? (
                                     <input
                                         type="checkbox"
