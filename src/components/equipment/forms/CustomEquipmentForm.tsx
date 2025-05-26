@@ -193,7 +193,6 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
 
     const [equipment, setEquipment] = useState<Partial<CustomEquipment>>({
         name: '',
-        description: '',
         animationType: 'v60',
         hasValve: false,
         customShapeSvg: '',
@@ -391,10 +390,6 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
             newErrors.name = '器具名称已存在';
         }
 
-        if (!equipment.description?.trim()) {
-            newErrors.description = '请输入器具描述';
-        }
-
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -533,12 +528,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
         setShowDrawingCanvas(true);
     };
 
-    // 切换到阀门绘图界面
-    const _handleShowValveDrawingCanvas = (mode: 'closed' | 'open' = 'closed') => {
-        hapticsUtils.light();
-        setValveEditMode(mode);
-        setShowValveDrawingCanvas(true);
-    };
+
 
     // 注水动画相关函数
     const handleAddPourAnimation = () => {
@@ -1218,16 +1208,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                             />
                         </FormField>
 
-                        {/* 器具描述 */}
-                        <FormField label="器具描述" error={errors.description}>
-                            <textarea
-                                value={equipment.description || ''}
-                                onChange={(e) => handleChange('description', e.target.value)}
-                                rows={3}
-                                className="block w-full rounded-md border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500 dark:text-neutral-100 transition-colors"
-                                placeholder="描述器具的特点和用途"
-                            />
-                        </FormField>
+
                     </div>
                 </div>
 
@@ -1278,7 +1259,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
 
                             </div>
                         </div>
-                        
+
                         {/* 杯型设置 */}
                         {selectedPreset !== 'espresso' && (
                         <div className="p-4">

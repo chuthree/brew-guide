@@ -4,7 +4,7 @@ import React from 'react'
 import { type CustomEquipment } from '@/lib/core/config'
 
 interface EquipmentSelectorProps {
-  equipmentList: { id: string; name: string; description: string }[]
+  equipmentList: { id: string; name: string }[]
   customEquipments: CustomEquipment[]
   selectedEquipment: string
   onSelect: (equipmentId: string) => void
@@ -25,7 +25,7 @@ const EquipmentSelector: React.FC<EquipmentSelectorProps> = ({
         <div className="space-y-5">
           {/* 标准器具列表 */}
           {equipmentList.map((equipment) => (
-            <div 
+            <div
               key={equipment.id}
               className="group relative text-neutral-500 dark:text-neutral-400"
               onClick={() => onSelect(equipment.id)}
@@ -39,19 +39,15 @@ const EquipmentSelector: React.FC<EquipmentSelectorProps> = ({
                       </h3>
                     </div>
                   </div>
-                  <div className="mt-2">
-                    <p className="text-xs font-light">
-                      {equipment.description}
-                    </p>
-                  </div>
+
                 </div>
               </div>
             </div>
           ))}
-          
+
           {/* 自定义器具列表 */}
           {customEquipments.map((equipment) => (
-            <div 
+            <div
               key={equipment.id}
               className="group relative text-neutral-500 dark:text-neutral-400"
               onClick={() => onSelect(equipment.id)}
@@ -67,7 +63,7 @@ const EquipmentSelector: React.FC<EquipmentSelectorProps> = ({
                   </div>
                   <div className="mt-2">
                     <p className="text-xs font-light">
-                      {equipment.description || '自定义器具'}
+                      自定义器具
                     </p>
                   </div>
                 </div>
@@ -80,4 +76,4 @@ const EquipmentSelector: React.FC<EquipmentSelectorProps> = ({
   )
 }
 
-export default EquipmentSelector 
+export default EquipmentSelector

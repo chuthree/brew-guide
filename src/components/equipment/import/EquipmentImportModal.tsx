@@ -215,7 +215,6 @@ const EquipmentImportModal: React.FC<EquipmentImportModalProps> = ({
                         // 优先使用原始ID，如果没有则生成新ID
                         id: equipment.id || `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
                         name: equipment.name,
-                        description: equipment.description || '',
                         isCustom: true,
                         animationType: equipment.animationType,
                         hasValve: equipment.hasValve || false,

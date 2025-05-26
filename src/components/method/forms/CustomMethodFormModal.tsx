@@ -36,18 +36,18 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
     useEffect(() => {
         const fetchCustomEquipments = async () => {
             if (!showCustomForm) return; // 不显示表单时不加载
-            
+
             try {
                 const equipments = await loadCustomEquipments();
                 setCustomEquipments(equipments);
-                
+
                 // 直接在这里设置currentCustomEquipment，避免依赖另一个useEffect
                 if (selectedEquipment) {
                     // 首先检查是否是自定义器具
                     const customEquipment = equipments.find(
                         e => e.id === selectedEquipment || e.name === selectedEquipment
                     );
-                    
+
                     if (customEquipment) {
                         setCurrentCustomEquipment(customEquipment);
                     } else {
@@ -55,7 +55,6 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
                         const virtualCustomEquipment: CustomEquipment = {
                             id: selectedEquipment,
                             name: selectedEquipment,
-                            description: '标准器具',
                             isCustom: true,
                             animationType: getAnimationTypeFromEquipmentId(selectedEquipment),
                             hasValve: selectedEquipment === 'CleverDripper'
@@ -74,7 +73,7 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
     // 根据标准器具ID获取动画类型
     const getAnimationTypeFromEquipmentId = (equipmentId: string | null): "v60" | "kalita" | "origami" | "clever" | "custom" | "espresso" => {
         if (!equipmentId) return "custom";
-        
+
         switch (equipmentId) {
             case 'V60':
                 return 'v60';
@@ -162,4 +161,4 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
     )
 }
 
-export default CustomMethodFormModal 
+export default CustomMethodFormModal

@@ -36,7 +36,6 @@ export interface BrewingMethods {
 export interface Equipment {
 	id: string;
 	name: string;
-	description: string;
 	note?: string;
 }
 
@@ -403,7 +402,7 @@ export const availableGrinders: Grinder[] = [
 		中粗: "32-38格", // 法压壶
 		粗: "38-45格", // 法压壶粗一些
 		特粗: "45-50格", // 冷萃
-		意式: "13-17格", // 气动咖啡机 研磨度 14 格出液丝滑 13 慢 
+		意式: "13-17格", // 气动咖啡机 研磨度 14 格出液丝滑 13 慢
 		摩卡壶: "14-18格",
 		手冲: "34-38格", // 星粒三plus 15～17格\n手冲 34～38格
 		法压壶: "32-45格",
@@ -432,27 +431,22 @@ export const equipmentList: Equipment[] = [
 	{
 		id: "V60",
 		name: "V60",
-		description: "经典锥形设计，流速快，萃取出层次分明的咖啡风味",
 	},
 	{
 		id: "CleverDripper",
 		name: "聪明杯",
-		description: "结合浸泡与过滤，操作简单，适合各种烘焙度咖啡",
 	},
 	{
 		id: "Kalita",
 		name: "蛋糕滤杯",
-		description: "波浪形底部设计，流速稳定，萃取更均匀",
 	},
 	{
 		id: "Origami",
 		name: "折纸滤杯",
-		description: "褶皱设计兼具美感与实用性，可使用不同形状滤纸",
 	},
 	{
 		id: "Espresso",
 		name: "意式咖啡机",
-		description: "高压萃取，制作浓缩咖啡和其他意式咖啡饮品",
 	},
 	// 可以在这里添加更多器具
 ];
