@@ -3,6 +3,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react'
 import { ExtendedCoffeeBean, BeanType } from '../types'
 import BeanListItem from './BeanListItem'
+import ImageFlowView from './ImageFlowView'
 import { generateBeanTitle } from '../types'
 import RemainingEditor from './RemainingEditor'
 
@@ -26,6 +27,8 @@ interface InventoryViewProps {
     onQuickDecrement: (beanId: string, currentValue: string, decrementAmount: number) => Promise<{ success: boolean, value?: string, reducedToZero?: boolean, error?: Error }>
     isSearching?: boolean
     searchQuery?: string
+    // 新增图片流模式相关props
+    isImageFlowMode?: boolean
 }
 
 const InventoryView: React.FC<InventoryViewProps> = ({
@@ -44,7 +47,8 @@ const InventoryView: React.FC<InventoryViewProps> = ({
     _onRemainingUpdate,
     onQuickDecrement,
     isSearching = false,
-    searchQuery = ''
+    searchQuery = '',
+    isImageFlowMode = false
 }) => {
     // 添加剩余量编辑状态
     const [editingRemaining, setEditingRemaining] = useState<{
@@ -59,13 +63,13 @@ const InventoryView: React.FC<InventoryViewProps> = ({
         event.stopPropagation();
         try {
             const target = event.target as HTMLElement;
-            
+
             // 检查目标元素是否有效
             if (!target || !document.body.contains(target)) {
                 console.warn('无效的目标元素');
                 return;
             }
-            
+
             setEditingRemaining({
                 beanId: bean.id,
                 value: bean.remaining || '',
@@ -84,27 +88,27 @@ const InventoryView: React.FC<InventoryViewProps> = ({
             // 保存当前的bean引用，以防在异步操作中状态变化
             const currentBeanId = editingRemaining.beanId;
             const currentValue = editingRemaining.value;
-            
+
             // 先关闭弹出层，防止在处理过程中组件卸载导致错误
             setEditingRemaining(null);
-            
+
             const result = await onQuickDecrement(
                 currentBeanId,
                 currentValue,
                 decrementAmount
             );
-            
+
             if (result.success) {
                 // 强制更新筛选后的咖啡豆列表，确保UI显示正确
                 const updatedBean = filteredBeans.find(bean => bean.id === currentBeanId);
                 if (updatedBean) {
                     updatedBean.remaining = result.value || "0";
-                    
+
                     // 检查组件是否仍然挂载
                     if (loaderRef.current) {
                         // 刷新当前显示的咖啡豆
-                        setDisplayedBeans(prev => 
-                            prev.map(bean => 
+                        setDisplayedBeans(prev =>
+                            prev.map(bean =>
                                 bean.id === currentBeanId ? {...bean, remaining: result.value || "0"} : bean
                             )
                         );
@@ -129,7 +133,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
     const [hasMore, setHasMore] = useState(true);
     const [isLoading, setIsLoading] = useState(false);
     const loaderRef = useRef<HTMLDivElement>(null);
-    
+
     // 初始化分页数据
     useEffect(() => {
         // 每次筛选条件变化时，重置分页状态
@@ -138,24 +142,24 @@ const InventoryView: React.FC<InventoryViewProps> = ({
         setDisplayedBeans(initialBeans);
         setHasMore(filteredBeans.length > PAGE_SIZE);
     }, [filteredBeans]);
-    
+
     // 加载更多咖啡豆 - 移除setTimeout，直接同步更新
     const loadMoreBeans = useCallback(() => {
         if (!hasMore || isLoading) return;
-        
+
         setIsLoading(true);
-        
+
         try {
             // 计算下一页的咖啡豆
             const nextPage = currentPage + 1;
             const endIndex = nextPage * PAGE_SIZE;
-            
+
             // 使用筛选后的咖啡豆作为数据源
             const newDisplayedBeans = filteredBeans.slice(0, endIndex);
-            
+
             // 如果加载的数量和筛选后的总数一样，说明没有更多数据了
             const noMoreBeans = newDisplayedBeans.length >= filteredBeans.length;
-            
+
             setDisplayedBeans(newDisplayedBeans);
             setCurrentPage(nextPage);
             setHasMore(!noMoreBeans);
@@ -165,11 +169,11 @@ const InventoryView: React.FC<InventoryViewProps> = ({
             setIsLoading(false);
         }
     }, [currentPage, filteredBeans, hasMore, isLoading]);
-    
+
     // 设置IntersectionObserver来监听加载更多的元素
     useEffect(() => {
         if (!loaderRef.current) return;
-        
+
         const observer = new IntersectionObserver(
             (entries) => {
                 if (entries[0].isIntersecting && hasMore) {
@@ -178,15 +182,20 @@ const InventoryView: React.FC<InventoryViewProps> = ({
             },
             { threshold: 0.1 } // 降低阈值，提高加载触发敏感度
         );
-        
+
         observer.observe(loaderRef.current);
-        
+
         return () => {
             if (loaderRef.current) {
                 observer.unobserve(loaderRef.current);
             }
         };
     }, [hasMore, loadMoreBeans]);
+
+    // 如果是图片流模式，直接返回图片流视图
+    if (isImageFlowMode) {
+        return <ImageFlowView filteredBeans={filteredBeans} />
+    }
 
     return (
         <div className="w-full h-full overflow-y-auto scroll-with-bottom-bar relative">
@@ -195,7 +204,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                 <div
                     className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400"
                 >
-                    {searchQuery.trim() ? 
+                    {searchQuery.trim() ?
                         `[ 没有找到匹配"${searchQuery.trim()}"的咖啡豆 ]` :
                         selectedVariety ?
                             `[ 没有${selectedVariety}品种的咖啡豆 ]` :
@@ -221,11 +230,11 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                             searchQuery={isSearching ? searchQuery : ''}
                         />
                     ))}
-                    
+
                     {/* 加载更多指示器 - 简化加载提示 */}
                     {hasMore && (
-                        <div 
-                            ref={loaderRef} 
+                        <div
+                            ref={loaderRef}
                             className="flex justify-center items-center py-4"
                         >
                             <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">

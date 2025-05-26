@@ -45,6 +45,9 @@ interface ViewSwitcherProps {
     onSearchChange?: (e: React.ChangeEvent<HTMLInputElement>) => void
     rankingBeansCount?: number
     bloggerBeansCount?: number
+    // 新增图片流模式相关props
+    isImageFlowMode?: boolean
+    onToggleImageFlowMode?: () => void
 }
 
 const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
@@ -78,6 +81,8 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
     onSearchChange,
     rankingBeansCount,
     bloggerBeansCount,
+    isImageFlowMode = false,
+    onToggleImageFlowMode,
 }) => {
     // 添加极简模式状态
     const [_isMinimalistMode, setIsMinimalistMode] = useState(false);
@@ -340,6 +345,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                                         display: none;
                                     }
                                 `}</style>
+
                                 {/* 豆子类型筛选按钮 */}
                                 <button
                                     onClick={() => onBeanTypeChange?.('espresso')}
@@ -362,14 +368,17 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
 
                                 <button
                                     onClick={() => selectedVariety !== null && onVarietyClick?.(null)}
+                                    onDoubleClick={() => onToggleImageFlowMode?.()}
                                     className={`pb-1.5 mr-3 text-[11px] whitespace-nowrap relative ${selectedVariety === null ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
                                 >
-                                    <span className="relative">全部豆种</span>
+                                        全部豆种
+                                        {isImageFlowMode && (
+                                            <span> · 图片流</span>
+                                        )}
                                     {selectedVariety === null && (
                                         <span className="absolute bottom-0 left-0 w-full h-px bg-neutral-800 dark:bg-white"></span>
                                     )}
                                 </button>
-
 
                                 {/* 品种筛选按钮 */}
                                 {availableVarieties?.map((variety: string) => (
