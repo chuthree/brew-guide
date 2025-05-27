@@ -344,7 +344,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
             <MethodSelector
               selectedEquipment={selectedEquipment}
               selectedMethod={selectedMethod}
-              customMethods={selectedEquipment ? (customMethods as any)[selectedEquipment] || [] : []}
+              customMethods={customMethods}
               commonMethods={selectedEquipment ? (commonMethods as any)[selectedEquipment] || [] : []}
               onMethodSelect={setSelectedMethod}
               onParamsChange={_handleMethodParamsChange}
