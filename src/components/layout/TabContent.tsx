@@ -484,9 +484,16 @@ const TabContent: React.FC<TabContentProps> = ({
             }
 
             // 过滤掉已经用完的豆子
-            const availableBeans = allBeans.filter(bean =>
-                !(bean.remaining === "0" || bean.remaining === "0g") || !bean.capacity
-            );
+            const availableBeans = allBeans.filter(bean => {
+                // 如果没有设置容量，则显示（因为无法判断是否用完）
+                if (!bean.capacity || bean.capacity === '0' || bean.capacity === '0g') {
+                    return true;
+                }
+
+                // 如果设置了容量，则检查剩余量是否大于0
+                const remaining = parseFloat(bean.remaining || '0');
+                return remaining > 0;
+            });
 
             if (availableBeans.length > 0) {
                 // 打开随机选择器

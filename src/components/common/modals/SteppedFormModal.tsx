@@ -39,22 +39,22 @@ const SteppedFormModal: React.FC<SteppedFormModalProps> = ({
     onRandomBean
 }) => {
     const [internalStepIndex, setInternalStepIndex] = useState(initialStep)
-    
+
     // 使用外部或内部状态控制当前步骤
     const currentStepIndex = currentStep !== undefined ? currentStep : internalStepIndex
     const setCurrentStepIndex = setCurrentStep || setInternalStepIndex
-    
+
     // 搜索相关状态
     const [isSearching, setIsSearching] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
     const searchInputRef = useRef<HTMLInputElement>(null)
-    
+
     // 添加高亮咖啡豆ID状态
     const [highlightedBeanId, setHighlightedBeanId] = useState<string | null>(null)
-    
+
     // 添加随机按钮禁用状态
     const [isRandomButtonDisabled, setIsRandomButtonDisabled] = useState(false)
-    
+
     // 模态框DOM引用
     const modalRef = useRef<HTMLDivElement>(null)
 
@@ -129,7 +129,7 @@ const SteppedFormModal: React.FC<SteppedFormModalProps> = ({
             onComplete()
         }
     }
-    
+
     // 处理搜索按钮点击
     const handleSearchClick = () => {
         setIsSearching(true);
@@ -137,14 +137,14 @@ const SteppedFormModal: React.FC<SteppedFormModalProps> = ({
             searchInputRef.current?.focus();
         }, 100);
     }
-    
+
     // 处理关闭搜索
     const handleCloseSearch = (e?: React.MouseEvent) => {
         e?.stopPropagation();
         setIsSearching(false);
         setSearchQuery('');
     }
-    
+
     // 检查当前步骤是否为咖啡豆选择步骤
     const isCoffeeBeanStep = currentStepContent?.id === 'coffeeBean';
 
@@ -154,13 +154,13 @@ const SteppedFormModal: React.FC<SteppedFormModalProps> = ({
     // 创建一个包含搜索字段的内容
     const contentWithSearchProps = React.useMemo(() => {
         if (!isCoffeeBeanStep) return currentStepContent.content;
-        
+
         // 为咖啡豆选择器添加搜索查询参数和高亮ID
         return React.cloneElement(
             currentStepContent.content as React.ReactElement<any>,
-            { 
+            {
                 searchQuery,
-                highlightedBeanId  
+                highlightedBeanId
             }
         );
     }, [currentStepContent?.content, isCoffeeBeanStep, searchQuery, highlightedBeanId]);
@@ -172,24 +172,31 @@ const SteppedFormModal: React.FC<SteppedFormModalProps> = ({
             onRandomBean();
             return;
         }
-        
+
         // 如果按钮被禁用，直接返回
         if (isRandomButtonDisabled) return;
-        
+
         try {
             const allBeans = await CoffeeBeanManager.getAllBeans();
             // 过滤掉已经用完的豆子
-            const availableBeans = allBeans.filter(bean => 
-                !(bean.remaining === "0" || bean.remaining === "0g") || !bean.capacity
-            );
-            
+            const availableBeans = allBeans.filter(bean => {
+                // 如果没有设置容量，则显示（因为无法判断是否用完）
+                if (!bean.capacity || bean.capacity === '0' || bean.capacity === '0g') {
+                    return true;
+                }
+
+                // 如果设置了容量，则检查剩余量是否大于0
+                const remaining = parseFloat(bean.remaining || '0');
+                return remaining > 0;
+            });
+
             if (availableBeans.length > 0) {
                 const randomIndex = Math.floor(Math.random() * availableBeans.length);
                 const randomBean = availableBeans[randomIndex];
-                
+
                 // 设置高亮豆子ID，而不是直接选择
                 setHighlightedBeanId(randomBean.id);
-                
+
                 // 禁用随机按钮3秒
                 setIsRandomButtonDisabled(true);
                 setTimeout(() => {
@@ -198,18 +205,18 @@ const SteppedFormModal: React.FC<SteppedFormModalProps> = ({
                     setHighlightedBeanId(null);
                 },3500);
             } else {
-                showToast({ 
-                    type: 'info', 
-                    title: '没有可用的咖啡豆', 
-                    duration: 2000 
+                showToast({
+                    type: 'info',
+                    title: '没有可用的咖啡豆',
+                    duration: 2000
                 });
             }
         } catch (error) {
             console.error('随机选择咖啡豆失败:', error);
-            showToast({ 
-                type: 'error', 
-                title: '随机选择失败', 
-                duration: 2000 
+            showToast({
+                type: 'error',
+                title: '随机选择失败',
+                duration: 2000
             });
         }
     };
@@ -218,13 +225,13 @@ const SteppedFormModal: React.FC<SteppedFormModalProps> = ({
     const renderNextButton = () => {
         const isLastStep = currentStepIndex === steps.length - 1;
         const isValid = currentStepContent?.isValid !== false;
-        
+
         const springTransition = {
             type: "spring",
             stiffness: 500,
             damping: 25
         };
-        
+
         return (
             <div className="modal-bottom-button flex items-center justify-center">
                 <div className="flex items-center justify-center gap-2">
@@ -298,7 +305,7 @@ const SteppedFormModal: React.FC<SteppedFormModalProps> = ({
                             )}
                         </motion.button>
                     )}
-                    
+
                     {/* 随机选择按钮 - 仅在咖啡豆步骤且未处于搜索状态时显示 */}
                     {isValid && isCoffeeBeanStep && !isSearching && (
                         <motion.button
@@ -323,19 +330,19 @@ const SteppedFormModal: React.FC<SteppedFormModalProps> = ({
 
     // 直接使用CSS控制显示/隐藏，而不是条件渲染
     return (
-        <div 
+        <div
             ref={modalRef}
             className={`fixed inset-0 z-50 transition-opacity duration-200 ${showForm ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
         >
-            <div 
+            <div
                 className="absolute inset-0 bg-black/30 backdrop-blur-xs"
                 onClick={onClose}
             >
-                <div 
+                <div
                     className="absolute inset-x-0 bottom-0 max-w-[500px] mx-auto max-h-[80vh] overflow-hidden rounded-t-2xl bg-neutral-50 dark:bg-neutral-900 shadow-xl transition-transform duration-200"
-                    style={{ 
+                    style={{
                         transform: showForm ? 'translateY(0)' : 'translateY(100%)',
-                        willChange: "transform" 
+                        willChange: "transform"
                     }}
                     onClick={(e) => e.stopPropagation()}
                 >
@@ -383,4 +390,4 @@ const SteppedFormModal: React.FC<SteppedFormModalProps> = ({
     )
 }
 
-export default SteppedFormModal 
+export default SteppedFormModal

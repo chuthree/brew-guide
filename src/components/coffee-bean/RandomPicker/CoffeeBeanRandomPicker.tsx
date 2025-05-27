@@ -37,11 +37,21 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
 
   // 动画过渡参数
   const springTransition = { type: "spring", stiffness: 500, damping: 25 }
-  
+
   // 获取有效的豆子列表（过滤掉无效或为空的豆子）
-  const validBeans = beans.filter(bean => 
-    bean && bean.id && !(bean.remaining === "0" || bean.remaining === "0g") || !bean.capacity
-  )
+  const validBeans = beans.filter(bean => {
+    // 基础验证
+    if (!bean || !bean.id) return false;
+
+    // 如果没有设置容量，则显示（因为无法判断是否用完）
+    if (!bean.capacity || bean.capacity === '0' || bean.capacity === '0g') {
+      return true;
+    }
+
+    // 如果设置了容量，则检查剩余量是否大于0
+    const remaining = parseFloat(bean.remaining || '0');
+    return remaining > 0;
+  })
 
   // 重置组件状态
   const resetState = useCallback(() => {
@@ -60,26 +70,26 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
   // 开始随机选择动画
   const startRandomSelection = useCallback(async () => {
     if (validBeans.length === 0 || !containerRef.current) return
-    
+
     setAnimationState('selecting')
-    
+
     try {
       // 获取容器宽度以计算中心位置
       const containerWidth = containerRef.current.clientWidth
-      
+
       // 随机选择一个豆子
       const randomIndex = Math.floor(Math.random() * validBeans.length)
-      
+
       // 计算初始位置和最终位置
       const initialX = (containerWidth - cardWidth) / 2 // 让第一个卡片在中心
-      
+
       // 简化动画算法：直接计算最终位置
       // 让动画滚动足够多的卡片来营造旋转效果，最终停在选中的卡片
       const totalScrollDistance = (validBeans.length * 3 + randomIndex) * cardTotalWidth
-      
+
       // 设置初始位置并直接执行动画
       controls.set({ x: initialX })
-      
+
       // 使用更优化的动画设置
       await controls.start({
         x: initialX - totalScrollDistance,
@@ -89,7 +99,7 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
           type: "tween" // 使用tween而不是spring可能更流畅
         }
       })
-      
+
       // 动画完成后设置状态
       setSelectedBean(validBeans[randomIndex])
       setSelectedIndex(randomIndex)
@@ -99,7 +109,7 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
       // 错误恢复
       setAnimationState('initial')
     }
-    
+
   }, [validBeans, controls, cardWidth, cardTotalWidth])
 
   // 重新选择
@@ -118,11 +128,11 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
 
   // 容器变体
   const containerVariants = {
-    open: { 
+    open: {
       opacity: 1,
       transition: { duration: 0.3 }
     },
-    closed: { 
+    closed: {
       opacity: 0,
       transition: { duration: 0.3 }
     }
@@ -135,7 +145,7 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
       startRandomSelection()
     }
   }, [isOpen, animationState, validBeans.length, startRandomSelection])
-  
+
   // 为动画准备数据 - 创建足够长的序列
   // 优化：减少渲染的卡片数量以提高性能
   const displayBeans = [...validBeans, ...validBeans, ...validBeans, ...validBeans, ...validBeans]
@@ -155,13 +165,13 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
             <div className="relative w-full max-w-md" ref={containerRef}>
               {/* 中间指示器 - 永远在中间 */}
               <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[160px] h-[132px] border-2 border-neutral-800 dark:border-neutral-100 rounded-lg z-10 pointer-events-none"></div>
-              
+
               {/* 创建渐变遮罩效果 */}
               <div className="absolute inset-0 bg-linear-to-r from-white/95 via-transparent to-white/95 dark:from-neutral-900/95 dark:via-transparent dark:to-neutral-900/95 z-20 pointer-events-none"></div>
-              
+
               {/* 横向卡片容器 */}
               <div className="relative w-full h-[132px] overflow-hidden">
-                <motion.div 
+                <motion.div
                   className="flex space-x-3 absolute"
                   animate={controls}
                   style={{ willChange: "transform" }} // 性能优化
@@ -196,7 +206,7 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
                 </motion.div>
               </div>
             </div>
-            
+
             {/* 底部按钮 - 使用固定高度避免布局抖动 */}
             <div className="mt-12 flex items-center justify-center gap-4 h-[56px]">
               <AnimatePresence>
@@ -212,7 +222,7 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
                     >
                       使用
                     </motion.button>
-                    
+
                     <motion.button
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
@@ -228,7 +238,7 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
               </AnimatePresence>
             </div>
           </div>
-          
+
           {/* 关闭按钮 */}
           <motion.button
             className="absolute top-[calc(env(safe-area-inset-top)+36px)] right-6 p-2 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100"
@@ -238,15 +248,15 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
           >
-            <svg 
-              xmlns="http://www.w3.org/2000/svg" 
-              width="24" 
-              height="24" 
-              viewBox="0 0 24 24" 
-              fill="none" 
-              stroke="currentColor" 
-              strokeWidth="2" 
-              strokeLinecap="round" 
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
               strokeLinejoin="round"
             >
               <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -259,4 +269,4 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
   )
 }
 
-export default CoffeeBeanRandomPicker 
+export default CoffeeBeanRandomPicker
