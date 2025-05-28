@@ -38,10 +38,13 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
   // 动画过渡参数
   const springTransition = { type: "spring", stiffness: 500, damping: 25 }
 
-  // 获取有效的豆子列表（过滤掉无效或为空的豆子）
+  // 获取有效的豆子列表（过滤掉无效或为空的豆子，以及在途状态的豆子）
   const validBeans = beans.filter(bean => {
     // 基础验证
     if (!bean || !bean.id) return false;
+
+    // 过滤掉在途状态的咖啡豆
+    if (bean.isInTransit) return false;
 
     // 如果没有设置容量，则显示（因为无法判断是否用完）
     if (!bean.capacity || bean.capacity === '0' || bean.capacity === '0g') {

@@ -152,8 +152,15 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
                 
             const loadedBeans = await CoffeeBeanManager.getAllBeans();
 
-            // 过滤掉已经喝完的咖啡豆
-            const availableBeans = loadedBeans.filter(bean => !isBeanEmpty(bean));
+            // 过滤掉已经喝完的咖啡豆和在途状态的咖啡豆
+            const availableBeans = loadedBeans.filter(bean => {
+                // 过滤掉在途状态的咖啡豆
+                if (bean.isInTransit) {
+                    return false;
+                }
+                // 过滤掉已经喝完的咖啡豆
+                return !isBeanEmpty(bean);
+            });
 
             // 按照赏味期排序
             const sortedBeans = sortBeans(availableBeans);

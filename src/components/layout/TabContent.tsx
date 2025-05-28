@@ -500,8 +500,13 @@ const TabContent: React.FC<TabContentProps> = ({
                 setAllBeans(beans);
             }
 
-            // 过滤掉已经用完的豆子
+            // 过滤掉已经用完的豆子和在途状态的豆子
             const availableBeans = allBeans.filter(bean => {
+                // 过滤掉在途状态的咖啡豆
+                if (bean.isInTransit) {
+                    return false;
+                }
+
                 // 如果没有设置容量，则显示（因为无法判断是否用完）
                 if (!bean.capacity || bean.capacity === '0' || bean.capacity === '0g') {
                     return true;
