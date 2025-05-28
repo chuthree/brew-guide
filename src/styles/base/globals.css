@@ -105,7 +105,7 @@ body {
 /* 底部间距容器 */
 .scroll-with-bottom-bar,
 .content-area {
-  padding-bottom: calc(env(safe-area-inset-bottom) + 100px);
+  padding-bottom: calc(var(--safe-area-bottom) + 100px);
 }
 
 /* 底部操作栏 */

@@ -3,6 +3,7 @@
 import { Capacitor } from "@capacitor/core";
 import { SplashScreen } from "@capacitor/splash-screen";
 import { StatusBar, Style } from "@capacitor/status-bar";
+import SafeAreaManager from "./safeArea";
 
 export const isNative = () => {
 	return Capacitor.isNativePlatform();
@@ -14,6 +15,9 @@ export const getPlatform = () => {
 
 export const initCapacitor = async (): Promise<void> => {
 	try {
+		// 初始化安全区域（在所有平台上都需要）
+		await SafeAreaManager.initialize();
+
 		if (isNative()) {
 			// 隐藏启动屏幕
 			await SplashScreen.hide();
@@ -27,7 +31,7 @@ export const initCapacitor = async (): Promise<void> => {
 					await StatusBar.setStyle({
 						style: prefersDark ? Style.Dark : Style.Light,
 					});
-					
+
 					// 设置状态栏覆盖
 					await StatusBar.setOverlaysWebView({ overlay: true });
 					await StatusBar.show();
@@ -44,6 +48,12 @@ export const initCapacitor = async (): Promise<void> => {
 					try {
 						await StatusBar.setStyle({
 							style: e.matches ? Style.Dark : Style.Light,
+						});
+
+						// 同时更新安全区域的状态栏内容颜色
+						await SafeAreaManager.updateConfig({
+							statusBarContent: e.matches ? 'light' : 'dark',
+							navigationBarContent: e.matches ? 'light' : 'dark',
 						});
 					} catch {}
 				});

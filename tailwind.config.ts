@@ -1,5 +1,4 @@
 import type { Config } from "tailwindcss";
-import safeArea from "tailwindcss-safe-area";
 import animate from "tailwindcss-animate";
 
 const config: Config = {
@@ -21,8 +20,16 @@ const config: Config = {
 				mono: ["var(--font-mono)"],
 			},
 			padding: {
-				'safe-top': 'max(env(safe-area-inset-top), 36px)',
-				'safe-bottom': 'max(env(safe-area-inset-bottom), 36px)',
+				'safe-top': 'var(--safe-area-top)',
+				'safe-bottom': 'var(--safe-area-bottom)',
+				'safe-left': 'var(--safe-area-left)',
+				'safe-right': 'var(--safe-area-right)',
+			},
+			margin: {
+				'safe-top': 'var(--safe-area-top)',
+				'safe-bottom': 'var(--safe-area-bottom)',
+				'safe-left': 'var(--safe-area-left)',
+				'safe-right': 'var(--safe-area-right)',
 			},
 			keyframes: {
 				"caret-blink": {
@@ -36,7 +43,6 @@ const config: Config = {
 		},
 	},
 	plugins: [
-		safeArea,
 		animate,
 	],
 	future: {

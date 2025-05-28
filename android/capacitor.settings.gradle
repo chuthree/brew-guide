@@ -37,3 +37,6 @@ project(':capacitor-text-zoom').projectDir = new File('../node_modules/@capacito
 
 include ':capawesome-capacitor-file-picker'
 project(':capawesome-capacitor-file-picker').projectDir = new File('../node_modules/@capawesome/capacitor-file-picker/android')
+
+include ':capacitor-community-safe-area'
+project(':capacitor-community-safe-area').projectDir = new File('../node_modules/@capacitor-community/safe-area/android')

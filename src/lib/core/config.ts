@@ -442,7 +442,7 @@ export const equipmentList: Equipment[] = [
 	},
 	{
 		id: "Origami",
-		name: "折纸滤杯",
+		name: "折纸滤杯1",
 	},
 	{
 		id: "Espresso",

@@ -1,3 +1,5 @@
+/// <reference types="@capacitor-community/safe-area" />
+
 import type { CapacitorConfig } from "@capacitor/cli";
 import { KeyboardResize, KeyboardStyle } from "@capacitor/keyboard";
 
@@ -25,6 +27,15 @@ const config: CapacitorConfig = {
 			resize: KeyboardResize.Native,
 			style: KeyboardStyle.Dark,
 			resizeOnFullScreen: true,
+		},
+		SafeArea: {
+			enabled: true,
+			customColorsForSystemBars: true,
+			statusBarColor: '#00000000', // 透明
+			statusBarContent: 'light',
+			navigationBarColor: '#00000000', // 透明
+			navigationBarContent: 'light',
+			offset: 0,
 		},
 	},
 };
