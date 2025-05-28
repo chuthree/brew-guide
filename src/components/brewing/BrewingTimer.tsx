@@ -593,27 +593,41 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         ? JSON.parse(existingNotesStr)
         : [];
 
-      // 创建新笔记 - 确保不保存完整的coffeeBean对象
-      const newNote = {
+      // 检查是否是现有笔记
+      const isExistingNote = note.id && existingNotes.some((n: BrewingNoteData) => n.id === note.id);
+
+      // 创建笔记数据 - 确保不保存完整的coffeeBean对象
+      const noteData = {
         ...note,
-        id: Date.now().toString(),
-        timestamp: Date.now(),
+        id: note.id || Date.now().toString(),
+        // 编辑现有笔记时保留原始时间戳，新建笔记时使用当前时间
+        timestamp: isExistingNote
+          ? existingNotes.find((n: BrewingNoteData) => n.id === note.id)?.timestamp || Date.now()
+          : Date.now(),
       };
       
       // 如果存在coffeeBean字段，移除它
-      if ('coffeeBean' in newNote) {
-        delete newNote.coffeeBean;
+      if ('coffeeBean' in noteData) {
+        delete noteData.coffeeBean;
       }
 
-      // 将新笔记添加到列表开头
-      const updatedNotes = [newNote, ...existingNotes];
+      let updatedNotes;
+      if (isExistingNote) {
+        // 更新现有笔记
+        updatedNotes = existingNotes.map((n: BrewingNoteData) =>
+          n.id === noteData.id ? noteData : n
+        );
+      } else {
+        // 将新笔记添加到列表开头
+        updatedNotes = [noteData, ...existingNotes];
+      }
 
       // 存储更新后的笔记列表
       await Storage.set("brewingNotes", JSON.stringify(updatedNotes));
 
       // 触发自定义事件通知数据变更
       const storageEvent = new CustomEvent('storage:changed', {
-        detail: { key: 'brewingNotes', id: newNote.id }
+        detail: { key: 'brewingNotes', id: noteData.id }
       });
       window.dispatchEvent(storageEvent);
       

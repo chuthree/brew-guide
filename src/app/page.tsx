@@ -1496,10 +1496,17 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             const isExistingNote = note.id && existingNotes.some((n: BrewingNoteData) => n.id === note.id);
 
             if (isExistingNote) {
-                // 更新现有笔记
-                updatedNotes = existingNotes.map((n: BrewingNoteData) =>
-                    n.id === note.id ? note : n
-                );
+                // 更新现有笔记 - 保留原始时间戳
+                updatedNotes = existingNotes.map((n: BrewingNoteData) => {
+                    if (n.id === note.id) {
+                        return {
+                            ...note,
+                            // 确保保留原始时间戳
+                            timestamp: n.timestamp
+                        };
+                    }
+                    return n;
+                });
             } else {
                 // 添加新笔记 - 使用笔记自带的ID或生成新ID
                 const newNote = {

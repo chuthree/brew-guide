@@ -222,13 +222,30 @@ const TabContent: React.FC<TabContentProps> = ({
             const existingNotesStr = await Storage.get('brewingNotes');
             const existingNotes = existingNotesStr ? JSON.parse(existingNotesStr) : [];
 
-            const newNote = {
+            // 检查是否是现有笔记
+            const isExistingNote = note.id && existingNotes.some((n: BrewingNoteData) => n.id === note.id);
+
+            const noteData = {
                 ...note,
-                id: Date.now().toString(),
-                timestamp: Date.now(),
+                id: note.id || Date.now().toString(),
+                // 编辑现有笔记时保留原始时间戳，新建笔记时使用当前时间
+                timestamp: isExistingNote
+                    ? existingNotes.find((n: BrewingNoteData) => n.id === note.id)?.timestamp || Date.now()
+                    : Date.now(),
             };
 
-            await Storage.set('brewingNotes', JSON.stringify([newNote, ...existingNotes]));
+            let updatedNotes;
+            if (isExistingNote) {
+                // 更新现有笔记
+                updatedNotes = existingNotes.map((n: BrewingNoteData) =>
+                    n.id === noteData.id ? noteData : n
+                );
+            } else {
+                // 添加新笔记
+                updatedNotes = [noteData, ...existingNotes];
+            }
+
+            await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
             setNoteSaved(true);
 
             // 设置全局笔记保存状态

@@ -534,7 +534,8 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         // 创建完整的笔记数据
         const noteData: BrewingNoteData = {
             id: id || Date.now().toString(),
-            timestamp: Date.now(),
+            // 编辑现有笔记时保留原始时间戳，新建笔记时使用当前时间
+            timestamp: initialData.timestamp || Date.now(),
             ...formData,
             equipment: initialData.equipment,
             method: initialData.method,
