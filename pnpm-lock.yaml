@@ -11,6 +11,9 @@ importers:
       '@capacitor-community/keep-awake':
         specifier: ^7.0.0
         version: 7.0.0(@capacitor/core@7.2.0)
+      '@capacitor-community/safe-area':
+        specifier: ^7.0.0-alpha.1
+        version: 7.0.0-alpha.1(@capacitor/core@7.2.0)
       '@capacitor/android':
         specifier: ^7.2.0
         version: 7.2.0(@capacitor/core@7.2.0)
@@ -167,9 +170,6 @@ importers:
       tailwindcss-animate:
         specifier: ^1.0.7
         version: 1.0.7(tailwindcss@4.1.7)
-      tailwindcss-safe-area:
-        specifier: ^0.6.0
-        version: 0.6.0(tailwindcss@4.1.7)
       ts-node:
         specifier: ^10.9.2
         version: 10.9.2(@types/node@22.15.19)(typescript@5.8.3)
@@ -711,6 +711,11 @@ packages:
 
   '@capacitor-community/keep-awake@7.0.0':
     resolution: {integrity: sha512-z0dOhSDU1epVM1dhdBSRcNYFBMCky2bbp9HY9uptbmixeV5QliO8LX4qM84P9y4+LXwLSNRjL0JtMqk8rKWUyg==}
+    peerDependencies:
+      '@capacitor/core': '>=7.0.0'
+
+  '@capacitor-community/safe-area@7.0.0-alpha.1':
+    resolution: {integrity: sha512-N6ktkRiofqrt+N/vQzh4jcWY8IzJ4TVw1tKAPssvbddWFTyZzXzSdBeX/l/nracJF0PZqmLdA7JYTBfnOxXQYw==}
     peerDependencies:
       '@capacitor/core': '>=7.0.0'
 
@@ -3783,12 +3788,6 @@ packages:
     peerDependencies:
       tailwindcss: '>=3.0.0 || insiders'
 
-  tailwindcss-safe-area@0.6.0:
-    resolution: {integrity: sha512-5PM3CKquzmaa6mow64zWJ0438/yGSqdPfjaXtwNDb31LezNWqFoGPSbvrW12T8iB4EBjeWot+qAA9nbUqqf3sw==}
-    engines: {node: '>=16'}
-    peerDependencies:
-      tailwindcss: ^2.0.0 || >=3.0.0
-
   tailwindcss@4.1.7:
     resolution: {integrity: sha512-kr1o/ErIdNhTz8uzAYL7TpaUuzKIE6QPQ4qmSdxnoX/lo+5wmUHQA6h3L5yIqEImSRnAAURDirLu/BgiXGPAhg==}
 
@@ -4801,6 +4800,10 @@ snapshots:
       '@babel/helper-validator-identifier': 7.27.1
 
   '@capacitor-community/keep-awake@7.0.0(@capacitor/core@7.2.0)':
+    dependencies:
+      '@capacitor/core': 7.2.0
+
+  '@capacitor-community/safe-area@7.0.0-alpha.1(@capacitor/core@7.2.0)':
     dependencies:
       '@capacitor/core': 7.2.0
 
@@ -7990,10 +7993,6 @@ snapshots:
   tailwind-merge@3.3.0: {}
 
   tailwindcss-animate@1.0.7(tailwindcss@4.1.7):
-    dependencies:
-      tailwindcss: 4.1.7
-
-  tailwindcss-safe-area@0.6.0(tailwindcss@4.1.7):
     dependencies:
       tailwindcss: 4.1.7
 
