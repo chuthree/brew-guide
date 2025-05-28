@@ -14,6 +14,7 @@ interface BasicInfoProps {
     onImageUpload: (file: File) => void;
     editingRemaining: string | null;
     validateRemaining: () => void;
+    toggleInTransitState: () => void;
 }
 
 const BasicInfo: React.FC<BasicInfoProps> = ({
@@ -22,6 +23,7 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
     onImageUpload,
     editingRemaining,
     validateRemaining,
+    toggleInTransitState,
 }) => {
     // 处理容量和剩余容量的状态
     const [capacityValue, setCapacityValue] = useState('');
@@ -224,7 +226,7 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
             <div className="grid grid-cols-2 gap-6 w-full">
                 <div className="space-y-2">
                     <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                        剩余/容量 (g)
+                        剩余量 / 总量 (g)
                     </label>
                     <div className="flex items-center justify-start w-full">
                         <div className="flex items-center border-b border-neutral-300 dark:border-neutral-700 py-2 w-full">
@@ -299,14 +301,25 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
                 </div>
 
                 <div className="space-y-2">
-                    <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                        烘焙日期
-                    </label>
-                    <div className="flex items-center justify-start w-full">
+                    <div className="flex items-center justify-between">
+                        <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                            烘焙日期
+                        </label>
+                        <button
+                            type="button"
+                            onClick={toggleInTransitState}
+                            className={`text-xs ${bean.isInTransit ? 'text-neutral-700 dark:text-neutral-300' : 'text-neutral-600 dark:text-neutral-400'} underline`}
+                        >
+                            {bean.isInTransit ? '取消在途状态' : '设为在途'}
+                        </button>
+                    </div>
+                    <div className="flex items-center justify-start w-full relative">
                         <InputOTP
                             maxLength={8}
-                            value={bean.roastDate?.replace(/-/g, '') || ''}
+                            value={bean.isInTransit ? '' : (bean.roastDate?.replace(/-/g, '') || '')}
                             onChange={(value) => {
+                                if (bean.isInTransit) return; // 在途状态下禁止输入
+
                                 if (value.length === 8) {
                                     // 格式化为 YYYY-MM-DD
                                     const year = value.substring(0, 4);
@@ -324,18 +337,23 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
                             }}
                             pattern={REGEXP_ONLY_DIGITS}
                             containerClassName="justify-between"
+                            disabled={bean.isInTransit}
                         >
-                            <InputOTPSlot index={0} />
-                            <InputOTPSlot index={1} />
-                            <InputOTPSlot index={2} />
-                            <InputOTPSlot index={3} />
-                            <span className="text-neutral-500 dark:text-neutral-400 border-b border-neutral-300 dark:border-neutral-700 h-[40px] flex items-center px-0.5">-</span>
-                            <InputOTPSlot index={4} />
-                            <InputOTPSlot index={5} />
-                            <span className="text-neutral-500 dark:text-neutral-400 border-b border-neutral-300 dark:border-neutral-700 h-[40px] flex items-center px-0.5">-</span>
-                            <InputOTPSlot index={6} />
-                            <InputOTPSlot index={7} />
+                            <InputOTPSlot index={0} className={bean.isInTransit ? 'opacity-50' : ''} />
+                            <InputOTPSlot index={1} className={bean.isInTransit ? 'opacity-50' : ''} />
+                            <InputOTPSlot index={2} className={bean.isInTransit ? 'opacity-50' : ''} />
+                            <InputOTPSlot index={3} className={bean.isInTransit ? 'opacity-50' : ''} />
+                            <span className={`text-neutral-500 dark:text-neutral-400 border-b border-neutral-300 dark:border-neutral-700 h-[40px] flex items-center px-0.5 ${bean.isInTransit ? 'opacity-50' : ''}`}>-</span>
+                            <InputOTPSlot index={4} className={bean.isInTransit ? 'opacity-50' : ''} />
+                            <InputOTPSlot index={5} className={bean.isInTransit ? 'opacity-50' : ''} />
+                            <span className={`text-neutral-500 dark:text-neutral-400 border-b border-neutral-300 dark:border-neutral-700 h-[40px] flex items-center px-0.5 ${bean.isInTransit ? 'opacity-50' : ''}`}>-</span>
+                            <InputOTPSlot index={6} className={bean.isInTransit ? 'opacity-50' : ''} />
+                            <InputOTPSlot index={7} className={bean.isInTransit ? 'opacity-50' : ''} />
                         </InputOTP>
+                        {bean.isInTransit && (
+                            <div className="absolute inset-0 flex items-center  pointer-events-none">
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

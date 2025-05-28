@@ -49,6 +49,7 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
     // 获取阶段数值用于排序
     const getPhaseValue = useCallback((phase: string): number => {
         switch (phase) {
+            case '在途': return -1; // 在途状态优先级最高
             case '冰冻': return 0; // 冰冻状态与赏味期同等优先级
             case '赏味期': return 0;
             case '养豆期': return 1;

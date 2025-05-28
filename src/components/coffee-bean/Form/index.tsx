@@ -492,6 +492,19 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
         }));
     };
 
+    // 切换在途状态
+    const toggleInTransitState = () => {
+        setBean(prev => ({
+            ...prev,
+            isInTransit: !prev.isInTransit,
+            // 设为在途时清空烘焙日期和赏味期设置
+            roastDate: !prev.isInTransit ? '' : prev.roastDate,
+            startDay: !prev.isInTransit ? 0 : prev.startDay,
+            endDay: !prev.isInTransit ? 0 : prev.endDay,
+            isFrozen: !prev.isInTransit ? false : prev.isFrozen
+        }));
+    };
+
     // 处理图片上传
     const handleImageUpload = async (file: File) => {
         try {
@@ -637,6 +650,7 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                         onImageUpload={handleImageUpload}
                         editingRemaining={editingRemaining}
                         validateRemaining={validateRemaining}
+                        toggleInTransitState={toggleInTransitState}
                     />
                 );
 

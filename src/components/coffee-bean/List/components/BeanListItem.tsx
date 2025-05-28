@@ -96,16 +96,33 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
 
     // 计算赏味期信息
     const flavorInfo = useMemo(() => {
-        if (!bean.roastDate) return { 
-            phase: '未知', 
-            remainingDays: 0, 
-            progressPercent: 0, 
+        // 检查是否为在途状态
+        if (bean.isInTransit) {
+            return {
+                phase: '在途',
+                remainingDays: 0,
+                progressPercent: 0,
+                status: '在途',
+                preFlavorPercent: 0,
+                flavorPercent: 100, // 在途状态下整个进度条显示为在途区域
+                daysSinceRoast: 0,
+                endDay: 0,
+                isFrozen: false,
+                isInTransit: true
+            };
+        }
+
+        if (!bean.roastDate) return {
+            phase: '未知',
+            remainingDays: 0,
+            progressPercent: 0,
             status: '未知',
             preFlavorPercent: 0,
             flavorPercent: 0,
             daysSinceRoast: 0,
             endDay: 0,
-            isFrozen: false
+            isFrozen: false,
+            isInTransit: false
         };
 
         // 检查是否为冰冻状态
@@ -119,7 +136,8 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                 flavorPercent: 100, // 冰冻状态下整个进度条显示为赏味期区域
                 daysSinceRoast: 0,
                 endDay: 0,
-                isFrozen: true
+                isFrozen: true,
+                isInTransit: false
             };
         }
 
@@ -171,8 +189,8 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
             status = '已衰退';
         }
 
-        return { phase, remainingDays, progressPercent, preFlavorPercent, flavorPercent, status, daysSinceRoast, endDay, isFrozen: false };
-    }, [bean.roastDate, bean.startDay, bean.endDay, bean.roastLevel, bean.isFrozen]);
+        return { phase, remainingDays, progressPercent, preFlavorPercent, flavorPercent, status, daysSinceRoast, endDay, isFrozen: false, isInTransit: false };
+    }, [bean.roastDate, bean.startDay, bean.endDay, bean.roastLevel, bean.isFrozen, bean.isInTransit]);
 
     // 计算豆子是否为空
     const isEmpty = isBeanEmpty(bean);
@@ -327,19 +345,27 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                         </div>
                     )}
 
-                    {/* 赏味期进度条 - 仅当roastDate存在时显示 */}
-                    {bean.roastDate && (
+                    {/* 赏味期进度条 - 在途状态或有烘焙日期时显示 */}
+                    {(bean.isInTransit || bean.roastDate) && (
                         <div className="space-y-1">
                             <div className="flex items-center justify-between">
                                 <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
-                                    {flavorInfo.isFrozen ? '保存方式' : '赏味期'}
+                                    {bean.isInTransit ? '状态' : flavorInfo.isFrozen ? '保存方式' : '赏味期'}
                                 </div>
                                 <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
                                     {flavorInfo.status}
                                 </div>
                             </div>
                             <div className="h-px w-full overflow-hidden bg-neutral-200/50 dark:bg-neutral-800 relative">
-                                {flavorInfo.isFrozen ? (
+                                {bean.isInTransit ? (
+                                    // 在途状态进度条样式
+                                    <div
+                                        className="absolute h-full bg-neutral-400/20 dark:bg-neutral-600/30 w-full"
+                                        style={{
+                                            backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(0, 0, 0, 0.1) 2px, rgba(0, 0, 0, 0.1) 4px)'
+                                        }}
+                                    ></div>
+                                ) : flavorInfo.isFrozen ? (
                                     // 冰冻状态进度条样式
                                     <div
                                         className="absolute h-full bg-blue-500/20 dark:bg-blue-600/30 w-full"
@@ -406,7 +432,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                 {/* 底部信息布局优化 - 根据设置控制显示 */}
                 <div className="flex items-baseline justify-between text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
                     <div>
-                        {bean.roastDate && !hideRoastDate && (
+                        {bean.roastDate && !hideRoastDate && !bean.isInTransit && (
                             <span>烘焙于 {formatDate(bean.roastDate)}</span>
                         )}
                     </div>

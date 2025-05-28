@@ -42,6 +42,7 @@ export interface CoffeeBean {
 	startDay?: number;    // 开始使用天数
 	endDay?: number;      // 结束使用天数
 	isFrozen?: boolean;   // 是否冰冻状态
+	isInTransit?: boolean; // 是否在途状态
 	
 	// 分类标签
 	beanType?: "espresso" | "filter"; // 豆子类型：意式/手冲

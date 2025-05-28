@@ -13,6 +13,7 @@ export interface BlendComponent {
 export interface ExtendedCoffeeBean extends CoffeeBean {
     blendComponents?: BlendComponent[];
     isFrozen?: boolean;  // 显式添加冰冻状态字段，确保类型定义完整
+    isInTransit?: boolean; // 显式添加在途状态字段，确保类型定义完整
 }
 
 // 视图模式定义

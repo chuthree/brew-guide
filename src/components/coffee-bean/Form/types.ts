@@ -34,6 +34,7 @@ export interface CoffeeBean {
     startDay?: number;
     endDay?: number;
     isFrozen?: boolean;  // 新增：是否冰冻状态
+    isInTransit?: boolean; // 新增：是否在途状态
 }
 
 // 扩展CoffeeBean类型以支持拼配成分

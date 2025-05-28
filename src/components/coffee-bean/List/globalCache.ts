@@ -201,6 +201,11 @@ export const isBeanEmpty = (bean: ExtendedCoffeeBean): boolean => {
 
 // 获取咖啡豆的赏味期信息
 export const getFlavorInfo = (bean: ExtendedCoffeeBean): { phase: string, remainingDays: number } => {
+    // 处理在途状态
+    if (bean.isInTransit) {
+        return { phase: '在途', remainingDays: 0 };
+    }
+
     if (!bean.roastDate) {
         return { phase: '衰退期', remainingDays: 0 };
     }
