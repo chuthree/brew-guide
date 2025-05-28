@@ -107,52 +107,6 @@ const CoffeeBeanRatingModal: React.FC<CoffeeBeanRatingModalProps> = ({
                             {/* 豆子名称和类型 */}
                             <div className="space-y-2">
                                 <h3 className="text-xs font-medium tracking-wide">{coffeeBean.name}</h3>
-
-                                <div className="space-y-2">
-                                    <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                                        豆子类型
-                                    </label>
-                                    <div className="flex w-full border-b border-neutral-300 dark:border-neutral-700">
-                                        <div
-                                            className="w-1/2 relative py-2"
-                                            onClick={() => setBeanType('filter')}
-                                        >
-                                            <button
-                                                type="button"
-                                                className={`w-full text-center transition-colors duration-200 ${beanType === 'filter'
-                                                    ? 'text-neutral-800 dark:text-neutral-200'
-                                                    : 'text-neutral-500 dark:text-neutral-400'
-                                                    }`}
-                                            >
-                                                手冲豆
-                                            </button>
-                                            {beanType === 'filter' && (
-                                                <div
-                                                    className="absolute -bottom-px left-0 w-full h-px bg-neutral-800 dark:bg-neutral-200"
-                                                ></div>
-                                            )}
-                                        </div>
-                                        <div
-                                            className="w-1/2 relative py-2"
-                                            onClick={() => setBeanType('espresso')}
-                                        >
-                                            <button
-                                                type="button"
-                                                className={`w-full text-center transition-colors duration-200 ${beanType === 'espresso'
-                                                    ? 'text-neutral-800 dark:text-neutral-200'
-                                                    : 'text-neutral-500 dark:text-neutral-400'
-                                                    }`}
-                                            >
-                                                意式豆
-                                            </button>
-                                            {beanType === 'espresso' && (
-                                                <div
-                                                    className="absolute -bottom-px left-0 w-full h-px bg-neutral-800 dark:bg-neutral-200"
-                                                ></div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
                             </div>
 
                             {/* 总体评分 */}
