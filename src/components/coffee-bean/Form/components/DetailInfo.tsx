@@ -140,22 +140,20 @@ const DetailInfo: React.FC<DetailInfoProps> = ({
                 </div>
             )}
 
-            {(bean.isFrozen || bean.isInTransit) && (
+            {bean.isFrozen && !bean.isInTransit && (
                 <div className="space-y-4 w-full">
                     <div className="flex items-center justify-between">
                         <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
                             状态设置
                         </label>
                         <div className="flex space-x-2">
-                            {bean.isFrozen && (
-                                <button
-                                    type="button"
-                                    onClick={toggleFrozenState}
-                                    className="text-xs text-neutral-600 dark:text-neutral-400 underline"
-                                >
-                                    取消冰冻状态
-                                </button>
-                            )}
+                            <button
+                                type="button"
+                                onClick={toggleFrozenState}
+                                className="text-xs text-neutral-600 dark:text-neutral-400 underline"
+                            >
+                                取消冰冻状态
+                            </button>
                         </div>
                     </div>
                 </div>
