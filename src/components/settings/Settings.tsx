@@ -860,8 +860,8 @@ const handleChange = async <K extends keyof SettingsOptions>(
                             <div className="px-1">
                                 <input
                                     type="range"
-                                    min="20"
-                                    max="80"
+                                    min="12"
+                                    max="84"
                                     step="2"
                                     value={settings.safeAreaMargins?.top || defaultSettings.safeAreaMargins!.top}
                                     onChange={(e) => {
