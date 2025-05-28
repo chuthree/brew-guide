@@ -226,21 +226,23 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
             <div className="grid grid-cols-2 gap-6 w-full">
                 <div className="space-y-2">
                     <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                        剩余量 / 总量 (g)
+                        库存量(g)
                     </label>
-                    <div className="flex items-center justify-start w-full">
-                        <div className="flex items-center border-b border-neutral-300 dark:border-neutral-700 py-2 w-full">
+                    <div className="flex items-center justify-start w-full gap-2">
+                        <div className="flex-1">
                             <input
                                 type="number"
                                 inputMode="decimal"
                                 step="0.1"
                                 value={remainingValue}
                                 onChange={(e) => handleRemainingChange(e.target.value)}
-                                placeholder="剩余"
-                                className="bg-transparent outline-none w-1/2 text-center"
+                                placeholder="剩余量"
+                                className="bg-transparent outline-none w-full text-center border-b border-neutral-300 dark:border-neutral-700 py-2"
                                 onBlur={validateRemaining}
                             />
-                            <span className="text-neutral-500 dark:text-neutral-400 px-1">/</span>
+                        </div>
+                        <span className="text-neutral-300 dark:text-neutral-700">/</span>
+                        <div className="flex-1">
                             <input
                                 type="number"
                                 inputMode="decimal"
@@ -248,7 +250,7 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
                                 value={capacityValue}
                                 onChange={(e) => handleCapacityChange(e.target.value)}
                                 placeholder="总量"
-                                className="bg-transparent outline-none w-1/2 text-center"
+                                className="bg-transparent outline-none w-full text-center border-b border-neutral-300 dark:border-neutral-700 py-2"
                             />
                         </div>
                     </div>
@@ -256,13 +258,12 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
 
                 <div className="space-y-2">
                     <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                        价格
+                        价格(¥)
                     </label>
                     <AutocompleteInput
                         value={bean.price || ''}
                         onChange={onBeanChange('price')}
                         placeholder="例如：88"
-                        unit="¥"
                         clearable={false}
                         suggestions={[]}
                         inputType="number"

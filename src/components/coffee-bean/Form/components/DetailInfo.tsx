@@ -107,13 +107,12 @@ const DetailInfo: React.FC<DetailInfoProps> = ({
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1">
                             <label className="block text-xs text-neutral-500 dark:text-neutral-400">
-                                养豆期结束
+                                养豆期结束 (天)
                             </label>
                             <AutocompleteInput
                                 value={bean.startDay ? String(bean.startDay) : ''}
                                 onChange={onBeanChange('startDay')}
                                 placeholder="天数"
-                                unit="天"
                                 clearable={false}
                                 suggestions={[]}
                                 inputType="tel"
@@ -121,13 +120,12 @@ const DetailInfo: React.FC<DetailInfoProps> = ({
                         </div>
                         <div className="space-y-1">
                             <label className="block text-xs text-neutral-500 dark:text-neutral-400">
-                                赏味期结束
+                                赏味期结束 (天)
                             </label>
                             <AutocompleteInput
                                 value={bean.endDay ? String(bean.endDay) : ''}
                                 onChange={onBeanChange('endDay')}
                                 placeholder="天数"
-                                unit="天"
                                 clearable={false}
                                 suggestions={[]}
                                 inputType="tel"
