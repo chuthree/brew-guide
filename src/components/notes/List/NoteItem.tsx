@@ -77,7 +77,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
 
     return (
         <div
-            className={`group space-y-3 px-6 py-3 border-b border-neutral-200/60 dark:border-neutral-800/40 last:border-b-0 ${isShareMode ? 'cursor-pointer' : ''} note-item`}
+            className={`group space-y-3 px-6 py-5 border-b border-neutral-200/60 dark:border-neutral-800/40 last:border-b-0 ${isShareMode ? 'cursor-pointer' : ''} note-item`}
             onClick={isShareMode ? handleNoteClick : undefined}
             data-note-id={note.id}
         >
