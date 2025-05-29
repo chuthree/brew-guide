@@ -4,7 +4,7 @@ import React, { useState, useEffect, useTransition, useCallback, useMemo, useRef
 import { CoffeeBean } from '@/types/app'
 import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager'
 import { Storage } from '@/lib/core/storage'
-import { defaultSettings, SettingsOptions } from '@/components/settings/Settings'
+import { SettingsOptions } from '@/components/settings/Settings'
 
 // 定义组件属性接口
 interface CoffeeBeanListProps {
