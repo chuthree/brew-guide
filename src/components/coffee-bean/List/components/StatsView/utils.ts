@@ -25,7 +25,7 @@ export const stardomFontStyle = {
 }
 
 // 计算统计数据
-export const calculateStats = (beans: ExtendedCoffeeBean[], showEmptyBeans: boolean): StatsData => {
+export const calculateStats = (beans: ExtendedCoffeeBean[], showEmptyBeans: boolean, todayConsumption: { espressoConsumption: number; espressoCost: number; filterConsumption: number; filterCost: number }): StatsData => {
     // 计算咖啡豆总数
     const totalBeans = beans.length
 
@@ -220,6 +220,44 @@ export const calculateStats = (beans: ExtendedCoffeeBean[], showEmptyBeans: bool
         }
     })
 
+    // 计算手冲豆统计
+    const filterBeans = beans.filter(bean => bean.beanType === 'filter')
+    const activeFilterBeans = filterBeans.filter(bean => !isBeanEmpty(bean))
+    const filterTotalWeight = filterBeans.reduce((sum, bean) => {
+        const capacity = bean.capacity ? parseFloat(bean.capacity) : 0
+        return sum + capacity
+    }, 0)
+    const filterRemainingWeight = filterBeans.reduce((sum, bean) => {
+        const remaining = bean.remaining ? parseFloat(bean.remaining) : 0
+        return sum + remaining
+    }, 0)
+    const filterConsumedWeight = filterTotalWeight - filterRemainingWeight
+    const filterTotalCost = filterBeans.reduce((sum, bean) => {
+        const price = bean.price ? parseFloat(bean.price) : 0
+        return sum + price
+    }, 0)
+    const filterAverageBeanPrice = filterBeans.length > 0 ? filterTotalCost / filterBeans.length : 0
+    const filterAverageGramPrice = filterTotalWeight > 0 ? filterTotalCost / filterTotalWeight : 0
+
+    // 计算意式豆统计
+    const espressoBeans = beans.filter(bean => bean.beanType === 'espresso')
+    const activeEspressoBeans = espressoBeans.filter(bean => !isBeanEmpty(bean))
+    const espressoTotalWeight = espressoBeans.reduce((sum, bean) => {
+        const capacity = bean.capacity ? parseFloat(bean.capacity) : 0
+        return sum + capacity
+    }, 0)
+    const espressoRemainingWeight = espressoBeans.reduce((sum, bean) => {
+        const remaining = bean.remaining ? parseFloat(bean.remaining) : 0
+        return sum + remaining
+    }, 0)
+    const espressoConsumedWeight = espressoTotalWeight - espressoRemainingWeight
+    const espressoTotalCost = espressoBeans.reduce((sum, bean) => {
+        const price = bean.price ? parseFloat(bean.price) : 0
+        return sum + price
+    }, 0)
+    const espressoAverageBeanPrice = espressoBeans.length > 0 ? espressoTotalCost / espressoBeans.length : 0
+    const espressoAverageGramPrice = espressoTotalWeight > 0 ? espressoTotalCost / espressoTotalWeight : 0
+
     return {
         totalBeans,
         emptyBeans,
@@ -238,6 +276,30 @@ export const calculateStats = (beans: ExtendedCoffeeBean[], showEmptyBeans: bool
         varietyCount,
         topFlavors,
         totalFlavorTags,
-        flavorPeriodStatus
+        flavorPeriodStatus,
+        espressoStats: {
+            totalBeans: espressoBeans.length,
+            activeBeans: activeEspressoBeans.length,
+            totalWeight: espressoTotalWeight,
+            remainingWeight: espressoRemainingWeight,
+            consumedWeight: espressoConsumedWeight,
+            totalCost: espressoTotalCost,
+            averageBeanPrice: espressoAverageBeanPrice,
+            averageGramPrice: espressoAverageGramPrice,
+            todayConsumption: todayConsumption.espressoConsumption,
+            todayCost: todayConsumption.espressoCost
+        },
+        filterStats: {
+            totalBeans: filterBeans.length,
+            activeBeans: activeFilterBeans.length,
+            totalWeight: filterTotalWeight,
+            remainingWeight: filterRemainingWeight,
+            consumedWeight: filterConsumedWeight,
+            totalCost: filterTotalCost,
+            averageBeanPrice: filterAverageBeanPrice,
+            averageGramPrice: filterAverageGramPrice,
+            todayConsumption: todayConsumption.filterConsumption,
+            todayCost: todayConsumption.filterCost
+        }
     }
 } 

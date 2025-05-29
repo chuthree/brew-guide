@@ -154,12 +154,48 @@ const StatsCategories: React.FC<StatsCategoriesProps> = ({
                 </StatCategory>
                 
                 {/* 编号10 - 风味标签分布 */}
-                <StatCategory 
-                    number={10} 
-                    title="风味" 
+                <StatCategory
+                    number={10}
+                    title="风味"
                     animStyle={styles.statsAnimStyle(3)}
                 >
                     {renderStatsRows(stats.topFlavors, '次')}
+                </StatCategory>
+
+                {/* 编号11 - 意式咖啡统计 */}
+                <StatCategory
+                    number={11}
+                    title="意式咖啡"
+                    animStyle={styles.statsAnimStyle(4)}
+                >
+                    <StatItem label="意式豆总数" value={`${stats.espressoStats.totalBeans}`} unit="个" />
+                    <StatItem label="正在使用" value={`${stats.espressoStats.activeBeans}`} unit="个" />
+                    <StatItem label="总重量" value={`${formatNumber(stats.espressoStats.totalWeight)}`} unit="克" />
+                    <StatItem label="剩余重量" value={`${formatNumber(stats.espressoStats.remainingWeight)}`} unit="克" />
+                    <StatItem label="已消耗重量" value={`${formatNumber(stats.espressoStats.consumedWeight)}`} unit="克" />
+                    <StatItem label="总花费" value={`${formatNumber(stats.espressoStats.totalCost)}`} unit="元" />
+                    <StatItem label="平均每包价格" value={`${formatNumber(stats.espressoStats.averageBeanPrice)}`} unit="元" />
+                    <StatItem label="每克平均价格" value={`${formatNumber(stats.espressoStats.averageGramPrice)}`} unit="元/克" />
+                    <StatItem label="今日消耗" value={`${formatNumber(stats.espressoStats.todayConsumption)}`} unit="克" />
+                    <StatItem label="今日花费" value={`${formatNumber(stats.espressoStats.todayCost)}`} unit="元" />
+                </StatCategory>
+
+                {/* 编号12 - 手冲咖啡统计 */}
+                <StatCategory
+                    number={12}
+                    title="手冲咖啡"
+                    animStyle={styles.statsAnimStyle(4)}
+                >
+                    <StatItem label="手冲豆总数" value={`${stats.filterStats.totalBeans}`} unit="个" />
+                    <StatItem label="正在使用" value={`${stats.filterStats.activeBeans}`} unit="个" />
+                    <StatItem label="总重量" value={`${formatNumber(stats.filterStats.totalWeight)}`} unit="克" />
+                    <StatItem label="剩余重量" value={`${formatNumber(stats.filterStats.remainingWeight)}`} unit="克" />
+                    <StatItem label="已消耗重量" value={`${formatNumber(stats.filterStats.consumedWeight)}`} unit="克" />
+                    <StatItem label="总花费" value={`${formatNumber(stats.filterStats.totalCost)}`} unit="元" />
+                    <StatItem label="平均每包价格" value={`${formatNumber(stats.filterStats.averageBeanPrice)}`} unit="元" />
+                    <StatItem label="每克平均价格" value={`${formatNumber(stats.filterStats.averageGramPrice)}`} unit="元/克" />
+                    <StatItem label="今日消耗" value={`${formatNumber(stats.filterStats.todayConsumption)}`} unit="克" />
+                    <StatItem label="今日花费" value={`${formatNumber(stats.filterStats.todayCost)}`} unit="元" />
                 </StatCategory>
             </div>
         </div>

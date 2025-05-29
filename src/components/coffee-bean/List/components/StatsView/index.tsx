@@ -15,11 +15,17 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
     const statsContainerRef = useRef<HTMLDivElement>(null)
     const [username, setUsername] = useState<string>('')
     
-    // 获取统计数据
-    const stats = useMemo(() => calculateStats(beans, showEmptyBeans), [beans, showEmptyBeans])
-    
     // 获取今日消耗数据
-    const { consumption: todayConsumption, cost: todayCost } = useConsumption(beans)
+    const todayConsumptionData = useConsumption(beans)
+    const { consumption: todayConsumption, cost: todayCost } = todayConsumptionData
+
+    // 获取统计数据
+    const stats = useMemo(() => calculateStats(beans, showEmptyBeans, {
+        espressoConsumption: todayConsumptionData.espressoConsumption,
+        espressoCost: todayConsumptionData.espressoCost,
+        filterConsumption: todayConsumptionData.filterConsumption,
+        filterCost: todayConsumptionData.filterCost
+    }), [beans, showEmptyBeans, todayConsumptionData])
     
     // 计算平均消耗和预计用完日期
     const averageConsumption = useMemo(() => 

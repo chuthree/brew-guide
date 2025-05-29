@@ -6,6 +6,10 @@ import { TodayConsumptionData } from './types'
 export const useConsumption = (beans: ExtendedCoffeeBean[]): TodayConsumptionData => {
     const [todayConsumption, setTodayConsumption] = useState(0)
     const [todayCost, setTodayCost] = useState(0)
+    const [todayEspressoConsumption, setTodayEspressoConsumption] = useState(0)
+    const [todayEspressoCost, setTodayEspressoCost] = useState(0)
+    const [todayFilterConsumption, setTodayFilterConsumption] = useState(0)
+    const [todayFilterCost, setTodayFilterCost] = useState(0)
     
     // 加载今日消耗数据
     useEffect(() => {
@@ -28,7 +32,11 @@ export const useConsumption = (beans: ExtendedCoffeeBean[]): TodayConsumptionDat
                 // 计算今日消耗的咖啡量
                 let consumption = 0
                 let cost = 0
-                
+                let espressoConsumption = 0
+                let espressoCost = 0
+                let filterConsumption = 0
+                let filterCost = 0
+
                 todayNotes.forEach(note => {
                     if (note.params?.coffee) {
                         // 提取咖啡量中的数字部分
@@ -37,7 +45,22 @@ export const useConsumption = (beans: ExtendedCoffeeBean[]): TodayConsumptionDat
                             const coffeeAmount = parseFloat(match[0]);
                             if (!isNaN(coffeeAmount)) {
                                 consumption += coffeeAmount;
-                                
+
+                                // 判断是否是意式咖啡
+                                const isEspresso = note.equipment === 'Espresso' ||
+                                                 note.equipment === '意式咖啡机' ||
+                                                 (note.stages && Array.isArray(note.stages) &&
+                                                  note.stages.some((stage: any) =>
+                                                    stage.pourType === 'extraction' || stage.pourType === 'beverage'
+                                                  ));
+
+                                // 分别统计手冲和意式消耗
+                                if (isEspresso) {
+                                    espressoConsumption += coffeeAmount;
+                                } else {
+                                    filterConsumption += coffeeAmount;
+                                }
+
                                 // 计算花费
                                 if (note.coffeeBeanInfo?.name) {
                                     // 找到对应的豆子计算价格
@@ -46,7 +69,15 @@ export const useConsumption = (beans: ExtendedCoffeeBean[]): TodayConsumptionDat
                                         const price = parseFloat(bean.price)
                                         const capacity = parseFloat(bean.capacity)
                                         if (capacity > 0) {
-                                            cost += coffeeAmount * price / capacity
+                                            const noteCost = coffeeAmount * price / capacity
+                                            cost += noteCost
+
+                                            // 分别统计手冲和意式花费
+                                            if (isEspresso) {
+                                                espressoCost += noteCost;
+                                            } else {
+                                                filterCost += noteCost;
+                                            }
                                         }
                                     }
                                 }
@@ -57,6 +88,10 @@ export const useConsumption = (beans: ExtendedCoffeeBean[]): TodayConsumptionDat
                 
                 setTodayConsumption(consumption)
                 setTodayCost(cost)
+                setTodayEspressoConsumption(espressoConsumption)
+                setTodayEspressoCost(espressoCost)
+                setTodayFilterConsumption(filterConsumption)
+                setTodayFilterCost(filterCost)
             } catch (err) {
                 console.error('加载今日消耗数据失败:', err)
             }
@@ -82,6 +117,10 @@ export const useConsumption = (beans: ExtendedCoffeeBean[]): TodayConsumptionDat
 
     return {
         consumption: todayConsumption,
-        cost: todayCost
+        cost: todayCost,
+        espressoConsumption: todayEspressoConsumption,
+        espressoCost: todayEspressoCost,
+        filterConsumption: todayFilterConsumption,
+        filterCost: todayFilterCost
     }
 } 

@@ -37,6 +37,31 @@ export interface StatsData {
         afterPeriod: number
         unknown: number
     }
+    // 新增：手冲和意式分别统计
+    espressoStats: {
+        totalBeans: number
+        activeBeans: number
+        totalWeight: number
+        remainingWeight: number
+        consumedWeight: number
+        totalCost: number
+        averageBeanPrice: number
+        averageGramPrice: number
+        todayConsumption: number
+        todayCost: number
+    }
+    filterStats: {
+        totalBeans: number
+        activeBeans: number
+        totalWeight: number
+        remainingWeight: number
+        consumedWeight: number
+        totalCost: number
+        averageBeanPrice: number
+        averageGramPrice: number
+        todayConsumption: number
+        todayCost: number
+    }
 }
 
 export interface StatItemProps {
@@ -65,6 +90,10 @@ export interface BeanImageGalleryProps {
 export interface TodayConsumptionData {
     consumption: number
     cost: number
+    espressoConsumption: number
+    espressoCost: number
+    filterConsumption: number
+    filterCost: number
 }
 
 export interface StatsSummaryProps {
