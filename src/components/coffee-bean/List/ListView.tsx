@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useTransition, useCallback, useMemo, useRef } from 'react'
 import { CoffeeBean } from '@/types/app'
 import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager'
+import { Storage } from '@/lib/core/storage'
+import { defaultSettings, SettingsOptions } from '@/components/settings/Settings'
 
 // 定义组件属性接口
 interface CoffeeBeanListProps {
@@ -24,9 +26,55 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
     const [_isPending, startTransition] = useTransition()
     const [isFirstLoad, setIsFirstLoad] = useState(true)
     const [forceRefreshKey, setForceRefreshKey] = useState(0) // 添加强制刷新的key
-    
+
+    // 添加设置状态
+    const [hidePrice, setHidePrice] = useState(false) // 默认显示价格
+
     // 添加ref用于存储咖啡豆元素列表
     const beanItemsRef = useRef<Map<string, HTMLDivElement>>(new Map());
+
+    // 加载设置
+    useEffect(() => {
+        const loadSettings = async () => {
+            try {
+                const settingsStr = await Storage.get('brewGuideSettings');
+                if (settingsStr) {
+                    const parsedSettings = JSON.parse(settingsStr) as SettingsOptions;
+
+                    // 加载细粒度设置选项，使用默认值作为后备
+                    const minimalistOptions = parsedSettings.minimalistOptions || {
+                        hideFlavors: true,
+                        hidePrice: false, // 默认显示价格
+                        hideRoastDate: false,
+                        hideTotalWeight: true
+                    };
+
+                    setHidePrice(parsedSettings.minimalistMode && minimalistOptions.hidePrice);
+                } else {
+                    // 如果没有设置，使用默认值（价格默认显示）
+                    setHidePrice(false);
+                }
+            } catch (error) {
+                console.error('加载设置失败', error);
+                // 出错时也使用默认值（价格默认显示）
+                setHidePrice(false);
+            }
+        };
+
+        loadSettings();
+
+        // 监听设置变更
+        const handleSettingsChange = (e: CustomEvent) => {
+            if (e.detail?.key === 'brewGuideSettings') {
+                loadSettings();
+            }
+        };
+
+        window.addEventListener('storageChange', handleSettingsChange as EventListener);
+        return () => {
+            window.removeEventListener('storageChange', handleSettingsChange as EventListener);
+        };
+    }, []);
 
     // 检查咖啡豆是否用完
     const isBeanEmpty = (bean: CoffeeBean): boolean => {
@@ -362,10 +410,12 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
                     items.push(`烘焙度 ${bean.roastLevel}`);
                 }
 
-                // 添加单价信息
-                const unitPrice = calculateUnitPrice(bean);
-                if (unitPrice !== "未知") {
-                    items.push(`价格 ${unitPrice} 元/g`);
+                // 添加单价信息 - 根据设置控制显示
+                if (!hidePrice) {
+                    const unitPrice = calculateUnitPrice(bean);
+                    if (unitPrice !== "未知") {
+                        items.push(`价格 ${unitPrice} 元/g`);
+                    }
                 }
 
                 // 添加容量信息

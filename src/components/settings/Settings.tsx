@@ -68,7 +68,7 @@ export const defaultSettings: SettingsOptions = {
     minimalistMode: false, // 默认不启用极简模式
     minimalistOptions: {
         hideFlavors: true, // 默认隐藏风味标签
-        hidePrice: true, // 默认隐藏价格信息
+        hidePrice: false, // 默认显示价格信息
         hideRoastDate: false, // 默认不隐藏烘焙度信息
         hideTotalWeight: true // 默认隐藏总重量显示
     },

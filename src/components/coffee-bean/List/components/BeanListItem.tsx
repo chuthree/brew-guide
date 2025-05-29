@@ -44,9 +44,9 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
     // 添加设置状态
     const [_settings, setSettings] = useState<SettingsOptions>(defaultSettings);
     const [_isMinimalistMode, setIsMinimalistMode] = useState(false);
-    const [hideFlavors, setHideFlavors] = useState(defaultSettings.minimalistOptions.hideFlavors);
-    const [hidePrice, setHidePrice] = useState(defaultSettings.minimalistOptions.hidePrice);
-    const [hideRoastDate, setHideRoastDate] = useState(defaultSettings.minimalistOptions.hideRoastDate);
+    const [hideFlavors, setHideFlavors] = useState(false); // 默认显示风味标签
+    const [hidePrice, setHidePrice] = useState(false); // 默认显示价格
+    const [hideRoastDate, setHideRoastDate] = useState(false); // 默认显示烘焙日期
     
     // 获取全局设置
     useEffect(() => {
@@ -57,16 +57,30 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                     const parsedSettings = JSON.parse(settingsStr) as SettingsOptions;
                     setSettings(parsedSettings);
                     setIsMinimalistMode(parsedSettings.minimalistMode || false);
-                    
-                    // 加载细粒度设置选项
-                    if (parsedSettings.minimalistOptions) {
-                        setHideFlavors(parsedSettings.minimalistMode && parsedSettings.minimalistOptions.hideFlavors);
-                        setHidePrice(parsedSettings.minimalistMode && parsedSettings.minimalistOptions.hidePrice);
-                        setHideRoastDate(parsedSettings.minimalistMode && parsedSettings.minimalistOptions.hideRoastDate);
-                    }
+
+                    // 加载细粒度设置选项，使用默认值作为后备
+                    const minimalistOptions = parsedSettings.minimalistOptions || {
+                        hideFlavors: true,
+                        hidePrice: false, // 默认显示价格
+                        hideRoastDate: false,
+                        hideTotalWeight: true
+                    };
+
+                    setHideFlavors(parsedSettings.minimalistMode && minimalistOptions.hideFlavors);
+                    setHidePrice(parsedSettings.minimalistMode && minimalistOptions.hidePrice);
+                    setHideRoastDate(parsedSettings.minimalistMode && minimalistOptions.hideRoastDate);
+                } else {
+                    // 如果没有设置，使用默认值（价格默认显示）
+                    setHideFlavors(false);
+                    setHidePrice(false);
+                    setHideRoastDate(false);
                 }
             } catch (error) {
                 console.error('加载设置失败', error);
+                // 出错时也使用默认值（价格默认显示）
+                setHideFlavors(false);
+                setHidePrice(false);
+                setHideRoastDate(false);
             }
         };
         
