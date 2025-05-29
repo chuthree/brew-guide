@@ -349,7 +349,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                                 {/* 豆子类型筛选按钮 */}
                                 <button
                                     onClick={() => onBeanTypeChange?.('espresso')}
-                                    className={`pb-1.5 mr-3 text-[11px] whitespace-nowrap relative ${selectedBeanType === 'espresso' ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
+                                    className={`pb-1.5 mr-3 text-xs whitespace-nowrap relative ${selectedBeanType === 'espresso' ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
                                 >
                                     <span className="relative">意式豆</span>
                                     {selectedBeanType === 'espresso' && (
@@ -358,7 +358,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                                 </button>
                                 <button
                                     onClick={() => onBeanTypeChange?.('filter')}
-                                    className={`pb-1.5 mr-3 text-[11px] whitespace-nowrap relative ${selectedBeanType === 'filter' ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
+                                    className={`pb-1.5 mr-3 text-xs whitespace-nowrap relative ${selectedBeanType === 'filter' ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
                                 >
                                     <span className="relative">手冲豆</span>
                                     {selectedBeanType === 'filter' && (
@@ -369,7 +369,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                                 <button
                                     onClick={() => selectedVariety !== null && onVarietyClick?.(null)}
                                     onDoubleClick={() => onToggleImageFlowMode?.()}
-                                    className={`pb-1.5 mr-3 text-[11px] whitespace-nowrap relative ${selectedVariety === null ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
+                                    className={`pb-1.5 mr-3 text-xs whitespace-nowrap relative ${selectedVariety === null ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
                                 >
                                         全部豆种
                                         {isImageFlowMode && (
@@ -385,7 +385,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                                     <button
                                         key={variety}
                                         onClick={() => selectedVariety !== variety && onVarietyClick?.(variety)}
-                                        className={`pb-1.5 mr-3 text-[11px] whitespace-nowrap relative ${selectedVariety === variety ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
+                                        className={`pb-1.5 mr-3 text-xs whitespace-nowrap relative ${selectedVariety === variety ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
                                     >
                                         <span className="relative">{variety}</span>
                                         {selectedVariety === variety && (

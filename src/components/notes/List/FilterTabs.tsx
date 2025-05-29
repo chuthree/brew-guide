@@ -82,7 +82,7 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                             <>
                                 <button
                                     onClick={() => onEquipmentClick(null)}
-                                    className={`pb-1.5 mr-3 text-[11px] whitespace-nowrap relative ${selectedEquipment === null ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
+                                    className={`pb-1.5 mr-3 text-xs whitespace-nowrap relative ${selectedEquipment === null ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
                                 >
                                     <span className="relative">全部记录</span>
                                     {selectedEquipment === null && (
@@ -93,7 +93,7 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                                     <button
                                         key={equipment}
                                         onClick={() => onEquipmentClick(equipment)}
-                                        className={`pb-1.5 mr-3 text-[11px] whitespace-nowrap relative ${selectedEquipment === equipment ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
+                                        className={`pb-1.5 mr-3 text-xs whitespace-nowrap relative ${selectedEquipment === equipment ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
                                     >
                                         <span className="relative">{equipmentNames[equipment] || equipment}</span>
                                         {selectedEquipment === equipment && (
@@ -106,7 +106,7 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                             <>
                                 <button
                                     onClick={() => onBeanClick(null)}
-                                    className={`pb-1.5 mr-3 text-[11px] whitespace-nowrap relative ${selectedBean === null ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
+                                    className={`pb-1.5 mr-3 text-xs whitespace-nowrap relative ${selectedBean === null ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
                                 >
                                     <span className="relative">全部记录</span>
                                     {selectedBean === null && (
@@ -117,7 +117,7 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                                     <button
                                         key={bean}
                                         onClick={() => onBeanClick(bean)}
-                                        className={`pb-1.5 mr-3 text-[11px] whitespace-nowrap relative ${selectedBean === bean ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
+                                        className={`pb-1.5 mr-3 text-xs whitespace-nowrap relative ${selectedBean === bean ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
                                     >
                                         <span className="relative">{bean}</span>
                                         {selectedBean === bean && (
