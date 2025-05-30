@@ -284,7 +284,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                 {/* 左侧图片区域 - 圆形显示 */}
                 {bean.image && (
                     <div
-                        className="w-12 h-12 relative shrink-0 cursor-pointer  border border-neutral-200 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800 overflow-hidden"
+                        className="w-18 h-18 relative shrink-0 cursor-pointer  border border-neutral-200 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800 overflow-hidden"
                         onClick={() => !imageError && setImageViewerOpen(true)}
                     >
                         {imageError ? (
@@ -414,10 +414,14 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                             ))}
                         </div>
                     )} */}
+                </div>
+            </div>
 
-                    {/* 第四行：备注信息 */}
-                    {bean.notes && (
-                        <div className="text-[11px] mt-2.5 tracking-widest text-neutral-600 dark:text-neutral-400 whitespace-pre-line leading-tight text-justify">
+            {/* 备注区域 - 在整个内容下方独立显示 */}
+            {bean.notes && (
+                <div className="mt-3">
+                    <div className="bg-neutral-100/50 dark:bg-neutral-800/50 px-3 py-2 border border-neutral-200/50 dark:border-neutral-800">
+                        <div className="text-[11px] tracking-widest text-neutral-600 dark:text-neutral-400 whitespace-pre-line leading-tight">
                             {searchQuery ? (
                                 <HighlightText
                                     text={bean.notes}
@@ -428,9 +432,9 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                                 bean.notes
                             )}
                         </div>
-                    )}
+                    </div>
                 </div>
-            </div>
+            )}
         </div>
     )
 }
