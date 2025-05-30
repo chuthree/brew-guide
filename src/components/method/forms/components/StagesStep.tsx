@@ -153,11 +153,12 @@ const StagesStep: React.FC<StagesStepProps> = ({
     
     stages.forEach(stage => {
       if (!stage.water) return;
-      
-      const waterValue = typeof stage.water === 'number' 
-        ? stage.water 
+
+      const waterValue = typeof stage.water === 'number'
+        ? stage.water
         : parseInt(stage.water.toString().replace('g', '') || '0');
-      
+
+      // 只处理有效的水量值（大于0）
       if (waterValue <= 0) return;
       
       // 获取显示的标签
@@ -227,7 +228,7 @@ const StagesStep: React.FC<StagesStepProps> = ({
           <div className={`${isEspressoMachine(customEquipment) ? 'flex-1 ml-4 text-right truncate relative group' : 'shrink-0'}`}>
             <span className="truncate">总水量: {isEspressoMachine(customEquipment) 
                   ? formatEspressoTotalWater() 
-                  : `${calculateCurrentWater()}g / ${parseInt(totalWater)}g`}</span>
+                  : `${calculateCurrentWater()}/ ${parseInt(totalWater)} 克`}</span>
             
             {/* 当水量文本溢出时显示的提示框 */}
             {isEspressoMachine(customEquipment) && (
@@ -497,7 +498,7 @@ const StagesStep: React.FC<StagesStepProps> = ({
                   </div>
 
                   <div className="space-y-2">
-                    <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400 flex items-center">
+                    <label className="flex items-center text-xs font-medium text-neutral-500 dark:text-neutral-400">
                       累计水量
                       <button 
                         type="button"
@@ -577,10 +578,10 @@ const StagesStep: React.FC<StagesStepProps> = ({
                             water = parseInt(e.target.value) || 0;
                           }
 
-                          // 确保累计水量不超过总水量
+                          // 确保累计水量不超过总水量（只有当总水量大于0时才进行限制）
                           const totalWaterValue = parseInt(totalWater.replace('g', '') || '0');
-                                
-                          if (water > totalWaterValue) {
+
+                          if (totalWaterValue > 0 && water > totalWaterValue) {
                             onStageChange(index, 'water', `${totalWaterValue}`);
                           } else {
                             onStageChange(index, 'water', `${water}`);
@@ -607,15 +608,21 @@ const StagesStep: React.FC<StagesStepProps> = ({
                           if (percentMatch) {
                             // 提取百分比值
                             const percentValue = parseFloat(percentMatch[1]);
-                            
-                            // 计算实际克数 (百分比 * 总水量)
-                            const calculatedWater = Math.round((percentValue / 100) * totalWaterValue);
-                            
-                            // 确保计算的水量不超过总水量
-                            const finalWater = Math.min(calculatedWater, totalWaterValue);
-                            
-                            // 更新水量
-                            onStageChange(index, 'water', `${finalWater}`);
+
+                            // 只有当总水量大于0时才进行百分比计算
+                            if (totalWaterValue > 0) {
+                              // 计算实际克数 (百分比 * 总水量)
+                              const calculatedWater = Math.round((percentValue / 100) * totalWaterValue);
+
+                              // 确保计算的水量不超过总水量
+                              const finalWater = Math.min(calculatedWater, totalWaterValue);
+
+                              // 更新水量
+                              onStageChange(index, 'water', `${finalWater}`);
+                            } else {
+                              // 如果总水量为0，直接使用百分比数值作为水量
+                              onStageChange(index, 'water', `${Math.round(percentValue)}`);
+                            }
                             return;
                           }
 
@@ -635,10 +642,12 @@ const StagesStep: React.FC<StagesStepProps> = ({
                             
                             // 计算实际克数 (倍数 * 咖啡粉量)
                             const calculatedWater = Math.round(multipleValue * coffeeAmount);
-                            
-                            // 确保计算的水量不超过总水量
-                            const finalWater = Math.min(calculatedWater, totalWaterValue);
-                            
+
+                            // 只有当总水量大于0时才进行上限限制
+                            const finalWater = totalWaterValue > 0
+                              ? Math.min(calculatedWater, totalWaterValue)
+                              : calculatedWater;
+
                             // 更新水量
                             onStageChange(index, 'water', `${finalWater}`);
                             return;
@@ -654,8 +663,8 @@ const StagesStep: React.FC<StagesStepProps> = ({
                             water = parseInt(value) || 0;
                           }
 
-                          // 确保累计水量不超过总水量
-                          if (water > totalWaterValue) {
+                          // 确保累计水量不超过总水量（只有当总水量大于0时才进行限制）
+                          if (totalWaterValue > 0 && water > totalWaterValue) {
                             onStageChange(index, 'water', `${totalWaterValue}`);
                           } else {
                             onStageChange(index, 'water', `${water}`);
@@ -703,7 +712,7 @@ const StagesStep: React.FC<StagesStepProps> = ({
                   </div>
 
                   <div className="space-y-2">
-                    <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400 flex items-center">
+                    <label className="flex items-center text-xs font-medium text-neutral-500 dark:text-neutral-400">
                       液重
                     </label>
                     <div className="relative">
@@ -747,7 +756,7 @@ const StagesStep: React.FC<StagesStepProps> = ({
               {isEspressoMachine(customEquipment) && stage.pourType === 'beverage' && (
                 <div className="grid grid-cols-1 gap-4">
                   <div className="space-y-2">
-                    <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400 flex items-center">
+                    <label className="flex items-center text-xs font-medium text-neutral-500 dark:text-neutral-400">
                       水量
                     </label>
                     <div className="relative">

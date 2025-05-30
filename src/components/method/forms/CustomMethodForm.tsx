@@ -377,7 +377,11 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         if (typeof stage.water === 'number') {
           return stage.water;
         } else if (typeof stage.water === 'string') {
-          return parseInt(stage.water.replace('g', ''));
+          const waterValue = parseInt(stage.water.replace('g', '') || '0');
+          // 只返回有效的水量值（大于0）
+          if (waterValue > 0) {
+            return waterValue;
+          }
         }
       }
     }
@@ -438,41 +442,37 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     // 水量特殊处理 - 更新总水量
     const updatedParams = { ...method.params, stages: newStages };
 
+    // 手冲模式：阶段水量变更时，不应该自动更新总水量
+    // 总水量应该只在用户修改咖啡粉量、水粉比时才自动计算
+    // 阶段水量是累计水量，应该受总水量限制，但不应该反过来影响总水量
     if (field === 'water' && !isEspressoMachine(customEquipment)) {
-      // 手冲模式：计算更新后的总水量（最大累计水量）
-      let maxWater = 0;
-      for (const s of newStages) {
-        if (s.water) {
-          const stageWater = typeof s.water === 'number'
-            ? s.water
-            : parseInt(s.water.replace('g', '') || '0');
-
-          if (stageWater > maxWater) {
-            maxWater = stageWater;
-          }
-        }
-      }
-
-      // 更新总水量
-      updatedParams.water = `${maxWater}g`;
+      // 手冲模式：不自动更新总水量，保持用户设定的总水量不变
+      // 这样确保用户的总水量设定不会因为阶段水量的修改而意外改变
     } else if (field === 'water' && isEspressoMachine(customEquipment)) {
-      // 意式机模式：如果修改的是萃取步骤的水量，更新总水量
+      // 意式机模式：萃取步骤的液重变化时，同步更新总水量和水粉比
       if (stage.pourType === 'extraction') {
-        updatedParams.water = stage.water as string;
+        // 只有当水量有效时才更新总水量和比例
+        const liquidValue = stage.water ? parseInt((stage.water as string).replace('g', '') || '0') : 0;
 
-        // 根据咖啡粉量和液重计算新的水粉比
-        const coffee = parseFloat(method.params.coffee.replace('g', ''));
-        const liquid = parseInt((stage.water as string).replace('g', '') || '0');
+        if (liquidValue > 0) {
+          updatedParams.water = stage.water as string;
 
-        // 计算比值
-        const ratio = liquid / coffee;
-        // 如果比值是整数，则不显示小数点
-        const newRatio = coffee > 0
-          ? `1:${Number.isInteger(ratio) ? ratio.toString() : ratio.toFixed(1)}`
-          : method.params.ratio;
+          // 根据咖啡粉量和液重计算新的水粉比
+          const coffee = parseFloat(method.params.coffee.replace('g', ''));
+          const liquid = liquidValue;
 
-        updatedParams.ratio = newRatio;
+          // 计算比值
+          const ratio = liquid / coffee;
+          // 如果比值是整数，则不显示小数点
+          const newRatio = coffee > 0
+            ? `1:${Number.isInteger(ratio) ? ratio.toString() : ratio.toFixed(1)}`
+            : method.params.ratio;
+
+          updatedParams.ratio = newRatio;
+        }
+        // 如果水量为空或0，保持原有的总水量和比例不变
       }
+      // 对于饮料类型的水量变化，不影响总水量和比例
     }
 
     setMethod({
