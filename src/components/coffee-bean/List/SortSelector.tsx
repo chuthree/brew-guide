@@ -304,14 +304,12 @@ export const convertToRankingSortOption = (option: SortOption, viewMode: 'invent
                 return RANKING_SORT_OPTIONS.PRICE_ASC;
             case SORT_OPTIONS.PRICE_DESC:
                 return RANKING_SORT_OPTIONS.PRICE_DESC;
-            case SORT_OPTIONS.LAST_MODIFIED_ASC:
-                return RANKING_SORT_OPTIONS.ORIGINAL; // 最近变动升序，返回原始排序
-            case SORT_OPTIONS.LAST_MODIFIED_DESC:
-                return RANKING_SORT_OPTIONS.ORIGINAL; // 最近变动降序，返回原始排序
             case SORT_OPTIONS.REMAINING_AMOUNT_ASC:
             case SORT_OPTIONS.REMAINING_AMOUNT_DESC:
             case SORT_OPTIONS.ROAST_DATE_ASC:
             case SORT_OPTIONS.ROAST_DATE_DESC:
+            case SORT_OPTIONS.LAST_MODIFIED_ASC:
+            case SORT_OPTIONS.LAST_MODIFIED_DESC:
                 return RANKING_SORT_OPTIONS.ORIGINAL; // 默认使用原始排序
             default:
                 return RANKING_SORT_OPTIONS.ORIGINAL;
@@ -414,7 +412,7 @@ export const SORT_TYPES = {
     LAST_MODIFIED: 'last_modified', // 最近变动
 } as const;
 
-type SortType = typeof SORT_TYPES[keyof typeof SORT_TYPES];
+export type SortType = typeof SORT_TYPES[keyof typeof SORT_TYPES];
 
 // 排序顺序定义
 export const SORT_ORDERS = {
@@ -422,10 +420,10 @@ export const SORT_ORDERS = {
     DESC: 'desc',
 } as const;
 
-type SortOrder = typeof SORT_ORDERS[keyof typeof SORT_ORDERS];
+export type SortOrder = typeof SORT_ORDERS[keyof typeof SORT_ORDERS];
 
 // 排序方式的显示名称
-const SORT_TYPE_LABELS: Record<SortType, string> = {
+export const SORT_TYPE_LABELS: Record<SortType, string> = {
     [SORT_TYPES.REMAINING_DAYS]: '赏味期',
     [SORT_TYPES.NAME]: '名称',
     [SORT_TYPES.RATING]: '评分',
@@ -460,7 +458,7 @@ const getSortOrderIcon = (type: SortType, order: SortOrder): React.ReactNode => 
 };
 
 // 将排序选项转换为类型和顺序
-const getSortTypeAndOrder = (option: SortOption): { type: SortType, order: SortOrder } => {
+export const getSortTypeAndOrder = (option: SortOption): { type: SortType, order: SortOrder } => {
     switch (option) {
         case SORT_OPTIONS.REMAINING_DAYS_ASC:
             return { type: SORT_TYPES.REMAINING_DAYS, order: SORT_ORDERS.ASC };
@@ -498,7 +496,7 @@ const getSortTypeAndOrder = (option: SortOption): { type: SortType, order: SortO
 };
 
 // 将类型和顺序转换为排序选项
-const getSortOption = (type: SortType, order: SortOrder): SortOption => {
+export const getSortOption = (type: SortType, order: SortOrder): SortOption => {
     switch (type) {
         case SORT_TYPES.REMAINING_DAYS:
             return order === SORT_ORDERS.ASC ? SORT_OPTIONS.REMAINING_DAYS_ASC : SORT_OPTIONS.REMAINING_DAYS_DESC;
@@ -522,7 +520,7 @@ const getSortOption = (type: SortType, order: SortOrder): SortOption => {
 };
 
 // 获取排序顺序的显示标签
-const getSortOrderLabel = (type: SortType, order: SortOrder): string => {
+export const getSortOrderLabel = (type: SortType, order: SortOrder): string => {
     if (type === SORT_TYPES.REMAINING_DAYS) {
         // 赏味期对应的排序顺序标签
         return order === SORT_ORDERS.ASC ? '从少到多' : '从多到少';
@@ -550,7 +548,7 @@ const getSortOrderLabel = (type: SortType, order: SortOrder): string => {
 };
 
 // 根据排序类型获取排序顺序的显示顺序
-const getSortOrdersForType = (type: SortType): SortOrder[] => {
+export const getSortOrdersForType = (type: SortType): SortOrder[] => {
     // 对于烘焙日期，从晚到早（DESC）更符合直觉（最近烘焙的豆子先显示）
     if (type === SORT_TYPES.ROAST_DATE) {
         return [SORT_ORDERS.DESC, SORT_ORDERS.ASC];
@@ -581,6 +579,29 @@ const getSortOrdersForType = (type: SortType): SortOrder[] => {
     }
     // 默认顺序
     return [SORT_ORDERS.ASC, SORT_ORDERS.DESC];
+};
+
+// 根据视图模式获取可用的排序方式
+export const getAvailableSortTypesForView = (viewMode: 'inventory' | 'ranking' | 'blogger' | 'stats') => {
+    switch (viewMode) {
+        case 'inventory':
+            return [
+                SORT_TYPES.LAST_MODIFIED, // 添加最近变动排序
+                SORT_TYPES.ROAST_DATE,
+                SORT_TYPES.REMAINING_DAYS,
+                SORT_TYPES.REMAINING_AMOUNT,
+                SORT_TYPES.PRICE,
+                SORT_TYPES.NAME
+            ];
+        case 'ranking':
+            return [SORT_TYPES.RATING, SORT_TYPES.NAME, SORT_TYPES.LAST_MODIFIED];
+        case 'blogger':
+            return [SORT_TYPES.ORIGINAL, SORT_TYPES.RATING, SORT_TYPES.PRICE, SORT_TYPES.NAME];
+        case 'stats':
+            return [SORT_TYPES.REMAINING_DAYS, SORT_TYPES.REMAINING_AMOUNT, SORT_TYPES.ROAST_DATE, SORT_TYPES.PRICE, SORT_TYPES.LAST_MODIFIED];
+        default:
+            return [SORT_TYPES.REMAINING_DAYS, SORT_TYPES.NAME, SORT_TYPES.LAST_MODIFIED];
+    }
 };
 
 interface SortSelectorProps {
@@ -617,25 +638,7 @@ export const SortSelector: React.FC<SortSelectorProps> = ({
 
     // 根据视图模式获取可用的排序方式
     const getAvailableSortTypes = (viewMode: 'inventory' | 'ranking' | 'blogger' | 'stats') => {
-        switch (viewMode) {
-            case 'inventory':
-                return [
-                    SORT_TYPES.LAST_MODIFIED, // 添加最近变动排序
-                    SORT_TYPES.ROAST_DATE, 
-                    SORT_TYPES.REMAINING_DAYS,
-                    SORT_TYPES.REMAINING_AMOUNT,
-                    SORT_TYPES.PRICE,
-                    SORT_TYPES.NAME
-                ];
-            case 'ranking':
-                return [SORT_TYPES.RATING, SORT_TYPES.NAME, SORT_TYPES.LAST_MODIFIED];
-            case 'blogger':
-                return [SORT_TYPES.ORIGINAL, SORT_TYPES.RATING, SORT_TYPES.PRICE, SORT_TYPES.NAME, SORT_TYPES.LAST_MODIFIED];
-            case 'stats':
-                return [SORT_TYPES.REMAINING_DAYS, SORT_TYPES.REMAINING_AMOUNT, SORT_TYPES.ROAST_DATE, SORT_TYPES.PRICE, SORT_TYPES.LAST_MODIFIED];
-            default:
-                return [SORT_TYPES.REMAINING_DAYS, SORT_TYPES.NAME, SORT_TYPES.LAST_MODIFIED];
-        }
+        return getAvailableSortTypesForView(viewMode);
     };
 
     // 根据排序类型判断是否显示排序顺序选项
