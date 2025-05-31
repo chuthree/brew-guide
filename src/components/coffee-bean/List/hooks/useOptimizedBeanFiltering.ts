@@ -101,9 +101,10 @@ export const useOptimizedBeanFiltering = ({
         // 提取品种并去重
         const varieties = beansForVarieties
             .map(bean => bean.variety)
-            .filter((variety, index, array) => 
-                variety && variety.trim() !== '' && array.indexOf(variety) === index
+            .filter((variety): variety is string =>
+                variety !== undefined && variety !== null && variety.trim() !== ''
             )
+            .filter((variety, index, array) => array.indexOf(variety) === index)
             .sort()
 
         return varieties
