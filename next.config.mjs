@@ -110,9 +110,9 @@ const nextConfig = {
     reactStrictMode: true,
     // 为 Capacitor 启用静态导出模式
     output: 'export',
-    // 优化图像配置以提升性能
+    // 禁用图像优化，因为在静态导出模式下不支持
     images: {
-        unoptimized: true, // 静态导出模式需要
+        unoptimized: true,
         domains: ['localhost'],
         remotePatterns: [
             {
@@ -120,17 +120,11 @@ const nextConfig = {
                 hostname: '**',
             },
         ],
-        // 添加图片格式优化
-        formats: ['image/webp', 'image/avif'],
-        // 预定义尺寸以减少布局偏移
-        deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
-        imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     },
     // 增加静态页面生成超时时间
     staticPageGenerationTimeout: 180,
-    // 配置 webpack 以支持 CSV 文件和性能优化
-    webpack: (config, { dev, isServer }) => {
-        // CSV 文件支持
+    // 配置 webpack 以支持 CSV 文件
+    webpack: (config) => {
         config.module.rules.push({
             test: /\.csv$/,
             use: [
@@ -144,33 +138,6 @@ const nextConfig = {
                 }
             ]
         });
-
-        // 性能优化配置
-        if (!dev && !isServer) {
-            // 启用代码分割优化
-            config.optimization = {
-                ...config.optimization,
-                splitChunks: {
-                    ...config.optimization.splitChunks,
-                    cacheGroups: {
-                        ...config.optimization.splitChunks.cacheGroups,
-                        // 将大型库单独打包
-                        vendor: {
-                            test: /[\\/]node_modules[\\/](react|react-dom|framer-motion|lucide-react)[\\/]/,
-                            name: 'vendor',
-                            chunks: 'all',
-                        },
-                        // 将UI组件库单独打包
-                        ui: {
-                            test: /[\\/]node_modules[\\/](@radix-ui|vaul)[\\/]/,
-                            name: 'ui',
-                            chunks: 'all',
-                        }
-                    }
-                }
-            };
-        }
-
         return config;
     }
 };

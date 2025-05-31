@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useRef, useCallback, useEffect, memo } from 'react'
+import React, { useState, useRef, useCallback, useEffect } from 'react'
 import { ExtendedCoffeeBean, BeanType } from '../types'
 import BeanListItem from './BeanListItem'
 import ImageFlowView from './ImageFlowView'
@@ -30,9 +30,7 @@ interface InventoryViewProps {
     searchQuery?: string
     // 新增图片流模式相关props
     isImageFlowMode?: boolean
-    // 性能优化选项
-    enableVirtualization?: boolean
-    _containerHeight?: number
+
 }
 
 const InventoryView: React.FC<InventoryViewProps> = ({
@@ -52,9 +50,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
     onQuickDecrement,
     isSearching = false,
     searchQuery = '',
-    isImageFlowMode = false,
-    enableVirtualization = true,
-    _containerHeight = 600
+    isImageFlowMode = false
 }) => {
     // 添加剩余量编辑状态
     const [editingRemaining, setEditingRemaining] = useState<{
@@ -245,14 +241,14 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                     }
                 </div>
             ) : (
-                // 使用传统滚动（当项目数量较少时）
+                // 使用传统滚动
                 <div className="min-h-full pb-20">
-                    {(enableVirtualization ? filteredBeans : displayedBeans).map((bean, index) => (
+                    {displayedBeans.map((bean, index) => (
                         <BeanListItem
                             key={bean.id}
                             bean={bean}
                             title={generateBeanTitle(bean)}
-                            isLast={index === (enableVirtualization ? filteredBeans : displayedBeans).length - 1}
+                            isLast={index === displayedBeans.length - 1}
                             onEdit={onEdit}
                             onDelete={onDelete}
                             onShare={onShare}
@@ -262,8 +258,8 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                         />
                     ))}
 
-                    {/* 加载更多指示器 - 仅在非虚拟化模式下显示 */}
-                    {!enableVirtualization && hasMore && (
+                    {/* 加载更多指示器 */}
+                    {hasMore && (
                         <div
                             ref={loaderRef}
                             className="flex justify-center items-center py-4"
@@ -297,5 +293,4 @@ const InventoryView: React.FC<InventoryViewProps> = ({
     );
 };
 
-// 使用 React.memo 包装组件以避免不必要的重新渲染
-export default memo(InventoryView);
+export default InventoryView;
