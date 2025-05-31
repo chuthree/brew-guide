@@ -110,9 +110,9 @@ const nextConfig = {
     reactStrictMode: true,
     // 为 Capacitor 启用静态导出模式
     output: 'export',
-    // 禁用图像优化，因为在静态导出模式下不支持
+    // 图像配置
     images: {
-        unoptimized: true,
+        unoptimized: true, // 静态导出模式需要
         domains: ['localhost'],
         remotePatterns: [
             {
@@ -125,6 +125,7 @@ const nextConfig = {
     staticPageGenerationTimeout: 180,
     // 配置 webpack 以支持 CSV 文件
     webpack: (config) => {
+        // CSV 文件支持
         config.module.rules.push({
             test: /\.csv$/,
             use: [
@@ -138,6 +139,7 @@ const nextConfig = {
                 }
             ]
         });
+
         return config;
     }
 };
