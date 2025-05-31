@@ -28,7 +28,7 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
     const [forceRefreshKey, setForceRefreshKey] = useState(0) // 添加强制刷新的key
 
     // 添加设置状态
-    const [hidePrice, setHidePrice] = useState(false) // 默认显示价格
+    const [_hidePrice, setHidePrice] = useState(false) // 默认显示价格
 
     // 添加ref用于存储咖啡豆元素列表
     const beanItemsRef = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -77,19 +77,19 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
     }, []);
 
     // 检查咖啡豆是否用完
-    const isBeanEmpty = (bean: CoffeeBean): boolean => {
+    const _isBeanEmpty = (bean: CoffeeBean): boolean => {
         // 处理remaining可能是字符串或数字的情况
         if (typeof bean.remaining === 'number') {
             return bean.remaining <= 0;
         }
-        
+
         // 处理remaining是字符串的情况
         if (typeof bean.remaining === 'string') {
             // 移除所有非数字字符（除了小数点）并转换为数字
             const numericValue = parseFloat(bean.remaining.replace(/[^\d.]/g, ''));
             return isNaN(numericValue) || numericValue <= 0;
         }
-        
+
         // 如果remaining未定义或为null，也视为空
         return true;
     }
@@ -138,7 +138,7 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
     }, []);
 
     // 计算单价
-    const calculateUnitPrice = (bean: CoffeeBean): string => {
+    const _calculateUnitPrice = (bean: CoffeeBean): string => {
         if (!bean.price || !bean.capacity) return "未知";
 
         try {
