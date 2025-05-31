@@ -360,7 +360,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                                 )}
                             </div>
                             {/* 拼配豆信息显示 - 简化版本 */}
-                            {bean.type === '拼配' && bean.blendComponents && bean.blendComponents.length > 1 && (
+                            {bean.blendComponents && bean.blendComponents.length > 1 && (
                                 <div className="text-[11px] font-normal text-neutral-500 dark:text-neutral-400 pr-2 leading-tight overflow-hidden">
                                     <div className="truncate">
                                         {bean.blendComponents.map((comp, index) => {

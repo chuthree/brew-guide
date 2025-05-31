@@ -21,7 +21,6 @@ export interface CoffeeBean {
 	id: string;           // 唯一标识
 	timestamp: number;    // 时间戳
 	name: string;         // 咖啡豆名称
-	type: '单品' | '拼配';  // 咖啡豆类型
 	
 	// 基本信息
 	image?: string;       // 图片

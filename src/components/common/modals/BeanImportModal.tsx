@@ -267,33 +267,41 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
     const _templatePrompt = (() => {
         // 不再使用模板生成
         // const templateJson = generateBeanTemplateJson();
-        return `提取咖啡豆数据，返回JSON格式，支持批量导入。
+        return `提取咖啡豆信息，返回JSON格式。
 
 单个咖啡豆使用：{...}
 多个咖啡豆使用：[{...},{...}]
 
-数据字段：
-- id: 留空
+字段说明：
 - name: 咖啡豆名称（必填）
-- capacity: 总容量，纯数字
-- remaining: 剩余容量，纯数字（若无标注则与capacity相同）
-- price: 价格，纯数字
-- roastLevel: 烘焙度（极浅烘焙/浅度烘焙/中浅烘焙/中度烘焙/中深烘焙/深度烘焙）
-- roastDate: 烘焙日期，格式YYYY-MM-DD
-- flavor: 风味描述标签数组
+- capacity: 总容量数字
+- remaining: 剩余容量数字
+- price: 价格数字
+- roastLevel: 极浅烘焙/浅度烘焙/中浅烘焙/中度烘焙/中深烘焙/深度烘焙
+- roastDate: YYYY-MM-DD格式
+- flavor: 风味数组
+- notes: 备注信息
+- startDay: 养豆期天数
+- endDay: 赏味期天数
+- blendComponents: 成分数组
+
+成分格式：
+单品：[{"origin":"埃塞俄比亚","process":"水洗","variety":"瑰夏"}]
+拼配：[
+  {"percentage":60,"origin":"巴西","process":"日晒","variety":"红波旁"},
+  {"percentage":40,"origin":"埃塞俄比亚","process":"水洗","variety":"铁皮卡"}
+]
+
+成分字段说明：
+- percentage: 比例数字（有比例信息时填写，没有时可省略该字段）
 - origin: 产地
 - process: 处理法
-- variety: 品种（如瑰夏）
-- type: 类型，必须为"单品"或"拼配"
-- notes: 备注信息
-- startDay: 养豆期天数，纯数字
-- endDay: 赏味期天数，纯数字
-- blendComponents: 拼配成分，格式[{"percentage":比例(纯数字),"origin":"产地","process":"处理法","variety":"品种"}]
+- variety: 品种
 
-要求：
-0. 不要包含任何其他字段以及注释，请严格按照获取到的内容进行JSON格式化
-1. 不确定的字段留空或为[]
-2. 确保JSON格式有效，数值字段不包含单位`;
+注意：
+- 每个成分的origin/process/variety只能填一个值，不能用逗号连接
+- 不确定的字段留空字符串""或空数组[]
+- 产地、处理法、品种信息请放在blendComponents数组中`;
     })();
 
     // 兼容性更好的复制文本方法

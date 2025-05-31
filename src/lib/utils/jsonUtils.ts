@@ -28,7 +28,7 @@ interface CoffeeBean {
 	capacity?: string;
 	remaining?: string;
 	price?: string;
-	type?: string;
+
 	blendComponents?: BlendComponent[] | undefined;
 	startDay?: number;
 	endDay?: number;
@@ -484,10 +484,14 @@ export function generateBeanTemplateJson() {
   "roastLevel": "浅度烘焙",
   "roastDate": "",
   "flavor": [],
-  "origin": "",
-  "process": "",
-  "variety": "",
-  "type": "",
+  "blendComponents": [
+    {
+      "percentage": 100,
+      "origin": "",
+      "process": "",
+      "variety": ""
+    }
+  ],
   "notes": ""
 }`;
 }
@@ -499,12 +503,9 @@ export function generateBeanTemplateJson() {
  */
 export function beanToReadableText(bean: CoffeeBean): string {
 	let text = `【咖啡豆信息】${bean.name}\n`;
-	
+
 	// 确定豆子类型（单品/拼配）
 	const isBlend = bean.blendComponents && Array.isArray(bean.blendComponents) && bean.blendComponents.length > 1;
-	const beanType = isBlend ? '拼配' : '单品';
-	
-	text += `类型: ${beanType}\n`;
 	
 	// 如果有beanType字段（手冲/意式），添加用途信息
 	if (bean.beanType) {
@@ -528,38 +529,42 @@ export function beanToReadableText(bean: CoffeeBean): string {
 		text += `烘焙日期: ${bean.roastDate}\n`;
 	}
 	
-	if (!isBlend) {
-		// 单品豆特有信息
-		if (bean.origin) {
-			text += `产地: ${bean.origin}\n`;
+	// 显示成分信息（统一处理单品和拼配）
+	if (bean.blendComponents && Array.isArray(bean.blendComponents) && bean.blendComponents.length > 0) {
+		if (isBlend) {
+			// 拼配豆：检查是否有有效的成分信息
+			const hasValidBlendInfo = bean.blendComponents.some(component =>
+				component.origin || component.process || component.variety
+			);
+
+			if (hasValidBlendInfo) {
+				text += `拼配成分:\n`;
+				bean.blendComponents.forEach((component, index) => {
+					const componentText = [
+						component.origin || "",
+						component.process || "",
+						component.variety || ""
+					]
+						.filter(v => v) // 过滤掉空值
+						.join(" | ");
+
+					const percentageText = component.percentage
+						? `${component.percentage}% `
+						: "";
+
+					text += `${index + 1}. ${percentageText}${componentText}\n`;
+				});
+			}
+		} else {
+			// 单品豆：检查是否有有效的成分信息
+			const component = bean.blendComponents[0];
+			if (component && (component.origin || component.process || component.variety)) {
+				text += `成分信息:\n`;
+				if (component.origin) text += `产地: ${component.origin}\n`;
+				if (component.process) text += `处理法: ${component.process}\n`;
+				if (component.variety) text += `品种: ${component.variety}\n`;
+			}
 		}
-		
-		if (bean.process) {
-			text += `处理法: ${bean.process}\n`;
-		}
-		
-		if (bean.variety) {
-			text += `品种: ${bean.variety}\n`;
-		}
-	} else if (bean.blendComponents && Array.isArray(bean.blendComponents) && bean.blendComponents.length > 0) {
-		// 拼配豆成分信息
-		text += `拼配成分:\n`;
-		
-		bean.blendComponents.forEach((component, index) => {
-			const componentText = [
-				component.origin || "",
-				component.process || "",
-				component.variety || ""
-			]
-				.filter(v => v) // 过滤掉空值
-				.join(" | ");
-			
-			const percentageText = component.percentage 
-				? `${component.percentage}% ` 
-				: "";
-			
-			text += `${index + 1}. ${percentageText}${componentText}\n`;
-		});
 	}
 	
 	// 风味和备注
@@ -833,29 +838,22 @@ function parseCoffeeBeanText(text: string): CoffeeBean | null {
 		bean.roastDate = dateMatch[1].trim();
 	}
 
-	// 提取产地
+	// 提取单品豆的成分信息（产地、处理法、品种）
 	const originMatch = text.match(/产地:\s*(.*?)(?:\n|$)/);
-	if (originMatch && originMatch[1]) {
-		bean.origin = originMatch[1].trim();
-	}
-
-	// 提取处理法
 	const processMatch = text.match(/处理法:\s*(.*?)(?:\n|$)/);
-	if (processMatch && processMatch[1]) {
-		bean.process = processMatch[1].trim();
-	}
-
-	// 提取品种
 	const varietyMatch = text.match(/品种:\s*(.*?)(?:\n|$)/);
-	if (varietyMatch && varietyMatch[1]) {
-		bean.variety = varietyMatch[1].trim();
+
+	// 如果有任何成分信息，创建blendComponents
+	if (originMatch?.[1] || processMatch?.[1] || varietyMatch?.[1]) {
+		bean.blendComponents = [{
+			percentage: 100,
+			origin: originMatch?.[1]?.trim() || '',
+			process: processMatch?.[1]?.trim() || '',
+			variety: varietyMatch?.[1]?.trim() || ''
+		}];
 	}
 
-	// 提取类型
-	const typeMatch = text.match(/类型:\s*(.*?)(?:\n|$)/);
-	if (typeMatch && typeMatch[1]) {
-		bean.type = typeMatch[1].trim();
-	}
+
 
 	// 提取用途
 	const usageMatch = text.match(/用途:\s*(.*?)(?:\n|$)/);

@@ -404,8 +404,170 @@ export const DataManager = {
 	},
 
 	/**
-	 * 修复拼配豆数据问题
-	 * 处理可能存在问题的拼配豆数据，确保类型和blendComponents字段正确
+	 * 检查是否为有效的文本（非占位符）
+	 * @param text 要检查的文本
+	 * @returns 是否为有效文本
+	 */
+	isValidText(text: string | undefined | null): boolean {
+		if (!text || typeof text !== 'string') return false;
+
+		const trimmed = text.trim();
+		if (trimmed === '') return false;
+
+		// 占位符文本列表
+		const placeholders = [
+			'产地', 'origin', 'Origin',
+			'处理法', 'process', 'Process', '水洗', '日晒', '蜜处理',
+			'品种', 'variety', 'Variety',
+			'烘焙度', 'roast', 'Roast'
+		];
+
+		return !placeholders.includes(trimmed);
+	},
+
+	/**
+	 * 检查咖啡豆是否有有效的旧格式字段
+	 * @param bean 咖啡豆对象
+	 * @returns 是否有有效的旧格式字段
+	 */
+	hasValidLegacyFields(bean: any): boolean {
+		return this.isValidText(bean.origin) ||
+			   this.isValidText(bean.process) ||
+			   this.isValidText(bean.variety);
+	},
+
+	/**
+	 * 检测是否存在旧格式的咖啡豆数据
+	 * @returns 检测结果，包含是否存在旧格式数据和数量
+	 */
+	async detectLegacyBeanData(): Promise<{ hasLegacyData: boolean; legacyCount: number; totalCount: number }> {
+		try {
+			// 获取所有咖啡豆数据
+			const beansStr = await Storage.get('coffeeBeans');
+			if (!beansStr) {
+				return { hasLegacyData: false, legacyCount: 0, totalCount: 0 };
+			}
+
+			// 解析咖啡豆数据
+			const beans = JSON.parse(beansStr);
+			if (!Array.isArray(beans)) {
+				return { hasLegacyData: false, legacyCount: 0, totalCount: 0 };
+			}
+
+			let legacyCount = 0;
+
+			// 检查每个咖啡豆是否使用旧格式
+			beans.forEach((bean) => {
+				// 检查是否存在有效的旧格式字段（排除占位符）
+				const hasValidLegacyFields = this.hasValidLegacyFields(bean);
+
+				if (hasValidLegacyFields) {
+					legacyCount++;
+				}
+			});
+
+			return {
+				hasLegacyData: legacyCount > 0,
+				legacyCount,
+				totalCount: beans.length
+			};
+		} catch (error) {
+			console.error('检测旧格式数据失败:', error);
+			return { hasLegacyData: false, legacyCount: 0, totalCount: 0 };
+		}
+	},
+
+	/**
+	 * 迁移旧格式咖啡豆数据到新格式
+	 * @returns 迁移结果，包含迁移数量
+	 */
+	async migrateLegacyBeanData(): Promise<{ success: boolean; migratedCount: number; message: string }> {
+		try {
+			// 获取所有咖啡豆数据
+			const beansStr = await Storage.get('coffeeBeans');
+			if (!beansStr) {
+				return { success: true, migratedCount: 0, message: '没有找到咖啡豆数据' };
+			}
+
+			// 解析咖啡豆数据
+			const beans = JSON.parse(beansStr);
+			if (!Array.isArray(beans)) {
+				return { success: false, migratedCount: 0, message: '咖啡豆数据格式错误' };
+			}
+
+			let migratedCount = 0;
+
+			// 处理每个咖啡豆
+			const migratedBeans = beans.map((bean) => {
+				// 检查是否需要迁移（存在有效的旧格式字段）
+				const hasValidLegacyFields = this.hasValidLegacyFields(bean);
+
+				if (hasValidLegacyFields) {
+					// 如果没有blendComponents，创建新的
+					if (!bean.blendComponents || !Array.isArray(bean.blendComponents) || bean.blendComponents.length === 0) {
+						bean.blendComponents = [{
+							origin: this.isValidText(bean.origin) ? bean.origin : '',
+							process: this.isValidText(bean.process) ? bean.process : '',
+							variety: this.isValidText(bean.variety) ? bean.variety : ''
+						}];
+					}
+					// 如果已经有blendComponents，但旧字段的信息更完整，则更新blendComponents
+					else {
+						// 检查第一个组件是否需要更新
+						const firstComponent = bean.blendComponents[0];
+						if (!this.isValidText(firstComponent.origin) && this.isValidText(bean.origin)) {
+							firstComponent.origin = bean.origin;
+						}
+						if (!this.isValidText(firstComponent.process) && this.isValidText(bean.process)) {
+							firstComponent.process = bean.process;
+						}
+						if (!this.isValidText(firstComponent.variety) && this.isValidText(bean.variety)) {
+							firstComponent.variety = bean.variety;
+						}
+					}
+
+					migratedCount++;
+				}
+
+				// 总是删除旧的字段（无论是否有效），避免数据重复
+				delete bean.origin;
+				delete bean.process;
+				delete bean.variety;
+
+				return bean;
+			});
+
+			// 如果有迁移，更新存储
+			if (migratedCount > 0) {
+				await Storage.set('coffeeBeans', JSON.stringify(migratedBeans));
+
+				// 同时更新IndexedDB
+				try {
+					await db.coffeeBeans.clear();
+					await db.coffeeBeans.bulkPut(migratedBeans);
+				} catch (dbError) {
+					console.error('更新IndexedDB失败:', dbError);
+				}
+			}
+
+			return {
+				success: true,
+				migratedCount,
+				message: migratedCount > 0 ? `成功迁移了${migratedCount}个咖啡豆的数据格式` : '没有需要迁移的数据'
+			};
+		} catch (error) {
+			console.error('迁移数据失败:', error);
+			return {
+				success: false,
+				migratedCount: 0,
+				message: `迁移失败: ${(error as Error).message}`
+			};
+		}
+	},
+
+	/**
+	 * 修复咖啡豆数据问题
+	 * 处理可能存在问题的咖啡豆数据，确保blendComponents字段正确，删除废弃的type字段
 	 * @returns 修复结果，包含修复数量
 	 */
 	async fixBlendBeansData(): Promise<{ success: boolean; fixedCount: number }> {
@@ -426,47 +588,20 @@ export const DataManager = {
 
 			// 处理每个咖啡豆
 			const fixedBeans = beans.map((bean) => {
-				// 检查是否有类型字段
-				if (!bean.type) {
-					bean.type = '单品';
+				// 删除已废弃的type字段
+				if ('type' in bean) {
+					delete (bean as any).type;
 					fixedCount++;
 				}
 
-				// 处理拼配豆
-				if (bean.type === '拼配') {
-					// 如果标记为拼配豆但没有拼配成分，添加默认拼配成分
-					if (!bean.blendComponents || !Array.isArray(bean.blendComponents) || bean.blendComponents.length === 0) {
-						bean.blendComponents = [{
-							origin: bean.origin || '',
-							process: bean.process || '',
-							variety: bean.variety || ''
-						}];
-						fixedCount++;
-					}
-					// 如果拼配成分只有一个，确保类型是单品
-					else if (bean.blendComponents.length === 1) {
-						bean.type = '单品';
-						fixedCount++;
-					}
-				}
-				// 处理单品豆
-				else if (bean.type === '单品') {
-					// 如果是单品但拼配成分长度不对，修复
-					if (bean.blendComponents && Array.isArray(bean.blendComponents)) {
-						if (bean.blendComponents.length > 1) {
-							bean.type = '拼配';
-							fixedCount++;
-						}
-					}
-					// 确保单品也有blendComponents字段，用于统一处理
-					else {
-						bean.blendComponents = [{
-							origin: bean.origin || '',
-							process: bean.process || '',
-							variety: bean.variety || ''
-						}];
-						fixedCount++;
-					}
+				// 确保所有咖啡豆都有blendComponents字段
+				if (!bean.blendComponents || !Array.isArray(bean.blendComponents) || bean.blendComponents.length === 0) {
+					bean.blendComponents = [{
+						origin: bean.origin || '',
+						process: bean.process || '',
+						variety: bean.variety || ''
+					}];
+					fixedCount++;
 				}
 
 				// 确保所有拼配成分都有正确的属性

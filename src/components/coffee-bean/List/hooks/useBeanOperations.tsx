@@ -228,7 +228,7 @@ export const useBeanOperations = () => {
                 process: bean.process,
                 variety: bean.variety,
                 price: bean.price,
-                type: bean.blendComponents && bean.blendComponents.length > 1 ? '拼配' : '单品',
+
                 beanType: bean.beanType, // 添加beanType信息
                 notes: bean.notes,
                 startDay: bean.startDay,

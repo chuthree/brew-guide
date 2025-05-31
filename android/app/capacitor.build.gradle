@@ -10,7 +10,6 @@ android {
 apply from: "../capacitor-cordova-android-plugins/cordova.variables.gradle"
 dependencies {
     implementation project(':capacitor-community-keep-awake')
-    implementation project(':capacitor-community-safe-area')
     implementation project(':capacitor-browser')
     implementation project(':capacitor-filesystem')
     implementation project(':capacitor-haptics')
@@ -22,6 +21,7 @@ dependencies {
     implementation project(':capacitor-status-bar')
     implementation project(':capacitor-text-zoom')
     implementation project(':capawesome-capacitor-file-picker')
+    implementation project(':capacitor-community-safe-area')
 
 }
 

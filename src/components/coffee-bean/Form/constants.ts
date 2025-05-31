@@ -230,11 +230,7 @@ export const FLAVOR_CATEGORIES = {
     ]
 };
 
-// 修改类型选项为单品和拼配
-export const BEAN_TYPES = [
-    { value: '单品', label: '单品' },
-    { value: '拼配', label: '拼配' },
-];
+
 
 // 动画配置
 export const pageVariants = {

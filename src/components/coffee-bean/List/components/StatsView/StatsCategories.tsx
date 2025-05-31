@@ -67,22 +67,22 @@ const StatsCategories: React.FC<StatsCategoriesProps> = ({
                     title="分类" 
                     animStyle={styles.statsAnimStyle(1)}
                 >
-                    <StatItem 
-                        label="单品豆" 
+                    <StatItem
+                        label="单品豆"
                         value={(() => {
-                            const total = beans.filter(bean => bean.type === '单品').length;
-                            const active = beans.filter(bean => bean.type === '单品' && !isBeanEmpty(bean)).length;
+                            const total = beans.filter(bean => !bean.blendComponents || bean.blendComponents.length <= 1).length;
+                            const active = beans.filter(bean => (!bean.blendComponents || bean.blendComponents.length <= 1) && !isBeanEmpty(bean)).length;
                             return total === 0 ? '0' : `${active}/${total}`;
-                        })()} 
+                        })()}
                         unit="个"
                     />
-                    <StatItem 
-                        label="拼配豆" 
+                    <StatItem
+                        label="拼配豆"
                         value={(() => {
-                            const total = beans.filter(bean => bean.type === '拼配').length;
-                            const active = beans.filter(bean => bean.type === '拼配' && !isBeanEmpty(bean)).length;
+                            const total = beans.filter(bean => bean.blendComponents && bean.blendComponents.length > 1).length;
+                            const active = beans.filter(bean => bean.blendComponents && bean.blendComponents.length > 1 && !isBeanEmpty(bean)).length;
                             return total === 0 ? '0' : `${active}/${total}`;
-                        })()} 
+                        })()}
                         unit="个"
                     />
                     <StatItem 

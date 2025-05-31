@@ -214,7 +214,25 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     const getOriginInfoItems = (): InfoItem[] => {
         const items: InfoItem[] = []
 
-        if (bean?.origin) {
+        // 处理产地信息
+        if (bean?.blendComponents && Array.isArray(bean.blendComponents) && bean.blendComponents.length > 0) {
+            // 从blendComponents中提取产地信息
+            const origins = bean.blendComponents
+                .map(comp => comp.origin)
+                .filter((origin): origin is string => origin !== undefined && origin !== null && origin.trim() !== '')
+
+            if (origins.length > 0) {
+                const uniqueOrigins = Array.from(new Set(origins))
+                items.push({
+                    key: 'origin',
+                    label: '产地',
+                    value: searchQuery ? (
+                        <HighlightText text={uniqueOrigins.join(', ')} highlight={searchQuery} />
+                    ) : uniqueOrigins.join(', ')
+                })
+            }
+        } else if (bean?.origin) {
+            // 兼容旧数据格式
             items.push({
                 key: 'origin',
                 label: '产地',
@@ -224,7 +242,23 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
             })
         }
 
-        if (bean?.process) {
+        // 处理处理法信息
+        if (bean?.blendComponents && Array.isArray(bean.blendComponents) && bean.blendComponents.length > 0) {
+            // 从blendComponents中提取处理法信息
+            const processes = bean.blendComponents
+                .map(comp => comp.process)
+                .filter((process): process is string => process !== undefined && process !== null && process.trim() !== '')
+
+            if (processes.length > 0) {
+                const uniqueProcesses = Array.from(new Set(processes))
+                items.push({
+                    key: 'process',
+                    label: '处理法',
+                    value: uniqueProcesses.join(', ')
+                })
+            }
+        } else if (bean?.process) {
+            // 兼容旧数据格式
             items.push({
                 key: 'process',
                 label: '处理法',
@@ -232,7 +266,23 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
             })
         }
 
-        if (bean?.variety) {
+        // 处理品种信息
+        if (bean?.blendComponents && Array.isArray(bean.blendComponents) && bean.blendComponents.length > 0) {
+            // 从blendComponents中提取品种信息
+            const varieties = bean.blendComponents
+                .map(comp => comp.variety)
+                .filter((variety): variety is string => variety !== undefined && variety !== null && variety.trim() !== '')
+
+            if (varieties.length > 0) {
+                const uniqueVarieties = Array.from(new Set(varieties))
+                items.push({
+                    key: 'variety',
+                    label: '品种',
+                    value: uniqueVarieties.join(', ')
+                })
+            }
+        } else if (bean?.variety) {
+            // 兼容旧数据格式
             items.push({
                 key: 'variety',
                 label: '品种',
@@ -365,7 +415,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                         <InfoSection title="产地信息" items={getOriginInfoItems()} />
 
                         {/* 拼配信息 */}
-                        {bean.type === '拼配' && bean.blendComponents && bean.blendComponents.length > 0 && (
+                        {bean.blendComponents && bean.blendComponents.length > 1 && (
                             <div className="py-3 border-b border-neutral-200/40 dark:border-neutral-800/40">
                                 <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-2">拼配组成</div>
                                 <div className="space-y-1">

@@ -312,8 +312,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
                     timestamp: bean.timestamp,
                     overallRating: bean.overallRating,
                     variety: bean.variety,
-                    price: bean.price,
-                    type: bean.type
+                    price: bean.price
                 }));
 
                 const sortedBeans = sortBeans(compatibleBeans, sortOption);
@@ -406,8 +405,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
                 timestamp: bean.timestamp,
                 overallRating: bean.overallRating,
                 variety: bean.variety,
-                price: bean.price,
-                type: bean.type
+                price: bean.price
             }));
 
             const sortedBeans = sortBeans(compatibleBeans, sortOption);

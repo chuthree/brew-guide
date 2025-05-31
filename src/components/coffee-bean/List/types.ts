@@ -1,4 +1,5 @@
 import { CoffeeBean } from '@/types/app'
+import { getBeanOrigins, getBeanProcesses, getBeanVarieties } from '@/lib/utils/beanVarietyUtils'
 
 // 添加BlendComponent类型
 export interface BlendComponent {
@@ -71,7 +72,7 @@ export const generateBeanTitle = (bean: ExtendedCoffeeBean): string => {
     // 如果是拼配咖啡且有拼配成分，将成分添加到标题中
     if (bean.blendComponents && Array.isArray(bean.blendComponents) && bean.blendComponents.length > 0) {
         // 拼配豆情况下，不再在标题中添加拼配成分信息
-        if (bean.type === '拼配' && bean.blendComponents.length > 1) {
+        if (bean.blendComponents.length > 1) {
             // 不添加拼配成分到标题
         } else {
             // 单品豆的情况，仍然添加信息到标题
@@ -100,26 +101,35 @@ export const generateBeanTitle = (bean: ExtendedCoffeeBean): string => {
             }
         }
     } else {
-        // 单品咖啡的情况，保持原有逻辑
+        // 单品咖啡的情况，使用新的工具函数
         // 检查并添加烘焙度
         if (bean.roastLevel && !isIncluded(bean.roastLevel)) {
             additionalParams.push(bean.roastLevel);
         }
 
-        // 检查并添加产地
-        if (bean.origin && !isIncluded(bean.origin)) {
-            additionalParams.push(bean.origin);
-        }
+        // 使用工具函数获取产地信息
+        const origins = getBeanOrigins(bean);
+        origins.forEach(origin => {
+            if (!isIncluded(origin)) {
+                additionalParams.push(origin);
+            }
+        });
 
-        // 检查并添加处理法
-        if (bean.process && !isIncluded(bean.process)) {
-            additionalParams.push(bean.process);
-        }
+        // 使用工具函数获取处理法信息
+        const processes = getBeanProcesses(bean);
+        processes.forEach(process => {
+            if (!isIncluded(process)) {
+                additionalParams.push(process);
+            }
+        });
 
-        // 检查并添加品种
-        if (bean.variety && !isIncluded(bean.variety)) {
-            additionalParams.push(bean.variety);
-        }
+        // 使用工具函数获取品种信息
+        const varieties = getBeanVarieties(bean);
+        varieties.forEach(variety => {
+            if (!isIncluded(variety)) {
+                additionalParams.push(variety);
+            }
+        });
     }
 
     // 如果有额外参数，将它们添加到名称后面

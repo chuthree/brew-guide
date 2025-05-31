@@ -11,6 +11,8 @@ interface ErrorBoundaryProps {
 interface ErrorBoundaryState {
     hasError: boolean
     error: Error | null
+    errorInfo: ErrorInfo | null
+    showDetails: boolean
 }
 
 /**
@@ -22,7 +24,9 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
         super(props)
         this.state = {
             hasError: false,
-            error: null
+            error: null,
+            errorInfo: null,
+            showDetails: false
         }
     }
 
@@ -30,14 +34,21 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
         // 更新状态，下次渲染时显示备用UI
         return {
             hasError: true,
-            error
+            error,
+            errorInfo: null,
+            showDetails: false
         }
     }
 
     componentDidCatch(error: Error, errorInfo: ErrorInfo) {
         // 记录错误信息
         console.error('ErrorBoundary捕获到错误:', error, errorInfo)
-        
+
+        // 保存错误信息到状态中
+        this.setState({
+            errorInfo
+        })
+
         // 如果提供了onError回调，则调用它
         if (this.props.onError) {
             this.props.onError(error, errorInfo)
@@ -70,8 +81,17 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     resetError = () => {
         this.setState({
             hasError: false,
-            error: null
+            error: null,
+            errorInfo: null,
+            showDetails: false
         })
+    }
+
+    // 切换错误详情显示
+    toggleDetails = () => {
+        this.setState(prevState => ({
+            showDetails: !prevState.showDetails
+        }))
     }
 
     render() {
@@ -90,7 +110,34 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
                     <p className="text-sm text-red-600 dark:text-red-300 mb-4">
                         应用遇到了一个错误，正在尝试自动修复...
                     </p>
-                    <div className="flex space-x-2">
+
+                    {/* 错误详情 */}
+                    {this.state.showDetails && (
+                        <div className="mb-4 p-3 bg-red-100 dark:bg-red-900/30 rounded border text-xs max-h-80 overflow-y-auto">
+                            <div className="mb-2">
+                                <strong className="text-red-800 dark:text-red-300">错误信息:</strong>
+                                <div className="mt-1 text-red-700 dark:text-red-400 font-mono break-all">
+                                    {this.state.error?.message || '未知错误'}
+                                </div>
+                            </div>
+                            <div className="mb-2">
+                                <strong className="text-red-800 dark:text-red-300">错误堆栈:</strong>
+                                <div className="mt-1 text-red-700 dark:text-red-400 font-mono break-all whitespace-pre-wrap">
+                                    {this.state.error?.stack || '无堆栈信息'}
+                                </div>
+                            </div>
+                            {this.state.errorInfo?.componentStack && (
+                                <div>
+                                    <strong className="text-red-800 dark:text-red-300">组件堆栈:</strong>
+                                    <div className="mt-1 text-red-700 dark:text-red-400 font-mono break-all whitespace-pre-wrap">
+                                        {this.state.errorInfo.componentStack}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    <div className="flex flex-wrap gap-2">
                         <button
                             onClick={this.resetError}
                             className="px-3 py-1 text-sm font-medium text-neutral-100 bg-red-600 rounded-md hover:bg-red-700 transition-colors"
@@ -102,6 +149,12 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
                             className="px-3 py-1 text-sm font-medium text-red-700 bg-red-100 rounded-md hover:bg-red-200 transition-colors dark:bg-red-800/30 dark:text-red-300 dark:hover:bg-red-800/50"
                         >
                             刷新页面
+                        </button>
+                        <button
+                            onClick={this.toggleDetails}
+                            className="px-3 py-1 text-sm font-medium text-red-700 bg-red-100 rounded-md hover:bg-red-200 transition-colors dark:bg-red-800/30 dark:text-red-300 dark:hover:bg-red-800/50"
+                        >
+                            {this.state.showDetails ? '隐藏' : '显示'}错误详情
                         </button>
                     </div>
                 </div>

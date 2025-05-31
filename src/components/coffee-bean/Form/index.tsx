@@ -194,11 +194,7 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
             roastLevel: '浅度烘焙',
             roastDate: '',
             flavor: [],
-            origin: '',
-            process: '',
-            variety: '',
             price: '',
-            type: '单品',
             beanType: 'filter', // 默认为手冲
             notes: '',
             startDay: 0,
@@ -430,32 +426,27 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
     const handleSubmit = () => {
         validateRemaining();
 
-        // 根据blendComponents的数量自动判断是单品还是拼配
-        const isBlend = blendComponents.length > 1;
-        const beanType = isBlend ? '拼配' : '单品';
-
         // 保存自定义的预设值
         blendComponents.forEach(component => {
             // 检查产地是否是自定义值
             if (component.origin && !DEFAULT_ORIGINS.includes(component.origin)) {
                 addCustomPreset('origins', component.origin);
             }
-            
+
             // 检查处理法是否是自定义值
             if (component.process && !DEFAULT_PROCESSES.includes(component.process)) {
                 addCustomPreset('processes', component.process);
             }
-            
+
             // 检查品种是否是自定义值
             if (component.variety && !DEFAULT_VARIETIES.includes(component.variety)) {
                 addCustomPreset('varieties', component.variety);
             }
         });
 
-        // 统一使用成分属性，不管是单品还是拼配
+        // 统一使用成分属性
         onSave({
             ...bean,
-            type: beanType,
             blendComponents: blendComponents
         });
     };

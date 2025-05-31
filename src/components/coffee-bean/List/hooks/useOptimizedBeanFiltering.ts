@@ -3,6 +3,7 @@ import { debounce } from 'lodash'
 import { ExtendedCoffeeBean, BeanType } from '../types'
 import { SortOption, sortBeans } from '../SortSelector'
 import { isBeanEmpty } from '../globalCache'
+import { beanHasVariety, extractUniqueVarieties } from '@/lib/utils/beanVarietyUtils'
 
 interface UseOptimizedBeanFilteringProps {
     beans: ExtendedCoffeeBean[]
@@ -48,7 +49,7 @@ export const useOptimizedBeanFiltering = ({
 
         // 3. 按品种筛选
         if (selectedVariety) {
-            filtered = filtered.filter(bean => bean.variety === selectedVariety)
+            filtered = filtered.filter(bean => beanHasVariety(bean, selectedVariety))
         }
 
         // 4. 排序
@@ -64,8 +65,7 @@ export const useOptimizedBeanFiltering = ({
             timestamp: bean.timestamp,
             overallRating: bean.overallRating,
             variety: bean.variety,
-            price: bean.price,
-            type: bean.type
+            price: bean.price
         }))
 
         const sortedBeans = sortBeans(compatibleBeans, sortOption)
@@ -98,14 +98,8 @@ export const useOptimizedBeanFiltering = ({
             beansForVarieties = typeFilteredBeans.filter(bean => !isBeanEmpty(bean))
         }
 
-        // 提取品种并去重
-        const varieties = beansForVarieties
-            .map(bean => bean.variety)
-            .filter((variety): variety is string =>
-                variety !== undefined && variety !== null && variety.trim() !== ''
-            )
-            .filter((variety, index, array) => array.indexOf(variety) === index)
-            .sort()
+        // 使用工具函数提取品种并去重
+        const varieties = extractUniqueVarieties(beansForVarieties)
 
         return varieties
     }, [beans, selectedBeanType, showEmptyBeans])

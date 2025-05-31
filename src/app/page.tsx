@@ -39,7 +39,7 @@ import SwipeBackGesture from '@/components/app/SwipeBackGesture'
 import { loadCustomEquipments, saveCustomEquipment, deleteCustomEquipment } from '@/lib/managers/customEquipments'
 import CustomEquipmentFormModal from '@/components/equipment/forms/CustomEquipmentFormModal'
 import EquipmentImportModal from '@/components/equipment/import/EquipmentImportModal'
-import NoteFormHeader from '@/components/notes/ui/NoteFormHeader'
+import DataMigrationModal from '@/components/common/modals/DataMigrationModal'
 
 // 为Window对象声明类型扩展
 declare global {
@@ -213,6 +213,13 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     // 添加器具导入表单状态
     const [showEquipmentImportForm, setShowEquipmentImportForm] = useState(false);
 
+    // 添加数据迁移相关状态
+    const [showDataMigration, setShowDataMigration] = useState(false);
+    const [migrationData, setMigrationData] = useState<{
+        legacyCount: number;
+        totalCount: number;
+    } | null>(null);
+
     // 加载自定义器具
     useEffect(() => {
         const loadEquipments = async () => {
@@ -312,17 +319,31 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 }
                 setHasCoffeeBeans(hasCoffeeBeans);
 
-                // 0. 自动修复可能存在的数据问题
+                // 0. 检测数据迁移需求和自动修复
                 try {
                     // 导入数据管理工具
                     const { DataManager } = await import('@/lib/core/dataManager');
+
+                    // 检查是否需要数据迁移
+                    const migrationSkippedThisSession = sessionStorage.getItem('dataMigrationSkippedThisSession');
+                    if (migrationSkippedThisSession !== 'true') {
+                        const legacyDetection = await DataManager.detectLegacyBeanData();
+                        if (legacyDetection.hasLegacyData && isMounted) {
+                            setMigrationData({
+                                legacyCount: legacyDetection.legacyCount,
+                                totalCount: legacyDetection.totalCount
+                            });
+                            setShowDataMigration(true);
+                        }
+                    }
+
                     // 自动修复拼配豆数据
                     const fixResult = await DataManager.fixBlendBeansData();
                     if (fixResult.fixedCount > 0) {
                         console.log(`自动修复了${fixResult.fixedCount}个存在问题的拼配豆数据`);
                     }
                 } catch (error) {
-                    console.error('自动修复数据时出错:', error);
+                    console.error('数据检测和修复时出错:', error);
                     // 继续初始化，不阻止应用启动
                 }
 
@@ -962,13 +983,9 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                     remaining: beanData.remaining || beanData.capacity || '200',
                     price: beanData.price || '',
                     roastDate: beanData.roastDate || '',
-                    process: beanData.process || '',
-                    origin: beanData.origin || '',
-                    variety: beanData.variety || '',
                     flavor: beanData.flavor || [],
                     notes: beanData.notes || '',
-                    // 确保type是有效值，否则设为'单品'
-                    type: (beanData.type === '单品' || beanData.type === '拼配') ? beanData.type : '单品',
+
                     startDay: beanData.startDay,
                     endDay: beanData.endDay
                 } as Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>;
@@ -1001,18 +1018,19 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                                     (typeof comp.percentage === 'number' ? comp.percentage : undefined)
                             } : {})
                         }));
+                    }
+                } else {
+                    // 检查是否有旧格式的字段，如果有则转换为新格式
+                    const legacyOrigin = (beanData as any).origin;
+                    const legacyProcess = (beanData as any).process;
+                    const legacyVariety = (beanData as any).variety;
 
-                        // 根据拼配成分数量设置豆子类型
-                        bean.type = bean.blendComponents.length > 1 ? '拼配' : '单品';
-                    } else {
-                        // 如果没有有效的拼配成分，创建一个默认成分
-                        console.warn('咖啡豆数据格式不完整，添加默认成分');
-                        bean.type = '单品';
+                    if (legacyOrigin || legacyProcess || legacyVariety) {
                         bean.blendComponents = [{
                             percentage: 100,
-                            origin: bean.origin || '',
-                            process: bean.process || '',
-                            variety: bean.variety || ''
+                            origin: legacyOrigin || '',
+                            process: legacyProcess || '',
+                            variety: legacyVariety || ''
                         }];
                     }
                 }
@@ -1356,6 +1374,14 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         valveStatus?: 'open' | 'closed';
         originalIndex: number;
     }[]>([]);
+
+    // 处理数据迁移完成
+    const handleMigrationComplete = () => {
+        setShowDataMigration(false);
+        setMigrationData(null);
+        // 强制重新加载咖啡豆列表
+        handleBeanListChange();
+    };
 
     // 在 Settings 组件中添加 onDataChange 属性
     const handleDataChange = async () => {
@@ -1768,90 +1794,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     // 添加导航栏替代头部相关状态
     const [alternativeHeaderContent, setAlternativeHeaderContent] = useState<ReactNode | null>(null);
     const [showAlternativeHeader, setShowAlternativeHeader] = useState(false);
-
-    // 添加处理编辑笔记时的导航栏内容切换
-    const _handleEditNote = (_note: BrewingNoteData) => {
-        // 创建笔记编辑头部内容
-        const headerContent = (
-            <NoteFormHeader
-                isEditMode={true}
-                onBack={() => {
-                    // 关闭替代头部显示
-                    setShowAlternativeHeader(false);
-                    setAlternativeHeaderContent(null);
-                    // 处理返回逻辑 - 根据需要可以添加额外逻辑
-                }}
-                onSave={() => {
-                    // 获取表单元素并触发提交
-                    const form = document.querySelector('form');
-                    if (form) {
-                        form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
-                    }
-                }}
-                showSaveButton={true}
-            />
-        );
-
-        // 设置替代头部内容并显示
-        setAlternativeHeaderContent(headerContent);
-        setShowAlternativeHeader(true);
-
-        // 打开笔记编辑表单 - 使用现有的编辑逻辑
-        // ...
-    };
-
-    // 修改笔记保存成功时的回调
-    const _handleSaveNoteSuccess = () => {
-        // 关闭替代头部显示
-        setShowAlternativeHeader(false);
-        setAlternativeHeaderContent(null);
-
-        // 其他保存后的逻辑
-        // ...
-    };
-
-    // 使用扩展 Method 类型来匹配 BrewingTimer 的期望类型
-    // 添加在导入部分之后
-    type CompatMethod = {
-        id?: string;
-        name: string;
-        params: {
-            coffee: string;
-            water: string;
-            ratio: string;
-            grindSize: string;
-            temp: string;
-            videoUrl: string;
-            roastLevel?: string;
-            stages: {
-                time: number;
-                label: string;
-                water: string;
-                detail: string;
-                pourTime?: number;
-                pourType?: string;
-                valveStatus?: "open" | "closed";
-            }[];
-        };
-        timestamp?: number;
-    };
-
-    // 添加一个辅助函数转换类型
-    const _ensureMethodCompat = (method: Method | null): CompatMethod | null => {
-        if (!method) return null;
-
-        // 创建一个新对象，确保stages中的所有time属性都有值
-        return {
-            ...method,
-            params: {
-                ...method.params,
-                stages: method.params.stages.map(stage => ({
-                    ...stage,
-                    time: stage.time ?? 0, // 确保time不是undefined
-                }))
-            }
-        };
-    };
 
     return (
         <div className="relative h-full flex flex-col overflow-hidden">
@@ -2311,6 +2253,16 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 onClose={() => setShowEquipmentImportForm(false)}
                 existingEquipments={customEquipments}
             />
+
+            {/* 数据迁移模态框 */}
+            {migrationData && (
+                <DataMigrationModal
+                    isOpen={showDataMigration}
+                    onClose={() => setShowDataMigration(false)}
+                    legacyCount={migrationData.legacyCount}
+                    onMigrationComplete={handleMigrationComplete}
+                />
+            )}
 
             {/* 引导组件 */}
             {

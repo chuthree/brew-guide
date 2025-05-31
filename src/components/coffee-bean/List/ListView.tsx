@@ -154,15 +154,129 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
         }
     }
 
-    // 搜索过滤的咖啡豆
+    // 计算咖啡豆的赏味期阶段和剩余天数
+    const getFlavorInfo = (bean: CoffeeBean) => {
+        // 处理在途状态
+        if (bean.isInTransit) {
+            return { phase: '在途', remainingDays: 0 };
+        }
+
+        // 处理冰冻状态
+        if (bean.isFrozen) {
+            return { phase: '冰冻', remainingDays: 0 };
+        }
+
+        if (!bean.roastDate) {
+            return { phase: '衰退期', remainingDays: 0 };
+        }
+
+        const today = new Date();
+        const roastDate = new Date(bean.roastDate);
+        const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const roastDateOnly = new Date(roastDate.getFullYear(), roastDate.getMonth(), roastDate.getDate());
+        const daysSinceRoast = Math.ceil((todayDate.getTime() - roastDateOnly.getTime()) / (1000 * 60 * 60 * 24));
+
+        let startDay = bean.startDay || 0;
+        let endDay = bean.endDay || 0;
+
+        // 如果没有自定义值，则根据烘焙度设置默认值
+        if (startDay === 0 && endDay === 0) {
+            if (bean.roastLevel?.includes('浅')) {
+                startDay = 7;
+                endDay = 30;
+            } else if (bean.roastLevel?.includes('深')) {
+                startDay = 14;
+                endDay = 60;
+            } else {
+                // 默认为中烘焙
+                startDay = 10;
+                endDay = 30;
+            }
+        }
+
+        if (daysSinceRoast < startDay) {
+            // 养豆期
+            return { phase: '养豆期', remainingDays: startDay - daysSinceRoast };
+        } else if (daysSinceRoast <= endDay) {
+            // 赏味期
+            return { phase: '赏味期', remainingDays: endDay - daysSinceRoast };
+        } else {
+            // 衰退期
+            return { phase: '衰退期', remainingDays: 0 };
+        }
+    }
+
+    // 获取阶段数值用于排序
+    const getPhaseValue = (phase: string): number => {
+        switch (phase) {
+            case '在途': return -1; // 在途状态优先级最高
+            case '冰冻': return 0; // 冰冻状态与赏味期同等优先级
+            case '赏味期': return 0;
+            case '养豆期': return 1;
+            case '衰退期':
+            default: return 2;
+        }
+    }
+
+    // 过滤出未用完的咖啡豆，并按赏味期排序
+    const availableBeans = useMemo(() => {
+        // 首先过滤掉剩余量为0(且设置了容量)的咖啡豆和在途状态的咖啡豆
+        const filteredBeans = beans.filter(bean => {
+            // 过滤掉在途状态的咖啡豆
+            if (bean.isInTransit) {
+                return false;
+            }
+
+            // 如果没有设置容量，则直接显示
+            if (!bean.capacity || bean.capacity === '0' || bean.capacity === '0g') {
+                return true;
+            }
+
+            // 考虑remaining可能是字符串或者数字
+            const remaining = typeof bean.remaining === 'string'
+                ? parseFloat(bean.remaining)
+                : Number(bean.remaining);
+
+            // 只过滤掉有容量设置且剩余量为0的咖啡豆
+            return remaining > 0;
+        });
+
+        // 然后按照赏味期等进行排序（与添加笔记页面保持一致）
+        return [...filteredBeans].sort((a, b) => {
+            const { phase: phaseA, remainingDays: daysA } = getFlavorInfo(a);
+            const { phase: phaseB, remainingDays: daysB } = getFlavorInfo(b);
+
+            // 首先按照阶段排序：赏味期 > 养豆期 > 衰退期
+            if (phaseA !== phaseB) {
+                const phaseValueA = getPhaseValue(phaseA);
+                const phaseValueB = getPhaseValue(phaseB);
+                return phaseValueA - phaseValueB;
+            }
+
+            // 如果阶段相同，根据不同阶段有不同的排序逻辑
+            if (phaseA === '赏味期') {
+                // 赏味期内，剩余天数少的排在前面
+                return daysA - daysB;
+            } else if (phaseA === '养豆期') {
+                // 养豆期内，剩余天数少的排在前面（离赏味期近的优先）
+                return daysA - daysB;
+            } else {
+                // 衰退期按烘焙日期新的在前
+                if (!a.roastDate || !b.roastDate) return 0;
+                return new Date(b.roastDate).getTime() - new Date(a.roastDate).getTime();
+            }
+        });
+    }, [beans]);
+
+    // 搜索过滤
     const filteredBeans = useMemo(() => {
-        if (!searchQuery?.trim()) return beans;
-        
+        if (!searchQuery?.trim()) return availableBeans;
+
         const query = searchQuery.toLowerCase().trim();
-        return beans.filter(bean => 
+        return availableBeans.filter(bean =>
             bean.name?.toLowerCase().includes(query)
         );
-    }, [beans, searchQuery]);
+    }, [availableBeans, searchQuery]);
 
     // 设置ref的回调函数
     const setItemRef = useCallback((id: string) => (node: HTMLDivElement | null) => {
@@ -223,60 +337,30 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
             )}
 
             {filteredBeans.map((bean) => {
-                // 获取赏味期状态（添加到咖啡豆名称后面）
+                // 获取赏味期状态
                 let freshStatus = "";
-                let statusClass = "text-rose-500 dark:text-rose-400";
+                let statusClass = "text-neutral-500 dark:text-neutral-400";
 
-                if (bean.isFrozen) {
+                if (bean.isInTransit) {
+                    // 在途状态处理
+                    freshStatus = "(在途)";
+                    statusClass = "text-neutral-600 dark:text-neutral-400";
+                } else if (bean.isFrozen) {
                     // 冰冻状态处理
                     freshStatus = "(冰冻)";
                     statusClass = "text-blue-400 dark:text-blue-300";
                 } else if (bean.roastDate) {
-                    try {
-                        // 消除时区和时间差异，只比较日期部分
-                        const today = new Date();
-                        const roastDate = new Date(bean.roastDate);
+                    const { phase } = getFlavorInfo(bean);
 
-                        const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-                        const roastDateOnly = new Date(roastDate.getFullYear(), roastDate.getMonth(), roastDate.getDate());
-
-                        // 计算天数差
-                        const daysSinceRoast = Math.ceil((todayDate.getTime() - roastDateOnly.getTime()) / (1000 * 60 * 60 * 24));
-
-                        // 优先使用自定义赏味期参数，如果没有则根据烘焙度计算
-                        let startDay = bean.startDay || 0;
-                        let endDay = bean.endDay || 0;
-
-                        // 如果没有自定义值，则根据烘焙度设置默认值
-                        if (startDay === 0 && endDay === 0) {
-                            if (bean.roastLevel?.includes('浅')) {
-                                startDay = 7;
-                                endDay = 30;
-                            } else if (bean.roastLevel?.includes('深')) {
-                                startDay = 14;
-                                endDay = 60;
-                            } else {
-                                // 默认为中烘焙
-                                startDay = 10;
-                                endDay = 30;
-                            }
-                        }
-
-                        if (daysSinceRoast < startDay) {
-                            // 还没到最佳赏味期
-                            freshStatus = `(养豆期)`;
-                            statusClass = "text-neutral-500 dark:text-neutral-400";
-                        } else if (daysSinceRoast <= endDay) {
-                            // 处于赏味期
-                            freshStatus = `(赏味期)`;
-                            statusClass = "text-emerald-500 dark:text-emerald-400";
-                        } else {
-                            // 已超过推荐饮用期限
-                            freshStatus = "(衰退期)";
-                            statusClass = "text-neutral-500 dark:text-neutral-400";
-                        }
-                    } catch {
-                        // 忽略日期解析错误
+                    if (phase === '养豆期') {
+                        freshStatus = `(养豆期)`;
+                        statusClass = "text-neutral-500 dark:text-neutral-400";
+                    } else if (phase === '赏味期') {
+                        freshStatus = `(赏味期)`;
+                        statusClass = "text-emerald-500 dark:text-emerald-400";
+                    } else {
+                        freshStatus = "(衰退期)";
+                        statusClass = "text-neutral-500 dark:text-neutral-400";
                     }
                 }
 
@@ -288,19 +372,16 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
                     items.push(`烘焙度 ${bean.roastLevel}`);
                 }
 
-                // 添加单价信息 - 根据设置控制显示
-                if (!hidePrice) {
-                    const unitPrice = calculateUnitPrice(bean);
-                    if (unitPrice !== "未知") {
-                        items.push(`价格 ${unitPrice} 元/g`);
-                    }
-                }
-
                 // 添加容量信息
                 const remaining = typeof bean.remaining === 'string' ? parseFloat(bean.remaining) : bean.remaining ?? 0;
                 const capacity = typeof bean.capacity === 'string' ? parseFloat(bean.capacity) : bean.capacity ?? 0;
                 if (remaining > 0 && capacity > 0) {
                     items.push(`容量 ${remaining}/${capacity} g`);
+                }
+
+                // 添加烘焙日期（在途状态不显示）
+                if (bean.roastDate && !bean.isInTransit) {
+                    items.push(`烘焙日期 ${bean.roastDate}`);
                 }
 
                 // 确定是否高亮当前咖啡豆
@@ -310,11 +391,10 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
                     <div
                         key={bean.id}
                         ref={setItemRef(bean.id)}
-                        className={`group relative border-l ${isHighlighted 
-                            ? 'border-neutral-800 dark:border-neutral-100' 
-                            : 'border-neutral-200 dark:border-neutral-800'} 
-                            pl-6 cursor-pointer text-neutral-500 dark:text-neutral-400 transition-all duration-300
-                            ${isBeanEmpty(bean) ? 'bg-neutral-100/60 dark:bg-neutral-800/30' : ''}`}
+                        className={`group relative border-l ${isHighlighted
+                            ? 'border-neutral-800 dark:border-neutral-100'
+                            : 'border-neutral-200 dark:border-neutral-800'}
+                            pl-6 cursor-pointer text-neutral-500 dark:text-neutral-400 transition-all duration-300`}
                         onClick={() => onSelect(bean.id, bean)}
                     >
                         <div className="cursor-pointer">

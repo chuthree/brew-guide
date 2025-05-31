@@ -1,4 +1,5 @@
 import { ExtendedCoffeeBean } from '../../types'
+import { getBeanVarieties, beanHasVarietyInfo } from '@/lib/utils/beanVarietyUtils'
 import { isBeanEmpty } from '../../globalCache'
 import { StatsData } from './types'
 
@@ -75,10 +76,10 @@ export const calculateStats = (beans: ExtendedCoffeeBean[], showEmptyBeans: bool
         roastLevelCount[roastLevel] = (roastLevelCount[roastLevel] || 0) + 1
     })
     
-    // 根据产品类型统计
+    // 根据产品类型统计（基于blendComponents数量判断）
     const typeCount = {
-        '单品': filteredBeans.filter(bean => bean.type === '单品').length,
-        '拼配': filteredBeans.filter(bean => bean.type === '拼配').length
+        '单品': filteredBeans.filter(bean => !bean.blendComponents || bean.blendComponents.length <= 1).length,
+        '拼配': filteredBeans.filter(bean => bean.blendComponents && bean.blendComponents.length > 1).length
     }
     
     // 根据豆子用途统计
@@ -127,18 +128,14 @@ export const calculateStats = (beans: ExtendedCoffeeBean[], showEmptyBeans: bool
     // 根据品种统计
     const varietyCount: Record<string, number> = {}
     filteredBeans.forEach(bean => {
-        // 不再处理顶层的 variety 字段
-        
-        // 只处理 blendComponents 中的品种信息
-        if (bean.blendComponents && Array.isArray(bean.blendComponents) && bean.blendComponents.length > 0) {
-            bean.blendComponents.forEach(comp => {
-                if (comp.variety) {
-                    const variety = comp.variety
-                    varietyCount[variety] = (varietyCount[variety] || 0) + 1
-                }
+        // 使用工具函数获取品种信息
+        if (beanHasVarietyInfo(bean)) {
+            const varieties = getBeanVarieties(bean)
+            varieties.forEach(variety => {
+                varietyCount[variety] = (varietyCount[variety] || 0) + 1
             })
         } else {
-            // 如果没有 blendComponents 或者其中没有品种信息，则归为"未分类"
+            // 如果没有品种信息，归为"未分类"
             const variety = '未分类'
             varietyCount[variety] = (varietyCount[variety] || 0) + 1
         }

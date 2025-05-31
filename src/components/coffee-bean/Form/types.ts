@@ -11,7 +11,6 @@ export interface CoffeeBean {
     id: string;
     timestamp: number;
     name: string;
-    type: '单品' | '拼配';
     beanType?: 'espresso' | 'filter';  // 新增：用于区分手冲(filter)或意式(espresso)
     image?: string;
     capacity?: string;
