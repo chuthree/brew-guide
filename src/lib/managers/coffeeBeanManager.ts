@@ -22,9 +22,6 @@ export const CoffeeBeanManager = {
 	 * @returns 咖啡豆数组
 	 */
 	async getAllBeans(): Promise<CoffeeBean[]> {
-		// 修复排序问题：每次获取数据时都清除缓存，确保获取最新数据
-		beanCache.delete(BEAN_CACHE_KEY);
-		
 		return beanCache.resolve(
 			BEAN_CACHE_KEY,
 			async () => {
@@ -34,25 +31,25 @@ export const CoffeeBeanManager = {
 					if (beans && beans.length > 0) {
 						return beans;
 					}
-					
+
 					// 如果IndexedDB中没有数据，尝试从Storage加载
 					const data = await Storage.get("coffeeBeans");
 					if (!data) return [];
-					
+
 					const parsedBeans = JSON.parse(data) as CoffeeBean[];
-					
+
 					// 将数据保存到IndexedDB以便下次使用
 					if (parsedBeans.length > 0) {
 						await db.coffeeBeans.bulkPut(parsedBeans);
 					}
-					
+
 					return parsedBeans;
 				} catch (error) {
 					console.error("加载咖啡豆数据失败:", error);
 					return [];
 				}
 			},
-			"10mins" // 缓存10分钟，减少重复查询
+			"5mins" // 缓存5分钟，平衡性能和数据新鲜度
 		);
 	},
 

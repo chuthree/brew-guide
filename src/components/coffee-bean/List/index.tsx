@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager'
 import CoffeeBeanFormModal from '@/components/coffee-bean/Form/Modal'
 import CoffeeBeanRatingModal from '../Rating/Modal'
@@ -32,10 +32,10 @@ import {
     saveBloggerSortOptionPreference,
     saveRankingBeanTypePreference,
     saveRankingEditModePreference,
-    saveBloggerYearPreference,
-    isBeanEmpty
+    saveBloggerYearPreference
 } from './globalCache'
 import { useBeanOperations } from './hooks/useBeanOperations'
+import { useOptimizedBeanFiltering } from './hooks/useOptimizedBeanFiltering'
 import ViewSwitcher from './components/ViewSwitcher'
 import InventoryView from './components/InventoryView'
 import StatsView from './components/StatsView'
@@ -88,10 +88,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     const [ratingSavedCallback, setRatingSavedCallback] = useState<(() => void) | null>(null)
 
     // 过滤和显示控制状态
-    const [availableVarieties, setAvailableVarieties] = useState<string[]>(globalCache.varieties)
     const [selectedVariety, setSelectedVariety] = useState<string | null>(globalCache.selectedVariety)
     const [selectedBeanType, setSelectedBeanType] = useState<BeanType>(globalCache.selectedBeanType)
-    const [filteredBeans, setFilteredBeans] = useState<ExtendedCoffeeBean[]>(globalCache.filteredBeans)
     const [showEmptyBeans, setShowEmptyBeans] = useState<boolean>(globalCache.showEmptyBeans)
 
     // 榜单视图状态
@@ -149,70 +147,25 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         }
     };
 
-    // 更新过滤后的豆子和分类
-    const updateFilteredBeansAndCategories = React.useCallback((beansToSort: ExtendedCoffeeBean[]) => {
-        // 先根据豆子类型过滤
-        let typeFilteredBeans = beansToSort;
-        if (selectedBeanType && selectedBeanType !== 'all') {
-            // 常规豆子类型筛选
-            typeFilteredBeans = beansToSort.filter(bean => bean.beanType === selectedBeanType);
-        }
+    // 使用优化的筛选Hook
+    const {
+        filteredBeans,
+        availableVarieties,
+        debouncedUpdateFilters
+    } = useOptimizedBeanFiltering({
+        beans,
+        selectedVariety,
+        selectedBeanType,
+        showEmptyBeans,
+        sortOption
+    })
 
-        // 然后根据是否显示已用完的豆子过滤用于提取品种的豆子
-        let beansForVarieties = typeFilteredBeans;
-        if (!showEmptyBeans) {
-            beansForVarieties = typeFilteredBeans.filter(bean => !isBeanEmpty(bean));
-        }
-
-        // 从过滤后的豆子中提取可用的品种列表 - 只使用 blendComponents 中的品种信息
-        const varieties = beansForVarieties.reduce((acc, bean) => {
-            // 不再从顶层 variety 字段提取品种
-
-            // 从拼配豆/单品豆的成分中提取品种
-            if (bean.blendComponents && Array.isArray(bean.blendComponents) && bean.blendComponents.length > 0) {
-                bean.blendComponents.forEach(component => {
-                    if (component.variety && !acc.includes(component.variety)) {
-                        acc.push(component.variety);
-                    }
-                });
-            } else if (!acc.includes('未分类')) {
-                // 如果没有 blendComponents，添加"未分类"
-                acc.push('未分类');
-            }
-
-            return acc;
-        }, [] as string[]);
-
-        // 再根据选择的品种过滤豆子
-        let filtered = typeFilteredBeans;
-        if (selectedVariety) {
-            filtered = filtered.filter(bean => {
-                // 如果选择的是"拼配豆"分类
-                if (selectedVariety === '拼配豆') {
-                    return bean.blendComponents && bean.blendComponents.length > 1;
-                }
-
-                // 只检查拼配豆/单品豆中是否包含所选品种
-                if (bean.blendComponents && Array.isArray(bean.blendComponents) && bean.blendComponents.length > 0) {
-                    return bean.blendComponents.some(component => component.variety === selectedVariety);
-                }
-
-                // 如果没有 blendComponents 且选择了"未分类"
-                return selectedVariety === '未分类';
-            });
-        }
-
-        // 根据"显示已用完"设置过滤
-        if (!showEmptyBeans) {
-            filtered = filtered.filter(bean => !isBeanEmpty(bean));
-        }
-
-        // 更新状态和全局缓存
-        setAvailableVarieties(varieties);
-        setFilteredBeans(filtered);
-        globalCache.varieties = varieties;
-        globalCache.filteredBeans = filtered;
-    }, [selectedVariety, showEmptyBeans, selectedBeanType]);
+    // 更新过滤后的豆子和分类 - 简化版本，主要用于更新全局缓存
+    const updateFilteredBeansAndCategories = useCallback((_beansToSort: ExtendedCoffeeBean[]) => {
+        // 优化的Hook已经处理了筛选和排序，这里只需要更新全局缓存
+        globalCache.varieties = availableVarieties;
+        globalCache.filteredBeans = filteredBeans;
+    }, [availableVarieties, filteredBeans]);
 
     // 加载咖啡豆数据 - 优化防抖动
     const loadBeans = React.useCallback(async () => {
@@ -293,7 +246,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         }
     }, [viewMode, rankingBeanType, bloggerYear]);
 
-    // 统一的数据加载逻辑 - 减少重复触发
+    // 优化的数据加载逻辑 - 减少依赖项，避免重复触发
     useEffect(() => {
         if (isOpen) {
             // 取消任何可能的超时重置
@@ -311,7 +264,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
                 // 不执行任何操作，状态保持不变
             }, 5000);
         }
-    }, [isOpen, forceRefreshKey, sortOption, selectedVariety, loadBeans, loadRatedBeans, loadBloggerBeans, rankingBeanType, bloggerYear]);
+    }, [isOpen, forceRefreshKey, loadBeans, loadRatedBeans, loadBloggerBeans]);
 
     // 监听咖啡豆更新事件
     useEffect(() => {
@@ -394,16 +347,17 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         }
     }, [rankingBeanType, bloggerYear, viewMode, loadRatedBeans, loadBloggerBeans]);
 
-    // 当显示空豆子设置改变时更新过滤和全局缓存
+    // 当显示空豆子设置改变时更新全局缓存 - 简化版本
     useEffect(() => {
         if (globalCache.initialized) {
             // 更新全局缓存
             globalCache.showEmptyBeans = showEmptyBeans;
-            // 持久化到localStorage
-            saveShowEmptyBeansPreference(showEmptyBeans);
+            globalCache.selectedVariety = selectedVariety;
+            globalCache.selectedBeanType = selectedBeanType;
+            // 优化的Hook会自动处理筛选，这里只需要更新缓存
             updateFilteredBeansAndCategories(globalCache.beans);
         }
-    }, [showEmptyBeans, selectedVariety, updateFilteredBeansAndCategories]);
+    }, [showEmptyBeans, selectedVariety, selectedBeanType, updateFilteredBeansAndCategories]);
 
     // 视图切换时更新排序选项
     useEffect(() => {
@@ -480,50 +434,18 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         }
     }, [sortOption, viewMode, beans, updateFilteredBeansAndCategories]);
 
-    // 处理品种标签点击
-    const handleVarietyClick = (variety: string | null) => {
+    // 处理品种标签点击 - 简化版本，优化的Hook会自动处理筛选
+    const handleVarietyClick = useCallback((variety: string | null) => {
         setSelectedVariety(variety);
         // 更新全局缓存并保存到本地存储
         globalCache.selectedVariety = variety;
         saveSelectedVarietyPreference(variety);
+        // 使用防抖更新筛选
+        debouncedUpdateFilters({ selectedVariety: variety });
+    }, [debouncedUpdateFilters]);
 
-        // 先根据豆子类型过滤
-        let typeFilteredBeans = beans;
-        if (selectedBeanType && selectedBeanType !== 'all') {
-            // 常规豆子类型筛选
-            typeFilteredBeans = beans.filter(bean => bean.beanType === selectedBeanType);
-        }
-
-        // 再根据品种过滤
-        let filtered = typeFilteredBeans;
-        if (variety) {
-            filtered = filtered.filter(bean => {
-                // 如果选择的是"拼配豆"分类
-                if (variety === '拼配豆') {
-                    return bean.blendComponents && bean.blendComponents.length > 1;
-                }
-
-                // 只检查拼配豆/单品豆中是否包含所选品种
-                if (bean.blendComponents && Array.isArray(bean.blendComponents) && bean.blendComponents.length > 0) {
-                    return bean.blendComponents.some(component => component.variety === variety);
-                }
-
-                // 如果没有 blendComponents 且选择了"未分类"
-                return variety === '未分类';
-            });
-        }
-
-        // 根据"显示已用完"设置过滤
-        if (!showEmptyBeans) {
-            filtered = filtered.filter(bean => !isBeanEmpty(bean));
-        }
-
-        globalCache.filteredBeans = filtered;
-        setFilteredBeans(filtered);
-    };
-
-    // 处理豆子类型点击
-    const handleBeanTypeChange = (beanType: BeanType) => {
+    // 处理豆子类型点击 - 简化版本，优化的Hook会自动处理筛选
+    const handleBeanTypeChange = useCallback((beanType: BeanType) => {
         // 如果点击已选中的类型，则重置为全部
         const newBeanType = beanType === selectedBeanType ? 'all' : beanType;
 
@@ -531,69 +453,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         // 更新全局缓存并保存到本地存储
         globalCache.selectedBeanType = newBeanType;
         saveSelectedBeanTypePreference(newBeanType);
-
-        // 根据新选择的豆子类型过滤
-        let typeFilteredBeans = beans;
-        if (newBeanType !== 'all') {
-            // 常规豆子类型筛选
-            typeFilteredBeans = beans.filter(bean => bean.beanType === newBeanType);
-        }
-
-        // 再根据选择的品种过滤
-        let filtered = typeFilteredBeans;
-        if (selectedVariety) {
-            filtered = filtered.filter(bean => {
-                // 如果选择的是"拼配豆"分类
-                if (selectedVariety === '拼配豆') {
-                    return bean.blendComponents && bean.blendComponents.length > 1;
-                }
-
-                // 只检查拼配豆/单品豆中是否包含所选品种
-                if (bean.blendComponents && Array.isArray(bean.blendComponents) && bean.blendComponents.length > 0) {
-                    return bean.blendComponents.some(component => component.variety === selectedVariety);
-                }
-
-                // 如果没有 blendComponents 且选择了"未分类"
-                return selectedVariety === '未分类';
-            });
-        }
-
-        // 根据"显示已用完"设置过滤
-        if (!showEmptyBeans) {
-            filtered = filtered.filter(bean => !isBeanEmpty(bean));
-        }
-
-        // 更新品种列表 - 切换豆子类型后需要重新计算可用品种
-        // 只有未用完的豆子才会被用于计算可用品种，除非showEmptyBeans为true
-        let beansForVarieties = typeFilteredBeans;
-        if (!showEmptyBeans) {
-            beansForVarieties = typeFilteredBeans.filter(bean => !isBeanEmpty(bean));
-        }
-
-        // 从过滤后的豆子中提取可用的品种列表 - 只使用 blendComponents 中的品种信息
-        const varieties = beansForVarieties.reduce((acc, bean) => {
-            // 不再从顶层 variety 字段提取品种
-
-            // 从拼配豆/单品豆的成分中提取品种
-            if (bean.blendComponents && Array.isArray(bean.blendComponents) && bean.blendComponents.length > 0) {
-                bean.blendComponents.forEach(component => {
-                    if (component.variety && !acc.includes(component.variety)) {
-                        acc.push(component.variety);
-                    }
-                });
-            } else if (!acc.includes('未分类')) {
-                // 如果没有 blendComponents，添加"未分类"
-                acc.push('未分类');
-            }
-
-            return acc;
-        }, [] as string[]);
-
-        setAvailableVarieties(varieties);
-        globalCache.varieties = varieties;
-        globalCache.filteredBeans = filtered;
-        setFilteredBeans(filtered);
-    };
+        // 使用防抖更新筛选
+        debouncedUpdateFilters({ selectedBeanType: newBeanType });
+    }, [selectedBeanType, debouncedUpdateFilters]);
 
     // 处理编辑咖啡豆
     const handleEdit = (bean: ExtendedCoffeeBean) => {
@@ -673,75 +535,16 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         }
     };
 
-    // 切换显示空豆子状态
-    const toggleShowEmptyBeans = () => {
+    // 切换显示空豆子状态 - 简化版本，优化的Hook会自动处理筛选
+    const toggleShowEmptyBeans = useCallback(() => {
         const newShowEmptyBeans = !showEmptyBeans;
         setShowEmptyBeans(newShowEmptyBeans);
         // 更新全局缓存并保存到本地存储
         globalCache.showEmptyBeans = newShowEmptyBeans;
         saveShowEmptyBeansPreference(newShowEmptyBeans);
-
-        // 根据豆子类型过滤
-        let typeFilteredBeans = beans;
-        if (selectedBeanType && selectedBeanType !== 'all') {
-            // 常规豆子类型筛选
-            typeFilteredBeans = beans.filter(bean => bean.beanType === selectedBeanType);
-        }
-
-        // 再根据品种过滤
-        let filtered = typeFilteredBeans;
-        if (selectedVariety) {
-            filtered = filtered.filter(bean => {
-                // 如果选择的是"拼配豆"分类
-                if (selectedVariety === '拼配豆') {
-                    return bean.blendComponents && bean.blendComponents.length > 1;
-                }
-
-                // 只检查拼配豆/单品豆中是否包含所选品种
-                if (bean.blendComponents && Array.isArray(bean.blendComponents) && bean.blendComponents.length > 0) {
-                    return bean.blendComponents.some(component => component.variety === selectedVariety);
-                }
-
-                // 如果没有 blendComponents 且选择了"未分类"
-                return selectedVariety === '未分类';
-            });
-        }
-
-        // 根据新的"显示已用完"设置过滤
-        if (!newShowEmptyBeans) {
-            filtered = filtered.filter(bean => !isBeanEmpty(bean));
-        }
-
-        // 更新品种列表 - 切换显示空豆子状态后需要重新计算可用品种
-        let beansForVarieties = typeFilteredBeans;
-        if (!newShowEmptyBeans) {
-            beansForVarieties = typeFilteredBeans.filter(bean => !isBeanEmpty(bean));
-        }
-
-        // 从过滤后的豆子中提取可用的品种列表 - 只使用 blendComponents 中的品种信息
-        const varieties = beansForVarieties.reduce((acc, bean) => {
-            // 不再从顶层 variety 字段提取品种
-
-            // 从拼配豆/单品豆的成分中提取品种
-            if (bean.blendComponents && Array.isArray(bean.blendComponents) && bean.blendComponents.length > 0) {
-                bean.blendComponents.forEach(component => {
-                    if (component.variety && !acc.includes(component.variety)) {
-                        acc.push(component.variety);
-                    }
-                });
-            } else if (!acc.includes('未分类')) {
-                // 如果没有 blendComponents，添加"未分类"
-                acc.push('未分类');
-            }
-
-            return acc;
-        }, [] as string[]);
-
-        setAvailableVarieties(varieties);
-        globalCache.varieties = varieties;
-        globalCache.filteredBeans = filtered;
-        setFilteredBeans(filtered);
-    };
+        // 使用防抖更新筛选
+        debouncedUpdateFilters({ showEmptyBeans: newShowEmptyBeans });
+    }, [showEmptyBeans, debouncedUpdateFilters]);
 
     // 当榜单豆子类型变更时更新数据
     useEffect(() => {

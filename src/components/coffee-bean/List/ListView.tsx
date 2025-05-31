@@ -192,39 +192,26 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
         });
     }, [getFlavorInfo, getPhaseValue]);
 
-    // 加载咖啡豆数据
+    // 优化的加载咖啡豆数据函数 - 减少不必要的过滤和排序
     const loadBeans = useCallback(async () => {
         try {
             // 显示加载状态
             setIsFirstLoad(true);
-                
+
             const loadedBeans = await CoffeeBeanManager.getAllBeans();
-
-            // 过滤掉已经喝完的咖啡豆和在途状态的咖啡豆
-            const availableBeans = loadedBeans.filter(bean => {
-                // 过滤掉在途状态的咖啡豆
-                if (bean.isInTransit) {
-                    return false;
-                }
-                // 过滤掉已经喝完的咖啡豆
-                return !isBeanEmpty(bean);
-            });
-
-            // 按照赏味期排序
-            const sortedBeans = sortBeans(availableBeans);
 
             // 使用 useTransition 包裹状态更新，避免界面闪烁
             startTransition(() => {
-                setBeans(sortedBeans);
+                setBeans(loadedBeans);
                 setIsFirstLoad(false);
             });
         } catch (error) {
             console.error("加载咖啡豆数据失败:", error);
             setIsFirstLoad(false);
         }
-    }, [sortBeans]);
+    }, []);
 
-    // 统一的数据加载逻辑 - 减少重复触发
+    // 优化的数据加载逻辑 - 减少重复触发
     useEffect(() => {
         if (isOpen) {
             loadBeans();
