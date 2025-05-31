@@ -10,9 +10,10 @@ import { BREWING_EVENTS, ParameterInfo } from '@/lib/brewing/constants'
 import { listenToEvent } from '@/lib/brewing/events'
 import { updateParameterInfo } from '@/lib/brewing/parameters'
 import { useTranslations } from 'next-intl'
-import { Equal, ArrowLeft } from 'lucide-react'
+import { Equal, ArrowLeft, ChevronsUpDown } from 'lucide-react'
 import { saveStringState } from '@/lib/core/statePersistence'
 import { saveMainTabPreference } from '@/lib/navigation/navigationCache'
+import { ViewOption, VIEW_LABELS } from '@/components/coffee-bean/List/types'
 
 // 统一类型定义
 type TabType = '方案' | '注水' | '记录'
@@ -48,8 +49,8 @@ const TabButton: React.FC<TabButtonProps> = ({
             ? 'text-neutral-300 dark:text-neutral-600'
             : 'cursor-pointer text-neutral-500 dark:text-neutral-400'
 
-    // 统一使用实线边框
-    const indicatorClasses = `absolute -bottom-3 left-0 right-0 z-10 h-px bg-neutral-800 dark:bg-neutral-100 ${
+    // 统一使用实线边框，添加与咖啡豆按钮相同的动画效果
+    const indicatorClasses = `absolute -bottom-3 left-0 right-0 z-10 h-px bg-neutral-800 dark:bg-neutral-100 transition-all duration-300 ease-out ${
         isActive && !hideIndicator ? 'opacity-100 w-full' : 'opacity-0 w-0'
     }`
 
@@ -495,6 +496,11 @@ interface NavigationBarProps {
     // 添加替代头部内容支持
     alternativeHeader?: React.ReactNode; // 替代的头部内容
     showAlternativeHeader?: boolean; // 是否显示替代头部内容
+    // 添加咖啡豆视图切换相关属性
+    currentBeanView?: ViewOption; // 当前咖啡豆视图
+    _onBeanViewChange?: (view: ViewOption) => void; // 视图切换回调
+    showViewDropdown?: boolean; // 视图下拉菜单显示状态
+    onToggleViewDropdown?: () => void; // 切换视图下拉菜单
     // 添加萃取时间变更处理函数
     handleExtractionTimeChange?: (time: number) => void;
     // 添加器具相关props
@@ -553,13 +559,29 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
     isTimerRunning, showComplete, selectedEquipment, selectedMethod,
     handleParamChange, setShowHistory, setActiveTab, onTitleDoubleClick,
     settings, hasCoffeeBeans, alternativeHeader, showAlternativeHeader = false,
+    currentBeanView, _onBeanViewChange, showViewDropdown, onToggleViewDropdown,
     handleExtractionTimeChange, customEquipments = [], onEquipmentSelect,
     onAddEquipment, onEditEquipment, onDeleteEquipment, onShareEquipment, onBackClick,
 }) => {
     const t = useTranslations('nav')
     const { canGoBack } = useNavigation(activeBrewingStep, activeMainTab, hasCoffeeBeans)
 
+    // 获取当前视图的显示名称
+    const getCurrentViewLabel = () => {
+        if (!currentBeanView) return t('main.beans')
+        return VIEW_LABELS[currentBeanView]
+    }
 
+    // 处理咖啡豆按钮点击
+    const handleBeanTabClick = () => {
+        if (activeMainTab === '咖啡豆') {
+            // 如果已经在咖啡豆页面，切换下拉菜单显示状态
+            onToggleViewDropdown?.()
+        } else {
+            // 如果不在咖啡豆页面，先切换到咖啡豆页面
+            handleMainTabClick('咖啡豆')
+        }
+    }
 
     const handleTitleClick = () => {
         if (settings.hapticFeedback) {
@@ -703,14 +725,91 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                             opacity: !(canGoBack() && onBackClick) ? 1 : 0,
                                             pointerEvents: !(canGoBack() && onBackClick) ? 'auto' : 'none'
                                         }}
+                                        className="relative"
                                     >
-                                        <TabButton
-                                            tab={t('main.beans')}
-                                            isActive={activeMainTab === '咖啡豆'}
-                                            onClick={() => handleMainTabClick('咖啡豆')}
-                                            dataTab="咖啡豆"
-                                            hideIndicator={false}
-                                        />
+                                        {/* 咖啡豆按钮 - 带下拉菜单 */}
+                                        <div
+                                            ref={(el) => {
+                                                // 将按钮引用传递给父组件
+                                                if (el && typeof window !== 'undefined') {
+                                                    (window as any).beanButtonRef = el;
+                                                }
+                                            }}
+                                            onClick={handleBeanTabClick}
+                                            className="text-[12px] tracking-widest whitespace-nowrap pb-3 cursor-pointer flex items-center transition-opacity duration-100"
+                                            style={{
+                                                opacity: showViewDropdown && activeMainTab === '咖啡豆' ? 0 : 1,
+                                                pointerEvents: showViewDropdown && activeMainTab === '咖啡豆' ? 'none' : 'auto',
+                                                visibility: showViewDropdown && activeMainTab === '咖啡豆' ? 'hidden' : 'visible'
+                                            }}
+                                            data-view-selector
+                                        >
+                                            <span className={`relative inline-block ${
+                                                activeMainTab === '咖啡豆'
+                                                    ? 'text-neutral-800 dark:text-neutral-100'
+                                                    : 'text-neutral-500 dark:text-neutral-400'
+                                            }`}>
+                                                {getCurrentViewLabel()}
+                                                <span className={`absolute -bottom-3 left-0 right-0 z-10 h-px bg-neutral-800 dark:bg-neutral-100 transition-all duration-300 ease-out ${
+                                                    activeMainTab === '咖啡豆' ? 'opacity-100 w-full' : 'opacity-0 w-0'
+                                                }`} />
+                                            </span>
+
+                                            {/* 下拉图标容器 - 使用动画宽度避免布局抖动 */}
+                                            <motion.div
+                                                className="flex items-center justify-center overflow-hidden"
+                                                initial={false}
+                                                animate={{
+                                                    width: activeMainTab === '咖啡豆' ? '12px' : '0px',
+                                                    marginLeft: activeMainTab === '咖啡豆' ? '4px' : '0px',
+                                                    transition: {
+                                                        duration: 0.35,
+                                                        ease: [0.25, 0.46, 0.45, 0.94], // Apple的标准缓动
+                                                    }
+                                                }}
+                                            >
+                                                <AnimatePresence mode="wait">
+                                                    {activeMainTab === '咖啡豆' && (
+                                                        <motion.div
+                                                            key="chevron-icon"
+                                                            initial={{
+                                                                opacity: 0,
+                                                                scale: 0.8
+                                                            }}
+                                                            animate={{
+                                                                opacity: 1,
+                                                                scale: 1,
+                                                                transition: {
+                                                                    duration: 0.35,
+                                                                    ease: [0.25, 0.46, 0.45, 0.94], // Apple的标准缓动
+                                                                    opacity: { duration: 0.25, delay: 0.1 }, // 稍微延迟透明度动画
+                                                                    scale: { duration: 0.35 }
+                                                                }
+                                                            }}
+                                                            exit={{
+                                                                opacity: 0,
+                                                                scale: 0.8,
+                                                                transition: {
+                                                                    duration: 0.15,
+                                                                    ease: [0.4, 0.0, 1, 1], // Apple的退出缓动
+                                                                    opacity: { duration: 0.15 },
+                                                                    scale: { duration: 0.15 }
+                                                                }
+                                                            }}
+                                                            className="flex items-center justify-center w-3 h-3 shrink-0"
+                                                        >
+                                                            <ChevronsUpDown
+                                                                size={12}
+                                                                className="text-neutral-400 dark:text-neutral-600"
+                                                                color="currentColor"
+                                                            />
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
+                                            </motion.div>
+                                        </div>
+
+
                                     </div>
                                     <div
                                         style={{

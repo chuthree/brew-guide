@@ -127,9 +127,8 @@ const NotesListView: React.FC<NotesListViewProps> = ({
 
     // 当过滤条件变化或预过滤笔记列表更新时重新加载数据
     useEffect(() => {
-        // 立即加载数据，不使用setTimeout延迟
         loadNotes();
-    }, [loadNotes, sortOption, selectedEquipment, selectedBean, filterMode, preFilteredNotes]);
+    }, [loadNotes]);
 
     // 确保在组件挂载时立即初始化数据
     useEffect(() => {

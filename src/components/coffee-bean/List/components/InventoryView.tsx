@@ -1,11 +1,12 @@
 'use client'
 
-import React, { useState, useRef, useCallback, useEffect } from 'react'
+import React, { useState, useRef, useCallback, useEffect, memo } from 'react'
 import { ExtendedCoffeeBean, BeanType } from '../types'
 import BeanListItem from './BeanListItem'
 import ImageFlowView from './ImageFlowView'
 import { generateBeanTitle } from '../types'
 import RemainingEditor from './RemainingEditor'
+import BeanDetailModal from '@/components/coffee-bean/Detail/BeanDetailModal'
 
 // 每页加载的咖啡豆数量 - 增大分页大小减少加载次数
 const PAGE_SIZE = 5;
@@ -29,6 +30,9 @@ interface InventoryViewProps {
     searchQuery?: string
     // 新增图片流模式相关props
     isImageFlowMode?: boolean
+    // 性能优化选项
+    enableVirtualization?: boolean
+    _containerHeight?: number
 }
 
 const InventoryView: React.FC<InventoryViewProps> = ({
@@ -48,7 +52,9 @@ const InventoryView: React.FC<InventoryViewProps> = ({
     onQuickDecrement,
     isSearching = false,
     searchQuery = '',
-    isImageFlowMode = false
+    isImageFlowMode = false,
+    enableVirtualization = true,
+    _containerHeight = 600
 }) => {
     // 添加剩余量编辑状态
     const [editingRemaining, setEditingRemaining] = useState<{
@@ -57,6 +63,25 @@ const InventoryView: React.FC<InventoryViewProps> = ({
         targetElement: HTMLElement | null,
         bean: ExtendedCoffeeBean // 存储完整的咖啡豆对象
     } | null>(null);
+
+    // 添加详情弹窗状态
+    const [detailBean, setDetailBean] = useState<ExtendedCoffeeBean | null>(null);
+    const [showDetailModal, setShowDetailModal] = useState(false);
+
+    // 处理详情点击
+    const handleDetailClick = (bean: ExtendedCoffeeBean) => {
+        setDetailBean(bean);
+        setShowDetailModal(true);
+    };
+
+    // 处理详情弹窗关闭
+    const handleDetailClose = () => {
+        setShowDetailModal(false);
+        // 延迟清除 bean 数据，让 Drawer 有时间播放关闭动画
+        setTimeout(() => {
+            setDetailBean(null);
+        }, 300); // 300ms 应该足够 Drawer 的关闭动画
+    };
 
     // 处理剩余量点击
     const handleRemainingClick = (bean: ExtendedCoffeeBean, event: React.MouseEvent) => {
@@ -127,12 +152,16 @@ const InventoryView: React.FC<InventoryViewProps> = ({
         setEditingRemaining(null);
     };
 
-    // 分页状态
+    // 分页状态（仅在非虚拟化模式下使用）
     const [displayedBeans, setDisplayedBeans] = useState<ExtendedCoffeeBean[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
     const [isLoading, setIsLoading] = useState(false);
     const loaderRef = useRef<HTMLDivElement>(null);
+
+
+
+
 
     // 初始化分页数据
     useEffect(() => {
@@ -216,23 +245,25 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                     }
                 </div>
             ) : (
+                // 使用传统滚动（当项目数量较少时）
                 <div className="min-h-full pb-20">
-                    {displayedBeans.map((bean, index) => (
+                    {(enableVirtualization ? filteredBeans : displayedBeans).map((bean, index) => (
                         <BeanListItem
                             key={bean.id}
                             bean={bean}
                             title={generateBeanTitle(bean)}
-                            isLast={index === displayedBeans.length - 1}
+                            isLast={index === (enableVirtualization ? filteredBeans : displayedBeans).length - 1}
                             onEdit={onEdit}
                             onDelete={onDelete}
                             onShare={onShare}
                             onRemainingClick={handleRemainingClick}
+                            onDetailClick={handleDetailClick}
                             searchQuery={isSearching ? searchQuery : ''}
                         />
                     ))}
 
-                    {/* 加载更多指示器 - 简化加载提示 */}
-                    {hasMore && (
+                    {/* 加载更多指示器 - 仅在非虚拟化模式下显示 */}
+                    {!enableVirtualization && hasMore && (
                         <div
                             ref={loaderRef}
                             className="flex justify-center items-center py-4"
@@ -254,8 +285,17 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                 onQuickDecrement={handleQuickDecrement}
                 coffeeBean={editingRemaining?.bean} // 传递咖啡豆对象
             />
+
+            {/* 详情弹窗 */}
+            <BeanDetailModal
+                isOpen={showDetailModal}
+                bean={detailBean}
+                onClose={handleDetailClose}
+                searchQuery={isSearching ? searchQuery : ''}
+            />
         </div>
     );
 };
 
-export default InventoryView;
+// 使用 React.memo 包装组件以避免不必要的重新渲染
+export default memo(InventoryView);

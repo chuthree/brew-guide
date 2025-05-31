@@ -24,6 +24,11 @@ import ImportModal from '@/components/common/modals/BeanImportModal'
 import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager'
 import textZoomUtils from '@/lib/utils/textZoomUtils'
 import { saveMainTabPreference } from '@/lib/navigation/navigationCache'
+import { ViewOption, VIEW_OPTIONS, VIEW_LABELS } from '@/components/coffee-bean/List/types'
+import { getStringState, saveStringState } from '@/lib/core/statePersistence'
+import { motion, AnimatePresence } from 'framer-motion'
+import { ChevronsUpDown } from 'lucide-react'
+import hapticsUtils from '@/lib/ui/haptics'
 import { BREWING_EVENTS } from '@/lib/brewing/constants'
 import type { BrewingNoteData } from '@/types/app'
 import { updateParameterInfo } from '@/lib/brewing/parameters'
@@ -365,6 +370,100 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
     // 添加检查是否有咖啡豆的状态 - 使用传入的初始状态
     const [hasCoffeeBeans, setHasCoffeeBeans] = useState(initialHasBeans);
+
+    // 添加咖啡豆视图状态管理
+    const [currentBeanView, setCurrentBeanView] = useState<ViewOption>(() => {
+        // 从本地存储加载保存的视图状态，默认为仓库视图
+        try {
+            const savedView = getStringState('coffee-beans', 'viewMode', VIEW_OPTIONS.INVENTORY);
+            return savedView as ViewOption;
+        } catch {
+            return VIEW_OPTIONS.INVENTORY;
+        }
+    });
+
+    // 视图下拉菜单状态
+    const [showViewDropdown, setShowViewDropdown] = useState(false);
+
+    // 咖啡豆按钮位置状态
+    const [beanButtonPosition, setBeanButtonPosition] = useState<{
+        top: number;
+        left: number;
+        width: number;
+    } | null>(null);
+
+    // 获取咖啡豆按钮位置
+    const updateBeanButtonPosition = useCallback(() => {
+        const beanButton = (window as any).beanButtonRef;
+        if (beanButton) {
+            const rect = beanButton.getBoundingClientRect();
+            setBeanButtonPosition({
+                top: rect.top + window.scrollY,
+                left: rect.left + window.scrollX,
+                width: rect.width
+            });
+        }
+    }, []);
+
+    // 监听窗口大小变化和滚动，以及下拉菜单状态变化
+    useEffect(() => {
+        if (showViewDropdown) {
+            // 立即更新位置
+            updateBeanButtonPosition();
+
+            const handleResize = () => updateBeanButtonPosition();
+            const handleScroll = () => updateBeanButtonPosition();
+
+            window.addEventListener('resize', handleResize);
+            window.addEventListener('scroll', handleScroll);
+
+            return () => {
+                window.removeEventListener('resize', handleResize);
+                window.removeEventListener('scroll', handleScroll);
+            };
+        } else {
+            // 下拉菜单关闭时清除位置信息
+            setBeanButtonPosition(null);
+        }
+    }, [showViewDropdown, updateBeanButtonPosition]);
+
+    // 在下拉菜单即将显示时预先获取位置
+    const handleToggleViewDropdown = useCallback(() => {
+        if (!showViewDropdown) {
+            // 在显示下拉菜单之前先获取位置
+            updateBeanButtonPosition();
+        }
+        setShowViewDropdown(!showViewDropdown);
+    }, [showViewDropdown, updateBeanButtonPosition]);
+
+    // 处理咖啡豆视图切换
+    const handleBeanViewChange = (view: ViewOption) => {
+        setCurrentBeanView(view);
+        // 保存到本地存储
+        saveStringState('coffee-beans', 'viewMode', view);
+        // 关闭下拉菜单
+        setShowViewDropdown(false);
+        // 触感反馈
+        if (settings.hapticFeedback) {
+            hapticsUtils.light();
+        }
+    };
+
+    // 点击外部关闭视图下拉菜单
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (showViewDropdown) {
+                const target = event.target as Element
+                // 检查点击是否在视图选择区域外
+                if (!target.closest('[data-view-selector]')) {
+                    setShowViewDropdown(false)
+                }
+            }
+        }
+
+        document.addEventListener('mousedown', handleClickOutside)
+        return () => document.removeEventListener('mousedown', handleClickOutside)
+    }, [showViewDropdown]);
 
     // 处理双击标题打开设置
     const handleTitleDoubleClick = () => {
@@ -1756,6 +1855,180 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
     return (
         <div className="relative h-full flex flex-col overflow-hidden">
+            {/* 页面级别的视图选择覆盖层 */}
+            <AnimatePresence>
+                {showViewDropdown && activeMainTab === '咖啡豆' && (
+                    <>
+                        {/* 模糊背景 - 移动设备优化的动画 */}
+                        <motion.div
+                            initial={{
+                                opacity: 0,
+                                backdropFilter: 'blur(0px)'
+                            }}
+                            animate={{
+                                opacity: 1,
+                                backdropFilter: 'blur(20px)',
+                                transition: {
+                                    opacity: {
+                                        duration: 0.2,
+                                        ease: [0.25, 0.46, 0.45, 0.94]
+                                    },
+                                    backdropFilter: {
+                                        duration: 0.3,
+                                        ease: [0.25, 0.46, 0.45, 0.94]
+                                    }
+                                }
+                            }}
+                            exit={{
+                                opacity: 0,
+                                backdropFilter: 'blur(0px)',
+                                transition: {
+                                    opacity: {
+                                        duration: 0.15,
+                                        ease: [0.4, 0.0, 1, 1]
+                                    },
+                                    backdropFilter: {
+                                        duration: 0.2,
+                                        ease: [0.4, 0.0, 1, 1]
+                                    }
+                                }
+                            }}
+                            className="fixed inset-0 z-[60]"
+                            style={{
+                                backgroundColor: 'color-mix(in srgb, var(--background) 40%, transparent)',
+                                WebkitBackdropFilter: 'blur(4px)'
+                            }}
+                            onClick={() => setShowViewDropdown(false)}
+                        />
+
+                        {/* 当前选中的视图选项 - 完全替代原始按钮 */}
+                        {beanButtonPosition && (
+                            <motion.div
+                                initial={{ opacity: 1, scale: 1 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{
+                                    opacity: 0,
+                                    scale: 0.98,
+                                    transition: {
+                                        duration: 0.12,
+                                        ease: [0.4, 0.0, 1, 1] // Apple 的退出缓动
+                                    }
+                                }}
+                                className="fixed z-[80]"
+                                style={{
+                                    top: `${beanButtonPosition.top}px`,
+                                    left: `${beanButtonPosition.left}px`,
+                                    minWidth: `${beanButtonPosition.width}px`
+                                }}
+                                data-view-selector
+                            >
+                                {/* 当前选中的视图选项 - 移除下划线 */}
+                                <motion.button
+                                    initial={{ opacity: 1 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 1 }}
+                                    onClick={() => setShowViewDropdown(false)}
+                                    className="text-[12px] tracking-widest whitespace-nowrap transition-colors text-left pb-3 flex items-center text-neutral-800 dark:text-neutral-100 cursor-pointer"
+                                    style={{ paddingBottom: '12px' }}
+                                >
+                                    <span className="relative inline-block">
+                                        {VIEW_LABELS[currentBeanView]}
+                                        {/* 移除下划线，保持统一外观 */}
+                                    </span>
+                                    {/* 下拉图标 */}
+                                    <ChevronsUpDown
+                                        size={12}
+                                        className="ml-1 text-neutral-400 dark:text-neutral-600"
+                                        color="currentColor"
+                                    />
+                                </motion.button>
+                            </motion.div>
+                        )}
+
+                        {/* 其他视图选项 - 从当前选项下方展开 */}
+                        {beanButtonPosition && (
+                            <motion.div
+                                initial={{
+                                    opacity: 0,
+                                    y: -8,
+                                    scale: 0.96
+                                }}
+                                animate={{
+                                    opacity: 1,
+                                    y: 0,
+                                    scale: 1,
+                                    transition: {
+                                        duration: 0.25,
+                                        ease: [0.25, 0.46, 0.45, 0.94] // Apple 的标准缓动
+                                    }
+                                }}
+                                exit={{
+                                    opacity: 0,
+                                    y: -6,
+                                    scale: 0.98,
+                                    transition: {
+                                        duration: 0.15,
+                                        ease: [0.4, 0.0, 1, 1] // Apple 的退出缓动
+                                    }
+                                }}
+                                className="fixed z-[80]"
+                                style={{
+                                    top: `${beanButtonPosition.top + 30}px`, // 在当前选项下方（48px是按钮高度）
+                                    left: `${beanButtonPosition.left}px`,
+                                    minWidth: `${beanButtonPosition.width}px`
+                                }}
+                                data-view-selector
+                            >
+                                {/* 其他视图选项 - 统一样式和间距 */}
+                                <div className="flex flex-col">
+                                    {Object.entries(VIEW_LABELS)
+                                        .filter(([key]) => key !== currentBeanView)
+                                        .map(([key, label], index) => (
+                                            <motion.button
+                                                key={key}
+                                                initial={{
+                                                    opacity: 0,
+                                                    y: -6,
+                                                    scale: 0.98
+                                                }}
+                                                animate={{
+                                                    opacity: 1,
+                                                    y: 0,
+                                                    scale: 1,
+                                                    transition: {
+                                                        delay: index * 0.04, // 更快的错开时间，符合 Apple 风格
+                                                        duration: 0.2,
+                                                        ease: [0.25, 0.46, 0.45, 0.94] // Apple 的标准缓动
+                                                    }
+                                                }}
+                                                exit={{
+                                                    opacity: 0,
+                                                    y: -4,
+                                                    scale: 0.98,
+                                                    transition: {
+                                                        delay: (Object.keys(VIEW_LABELS).length - index - 1) * 0.02,
+                                                        duration: 0.12,
+                                                        ease: [0.4, 0.0, 1, 1] // Apple 的退出缓动
+                                                    }
+                                                }}
+                                                onClick={() => handleBeanViewChange(key as ViewOption)}
+                                                className="text-[12px] tracking-widest whitespace-nowrap transition-colors text-left pb-3 flex items-center text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300"
+                                                style={{ paddingBottom: '12px' }}
+                                            >
+                                                <span className="relative inline-block">
+                                                    {label}
+                                                </span>
+                                                {/* 添加占位空间，保持与当前选项的对齐 */}
+                                                <span className="ml-1 w-3 h-3" />
+                                            </motion.button>
+                                        ))}
+                                </div>
+                            </motion.div>
+                        )}
+                    </>
+                )}
+            </AnimatePresence>
+
             {/* 导航栏 - 添加替代头部内容支持 */}
             <NavigationBar
                 activeMainTab={activeMainTab}
@@ -1782,6 +2055,11 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 onStepClick={handleBrewingStepClickWrapper}
                 alternativeHeader={alternativeHeaderContent}
                 showAlternativeHeader={showAlternativeHeader}
+                // 添加咖啡豆视图切换相关props
+                currentBeanView={currentBeanView}
+                _onBeanViewChange={handleBeanViewChange}
+                showViewDropdown={showViewDropdown}
+                onToggleViewDropdown={handleToggleViewDropdown}
                 // 添加器具相关props
                 customEquipments={customEquipments}
                 onEquipmentSelect={handleEquipmentSelectWithName}
@@ -1868,6 +2146,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                         isOpen={activeMainTab === '咖啡豆'}
                         showBeanForm={handleBeanForm}
                         onShowImport={() => setShowImportBeanForm(true)}
+                        externalViewMode={currentBeanView}
+                        onExternalViewChange={handleBeanViewChange}
                     />
                 </ErrorBoundary>
             )}

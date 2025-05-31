@@ -1,14 +1,7 @@
 'use client'
 
 import React, { useRef, useState, useEffect } from 'react'
-import { ViewOption, VIEW_LABELS, VIEW_OPTIONS, BeanType, BloggerBeansYear } from '../types'
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/coffee-bean/ui/select'
+import { ViewOption, VIEW_OPTIONS, BeanType, BloggerBeansYear } from '../types'
 import {
     SortOption,
     SORT_ORDERS,
@@ -22,35 +15,6 @@ import {
 import { X, ArrowUpRight, AlignLeft } from 'lucide-react'
 import { Storage } from '@/lib/core/storage'
 import { SettingsOptions } from '@/components/settings/Settings'
-import { AnimatePresence, motion } from 'framer-motion'
-
-// Apple风格动画配置
-const FILTER_ANIMATION = {
-    initial: {
-        height: 0,
-        opacity: 0,
-        y: -10
-    },
-    animate: {
-        height: 'auto',
-        opacity: 1,
-        y: 0
-    },
-    exit: {
-        height: 0,
-        opacity: 0,
-        y: -10
-    },
-    transition: {
-        type: "tween",
-        ease: [0.33, 1, 0.68, 1], // Apple的easeOutCubic曲线
-        duration: 0.35,
-        opacity: {
-            duration: 0.25,
-            ease: [0.33, 1, 0.68, 1]
-        }
-    }
-}
 
 // 可复用的标签按钮组件
 interface TabButtonProps {
@@ -189,7 +153,6 @@ const BeanTypeFilter: React.FC<BeanTypeFilterProps> = ({
 
 interface ViewSwitcherProps {
     viewMode: ViewOption
-    onViewChange: (view: ViewOption) => void
     sortOption: SortOption
     onSortChange: (option: SortOption) => void
     beansCount: number
@@ -225,7 +188,6 @@ interface ViewSwitcherProps {
 
 const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
     viewMode,
-    onViewChange,
     sortOption,
     onSortChange,
     beansCount,
@@ -379,55 +341,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                     </div>
                 </div>
 
-                <div className="flex items-center space-x-3">
-                    {/* 统一的视图切换组件 */}
-                    <Select
-                        value={viewMode}
-                        onValueChange={(value) => onViewChange(value as ViewOption)}
-                    >
-                        <SelectTrigger
-                            variant="minimal"
-                            className="w-auto min-w-[82px] tracking-wide text-neutral-800 dark:text-neutral-100 transition-colors hover:opacity-80 text-right"
-                        >
-                            <div className="flex items-center justify-end w-full">
-                                <SelectValue />
-                                <svg
-                                    className="w-3 h-3 ml-1.5"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                >
-                                    <line x1="4" y1="6" x2="11" y2="6" />
-                                    <line x1="4" y1="12" x2="11" y2="12" />
-                                    <line x1="4" y1="18" x2="13" y2="18" />
-                                    <line x1="15" y1="6" x2="20" y2="6" />
-                                    <line x1="15" y1="12" x2="20" y2="12" />
-                                    <line x1="15" y1="18" x2="20" y2="18" />
-                                </svg>
-                            </div>
-                        </SelectTrigger>
-                        <SelectContent
-                            position="popper"
-                            sideOffset={5}
-                            className="border-neutral-200/70 dark:border-neutral-800/70 shadow-lg backdrop-blur-xs bg-white/95 dark:bg-neutral-900/95 rounded-lg overflow-hidden"
-                        >
-                            {Object.entries(VIEW_LABELS).map(([value, label]) => (
-                                <SelectItem
-                                    key={value}
-                                    value={value}
-                                    className="tracking-wide text-neutral-800 dark:text-neutral-100 data-highlighted:opacity-80 transition-colors font-medium"
-                                >
-                                    {label}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-
-
-                </div>
+                {/* 视图切换功能已移至导航栏 */}
             </div>
 
             {/* 榜单标签筛选 - 在榜单和博主榜单视图中显示 */}
@@ -517,34 +431,25 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                             </div>
                         </div>
 
-                        {/* 展开式筛选栏 - 在同一个容器内 */}
-                        <AnimatePresence>
-                            {isFilterExpanded && (
-                                <>
-                                    {/* 固定的半透明分割线 - 只在展开时显示 */}
-                                    <div className="border-t border-neutral-200/50 dark:border-neutral-700/50"></div>
+                        {/* 展开式筛选栏 - 移除动画效果 */}
+                        {isFilterExpanded && (
+                            <>
+                                {/* 固定的半透明分割线 - 只在展开时显示 */}
+                                <div className="border-t border-neutral-200/50 dark:border-neutral-700/50"></div>
 
-                                    <motion.div
-                                        initial={FILTER_ANIMATION.initial}
-                                        animate={FILTER_ANIMATION.animate}
-                                        exit={FILTER_ANIMATION.exit}
-                                        transition={FILTER_ANIMATION.transition}
-                                        className="overflow-hidden"
-                                        style={{ willChange: "height, opacity, transform" }}
-                                    >
-                                        <div className="px-6 py-4">
-                                            <div className="space-y-4">
-                                                <SortSection
-                                                    viewMode={viewMode}
-                                                    sortOption={sortOption}
-                                                    onSortChange={onSortChange}
-                                                />
-                                            </div>
+                                <div className="overflow-hidden">
+                                    <div className="px-6 py-4">
+                                        <div className="space-y-4">
+                                            <SortSection
+                                                viewMode={viewMode}
+                                                sortOption={sortOption}
+                                                onSortChange={onSortChange}
+                                            />
                                         </div>
-                                    </motion.div>
-                                </>
-                            )}
-                        </AnimatePresence>
+                                    </div>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
             )}
@@ -642,61 +547,52 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                             )}
                         </div>
 
-                        {/* 展开式筛选栏 - 在同一个容器内 */}
-                        <AnimatePresence>
-                            {isFilterExpanded && (
-                                <>
-                                    {/* 固定的半透明分割线 - 只在展开时显示 */}
-                                    <div className="border-t border-neutral-200/50 dark:border-neutral-700/50"></div>
+                        {/* 展开式筛选栏 - 移除动画效果 */}
+                        {isFilterExpanded && (
+                            <>
+                                {/* 固定的半透明分割线 - 只在展开时显示 */}
+                                <div className="border-t border-neutral-200/50 dark:border-neutral-700/50"></div>
 
-                                    <motion.div
-                                        initial={FILTER_ANIMATION.initial}
-                                        animate={FILTER_ANIMATION.animate}
-                                        exit={FILTER_ANIMATION.exit}
-                                        transition={FILTER_ANIMATION.transition}
-                                        className="overflow-hidden"
-                                        style={{ willChange: "height, opacity, transform" }}
-                                    >
-                                        <div className="px-6 py-4">
-                                            <div className="space-y-4">
-                                                <SortSection
-                                                    viewMode={viewMode}
-                                                    sortOption={sortOption}
-                                                    onSortChange={onSortChange}
-                                                />
+                                <div className="overflow-hidden">
+                                    <div className="px-6 py-4">
+                                        <div className="space-y-4">
+                                            <SortSection
+                                                viewMode={viewMode}
+                                                sortOption={sortOption}
+                                                onSortChange={onSortChange}
+                                            />
 
-                                                <BeanTypeFilter
-                                                    selectedBeanType={selectedBeanType}
-                                                    onBeanTypeChange={onBeanTypeChange}
-                                                    showAll={true}
-                                                />
+                                            <BeanTypeFilter
+                                                selectedBeanType={selectedBeanType}
+                                                onBeanTypeChange={onBeanTypeChange}
+                                                showAll={true}
+                                            />
 
-                                                {/* 显示选项区域 */}
-                                                <div>
-                                                    <div className="text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-2">显示</div>
-                                                    <div className="flex items-center flex-wrap gap-2">
+                                            {/* 显示选项区域 */}
+                                            <div>
+                                                <div className="text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-2">显示</div>
+                                                <div className="flex items-center flex-wrap gap-2">
+                                                    <FilterButton
+                                                        isActive={showEmptyBeans || false}
+                                                        onClick={() => onToggleShowEmptyBeans?.()}
+                                                    >
+                                                        已用完
+                                                    </FilterButton>
+                                                    {onToggleImageFlowMode && (
                                                         <FilterButton
-                                                            isActive={showEmptyBeans || false}
-                                                            onClick={() => onToggleShowEmptyBeans?.()}
+                                                            isActive={isImageFlowMode}
+                                                            onClick={() => onToggleImageFlowMode()}
                                                         >
-                                                            已用完
+                                                            图片流
                                                         </FilterButton>
-                                                        {onToggleImageFlowMode && (
-                                                            <FilterButton
-                                                                isActive={isImageFlowMode}
-                                                                onClick={() => onToggleImageFlowMode()}
-                                                            >
-                                                                图片流
-                                                            </FilterButton>
-                                                        )}
-                                                    </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
-                                    </motion.div>
-                                </>
-                            )}
-                        </AnimatePresence>
+                                    </div>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
             ) : null}

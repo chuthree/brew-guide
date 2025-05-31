@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useMemo } from 'react'
+import React, { useMemo, memo } from 'react'
 import Image from 'next/image'
 import { ExtendedCoffeeBean } from '../types'
 
@@ -85,4 +85,5 @@ const ImageFlowView: React.FC<ImageFlowViewProps> = ({
     )
 }
 
-export default ImageFlowView
+// 使用 React.memo 包装组件以避免不必要的重新渲染
+export default memo(ImageFlowView)

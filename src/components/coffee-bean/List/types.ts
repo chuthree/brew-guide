@@ -38,6 +38,9 @@ export interface CoffeeBeansProps {
     isOpen: boolean
     showBeanForm?: (bean: ExtendedCoffeeBean | null) => void
     onShowImport?: () => void
+    // 添加外部视图控制相关props
+    externalViewMode?: ViewOption
+    onExternalViewChange?: (view: ViewOption) => void
 }
 
 // 导出工具函数

@@ -261,6 +261,7 @@ export const useBeanOperations = () => {
 
     return {
         forceRefreshKey,
+        setForceRefreshKey,
         handleSaveBean,
         handleDelete,
         handleSaveRating,

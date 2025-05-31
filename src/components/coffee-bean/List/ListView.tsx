@@ -224,40 +224,25 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
         }
     }, [sortBeans]);
 
-    // 当isOpen状态变化时重新加载数据
+    // 统一的数据加载逻辑 - 减少重复触发
     useEffect(() => {
         if (isOpen) {
             loadBeans();
         }
-    }, [isOpen, loadBeans]);
-
-    // 初始化加载
-    useEffect(() => {
-        // 即使未设置isOpen，也尝试加载一次数据
-        loadBeans();
-    }, [loadBeans]);
-
-    // 强制刷新时重新加载数据
-    useEffect(() => {
-        loadBeans();
-    }, [forceRefreshKey, loadBeans]);
+    }, [isOpen, forceRefreshKey, loadBeans]);
 
     // 监听咖啡豆更新事件
     useEffect(() => {
-        // 处理自定义coffeeBeansUpdated事件
         const handleBeansUpdated = () => {
-            // 强制刷新
             setForceRefreshKey(prev => prev + 1);
         };
 
-        // 添加事件监听
         window.addEventListener('coffeeBeansUpdated', handleBeansUpdated);
-        
-        // 清理函数
+
         return () => {
             window.removeEventListener('coffeeBeansUpdated', handleBeansUpdated);
         };
-    }, [loadBeans]);
+    }, []);
 
     // 计算单价
     const calculateUnitPrice = (bean: CoffeeBean): string => {
