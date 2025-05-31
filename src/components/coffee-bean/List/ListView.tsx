@@ -5,6 +5,10 @@ import { CoffeeBean } from '@/types/app'
 import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager'
 import { Storage } from '@/lib/core/storage'
 import { SettingsOptions } from '@/components/settings/Settings'
+import { globalCache } from './globalCache'
+
+// 每页加载的咖啡豆数量
+const PAGE_SIZE = 8;
 
 // 定义组件属性接口
 interface CoffeeBeanListProps {
@@ -18,13 +22,17 @@ interface CoffeeBeanListProps {
 
 const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
     onSelect,
-    isOpen = true,
+    isOpen: _isOpen = true,
     searchQuery = '',  // 添加搜索查询参数默认值
     highlightedBeanId = null // 添加高亮咖啡豆ID默认值
 }) => {
-    const [beans, setBeans] = useState<CoffeeBean[]>([])
+    // 如果缓存已有数据，直接使用缓存初始化，避免闪烁
+    const [beans, setBeans] = useState<CoffeeBean[]>(() =>
+        globalCache.initialized ? globalCache.beans : []
+    )
     const [_isPending, startTransition] = useTransition()
-    const [isFirstLoad, setIsFirstLoad] = useState(true)
+    // 如果缓存已经有数据，就不显示加载动画
+    const [isFirstLoad, setIsFirstLoad] = useState(!globalCache.initialized || globalCache.beans.length === 0)
     const [forceRefreshKey, setForceRefreshKey] = useState(0) // 添加强制刷新的key
 
     // 添加设置状态
@@ -32,6 +40,23 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
 
     // 添加ref用于存储咖啡豆元素列表
     const beanItemsRef = useRef<Map<string, HTMLDivElement>>(new Map());
+
+    // 分页状态 - 如果缓存有数据，直接初始化分页数据
+    const [displayedBeans, setDisplayedBeans] = useState<CoffeeBean[]>(() => {
+        if (globalCache.initialized && globalCache.beans.length > 0) {
+            return globalCache.beans.slice(0, PAGE_SIZE);
+        }
+        return [];
+    });
+    const [currentPage, setCurrentPage] = useState(1);
+    const [hasMore, setHasMore] = useState(() => {
+        if (globalCache.initialized && globalCache.beans.length > 0) {
+            return globalCache.beans.length > PAGE_SIZE;
+        }
+        return true;
+    });
+    const [isLoading, setIsLoading] = useState(false);
+    const loaderRef = useRef<HTMLDivElement>(null);
 
     // 加载设置
     useEffect(() => {
@@ -98,13 +123,24 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
 
 
 
-    // 优化的加载咖啡豆数据函数 - 减少不必要的过滤和排序
+    // 优化的加载咖啡豆数据函数 - 使用全局缓存避免重复加载
     const loadBeans = useCallback(async () => {
         try {
-            // 显示加载状态
-            setIsFirstLoad(true);
+            // 如果全局缓存已初始化且有数据，什么都不做，避免状态变化导致闪烁
+            if (globalCache.initialized && globalCache.beans.length > 0) {
+                return;
+            }
+
+            // 只有在真正需要加载时才显示加载状态
+            if (!globalCache.initialized) {
+                setIsFirstLoad(true);
+            }
 
             const loadedBeans = await CoffeeBeanManager.getAllBeans();
+
+            // 更新全局缓存
+            globalCache.beans = loadedBeans;
+            globalCache.initialized = true;
 
             // 使用 useTransition 包裹状态更新，避免界面闪烁
             startTransition(() => {
@@ -117,12 +153,10 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
         }
     }, []);
 
-    // 优化的数据加载逻辑 - 减少重复触发
+    // 优化的数据加载逻辑 - 只在首次挂载和强制刷新时加载
     useEffect(() => {
-        if (isOpen) {
-            loadBeans();
-        }
-    }, [isOpen, forceRefreshKey, loadBeans]);
+        loadBeans();
+    }, [forceRefreshKey, loadBeans]);
 
     // 监听咖啡豆更新事件
     useEffect(() => {
@@ -278,6 +312,78 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
         );
     }, [availableBeans, searchQuery]);
 
+    // 初始化分页数据
+    useEffect(() => {
+        // 每次筛选条件变化时，重置分页状态
+        setCurrentPage(1);
+        const initialBeans = filteredBeans.slice(0, PAGE_SIZE);
+
+        // 只有在数据真正变化时才更新状态，避免不必要的重新渲染
+        setDisplayedBeans(prevBeans => {
+            if (JSON.stringify(prevBeans) !== JSON.stringify(initialBeans)) {
+                return initialBeans;
+            }
+            return prevBeans;
+        });
+
+        const newHasMore = filteredBeans.length > PAGE_SIZE;
+        setHasMore(prevHasMore => {
+            if (prevHasMore !== newHasMore) {
+                return newHasMore;
+            }
+            return prevHasMore;
+        });
+    }, [filteredBeans]);
+
+    // 加载更多咖啡豆
+    const loadMoreBeans = useCallback(() => {
+        if (!hasMore || isLoading) return;
+
+        setIsLoading(true);
+
+        try {
+            // 计算下一页的咖啡豆
+            const nextPage = currentPage + 1;
+            const endIndex = nextPage * PAGE_SIZE;
+
+            // 使用筛选后的咖啡豆作为数据源
+            const newDisplayedBeans = filteredBeans.slice(0, endIndex);
+
+            // 如果加载的数量和筛选后的总数一样，说明没有更多数据了
+            const noMoreBeans = newDisplayedBeans.length >= filteredBeans.length;
+
+            setDisplayedBeans(newDisplayedBeans);
+            setCurrentPage(nextPage);
+            setHasMore(!noMoreBeans);
+        } catch (error) {
+            console.error('加载更多咖啡豆失败:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [currentPage, filteredBeans, hasMore, isLoading]);
+
+    // 设置IntersectionObserver来监听加载更多的元素
+    useEffect(() => {
+        if (!loaderRef.current) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting && hasMore) {
+                    loadMoreBeans();
+                }
+            },
+            { threshold: 0.1 } // 降低阈值，提高加载触发敏感度
+        );
+
+        observer.observe(loaderRef.current);
+
+        return () => {
+            if (loaderRef.current) {
+                observer.unobserve(loaderRef.current);
+            }
+        };
+    }, [hasMore, loadMoreBeans]);
+
     // 设置ref的回调函数
     const setItemRef = useCallback((id: string) => (node: HTMLDivElement | null) => {
         if (node) {
@@ -336,7 +442,7 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
                 </div>
             )}
 
-            {filteredBeans.map((bean) => {
+            {displayedBeans.map((bean) => {
                 // 获取赏味期状态
                 let freshStatus = "";
                 let statusClass = "text-neutral-500 dark:text-neutral-400";
@@ -367,11 +473,6 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
                 // 准备简洁的信息列表
                 const items = [];
 
-                // 添加烘焙度信息
-                if (bean.roastLevel) {
-                    items.push(`烘焙度 ${bean.roastLevel}`);
-                }
-
                 // 添加容量信息
                 const remaining = typeof bean.remaining === 'string' ? parseFloat(bean.remaining) : bean.remaining ?? 0;
                 const capacity = typeof bean.capacity === 'string' ? parseFloat(bean.capacity) : bean.capacity ?? 0;
@@ -398,28 +499,62 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
                         onClick={() => onSelect(bean.id, bean)}
                     >
                         <div className="cursor-pointer">
-                            <div className="flex items-baseline justify-between">
-                                <div className="flex items-baseline gap-3 min-w-0 overflow-hidden">
-                                    <h3 className="text-xs font-normal tracking-wider truncate">
-                                        {bean.name} <span className={statusClass}>{freshStatus}</span>
-                                    </h3>
+                            <div className="flex gap-4">
+                                {/* 左侧图片区域 - 正方形显示 */}
+                                {bean.image && (
+                                    <div className="w-16 h-16 relative shrink-0 border border-neutral-200 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
+                                        <img
+                                            src={bean.image}
+                                            alt={bean.name || '咖啡豆图片'}
+                                            className="w-full h-full object-cover"
+                                            onError={(e) => {
+                                                const target = e.target as HTMLImageElement;
+                                                target.style.display = 'none';
+                                            }}
+                                        />
+                                    </div>
+                                )}
+
+                                {/* 右侧内容区域 - 与图片等高 */}
+                                <div className={`flex-1 min-w-0 flex flex-col ${bean.image ? 'h-16 justify-between' : 'min-h-[2.5rem] justify-start gap-1.5'}`}>
+                                    {/* 顶部：咖啡豆名称和烘焙度 */}
+                                    <div className="flex-1 min-w-0 overflow-hidden">
+                                        <div className="text-xs font-normal text-neutral-800 dark:text-neutral-100 leading-tight line-clamp-2 text-justify">
+                                            {bean.name}
+                                            {bean.roastLevel && ` ${bean.roastLevel}`}
+                                            <span className={statusClass}> {freshStatus}</span>
+                                        </div>
+                                    </div>
+
+                                    {/* 底部：其他信息 */}
+                                    <div className="space-y-1">
+                                        {items.map((item, i) => (
+                                            <div key={i} className="text-[11px] tracking-widest text-neutral-600 dark:text-neutral-400 truncate leading-none">
+                                                {item}
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="mt-2">
-                                <ul className="space-y-1">
-                                    {items.map((item, i) => (
-                                        <li key={i} className="text-xs font-light">
-                                            {item}
-                                        </li>
-                                    ))}
-                                </ul>
                             </div>
                         </div>
                     </div>
                 );
             })}
+
+            {/* 加载更多指示器 */}
+            {hasMore && (
+                <div
+                    ref={loaderRef}
+                    className="flex justify-center items-center py-4"
+                >
+                    <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
+                        {isLoading ? '正在加载...' : '上滑加载更多'}
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
 
-export default CoffeeBeanList 
+// 使用 React.memo 包装组件以避免不必要的重新渲染
+export default React.memo(CoffeeBeanList)

@@ -42,6 +42,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
     // 图片查看器状态和错误状态
     const [imageViewerOpen, setImageViewerOpen] = useState(false);
     const [imageError, setImageError] = useState(false);
+    const [_imageLoaded, _setImageLoaded] = useState(false);
     
     // 添加设置状态
     const [_settings, setSettings] = useState<SettingsOptions>(defaultSettings);
@@ -326,9 +327,11 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                                 style={{ width: '100%', height: '100%' }}
                                 className="object-cover"
                                 sizes="80px"
-                                priority={false}
-                                loading="lazy"
+                                priority={true}  // 设置为高优先级，减少闪烁
+                                loading="eager"  // 使用即时加载
                                 onError={() => setImageError(true)}
+                                placeholder="blur"
+                                blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
                             />
                         )}
                     </div>
@@ -361,7 +364,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                             </div>
                             {/* 拼配豆信息显示 - 简化版本 */}
                             {bean.blendComponents && bean.blendComponents.length > 1 && (
-                                <div className="text-[11px] font-normal text-neutral-500 dark:text-neutral-400 pr-2 leading-tight overflow-hidden">
+                                <div className="text-[11px] font-normal text-neutral-500 dark:text-neutral-400 mt-0.5 pr-2 leading-tight overflow-hidden">
                                     <div className="truncate">
                                         {bean.blendComponents.map((comp, index) => {
                                             // 优先显示产地，如果没有则显示品种

@@ -192,7 +192,7 @@ const TabContent: React.FC<TabContentProps> = ({
         }
     }, [settings?.hapticFeedback]);
 
-    // 加载所有咖啡豆数据
+    // 加载所有咖啡豆数据 - 优化：只在首次需要时加载
     useEffect(() => {
         const loadBeans = async () => {
             try {
@@ -203,10 +203,29 @@ const TabContent: React.FC<TabContentProps> = ({
             }
         };
 
-        if (activeTab === '咖啡豆') {
+        // 只在没有数据且需要时才加载
+        if (activeTab === '咖啡豆' && allBeans.length === 0) {
             loadBeans();
         }
-    }, [activeTab]);
+    }, [activeTab, allBeans.length]);
+
+    // 监听咖啡豆更新事件，同步更新数据
+    useEffect(() => {
+        const handleBeansUpdated = async () => {
+            try {
+                const beans = await CoffeeBeanManager.getAllBeans();
+                setAllBeans(beans);
+            } catch (error) {
+                console.error('更新咖啡豆数据失败:', error);
+            }
+        };
+
+        window.addEventListener('coffeeBeansUpdated', handleBeansUpdated);
+
+        return () => {
+            window.removeEventListener('coffeeBeansUpdated', handleBeansUpdated);
+        };
+    }, []);
 
     // 处理方案类型切换
     const _handleMethodTypeChange = async (type: 'common' | 'custom') => {

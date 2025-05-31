@@ -224,11 +224,6 @@ const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
               // 准备简洁的信息列表
               const items = [];
 
-              // 添加烘焙度信息
-              if (bean.roastLevel) {
-                items.push(`烘焙度 ${bean.roastLevel}`);
-              }
-
               // 添加容量信息
               const remaining = typeof bean.remaining === 'string' ? parseFloat(bean.remaining) : bean.remaining ?? 0;
               const capacity = typeof bean.capacity === 'string' ? parseFloat(bean.capacity) : bean.capacity ?? 0;
@@ -245,32 +240,53 @@ const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
               const isHighlighted = highlightedBeanId === bean.id;
 
               return (
-                <div 
+                <div
                   key={bean.id}
                   className="group relative text-neutral-500 dark:text-neutral-400"
                   onClick={() => onSelect(bean)}
                   ref={setItemRef(bean.id)}
                 >
-                  <div className={`group relative border-l ${isHighlighted 
-                    ? 'border-neutral-800 dark:border-neutral-100' 
-                    : 'border-neutral-200 dark:border-neutral-800'} 
+                  <div className={`group relative border-l ${isHighlighted
+                    ? 'border-neutral-800 dark:border-neutral-100'
+                    : 'border-neutral-200 dark:border-neutral-800'}
                     pl-6 cursor-pointer transition-all duration-300`}>
                     <div className="cursor-pointer">
-                      <div className="flex items-baseline justify-between">
-                        <div className="flex items-baseline gap-3 min-w-0 overflow-hidden">
-                          <h3 className="text-xs font-normal tracking-wider truncate">
-                            {bean.name} <span className={statusClass}>{freshStatus}</span>
-                          </h3>
+                      <div className="flex gap-4">
+                        {/* 左侧图片区域 - 正方形显示 */}
+                        {bean.image && (
+                          <div className="w-16 h-16 relative shrink-0 border border-neutral-200 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
+                            <img
+                              src={bean.image}
+                              alt={bean.name || '咖啡豆图片'}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                              }}
+                            />
+                          </div>
+                        )}
+
+                        {/* 右侧内容区域 - 与图片等高 */}
+                        <div className={`flex-1 min-w-0 flex flex-col ${bean.image ? 'h-16 justify-between' : 'min-h-[2.5rem] justify-start gap-1.5'}`}>
+                          {/* 顶部：咖啡豆名称和烘焙度 */}
+                          <div className="flex-1 min-w-0 overflow-hidden">
+                            <div className="text-xs font-normal text-neutral-800 dark:text-neutral-100 leading-tight line-clamp-2 text-justify">
+                              {bean.name}
+                              {bean.roastLevel && ` ${bean.roastLevel}`}
+                              <span className={statusClass}> {freshStatus}</span>
+                            </div>
+                          </div>
+
+                          {/* 底部：其他信息 */}
+                          <div className="space-y-1">
+                            {items.map((item, i) => (
+                              <div key={i} className="text-[11px] tracking-widest text-neutral-600 dark:text-neutral-400 truncate leading-none">
+                                {item}
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                      <div className="mt-2">
-                        <ul className="space-y-1">
-                          {items.map((item, i) => (
-                            <li key={i} className="text-xs font-light">
-                              {item}
-                            </li>
-                          ))}
-                        </ul>
                       </div>
                     </div>
                   </div>

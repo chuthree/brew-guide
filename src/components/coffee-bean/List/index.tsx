@@ -167,11 +167,19 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         globalCache.filteredBeans = filteredBeans;
     }, [availableVarieties, filteredBeans]);
 
-    // 加载咖啡豆数据 - 优化防抖动
+    // 加载咖啡豆数据 - 优化防抖动和缓存
     const loadBeans = React.useCallback(async () => {
         if (isLoadingRef.current) return; // 防止重复加载
 
         try {
+            // 如果全局缓存已初始化且有数据，直接使用缓存，避免重新加载导致闪烁
+            if (globalCache.initialized && globalCache.beans.length > 0) {
+                setBeans(globalCache.beans);
+                updateFilteredBeansAndCategories(globalCache.beans);
+                setIsFirstLoad(false);
+                return;
+            }
+
             isLoadingRef.current = true;
 
             // 直接从存储加载新数据
