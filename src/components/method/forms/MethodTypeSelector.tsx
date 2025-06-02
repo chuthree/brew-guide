@@ -34,19 +34,18 @@ const MethodTypeSelector: React.FC<MethodTypeSelectorProps> = ({
     return (
         <BottomActionBar
             buttons={[
-                [{
+                {
                     text: '通用方案',
                     onClick: () => handleMethodTypeChange('common'),
-                    active: methodType === 'common'
-                }],
-                [{
+                    className: methodType === 'common' ? 'font-bold' : ''
+                },
+                {
                     text: '自定义方案',
                     onClick: () => handleMethodTypeChange('custom'),
-                    active: methodType === 'custom'
-                }]
+                    className: methodType === 'custom' ? 'font-bold' : ''
+                }
             ]}
-            className="px-6 "
-            fixed={false} // 让它的定位由父组件控制
+            className="px-6"
         />
     );
 };

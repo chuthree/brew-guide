@@ -1002,19 +1002,14 @@ const TabContent: React.FC<TabContentProps> = ({
                         {
                             icon: '+',
                             text: '新建方案',
-                            onClick: () => setShowCustomForm(true),
-                            highlight: true,
-                            id: 'new'
+                            onClick: () => setShowCustomForm(true)
                         },
                         {
                             icon: '↓',
                             text: '导入方案',
-                            onClick: () => setShowImportForm(true),
-                            highlight: true,
-                            id: 'import'
+                            onClick: () => setShowImportForm(true)
                         }
                     ]}
-                    customPresetMode={customEquipments.find(e => e.id === selectedEquipment)?.animationType === 'custom'}
                 />
             )}
 

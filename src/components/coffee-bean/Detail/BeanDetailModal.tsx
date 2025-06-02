@@ -41,7 +41,7 @@ const InfoGrid: React.FC<{
                     <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-1">
                         {item.label}
                     </div>
-                    <div className={`text-sm font-medium ${
+                    <div className={`text-xs font-medium ${
                         item.type === 'status' && item.color ?
                         item.color :
                         'text-neutral-800 dark:text-neutral-100'
@@ -75,13 +75,19 @@ interface BeanDetailModalProps {
     bean: ExtendedCoffeeBean | null
     onClose: () => void
     searchQuery?: string
+    onEdit?: (bean: ExtendedCoffeeBean) => void
+    onDelete?: (bean: ExtendedCoffeeBean) => void
+    onShare?: (bean: ExtendedCoffeeBean) => void
 }
 
 const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     isOpen,
     bean,
     onClose,
-    searchQuery = ''
+    searchQuery = '',
+    onEdit,
+    onDelete,
+    onShare
 }) => {
     const [imageError, setImageError] = useState(false)
     const [relatedNotes, setRelatedNotes] = useState<BrewingNote[]>([])
@@ -387,8 +393,10 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                     </DrawerTitle>
                 </DrawerHeader>
 
+
+
                 {bean ? (
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                    <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-safe-bottom">
                         {/* 图片区域 */}
                         {bean.image && (
                             <div className="flex items-center justify-center pb-3 border-b border-neutral-200/60 dark:border-neutral-800/40">
@@ -655,6 +663,47 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                 </div>
                             )}
                         </div>
+
+                        {/* 操作按钮区域 - 底部 */}
+                        {bean && (onEdit || onDelete || onShare) && (
+                            <div className="border-t border-neutral-200/60 dark:border-neutral-800/40 pt-4 mt-4">
+                                <div className="flex justify-center gap-3">
+                                    {onEdit && (
+                                        <button
+                                            onClick={() => {
+                                                onEdit(bean)
+                                                onClose() // 编辑操作后关闭详情模态框
+                                            }}
+                                            className="px-3 py-1.5 text-xs font-medium text-neutral-700 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+                                        >
+                                            编辑
+                                        </button>
+                                    )}
+                                    {onShare && (
+                                        <button
+                                            onClick={() => {
+                                                onShare(bean)
+                                                onClose() // 分享操作后关闭详情模态框
+                                            }}
+                                            className="px-3 py-1.5 text-xs font-medium text-neutral-700 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+                                        >
+                                            分享
+                                        </button>
+                                    )}
+                                    {onDelete && (
+                                        <button
+                                            onClick={() => {
+                                                onDelete(bean)
+                                                onClose() // 删除操作后关闭详情模态框
+                                            }}
+                                            className="px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+                                        >
+                                            删除
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 ) : (
                     <div className="flex-1 flex items-center justify-center p-4">

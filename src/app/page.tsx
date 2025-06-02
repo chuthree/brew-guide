@@ -1870,7 +1870,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                                     animate={{ opacity: 1 }}
                                     exit={{ opacity: 1 }}
                                     onClick={() => setShowViewDropdown(false)}
-                                    className="text-[12px] tracking-widest whitespace-nowrap transition-colors text-left pb-3 flex items-center text-neutral-800 dark:text-neutral-100 cursor-pointer"
+                                    className="text-xs font-medium tracking-widest whitespace-nowrap transition-colors text-left pb-3 flex items-center text-neutral-800 dark:text-neutral-100 cursor-pointer"
                                     style={{ paddingBottom: '12px' }}
                                 >
                                     <span className="relative inline-block">
@@ -1954,7 +1954,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                                                     }
                                                 }}
                                                 onClick={() => handleBeanViewChange(key as ViewOption)}
-                                                className="text-[12px] tracking-widest whitespace-nowrap transition-colors text-left pb-3 flex items-center text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300"
+                                                className="text-xs font-medium tracking-widest whitespace-nowrap transition-colors text-left pb-3 flex items-center text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300"
                                                 style={{ paddingBottom: '12px' }}
                                             >
                                                 <span className="relative inline-block">

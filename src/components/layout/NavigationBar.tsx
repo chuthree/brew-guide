@@ -36,23 +36,17 @@ interface TabButtonProps {
     onClick?: () => void
     className?: string
     dataTab?: string
-    hideIndicator?: boolean // 添加隐藏指示器的选项
 }
 
 const TabButton: React.FC<TabButtonProps> = ({
-    tab, isActive, isDisabled = false, onClick, className = '', dataTab, hideIndicator = false
+    tab, isActive, isDisabled = false, onClick, className = '', dataTab
 }) => {
-    const baseClasses = 'text-[12px] tracking-widest whitespace-nowrap pb-3'
+    const baseClasses = 'text-xs font-medium tracking-widest whitespace-nowrap pb-3'
     const stateClasses = isActive
         ? 'text-neutral-800 dark:text-neutral-100'
         : isDisabled
             ? 'text-neutral-300 dark:text-neutral-600'
             : 'cursor-pointer text-neutral-500 dark:text-neutral-400'
-
-    // 统一使用实线边框，添加与咖啡豆按钮相同的动画效果
-    const indicatorClasses = `absolute -bottom-3 left-0 right-0 z-10 h-px bg-neutral-800 dark:bg-neutral-100 transition-all duration-300 ease-out ${
-        isActive && !hideIndicator ? 'opacity-100 w-full' : 'opacity-0 w-0'
-    }`
 
     return (
         <div
@@ -62,7 +56,6 @@ const TabButton: React.FC<TabButtonProps> = ({
         >
             <span className="relative inline-block">
                 {tab}
-                {!hideIndicator && <span className={indicatorClasses} />}
             </span>
         </div>
     )
@@ -437,7 +430,7 @@ const EditableParameter: React.FC<EditableParameterProps> = ({
                     onChange={(e) => setTempValue(e.target.value)}
                     onBlur={handleSubmit}
                     onKeyDown={handleKeyDown}
-                    className="w-full border-b border-neutral-300 bg-transparent text-center text-[10px] outline-hidden px-0.5"
+                    className="w-full bg-transparent text-center text-[10px] outline-hidden px-0.5"
                 />
             ) : (
                 <span className="inline-flex items-center whitespace-nowrap">
@@ -692,6 +685,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                             style={{ pointerEvents: shouldHideHeader ? 'none' : 'auto' }}
                         >
                             <div className="flex items-start justify-between">
+                                {/* 设置入口按钮图标 */}
                                 <div
                                     onClick={handleTitleClick}
                                     className="cursor-pointer text-[12px] tracking-widest text-neutral-500 dark:text-neutral-400 flex items-center"
@@ -717,7 +711,6 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                             isActive={activeMainTab === '冲煮'}
                                             onClick={() => handleMainTabClick('冲煮')}
                                             dataTab="冲煮"
-                                            hideIndicator={activeMainTab === '冲煮' && activeBrewingStep === 'method'}
                                         />
                                     </div>
                                     <div
@@ -736,7 +729,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                                 }
                                             }}
                                             onClick={handleBeanTabClick}
-                                            className="text-[12px] tracking-widest whitespace-nowrap pb-3 cursor-pointer flex items-center transition-opacity duration-100"
+                                            className="text-xs font-medium tracking-widest whitespace-nowrap pb-3 cursor-pointer flex items-center transition-opacity duration-100"
                                             style={{
                                                 opacity: showViewDropdown && activeMainTab === '咖啡豆' ? 0 : 1,
                                                 pointerEvents: showViewDropdown && activeMainTab === '咖啡豆' ? 'none' : 'auto',
@@ -750,9 +743,6 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                                     : 'text-neutral-500 dark:text-neutral-400'
                                             }`}>
                                                 {getCurrentViewLabel()}
-                                                <span className={`absolute -bottom-3 left-0 right-0 z-10 h-px bg-neutral-800 dark:bg-neutral-100 transition-all duration-300 ease-out ${
-                                                    activeMainTab === '咖啡豆' ? 'opacity-100 w-full' : 'opacity-0 w-0'
-                                                }`} />
                                             </span>
 
                                             {/* 下拉图标容器 - 使用动画宽度避免布局抖动 */}
@@ -822,7 +812,6 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                             isActive={activeMainTab === '笔记'}
                                             onClick={() => handleMainTabClick('笔记')}
                                             dataTab="笔记"
-                                            hideIndicator={false}
                                         />
                                     </div>
                                 </div>
@@ -885,7 +874,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                                                 value={editableParams.coffee.replace('g', '')}
                                                                 onChange={(v) => handleParamChange('coffee', v)}
                                                                 unit="g"
-                                                                className="border-b border-dashed border-neutral-200 dark:border-neutral-700"
+                                                                className=""
                                                             />
 
                                                             {!espressoUtils.isEspresso(selectedMethod) && (
@@ -896,7 +885,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                                                         onChange={(v) => handleParamChange('ratio', v)}
                                                                         unit=""
                                                                         prefix="1:"
-                                                                        className="border-b border-dashed border-neutral-200 dark:border-neutral-700"
+                                                                        className=""
                                                                     />
                                                                 </>
                                                             )}
@@ -908,7 +897,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                                                         value={formatGrindSize(editableParams.grindSize, settings.grindType)}
                                                                         onChange={(v) => handleParamChange('grindSize', v)}
                                                                         unit=""
-                                                                        className="border-b border-dashed border-neutral-200 dark:border-neutral-700"
+                                                                        className=""
                                                                         isGrindSize={true}
                                                                         originalGrindSize={editableParams.grindSize}
                                                                     />
@@ -922,14 +911,14 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                                                         value={espressoUtils.formatTime(espressoUtils.getExtractionTime(selectedMethod))}
                                                                         onChange={(v) => handleTimeChange(v)}
                                                                         unit="秒"
-                                                                        className="border-b border-dashed border-neutral-200 dark:border-neutral-700"
+                                                                        className=""
                                                                     />
                                                                     <span className="shrink-0">·</span>
                                                                     <EditableParameter
                                                                         value={editableParams.water.replace('g', '')}
                                                                         onChange={(v) => handleParamChange('water', v)}
                                                                         unit="g"
-                                                                        className="border-b border-dashed border-neutral-200 dark:border-neutral-700"
+                                                                        className=""
                                                                     />
                                                                 </>
                                                             ) : (
@@ -940,7 +929,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                                                             value={editableParams.temp.replace('°C', '')}
                                                                             onChange={(v) => handleParamChange('temp', v)}
                                                                             unit="°C"
-                                                                            className="border-b border-dashed border-neutral-200 dark:border-neutral-700"
+                                                                            className=""
                                                                         />
                                                                     </>
                                                                 )

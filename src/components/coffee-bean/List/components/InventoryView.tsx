@@ -242,16 +242,13 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                 </div>
             ) : (
                 // 使用传统滚动
-                <div className="min-h-full pb-20">
+                <div className="min-h-full pb-20 mx-6 flex flex-col gap-y-5 mt-5">
                     {displayedBeans.map((bean, index) => (
                         <BeanListItem
                             key={bean.id}
                             bean={bean}
                             title={generateBeanTitle(bean)}
                             isLast={index === displayedBeans.length - 1}
-                            onEdit={onEdit}
-                            onDelete={onDelete}
-                            onShare={onShare}
                             onRemainingClick={handleRemainingClick}
                             onDetailClick={handleDetailClick}
                             searchQuery={isSearching ? searchQuery : ''}
@@ -288,6 +285,9 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                 bean={detailBean}
                 onClose={handleDetailClose}
                 searchQuery={isSearching ? searchQuery : ''}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                onShare={onShare}
             />
         </div>
     );

@@ -56,7 +56,7 @@ interface TabButtonProps {
 const TabButton: React.FC<TabButtonProps> = ({ isActive, onClick, children, className = '' }) => (
     <button
         onClick={onClick}
-        className={`pb-1.5 text-xs relative whitespace-nowrap ${
+        className={`pb-1.5 text-xs font-medium relative whitespace-nowrap ${
             isActive
                 ? 'text-neutral-800 dark:text-neutral-100'
                 : 'text-neutral-600 dark:text-neutral-400 hover:opacity-80'
@@ -82,7 +82,7 @@ interface FilterButtonProps {
 const FilterButton: React.FC<FilterButtonProps> = ({ isActive, onClick, children, className = '' }) => (
     <button
         onClick={onClick}
-        className={`bg-neutral-100 dark:bg-neutral-700 px-2 py-1 text-xs transition-colors whitespace-nowrap ${
+        className={`bg-neutral-100 dark:bg-neutral-700 px-2 py-1 text-xs font-medium transition-colors whitespace-nowrap ${
             isActive
                 ? 'bg-neutral-200/60 dark:bg-neutral-700 text-neutral-800 dark:text-neutral-100'
                 : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-neutral-800 dark:hover:text-neutral-200'
@@ -363,7 +363,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
             {/* 视图切换与筛选栏 - 统一布局 */}
             <div className="flex justify-between items-center mb-6 px-6">
                 <div className="flex items-center space-x-3">
-                    <div className="text-xs tracking-wide text-neutral-800 dark:text-neutral-100 break-words">
+                    <div className="text-xs font-medium tracking-wide text-neutral-800 dark:text-neutral-100 break-words">
                         {viewMode === VIEW_OPTIONS.INVENTORY
                             ? `${beansCount} 款咖啡豆${!hideTotalWeight && totalWeight ? `，共 ${totalWeight}` : ''}`
                             : viewMode === VIEW_OPTIONS.BLOGGER
@@ -396,7 +396,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                                     {/* 筛选图标按钮 */}
                                     <button
                                         onClick={handleFilterToggle}
-                                        className="pb-1.5 mr-3 text-xs text-neutral-400 dark:text-neutral-600 flex items-center"
+                                        className="pb-1.5 mr-3 text-xs font-medium text-neutral-400 dark:text-neutral-600 flex items-center"
                                     >
                                         <AlignLeft size={12} color="currentColor" />
                                     </button>
@@ -454,7 +454,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                                 {viewMode === VIEW_OPTIONS.RANKING && onRankingShare && (
                                     <button
                                         onClick={onRankingShare}
-                                        className="pb-1.5 text-xs relative text-neutral-600 dark:text-neutral-400"
+                                        className="pb-1.5 text-xs font-medium relative text-neutral-600 dark:text-neutral-400"
                                     >
                                         <span className="relative underline underline-offset-2 decoration-sky-500">分享</span>
                                         <ArrowUpRight className="inline-block ml-1 w-3 h-3" color="currentColor" />
@@ -533,7 +533,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                                     {/* 筛选图标按钮 */}
                                     <button
                                         onClick={handleFilterToggle}
-                                        className="pb-1.5 mr-3 text-xs text-neutral-400 dark:text-neutral-600 flex items-center"
+                                        className="pb-1.5 mr-3 text-xs font-medium text-neutral-400 dark:text-neutral-600 flex items-center"
                                     >
                                         <AlignLeft size={12} color="currentColor" />
                                     </button>
@@ -560,7 +560,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                                             onChange={handleSearchChange}
                                             onKeyDown={handleSearchKeyDown}
                                             placeholder="输入咖啡豆名称..."
-                                            className="w-full pr-2 text-xs bg-transparent border-none outline-hidden text-neutral-800 dark:text-neutral-100 placeholder-neutral-400 dark:placeholder-neutral-500"
+                                            className="w-full pr-2 text-xs font-medium bg-transparent border-none outline-hidden text-neutral-800 dark:text-neutral-100 placeholder-neutral-400 dark:placeholder-neutral-500"
                                             autoComplete="off"
                                         />
                                     </div>
@@ -580,7 +580,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                                     <div className="w-px h-3 bg-neutral-200 dark:bg-neutral-800 mb-1.5 mr-3"></div>
                                     <button
                                         onClick={handleSearchClick}
-                                        className="pb-1.5 text-xs text-neutral-600 dark:text-neutral-400 flex items-center whitespace-nowrap"
+                                        className="pb-1.5 text-xs font-medium text-neutral-600 dark:text-neutral-400 flex items-center whitespace-nowrap"
                                     >
                                         <span className="relative">搜索</span>
                                     </button>

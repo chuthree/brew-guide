@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
-import ActionMenu, { ActionMenuItem } from '@/components/coffee-bean/ui/action-menu'
+// import ActionMenu, { ActionMenuItem } from '@/components/coffee-bean/ui/action-menu' // 移除操作菜单
 import { ExtendedCoffeeBean } from '../types'
 import { isBeanEmpty } from '../globalCache'
 import { parseDateToTimestamp } from '@/lib/utils/dateUtils'
@@ -20,9 +20,9 @@ interface BeanListItemProps {
     bean: ExtendedCoffeeBean
     title: string
     isLast: boolean
-    onEdit: (bean: ExtendedCoffeeBean) => void
-    onDelete: (bean: ExtendedCoffeeBean) => void
-    onShare: (bean: ExtendedCoffeeBean) => void
+    // onEdit: (bean: ExtendedCoffeeBean) => void // 移至详情页面
+    // onDelete: (bean: ExtendedCoffeeBean) => void // 移至详情页面
+    // onShare: (bean: ExtendedCoffeeBean) => void // 移至详情页面
     onRemainingClick: (bean: ExtendedCoffeeBean, event: React.MouseEvent) => void
     onDetailClick?: (bean: ExtendedCoffeeBean) => void
     searchQuery?: string
@@ -32,9 +32,9 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
     bean,
     title,
     isLast,
-    onEdit,
-    onDelete,
-    onShare,
+    // onEdit, // 移至详情页面
+    // onDelete, // 移至详情页面
+    // onShare, // 移至详情页面
     onRemainingClick,
     onDetailClick,
     searchQuery = ''
@@ -205,12 +205,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
     // 计算豆子是否为空
     const isEmpty = isBeanEmpty(bean);
 
-    // 操作菜单项
-    const actionMenuItems: ActionMenuItem[] = [
-        { id: 'edit', label: '编辑', onClick: () => onEdit(bean) },
-        { id: 'share', label: '分享', onClick: () => onShare(bean) },
-        { id: 'delete', label: '删除', color: 'danger', onClick: () => onDelete(bean) }
-    ];
+    // 移除操作菜单项，操作功能移至详情页面
 
     // 格式化数字显示，整数时不显示小数点
     const formatNumber = (value: string | undefined): string =>
@@ -234,58 +229,38 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
         const capacityNum = parseFloat(capacity.replace('g', ''));
         if (isNaN(priceNum) || isNaN(capacityNum) || capacityNum === 0) return '';
         const pricePerGram = priceNum / capacityNum;
-        return `${pricePerGram.toFixed(1)}元/克`;
+        return `${pricePerGram.toFixed(2)}元/克`;
     };
 
-    // 计算需要显示的简化信息项（去掉标签）
-    const infoItems = [];
+    // 移除了不再使用的 infoItems 计算逻辑，因为现在直接在 JSX 中渲染
 
-    // 剩余量信息 - 优化显示格式
-    if (bean.capacity && bean.remaining) {
-        infoItems.push({
-            type: 'remaining',
-            value: `${formatNumber(bean.remaining)}/${formatNumber(bean.capacity)}克`,
-            clickable: true,
-            remainingOnly: formatNumber(bean.remaining) // 只有剩余量数字，用于虚线显示
-        });
-    }
-
-    // 状态信息 - 直接显示状态
-    if (bean.isInTransit || bean.isFrozen || bean.roastDate) {
-        infoItems.push({
-            type: 'status',
-            value: flavorInfo.status,
-            clickable: false
-        });
-    }
-
-    // 烘焙日期信息 - 直接显示日期
-    if (bean.roastDate && !hideRoastDate && !bean.isInTransit) {
-        infoItems.push({
-            type: 'roastDate',
-            value: formatDateShort(bean.roastDate),
-            clickable: false
-        });
-    }
-
-    // 价格信息 - 直接显示价格
-    if (!hidePrice && bean.price && bean.capacity) {
-        infoItems.push({
-            type: 'price',
-            value: formatPricePerGram(bean.price, bean.capacity),
-            clickable: false
-        });
-    }
+    // 获取状态圆点的颜色
+    const getStatusDotColor = (phase: string): string => {
+        switch (phase) {
+            case '养豆期':
+                return 'bg-amber-400'; // 黄色
+            case '赏味期':
+                return 'bg-green-400'; // 绿色
+            case '衰退期':
+                return 'bg-red-400'; // 红色
+            case '在途':
+                return 'bg-blue-400'; // 蓝色
+            case '冰冻':
+                return 'bg-cyan-400'; // 冰蓝色
+            case '未知':
+            default:
+                return 'bg-neutral-400'; // 灰色
+        }
+    };
 
     // 处理卡片点击事件
     const handleCardClick = (e: React.MouseEvent) => {
         // 检查点击的目标是否在需要避开的区域内
         const target = e.target as HTMLElement;
 
-        // 避开图片区域、操作菜单、剩余量编辑区域
+        // 避开图片区域、剩余量编辑区域
         if (
             target.closest('[data-click-area="image"]') ||
-            target.closest('[data-click-area="action-menu"]') ||
             target.closest('[data-click-area="remaining-edit"]')
         ) {
             return;
@@ -299,43 +274,47 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
 
     return (
         <div
-            className={`group px-6 py-4 ${isLast ? '' : 'border-b border-neutral-200/60 dark:border-neutral-800/40'} ${
+            className={`group ${isLast ? '' : ''} ${
                 isEmpty ? 'bg-neutral-100/60 dark:bg-neutral-800/30' : ''
             } ${onDetailClick ? 'cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors' : ''}`}
             onClick={handleCardClick}
         >
-            {/* 主要布局：如果有图片则左图右内容，否则全宽内容 */}
-            <div className="flex gap-4">
-                {/* 左侧图片区域 - 圆形显示 */}
-                {bean.image && (
+            {/* 左右布局：左侧图片，右侧所有内容（包括备注） */}
+            <div className="flex gap-3">
+                {/* 左侧图片区域 - 固定显示，缩小尺寸，使用 self-start 防止被拉伸 */}
+                <div className="relative self-start">
                     <div
-                        className="w-20 h-20 relative shrink-0 cursor-pointer border border-neutral-200 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800 overflow-hidden"
-                        onClick={() => !imageError && setImageViewerOpen(true)}
+                        className="w-14 h-14 relative shrink-0 cursor-pointer rounded border border-neutral-200/40 dark:border-neutral-900/60 bg-neutral-100 dark:bg-neutral-800 overflow-hidden"
+                        onClick={() => bean.image && !imageError && setImageViewerOpen(true)}
                         data-click-area="image"
                     >
-                        {imageError ? (
-                            <div className="absolute inset-0 flex items-center justify-center text-xs text-neutral-500 dark:text-neutral-400">
-                                失败
-                            </div>
-                        ) : (
+                        {bean.image && !imageError ? (
                             <Image
                                 src={bean.image}
                                 alt={bean.name || '咖啡豆图片'}
-                                height={80}
-                                width={80}
+                                height={48}
+                                width={48}
                                 unoptimized
                                 style={{ width: '100%', height: '100%' }}
                                 className="object-cover"
-                                sizes="80px"
-                                priority={true}  // 设置为高优先级，减少闪烁
-                                loading="eager"  // 使用即时加载
+                                sizes="48px"
+                                priority={true}
+                                loading="eager"
                                 onError={() => setImageError(true)}
                                 placeholder="blur"
                                 blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
                             />
+                        ) : (
+                            // 没有图片时显示灰色背景和名称首字
+                            <div className="absolute inset-0 flex items-center justify-center text-xs font-medium text-neutral-400 dark:text-neutral-600 bg-neutral-200/20 dark:bg-neutral-900/80">
+                                {bean.name ? bean.name.charAt(0) : '豆'}
+                            </div>
                         )}
                     </div>
-                )}
+
+                    {/* 状态圆点 - 右下角，边框超出图片边界 */}
+                    <div className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full ${getStatusDotColor(flavorInfo.phase)} border-2 border-neutral-50 dark:border-neutral-900`} />
+                </div>
 
                 {/* 图片查看器 */}
                 {bean.image && !imageError && imageViewerOpen && (
@@ -347,63 +326,42 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                     />
                 )}
 
-                {/* 右侧内容区域（或全宽内容区域） - 有图片时高度与图片一致，无图片时自适应高度 */}
-                <div className={`flex-1 min-w-0 flex flex-col ${bean.image ? 'h-20 justify-between' : 'min-h-[2.5rem] justify-start gap-1.5'}`}>
-                    {/* 顶部：标题和操作菜单 */}
-                    <div className="flex justify-between items-start">
-                        <div className="flex-1 min-w-0 overflow-hidden">
-                            <div className="text-xs font-normal text-neutral-800 dark:text-neutral-100 pr-2 leading-tight line-clamp-2">
-                                {searchQuery ? (
-                                    <HighlightText
-                                        text={title}
-                                        highlight={searchQuery}
-                                    />
-                                ) : (
-                                    title
-                                )}
-                            </div>
-                            {/* 拼配豆信息显示 - 简化版本 */}
-                            {bean.blendComponents && bean.blendComponents.length > 1 && (
-                                <div className="text-[11px] font-normal text-neutral-500 dark:text-neutral-400 mt-0.5 pr-2 leading-tight overflow-hidden">
-                                    <div className="truncate">
-                                        {bean.blendComponents.map((comp, index) => {
-                                            // 优先显示产地，如果没有则显示品种
-                                            const displayText = comp.origin || comp.variety || '';
-                                            const hasPercentage = comp.percentage !== undefined && comp.percentage !== null;
-
-                                            return (
-                                                <span key={index} className="mr-1.5">
-                                                    {searchQuery ? (
-                                                        <HighlightText
-                                                            text={displayText}
-                                                            highlight={searchQuery}
-                                                            className="text-neutral-500 dark:text-neutral-400"
-                                                        />
-                                                    ) : (
-                                                        displayText
-                                                    )}
-                                                    {hasPercentage && `${comp.percentage}%`}
-                                                    {index < (bean.blendComponents?.length || 0) - 1 && ' +'}
-                                                </span>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
+                {/* 右侧内容区域 - 包含标题、参数和备注 */}
+                <div className="flex-1 min-w-0 flex flex-col gap-y-2">
+                    {/* 标题和参数区域 - 根据是否有备注决定高度 */}
+                    <div className={`flex flex-col justify-center gap-y-1.5 ${bean.notes ? '' : 'h-14'}`}>
+                        {/* 顶部：标题 */}
+                        <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100 pr-2 leading-tight line-clamp-2">
+                            {searchQuery ? (
+                                <HighlightText
+                                    text={title}
+                                    highlight={searchQuery}
+                                />
+                            ) : (
+                                title
+                            )}
+                            {isEmpty && (
+                                <span className="text-neutral-500 dark:text-neutral-400 font-normal">（已用完）</span>
                             )}
                         </div>
-                        <div className="shrink-0 ml-2 relative" data-click-area="action-menu">
-                            <ActionMenu items={actionMenuItems} />
-                        </div>
-                    </div>
 
-                    {/* 底部：状态信息和已用完标签 */}
-                    <div className={`flex justify-between ${bean.image ? 'items-end' : 'items-start'}`}>
-                        {/* 左侧：两排信息显示 */}
-                        <div className="flex-1 min-w-0 overflow-hidden space-y-0.5">
-                            {/* 第一排：克数和价格 */}
-                            <div className="flex items-center text-[11px] tracking-widest text-neutral-600 dark:text-neutral-400 truncate">
-                                {/* 剩余量信息 */}
-                                {bean.capacity && bean.remaining && (
+                        {/* 底部：参数信息 */}
+                        <div className="flex items-center text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
+                            {/* 烘焙日期 */}
+                            {bean.roastDate && !hideRoastDate && !bean.isInTransit && (
+                                <>
+                                    <span className="shrink-0">
+                                        {formatDateShort(bean.roastDate)}
+                                    </span>
+                                    {(bean.capacity && bean.remaining) || (!hidePrice && bean.price && bean.capacity) ? (
+                                        <span className="mx-2 text-neutral-400 dark:text-neutral-500">·</span>
+                                    ) : null}
+                                </>
+                            )}
+
+                            {/* 剩余量信息 */}
+                            {bean.capacity && bean.remaining && (
+                                <>
                                     <span className="shrink-0">
                                         <span
                                             onClick={(e) => onRemainingClick(bean, e)}
@@ -416,61 +374,24 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                                             /{formatNumber(bean.capacity)}克
                                         </span>
                                     </span>
-                                )}
+                                    {!hidePrice && bean.price && bean.capacity ? (
+                                        <span className="mx-2 text-neutral-400 dark:text-neutral-500">·</span>
+                                    ) : null}
+                                </>
+                            )}
 
-                                {/* 分隔符 */}
-                                {bean.capacity && bean.remaining &&
-                                 !hidePrice && bean.price && bean.capacity && (
-                                    <span className="mx-2 shrink-0">·</span>
-                                )}
-
-                                {/* 价格信息 */}
-                                {!hidePrice && bean.price && bean.capacity && (
-                                    <span className="shrink-0">
-                                        {formatPricePerGram(bean.price, bean.capacity)}
-                                    </span>
-                                )}
-                            </div>
-
-                            {/* 第二排：日期和状态 */}
-                            <div className="flex items-center text-[11px] tracking-widest text-neutral-600 dark:text-neutral-400 truncate">
-                                {/* 烘焙日期 */}
-                                {bean.roastDate && !hideRoastDate && !bean.isInTransit && (
-                                    <span className="shrink-0">
-                                        {formatDateShort(bean.roastDate)}
-                                    </span>
-                                )}
-
-                                {/* 分隔符 */}
-                                {bean.roastDate && !hideRoastDate && !bean.isInTransit &&
-                                 (bean.isInTransit || bean.isFrozen || bean.roastDate) && (
-                                    <span className="mx-2 shrink-0">·</span>
-                                )}
-
-                                {/* 状态信息 */}
-                                {(bean.isInTransit || bean.isFrozen || bean.roastDate) && (
-                                    <span className="shrink-0">
-                                        {flavorInfo.status}
-                                    </span>
-                                )}
-                            </div>
+                            {/* 价格信息 */}
+                            {!hidePrice && bean.price && bean.capacity && (
+                                <span className="shrink-0">
+                                    {formatPricePerGram(bean.price, bean.capacity)}
+                                </span>
+                            )}
                         </div>
-
-                        {/* 右侧：已用完标签 */}
-                        {isEmpty && (
-                            <div className="text-[11px] font-normal px-1.5 py-0.5 rounded-full bg-neutral-200 text-neutral-600 dark:bg-neutral-700 dark:text-neutral-300 shrink-0 ml-2">
-                                已用完
-                            </div>
-                        )}
                     </div>
-                </div>
-            </div>
 
-            {/* 备注区域 - 在整个内容下方独立显示 */}
-            {bean.notes && (
-                <div className="mt-3">
-                    <div className="bg-neutral-100/50 dark:bg-neutral-800/50 px-3 py-2 border border-neutral-200/50 dark:border-neutral-800">
-                        <div className="text-[11px] tracking-widest text-neutral-600 dark:text-neutral-400 whitespace-pre-line leading-tight">
+                    {/* 备注区域 - 现在在右侧内容区域内 */}
+                    {bean.notes && (
+                        <div className="text-xs font-medium bg-neutral-200/30 dark:bg-neutral-800/40 p-1.5 rounded tracking-widest text-neutral-800/70 dark:text-neutral-400/85 whitespace-pre-line leading-tight">
                             {searchQuery ? (
                                 <HighlightText
                                     text={bean.notes}
@@ -481,9 +402,9 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                                 bean.notes
                             )}
                         </div>
-                    </div>
+                    )}
                 </div>
-            )}
+            </div>
         </div>
     )
 }

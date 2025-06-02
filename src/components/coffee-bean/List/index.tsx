@@ -1109,16 +1109,14 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
                                 } else {
                                     setShowAddForm(true);
                                 }
-                            },
-                            highlight: true
+                            }
                         },
                         {
                             icon: '↓',
                             text: '导入咖啡豆',
                             onClick: () => {
                                 if (onShowImport) onShowImport();
-                            },
-                            highlight: true
+                            }
                         }
                     ]}
                 />
