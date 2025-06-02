@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@capacitor-community/keep-awake": "^7.0.0",
+    "@capacitor-community/safe-area": "^7.0.0-alpha.1",
     "@capacitor/android": "^7.2.0",
     "@capacitor/browser": "^7.0.1",
     "@capacitor/cli": "^7.1.0",
@@ -71,9 +72,9 @@
     "regenerator-runtime": "^0.14.1",
     "tailwind-merge": "^3.0.2",
     "tailwindcss-animate": "^1.0.7",
-    "@capacitor-community/safe-area": "^7.0.0-alpha.1",
     "ts-node": "^10.9.2",
-    "uuid": "^11.1.0"
+    "uuid": "^11.1.0",
+    "vaul": "^1.1.2"
   },
   "devDependencies": {
     "@csstools/postcss-oklab-function": "^4.0.9",
