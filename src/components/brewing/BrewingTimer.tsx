@@ -1047,6 +1047,28 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     }, 300); // 添加300ms延迟，模拟正常完成过程
   }, [currentBrewingMethod, handleComplete, clearTimerAndStates]);
 
+  // 新增：从初始状态跳过到记录阶段的函数
+  const handleSkipToNotes = useCallback(() => {
+    if (!currentBrewingMethod) return;
+
+    // 获取总冲煮时间（如果有阶段的话）
+    const totalTime = expandedStagesRef.current.length > 0
+      ? expandedStagesRef.current[expandedStagesRef.current.length - 1].endTime
+      : 0;
+
+    // 设置当前时间为总时间
+    setCurrentTime(totalTime);
+
+    // 模拟正常完成流程，添加短暂延迟
+    setTimeout(() => {
+      // 触发完成处理，这会处理所有必要的逻辑
+      handleComplete();
+
+      // 完成处理后，主页面的自动导航逻辑会自动处理跳转到记录页面
+      // 不需要额外的事件触发
+    }, 0);
+  }, [currentBrewingMethod, handleComplete]);
+
   // 监听阶段变化以显示跳过按钮
   useEffect(() => {
     if (!currentBrewingMethod || !expandedStagesRef.current.length) return;
@@ -1775,7 +1797,12 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
               )}
             </motion.button>
             <motion.button
-              onClick={resetTimer}
+              onClick={
+                // 判断是否处于初始状态：时间为0，未开始过，且未运行
+                currentTime === 0 && !hasStartedOnce && !isRunning
+                  ? handleSkipToNotes  // 初始状态：跳过到记录
+                  : resetTimer         // 非初始状态：重置计时器
+              }
               className={`${localShowFlowRate ? 'w-12 h-12' : 'w-14 h-14'} flex items-center justify-center rounded-full bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400 transform-gpu`}
               whileTap={{ scale: 0.95 }}
               transition={{ duration: 0.1, ease: [0.4, 0, 0.2, 1] }}
@@ -1786,20 +1813,40 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                 backfaceVisibility: "hidden",
               }}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={1.5}
-                stroke="currentColor"
-                className={`${localShowFlowRate ? 'w-5 h-5' : 'w-6 h-6'}`}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"
-                />
-              </svg>
+              {/* 根据计时器状态显示不同图标 */}
+              {currentTime === 0 && !hasStartedOnce && !isRunning ? (
+                // 初始状态：显示跳过图标
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                  className={`${localShowFlowRate ? 'w-5 h-5' : 'w-6 h-6'}`}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M3 8.689c0-.864.933-1.406 1.683-.977l7.108 4.061a1.125 1.125 0 0 1 0 1.954l-7.108 4.061A1.125 1.125 0 0 1 3 16.811V8.69ZM12.75 8.689c0-.864.933-1.406 1.683-.977l7.108 4.061a1.125 1.125 0 0 1 0 1.954l-7.108 4.061a1.125 1.125 0 0 1-1.683-.977V8.69Z"
+                  />
+                </svg>
+              ) : (
+                // 非初始状态：显示重置图标
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                  className={`${localShowFlowRate ? 'w-5 h-5' : 'w-6 h-6'}`}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"
+                  />
+                </svg>
+              )}
             </motion.button>
           </div>
         </div>
