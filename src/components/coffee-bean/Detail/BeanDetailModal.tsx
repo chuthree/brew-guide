@@ -458,7 +458,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                         {bean.notes && (
                             <div className="py-3 border-b border-neutral-200/40 dark:border-neutral-800/40">
                                 <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-2">备注</div>
-                                <div className="text-sm text-neutral-700 dark:text-neutral-300 leading-relaxed">
+                                <div className="text-sm text-neutral-700 dark:text-neutral-300 leading-relaxed whitespace-pre-line">
                                     {searchQuery ? (
                                         <HighlightText
                                             text={bean.notes}

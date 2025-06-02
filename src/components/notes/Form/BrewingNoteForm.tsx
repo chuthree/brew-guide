@@ -869,7 +869,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                 {/* 总体评分 */}
                 <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                        <div className="">
+                        <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
                             总体评分
                         </div>
                         <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
