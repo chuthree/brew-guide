@@ -46,13 +46,19 @@ export const useConsumption = (beans: ExtendedCoffeeBean[]): TodayConsumptionDat
                             if (!isNaN(coffeeAmount)) {
                                 consumption += coffeeAmount;
 
-                                // 判断是否是意式咖啡
+                                // 判断是否是意式咖啡 - 改进判断逻辑
                                 const isEspresso = note.equipment === 'Espresso' ||
                                                  note.equipment === '意式咖啡机' ||
+                                                 note.equipment === 'espresso' ||
+                                                 note.equipment?.toLowerCase().includes('espresso') ||
+                                                 note.equipment?.toLowerCase().includes('意式') ||
                                                  (note.stages && Array.isArray(note.stages) &&
                                                   note.stages.some((stage: any) =>
                                                     stage.pourType === 'extraction' || stage.pourType === 'beverage'
-                                                  ));
+                                                  )) ||
+                                                 // 如果咖啡豆信息中标明是意式豆，也算作意式咖啡
+                                                 (note.coffeeBeanInfo?.name &&
+                                                  beans.find(b => b.name === note.coffeeBeanInfo?.name)?.beanType === 'espresso');
 
                                 // 分别统计手冲和意式消耗
                                 if (isEspresso) {
@@ -66,9 +72,10 @@ export const useConsumption = (beans: ExtendedCoffeeBean[]): TodayConsumptionDat
                                     // 找到对应的豆子计算价格
                                     const bean = beans.find(b => b.name === note.coffeeBeanInfo?.name)
                                     if (bean && bean.price && bean.capacity) {
-                                        const price = parseFloat(bean.price)
-                                        const capacity = parseFloat(bean.capacity)
-                                        if (capacity > 0) {
+                                        // 清理价格和容量数据，移除非数字字符
+                                        const price = parseFloat(bean.price.toString().replace(/[^\d.]/g, ''))
+                                        const capacity = parseFloat(bean.capacity.toString().replace(/[^\d.]/g, ''))
+                                        if (!isNaN(price) && !isNaN(capacity) && capacity > 0) {
                                             const noteCost = coffeeAmount * price / capacity
                                             cost += noteCost
 

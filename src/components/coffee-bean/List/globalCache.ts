@@ -184,19 +184,23 @@ globalCache.bloggerYear = getBloggerYearPreference();
 // 检查咖啡豆是否用完
 export const isBeanEmpty = (bean: ExtendedCoffeeBean): boolean => {
     // 如果没有capacity属性，视为非空
-    if (bean.capacity === undefined) return false;
-    
+    if (bean.capacity === undefined || bean.capacity === null) return false;
+
     // 如果没有remaining属性，视为非空
-    if (bean.remaining === undefined) return false;
-    
-    // 移除单位"g"
-    const remaining = bean.remaining.replace(/g$/i, '');
-    
-    // 尝试转换为数值并比较
-    const numValue = parseFloat(remaining);
-    
+    if (bean.remaining === undefined || bean.remaining === null) return false;
+
+    // 处理remaining可能是字符串或数字的情况
+    let remainingValue: number;
+    if (typeof bean.remaining === 'number') {
+        remainingValue = bean.remaining;
+    } else {
+        // 移除所有非数字字符（除了小数点和负号）
+        const cleanedRemaining = bean.remaining.toString().replace(/[^\d.-]/g, '');
+        remainingValue = parseFloat(cleanedRemaining);
+    }
+
     // 当数值为0或接近0时视为空（浮点数比较）
-    return !isNaN(numValue) && numValue < 0.001;
+    return !isNaN(remainingValue) && remainingValue < 0.001;
 };
 
 // 获取咖啡豆的赏味期信息

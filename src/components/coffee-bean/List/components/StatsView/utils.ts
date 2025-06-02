@@ -3,9 +3,16 @@ import { getBeanVarieties, beanHasVarietyInfo } from '@/lib/utils/beanVarietyUti
 import { isBeanEmpty } from '../../globalCache'
 import { StatsData } from './types'
 
-// 格式化数字，保留2位小数
+// 格式化数字，保留2位小数，处理浮点数精度问题
 export const formatNumber = (num: number): string => {
-    return num.toFixed(2).replace(/\.00$/, '')
+    // 处理 NaN 和无穷大的情况
+    if (!isFinite(num)) return '0'
+
+    // 四舍五入到2位小数，避免浮点数精度问题
+    const rounded = Math.round(num * 100) / 100
+
+    // 格式化并移除不必要的 .00
+    return rounded.toFixed(2).replace(/\.00$/, '')
 }
 
 // 添加序号格式化函数
@@ -38,14 +45,14 @@ export const calculateStats = (beans: ExtendedCoffeeBean[], showEmptyBeans: bool
 
     // 计算总重量（克）- 使用所有豆子计算，不受showEmptyBeans影响
     const totalWeight = beans.reduce((sum, bean) => {
-        const capacity = bean.capacity ? parseFloat(bean.capacity) : 0
-        return sum + capacity
+        const capacity = bean.capacity ? parseFloat(bean.capacity.toString().replace(/[^\d.]/g, '')) : 0
+        return sum + (isNaN(capacity) ? 0 : capacity)
     }, 0)
-    
+
     // 计算剩余重量（克）- 使用所有豆子计算，不受showEmptyBeans影响
     const remainingWeight = beans.reduce((sum, bean) => {
-        const remaining = bean.remaining ? parseFloat(bean.remaining) : 0
-        return sum + remaining
+        const remaining = bean.remaining ? parseFloat(bean.remaining.toString().replace(/[^\d.]/g, '')) : 0
+        return sum + (isNaN(remaining) ? 0 : remaining)
     }, 0)
     
     // 计算已消耗重量（克）
@@ -53,8 +60,8 @@ export const calculateStats = (beans: ExtendedCoffeeBean[], showEmptyBeans: bool
     
     // 计算总花费（元）- 使用所有豆子计算，不受showEmptyBeans影响
     const totalCost = beans.reduce((sum, bean) => {
-        const price = bean.price ? parseFloat(bean.price) : 0
-        return sum + price
+        const price = bean.price ? parseFloat(bean.price.toString().replace(/[^\d.]/g, '')) : 0
+        return sum + (isNaN(price) ? 0 : price)
     }, 0)
     
     // 计算平均每豆价格（元）
@@ -221,17 +228,17 @@ export const calculateStats = (beans: ExtendedCoffeeBean[], showEmptyBeans: bool
     const filterBeans = beans.filter(bean => bean.beanType === 'filter')
     const activeFilterBeans = filterBeans.filter(bean => !isBeanEmpty(bean))
     const filterTotalWeight = filterBeans.reduce((sum, bean) => {
-        const capacity = bean.capacity ? parseFloat(bean.capacity) : 0
-        return sum + capacity
+        const capacity = bean.capacity ? parseFloat(bean.capacity.toString().replace(/[^\d.]/g, '')) : 0
+        return sum + (isNaN(capacity) ? 0 : capacity)
     }, 0)
     const filterRemainingWeight = filterBeans.reduce((sum, bean) => {
-        const remaining = bean.remaining ? parseFloat(bean.remaining) : 0
-        return sum + remaining
+        const remaining = bean.remaining ? parseFloat(bean.remaining.toString().replace(/[^\d.]/g, '')) : 0
+        return sum + (isNaN(remaining) ? 0 : remaining)
     }, 0)
     const filterConsumedWeight = filterTotalWeight - filterRemainingWeight
     const filterTotalCost = filterBeans.reduce((sum, bean) => {
-        const price = bean.price ? parseFloat(bean.price) : 0
-        return sum + price
+        const price = bean.price ? parseFloat(bean.price.toString().replace(/[^\d.]/g, '')) : 0
+        return sum + (isNaN(price) ? 0 : price)
     }, 0)
     const filterAverageBeanPrice = filterBeans.length > 0 ? filterTotalCost / filterBeans.length : 0
     const filterAverageGramPrice = filterTotalWeight > 0 ? filterTotalCost / filterTotalWeight : 0
@@ -240,17 +247,17 @@ export const calculateStats = (beans: ExtendedCoffeeBean[], showEmptyBeans: bool
     const espressoBeans = beans.filter(bean => bean.beanType === 'espresso')
     const activeEspressoBeans = espressoBeans.filter(bean => !isBeanEmpty(bean))
     const espressoTotalWeight = espressoBeans.reduce((sum, bean) => {
-        const capacity = bean.capacity ? parseFloat(bean.capacity) : 0
-        return sum + capacity
+        const capacity = bean.capacity ? parseFloat(bean.capacity.toString().replace(/[^\d.]/g, '')) : 0
+        return sum + (isNaN(capacity) ? 0 : capacity)
     }, 0)
     const espressoRemainingWeight = espressoBeans.reduce((sum, bean) => {
-        const remaining = bean.remaining ? parseFloat(bean.remaining) : 0
-        return sum + remaining
+        const remaining = bean.remaining ? parseFloat(bean.remaining.toString().replace(/[^\d.]/g, '')) : 0
+        return sum + (isNaN(remaining) ? 0 : remaining)
     }, 0)
     const espressoConsumedWeight = espressoTotalWeight - espressoRemainingWeight
     const espressoTotalCost = espressoBeans.reduce((sum, bean) => {
-        const price = bean.price ? parseFloat(bean.price) : 0
-        return sum + price
+        const price = bean.price ? parseFloat(bean.price.toString().replace(/[^\d.]/g, '')) : 0
+        return sum + (isNaN(price) ? 0 : price)
     }, 0)
     const espressoAverageBeanPrice = espressoBeans.length > 0 ? espressoTotalCost / espressoBeans.length : 0
     const espressoAverageGramPrice = espressoTotalWeight > 0 ? espressoTotalCost / espressoTotalWeight : 0

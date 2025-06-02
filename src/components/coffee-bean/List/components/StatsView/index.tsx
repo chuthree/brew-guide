@@ -109,42 +109,292 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
                         <div className="">✦</div>
                     </div>
                     
-                    {/* 添加两列统计信息 */}
-                    <div 
-                        className="w-full max-w-xs mx-auto px-4 pb-6 pt-2 grid grid-cols-2 gap-4 text-sm font-medium"
+                    {/* 简化后的统计信息布局 */}
+                    <div
+                        className="w-full max-w-xs mx-auto px-4 pb-6 pt-2 space-y-3 text-sm font-medium"
                         style={styles.infoAnimStyle}
                     >
-                        <div className="space-y-1.5">
-                            <p className="text-neutral-600 dark:text-neutral-400 text-xs">容量概览</p>
-                            <div>
-                                <span className="text-neutral-800 dark:text-white">总量</span>
-                                <span className="float-right">{formatNumber(stats.totalWeight)}克</span>
-                            </div>
-                            <div>
-                                <span className="text-neutral-800 dark:text-white">剩余</span>
-                                <span className="float-right">{formatNumber(stats.remainingWeight)}克</span>
-                            </div>
-                            <div>
-                                <span className="text-neutral-800 dark:text-white">消耗</span>
-                                <span className="float-right">{formatNumber(stats.consumedWeight)}克</span>
-                            </div>
-                        </div>
-                        
-                        <div className="space-y-1.5">
-                            <p className="text-neutral-600 dark:text-neutral-400 text-xs">消耗预估</p>
-                            <div>
-                                <span className="text-neutral-800 dark:text-white">今日</span>
-                                <span className="float-right">{formatNumber(todayConsumption)}克</span>
-                            </div>
-                            <div>
-                                <span className="text-neutral-800 dark:text-white">平均</span>
-                                <span className="float-right">{formatNumber(averageConsumption)}克/天</span>
-                            </div>
-                            <div>
-                                <span className="text-neutral-800 dark:text-white">预计用完</span>
-                                <span className="float-right">{estimatedFinishDate}</span>
-                            </div>
-                        </div>
+                        {(() => {
+                            const hasEspresso = stats.espressoStats && stats.espressoStats.totalBeans > 0;
+                            const hasFilter = stats.filterStats && stats.filterStats.totalBeans > 0;
+
+                            // 计算各类型的平均消耗和预计用完日期
+                            const espressoAverageConsumption = hasEspresso ? calculateAverageConsumption({
+                                ...stats,
+                                remainingWeight: stats.espressoStats.remainingWeight,
+                                consumedWeight: stats.espressoStats.consumedWeight,
+                                totalWeight: stats.espressoStats.totalWeight
+                            }, beans.filter(bean => bean.beanType === 'espresso')) : 0;
+
+                            const filterAverageConsumption = hasFilter ? calculateAverageConsumption({
+                                ...stats,
+                                remainingWeight: stats.filterStats.remainingWeight,
+                                consumedWeight: stats.filterStats.consumedWeight,
+                                totalWeight: stats.filterStats.totalWeight
+                            }, beans.filter(bean => bean.beanType === 'filter')) : 0;
+
+                            const espressoFinishDate = hasEspresso ? calculateEstimatedFinishDate({
+                                ...stats,
+                                remainingWeight: stats.espressoStats.remainingWeight,
+                                consumedWeight: stats.espressoStats.consumedWeight,
+                                totalWeight: stats.espressoStats.totalWeight
+                            }, stats.espressoStats.todayConsumption > 0 ? stats.espressoStats.todayConsumption : espressoAverageConsumption) : '';
+
+                            const filterFinishDate = hasFilter ? calculateEstimatedFinishDate({
+                                ...stats,
+                                remainingWeight: stats.filterStats.remainingWeight,
+                                consumedWeight: stats.filterStats.consumedWeight,
+                                totalWeight: stats.filterStats.totalWeight
+                            }, stats.filterStats.todayConsumption > 0 ? stats.filterStats.todayConsumption : filterAverageConsumption) : '';
+
+                            // 如果有两种豆子，显示两个独立的统计块
+                            if (hasEspresso && hasFilter) {
+                                return (
+                                    <>
+                                        {/* 意式豆统计 */}
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between items-center text-xs">
+                                                <span className="text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">意式豆</span>
+                                                <span className="text-neutral-800 dark:text-white font-mono">
+                                                    {formatNumber(stats.espressoStats.remainingWeight)}/{formatNumber(stats.espressoStats.totalWeight)}克
+                                                </span>
+                                            </div>
+
+                                            {/* 进度条 */}
+                                            <div className="relative h-1 bg-neutral-200 dark:bg-neutral-800">
+                                                {/* 剩余部分 - 实色（表示还有的） */}
+                                                <div
+                                                    className="absolute top-0 left-0 h-full bg-neutral-800 dark:bg-neutral-200 transition-all duration-300"
+                                                    style={{
+                                                        width: `${stats.espressoStats.totalWeight > 0 ? (stats.espressoStats.remainingWeight / stats.espressoStats.totalWeight) * 100 : 0}%`
+                                                    }}
+                                                />
+                                                {/* 消耗部分 - 斜线纹理（表示已用掉的） */}
+                                                <div
+                                                    className="absolute top-0 h-full transition-all duration-300"
+                                                    style={{
+                                                        left: `${stats.espressoStats.totalWeight > 0 ? (stats.espressoStats.remainingWeight / stats.espressoStats.totalWeight) * 100 : 0}%`,
+                                                        width: `${stats.espressoStats.totalWeight > 0 ? (stats.espressoStats.consumedWeight / stats.espressoStats.totalWeight) * 100 : 100}%`,
+                                                        background: 'repeating-linear-gradient(45deg, transparent, transparent 1px, rgba(0,0,0,0.15) 1px, rgba(0,0,0,0.15) 2px)'
+                                                    }}
+                                                />
+                                            </div>
+
+                                            {/* 消耗预估 */}
+                                            <div className="space-y-1 text-xs">
+                                                <div className="flex justify-between">
+                                                    <span className="text-neutral-600 dark:text-neutral-400">今日</span>
+                                                    <span className="text-neutral-800 dark:text-white font-mono">{formatNumber(stats.espressoStats.todayConsumption)}克</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-neutral-600 dark:text-neutral-400">平均</span>
+                                                    <span className="text-neutral-800 dark:text-white font-mono">{formatNumber(espressoAverageConsumption)}克/天</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-neutral-600 dark:text-neutral-400">预计用完</span>
+                                                    <span className="text-neutral-800 dark:text-white font-mono">{espressoFinishDate}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* 手冲豆统计 */}
+                                        <div className="space-y-2 border-t border-neutral-200 dark:border-neutral-800 pt-3">
+                                            <div className="flex justify-between items-center text-xs">
+                                                <span className="text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">手冲豆</span>
+                                                <span className="text-neutral-800 dark:text-white font-mono">
+                                                    {formatNumber(stats.filterStats.remainingWeight)}/{formatNumber(stats.filterStats.totalWeight)}克
+                                                </span>
+                                            </div>
+
+                                            {/* 进度条 */}
+                                            <div className="relative h-1 bg-neutral-200 dark:bg-neutral-800">
+                                                {/* 剩余部分 - 实色（表示还有的） */}
+                                                <div
+                                                    className="absolute top-0 left-0 h-full bg-neutral-800 dark:bg-neutral-200 transition-all duration-300"
+                                                    style={{
+                                                        width: `${stats.filterStats.totalWeight > 0 ? (stats.filterStats.remainingWeight / stats.filterStats.totalWeight) * 100 : 0}%`
+                                                    }}
+                                                />
+                                                {/* 消耗部分 - 斜线纹理（表示已用掉的） */}
+                                                <div
+                                                    className="absolute top-0 h-full transition-all duration-300"
+                                                    style={{
+                                                        left: `${stats.filterStats.totalWeight > 0 ? (stats.filterStats.remainingWeight / stats.filterStats.totalWeight) * 100 : 0}%`,
+                                                        width: `${stats.filterStats.totalWeight > 0 ? (stats.filterStats.consumedWeight / stats.filterStats.totalWeight) * 100 : 100}%`,
+                                                        background: 'repeating-linear-gradient(45deg, transparent, transparent 1px, rgba(0,0,0,0.15) 1px, rgba(0,0,0,0.15) 2px)'
+                                                    }}
+                                                />
+                                            </div>
+
+                                            {/* 消耗预估 */}
+                                            <div className="space-y-1 text-xs">
+                                                <div className="flex justify-between">
+                                                    <span className="text-neutral-600 dark:text-neutral-400">今日</span>
+                                                    <span className="text-neutral-800 dark:text-white font-mono">{formatNumber(stats.filterStats.todayConsumption)}克</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-neutral-600 dark:text-neutral-400">平均</span>
+                                                    <span className="text-neutral-800 dark:text-white font-mono">{formatNumber(filterAverageConsumption)}克/天</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-neutral-600 dark:text-neutral-400">预计用完</span>
+                                                    <span className="text-neutral-800 dark:text-white font-mono">{filterFinishDate}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </>
+                                );
+                            }
+
+                            // 如果只有一种豆子，显示对应的统计块
+                            if (hasEspresso) {
+                                return (
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between items-center text-xs">
+                                            <span className="text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">意式豆</span>
+                                            <span className="text-neutral-800 dark:text-white font-mono">
+                                                {formatNumber(stats.espressoStats.remainingWeight)}/{formatNumber(stats.espressoStats.totalWeight)}克
+                                            </span>
+                                        </div>
+
+                                        {/* 进度条 */}
+                                        <div className="relative h-1 bg-neutral-200 dark:bg-neutral-800">
+                                            {/* 剩余部分 - 实色（表示还有的） */}
+                                            <div
+                                                className="absolute top-0 left-0 h-full bg-neutral-800 dark:bg-neutral-200 transition-all duration-300"
+                                                style={{
+                                                    width: `${stats.espressoStats.totalWeight > 0 ? (stats.espressoStats.remainingWeight / stats.espressoStats.totalWeight) * 100 : 0}%`
+                                                }}
+                                            />
+                                            {/* 消耗部分 - 斜线纹理（表示已用掉的） */}
+                                            <div
+                                                className="absolute top-0 h-full transition-all duration-300"
+                                                style={{
+                                                    left: `${stats.espressoStats.totalWeight > 0 ? (stats.espressoStats.remainingWeight / stats.espressoStats.totalWeight) * 100 : 0}%`,
+                                                    width: `${stats.espressoStats.totalWeight > 0 ? (stats.espressoStats.consumedWeight / stats.espressoStats.totalWeight) * 100 : 100}%`,
+                                                    background: 'repeating-linear-gradient(45deg, transparent, transparent 1px, rgba(0,0,0,0.15) 1px, rgba(0,0,0,0.15) 2px)'
+                                                }}
+                                            />
+                                        </div>
+
+                                        {/* 消耗预估 */}
+                                        <div className="space-y-1 text-xs">
+                                            <div className="flex justify-between">
+                                                <span className="text-neutral-600 dark:text-neutral-400">今日</span>
+                                                <span className="text-neutral-800 dark:text-white font-mono">{formatNumber(stats.espressoStats.todayConsumption)}克</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-neutral-600 dark:text-neutral-400">平均</span>
+                                                <span className="text-neutral-800 dark:text-white font-mono">{formatNumber(espressoAverageConsumption)}克/天</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-neutral-600 dark:text-neutral-400">预计用完</span>
+                                                <span className="text-neutral-800 dark:text-white font-mono">{espressoFinishDate}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            }
+
+                            if (hasFilter) {
+                                return (
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between items-center text-xs">
+                                            <span className="text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">手冲豆</span>
+                                            <span className="text-neutral-800 dark:text-white font-mono">
+                                                {formatNumber(stats.filterStats.remainingWeight)}/{formatNumber(stats.filterStats.totalWeight)}克
+                                            </span>
+                                        </div>
+
+                                        {/* 进度条 */}
+                                        <div className="relative h-1 bg-neutral-200 dark:bg-neutral-800">
+                                            {/* 剩余部分 - 实色（表示还有的） */}
+                                            <div
+                                                className="absolute top-0 left-0 h-full bg-neutral-800 dark:bg-neutral-200 transition-all duration-300"
+                                                style={{
+                                                    width: `${stats.filterStats.totalWeight > 0 ? (stats.filterStats.remainingWeight / stats.filterStats.totalWeight) * 100 : 0}%`
+                                                }}
+                                            />
+                                            {/* 消耗部分 - 斜线纹理（表示已用掉的） */}
+                                            <div
+                                                className="absolute top-0 h-full transition-all duration-300"
+                                                style={{
+                                                    left: `${stats.filterStats.totalWeight > 0 ? (stats.filterStats.remainingWeight / stats.filterStats.totalWeight) * 100 : 0}%`,
+                                                    width: `${stats.filterStats.totalWeight > 0 ? (stats.filterStats.consumedWeight / stats.filterStats.totalWeight) * 100 : 100}%`,
+                                                    background: 'repeating-linear-gradient(45deg, transparent, transparent 1px, rgba(0,0,0,0.15) 1px, rgba(0,0,0,0.15) 2px)'
+                                                }}
+                                            />
+                                        </div>
+
+                                        {/* 消耗预估 */}
+                                        <div className="space-y-1 text-xs">
+                                            <div className="flex justify-between">
+                                                <span className="text-neutral-600 dark:text-neutral-400">今日</span>
+                                                <span className="text-neutral-800 dark:text-white font-mono">{formatNumber(stats.filterStats.todayConsumption)}克</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-neutral-600 dark:text-neutral-400">平均</span>
+                                                <span className="text-neutral-800 dark:text-white font-mono">{formatNumber(filterAverageConsumption)}克/天</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-neutral-600 dark:text-neutral-400">预计用完</span>
+                                                <span className="text-neutral-800 dark:text-white font-mono">{filterFinishDate}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            }
+
+                            // 如果没有任何豆子，显示总体统计（兜底情况）
+                            return (
+                                <div className="space-y-2">
+                                    <div className="flex justify-between items-center text-xs">
+                                        <span className="text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">容量概览</span>
+                                        <span className="text-neutral-800 dark:text-white font-mono">
+                                            {formatNumber(stats.remainingWeight)}/{formatNumber(stats.totalWeight)}克
+                                        </span>
+                                    </div>
+
+                                    {/* 进度条 */}
+                                    <div className="relative h-1 bg-neutral-200 dark:bg-neutral-800">
+                                        {/* 剩余部分 - 实色（表示还有的） */}
+                                        <div
+                                            className="absolute top-0 left-0 h-full bg-neutral-800 dark:bg-neutral-200 transition-all duration-300"
+                                            style={{
+                                                width: `${stats.totalWeight > 0 ? (stats.remainingWeight / stats.totalWeight) * 100 : 0}%`
+                                            }}
+                                        />
+                                        {/* 消耗部分 - 斜线纹理（表示已用掉的） */}
+                                        <div
+                                            className="absolute top-0 h-full transition-all duration-300"
+                                            style={{
+                                                left: `${stats.totalWeight > 0 ? (stats.remainingWeight / stats.totalWeight) * 100 : 0}%`,
+                                                width: `${stats.totalWeight > 0 ? (stats.consumedWeight / stats.totalWeight) * 100 : 100}%`,
+                                                background: 'repeating-linear-gradient(45deg, transparent, transparent 1px, rgba(0,0,0,0.15) 1px, rgba(0,0,0,0.15) 2px)'
+                                            }}
+                                        />
+                                    </div>
+
+                                    {/* 消耗预估 */}
+                                    <div className="space-y-1 text-xs">
+                                        <div className="flex justify-between">
+                                            <span className="text-neutral-600 dark:text-neutral-400">今日</span>
+                                            <span className="text-neutral-800 dark:text-white font-mono">{formatNumber(todayConsumption)}克</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-neutral-600 dark:text-neutral-400">平均</span>
+                                            <span className="text-neutral-800 dark:text-white font-mono">{formatNumber(averageConsumption)}克/天</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-neutral-600 dark:text-neutral-400">预计用完</span>
+                                            <span className="text-neutral-800 dark:text-white font-mono">{estimatedFinishDate}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })()}
+
+
                     </div>
                 </div>
 

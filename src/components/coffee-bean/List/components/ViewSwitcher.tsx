@@ -353,6 +353,11 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
         };
     }, [isFilterExpanded]);
 
+    // 统计视图时不显示任何筛选栏
+    if (viewMode === VIEW_OPTIONS.STATS) {
+        return null;
+    }
+
     return (
         <div className="pt-6 space-y-6 sticky top-0 bg-neutral-50 dark:bg-neutral-900 z-20 flex-none">
             {/* 视图切换与筛选栏 - 统一布局 */}
@@ -363,9 +368,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                             ? `${beansCount} 款咖啡豆${!hideTotalWeight && totalWeight ? `，共 ${totalWeight}` : ''}`
                             : viewMode === VIEW_OPTIONS.BLOGGER
                                 ? `${bloggerBeansCount || 0} 款 (${bloggerYear}) 咖啡豆`
-                                : viewMode === VIEW_OPTIONS.STATS
-                                    ? ``
-                                    : `${rankingBeansCount || 0} 款已评分咖啡豆`
+                                : `${rankingBeansCount || 0} 款已评分咖啡豆`
                         }
                     </div>
                 </div>

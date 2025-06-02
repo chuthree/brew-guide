@@ -43,7 +43,7 @@ const StatsCategories: React.FC<StatsCategoriesProps> = ({
                     <StatItem label="总重量" value={`${formatNumber(stats.totalWeight)}`} unit="克" />
                     <StatItem label="剩余重量" value={`${formatNumber(stats.remainingWeight)}`} unit="克" />
                     <StatItem label="已消耗重量" value={`${formatNumber(stats.consumedWeight)}`} unit="克" />
-                    <StatItem label="消耗比例" value={`${stats.totalWeight > 0 ? formatNumber(stats.consumedWeight / stats.totalWeight * 100) : 0}`} unit="%" />
+                    <StatItem label="消耗比例" value={`${stats.totalWeight > 0 ? formatNumber((stats.consumedWeight / stats.totalWeight) * 100) : '0'}`} unit="%" />
                     <StatItem label="今日消耗" value={`${formatNumber(todayConsumption)}`} unit="克" />
                 </StatCategory>
                 
