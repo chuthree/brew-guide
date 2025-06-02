@@ -424,13 +424,13 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
                 <div className="cursor-pointer">
                     <div className="flex items-baseline justify-between">
                         <div className="flex items-baseline gap-3 min-w-0 overflow-hidden">
-                            <h3 className="text-xs font-normal tracking-wider truncate">
+                            <h3 className="text-xs font-medium text-neutral-800 dark:text-neutral-100 tracking-wider truncate">
                                 不使用咖啡豆
                             </h3>
                         </div>
                     </div>
                     <div className="mt-2">
-                        <p className="text-xs font-light">跳过咖啡豆选择</p>
+                        <p className="text-xs font-medium text-neutral-600 dark:text-neutral-400">跳过咖啡豆选择</p>
                     </div>
                 </div>
             </div>
@@ -470,23 +470,71 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
                     }
                 }
 
-                // 准备简洁的信息列表
-                const items = [];
+                // 格式化数字显示，整数时不显示小数点
+                const formatNumber = (value: string | undefined): string =>
+                    !value ? '0' : (Number.isInteger(parseFloat(value)) ? Math.floor(parseFloat(value)).toString() : value);
+
+                // 格式化日期显示
+                const formatDateShort = (dateStr: string): string => {
+                    const date = new Date(dateStr);
+                    const month = date.getMonth() + 1;
+                    const day = date.getDate();
+                    return `${month}/${day}`;
+                };
+
+                // 格式化克价显示（只显示每克价格）
+                const formatPricePerGram = (price: string, capacity: string): string => {
+                    const priceNum = parseFloat(price);
+                    const capacityNum = parseFloat(capacity.replace('g', ''));
+                    if (isNaN(priceNum) || isNaN(capacityNum) || capacityNum === 0) return '';
+                    const pricePerGram = priceNum / capacityNum;
+                    return `${pricePerGram.toFixed(2)}元/克`;
+                };
+
+                // 构建参数信息项（使用与咖啡豆仓库列表相同的格式）
+                const infoItems = [];
+
+                // 添加烘焙日期（在途状态不显示）
+                if (bean.roastDate && !bean.isInTransit) {
+                    infoItems.push(formatDateShort(bean.roastDate));
+                }
 
                 // 添加容量信息
                 const remaining = typeof bean.remaining === 'string' ? parseFloat(bean.remaining) : bean.remaining ?? 0;
                 const capacity = typeof bean.capacity === 'string' ? parseFloat(bean.capacity) : bean.capacity ?? 0;
                 if (remaining > 0 && capacity > 0) {
-                    items.push(`容量 ${remaining}/${capacity} g`);
+                    infoItems.push(`${formatNumber(bean.remaining)}/${formatNumber(bean.capacity)}克`);
                 }
 
-                // 添加烘焙日期（在途状态不显示）
-                if (bean.roastDate && !bean.isInTransit) {
-                    items.push(`烘焙日期 ${bean.roastDate}`);
+                // 添加价格信息
+                if (bean.price && bean.capacity) {
+                    infoItems.push(formatPricePerGram(bean.price, bean.capacity));
                 }
 
                 // 确定是否高亮当前咖啡豆
                 const isHighlighted = highlightedBeanId === bean.id;
+
+                // 获取状态圆点的颜色
+                const getStatusDotColor = (phase: string): string => {
+                    switch (phase) {
+                        case '养豆期':
+                            return 'bg-amber-400'; // 黄色
+                        case '赏味期':
+                            return 'bg-green-400'; // 绿色
+                        case '衰退期':
+                            return 'bg-red-400'; // 红色
+                        case '在途':
+                            return 'bg-blue-400'; // 蓝色
+                        case '冰冻':
+                            return 'bg-cyan-400'; // 冰蓝色
+                        case '未知':
+                        default:
+                            return 'bg-neutral-400'; // 灰色
+                    }
+                };
+
+                // 获取当前豆子的状态阶段
+                const { phase } = getFlavorInfo(bean);
 
                 return (
                     <div
@@ -499,39 +547,49 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
                         onClick={() => onSelect(bean.id, bean)}
                     >
                         <div className="cursor-pointer">
-                            <div className="flex gap-4">
-                                {/* 左侧图片区域 - 正方形显示 */}
-                                {bean.image && (
-                                    <div className="w-16 h-16 relative shrink-0 border border-neutral-200 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
-                                        <img
-                                            src={bean.image}
-                                            alt={bean.name || '咖啡豆图片'}
-                                            className="w-full h-full object-cover"
-                                            onError={(e) => {
-                                                const target = e.target as HTMLImageElement;
-                                                target.style.display = 'none';
-                                            }}
-                                        />
+                            <div className="flex gap-3">
+                                {/* 左侧图片区域 - 固定显示，缩小尺寸 */}
+                                <div className="relative self-start">
+                                    <div className="w-14 h-14 relative shrink-0 rounded border border-neutral-200/40 dark:border-neutral-900/60 bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
+                                        {bean.image ? (
+                                            <img
+                                                src={bean.image}
+                                                alt={bean.name || '咖啡豆图片'}
+                                                className="w-full h-full object-cover"
+                                                onError={(e) => {
+                                                    const target = e.target as HTMLImageElement;
+                                                    target.style.display = 'none';
+                                                }}
+                                            />
+                                        ) : (
+                                            <div className="absolute inset-0 flex items-center justify-center text-xs font-medium text-neutral-400 dark:text-neutral-600 bg-neutral-200/20 dark:bg-neutral-900/80">
+                                                {bean.name ? bean.name.charAt(0) : '豆'}
+                                            </div>
+                                        )}
                                     </div>
-                                )}
+
+                                    {/* 状态圆点 - 右下角，边框超出图片边界 */}
+                                    <div className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full ${getStatusDotColor(phase)} border-2 border-neutral-50 dark:border-neutral-900`} />
+                                </div>
 
                                 {/* 右侧内容区域 - 与图片等高 */}
-                                <div className={`flex-1 min-w-0 flex flex-col ${bean.image ? 'h-16 justify-between' : 'min-h-[2.5rem] justify-start gap-1.5'}`}>
-                                    {/* 顶部：咖啡豆名称和烘焙度 */}
-                                    <div className="flex-1 min-w-0 overflow-hidden">
-                                        <div className="text-xs font-normal text-neutral-800 dark:text-neutral-100 leading-tight line-clamp-2 text-justify">
-                                            {bean.name}
-                                            {bean.roastLevel && ` ${bean.roastLevel}`}
-                                            <span className={statusClass}> {freshStatus}</span>
-                                        </div>
+                                <div className="flex-1 min-w-0 flex flex-col justify-center gap-y-1.5 h-14">
+                                    {/* 咖啡豆名称和烘焙度 */}
+                                    <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100 leading-tight line-clamp-2 text-justify">
+                                        {bean.name}
+                                        {bean.roastLevel && ` ${bean.roastLevel}`}
+                                        <span className={statusClass}> {freshStatus}</span>
                                     </div>
 
-                                    {/* 底部：其他信息 */}
-                                    <div className="space-y-1">
-                                        {items.map((item, i) => (
-                                            <div key={i} className="text-[11px] tracking-widest text-neutral-600 dark:text-neutral-400 truncate leading-none">
-                                                {item}
-                                            </div>
+                                    {/* 其他信息 */}
+                                    <div className="flex items-center text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
+                                        {infoItems.map((item, i) => (
+                                            <React.Fragment key={i}>
+                                                <span className="shrink-0">{item}</span>
+                                                {i < infoItems.length - 1 && (
+                                                    <span className="mx-2 text-neutral-400 dark:text-neutral-600">·</span>
+                                                )}
+                                            </React.Fragment>
                                         ))}
                                     </div>
                                 </div>

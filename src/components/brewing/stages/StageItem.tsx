@@ -141,14 +141,30 @@ const StageItem: React.FC<StageItemProps> = ({
 
     // 判断是否为当前阶段
     const isCurrentStage = activeTab === '注水' && index === currentStage;
-    
-    // 获取文本样式
-    const textStyle = useMemo(() => 
-        isCurrentStage
-            ? 'text-neutral-800 dark:text-neutral-100'
-            : 'text-neutral-600 dark:text-neutral-400',
-        [isCurrentStage]
-    );
+
+    // 获取文本样式 - 统一使用相同的样式，通过透明度区分状态
+    const textStyle = useMemo(() => {
+        if (activeTab === '方案') {
+            // 方案列表使用统一的样式，不区分当前状态
+            return 'text-neutral-600 dark:text-neutral-400';
+        } else {
+            // 注水步骤使用统一样式
+            return 'text-neutral-600 dark:text-neutral-400';
+        }
+    }, [activeTab]);
+
+    // 获取标题样式 - 统一使用相同的样式
+    const titleStyle = useMemo(() => {
+        return 'text-neutral-800 dark:text-neutral-100';
+    }, []);
+
+    // 获取透明度样式 - 注水步骤中未到达的步骤降低透明度
+    const opacityStyle = useMemo(() => {
+        if (activeTab === '注水' && !isCurrentStage && index > currentStage) {
+            return 'opacity-50';
+        }
+        return '';
+    }, [activeTab, isCurrentStage, index, currentStage]);
 
     // 处理点击事件，如果是分隔符则切换折叠状态
     const handleClick = (e: React.MouseEvent) => {
@@ -200,7 +216,7 @@ const StageItem: React.FC<StageItemProps> = ({
                     onClick={handleClick}
                 >
                     <div className="grow border-t border-neutral-200 dark:border-neutral-800"></div>
-                    <button className="flex items-center justify-center mx-3 text-[10px] text-neutral-600 dark:text-neutral-400">
+                    <button className="flex items-center justify-center mx-3 text-[10px] font-medium text-neutral-600 dark:text-neutral-400">
                         {step.dividerText || ''}
                         <svg
                             className={`ml-1 w-3 h-3 transition-transform duration-200 ${isCommonSectionCollapsed ? 'rotate-180' : ''}`}
@@ -217,7 +233,7 @@ const StageItem: React.FC<StageItemProps> = ({
         }
 
         return (
-            <div className={`group relative border-l ${isWaitingStage ? 'border-dashed' : ''} border-neutral-200 pl-6 dark:border-neutral-800 ${textStyle}`}>
+            <div className={`group relative border-l ${isWaitingStage ? 'border-dashed' : ''} border-neutral-200 pl-6 dark:border-neutral-800 ${textStyle} ${opacityStyle}`}>
                 {isCurrentStage && (
                     <motion.div
                         className={`absolute -left-px top-0 h-full w-px ${isWaitingStage ? 'bg-neutral-600 dark:bg-neutral-400' : 'bg-neutral-800 dark:bg-white'}`}
@@ -232,12 +248,12 @@ const StageItem: React.FC<StageItemProps> = ({
                             {step.icon && (
                                 <span className="text-xs mr-1">{step.icon}</span>
                             )}
-                            <h3 className={`text-xs font-normal tracking-wider truncate ${isCurrentStage ? 'text-neutral-800 dark:text-neutral-100' : ''}`}>
+                            <h3 className={`text-xs font-medium tracking-wider truncate ${titleStyle}`}>
                                 {step.title}
                             </h3>
                             {/* 注水阶段显示时间和水量 */}
                             {activeTab === '注水' && selectedMethod && step.originalIndex !== undefined && step.items && (
-                                <div className="flex items-baseline gap-3 text-[10px] text-neutral-600 dark:text-neutral-400 shrink-0">
+                                <div className="flex items-baseline gap-3 text-xs font-medium text-neutral-800 dark:text-neutral-100 shrink-0">
                                     {/* 显示时间：优先使用endTime，其次是note，再次是time属性 */}
                                     {(step.endTime !== undefined || step.note || step.time !== undefined) && (
                                         <>
@@ -268,12 +284,12 @@ const StageItem: React.FC<StageItemProps> = ({
                             )}
                         </div>
                         {step.description && (
-                            <p className="text-xs text-neutral-600 dark:text-neutral-400 truncate">
+                            <p className={`text-xs font-medium truncate ${textStyle}`}>
                                 {step.description}
                             </p>
                         )}
                         {step.detail && (
-                            <p className="text-xs text-neutral-600 dark:text-neutral-400 truncate">
+                            <p className={`text-xs font-medium truncate ${textStyle}`}>
                                 {step.detail}
                             </p>
                         )}
@@ -289,11 +305,11 @@ const StageItem: React.FC<StageItemProps> = ({
                     </div>
                     <div className="mt-2">
                         {activeTab === '注水' && step.items ? (
-                            <p className={`text-xs font-light ${textStyle}`}>{step.items[1]}</p>
+                            <p className="text-xs font-medium text-neutral-600 dark:text-neutral-400">{step.items[1]}</p>
                         ) : step.items ? (
                             <ul className="space-y-1">
                                 {step.items.map((item: string, i: number) => (
-                                    <li key={i} className="text-xs font-light text-neutral-600 dark:text-neutral-400">
+                                    <li key={i} className={`text-xs font-medium ${textStyle}`}>
                                         {item}
                                     </li>
                                 ))}
@@ -307,11 +323,7 @@ const StageItem: React.FC<StageItemProps> = ({
 
     return (
         <div
-            className={`group relative ${
-                currentStage === index
-                    ? 'text-neutral-800 dark:text-neutral-100'
-                    : 'text-neutral-600 dark:text-neutral-400'
-            }`}
+            className="group relative"
             onClick={handleClick}
         >
             {renderStageContent()}

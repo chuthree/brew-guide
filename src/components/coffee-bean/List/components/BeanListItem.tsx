@@ -354,7 +354,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                                         {formatDateShort(bean.roastDate)}
                                     </span>
                                     {(bean.capacity && bean.remaining) || (!hidePrice && bean.price && bean.capacity) ? (
-                                        <span className="mx-2 text-neutral-400 dark:text-neutral-500">·</span>
+                                        <span className="mx-2 text-neutral-400 dark:text-neutral-600">·</span>
                                     ) : null}
                                 </>
                             )}
@@ -375,7 +375,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                                         </span>
                                     </span>
                                     {!hidePrice && bean.price && bean.capacity ? (
-                                        <span className="mx-2 text-neutral-400 dark:text-neutral-500">·</span>
+                                        <span className="mx-2 text-neutral-400 dark:text-neutral-600">·</span>
                                     ) : null}
                                 </>
                             )}

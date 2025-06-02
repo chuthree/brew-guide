@@ -710,13 +710,13 @@ const TabContent: React.FC<TabContentProps> = ({
                                 <div className="cursor-pointer">
                                     <div className="flex items-baseline justify-between">
                                         <div className="flex items-baseline gap-3 min-w-0 overflow-hidden">
-                                            <h3 className="text-xs font-normal tracking-wider truncate">
+                                            <h3 className="text-xs font-medium text-neutral-800 dark:text-neutral-100 tracking-wider truncate">
                                                 跳过方案选择
                                             </h3>
                                         </div>
                                     </div>
                                     <div className="mt-2">
-                                        <p className="text-xs font-light">直接跳到记录</p>
+                                        <p className="text-xs font-medium text-neutral-600 dark:text-neutral-400">直接跳到记录</p>
                                     </div>
                                 </div>
                             </div>
@@ -980,13 +980,13 @@ const TabContent: React.FC<TabContentProps> = ({
                                 <div className="cursor-pointer">
                                     <div className="flex items-baseline justify-between">
                                         <div className="flex items-baseline gap-3 min-w-0 overflow-hidden">
-                                            <h3 className="text-xs font-normal tracking-wider truncate">
+                                            <h3 className="text-xs font-medium text-neutral-800 dark:text-neutral-100 tracking-wider truncate">
                                                 跳过方案选择
                                             </h3>
                                         </div>
                                     </div>
                                     <div className="mt-2">
-                                        <p className="text-xs font-light">直接跳到记录</p>
+                                        <p className="text-xs font-medium text-neutral-600 dark:text-neutral-400">直接跳到记录</p>
                                     </div>
                                 </div>
                             </div>

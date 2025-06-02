@@ -8,7 +8,7 @@ import { SettingsOptions } from '@/components/settings/Settings'
 import { formatGrindSize } from '@/lib/utils/grindUtils'
 import { BREWING_EVENTS, ParameterInfo } from '@/lib/brewing/constants'
 import { listenToEvent } from '@/lib/brewing/events'
-import { updateParameterInfo } from '@/lib/brewing/parameters'
+import { updateParameterInfo, getEquipmentName } from '@/lib/brewing/parameters'
 import { useTranslations } from 'next-intl'
 import { Equal, ArrowLeft, ChevronsUpDown } from 'lucide-react'
 import { saveStringState } from '@/lib/core/statePersistence'
@@ -418,7 +418,7 @@ const EditableParameter: React.FC<EditableParameterProps> = ({
 
     return (
         <span
-            className={`group relative inline-flex items-center ${className} cursor-pointer min-w-0`}
+            className={`group relative inline-flex items-center ${className} cursor-pointer min-w-0 border-b border-dashed border-neutral-300 dark:border-neutral-600 pb-0.5`}
             onClick={() => setIsEditing(true)}
         >
             {prefix && <span className="shrink-0">{prefix}</span>}
@@ -430,7 +430,7 @@ const EditableParameter: React.FC<EditableParameterProps> = ({
                     onChange={(e) => setTempValue(e.target.value)}
                     onBlur={handleSubmit}
                     onKeyDown={handleKeyDown}
-                    className="w-full bg-transparent text-center text-[10px] outline-hidden px-0.5"
+                    className="w-full bg-transparent text-center text-xs font-medium outline-hidden px-0.5"
                 />
             ) : (
                 <span className="inline-flex items-center whitespace-nowrap">
@@ -651,6 +651,12 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
         }
     }
 
+    // 获取器具名称
+    const getSelectedEquipmentName = () => {
+        if (!selectedEquipment) return null
+        return getEquipmentName(selectedEquipment, equipmentList, customEquipments)
+    }
+
     return (
         <motion.div
             className="sticky top-0 z-20 pt-safe-top bg-neutral-50/95 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800"
@@ -851,7 +857,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                         }}
                                         className="overflow-hidden"
                                     >
-                                        <div className="px-6 py-2 mt-2 bg-neutral-100 dark:bg-neutral-800 text-[10px] text-neutral-500 dark:text-neutral-400 relative">
+                                        <div className="px-6 py-2 mt-2 bg-neutral-100 dark:bg-neutral-800 text-xs font-medium text-neutral-500 dark:text-neutral-400 relative">
                                             <div className="flex items-center min-w-0 overflow-x-auto no-scrollbar max-w-full">
                                                 {parameterInfo.method && (
                                                     <span
@@ -861,6 +867,11 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                                             setActiveTab('方案');
                                                         }}
                                                     >
+                                                        {getSelectedEquipmentName() && (
+                                                            <>
+                                                                {getSelectedEquipmentName()} ·
+                                                            </>
+                                                        )}
                                                         {parameterInfo.method}
                                                     </span>
                                                 )}
@@ -950,6 +961,12 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                                                 }
                                                             }}
                                                         >
+                                                            {getSelectedEquipmentName() && (
+                                                                <>
+                                                                    <span className="whitespace-nowrap">{getSelectedEquipmentName()}</span>
+                                                                    <span className="shrink-0">·</span>
+                                                                </>
+                                                            )}
                                                             {espressoUtils.isEspresso(selectedMethod) ? (
                                                                 <>
                                                                     <span className="whitespace-nowrap">
