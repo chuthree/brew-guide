@@ -385,7 +385,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
 
                         {/* 绝对居中的标题 */}
                         <DrawerTitle className="absolute left-1/2 transform -translate-x-1/2 text-base font-medium text-neutral-800 dark:text-neutral-100 leading-tight max-w-[50%]">
-                            <div className="line-clamp-2 text-center">
+                            <div className="truncate text-center">
                                 {searchQuery ? (
                                     <HighlightText
                                         text={bean?.name || '未命名'}
