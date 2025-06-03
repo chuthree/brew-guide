@@ -1207,7 +1207,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         }
     }, [activeMainTab, hasCoffeeBeans, setActiveBrewingStep, setActiveTab]);
 
-    // 简化处理保存咖啡豆
+    // 简化处理保存咖啡豆 - 统一数据更新机制
     const handleSaveBean = async (bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>) => {
         try {
             const isFirstBean = !(await CoffeeBeanManager.getAllBeans()).length;
@@ -1224,23 +1224,23 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             setShowBeanForm(false);
             setEditingBean(null);
 
-            // 如果当前在咖啡豆标签页，触发一次标签切换来刷新列表
-            if (activeMainTab === '咖啡豆') {
-                // 通过临时切换到其他标签再切回来，触发组件重新加载
-                saveMainTabPreference('冲煮');
-                setActiveMainTab('冲煮');
-                setTimeout(() => {
-                    saveMainTabPreference('咖啡豆');
-                    setActiveMainTab('咖啡豆');
-                }, 10);
-            }
+            // 统一的数据更新通知机制
+            // 1. 触发咖啡豆数据变更事件，让所有相关组件监听并更新
+            window.dispatchEvent(
+                new CustomEvent('coffeeBeanDataChanged', {
+                    detail: {
+                        action: editingBean ? 'update' : 'add',
+                        beanId: editingBean?.id,
+                        isFirstBean: isFirstBean
+                    }
+                })
+            );
 
-            // 更新咖啡豆状态
+            // 2. 更新咖啡豆状态
             handleBeanListChange();
 
-            // 判断是否是首次添加咖啡豆，如果是则触发特殊事件
+            // 3. 判断是否是首次添加咖啡豆，如果是则触发特殊事件
             if (isFirstBean) {
-                // 触发首次添加咖啡豆的事件
                 window.dispatchEvent(
                     new CustomEvent('coffeeBeanListChanged', {
                         detail: { hasBeans: true, isFirstBean: true }
@@ -1248,7 +1248,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 );
             }
 
-            // 异步更新状态后立即检查一次咖啡豆状态
+            // 4. 异步更新状态后立即检查一次咖啡豆状态
             setTimeout(() => {
                 checkCoffeeBeans();
             }, 50);

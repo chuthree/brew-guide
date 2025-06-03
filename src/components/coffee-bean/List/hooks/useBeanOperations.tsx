@@ -3,118 +3,102 @@
 import { useState } from 'react'
 import { ExtendedCoffeeBean } from '../types'
 import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager'
-import { globalCache } from '../globalCache'
 
 export const useBeanOperations = () => {
     const [forceRefreshKey, setForceRefreshKey] = useState(0)
 
-    // 处理添加咖啡豆 - 优化为立即更新UI和全局缓存
+    // 处理添加咖啡豆 - 简化为直接存储更新，依赖统一事件机制
     const handleSaveBean = async (bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>, editingBean: ExtendedCoffeeBean | null) => {
         try {
-            if (editingBean) {
-                // 立即更新本地状态，先乐观更新UI
-                const optimisticBean = {
-                    ...editingBean,
-                    ...bean
-                };
-                
-                // 更新全局缓存
-                globalCache.beans = globalCache.beans.map(b =>
-                    b.id === editingBean.id ? optimisticBean : b
-                );
-                
-                // 异步更新本地存储
-                await CoffeeBeanManager.updateBean(editingBean.id, bean);
-                
-                // 强制刷新数据
-                setForceRefreshKey(prev => prev + 1);
-                
-                return { success: true, bean: optimisticBean };
-            } else {
-                // 添加新咖啡豆 - 创建临时ID以便乐观更新UI
-                const tempId = 'temp_' + Date.now();
-                const tempBean = {
-                    ...bean,
-                    id: tempId,
-                    timestamp: Date.now()
-                } as ExtendedCoffeeBean;
-                
-                // 立即更新UI
-                globalCache.beans = [...globalCache.beans, tempBean];
-                
-                // 异步保存到存储
-                const result = await CoffeeBeanManager.addBean(bean);
-                
-                // 强制刷新数据
-                setForceRefreshKey(prev => prev + 1);
+            let resultBean: ExtendedCoffeeBean;
 
-                // 检查是否是首次添加咖啡豆并触发事件
-                const allBeans = await CoffeeBeanManager.getAllBeans();
-                if (allBeans.length === 1) {
-                    // 触发全局事件，通知应用程序现在有咖啡豆了
-                    const event = new CustomEvent('coffeeBeanListChanged', {
-                        detail: { hasBeans: true, isFirstBean: true }
-                    });
-                    window.dispatchEvent(event);
-                } else {
-                    // 一般性更新，仍然触发事件
-                    const event = new CustomEvent('coffeeBeanListChanged', {
-                        detail: { hasBeans: true }
-                    });
-                    window.dispatchEvent(event);
+            if (editingBean) {
+                // 更新现有咖啡豆
+                const updatedBean = await CoffeeBeanManager.updateBean(editingBean.id, bean);
+                if (!updatedBean) {
+                    throw new Error('更新咖啡豆失败');
                 }
-                
-                return { success: true, bean: result };
+                resultBean = updatedBean as ExtendedCoffeeBean;
+
+                // 触发数据更新事件
+                window.dispatchEvent(
+                    new CustomEvent('coffeeBeanDataChanged', {
+                        detail: {
+                            action: 'update',
+                            beanId: editingBean.id
+                        }
+                    })
+                );
+            } else {
+                // 添加新咖啡豆
+                const newBean = await CoffeeBeanManager.addBean(bean);
+                resultBean = newBean as ExtendedCoffeeBean;
+
+                // 触发数据更新事件
+                window.dispatchEvent(
+                    new CustomEvent('coffeeBeanDataChanged', {
+                        detail: {
+                            action: 'add',
+                            beanId: newBean.id,
+                            isFirstBean: false // 这里会在主页面中重新计算
+                        }
+                    })
+                );
             }
+
+            return { success: true, bean: resultBean };
         } catch (error) {
             console.error('保存咖啡豆失败:', error);
             return { success: false, error };
         }
     };
 
-    // 处理咖啡豆删除 - 优化为立即更新UI
+    // 处理咖啡豆删除 - 使用统一事件机制
     const handleDelete = async (bean: ExtendedCoffeeBean) => {
         if (!window.confirm(`确认要删除咖啡豆"${bean.name}"吗？`)) {
             return { success: false, canceled: true };
         }
-        
+
         try {
-            // 立即更新UI
-            globalCache.beans = globalCache.beans.filter(b => b.id !== bean.id);
-            
-            // 异步执行删除操作
+            // 执行删除操作
             const success = await CoffeeBeanManager.deleteBean(bean.id);
-            
+
             if (!success) {
-                // 如果删除失败，重新加载数据
-                setForceRefreshKey(prev => prev + 1);
                 return { success: false, error: new Error('删除咖啡豆失败') };
-            } else {
-                // 触发自定义事件以通知组件更新
-                window.dispatchEvent(new CustomEvent('coffeeBeansUpdated'));
-                return { success: true };
             }
+
+            // 触发数据更新事件
+            window.dispatchEvent(
+                new CustomEvent('coffeeBeanDataChanged', {
+                    detail: {
+                        action: 'delete',
+                        beanId: bean.id
+                    }
+                })
+            );
+
+            return { success: true };
         } catch (error) {
             console.error('删除咖啡豆失败:', error);
-            // 重新加载数据恢复状态
-            setForceRefreshKey(prev => prev + 1);
             return { success: false, error };
         }
     };
 
-    // 保存咖啡豆评分 - 优化为立即更新UI
+    // 保存咖啡豆评分 - 使用统一事件机制
     const handleSaveRating = async (id: string, ratings: Partial<ExtendedCoffeeBean>) => {
         try {
             const updatedBean = await CoffeeBeanManager.updateBeanRatings(id, ratings);
             if (updatedBean) {
-                // 更新全局缓存
-                globalCache.beans = globalCache.beans.map(b =>
-                    b.id === updatedBean.id ? updatedBean : b
+                // 触发数据更新事件
+                window.dispatchEvent(
+                    new CustomEvent('coffeeBeanDataChanged', {
+                        detail: {
+                            action: 'update',
+                            beanId: id
+                        }
+                    })
                 );
 
-                // 触发更新
-                window.dispatchEvent(new CustomEvent('coffeeBeansUpdated'));
-                
                 return { success: true, bean: updatedBean };
             }
             return { success: false, error: new Error('更新评分失败') };
@@ -124,16 +108,13 @@ export const useBeanOperations = () => {
         }
     };
 
-    // 处理剩余量更新
+    // 处理剩余量更新 - 使用统一事件机制
     const handleRemainingUpdate = async (beanId: string, newValue: string) => {
         try {
-            const beanToUpdate = globalCache.beans.find(bean => bean.id === beanId);
-            if (!beanToUpdate) return { success: false, error: new Error('找不到咖啡豆') };
-
             // 验证输入值
             let valueToSave = newValue.trim();
             if (valueToSave === '') valueToSave = '0';
-            
+
             // 确保是有效数字
             const numValue = parseFloat(valueToSave);
             if (isNaN(numValue) || numValue < 0) {
@@ -143,23 +124,19 @@ export const useBeanOperations = () => {
                 valueToSave = numValue.toFixed(1);
             }
 
-            // 优化UI更新：先更新全局缓存
-            globalCache.beans = globalCache.beans.map(b => {
-                if (b.id === beanId) {
-                    return { ...b, remaining: valueToSave };
-                }
-                return b;
-            });
-
-            // 异步更新数据库
+            // 更新数据库
             await CoffeeBeanManager.updateBean(beanId, { remaining: valueToSave });
 
-            // 触发自定义事件以通知其他组件更新
-            window.dispatchEvent(new CustomEvent('coffeeBeansUpdated'));
-            
-            // 强制刷新
-            setForceRefreshKey(prev => prev + 1);
-            
+            // 触发数据更新事件
+            window.dispatchEvent(
+                new CustomEvent('coffeeBeanDataChanged', {
+                    detail: {
+                        action: 'update',
+                        beanId: beanId
+                    }
+                })
+            );
+
             return { success: true, value: valueToSave };
         } catch (error) {
             console.error('更新剩余量失败:', error);
@@ -167,45 +144,38 @@ export const useBeanOperations = () => {
         }
     };
 
-    // 处理快捷减量按钮点击
+    // 处理快捷减量按钮点击 - 使用统一事件机制
     const handleQuickDecrement = async (beanId: string, currentValue: string, decrementAmount: number) => {
         try {
-            const beanToUpdate = globalCache.beans.find(bean => bean.id === beanId);
-            if (!beanToUpdate) return { success: false, error: new Error('找不到咖啡豆') };
-            
             // 获取当前值（不带单位）
             const currentValueNum = parseFloat(currentValue);
             if (isNaN(currentValueNum)) return { success: false, error: new Error('当前值无效') };
-            
+
             // 计算新值，确保不小于0
             const newValue = Math.max(0, currentValueNum - decrementAmount);
-            
+
             // 是否减到0（剩余量不足）
             const reducedToZero = currentValueNum < decrementAmount;
-            
+
             // 格式化为保留一位小数的字符串
             const formattedValue = newValue.toFixed(1);
-            
-            // 更新全局缓存
-            globalCache.beans = globalCache.beans.map(b => {
-                if (b.id === beanId) {
-                    return { ...b, remaining: formattedValue };
-                }
-                return b;
-            });
-            
-            // 强制立即刷新UI
-            setForceRefreshKey(prev => prev + 1);
-            
-            // 异步更新数据库
+
+            // 更新数据库
             await CoffeeBeanManager.updateBean(beanId, { remaining: formattedValue });
-            
-            // 触发自定义事件以通知其他组件更新
-            window.dispatchEvent(new CustomEvent('coffeeBeansUpdated'));
-            
-            return { 
-                success: true, 
-                value: formattedValue, 
+
+            // 触发数据更新事件
+            window.dispatchEvent(
+                new CustomEvent('coffeeBeanDataChanged', {
+                    detail: {
+                        action: 'update',
+                        beanId: beanId
+                    }
+                })
+            );
+
+            return {
+                success: true,
+                value: formattedValue,
                 reducedToZero
             };
         } catch (error) {

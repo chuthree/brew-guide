@@ -274,6 +274,34 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         }
     }, [isOpen, forceRefreshKey, loadBeans, loadRatedBeans, loadBloggerBeans]);
 
+    // 监听统一的咖啡豆数据更新事件
+    useEffect(() => {
+        const handleCoffeeBeanDataChanged = async (event: CustomEvent) => {
+            const { action, beanId } = event.detail;
+            console.log('咖啡豆数据变更事件:', { action, beanId });
+
+            // 清除CoffeeBeanManager的缓存，确保获取最新数据
+            CoffeeBeanManager.clearCache();
+
+            // 强制重新加载数据
+            try {
+                const loadedBeans = await CoffeeBeanManager.getAllBeans() as ExtendedCoffeeBean[];
+                setBeans(loadedBeans);
+                globalCache.beans = loadedBeans;
+                updateFilteredBeansAndCategories(loadedBeans);
+            } catch (error) {
+                console.error("重新加载咖啡豆数据失败:", error);
+            }
+        };
+
+        // 监听数据变更事件
+        window.addEventListener('coffeeBeanDataChanged', handleCoffeeBeanDataChanged as unknown as EventListener);
+
+        return () => {
+            window.removeEventListener('coffeeBeanDataChanged', handleCoffeeBeanDataChanged as unknown as EventListener);
+        };
+    }, [updateFilteredBeansAndCategories]);
+
     // 监听咖啡豆更新事件
     useEffect(() => {
         const handleBeansUpdated = () => {
