@@ -595,7 +595,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
             <div className="grow space-y-6 pb-20">
                 {/* 笔记图片 */}
                 <div className="space-y-2 w-full">
-                    <label className="block text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
+                    <label className="block text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
                         笔记图片
                     </label>
                     <div className="flex items-center justify-center relative">
@@ -669,7 +669,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
 
                 {/* 咖啡豆信息 */}
                 <div className="space-y-4">
-                    <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
+                    <div className="text-xs font-medium  tracking-widest text-neutral-500 dark:text-neutral-400">
                         {initialData.coffeeBean ? (
                             // 显示选择的咖啡豆信息，直接在标题后面
                             <>咖啡豆信息 · {formData.coffeeBeanInfo.name || '未知咖啡豆'}</>
@@ -728,7 +728,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                 {/* 添加方案参数编辑 - 只在编辑记录时显示 */}
                 {initialData?.id && (
                 <div className="space-y-4">
-                    <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
+                    <div className="text-[10px] font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
                         方案参数
                     </div>
                     <div className="grid grid-cols-4 gap-6">
@@ -794,13 +794,13 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                 {/* 风味评分 */}
                 <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                        <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
+                        <div className="text-xs font-medium  tracking-widest text-neutral-500 dark:text-neutral-400">
                             风味评分
                         </div>
                         <button
                             type="button"
                             onClick={() => setShowFlavorRatings(!showFlavorRatings)}
-                            className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400"
+                            className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400"
                         >
                             [ {showFlavorRatings ? '收起' : '展开'} ]
                         </button>
@@ -811,7 +811,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                             {Object.entries(formData.taste).map(([key, value]) => (
                                 <div key={key} className="space-y-2">
                                     <div className="flex items-center justify-between">
-                                        <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
+                                        <div className="text-xs font-medium  tracking-widest text-neutral-500 dark:text-neutral-400">
                                             {
                                                 {
                                                     acidity: '酸度',
@@ -821,7 +821,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                                                 }[key]
                                             }
                                         </div>
-                                        <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
+                                        <div className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
                                             [ {value || 0} ]
                                         </div>
                                     </div>
@@ -877,10 +877,10 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                 {/* 总体评分 */}
                 <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                        <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
+                        <div className="text-xs font-medium  tracking-widest text-neutral-500 dark:text-neutral-400">
                             总体评分
                         </div>
-                        <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
+                        <div className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
                             [ {formData.rating.toFixed(1)} ]
                         </div>
                     </div>
@@ -931,7 +931,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
 
                 {/* 笔记 */}
                 <div className="space-y-4">
-                    <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
+                    <div className="text-xs font-medium  tracking-widest text-neutral-500 dark:text-neutral-400">
                         笔记
                     </div>
                     <AutoResizeTextarea
@@ -942,7 +942,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                                 notes: e.target.value,
                             })
                         }
-                        className="text-xs border-b border-neutral-200 focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 pb-4"
+                        className="text-xs font-medium border-b border-neutral-200 focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 pb-4"
                         placeholder="记录一下这次冲煮的感受、改进点等..."
                     />
                 </div>

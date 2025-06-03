@@ -156,7 +156,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
     return (
       <div
         key={isCustom ? (method.id || method.name) : method.name}
-        className="group relative text-neutral-500 dark:text-neutral-400"
+        className="group relative"
       >
         <div
           className={`group relative border-l ${isSelected ? 'border-neutral-800 dark:border-white' : 'border-neutral-200 dark:border-neutral-800'} pl-6 cursor-pointer`}
@@ -170,30 +170,30 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
             <div className="absolute -left-px top-0 h-full w-px bg-neutral-800 dark:bg-white"></div>
           )}
           <div className="flex items-baseline justify-between">
-            <div className="flex items-baseline gap-3 min-w-0 overflow-hidden">
-              <h3 className={`text-xs ${isSelected ? 'font-medium' : 'font-normal'} tracking-wider truncate`}>
+            <div className="flex items-baseline gap-3 min-w-0 overflow-hidden text-neutral-800 dark:text-neutral-100 ">
+              <h3 className={`text-xs font-medium tracking-wider truncate`}>
                 {method.name}
               </h3>
             </div>
           </div>
 
           {!isSelected && (
-            <div className="mt-1.5 space-y-0.5">
+            <div className="mt-1.5 space-y-0.5 text-neutral-500 dark:text-neutral-400">
               <div className="flex items-center">
-                <span className="text-xs font-light w-14">咖啡粉:</span>
-                <span className="text-xs font-light">{method.params.coffee}</span>
+                <span className="text-xs font-medium w-14">咖啡粉:</span>
+                <span className="text-xs font-medium">{method.params.coffee}</span>
               </div>
               <div className="flex items-center">
-                <span className="text-xs font-light w-14">水量:</span>
-                <span className="text-xs font-light">{method.params.water}</span>
+                <span className="text-xs font-medium w-14">水量:</span>
+                <span className="text-xs font-medium">{method.params.water}</span>
               </div>
               <div className="flex items-center">
-                <span className="text-xs font-light w-14">粉水比:</span>
-                <span className="text-xs font-light">{method.params.ratio}</span>
+                <span className="text-xs font-medium w-14">粉水比:</span>
+                <span className="text-xs font-medium">{method.params.ratio}</span>
               </div>
               <div className="flex items-center">
-                <span className="text-xs font-light w-14">研磨度:</span>
-                <span className="text-xs font-light">{method.params.grindSize}</span>
+                <span className="text-xs font-medium w-14">研磨度:</span>
+                <span className="text-xs font-medium">{method.params.grindSize}</span>
               </div>
             </div>
           )}
@@ -203,37 +203,37 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
               <div className="space-y-2">
                 {/* 咖啡粉量 */}
                 <div className="flex items-center">
-                  <label className="text-xs text-neutral-600 dark:text-neutral-400 w-14">咖啡粉:</label>
+                  <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 w-14">咖啡粉:</label>
                   <div className="w-20 flex justify-end">
                     <input
                       type="text"
                       value={coffeeAmount}
                       onChange={(e) => handleCoffeeAmountChange(e.target.value, method)}
-                      className="w-12 py-0.5 px-1 border border-neutral-300 dark:border-neutral-700 rounded-sm bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100 text-right text-xs focus:outline-hidden focus:ring-1 focus:ring-neutral-500"
+                      className="w-12 py-0.5 px-1 border border-neutral-300 dark:border-neutral-700 rounded-sm bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100 text-right text-xs font-medium focus:outline-hidden focus:ring-1 focus:ring-neutral-500"
                       placeholder="15"
                     />
-                    <span className="ml-0.5 text-xs text-neutral-600 dark:text-neutral-400">g</span>
+                    <span className="ml-0.5 text-xs font-medium text-neutral-500 dark:text-neutral-400">g</span>
                   </div>
                 </div>
 
                 {/* 水量 - 不可编辑，仅显示计算结果 */}
                 <div className="flex items-center">
-                  <label className="text-xs text-neutral-600 dark:text-neutral-400 w-14">水量:</label>
+                  <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 w-14">水量:</label>
                   <div className="w-20 flex justify-end">
-                    <span className="text-xs text-neutral-700 dark:text-neutral-300">{waterAmount}</span>
+                    <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400">{waterAmount}</span>
                   </div>
                 </div>
 
                 {/* 粉水比 */}
                 <div className="flex items-center">
-                  <label className="text-xs text-neutral-600 dark:text-neutral-400 w-14">粉水比:</label>
+                  <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 w-14">粉水比:</label>
                   <div className="w-20 flex justify-end items-center">
-                    <span className="mr-0.5 text-xs text-neutral-600 dark:text-neutral-400">1:</span>
+                    <span className="mr-0.5 text-xs font-medium text-neutral-500 dark:text-neutral-400">1:</span>
                     <input
                       type="text"
                       value={ratioAmount}
                       onChange={(e) => handleRatioAmountChange(e.target.value, method)}
-                      className="w-10 py-0.5 px-1 border border-neutral-300 dark:border-neutral-700 rounded-sm bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100 text-right text-xs focus:outline-hidden focus:ring-1 focus:ring-neutral-500"
+                      className="w-10 py-0.5 px-1 border border-neutral-300 dark:border-neutral-700 rounded-sm bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100 text-right text-xs font-medium  focus:outline-hidden focus:ring-1 focus:ring-neutral-500"
                       placeholder="15"
                     />
                   </div>
@@ -241,13 +241,13 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
 
                 {/* 研磨度 */}
                 <div className="flex items-center">
-                  <label className="text-xs text-neutral-600 dark:text-neutral-400 w-14">研磨度:</label>
+                  <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 w-14">研磨度:</label>
                   <div className="w-20 flex justify-end">
                     <input
                       type="text"
                       value={grindSize}
                       onChange={(e) => handleGrindSizeChange(e.target.value, method)}
-                      className="w-16 py-0.5 px-1 border border-neutral-300 dark:border-neutral-700 rounded-sm bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100 text-right text-xs focus:outline-hidden focus:ring-1 focus:ring-neutral-500"
+                      className="w-16 py-0.5 px-1 border border-neutral-300 dark:border-neutral-700 rounded-sm bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100 text-right text-xs font-medium  focus:outline-hidden focus:ring-1 focus:ring-neutral-500"
                       placeholder="中细"
                     />
                   </div>
@@ -293,13 +293,13 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
                 <div className="cursor-pointer">
                   <div className="flex items-baseline justify-between">
                     <div className="flex items-baseline gap-3 min-w-0 overflow-hidden">
-                      <h3 className="text-xs font-normal tracking-wider truncate">
+                      <h3 className="text-xs font-medium  tracking-wider truncate">
                         跳过方案选择
                       </h3>
                     </div>
                   </div>
                   <div className="mt-2">
-                    <p className="text-xs font-light">直接跳到记录</p>
+                    <p className="text-xs font-medium">直接跳到记录</p>
                   </div>
                 </div>
               </div>

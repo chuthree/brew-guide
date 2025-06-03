@@ -45,23 +45,28 @@ export interface CoffeeBeansProps {
 }
 
 // 导出工具函数
-export const generateBeanTitle = (bean: ExtendedCoffeeBean): string => {
+export const generateBeanTitle = (bean: ExtendedCoffeeBean, showOnlyName: boolean = false): string => {
     // 安全检查：确保bean是有效对象且有名称
     if (!bean || typeof bean !== 'object' || !bean.name) {
         return bean?.name || '未命名咖啡豆';
     }
-    
+
+    // 如果只显示名称，直接返回名称
+    if (showOnlyName) {
+        return bean.name;
+    }
+
     // 将豆子名称转换为小写以便比较
     const nameLower = bean.name.toLowerCase();
-    
+
     // 创建一个函数来检查参数是否已包含在名称中
     const isIncluded = (param?: string | null): boolean => {
         // 如果参数为空或不是字符串类型，视为已包含
         if (!param || typeof param !== 'string') return true;
-        
+
         // 将参数转换为小写并分割成单词
         const paramWords = param.toLowerCase().split(/\s+/);
-        
+
         // 检查每个单词是否都包含在名称中
         return paramWords.every(word => nameLower.includes(word));
     };

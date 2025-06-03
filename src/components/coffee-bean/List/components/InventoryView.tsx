@@ -4,7 +4,6 @@ import React, { useState, useRef, useCallback, useEffect } from 'react'
 import { ExtendedCoffeeBean, BeanType } from '../types'
 import BeanListItem from './BeanListItem'
 import ImageFlowView from './ImageFlowView'
-import { generateBeanTitle } from '../types'
 import RemainingEditor from './RemainingEditor'
 import BeanDetailModal from '@/components/coffee-bean/Detail/BeanDetailModal'
 
@@ -254,7 +253,6 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                         <BeanListItem
                             key={bean.id}
                             bean={bean}
-                            title={generateBeanTitle(bean)}
                             isLast={index === displayedBeans.length - 1}
                             onRemainingClick={handleRemainingClick}
                             onDetailClick={handleDetailClick}

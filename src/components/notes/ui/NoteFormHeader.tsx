@@ -20,7 +20,7 @@ const NoteFormHeader: React.FC<NoteFormHeaderProps> = ({
     return (
         <div className="flex items-center justify-between w-full">
             <div 
-                className="cursor-pointer text-[12px] tracking-widest text-neutral-500 dark:text-neutral-400 flex items-center"
+                className="cursor-pointer text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400 flex items-center"
             >
                 {`${isEditMode ? '编辑记录' : '新建记录'} · ${timestamp.toLocaleString('zh-CN', {
                     month: 'numeric',
@@ -34,7 +34,7 @@ const NoteFormHeader: React.FC<NoteFormHeaderProps> = ({
                     <button
                         type="button"
                         onClick={onBack}
-                        className="text-[12px] tracking-widest text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300 transition-colors"
+                        className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300 transition-colors"
                     >
                         返回
                     </button>
@@ -43,7 +43,7 @@ const NoteFormHeader: React.FC<NoteFormHeaderProps> = ({
                     <button
                         type="button" 
                         onClick={onSave}
-                        className="text-[12px] tracking-widest text-emerald-600 dark:text-emerald-500 hover:text-emerald-700 dark:hover:text-emerald-400 font-medium transition-colors"
+                        className="text-xs font-medium tracking-widest text-emerald-600 dark:text-emerald-500 hover:text-emerald-700 dark:hover:text-emerald-400 font-medium transition-colors"
                     >
                         保存
                     </button>

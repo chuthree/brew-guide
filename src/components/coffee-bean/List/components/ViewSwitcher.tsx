@@ -14,7 +14,6 @@ import {
 } from '../SortSelector'
 import { X, ArrowUpRight, AlignLeft } from 'lucide-react'
 import { Storage } from '@/lib/core/storage'
-import { SettingsOptions } from '@/components/settings/Settings'
 import { AnimatePresence, motion } from 'framer-motion'
 
 // Apple风格动画配置
@@ -262,14 +261,9 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
             try {
                 const settingsStr = await Storage.get('brewGuideSettings');
                 if (settingsStr) {
-                    const parsedSettings = JSON.parse(settingsStr) as SettingsOptions;
-                    setIsMinimalistMode(parsedSettings.minimalistMode || false);
-
-                    // 根据极简模式和具体设置决定是否隐藏总重量
-                    setHideTotalWeight(
-                        parsedSettings.minimalistMode &&
-                        parsedSettings.minimalistOptions.hideTotalWeight
-                    );
+                    // 移除极简模式相关设置
+                    setIsMinimalistMode(false); // 移除极简模式
+                    setHideTotalWeight(false); // 始终显示总重量
                 }
             } catch (error) {
                 console.error('加载设置失败', error);

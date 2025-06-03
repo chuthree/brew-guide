@@ -20,7 +20,7 @@ interface TabButtonProps {
 const TabButton: React.FC<TabButtonProps> = ({
   tab, isActive, onClick, dataTab
 }) => {
-  const baseClasses = 'text-[12px] tracking-widest whitespace-nowrap pb-3'
+  const baseClasses = 'text-xs font-medium tracking-widest whitespace-nowrap pb-3'
   const stateClasses = isActive
     ? 'text-neutral-800 dark:text-neutral-100'
     : 'cursor-pointer text-neutral-500 dark:text-neutral-400'

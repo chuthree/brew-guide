@@ -4,7 +4,7 @@ import React, { useState, useMemo, useEffect } from 'react'
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
 // import ActionMenu, { ActionMenuItem } from '@/components/coffee-bean/ui/action-menu' // 移除操作菜单
-import { ExtendedCoffeeBean } from '../types'
+import { ExtendedCoffeeBean, generateBeanTitle } from '../types'
 import { isBeanEmpty } from '../globalCache'
 import { parseDateToTimestamp } from '@/lib/utils/dateUtils'
 import HighlightText from '@/components/common/ui/HighlightText'
@@ -18,7 +18,7 @@ const ImageViewer = dynamic(() => import('@/components/common/ui/ImageViewer'), 
 
 interface BeanListItemProps {
     bean: ExtendedCoffeeBean
-    title: string
+    title?: string // 改为可选，如果不提供则内部生成
     isLast: boolean
     // onEdit: (bean: ExtendedCoffeeBean) => void // 移至详情页面
     // onDelete: (bean: ExtendedCoffeeBean) => void // 移至详情页面
@@ -46,10 +46,8 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
     
     // 添加设置状态
     const [_settings, setSettings] = useState<SettingsOptions>(defaultSettings);
-    const [_isMinimalistMode, setIsMinimalistMode] = useState(false);
-    // const [hideFlavors, setHideFlavors] = useState(false); // 默认显示风味标签
-    const [hidePrice, setHidePrice] = useState(false); // 默认显示价格
-    const [hideRoastDate, setHideRoastDate] = useState(false); // 默认显示烘焙日期
+    const [showOnlyBeanName, setShowOnlyBeanName] = useState(true); // 是否只显示咖啡豆名称
+    const [showFlavorPeriod, setShowFlavorPeriod] = useState(false); // 是否显示赏味期信息
     
     // 获取全局设置
     useEffect(() => {
@@ -59,31 +57,18 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                 if (settingsStr) {
                     const parsedSettings = JSON.parse(settingsStr) as SettingsOptions;
                     setSettings(parsedSettings);
-                    setIsMinimalistMode(parsedSettings.minimalistMode || false);
-
-                    // 加载细粒度设置选项，使用默认值作为后备
-                    const minimalistOptions = parsedSettings.minimalistOptions || {
-                        hideFlavors: true,
-                        hidePrice: false, // 默认显示价格
-                        hideRoastDate: false,
-                        hideTotalWeight: true
-                    };
-
-                    // setHideFlavors(parsedSettings.minimalistMode && minimalistOptions.hideFlavors);
-                    setHidePrice(parsedSettings.minimalistMode && minimalistOptions.hidePrice);
-                    setHideRoastDate(parsedSettings.minimalistMode && minimalistOptions.hideRoastDate);
+                    setShowOnlyBeanName(parsedSettings.showOnlyBeanName ?? true);
+                    setShowFlavorPeriod(parsedSettings.showFlavorPeriod ?? false);
                 } else {
-                    // 如果没有设置，使用默认值（价格默认显示）
-                    // setHideFlavors(false);
-                    setHidePrice(false);
-                    setHideRoastDate(false);
+                    // 如果没有设置，使用默认值
+                    setShowOnlyBeanName(true);
+                    setShowFlavorPeriod(false);
                 }
             } catch (error) {
                 console.error('加载设置失败', error);
-                // 出错时也使用默认值（价格默认显示）
-                // setHideFlavors(false);
-                setHidePrice(false);
-                setHideRoastDate(false);
+                // 出错时也使用默认值
+                setShowOnlyBeanName(true);
+                setShowFlavorPeriod(false);
             }
         };
         
@@ -204,6 +189,9 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
 
     // 计算豆子是否为空
     const isEmpty = isBeanEmpty(bean);
+
+    // 生成标题 - 如果没有传入title则根据设置生成
+    const displayTitle = title || generateBeanTitle(bean, showOnlyBeanName);
 
     // 移除操作菜单项，操作功能移至详情页面
 
@@ -334,11 +322,11 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                         <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100 pr-2 leading-tight line-clamp-2">
                             {searchQuery ? (
                                 <HighlightText
-                                    text={title}
+                                    text={displayTitle}
                                     highlight={searchQuery}
                                 />
                             ) : (
-                                title
+                                displayTitle
                             )}
                             {isEmpty && (
                                 <span className="text-neutral-500 dark:text-neutral-400 font-normal">（已用完）</span>
@@ -347,13 +335,13 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
 
                         {/* 底部：参数信息 */}
                         <div className="flex items-center text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
-                            {/* 烘焙日期 */}
-                            {bean.roastDate && !hideRoastDate && !bean.isInTransit && (
+                            {/* 日期或赏味期信息 */}
+                            {bean.roastDate && !bean.isInTransit && (
                                 <>
                                     <span className="shrink-0">
-                                        {formatDateShort(bean.roastDate)}
+                                        {showFlavorPeriod ? flavorInfo.status : formatDateShort(bean.roastDate)}
                                     </span>
-                                    {(bean.capacity && bean.remaining) || (!hidePrice && bean.price && bean.capacity) ? (
+                                    {(bean.capacity && bean.remaining) || (bean.price && bean.capacity) ? (
                                         <span className="mx-2 text-neutral-400 dark:text-neutral-600">·</span>
                                     ) : null}
                                 </>
@@ -374,14 +362,14 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                                             /{formatNumber(bean.capacity)}克
                                         </span>
                                     </span>
-                                    {!hidePrice && bean.price && bean.capacity ? (
+                                    {bean.price && bean.capacity ? (
                                         <span className="mx-2 text-neutral-400 dark:text-neutral-600">·</span>
                                     ) : null}
                                 </>
                             )}
 
                             {/* 价格信息 */}
-                            {!hidePrice && bean.price && bean.capacity && (
+                            {bean.price && bean.capacity && (
                                 <span className="shrink-0">
                                     {formatPricePerGram(bean.price, bean.capacity)}
                                 </span>
