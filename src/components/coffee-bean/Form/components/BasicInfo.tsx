@@ -5,8 +5,7 @@ import AutocompleteInput from '@/components/common/forms/AutocompleteInput';
 import { ExtendedCoffeeBean } from '../types';
 import { pageVariants, pageTransition } from '../constants';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/coffee-bean/ui/select';
-import { InputOTP, InputOTPSlot } from '@/components/common/ui/input-otp';
-import { REGEXP_ONLY_DIGITS } from 'input-otp';
+import { DatePicker } from '@/components/common/ui/DatePicker';
 
 interface BasicInfoProps {
     bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>;
@@ -35,13 +34,28 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
         setRemainingValue(editingRemaining !== null ? editingRemaining : (bean.remaining || ''));
     }, [bean.capacity, bean.remaining, editingRemaining]);
     
-    // 自动填充年份
-    useEffect(() => {
-        if (!bean.roastDate) {
-            const currentYear = new Date().getFullYear().toString();
-            onBeanChange('roastDate')(currentYear);
+    // 处理日期变化
+    const handleDateChange = (date: Date) => {
+        // 使用本地时间格式化为 YYYY-MM-DD，避免时区问题
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const formattedDate = `${year}-${month}-${day}`;
+        onBeanChange('roastDate')(formattedDate);
+    };
+
+    // 解析日期字符串为Date对象
+    const parseRoastDate = (dateStr: string | undefined): Date | undefined => {
+        if (!dateStr) return undefined;
+        // 如果是完整的日期格式 YYYY-MM-DD
+        if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            // 使用本地时间创建Date对象，避免时区偏移
+            const [year, month, day] = dateStr.split('-').map(Number);
+            return new Date(year, month - 1, day);
         }
-    }, [bean.roastDate, onBeanChange]);
+        // 如果只是年份，返回undefined让DatePicker显示placeholder
+        return undefined;
+    };
     
     // 处理容量变化
     const handleCapacityChange = (value: string) => {
@@ -315,45 +329,17 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
                         </button>
                     </div>
                     <div className="flex items-center justify-start w-full relative">
-                        <InputOTP
-                            maxLength={8}
-                            value={bean.isInTransit ? '' : (bean.roastDate?.replace(/-/g, '') || '')}
-                            onChange={(value) => {
-                                if (bean.isInTransit) return; // 在途状态下禁止输入
-
-                                if (value.length === 8) {
-                                    // 格式化为 YYYY-MM-DD
-                                    const year = value.substring(0, 4);
-                                    const month = value.substring(4, 6);
-                                    const day = value.substring(6, 8);
-                                    const formattedDate = `${year}-${month}-${day}`;
-                                    onBeanChange('roastDate')(formattedDate);
-                                } else if (value.length === 0) {
-                                    // 如果清空了输入，则重置
-                                    onBeanChange('roastDate')('');
-                                } else {
-                                    // 如果不是完整日期，只保存当前输入
-                                    onBeanChange('roastDate')(value ? value : '');
-                                }
-                            }}
-                            pattern={REGEXP_ONLY_DIGITS}
-                            containerClassName="justify-between"
-                            disabled={bean.isInTransit}
-                        >
-                            <InputOTPSlot index={0} className={bean.isInTransit ? 'opacity-50' : ''} />
-                            <InputOTPSlot index={1} className={bean.isInTransit ? 'opacity-50' : ''} />
-                            <InputOTPSlot index={2} className={bean.isInTransit ? 'opacity-50' : ''} />
-                            <InputOTPSlot index={3} className={bean.isInTransit ? 'opacity-50' : ''} />
-                            <span className={`text-neutral-500 dark:text-neutral-400 border-b border-neutral-300 dark:border-neutral-700 h-[40px] flex items-center px-0.5 ${bean.isInTransit ? 'opacity-50' : ''}`}>-</span>
-                            <InputOTPSlot index={4} className={bean.isInTransit ? 'opacity-50' : ''} />
-                            <InputOTPSlot index={5} className={bean.isInTransit ? 'opacity-50' : ''} />
-                            <span className={`text-neutral-500 dark:text-neutral-400 border-b border-neutral-300 dark:border-neutral-700 h-[40px] flex items-center px-0.5 ${bean.isInTransit ? 'opacity-50' : ''}`}>-</span>
-                            <InputOTPSlot index={6} className={bean.isInTransit ? 'opacity-50' : ''} />
-                            <InputOTPSlot index={7} className={bean.isInTransit ? 'opacity-50' : ''} />
-                        </InputOTP>
-                        {bean.isInTransit && (
-                            <div className="absolute inset-0 flex items-center  pointer-events-none">
+                        {bean.isInTransit ? (
+                            <div className="w-full py-2 bg-transparent border-b border-neutral-300 dark:border-neutral-700 opacity-50 text-neutral-500 dark:text-neutral-400">
+                                在途中...
                             </div>
+                        ) : (
+                            <DatePicker
+                                date={parseRoastDate(bean.roastDate)}
+                                onDateChange={handleDateChange}
+                                placeholder="选择烘焙日期"
+                                className="w-full"
+                            />
                         )}
                     </div>
                 </div>
