@@ -124,14 +124,14 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
                                 remainingWeight: stats.espressoStats.remainingWeight,
                                 consumedWeight: stats.espressoStats.consumedWeight,
                                 totalWeight: stats.espressoStats.totalWeight
-                            }, beans.filter(bean => bean.beanType === 'espresso')) : 0;
+                            }, beans.filter(bean => bean.beanType === 'espresso'), { beanType: 'espresso' }) : 0;
 
                             const filterAverageConsumption = hasFilter ? calculateAverageConsumption({
                                 ...stats,
                                 remainingWeight: stats.filterStats.remainingWeight,
                                 consumedWeight: stats.filterStats.consumedWeight,
                                 totalWeight: stats.filterStats.totalWeight
-                            }, beans.filter(bean => bean.beanType === 'filter')) : 0;
+                            }, beans.filter(bean => bean.beanType === 'filter'), { beanType: 'filter' }) : 0;
 
                             const espressoFinishDate = hasEspresso ? calculateEstimatedFinishDate({
                                 ...stats,

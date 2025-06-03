@@ -20,6 +20,15 @@ const getTodayConsumption = (stats: StatsSummaryProps['stats']): number => {
     return espressoToday + filterToday;
 }
 
+// 获取特定类型豆子的今日消耗数据
+const getTodayConsumptionByType = (stats: StatsSummaryProps['stats'], beanType: 'espresso' | 'filter'): number => {
+    if (beanType === 'espresso') {
+        return stats.espressoStats?.todayConsumption || 0;
+    } else {
+        return stats.filterStats?.todayConsumption || 0;
+    }
+}
+
 // 基于历史数据计算平均消耗量
 const calculateHistoricalAverage = (_stats: StatsSummaryProps['stats'], beans: any[]): number => {
     const now = Date.now();
@@ -82,17 +91,50 @@ const calculateSmartEstimation = (stats: StatsSummaryProps['stats']): number => 
            CONSUMPTION_REFERENCES.filter * filterRatio;
 }
 
+// 按类型智能估算消耗量
+const calculateSmartEstimationByType = (stats: StatsSummaryProps['stats'], beanType: 'espresso' | 'filter'): number => {
+    // 基于咖啡类型的合理消耗量参考值（克/天）
+    const CONSUMPTION_REFERENCES = {
+        espresso: 20,   // 意式豆：约2-3杯浓缩咖啡
+        filter: 30      // 手冲豆：约1-2杯手冲咖啡
+    };
+
+    // 获取对应类型的消耗数据
+    const typeStats = beanType === 'espresso' ? stats.espressoStats : stats.filterStats;
+
+    // 如果该类型没有消耗数据，返回参考值
+    if (!typeStats || typeStats.consumedWeight <= 0) {
+        return CONSUMPTION_REFERENCES[beanType];
+    }
+
+    // 如果有消耗数据，可以基于实际消耗情况调整参考值
+    // 这里可以根据实际消耗量与参考值的比例进行调整
+    const referenceValue = CONSUMPTION_REFERENCES[beanType];
+
+    // 简单返回参考值，后续可以根据需要添加更复杂的逻辑
+    return referenceValue;
+}
+
 // 计算平均每日消耗量（克/天）- 优化版
 export const calculateAverageConsumption = (
     stats: StatsSummaryProps['stats'],
     beans?: any[],
-    _options: ConsumptionCalculationOptions = {}
+    options: ConsumptionCalculationOptions & { beanType?: 'espresso' | 'filter' } = {}
 ) => {
+    const { beanType } = options;
+
     // 如果没有消耗则返回0
     if (stats.consumedWeight <= 0) return 0
 
-    // 优先使用今日消耗数据进行校正
-    const todayConsumption = getTodayConsumption(stats);
+    // 根据豆子类型获取对应的今日消耗数据
+    let todayConsumption: number;
+    if (beanType) {
+        // 如果指定了豆子类型，使用特定类型的今日消耗
+        todayConsumption = getTodayConsumptionByType(stats, beanType);
+    } else {
+        // 如果没有指定类型，使用总的今日消耗
+        todayConsumption = getTodayConsumption(stats);
+    }
 
     // 如果有今日消耗数据且合理，优先使用
     if (todayConsumption > 0 && todayConsumption < 200) { // 200克是合理的日消耗上限
@@ -108,7 +150,13 @@ export const calculateAverageConsumption = (
     }
 
     // 方法2：基于消耗模式的智能估算
-    return calculateSmartEstimation(stats);
+    if (beanType) {
+        // 如果指定了豆子类型，使用特定类型的智能估算
+        return calculateSmartEstimationByType(stats, beanType);
+    } else {
+        // 如果没有指定类型，使用总体智能估算
+        return calculateSmartEstimation(stats);
+    }
 }
 
 
