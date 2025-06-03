@@ -129,7 +129,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
                     <div className="flex-1 min-w-0">
                         <div className="flex justify-between items-start">
                             <div className="flex-1 min-w-0 overflow-hidden">
-                                <div className="text-[11px] font-normal break-words text-neutral-800 dark:text-neutral-100 pr-2">
+                                <div className="text-xs font-medium break-words text-neutral-800 dark:text-neutral-100 pr-2">
                                     {/* 根据是否有方案来决定显示内容 */}
                                     {note.method && note.method.trim() !== '' ? (
                                         // 有方案时的显示逻辑
@@ -169,7 +169,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
 
                                 {/* 方案信息 - 只在有方案时显示 */}
                                 {note.params && note.method && note.method.trim() !== '' && (
-                                    <div className="text-[10px] mt-1 tracking-widest text-neutral-600 dark:text-neutral-400 space-x-1 leading-relaxed">
+                                    <div className="text-xs font-medium mt-1 tracking-wide text-neutral-600 dark:text-neutral-400 space-x-1 leading-relaxed">
                                         {beanName && (
                                             <>
                                                 <span>{equipmentName}</span>
@@ -272,7 +272,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
                             .map(([key, value], _i) => (
                                 <div key={key} className="space-y-1">
                                     <div className="flex items-center justify-between">
-                                        <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
+                                        <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
                                             {(() => {
                                                 switch (key) {
                                                     case 'acidity':
@@ -288,7 +288,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
                                                 }
                                             })()}
                                         </div>
-                                        <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
+                                        <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
                                             {value}
                                         </div>
                                     </div>
@@ -306,10 +306,10 @@ const NoteItem: React.FC<NoteItemProps> = ({
                 {/* 时间和评分 */}
                 {hasTasteRatings ? (
                     <div className="flex items-baseline justify-between">
-                        <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
+                        <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
                             {formatDate(note.timestamp)}
                         </div>
-                        <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
+                        <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
                             {formatRating(note.rating)}
                         </div>
                     </div>
@@ -317,10 +317,10 @@ const NoteItem: React.FC<NoteItemProps> = ({
                     <div className="space-y-4">
                         <div className="space-y-1">
                             <div className="flex items-center justify-between">
-                                <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
+                                <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
                                     总体评分
                                 </div>
-                                <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
+                                <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
                                     {note.rating}
                                 </div>
                             </div>
@@ -331,7 +331,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
                                 />
                             </div>
                         </div>
-                        <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
+                        <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
                             {formatDate(note.timestamp)}
                         </div>
                     </div>
@@ -339,7 +339,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
 
                 {/* 备注信息 */}
                 {hasNotes && (
-                    <div className="text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400 whitespace-pre-line leading-tight break-words overflow-wrap-anywhere">
+                    <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400 whitespace-pre-line leading-tight break-words overflow-wrap-anywhere">
                         {note.notes}
                     </div>
                 )}

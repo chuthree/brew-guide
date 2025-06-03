@@ -82,10 +82,10 @@ interface FilterButtonProps {
 const FilterButton: React.FC<FilterButtonProps> = ({ isActive, onClick, children, className = '' }) => (
     <button
         onClick={onClick}
-        className={`bg-neutral-100 dark:bg-neutral-700 px-2 py-1 text-xs font-medium transition-colors whitespace-nowrap ${
+        className={`px-2 py-1 text-xs font-medium transition-colors whitespace-nowrap ${
             isActive
-                ? 'bg-neutral-200/60 dark:bg-neutral-700 text-neutral-800 dark:text-neutral-100'
-                : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-neutral-800 dark:hover:text-neutral-200'
+                ? 'bg-neutral-200/50 dark:bg-neutral-700/50 text-neutral-800 dark:text-neutral-100'
+                : 'bg-neutral-100 dark:bg-neutral-800/50 text-neutral-600 dark:text-neutral-400'
         } ${className}`}
     >
         {children}

@@ -46,7 +46,7 @@ export async function exportSelectedNotes({
     // 设置样式
     tempContainer.style.backgroundColor = backgroundColor;
     tempContainer.style.maxWidth = '100%';
-    tempContainer.style.width = '330px';
+    tempContainer.style.width = '360px';
     tempContainer.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
     
     if (isDarkMode) {
@@ -154,7 +154,7 @@ export async function exportSelectedNotes({
     const footer = document.createElement('p');
     footer.style.textAlign = 'left';
     footer.style.marginTop = '16px';
-    footer.style.fontSize = '11px';
+    footer.style.fontSize = '12px';
     footer.style.color = isDarkMode ? '#a3a3a3' : '#525252';
     footer.style.display = 'flex';
     footer.style.justifyContent = 'space-between';

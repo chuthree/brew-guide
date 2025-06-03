@@ -239,7 +239,7 @@ const NotesListView: React.FC<NotesListViewProps> = ({
                         onClick={toggleShowQuickDecrementNotes}
                     >
                         <div className="grow border-t border-neutral-200 dark:border-neutral-800"></div>
-                        <button className="flex items-center justify-center mx-3 px-2 py-0.5 rounded-sm text-[10px] text-neutral-600 dark:text-neutral-400 transition-colors">
+                        <button className="flex items-center justify-center mx-3 px-2 py-0.5 rounded-sm text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400 transition-colors">
                             {quickDecrementNotes.length}条快捷扣除记录
                             <svg
                                 className={`ml-1 w-3 h-3 transition-transform duration-200 ${showQuickDecrementNotes ? 'rotate-180' : ''}`}

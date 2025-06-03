@@ -46,17 +46,17 @@ const QuickDecrementNoteItem: React.FC<QuickDecrementNoteItemProps> = ({
                 {/* 左侧信息区域 */}
                 <div className="flex items-center gap-2 flex-1 min-w-0">
                     {/* 咖啡豆名称 */}
-                    <div className="text-[11px] font-medium truncate text-neutral-800 dark:text-neutral-200">
+                    <div className="text-xs font-medium truncate text-neutral-800 dark:text-neutral-100">
                         {beanName}
                     </div>
                     
                     {/* 扣除量 */}
-                    <div className="text-[10px] bg-neutral-100 dark:bg-neutral-800 px-2 py-px rounded-xs text-neutral-600 dark:text-neutral-400 whitespace-nowrap">
+                    <div className="text-xs font-medium bg-neutral-100 dark:bg-neutral-800 px-2 py-px rounded-xs text-neutral-600 dark:text-neutral-400 whitespace-nowrap">
                         -{amount}g
                     </div>
                     
                     {/* 日期 */}
-                    <div className="text-[10px] text-neutral-500 dark:text-neutral-500 whitespace-nowrap">
+                    <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400 whitespace-nowrap">
                         {dateFormatted}
                     </div>
                 </div>

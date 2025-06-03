@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback, useReducer, useMemo } 
 import { Storage } from '@/lib/core/storage'
 import { BrewingNote } from '@/lib/core/config'
 import { BrewingHistoryProps } from '../types'
-import SortSelector from './SortSelector'
+
 import FilterTabs from './FilterTabs'
 import AddNoteButton from './AddNoteButton'
 import Toast from '../ui/Toast'
@@ -674,17 +674,16 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                 />
             ) : (
                 <>
-                    <div className="pt-6 space-y-6 sticky top-0 bg-neutral-50 dark:bg-neutral-900 z-20">
-                        {/* 排序控件和数量显示 */}
+                    <div className="pt-6 space-y-6 sticky top-0 bg-neutral-50 dark:bg-neutral-900 z-20 flex-none">
+                        {/* 数量显示 */}
                         <div className="flex justify-between items-center mb-6 px-6">
-                            <div className="text-xs tracking-wide text-neutral-800 dark:text-neutral-100">
+                            <div className="text-xs font-medium tracking-wide text-neutral-800 dark:text-neutral-100 break-words">
                                 {(isSearching && searchQuery.trim())
                                     ? `${searchFilteredNotes.length} 条记录，已消耗 ${formatConsumption(currentConsumption)}`
-                                    : `${selectedEquipment || selectedBean 
-                                        ? globalCache.filteredNotes.length 
+                                    : `${selectedEquipment || selectedBean
+                                        ? globalCache.filteredNotes.length
                                         : globalCache.notes.length} 条记录，已消耗 ${formatConsumption(currentConsumption)}`}
                             </div>
-                            <SortSelector sortOption={sortOption} onSortChange={handleSortChange} />
                         </div>
 
                         {/* 设备筛选选项卡 */}
@@ -703,6 +702,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                             onSearchClick={handleSearchClick}
                             onSearchChange={handleSearchChange}
                             onSearchKeyDown={handleSearchKeyDown}
+                            sortOption={sortOption}
+                            onSortChange={handleSortChange}
                         />
                     </div>
 

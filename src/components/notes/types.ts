@@ -69,6 +69,9 @@ export interface FilterTabsProps {
     onSearchClick?: () => void
     onSearchChange?: (e: React.ChangeEvent<HTMLInputElement>) => void
     onSearchKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void
+    // 新增排序相关props
+    sortOption?: SortOption
+    onSortChange?: (option: SortOption) => void
 }
 
 // 添加笔记按钮属性
