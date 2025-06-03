@@ -219,7 +219,14 @@ const InventoryView: React.FC<InventoryViewProps> = ({
 
     // 如果是图片流模式，直接返回图片流视图
     if (isImageFlowMode) {
-        return <ImageFlowView filteredBeans={filteredBeans} />
+        return (
+            <ImageFlowView
+                filteredBeans={filteredBeans}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                onShare={onShare}
+            />
+        )
     }
 
     return (
