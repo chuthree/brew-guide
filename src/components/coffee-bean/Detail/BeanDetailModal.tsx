@@ -35,10 +35,10 @@ const InfoGrid: React.FC<{
     const gridCols = items.length === 1 ? 'grid-cols-1' : 'grid-cols-2'
 
     return (
-        <div className={`grid gap-4 ${gridCols} ${className}`}>
+        <div className={`grid gap-3 ${gridCols} ${className}`}>
             {items.map((item) => (
                 <div key={item.key}>
-                    <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-1">
+                    <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-0.5">
                         {item.label}
                     </div>
                     <div className={`text-xs font-medium ${
@@ -54,21 +54,7 @@ const InfoGrid: React.FC<{
     )
 }
 
-// 信息区域组件
-const InfoSection: React.FC<{
-    title: string
-    items: InfoItem[]
-    className?: string
-}> = ({ title, items, className = '' }) => {
-    if (items.length === 0) return null
 
-    return (
-        <div className={`py-3 border-b border-neutral-200/40 dark:border-neutral-800/40 ${className}`}>
-            <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-2">{title}</div>
-            <InfoGrid items={items} />
-        </div>
-    )
-}
 
 interface BeanDetailModalProps {
     isOpen: boolean
@@ -381,26 +367,71 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
         <Drawer open={isOpen} onOpenChange={handleOpenChange}>
             <DrawerContent className="max-h-[85vh]">
                 <DrawerHeader className="border-b border-neutral-200/60 dark:border-neutral-800/40 shrink-0 px-4 py-3">
-                    <DrawerTitle className="text-lg font-medium text-center">
-                        {searchQuery ? (
-                            <HighlightText
-                                text={bean?.name || '未命名'}
-                                highlight={searchQuery}
-                            />
-                        ) : (
-                            bean?.name || '未命名'
-                        )}
-                    </DrawerTitle>
+                    <div className="relative flex items-center justify-between">
+                        {/* 左侧按钮 */}
+                        <div className="flex items-center">
+                            {bean && onEdit && (
+                                <button
+                                    onClick={() => {
+                                        onEdit(bean)
+                                        onClose()
+                                    }}
+                                    className="text-xs font-medium text-neutral-600 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200 transition-colors px-2 py-1"
+                                >
+                                    编辑
+                                </button>
+                            )}
+                        </div>
+
+                        {/* 绝对居中的标题 */}
+                        <DrawerTitle className="absolute left-1/2 transform -translate-x-1/2 text-base font-medium text-neutral-800 dark:text-neutral-100 leading-tight max-w-[50%]">
+                            <div className="line-clamp-2 text-center">
+                                {searchQuery ? (
+                                    <HighlightText
+                                        text={bean?.name || '未命名'}
+                                        highlight={searchQuery}
+                                    />
+                                ) : (
+                                    bean?.name || '未命名'
+                                )}
+                            </div>
+                        </DrawerTitle>
+
+                        {/* 右侧按钮 */}
+                        <div className="flex items-center gap-2">
+                            {bean && onShare && (
+                                <button
+                                    onClick={() => {
+                                        onShare(bean)
+                                        onClose()
+                                    }}
+                                    className="text-xs font-medium text-neutral-600 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200 transition-colors px-2 py-1"
+                                >
+                                    分享
+                                </button>
+                            )}
+                            {bean && onDelete && (
+                                <button
+                                    onClick={() => {
+                                        onDelete(bean)
+                                        onClose()
+                                    }}
+                                    className="text-xs font-medium text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors px-2 py-1"
+                                >
+                                    删除
+                                </button>
+                            )}
+                        </div>
+                    </div>
                 </DrawerHeader>
-
-
 
                 {bean ? (
                     <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-safe-bottom">
-                        {/* 图片区域 */}
-                        {bean.image && (
-                            <div className="flex items-center justify-center pb-3 border-b border-neutral-200/60 dark:border-neutral-800/40">
-                                <div className="w-20 h-20 relative border border-neutral-200 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
+                        {/* 顶部核心信息区域 - 图片与基础信息横向排列 */}
+                        <div className="flex gap-4 pb-3 border-b border-neutral-200/40 dark:border-neutral-800/40">
+                            {/* 图片 */}
+                            {bean.image && (
+                                <div className="w-16 h-16 relative border border-neutral-200 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800 overflow-hidden flex-shrink-0">
                                     {imageError ? (
                                         <div className="absolute inset-0 flex items-center justify-center text-xs text-neutral-500 dark:text-neutral-400">
                                             失败
@@ -415,73 +446,87 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                         />
                                     )}
                                 </div>
+                            )}
+
+                            {/* 核心信息 */}
+                            <div className="flex-1 min-w-0">
+                                <InfoGrid items={getBasicInfoItems()} />
+                            </div>
+                        </div>
+
+                        {/* 详细信息区域 - 更紧凑的布局 */}
+                        {getOriginInfoItems().length > 0 && (
+                            <div className="space-y-2">
+                                <div className="text-xs text-neutral-500 dark:text-neutral-400">详细信息</div>
+                                <InfoGrid items={getOriginInfoItems()} />
                             </div>
                         )}
 
-                        <InfoGrid items={getBasicInfoItems()} className="py-3 border-b border-neutral-200/40 dark:border-neutral-800/40" />
+                        {/* 拼配、风味、备注 - 合并为一个紧凑区域 */}
+                        {((bean.blendComponents && bean.blendComponents.length > 1) ||
+                          (bean.flavor && bean.flavor.length > 0) ||
+                          bean.notes) && (
+                            <div className="space-y-3">
+                                {/* 拼配信息 */}
+                                {bean.blendComponents && bean.blendComponents.length > 1 && (
+                                    <div>
+                                        <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-1.5">拼配组成</div>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {bean.blendComponents.map((comp: any, index: number) => (
+                                                <div key={index} className="flex justify-between items-center">
+                                                    <span className="text-xs text-neutral-800 dark:text-neutral-100 truncate">
+                                                        {comp.origin || `组成 ${index + 1}`}
+                                                    </span>
+                                                    {comp.percentage !== undefined && comp.percentage !== null && (
+                                                        <span className="text-xs font-medium text-neutral-600 dark:text-neutral-400 ml-2">
+                                                            {comp.percentage}%
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
 
-                        <InfoSection title="产地信息" items={getOriginInfoItems()} />
+                                {/* 风味标签 */}
+                                {bean.flavor && bean.flavor.length > 0 && (
+                                    <div>
+                                        <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-1.5">风味</div>
+                                        <div className="flex flex-wrap gap-1">
+                                            {bean.flavor.map((flavor: any, index: number) => (
+                                                <span
+                                                    key={index}
+                                                    className="px-1.5 py-0.5 bg-neutral-100 dark:bg-neutral-700/50 text-xs text-neutral-700 dark:text-neutral-300"
+                                                >
+                                                    {flavor}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
 
-                        {/* 拼配信息 */}
-                        {bean.blendComponents && bean.blendComponents.length > 1 && (
-                            <div className="py-3 border-b border-neutral-200/40 dark:border-neutral-800/40">
-                                <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-2">拼配组成</div>
-                                <div className="space-y-1">
-                                    {bean.blendComponents.map((comp: any, index: number) => (
-                                        <div key={index} className="flex justify-between items-center py-1">
-                                            <div className="flex-1 min-w-0">
-                                                <span className="text-sm text-neutral-800 dark:text-neutral-100 truncate">
-                                                    {comp.origin || `组成 ${index + 1}`}
-                                                </span>
-                                            </div>
-                                            {comp.percentage !== undefined && comp.percentage !== null && (
-                                                <span className="text-xs font-medium text-neutral-600 dark:text-neutral-400 ml-2">
-                                                    {comp.percentage}%
-                                                </span>
+                                {/* 备注 */}
+                                {bean.notes && (
+                                    <div>
+                                        <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-1.5">备注</div>
+                                        <div className="text-xs text-neutral-700 dark:text-neutral-300 leading-relaxed whitespace-pre-line">
+                                            {searchQuery ? (
+                                                <HighlightText
+                                                    text={bean.notes}
+                                                    highlight={searchQuery}
+                                                    className="text-neutral-700 dark:text-neutral-300"
+                                                />
+                                            ) : (
+                                                bean.notes
                                             )}
                                         </div>
-                                    ))}
-                                </div>
+                                    </div>
+                                )}
                             </div>
                         )}
 
-                        {/* 风味标签 */}
-                        {bean.flavor && bean.flavor.length > 0 && (
-                            <div className="py-3 border-b border-neutral-200/40 dark:border-neutral-800/40">
-                                <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-2">风味</div>
-                                <div className="flex flex-wrap gap-1">
-                                    {bean.flavor.map((flavor: any, index: number) => (
-                                        <span
-                                            key={index}
-                                            className="px-2 py-0.5 bg-neutral-100 dark:bg-neutral-700/50 text-xs text-neutral-700 dark:text-neutral-300"
-                                        >
-                                            {flavor}
-                                        </span>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* 备注 */}
-                        {bean.notes && (
-                            <div className="py-3 border-b border-neutral-200/40 dark:border-neutral-800/40">
-                                <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-2">备注</div>
-                                <div className="text-sm text-neutral-700 dark:text-neutral-300 leading-relaxed whitespace-pre-line">
-                                    {searchQuery ? (
-                                        <HighlightText
-                                            text={bean.notes}
-                                            highlight={searchQuery}
-                                            className="text-neutral-700 dark:text-neutral-300"
-                                        />
-                                    ) : (
-                                        bean.notes
-                                    )}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* 相关冲煮记录 */}
-                        <div className="py-3">
+                        {/* 相关冲煮记录 - 简化布局 */}
+                        <div className="border-t border-neutral-200/40 dark:border-neutral-800/40 pt-3">
                             <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-2">
                                 冲煮记录 {relatedNotes.length > 0 && `(${relatedNotes.length})`}
                             </div>
@@ -495,161 +540,47 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                     暂无冲煮记录
                                 </div>
                             ) : (
-                                <div className="space-y-3">
+                                <div className="space-y-2">
                                     {relatedNotes.map((note) => {
-                                        // 获取咖啡豆名称和器具名称
-                                        const beanName = note.coffeeBeanInfo?.name || bean?.name
+                                        // 获取器具名称
                                         const equipmentName = note.equipment ? (equipmentNames[note.equipment] || note.equipment) : '未知器具'
-
-                                        // 检查是否有风味评分
-                                        const hasTasteRatings = note.taste && Object.values(note.taste).some(value => value > 0)
 
                                         // 检查是否有备注
                                         const hasNotes = note.notes && note.notes.trim()
 
                                         return (
-                                            <div key={note.id} className="p-3 bg-neutral-50/50 dark:bg-neutral-800/30 border border-neutral-200/40 dark:border-neutral-800/40 space-y-3">
-                                                {/* 标题和基本信息 */}
-                                                <div className="flex justify-between items-start">
+                                            <div key={note.id} className="p-2 bg-neutral-50/50 dark:bg-neutral-800/30 border border-neutral-200/40 dark:border-neutral-800/40 space-y-1.5">
+                                                {/* 标题行 - 更紧凑 */}
+                                                <div className="flex justify-between items-center">
                                                     <div className="flex-1 min-w-0">
-                                                        <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100 break-words">
-                                                            {/* 根据是否有方案来决定显示内容 */}
-                                                            {note.method && note.method.trim() !== '' ? (
-                                                                // 有方案时的显示逻辑
-                                                                beanName ? (
-                                                                    <>
-                                                                        {beanName}
-                                                                        <span className="text-neutral-600 dark:text-neutral-400 mx-1">·</span>
-                                                                        <span className="text-neutral-600 dark:text-neutral-400">{note.method}</span>
-                                                                    </>
-                                                                ) : (
-                                                                    <>
-                                                                        {equipmentName}
-                                                                        <span className="text-neutral-600 dark:text-neutral-400 mx-1">·</span>
-                                                                        <span className="text-neutral-600 dark:text-neutral-400">{note.method}</span>
-                                                                    </>
-                                                                )
-                                                            ) : (
-                                                                // 没有方案时的显示逻辑：合并咖啡豆和器具信息
-                                                                beanName ? (
-                                                                    beanName === equipmentName ? (
-                                                                        // 如果咖啡豆名称和器具名称相同，只显示一个
-                                                                        beanName
-                                                                    ) : (
-                                                                        // 显示咖啡豆和器具，用分割符连接
-                                                                        <>
-                                                                            {beanName}
-                                                                            <span className="text-neutral-600 dark:text-neutral-400 mx-1">·</span>
-                                                                            <span className="text-neutral-600 dark:text-neutral-400">{equipmentName}</span>
-                                                                        </>
-                                                                    )
-                                                                ) : (
-                                                                    // 只有器具信息
-                                                                    equipmentName
-                                                                )
-                                                            )}
+                                                        <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100 truncate">
+                                                            {note.method && note.method.trim() !== '' ? note.method : equipmentName}
                                                         </div>
-
-                                                        {/* 方案信息 - 只在有方案时显示 */}
-                                                        {note.params && note.method && note.method.trim() !== '' && (
-                                                            <div className="text-xs mt-1 text-neutral-600 dark:text-neutral-400 space-x-1">
-                                                                {beanName && (
-                                                                    <>
-                                                                        <span>{equipmentName}</span>
-                                                                        <span>·</span>
-                                                                    </>
-                                                                )}
-                                                                <span>{note.params.coffee}</span>
-                                                                <span>·</span>
-                                                                <span>{note.params.ratio}</span>
-
-                                                                {/* 合并显示研磨度和水温 */}
-                                                                {(note.params.grindSize || note.params.temp) && (
-                                                                    <>
-                                                                        <span>·</span>
-                                                                        {note.params.grindSize && note.params.temp ? (
-                                                                            <span>{note.params.grindSize} · {note.params.temp}</span>
-                                                                        ) : (
-                                                                            <span>{note.params.grindSize || note.params.temp}</span>
-                                                                        )}
-                                                                    </>
-                                                                )}
-                                                            </div>
-                                                        )}
+                                                    </div>
+                                                    <div className="text-xs text-neutral-600 dark:text-neutral-400 ml-2">
+                                                        {formatDate(note.timestamp)}
                                                     </div>
                                                 </div>
 
-                                                {/* 风味评分 - 只有当存在有效评分(大于0)时才显示 */}
-                                                {hasTasteRatings ? (
-                                                    <div className="grid grid-cols-2 gap-3">
-                                                        {Object.entries(note.taste)
-                                                            .map(([key, value]) => (
-                                                                <div key={key} className="space-y-1">
-                                                                    <div className="flex items-center justify-between">
-                                                                        <div className="text-xs text-neutral-600 dark:text-neutral-400">
-                                                                            {(() => {
-                                                                                switch (key) {
-                                                                                    case 'acidity':
-                                                                                        return '酸度';
-                                                                                    case 'sweetness':
-                                                                                        return '甜度';
-                                                                                    case 'bitterness':
-                                                                                        return '苦度';
-                                                                                    case 'body':
-                                                                                        return '口感';
-                                                                                    default:
-                                                                                        return key;
-                                                                                }
-                                                                            })()}
-                                                                        </div>
-                                                                        <div className="text-xs text-neutral-600 dark:text-neutral-400">
-                                                                            {value}
-                                                                        </div>
-                                                                    </div>
-                                                                    <div className="h-px w-full overflow-hidden bg-neutral-200/50 dark:bg-neutral-800">
-                                                                        <div
-                                                                            style={{ width: `${value === 0 ? 0 : (value / 5) * 100}%` }}
-                                                                            className="h-full bg-neutral-600 dark:bg-neutral-400"
-                                                                        />
-                                                                    </div>
-                                                                </div>
-                                                            ))}
-                                                    </div>
-                                                ) : null}
-
-                                                {/* 时间和评分 */}
-                                                {hasTasteRatings ? (
-                                                    <div className="flex items-baseline justify-between">
-                                                        <div className="text-xs text-neutral-600 dark:text-neutral-400">
-                                                            {formatDate(note.timestamp)}
-                                                        </div>
-                                                        <div className="text-xs text-neutral-600 dark:text-neutral-400">
-                                                            {formatRating(note.rating)}
-                                                        </div>
-                                                    </div>
-                                                ) : (
-                                                    <div className="space-y-3">
-                                                        <div className="space-y-1">
-                                                            <div className="flex items-center justify-between">
-                                                                <div className="text-xs text-neutral-600 dark:text-neutral-400">
-                                                                    总体评分
-                                                                </div>
-                                                                <div className="text-xs text-neutral-600 dark:text-neutral-400">
-                                                                    {note.rating}
-                                                                </div>
-                                                            </div>
-                                                            <div className="h-px w-full overflow-hidden bg-neutral-200/50 dark:bg-neutral-800">
-                                                                <div
-                                                                    style={{ width: `${note.rating === 0 ? 0 : (note.rating / 5) * 100}%` }}
-                                                                    className="h-full bg-neutral-600 dark:bg-neutral-400"
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                        <div className="text-xs text-neutral-600 dark:text-neutral-400">
-                                                            {formatDate(note.timestamp)}
-                                                        </div>
+                                                {/* 参数行 - 简化显示 */}
+                                                {note.params && (
+                                                    <div className="text-xs text-neutral-600 dark:text-neutral-400">
+                                                        {note.params.coffee} · {note.params.ratio}
+                                                        {(note.params.grindSize || note.params.temp) && (
+                                                            <span> · {note.params.grindSize || ''}{note.params.grindSize && note.params.temp ? ' · ' : ''}{note.params.temp || ''}</span>
+                                                        )}
                                                     </div>
                                                 )}
+
+                                                {/* 评分行 - 简化显示 */}
+                                                <div className="flex justify-between items-center">
+                                                    <div className="text-xs text-neutral-600 dark:text-neutral-400">
+                                                        总体评分
+                                                    </div>
+                                                    <div className="text-xs text-neutral-600 dark:text-neutral-400">
+                                                        {formatRating(note.rating)}
+                                                    </div>
+                                                </div>
 
                                                 {/* 备注信息 */}
                                                 {hasNotes && (
@@ -663,47 +594,6 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                 </div>
                             )}
                         </div>
-
-                        {/* 操作按钮区域 - 底部 */}
-                        {bean && (onEdit || onDelete || onShare) && (
-                            <div className="border-t border-neutral-200/60 dark:border-neutral-800/40 pt-4 mt-4">
-                                <div className="flex justify-center gap-3">
-                                    {onEdit && (
-                                        <button
-                                            onClick={() => {
-                                                onEdit(bean)
-                                                onClose() // 编辑操作后关闭详情模态框
-                                            }}
-                                            className="px-3 py-1.5 text-xs font-medium text-neutral-700 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
-                                        >
-                                            编辑
-                                        </button>
-                                    )}
-                                    {onShare && (
-                                        <button
-                                            onClick={() => {
-                                                onShare(bean)
-                                                onClose() // 分享操作后关闭详情模态框
-                                            }}
-                                            className="px-3 py-1.5 text-xs font-medium text-neutral-700 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
-                                        >
-                                            分享
-                                        </button>
-                                    )}
-                                    {onDelete && (
-                                        <button
-                                            onClick={() => {
-                                                onDelete(bean)
-                                                onClose() // 删除操作后关闭详情模态框
-                                            }}
-                                            className="px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
-                                        >
-                                            删除
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-                        )}
                     </div>
                 ) : (
                     <div className="flex-1 flex items-center justify-center p-4">
