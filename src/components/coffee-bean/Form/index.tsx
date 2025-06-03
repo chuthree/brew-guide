@@ -710,7 +710,7 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                                 key="save-button"
                                 type="button"
                                 onClick={handleSubmit}
-                                className={`${buttonBaseClass} p-4 shrink-0`}
+                                className={`${buttonBaseClass} flex items-center gap-2 px-4 py-3 shrink-0`}
                                 title="快速保存"
                                 initial={{ scale: 0.8, opacity: 0, x: 15 }}
                                 animate={{ scale: 1, opacity: 1, x: 0 }}
@@ -720,6 +720,7 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                                 transition={springTransition}
                             >
                                 <Check className="w-4 h-4" strokeWidth="3" />
+                                <span className="font-medium">完成</span>
                             </motion.button>
                         )}
                     </AnimatePresence>
@@ -736,16 +737,13 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                         className={`
                             ${buttonBaseClass} flex items-center justify-center
                             ${!valid ? 'opacity-0 cursor-not-allowed' : ''}
-                            ${isLastStep ? 'px-6 py-3' : 'px-5 py-3'}
+                            ${isLastStep ? 'px-6 py-3' : 'p-4'}
                         `}
                     >
                         {isLastStep ? (
                             <span className="font-medium">完成</span>
                         ) : (
-                            <div className="flex items-center gap-2">
-                                <span className="font-medium">下一步</span>
-                                <ArrowRight className="w-4 h-4" strokeWidth="3" />
-                            </div>
+                            <ArrowRight className="w-4 h-4" strokeWidth="3" />
                         )}
                     </motion.button>
                 </div>
