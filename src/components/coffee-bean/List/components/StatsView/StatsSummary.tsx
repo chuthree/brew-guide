@@ -296,7 +296,7 @@ export const calculateEstimatedFinishDateAdvanced = (
 
 const StatsSummary: React.FC<StatsSummaryProps> = ({ stats, todayConsumption: _todayConsumption }) => {
     return (
-        <div className="py-4 text-justify text-sm font-medium max-w-xs">
+        <div className="p-4 text-justify text-sm font-medium max-w-xs">
 {stats.beanTypeCount.filter > stats.beanTypeCount.espresso ?
                 `偏爱手冲豆` :
                 stats.beanTypeCount.espresso > stats.beanTypeCount.filter ?

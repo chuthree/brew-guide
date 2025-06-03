@@ -10,11 +10,14 @@ import { useAnimation } from './useAnimation'
 import { useConsumption } from './useConsumption'
 import { Storage } from '@/lib/core/storage'
 import { ArrowUpRight } from 'lucide-react'
+import type { BrewingNote } from '@/lib/core/config'
 
 const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsShare }) => {
     const statsContainerRef = useRef<HTMLDivElement>(null)
     const [username, setUsername] = useState<string>('')
-    
+    const [espressoAverageConsumption, setEspressoAverageConsumption] = useState<number>(0)
+    const [filterAverageConsumption, setFilterAverageConsumption] = useState<number>(0)
+
     // 获取今日消耗数据
     const todayConsumptionData = useConsumption(beans)
     const { consumption: todayConsumption, cost: todayCost } = todayConsumptionData
@@ -26,6 +29,64 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
         filterConsumption: todayConsumptionData.filterConsumption,
         filterCost: todayConsumptionData.filterCost
     }), [beans, showEmptyBeans, todayConsumptionData])
+
+    // 新的平均消耗计算函数
+    const calculateNewAverageConsumption = useMemo(() => {
+        return async (beanType: 'espresso' | 'filter'): Promise<number> => {
+            try {
+                // 获取所有冲煮笔记
+                const notesStr = await Storage.get('brewingNotes')
+                if (!notesStr) return 0
+
+                const notes: BrewingNote[] = JSON.parse(notesStr)
+                if (!Array.isArray(notes)) return 0
+
+                // 获取该类型的咖啡豆名称列表
+                const beanNames = beans
+                    .filter(bean => bean.beanType === beanType)
+                    .map(bean => bean.name)
+
+                if (beanNames.length === 0) return 0
+
+                // 筛选出相关的笔记记录
+                const relevantNotes = notes.filter(note => {
+                    return note.coffeeBeanInfo?.name && beanNames.includes(note.coffeeBeanInfo.name)
+                })
+
+                if (relevantNotes.length === 0) return 0
+
+                // 找到第一次记录日期
+                const firstNoteTimestamp = Math.min(...relevantNotes.map(note => note.timestamp))
+                const firstDate = new Date(firstNoteTimestamp)
+                const today = new Date()
+
+                // 计算总天数（从第一次记录到今天）
+                const dayInMs = 24 * 60 * 60 * 1000
+                const totalDays = Math.max(1, Math.ceil((today.getTime() - firstDate.getTime()) / dayInMs))
+
+                // 计算总消耗量
+                let totalConsumption = 0
+                relevantNotes.forEach(note => {
+                    if (note.params?.coffee) {
+                        // 提取咖啡量中的数字部分
+                        const match = note.params.coffee.match(/(\d+(\.\d+)?)/)
+                        if (match) {
+                            const coffeeAmount = parseFloat(match[0])
+                            if (!isNaN(coffeeAmount)) {
+                                totalConsumption += coffeeAmount
+                            }
+                        }
+                    }
+                })
+
+                // 计算平均每天消耗量
+                return totalConsumption / totalDays
+            } catch (error) {
+                console.error('计算平均消耗失败:', error)
+                return 0
+            }
+        }
+    }, [beans])
     
     // 计算平均消耗和预计用完日期
     const averageConsumption = useMemo(() => 
@@ -58,9 +119,29 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
                 console.error('获取用户设置失败', e);
             }
         };
-        
+
         fetchUsername();
     }, []);
+
+    // 计算新的平均消耗
+    useEffect(() => {
+        const calculateConsumptions = async () => {
+            const hasEspresso = stats.espressoStats && stats.espressoStats.totalBeans > 0;
+            const hasFilter = stats.filterStats && stats.filterStats.totalBeans > 0;
+
+            if (hasEspresso) {
+                const espressoAvg = await calculateNewAverageConsumption('espresso');
+                setEspressoAverageConsumption(espressoAvg);
+            }
+
+            if (hasFilter) {
+                const filterAvg = await calculateNewAverageConsumption('filter');
+                setFilterAverageConsumption(filterAvg);
+            }
+        };
+
+        calculateConsumptions();
+    }, [stats, calculateNewAverageConsumption]);
 
     return (
         <div className="bg-neutral-50 dark:bg-neutral-900 overflow-x-hidden coffee-bean-stats-container">
@@ -118,20 +199,7 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
                             const hasEspresso = stats.espressoStats && stats.espressoStats.totalBeans > 0;
                             const hasFilter = stats.filterStats && stats.filterStats.totalBeans > 0;
 
-                            // 计算各类型的平均消耗和预计用完日期
-                            const espressoAverageConsumption = hasEspresso ? calculateAverageConsumption({
-                                ...stats,
-                                remainingWeight: stats.espressoStats.remainingWeight,
-                                consumedWeight: stats.espressoStats.consumedWeight,
-                                totalWeight: stats.espressoStats.totalWeight
-                            }, beans.filter(bean => bean.beanType === 'espresso'), { beanType: 'espresso' }) : 0;
-
-                            const filterAverageConsumption = hasFilter ? calculateAverageConsumption({
-                                ...stats,
-                                remainingWeight: stats.filterStats.remainingWeight,
-                                consumedWeight: stats.filterStats.consumedWeight,
-                                totalWeight: stats.filterStats.totalWeight
-                            }, beans.filter(bean => bean.beanType === 'filter'), { beanType: 'filter' }) : 0;
+                            // 使用新的平均消耗计算结果
 
                             const espressoFinishDate = hasEspresso ? calculateEstimatedFinishDate({
                                 ...stats,
