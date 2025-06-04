@@ -33,82 +33,95 @@ interface BrewingNoteFormProps {
     initialData: Partial<BrewingNoteData> & {
         coffeeBean?: CoffeeBean | null;
     };
-    inBrewPage?: boolean; // 添加属性，标识是否在冲煮页面中
-    showSaveButton?: boolean; // 是否显示保存按钮
-    onSaveSuccess?: () => void; // 添加保存成功的回调函数
-    hideHeader?: boolean; // 添加属性，控制是否隐藏头部
+    inBrewPage?: boolean;
+    showSaveButton?: boolean;
+    onSaveSuccess?: () => void;
+    hideHeader?: boolean;
 }
 
-// 二次压缩函数：将base64图片再次压缩
-function compressBase64(base64: string, quality = 0.7, maxWidth = 800): Promise<string> {
+// 图片压缩函数
+const compressBase64 = (base64: string, quality = 0.7, maxWidth = 800): Promise<string> => {
   return new Promise((resolve, reject) => {
-      try {
-    // 计算base64字符串大小
-    const approximateSizeInBytes = base64.length * 0.75;
-    
     // 如果图片小于200kb，直接返回原图
-    if (approximateSizeInBytes <= 200 * 1024) {
+    if (base64.length * 0.75 <= 200 * 1024) {
       resolve(base64);
       return;
     }
-      
-      const img = document.createElement('img');
-      
-      img.onerror = () => {
-        reject(new Error('图片加载失败'));
-      };
-      
-      const imgLoadTimeout = setTimeout(() => {
-        reject(new Error('图片加载超时'));
-      }, 10000);
-      
-      img.onload = () => {
-        clearTimeout(imgLoadTimeout);
-        
-        try {
-          let width = img.width;
-          let height = img.height;
 
-          if (width > maxWidth) {
-            height = height * (maxWidth / width);
-            width = maxWidth;
-          }
+    const img = document.createElement('img');
+    const timeout = setTimeout(() => reject(new Error('图片加载超时')), 10000);
 
-          const canvas = document.createElement('canvas');
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          if (!ctx) {
-            throw new Error('无法获取canvas上下文');
-          }
-          
-          ctx.drawImage(img, 0, 0, width, height);
-
-          try {
-            const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
-            resolve(compressedBase64);
-          } catch (toDataURLError) {
-            reject(toDataURLError);
-          }
-        } catch (canvasError) {
-          reject(canvasError);
+    img.onload = () => {
+      clearTimeout(timeout);
+      try {
+        let { width, height } = img;
+        if (width > maxWidth) {
+          height = height * (maxWidth / width);
+          width = maxWidth;
         }
-      };
-      
-      img.src = base64;
-      
-      if (img.complete) {
-        clearTimeout(imgLoadTimeout);
-        if (img.onload) {
-          const event = new Event('load');
-          img.onload(event);
-        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+
+        if (!ctx) throw new Error('无法获取canvas上下文');
+
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      } catch (error) {
+        reject(error);
       }
-    } catch (error) {
-      reject(error);
-    }
+    };
+
+    img.onerror = () => {
+      clearTimeout(timeout);
+      reject(new Error('图片加载失败'));
+    };
+
+    img.src = base64;
   });
-}
+};
+
+// 标准化烘焙度值
+const normalizeRoastLevel = (roastLevel?: string): string => {
+    if (!roastLevel) return '中度烘焙';
+    if (roastLevel.endsWith('烘焙')) return roastLevel;
+
+    const roastMap: Record<string, string> = {
+        '极浅': '极浅烘焙',
+        '浅度': '浅度烘焙',
+        '中浅': '中浅烘焙',
+        '中度': '中度烘焙',
+        '中深': '中深烘焙',
+        '深度': '深度烘焙'
+    };
+
+    // 直接匹配或包含匹配
+    return roastMap[roastLevel] ||
+           Object.entries(roastMap).find(([key]) => roastLevel.includes(key))?.[1] ||
+           '中度烘焙';
+};
+
+// 获取初始咖啡豆信息
+const getInitialCoffeeBeanInfo = (initialData: BrewingNoteFormProps['initialData']) => {
+    const beanInfo = initialData.coffeeBean || initialData.coffeeBeanInfo;
+    return {
+        name: beanInfo?.name || '',
+        roastLevel: normalizeRoastLevel(beanInfo?.roastLevel)
+    };
+};
+
+// 通用滑块样式
+const SLIDER_STYLES = `relative h-px w-full appearance-none bg-neutral-300 dark:bg-neutral-600 cursor-pointer touch-none
+[&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none
+[&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-solid
+[&::-webkit-slider-thumb]:border-neutral-300 [&::-webkit-slider-thumb]:bg-neutral-50
+dark:[&::-webkit-slider-thumb]:border-neutral-600 dark:[&::-webkit-slider-thumb]:bg-neutral-900
+[&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:appearance-none
+[&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border [&::-moz-range-thumb]:border-solid
+[&::-moz-range-thumb]:border-neutral-300 [&::-moz-range-thumb]:bg-neutral-50
+dark:[&::-moz-range-thumb]:border-neutral-600 dark:[&::-moz-range-thumb]:bg-neutral-900`;
 
 const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     id,
@@ -116,56 +129,15 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     onClose,
     onSave,
     initialData,
-    inBrewPage = false, // 默认不在冲煮页面
-    showSaveButton = true, // 默认显示保存按钮
-    onSaveSuccess, // 保存成功的回调
-    hideHeader = false, // 默认显示头部
+    inBrewPage = false,
+    showSaveButton = true,
+    onSaveSuccess,
+    hideHeader = false,
 }) => {
-    // 处理咖啡豆数据，如果有提供coffeeBean则使用，否则使用coffeeBeanInfo
-    const initialCoffeeBeanInfo = initialData.coffeeBean
-        ? {
-            name: initialData.coffeeBean.name || '',
-            roastLevel: initialData.coffeeBean.roastLevel || '中度烘焙',
-        }
-        : {
-            name: initialData.coffeeBeanInfo?.name || '',
-            roastLevel: initialData.coffeeBeanInfo?.roastLevel || '中度烘焙',
-        };
-
-    // 标准化烘焙度值，确保与下拉列表选项匹配
-    const normalizeRoastLevel = (roastLevel?: string): string => {
-        if (!roastLevel) return '中度烘焙';
-        
-        // 如果已经是完整格式，直接返回
-        if (roastLevel.endsWith('烘焙')) return roastLevel;
-        
-        // 否则添加\"烘焙\"后缀
-        if (roastLevel === '极浅') return '极浅烘焙';
-        if (roastLevel === '浅度') return '浅度烘焙';
-        if (roastLevel === '中浅') return '中浅烘焙';
-        if (roastLevel === '中度') return '中度烘焙';
-        if (roastLevel === '中深') return '中深烘焙';
-        if (roastLevel === '深度') return '深度烘焙';
-        
-        // 尝试匹配部分字符串
-        if (roastLevel.includes('极浅')) return '极浅烘焙';
-        if (roastLevel.includes('浅度')) return '浅度烘焙';
-        if (roastLevel.includes('中浅')) return '中浅烘焙';
-        if (roastLevel.includes('中度')) return '中度烘焙';
-        if (roastLevel.includes('中深')) return '中深烘焙';
-        if (roastLevel.includes('深度')) return '深度烘焙';
-        
-        return '中度烘焙';
-    };
-
-    // 确保初始咖啡豆信息的烘焙度是标准化的
-    if (initialCoffeeBeanInfo.roastLevel) {
-        initialCoffeeBeanInfo.roastLevel = normalizeRoastLevel(initialCoffeeBeanInfo.roastLevel);
-    }
 
     const [formData, setFormData] = useState<FormData>({
-        coffeeBeanInfo: initialCoffeeBeanInfo,
-        image: typeof initialData.image === 'string' ? initialData.image : '', // 修复类型错误
+        coffeeBeanInfo: getInitialCoffeeBeanInfo(initialData),
+        image: typeof initialData.image === 'string' ? initialData.image : '',
         rating: initialData?.rating || 3,
         taste: {
             acidity: initialData?.taste?.acidity || 0,
@@ -185,75 +157,63 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         temp: initialData?.params?.temp || '92°C',
     });
     
-    // 添加表单ref
-    const formRef = useRef<HTMLFormElement>(null)
+    const formRef = useRef<HTMLFormElement>(null);
+    const [currentSliderValue, setCurrentSliderValue] = useState<number | null>(null);
 
-    // 移除之前的滑动按钮相关函数和状态
-    const sliderRef = useRef<HTMLDivElement>(null);
+    // 通用滑块触摸处理
+    const createSliderHandlers = (
+        updateFn: (value: number) => void,
+        min: number = 0,
+        max: number = 5,
+        step: number = 1
+    ) => ({
+        onTouchStart: (value: number) => (e: React.TouchEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setCurrentSliderValue(value);
+        },
+        onTouchMove: (e: React.TouchEvent) => {
+            if (currentSliderValue === null) return;
+
+            const touch = e.touches[0];
+            const target = e.currentTarget as HTMLInputElement;
+            const rect = target.getBoundingClientRect();
+            const percentage = Math.max(0, Math.min(1, (touch.clientX - rect.left) / rect.width));
+            const newValue = min + Math.round(percentage * (max - min) / step) * step;
+
+            if (newValue !== currentSliderValue) {
+                updateFn(newValue);
+                setCurrentSliderValue(newValue);
+            }
+        },
+        onTouchEnd: () => setCurrentSliderValue(null)
+    });
     
-    // 处理总体评分的滑动
-    const [ratingCurrentValue, setRatingCurrentValue] = useState<number | null>(null);
-    
-    const handleRatingTouchStart = (value: number) => (e: React.TouchEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setRatingCurrentValue(value);
-    }
-    
-    const handleRatingTouchMove = (e: React.TouchEvent) => {
-        if (ratingCurrentValue === null) return;
-        
-        const touch = e.touches[0];
-        const target = e.currentTarget as HTMLInputElement;
-        const rect = target.getBoundingClientRect();
-        const width = rect.width;
-        const x = touch.clientX - rect.left;
-        const percentage = Math.max(0, Math.min(1, x / width));
-        
-        // 计算0.5步进的评分值
-        const newValue = 1 + Math.round(percentage * 8) / 2;
-        
-        if (newValue !== formData.rating) {
-            setFormData({
-                ...formData,
-                rating: newValue,
-            });
-            setRatingCurrentValue(newValue);
-        }
-    }
-    
-    const handleRatingTouchEnd = () => {
-        setRatingCurrentValue(null);
-    }
-    
-    // 添加事件监听
+    // 事件监听
     useEffect(() => {
-        // 触摸事件处理
-        document.addEventListener('touchend', handleTouchEnd);
-        document.addEventListener('touchend', handleRatingTouchEnd);
-        
-        // 方案参数变化事件监听
+        const handleGlobalTouchEnd = () => setCurrentSliderValue(null);
+
         const handleMethodParamsChange = (e: CustomEvent) => {
             if (e.detail?.params) {
                 const params = e.detail.params;
-                setMethodParams({
-                    coffee: params.coffee || methodParams.coffee,
-                    water: params.water || methodParams.water,
-                    ratio: params.ratio || methodParams.ratio,
-                    grindSize: params.grindSize || methodParams.grindSize,
-                    temp: params.temp || methodParams.temp
-                });
+                setMethodParams(prev => ({
+                    coffee: params.coffee || prev.coffee,
+                    water: params.water || prev.water,
+                    ratio: params.ratio || prev.ratio,
+                    grindSize: params.grindSize || prev.grindSize,
+                    temp: params.temp || prev.temp
+                }));
             }
         };
-        
+
+        document.addEventListener('touchend', handleGlobalTouchEnd);
         document.addEventListener('methodParamsChanged', handleMethodParamsChange as EventListener);
-        
+
         return () => {
-            document.removeEventListener('touchend', handleTouchEnd);
-            document.removeEventListener('touchend', handleRatingTouchEnd);
+            document.removeEventListener('touchend', handleGlobalTouchEnd);
             document.removeEventListener('methodParamsChanged', handleMethodParamsChange as EventListener);
-        }
-    }, [methodParams]);
+        };
+    }, []);
 
     // 使用useRef保存上一次的initialData，用于比较变化
     const prevInitialDataRef = useRef<typeof initialData>(initialData);
@@ -335,72 +295,41 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         prevInitialDataRef.current = initialData;
     }, [initialData]);
 
-    const [currentValue, setCurrentValue] = useState<number | null>(null)
+    // 创建评分更新函数
+    const updateRating = (value: number) => {
+        setFormData(prev => ({ ...prev, rating: value }));
+    };
 
-    const handleTouchStart = (key: string, value: number) => (e: React.TouchEvent) => {
-        e.preventDefault()
-        e.stopPropagation()
-        setCurrentValue(value)
-    }
+    const updateTasteRating = (key: keyof TasteRatings) => (value: number) => {
+        setFormData(prev => ({
+            ...prev,
+            taste: { ...prev.taste, [key]: value }
+        }));
+    };
 
-    const handleTouchMove = (key: string) => (e: React.TouchEvent) => {
-        if (currentValue === null) return
+    // 创建滑块处理器
+    const ratingHandlers = createSliderHandlers(updateRating, 1, 5, 0.5);
+    const tasteHandlers = (key: keyof TasteRatings) =>
+        createSliderHandlers(updateTasteRating(key), 0, 5, 1);
 
-        const touch = e.touches[0]
-        const target = e.currentTarget as HTMLInputElement
-        const rect = target.getBoundingClientRect()
-        const width = rect.width
-        const x = touch.clientX - rect.left
-        const percentage = Math.max(0, Math.min(1, x / width))
-        const newValue = Math.round(percentage * 5)
+    // 计算水量
+    const calculateWater = (coffee: string, ratio: string): string => {
+        const coffeeValue = parseFloat(coffee.match(/(\d+(\.\d+)?)/)?.[0] || '0');
+        const ratioValue = parseFloat(ratio.match(/1:(\d+(\.\d+)?)/)?.[1] || '0');
 
-        if (newValue !== currentValue) {
-            setFormData({
-                ...formData,
-                taste: {
-                    ...formData.taste,
-                    [key]: newValue,
-                },
-            })
-            setCurrentValue(newValue)
+        if (coffeeValue > 0 && ratioValue > 0) {
+            return `${Math.round(coffeeValue * ratioValue)}g`;
         }
-    }
-
-    const handleTouchEnd = () => {
-        setCurrentValue(null)
-    }
-
-    useEffect(() => {
-        // 添加全局触摸事件处理
-        document.addEventListener('touchend', handleTouchEnd)
-
-        return () => {
-            document.removeEventListener('touchend', handleTouchEnd)
-        }
-    }, [])
+        return methodParams.water;
+    };
 
     // 处理咖啡粉量变化
     const handleCoffeeChange = (value: string) => {
-        const newMethodParams = {
-            ...methodParams,
+        setMethodParams(prev => ({
+            ...prev,
             coffee: value,
-        };
-        
-        // 根据新的咖啡粉量和当前粉水比计算水量
-        const coffeeMatch = value.match(/(\d+(\.\d+)?)/);
-        const ratioMatch = methodParams.ratio.match(/1:(\d+(\.\d+)?)/);
-        
-        if (coffeeMatch && ratioMatch) {
-            const coffeeValue = parseFloat(coffeeMatch[0]);
-            const ratioValue = parseFloat(ratioMatch[1]);
-            
-            if (!isNaN(coffeeValue) && !isNaN(ratioValue) && coffeeValue > 0) {
-                const waterValue = Math.round(coffeeValue * ratioValue);
-                newMethodParams.water = `${waterValue}g`;
-            }
-        }
-        
-        setMethodParams(newMethodParams);
+            water: calculateWater(value, prev.ratio)
+        }));
     };
 
     // Inside the component, add a new state for showing/hiding flavor ratings
@@ -434,97 +363,55 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
 
     // 处理图片上传
     const handleImageUpload = async (file: File) => {
-        try {
-            if (!file.type.startsWith('image/')) return;
-            
-            const reader = new FileReader();
-            
-            const readerTimeout = setTimeout(() => {
-                try {
-                    const objectUrl = URL.createObjectURL(file);
-                    setFormData(prev => ({...prev, image: objectUrl}));
-                    setTimeout(() => URL.revokeObjectURL(objectUrl), 30000);
-                } catch (_error) {
-                    console.error('处理图片失败');
-                }
-            }, 5000);
-            
-            reader.onloadend = async () => {
-                clearTimeout(readerTimeout);
-                try {
-                    const originalBase64 = reader.result as string;
-                    
-                    if (!originalBase64 || typeof originalBase64 !== 'string') return;
-                    
-                    try {
-                        const compressedBase64 = await compressBase64(originalBase64, 0.5, 800);
-                        setFormData(prev => ({...prev, image: compressedBase64}));
-                    } catch (_error) {
-                        setFormData(prev => ({...prev, image: originalBase64}));
-                    }
-                } catch (_error) {
-                    try {
-                        const objectUrl = URL.createObjectURL(file);
-                        setFormData(prev => ({...prev, image: objectUrl}));
-                        setTimeout(() => URL.revokeObjectURL(objectUrl), 30000);
-                    } catch (error) {
-                        console.error('处理图片失败', error);
-                    }
-                }
-            };
-            
-            reader.onerror = () => {
-                clearTimeout(readerTimeout);
-                try {
-                    const objectUrl = URL.createObjectURL(file);
-                    setFormData(prev => ({...prev, image: objectUrl}));
-                    setTimeout(() => URL.revokeObjectURL(objectUrl), 30000);
-                } catch (error) {
-                    console.error('处理图片失败', error);
-                }
-            };
-            
-            reader.readAsDataURL(file);
-        } catch (_error) {
-            console.error('处理图片失败', _error);
-        }
+        if (!file.type.startsWith('image/')) return;
+
+        const reader = new FileReader();
+
+        reader.onload = async () => {
+            try {
+                const base64 = reader.result as string;
+                if (!base64) return;
+
+                const compressedBase64 = await compressBase64(base64, 0.5, 800);
+                setFormData(prev => ({ ...prev, image: compressedBase64 }));
+            } catch (error) {
+                console.error('图片处理失败:', error);
+                // 降级使用原始文件
+                const objectUrl = URL.createObjectURL(file);
+                setFormData(prev => ({ ...prev, image: objectUrl }));
+                setTimeout(() => URL.revokeObjectURL(objectUrl), 30000);
+            }
+        };
+
+        reader.onerror = () => {
+            console.error('文件读取失败');
+            const objectUrl = URL.createObjectURL(file);
+            setFormData(prev => ({ ...prev, image: objectUrl }));
+            setTimeout(() => URL.revokeObjectURL(objectUrl), 30000);
+        };
+
+        reader.readAsDataURL(file);
     };
     
-    // 处理图片选择逻辑 (相册或拍照)
+    // 处理图片选择
     const handleImageSelect = (source: 'camera' | 'gallery') => {
-        try {
-            const fileInput = document.createElement('input');
-            fileInput.type = 'file';
-            fileInput.accept = 'image/*';
-            
-            // 根据来源设置不同的capture属性
-            if (source === 'camera') {
-                fileInput.setAttribute('capture', 'environment');
-            }
-            
-            fileInput.onchange = (e) => {
-                const input = e.target as HTMLInputElement;
-                if (!input.files || input.files.length === 0) return;
-                
-                const file = input.files[0];
-                if (file.type.startsWith('image/')) {
-                    // 先预览一下图片，以便用户知道已经选择了图片
-                    const tempUrl = URL.createObjectURL(file);
-                    // 临时设置图片预览
-                    setFormData(prev => ({
-                        ...prev,
-                        image: tempUrl
-                    }));
-                    // 然后正常处理添加
-                    handleImageUpload(file);
-                    // 释放URL对象
-                    setTimeout(() => URL.revokeObjectURL(tempUrl), 5000);
-                }
-            };
-            fileInput.click();
-        } catch (error) {
-            console.error('打开相机/相册失败:', error);
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = 'image/*';
+
+        if (source === 'camera') {
+            fileInput.setAttribute('capture', 'environment');
         }
+
+        fileInput.onchange = (e) => {
+            const input = e.target as HTMLInputElement;
+            const file = input.files?.[0];
+            if (file?.type.startsWith('image/')) {
+                handleImageUpload(file);
+            }
+        };
+
+        fileInput.click();
     };
 
     // 保存笔记的处理函数
@@ -747,23 +634,11 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                                 value={methodParams.ratio}
                                 onChange={(e) => {
                                     const newRatio = e.target.value;
-                                    const newMethodParams = {
-                                        ...methodParams,
+                                    setMethodParams(prev => ({
+                                        ...prev,
                                         ratio: newRatio,
-                                    };
-                                    
-                                    // 根据新的粉水比和当前咖啡粉量计算水量
-                                    const coffeeMatch = methodParams.coffee.match(/(\d+(\.\d+)?)/);
-                                    if (coffeeMatch && newRatio) {
-                                        const coffeeValue = parseFloat(coffeeMatch[0]);
-                                        const ratioValue = parseFloat(newRatio.replace('1:', ''));
-                                        if (!isNaN(coffeeValue) && !isNaN(ratioValue) && coffeeValue > 0) {
-                                            const waterValue = Math.round(coffeeValue * ratioValue);
-                                            newMethodParams.water = `${waterValue}g`;
-                                        }
-                                    }
-                                    
-                                    setMethodParams(newMethodParams);
+                                        water: calculateWater(prev.coffee, newRatio)
+                                    }));
                                 }}
                                 className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-hidden transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
                                 placeholder="粉水比 (如: 1:15)"
@@ -841,31 +716,10 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                                                     },
                                                 })
                                             }
-                                            onTouchStart={handleTouchStart(key, value)}
-                                            onTouchMove={handleTouchMove(key)}
-                                            onTouchEnd={handleTouchEnd}
-                                            className="relative h-px w-full appearance-none bg-neutral-300 dark:bg-neutral-600 cursor-pointer touch-none 
-                                            [&::-webkit-slider-thumb]:h-4 
-                                            [&::-webkit-slider-thumb]:w-4
-                                            [&::-webkit-slider-thumb]:appearance-none 
-                                            [&::-webkit-slider-thumb]:rounded-full 
-                                            [&::-webkit-slider-thumb]:border 
-                                            [&::-webkit-slider-thumb]:border-solid
-                                            [&::-webkit-slider-thumb]:border-neutral-300
-                                            [&::-webkit-slider-thumb]:bg-neutral-50
-                                            dark:[&::-webkit-slider-thumb]:border-neutral-600
-                                            dark:[&::-webkit-slider-thumb]:bg-neutral-900
-                                            
-                                            [&::-moz-range-thumb]:h-4 
-                                            [&::-moz-range-thumb]:w-4
-                                            [&::-moz-range-thumb]:appearance-none 
-                                            [&::-moz-range-thumb]:rounded-full 
-                                            [&::-moz-range-thumb]:border
-                                            [&::-moz-range-thumb]:border-solid
-                                            [&::-moz-range-thumb]:border-neutral-300
-                                            [&::-moz-range-thumb]:bg-neutral-50
-                                            dark:[&::-moz-range-thumb]:border-neutral-600
-                                            dark:[&::-moz-range-thumb]:bg-neutral-900"
+                                            onTouchStart={tasteHandlers(key as keyof TasteRatings).onTouchStart(value)}
+                                            onTouchMove={tasteHandlers(key as keyof TasteRatings).onTouchMove}
+                                            onTouchEnd={tasteHandlers(key as keyof TasteRatings).onTouchEnd}
+                                            className={SLIDER_STYLES}
                                         />
                                     </div>
                                 </div>
@@ -885,8 +739,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                         </div>
                     </div>
                     <div className="relative py-3">
-                        {/* 滑块 - 参考风味评分的滑块实现 */}
-                        <div className="relative py-4 -my-4" ref={sliderRef}>
+                        <div className="relative py-4 -my-4">
                             <input
                                 type="range"
                                 min="1"
@@ -899,31 +752,10 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                                         rating: parseFloat(e.target.value),
                                     })
                                 }
-                                onTouchStart={handleRatingTouchStart(formData.rating)}
-                                onTouchMove={handleRatingTouchMove}
-                                onTouchEnd={handleRatingTouchEnd}
-                                className="relative h-px w-full appearance-none bg-neutral-300 dark:bg-neutral-600 cursor-pointer touch-none 
-                                [&::-webkit-slider-thumb]:h-4 
-                                [&::-webkit-slider-thumb]:w-4
-                                [&::-webkit-slider-thumb]:appearance-none 
-                                [&::-webkit-slider-thumb]:rounded-full 
-                                [&::-webkit-slider-thumb]:border 
-                                [&::-webkit-slider-thumb]:border-solid
-                                [&::-webkit-slider-thumb]:border-neutral-300
-                                [&::-webkit-slider-thumb]:bg-neutral-50
-                                dark:[&::-webkit-slider-thumb]:border-neutral-500
-                                dark:[&::-webkit-slider-thumb]:bg-neutral-900
-                                
-                                [&::-moz-range-thumb]:h-4 
-                                [&::-moz-range-thumb]:w-4
-                                [&::-moz-range-thumb]:appearance-none 
-                                [&::-moz-range-thumb]:rounded-full 
-                                [&::-moz-range-thumb]:border
-                                [&::-moz-range-thumb]:border-solid
-                                [&::-moz-range-thumb]:border-neutral-300
-                                [&::-moz-range-thumb]:bg-neutral-50
-                                dark:[&::-moz-range-thumb]:border-neutral-500
-                                dark:[&::-moz-range-thumb]:bg-neutral-900"
+                                onTouchStart={ratingHandlers.onTouchStart(formData.rating)}
+                                onTouchMove={ratingHandlers.onTouchMove}
+                                onTouchEnd={ratingHandlers.onTouchEnd}
+                                className={SLIDER_STYLES}
                             />
                         </div>
                     </div>
