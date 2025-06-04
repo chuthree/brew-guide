@@ -390,7 +390,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
             // 获取现有笔记
             const savedNotes = await Storage.get('brewingNotes')
             let parsedNotes: BrewingNote[] = savedNotes ? JSON.parse(savedNotes) : []
-            
+
             // 查找并更新指定笔记
             parsedNotes = parsedNotes.map(note => {
                 if (note.id === updatedData.id) {
@@ -398,18 +398,38 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                 }
                 return note
             })
-            
+
             // 保存更新后的笔记
             await Storage.set('brewingNotes', JSON.stringify(parsedNotes))
-            
+
+            // 立即更新全局缓存，确保UI能立即反映变化
+            globalCache.notes = parsedNotes;
+
+            // 重新计算过滤后的笔记
+            let filteredNotes = parsedNotes;
+            if (filterMode === 'equipment' && selectedEquipment) {
+                filteredNotes = parsedNotes.filter(note => note.equipment === selectedEquipment);
+            } else if (filterMode === 'bean' && selectedBean) {
+                filteredNotes = parsedNotes.filter(note =>
+                    note.coffeeBeanInfo?.name === selectedBean
+                );
+            }
+            globalCache.filteredNotes = filteredNotes;
+
+            // 重新计算总消耗量
+            globalCache.totalConsumption = calculateTotalCoffeeConsumption(parsedNotes);
+
+            // 触发重新渲染
+            triggerRerender();
+
             // 触发存储变更事件
             window.dispatchEvent(new CustomEvent('customStorageChange', {
                 detail: { key: 'brewingNotes' }
             }))
-            
+
             // 关闭编辑
             setEditingNote(null)
-            
+
             // 如果提供了导航栏替代头部功能，则关闭它
             if (setShowAlternativeHeader) {
                 setShowAlternativeHeader(false);
@@ -417,7 +437,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
             if (setAlternativeHeaderContent) {
                 setAlternativeHeaderContent(null);
             }
-            
+
             // 显示成功提示
             showToast('笔记已更新', 'success')
         } catch (error) {

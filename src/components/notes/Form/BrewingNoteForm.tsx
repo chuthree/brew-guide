@@ -540,12 +540,12 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
             equipment: initialData.equipment,
             method: initialData.method,
             params: {
-                // 确保使用MethodSelector中更新的参数，而不是默认值
-                coffee: initialData.params?.coffee || methodParams.coffee,
-                water: initialData.params?.water || methodParams.water,
-                ratio: initialData.params?.ratio || methodParams.ratio,
-                grindSize: initialData.params?.grindSize || methodParams.grindSize,
-                temp: initialData.params?.temp || methodParams.temp
+                // 优先使用MethodSelector中更新的参数，如果没有则使用初始参数，最后使用默认值
+                coffee: methodParams.coffee || initialData.params?.coffee || '',
+                water: methodParams.water || initialData.params?.water || '',
+                ratio: methodParams.ratio || initialData.params?.ratio || '',
+                grindSize: methodParams.grindSize || initialData.params?.grindSize || '',
+                temp: methodParams.temp || initialData.params?.temp || ''
             },
             totalTime: initialData.totalTime,
             // 确保保留beanId，这是与咖啡豆的关联字段

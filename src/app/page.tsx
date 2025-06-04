@@ -1210,7 +1210,9 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     // 简化处理保存咖啡豆 - 统一数据更新机制
     const handleSaveBean = async (bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>) => {
         try {
-            const isFirstBean = !(await CoffeeBeanManager.getAllBeans()).length;
+            // 获取当前咖啡豆数量，用于判断是否是首次添加
+            const currentBeans = await CoffeeBeanManager.getAllBeans();
+            const isFirstBean = !editingBean && currentBeans.length === 0;
 
             if (editingBean) {
                 // 更新现有咖啡豆
@@ -1252,8 +1254,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             setTimeout(() => {
                 checkCoffeeBeans();
             }, 50);
-        } catch {
-            // 静默处理错误
+        } catch (error) {
+            console.error('保存咖啡豆失败:', error);
             alert('保存失败，请重试');
         }
     };
