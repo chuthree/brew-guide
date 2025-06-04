@@ -369,19 +369,19 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                         >
                             <div className="flex items-start px-6 py-3">
                                 {/* 序号 - 极简风格 */}
-                                <div className="text-[11px] text-neutral-600 dark:text-neutral-400 w-4 mr-2 shrink-0 leading-none">
+                                <div className="text-xs font-medium text-neutral-600 dark:text-neutral-400 w-4 mr-2 shrink-0 leading-none">
                                     {index + 1}
                                 </div>
 
                                 {/* 咖啡豆信息 */}
                                 <div className="cursor-pointer flex-1 min-w-0 ">
                                     <div className="flex items-center leading-none">
-                                        <div className="text-[11px] text-neutral-800 dark:text-neutral-100 truncate">{bean.name}</div>
-                                        <div className="ml-2 text-[11px] text-neutral-800 dark:text-neutral-100 shrink-0">
+                                        <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100 truncate">{bean.name}</div>
+                                        <div className="ml-2 text-xs font-medium text-neutral-800 dark:text-neutral-100 shrink-0">
                                             +{bean.overallRating !== undefined ? bean.overallRating : 0}
                                         </div>
                                     </div>
-                                    <div className="text-[10px] text-neutral-600 dark:text-neutral-400 mt-1.5 text-justify">
+                                    <div className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mt-1.5 text-justify">
                                         {(() => {
                                             // 显示信息数组
                                             const infoArray: (React.ReactNode | string)[] = [];
