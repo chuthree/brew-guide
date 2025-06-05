@@ -323,7 +323,7 @@ const EquipmentIndicator: React.FC<EquipmentIndicatorProps> = ({
                                     {item.type === 'addButton' ? (
                                         <div
                                             onClick={item.onClick}
-                                            className="text-[12px] tracking-widest cursor-pointer text-neutral-500 dark:text-neutral-400 flex items-center whitespace-nowrap pb-3 transition-colors duration-150"
+                                            className="text-xs font-medium tracking-widest cursor-pointer text-neutral-500 dark:text-neutral-400 flex items-center whitespace-nowrap pb-3 transition-colors duration-150"
                                         >
                                             添加器具
                                         </div>
