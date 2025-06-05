@@ -18,7 +18,6 @@ const MethodShareModal: React.FC<MethodShareModalProps> = ({
     customEquipment
 }) => {
     const [isSharing, setIsSharing] = useState(false)
-    const [activeOption, setActiveOption] = useState<'text' | 'image'>('text')
 
     // 处理文字分享
     const handleTextShare = async () => {
@@ -42,77 +41,6 @@ const MethodShareModal: React.FC<MethodShareModalProps> = ({
         }
     }
 
-    // 处理图片分享
-    const handleImageShare = async () => {
-        // 开发中提示
-        showToast({
-            type: 'info',
-            title: '图片分享功能开发中...',
-            duration: 2000
-        })
-        setIsSharing(false)
-    }
-    
-    // 渲染分享选项
-    const renderShareOptions = () => {
-        return (
-            <div className="space-y-4 mb-6">
-                <div
-                    className={`p-4 rounded-lg flex items-center cursor-pointer ${
-                        activeOption === 'text'
-                            ? 'bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800'
-                            : 'bg-neutral-100 dark:bg-neutral-800/30 hover:opacity-90'
-                    }`}
-                    onClick={() => setActiveOption('text')}
-                >
-                    <div className="mr-3 text-xl">📝</div>
-                    <div className="flex-1">
-                        <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                            文字分享
-                        </div>
-                        <div className="text-xs text-neutral-500 dark:text-neutral-400">
-                            生成方案文字说明并复制到剪贴板
-                        </div>
-                    </div>
-                    <div>
-                        <input
-                            type="radio"
-                            checked={activeOption === 'text'}
-                            onChange={() => setActiveOption('text')}
-                            className="w-4 h-4 text-blue-600 bg-neutral-100 border-neutral-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-neutral-800 focus:ring-2 dark:bg-neutral-700 dark:border-neutral-600"
-                        />
-                    </div>
-                </div>
-
-                <div
-                    className={`p-4 rounded-lg flex items-center cursor-pointer ${
-                        activeOption === 'image'
-                            ? 'bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800'
-                            : 'bg-neutral-100 dark:bg-neutral-800/30 hover:opacity-90'
-                    }`}
-                    onClick={() => setActiveOption('image')}
-                >
-                    <div className="mr-3 text-xl">🖼️</div>
-                    <div className="flex-1">
-                        <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                            图片分享
-                        </div>
-                        <div className="text-xs text-neutral-500 dark:text-neutral-400">
-                            生成精美的方案卡片图片，适合社交媒体分享
-                        </div>
-                    </div>
-                    <div>
-                        <input
-                            type="radio"
-                            checked={activeOption === 'image'}
-                            onChange={() => setActiveOption('image')}
-                            className="w-4 h-4 text-blue-600 bg-neutral-100 border-neutral-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-neutral-800 focus:ring-2 dark:bg-neutral-700 dark:border-neutral-600"
-                        />
-                    </div>
-                </div>
-            </div>
-        )
-    }
 
     return (
         <AnimatePresence>
@@ -160,34 +88,29 @@ const MethodShareModal: React.FC<MethodShareModalProps> = ({
                                 </button>
                             </div>
 
-                            {/* 分享选项 */}
-                            {renderShareOptions()}
-
-                            {/* 图片预览区域（隐藏但用于生成图片） */}
-                            <div className={activeOption === 'image' ? 'mb-4' : 'hidden'}>
-                                <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-2">
-                                    图片预览:
-                                </div>
-                                <div className="overflow-hidden rounded-lg border border-neutral-200 dark:border-neutral-700 flex items-center justify-center" style={{height: '250px'}}>
-                                    <div className="text-xl text-neutral-500 dark:text-neutral-400">
-                                        开发中...
+                            {/* 方案信息 */}
+                            <div className="mb-6">
+                                <div className="p-4 bg-neutral-100/60 dark:bg-neutral-800/30 rounded-lg">
+                                    <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200 mb-1">
+                                        {method.name}
+                                    </div>
+                                    <div className="text-xs text-neutral-500 dark:text-neutral-400">
+                                        将生成方案文字说明并复制到剪贴板
                                     </div>
                                 </div>
                             </div>
 
                             {/* 按钮 */}
                             <button
-                                onClick={activeOption === 'text' ? handleTextShare : handleImageShare}
-                                disabled={isSharing || activeOption === 'image'}
-                                className={`w-full mt-2 py-2.5 px-4 rounded-lg transition-colors ${
-                                    isSharing || activeOption === 'image'
+                                onClick={handleTextShare}
+                                disabled={isSharing}
+                                className={`w-full py-2.5 px-4 rounded-lg transition-colors ${
+                                    isSharing
                                         ? 'bg-neutral-400 dark:bg-neutral-700 cursor-not-allowed text-neutral-300 dark:text-neutral-500'
                                         : 'bg-neutral-800 dark:bg-neutral-200 text-neutral-100 dark:text-neutral-800 hover:opacity-80'
                                 }`}
                             >
-                                {isSharing 
-                                    ? (activeOption === 'text' ? '复制中...' : '开发中...') 
-                                    : (activeOption === 'text' ? '复制到剪贴板' : '开发中...')}
+                                {isSharing ? '复制中...' : '复制到剪贴板'}
                             </button>
                         </div>
                     </motion.div>

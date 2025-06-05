@@ -10,15 +10,13 @@ import type { BrewingNoteData } from '@/types/app';
 import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager'
 import { saveMainTabPreference } from '@/lib/navigation/navigationCache';
 import { showToast } from "@/components/common/feedback/GlobalToast";
-import EquipmentShareModal from '@/components/equipment/share/EquipmentShareModal';
 import { getEquipmentName } from '@/lib/brewing/parameters';
 import BottomActionBar from '@/components/layout/BottomActionBar';
 import CoffeeBeanList from '@/components/coffee-bean/List/ListView';
-import MethodShareModal from '@/components/method/share/MethodShareModal';
-
 import { saveCustomMethod } from '@/lib/managers/customMethods';
 import { Search, X, Shuffle } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
+// 分享模态框已移除，改为直接复制到剪贴板
 
 
 // 导入随机咖啡豆选择器组件
@@ -59,21 +57,16 @@ interface TabContentProps {
     showComplete: boolean;
     currentStage: number;
     isWaiting?: boolean;
-    _isPourVisualizerPreloaded: boolean;
     selectedEquipment: string | null;
     selectedCoffeeBean?: string | null;
     selectedCoffeeBeanData?: CoffeeBean | null;
     countdownTime: number | null;
-    _methodType: 'common' | 'custom';
     customMethods: Record<string, Method[]>;
     actionMenuStates: Record<string, boolean>;
     setActionMenuStates: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
-    _showCustomForm: boolean;
     setShowCustomForm: (show: boolean) => void;
-    _showImportForm: boolean;
     setShowImportForm: (show: boolean) => void;
     settings: SettingsOptions;
-    onEquipmentSelect: (name: string) => void;
     onMethodSelect: (index: number, step?: Step) => void;
     onCoffeeBeanSelect?: (beanId: string | null, bean: CoffeeBean | null) => void;
     onEditMethod: (method: Method) => void;
@@ -95,13 +88,9 @@ interface TabContentProps {
         originalIndex: number;
     }[];
     customEquipments: CustomEquipment[];
-    setCustomEquipments: React.Dispatch<React.SetStateAction<CustomEquipment[]>>;
     setShowEquipmentForm: (show: boolean) => void;
     setEditingEquipment: (equipment: CustomEquipment | undefined) => void;
-    handleSaveEquipment: (equipment: CustomEquipment) => Promise<void>;
     handleDeleteEquipment: (equipment: CustomEquipment) => Promise<void>;
-    _onShareMethod?: (method: Method) => void;
-    setShowEquipmentImportForm: (show: boolean) => void;
 }
 
 const TabContent: React.FC<TabContentProps> = ({
@@ -114,21 +103,16 @@ const TabContent: React.FC<TabContentProps> = ({
     showComplete,
     currentStage,
     isWaiting = false,
-    _isPourVisualizerPreloaded,
     selectedEquipment,
     selectedCoffeeBean,
     selectedCoffeeBeanData,
     countdownTime,
-    _methodType,
     customMethods,
     actionMenuStates,
     setActionMenuStates,
-    _showCustomForm,
     setShowCustomForm,
-    _showImportForm,
     setShowImportForm,
     settings,
-    onEquipmentSelect: _onEquipmentSelect,
     onMethodSelect,
     onCoffeeBeanSelect,
     onEditMethod,
@@ -138,13 +122,9 @@ const TabContent: React.FC<TabContentProps> = ({
     setIsNoteSaved,
     expandedStages,
     customEquipments,
-    setCustomEquipments: _setCustomEquipments,
     setShowEquipmentForm,
     setEditingEquipment,
-    handleSaveEquipment: _handleSaveEquipment,
     handleDeleteEquipment,
-    _onShareMethod,
-    setShowEquipmentImportForm: _setShowEquipmentImportForm,
 }) => {
     // 笔记表单状态
     const [noteSaved, setNoteSaved] = useState(false);
@@ -161,6 +141,8 @@ const TabContent: React.FC<TabContentProps> = ({
     // 随机选择器状态
     const [showRandomPicker, setShowRandomPicker] = useState(false);
     const [allBeans, setAllBeans] = useState<CoffeeBean[]>([]);
+
+    // 分享功能已简化为直接复制到剪贴板，不再需要模态框状态
 
     // 监听流速显示设置变化
     useEffect(() => {
@@ -227,65 +209,40 @@ const TabContent: React.FC<TabContentProps> = ({
         };
     }, []);
 
-    // 处理方案类型切换
-    const _handleMethodTypeChange = async (type: 'common' | 'custom') => {
-        await triggerHapticFeedback();
-        window.dispatchEvent(new CustomEvent('methodTypeChange', { detail: type }));
-        localStorage.setItem('methodType', type);
-    };
-
-    // 处理保存笔记
+    // 简化的保存笔记处理
     const handleSaveNote = async (note: BrewingNoteData) => {
         try {
             const Storage = (await import('@/lib/core/storage')).Storage;
             const existingNotesStr = await Storage.get('brewingNotes');
             const existingNotes = existingNotesStr ? JSON.parse(existingNotesStr) : [];
 
-            // 检查是否是现有笔记
             const isExistingNote = note.id && existingNotes.some((n: BrewingNoteData) => n.id === note.id);
-
             const noteData = {
                 ...note,
                 id: note.id || Date.now().toString(),
-                // 编辑现有笔记时保留原始时间戳，新建笔记时使用当前时间
                 timestamp: isExistingNote
                     ? existingNotes.find((n: BrewingNoteData) => n.id === note.id)?.timestamp || Date.now()
                     : Date.now(),
             };
 
-            let updatedNotes;
-            if (isExistingNote) {
-                // 更新现有笔记
-                updatedNotes = existingNotes.map((n: BrewingNoteData) =>
-                    n.id === noteData.id ? noteData : n
-                );
-            } else {
-                // 添加新笔记
-                updatedNotes = [noteData, ...existingNotes];
-            }
+            const updatedNotes = isExistingNote
+                ? existingNotes.map((n: BrewingNoteData) => n.id === noteData.id ? noteData : n)
+                : [noteData, ...existingNotes];
 
             await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
             setNoteSaved(true);
+            setIsNoteSaved?.(true);
 
-            // 设置全局笔记保存状态
-            if (setIsNoteSaved) {
-                setIsNoteSaved(true);
-            }
-
-            // 减少咖啡豆剩余量
+            // 扣减咖啡豆用量
             if (selectedCoffeeBean && currentBrewingMethod?.params.coffee) {
-                try {
-                    const coffeeAmount = parseFloat(currentBrewingMethod.params.coffee);
-                    if (!isNaN(coffeeAmount) && coffeeAmount > 0) {
-                        await CoffeeBeanManager.updateBeanRemaining(selectedCoffeeBean, coffeeAmount);
-                    }
-                } catch {}
+                const coffeeAmount = parseFloat(currentBrewingMethod.params.coffee);
+                if (!isNaN(coffeeAmount) && coffeeAmount > 0) {
+                    await CoffeeBeanManager.updateBeanRemaining(selectedCoffeeBean, coffeeAmount);
+                }
             }
 
-            // 清除跳过方案选择的标记（如果存在）
+            // 清理状态
             localStorage.removeItem('skipMethodToNotes');
-
-            // 清除笔记进行中的标记
             localStorage.removeItem('brewingNoteInProgress');
 
             if (setActiveMainTab) {
@@ -335,56 +292,7 @@ const TabContent: React.FC<TabContentProps> = ({
         return undefined;
     }, [selectedEquipment, customEquipments]);
 
-    // 分享相关状态
-    const [showMethodShareModal, setShowMethodShareModal] = useState(false);
-    const [sharingMethod, setSharingMethod] = useState<Method | null>(null);
-    const [showShareModal, setShowShareModal] = useState(false);
-    const [sharingEquipment, setSharingEquipment] = useState<CustomEquipment | null>(null);
-    const [sharingMethods, setSharingMethods] = useState<Method[]>([]);
 
-    // 处理分享方案
-    const handleShareMethod = (method: Method) => {
-        try {
-            setSharingMethod(method);
-            setShowMethodShareModal(true);
-        } catch {
-            showToast({ type: 'error', title: '准备分享失败，请重试', duration: 2000 });
-        }
-    };
-
-    // 处理分享器具
-    const handleShareEquipment = (equipment: CustomEquipment) => {
-        try {
-            let methods: Method[] = [];
-            if (equipment.id) {
-                methods = customMethods[equipment.id] || [];
-            }
-            if (methods.length === 0 && equipment.name) {
-                methods = customMethods[equipment.name] || [];
-            }
-
-            setSharingEquipment(equipment);
-            setSharingMethods(methods);
-            setShowShareModal(true);
-        } catch {
-            showToast({ type: 'error', title: '准备分享失败，请重试', duration: 2000 });
-        }
-    };
-
-    // 监听器具分享事件
-    useEffect(() => {
-        const handleEquipmentShareEvent = (e: Event) => {
-            const customEvent = e as CustomEvent;
-            if (customEvent.detail?.equipment) {
-                handleShareEquipment(customEvent.detail.equipment);
-            }
-        };
-
-        document.addEventListener('equipment:share', handleEquipmentShareEvent);
-        return () => {
-            document.removeEventListener('equipment:share', handleEquipmentShareEvent);
-        };
-    }, [customMethods]);
 
     // 笔记表单包装组件
     const NoteFormWrapper = () => {
@@ -491,7 +399,143 @@ const TabContent: React.FC<TabContentProps> = ({
         };
     };
 
-    // 获取分享器具方法
+
+
+    // 通用方案折叠状态
+    const [isCommonMethodsCollapsed, setIsCommonMethodsCollapsed] = useState(false);
+
+    // 简化的随机选择咖啡豆
+    const handleRandomBean = async () => {
+        if (isRandomButtonDisabled) return;
+
+        await triggerHapticFeedback();
+        try {
+            if (allBeans.length === 0) {
+                const beans = await CoffeeBeanManager.getAllBeans();
+                setAllBeans(beans);
+            }
+
+            const availableBeans = allBeans.filter(bean => {
+                if (bean.isInTransit) return false;
+                if (!bean.capacity || bean.capacity === '0' || bean.capacity === '0g') return true;
+                return parseFloat(bean.remaining || '0') > 0;
+            });
+
+            if (availableBeans.length > 0) {
+                setShowRandomPicker(true);
+                setIsRandomButtonDisabled(true);
+                setTimeout(() => setIsRandomButtonDisabled(false), 3000);
+            } else {
+                showToast({ type: 'info', title: '没有可用的咖啡豆', duration: 2000 });
+            }
+        } catch (error) {
+            console.error('随机选择失败:', error);
+            showToast({ type: 'error', title: '随机选择失败', duration: 2000 });
+        }
+    };
+
+    // 获取基础器具ID的辅助函数
+    const getBaseEquipmentId = (equipmentId: string): string => {
+        if (equipmentId.includes('-v60-')) return 'V60';
+        if (equipmentId.includes('-clever-')) return 'CleverDripper';
+        if (equipmentId.includes('-kalita-')) return 'Kalita';
+        if (equipmentId.includes('-origami-')) return 'Origami';
+        return 'V60'; // 默认
+    };
+
+    // 复制通用方案到自定义列表
+    const copyCommonMethodToCustom = async (step: Step, selectedEquipment: string) => {
+        let commonMethodsList = commonMethods[selectedEquipment];
+
+        if (!commonMethodsList && selectedEquipment.startsWith('custom-')) {
+            const baseEquipmentId = getBaseEquipmentId(selectedEquipment);
+            commonMethodsList = commonMethods[baseEquipmentId];
+        }
+
+        if (!commonMethodsList) return;
+
+        const methodIndex = step.methodIndex ?? commonMethodsList.findIndex(m =>
+            m.id === step.methodId || m.name === step.title);
+
+        if (methodIndex >= 0 && methodIndex < commonMethodsList.length) {
+            try {
+                const methodCopy = createEditableMethodFromCommon(commonMethodsList[methodIndex]);
+                await saveCustomMethod(selectedEquipment, methodCopy);
+                setTimeout(() => onEditMethod(methodCopy), 100);
+                showToast({ type: 'success', title: '已复制通用方案到自定义列表', duration: 2000 });
+            } catch {
+                showToast({ type: 'error', title: '复制方案失败，请重试', duration: 2000 });
+            }
+        }
+    };
+
+    // 简化的分享处理函数 - 直接复制到剪贴板
+    const handleShareMethod = async (method: Method) => {
+        try {
+            const { copyMethodToClipboard } = await import('@/lib/managers/customMethods');
+            await copyMethodToClipboard(method, getSelectedCustomEquipment());
+            showToast({
+                type: 'success',
+                title: '已复制到剪贴板',
+                duration: 2000
+            });
+        } catch (_error) {
+            showToast({
+                type: 'error',
+                title: '复制失败，请重试',
+                duration: 2000
+            });
+        }
+    };
+
+    const handleShareEquipment = async (equipment: CustomEquipment) => {
+        try {
+            const methods = customMethods[equipment.id || equipment.name] || [];
+            const { copyEquipmentToClipboard } = await import('@/lib/managers/customMethods');
+            await copyEquipmentToClipboard(equipment, methods);
+            showToast({
+                type: 'success',
+                title: '已复制到剪贴板',
+                duration: 2000
+            });
+        } catch (_error) {
+            showToast({
+                type: 'error',
+                title: '复制失败，请重试',
+                duration: 2000
+            });
+        }
+    };
+
+    // 获取分享方案的处理函数
+    const getShareMethodHandler = (step: Step) => {
+        if (activeTab !== '方案') return undefined;
+
+        return () => {
+            if (step.isCustom && customMethods[selectedEquipment!]) {
+                const methodIndex = customMethods[selectedEquipment!].findIndex(m =>
+                    m.id === step.methodId || m.name === step.title);
+                if (methodIndex !== -1) {
+                    handleShareMethod(customMethods[selectedEquipment!][methodIndex]);
+                }
+            } else if (!step.isCustom && selectedEquipment) {
+                let commonMethodsList = commonMethods[selectedEquipment];
+                if (!commonMethodsList && selectedEquipment.startsWith('custom-')) {
+                    const baseEquipmentId = getBaseEquipmentId(selectedEquipment);
+                    commonMethodsList = commonMethods[baseEquipmentId];
+                }
+                if (commonMethodsList) {
+                    const methodIndex = step.methodIndex ?? commonMethodsList.findIndex(m =>
+                        m.id === step.methodId || m.name === step.title);
+                    if (methodIndex >= 0 && methodIndex < commonMethodsList.length) {
+                        handleShareMethod(commonMethodsList[methodIndex]);
+                    }
+                }
+            }
+        };
+    };
+
+    // 获取分享器具的处理函数
     const getShareEquipmentHandler = (step: Step) => {
         if (!step.isCustom) return undefined;
 
@@ -501,65 +545,6 @@ const TabContent: React.FC<TabContentProps> = ({
                 handleShareEquipment(equipment);
             }
         };
-    };
-
-    // 添加通用方案折叠状态
-    const [isCommonMethodsCollapsed, setIsCommonMethodsCollapsed] = useState(false);
-
-    // 随机选择咖啡豆
-    const handleRandomBean = async () => {
-        // 如果按钮被禁用，直接返回
-        if (isRandomButtonDisabled) return;
-
-        await triggerHapticFeedback();
-        try {
-            // 如果没有豆子数据，先加载
-            if (allBeans.length === 0) {
-                const beans = await CoffeeBeanManager.getAllBeans();
-                setAllBeans(beans);
-            }
-
-            // 过滤掉已经用完的豆子和在途状态的豆子
-            const availableBeans = allBeans.filter(bean => {
-                // 过滤掉在途状态的咖啡豆
-                if (bean.isInTransit) {
-                    return false;
-                }
-
-                // 如果没有设置容量，则显示（因为无法判断是否用完）
-                if (!bean.capacity || bean.capacity === '0' || bean.capacity === '0g') {
-                    return true;
-                }
-
-                // 如果设置了容量，则检查剩余量是否大于0
-                const remaining = parseFloat(bean.remaining || '0');
-                return remaining > 0;
-            });
-
-            if (availableBeans.length > 0) {
-                // 打开随机选择器
-                setShowRandomPicker(true);
-
-                // 禁用随机按钮3秒，避免重复点击
-                setIsRandomButtonDisabled(true);
-                setTimeout(() => {
-                    setIsRandomButtonDisabled(false);
-                }, 3000);
-            } else {
-                showToast({
-                    type: 'info',
-                    title: '没有可用的咖啡豆',
-                    duration: 2000
-                });
-            }
-        } catch (error) {
-            console.error('随机选择咖啡豆失败:', error);
-            showToast({
-                type: 'error',
-                title: '随机选择失败',
-                duration: 2000
-            });
-        }
     };
 
     // 如果不是在冲煮主Tab，不显示内容
@@ -695,32 +680,7 @@ const TabContent: React.FC<TabContentProps> = ({
             <div className="space-y-4 content-area">
                 {showEmptyMethodsMessage ? (
                     <>
-                        {/* 跳过方案选择选项 - 在没有方案时显示在上面 */}
-                        {activeTab === '方案' && selectedEquipment && (
-                            <div
-                                className="group relative border-l border-neutral-200 dark:border-neutral-800 pl-6 cursor-pointer text-neutral-500 dark:text-neutral-400"
-                                onClick={async () => {
-                                    await triggerHapticFeedback();
-                                    // 触发自定义事件，通知 page.tsx 跳转到记录步骤
-                                    document.dispatchEvent(new CustomEvent('brewing:navigateToStep', {
-                                        detail: { step: 'notes', fromHistory: true }
-                                    }));
-                                }}
-                            >
-                                <div className="cursor-pointer">
-                                    <div className="flex items-baseline justify-between">
-                                        <div className="flex items-baseline gap-3 min-w-0 overflow-hidden">
-                                            <h3 className="text-xs font-medium text-neutral-800 dark:text-neutral-100 tracking-wider truncate">
-                                                跳过方案选择
-                                            </h3>
-                                        </div>
-                                    </div>
-                                    <div className="mt-2">
-                                        <p className="text-xs font-medium text-neutral-600 dark:text-neutral-400">直接跳到记录</p>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
+                        {/* 暂时移除跳过方案选择选项，避免意外触发 */}
 
                         <div className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400 mt-4">
                             [ 当前器具暂无自定义方案，请点击下方按钮添加 ]
@@ -746,93 +706,17 @@ const TabContent: React.FC<TabContentProps> = ({
                                 step.originalIndex !== content[activeTab]?.steps[index-1]?.originalIndex &&
                                 (settings?.layoutSettings?.showStageDivider !== false);
 
-                        // 计算编辑方案的处理函数
+                        // 简化的编辑处理函数
                         let editHandler;
                         if (activeTab === '方案') {
-                            // 判断是否为自定义方案
-                            const isCustomMethod = step.isCustom;
-
-                            if (isCustomMethod && customMethods[selectedEquipment!]) {
-                                // 自定义方案可以直接编辑
+                            if (step.isCustom && customMethods[selectedEquipment!]) {
                                 const methodIndex = customMethods[selectedEquipment!].findIndex(m =>
                                     m.id === step.methodId || m.name === step.title);
                                 if (methodIndex !== -1) {
-                                    editHandler = () => {
-                                        onEditMethod(customMethods[selectedEquipment!][methodIndex]);
-                                    };
+                                    editHandler = () => onEditMethod(customMethods[selectedEquipment!][methodIndex]);
                                 }
-                            } else if (!isCustomMethod && selectedEquipment) {
-                                // 通用方案需要先复制到自定义列表
-                                editHandler = () => {
-                                    // 获取正确的通用方案列表
-                                    let commonMethodsList = commonMethods[selectedEquipment];
-
-                                    // 如果是自定义器具，需要根据其基础类型获取通用方案
-                                    if (!commonMethodsList && selectedEquipment.startsWith('custom-')) {
-                                        let baseEquipmentId = '';
-
-                                        if (selectedEquipment.includes('-v60-')) {
-                                            baseEquipmentId = 'V60';
-                                        } else if (selectedEquipment.includes('-clever-')) {
-                                            baseEquipmentId = 'CleverDripper';
-                                        } else if (selectedEquipment.includes('-kalita-')) {
-                                            baseEquipmentId = 'Kalita';
-                                        } else if (selectedEquipment.includes('-origami-')) {
-                                            baseEquipmentId = 'Origami';
-                                        } else {
-                                            // 默认使用V60方案
-                                            baseEquipmentId = 'V60';
-                                        }
-
-                                        commonMethodsList = commonMethods[baseEquipmentId];
-                                    }
-
-                                    // 直接使用step.methodIndex获取正确的方案索引
-                                    if (commonMethodsList && step.methodIndex !== undefined && step.methodIndex >= 0 &&
-                                        step.methodIndex < commonMethodsList.length) {
-                                        const methodCopy = createEditableMethodFromCommon(commonMethodsList[step.methodIndex]);
-                                        saveCustomMethod(selectedEquipment, methodCopy)
-                                            .then(() => {
-                                                setTimeout(() => onEditMethod(methodCopy), 100);
-                                                showToast({
-                                                    type: 'success',
-                                                    title: '已复制通用方案到自定义列表',
-                                                    duration: 2000
-                                                });
-                                            })
-                                            .catch(() => {
-                                                showToast({
-                                                    type: 'error',
-                                                    title: '复制方案失败，请重试',
-                                                    duration: 2000
-                                                });
-                                            });
-                                    } else {
-                                        // 回退到原来的查找方式，作为备用措施
-                                        const commonMethodIndex = commonMethodsList?.findIndex(m =>
-                                            m.id === step.methodId || m.name === step.title);
-
-                                        if (commonMethodsList && commonMethodIndex !== undefined && commonMethodIndex !== -1) {
-                                            const methodCopy = createEditableMethodFromCommon(commonMethodsList[commonMethodIndex]);
-                                            saveCustomMethod(selectedEquipment, methodCopy)
-                                                .then(() => {
-                                                    setTimeout(() => onEditMethod(methodCopy), 100);
-                                                    showToast({
-                                                        type: 'success',
-                                                        title: '已复制通用方案到自定义列表',
-                                                        duration: 2000
-                                                    });
-                                                })
-                                                .catch(() => {
-                                                    showToast({
-                                                        type: 'error',
-                                                        title: '复制方案失败，请重试',
-                                                        duration: 2000
-                                                    });
-                                                });
-                                        }
-                                    }
-                                };
+                            } else if (!step.isCustom && selectedEquipment) {
+                                editHandler = () => copyCommonMethodToCustom(step, selectedEquipment);
                             }
                         } else if (step.isCustom) {
                             editHandler = getEditEquipmentHandler(step);
@@ -841,7 +725,6 @@ const TabContent: React.FC<TabContentProps> = ({
                         // 计算删除方案的处理函数
                         let deleteHandler;
                         if (activeTab === '方案' && step.isCustom && customMethods[selectedEquipment!]) {
-                            // 找到匹配的自定义方案
                             const methodIndex = customMethods[selectedEquipment!].findIndex(m =>
                                 m.id === step.methodId || m.name === step.title);
                             if (methodIndex !== -1) {
@@ -851,59 +734,12 @@ const TabContent: React.FC<TabContentProps> = ({
                             deleteHandler = getDeleteEquipmentHandler(step);
                         }
 
-                        // 计算分享方案的处理函数
-                        let shareHandler;
-                        if (activeTab === '方案') {
-                            shareHandler = () => {
-                                // 判断是自定义方案还是通用方案
-                                if (step.isCustom && customMethods[selectedEquipment!]) {
-                                    // 查找匹配的自定义方案
-                                    const methodIndex = customMethods[selectedEquipment!].findIndex(m =>
-                                        m.id === step.methodId || m.name === step.title);
-                                    if (methodIndex !== -1) {
-                                        handleShareMethod(customMethods[selectedEquipment!][methodIndex]);
-                                    }
-                                } else if (!step.isCustom && selectedEquipment) {
-                                    // 获取正确的通用方案列表
-                                    let commonMethodsList = commonMethods[selectedEquipment];
+                        // 计算分享处理函数
+                        const shareHandler = activeTab === '方案'
+                            ? getShareMethodHandler(step)
+                            : getShareEquipmentHandler(step);
 
-                                    // 如果是自定义器具，需要根据其基础类型获取通用方案
-                                    if (!commonMethodsList && selectedEquipment.startsWith('custom-')) {
-                                        let baseEquipmentId = '';
 
-                                        if (selectedEquipment.includes('-v60-')) {
-                                            baseEquipmentId = 'V60';
-                                        } else if (selectedEquipment.includes('-clever-')) {
-                                            baseEquipmentId = 'CleverDripper';
-                                        } else if (selectedEquipment.includes('-kalita-')) {
-                                            baseEquipmentId = 'Kalita';
-                                        } else if (selectedEquipment.includes('-origami-')) {
-                                            baseEquipmentId = 'Origami';
-                                        } else {
-                                            // 默认使用V60方案
-                                            baseEquipmentId = 'V60';
-                                        }
-
-                                        commonMethodsList = commonMethods[baseEquipmentId];
-                                    }
-
-                                    // 直接使用step.methodIndex获取正确的方案索引
-                                    if (commonMethodsList && step.methodIndex !== undefined && step.methodIndex >= 0 &&
-                                        step.methodIndex < commonMethodsList.length) {
-                                        handleShareMethod(commonMethodsList[step.methodIndex]);
-                                    } else {
-                                        // 回退到原来的查找方式
-                                        const commonMethodIndex = commonMethodsList?.findIndex(m =>
-                                            m.id === step.methodId || m.name === step.title);
-                                        if (commonMethodsList && commonMethodIndex !== undefined && commonMethodIndex !== -1) {
-                                            handleShareMethod(commonMethodsList[commonMethodIndex]);
-                                        }
-                                    }
-                                }
-                            };
-                        } else if (step.isCustom) {
-                            shareHandler = getShareEquipmentHandler(step);
-                        }
 
                             return (
                                 <React.Fragment key={step.methodId ? `${step.methodId}-${index}` : `${step.title}-${index}`}>
@@ -914,39 +750,18 @@ const TabContent: React.FC<TabContentProps> = ({
                                         step={step.isDivider ? {...step, onToggleCollapse: setIsCommonMethodsCollapsed} : step}
                                         index={index}
                                         onClick={() => {
-                                            if (activeTab === '方案') {
-                                                // 如果是分隔符，不处理点击事件
-                                                if (step.isDivider) {
-                                                    return;
-                                                }
-
-                                                // 根据方案类型确定正确的索引
-                                                if (step.isCustom) {
-                                                    // 自定义方案：在customMethods中查找匹配的方案
-                                                    const methodId = step.methodId;
-                                                    if (methodId && selectedEquipment && customMethods[selectedEquipment]) {
-                                                        const methodIndex = customMethods[selectedEquipment].findIndex(m =>
-                                                            m.id === methodId || m.name === step.title);
-                                                        if (methodIndex !== -1) {
-                                                            // 使用找到的自定义方案索引，并明确传递"custom"类型
-                                                            onMethodSelect(methodIndex, {
-                                                                ...step,
-                                                                explicitMethodType: 'custom'
-                                                            });
-                                                            return;
-                                                        }
+                                            if (activeTab === '方案' && !step.isDivider) {
+                                                if (step.isCustom && selectedEquipment && customMethods[selectedEquipment]) {
+                                                    const methodIndex = customMethods[selectedEquipment].findIndex(m =>
+                                                        m.id === step.methodId || m.name === step.title);
+                                                    if (methodIndex !== -1) {
+                                                        onMethodSelect(methodIndex, { ...step, explicitMethodType: 'custom' });
+                                                        return;
                                                     }
                                                 } else if (step.isCommonMethod && step.methodIndex !== undefined) {
-                                                    // 通用方案：使用预先存储的methodIndex，并明确传递"common"类型
-                                                    onMethodSelect(step.methodIndex, {
-                                                        ...step,
-                                                        explicitMethodType: 'common'
-                                                    });
+                                                    onMethodSelect(step.methodIndex, { ...step, explicitMethodType: 'common' });
                                                     return;
                                                 }
-
-                                                // 如果不能确定特定类型，使用传统的索引方式
-                                                // 默认根据当前类型传递
                                                 onMethodSelect(index, step);
                                             }
                                         }}
@@ -965,32 +780,7 @@ const TabContent: React.FC<TabContentProps> = ({
                             );
                         })}
 
-                        {/* 跳过方案选择选项 - 放在方案列表最下面（仅在有方案时显示） */}
-                        {activeTab === '方案' && selectedEquipment && !showEmptyMethodsMessage && (
-                            <div
-                                className="group relative border-l border-neutral-200 dark:border-neutral-800 pl-6 cursor-pointer text-neutral-500 dark:text-neutral-400 mt-4"
-                                onClick={async () => {
-                                    await triggerHapticFeedback();
-                                    // 触发自定义事件，通知 page.tsx 跳转到记录步骤
-                                    document.dispatchEvent(new CustomEvent('brewing:navigateToStep', {
-                                        detail: { step: 'notes', fromHistory: true }
-                                    }));
-                                }}
-                            >
-                                <div className="cursor-pointer">
-                                    <div className="flex items-baseline justify-between">
-                                        <div className="flex items-baseline gap-3 min-w-0 overflow-hidden">
-                                            <h3 className="text-xs font-medium text-neutral-800 dark:text-neutral-100 tracking-wider truncate">
-                                                跳过方案选择
-                                            </h3>
-                                        </div>
-                                    </div>
-                                    <div className="mt-2">
-                                        <p className="text-xs font-medium text-neutral-600 dark:text-neutral-400">直接跳到记录</p>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
+                        {/* 暂时移除跳过方案选择选项，避免意外触发 */}
                     </>
                 )}
             </div>
@@ -1013,25 +803,7 @@ const TabContent: React.FC<TabContentProps> = ({
                 />
             )}
 
-
-
-            {/* 分享模态框 */}
-            {sharingEquipment && (
-                <EquipmentShareModal
-                    isOpen={showShareModal}
-                    onClose={() => setShowShareModal(false)}
-                    equipment={sharingEquipment}
-                    methods={sharingMethods}
-                />
-            )}
-            {sharingMethod && (
-                <MethodShareModal
-                    isOpen={showMethodShareModal}
-                    onClose={() => setShowMethodShareModal(false)}
-                    method={sharingMethod}
-                    customEquipment={getSelectedCustomEquipment()}
-                />
-            )}
+            {/* 分享功能已简化为直接复制到剪贴板，不再需要模态框 */}
         </>
     );
 };

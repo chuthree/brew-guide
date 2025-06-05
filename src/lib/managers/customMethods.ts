@@ -444,6 +444,52 @@ export async function copyMethodToClipboard(
 }
 
 /**
+ * 复制器具配置到剪贴板
+ * @param equipment 器具对象
+ * @param methods 相关的自定义方案（可选）
+ */
+export async function copyEquipmentToClipboard(
+	equipment: CustomEquipment,
+	methods?: Method[]
+) {
+	try {
+		// 准备导出数据
+		const exportData = {
+			equipment: {
+				...equipment,
+				// 确保包含自定义注水动画配置
+				customPourAnimations: equipment.customPourAnimations || [],
+				// 保留ID信息，确保方案能正确关联
+				id: equipment.id
+			},
+			methods: methods && methods.length > 0 ? methods.map(method => ({
+				...method,
+				// 保留ID，确保关联性
+				id: method.id
+			})) : []
+		};
+
+		// 转换为JSON格式
+		const jsonData = JSON.stringify(exportData, null, 2);
+
+		// 尝试使用现代API
+		if (navigator.clipboard && window.isSecureContext) {
+			await navigator.clipboard.writeText(jsonData);
+		} else {
+			// 降级方案
+			const textarea = document.createElement("textarea");
+			textarea.value = jsonData;
+			document.body.appendChild(textarea);
+			textarea.select();
+			document.execCommand("copy");
+			document.body.removeChild(textarea);
+		}
+	} catch (err) {
+		throw err;
+	}
+}
+
+/**
  * 修复现有方案与器具的关联问题
  * 针对更新前已有数据的用户，自动检查并修复方案关联
  */

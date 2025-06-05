@@ -25,32 +25,14 @@ const EquipmentShareModal: React.FC<EquipmentShareModalProps> = ({
     const [isSharing, setIsSharing] = useState(false);
     const isNative = Capacitor.isNativePlatform();
 
-    // Reset selected methods when modal opens
+    // Reset selected methods when modal opens - 默认选择所有方案
     useEffect(() => {
         if (isOpen) {
-            setSelectedMethods([]);
-        }
-    }, [isOpen]);
-
-    // Handle select all toggle
-    const handleSelectAll = () => {
-        if (selectedMethods.length === methods.length) {
-            // If all are selected, deselect all
-            setSelectedMethods([]);
-        } else {
-            // Otherwise select all
             setSelectedMethods(methods.map(method => method.id || method.name));
         }
-    };
+    }, [isOpen, methods]);
 
-    // Toggle a single method selection
-    const handleToggleMethod = (methodId: string) => {
-        if (selectedMethods.includes(methodId)) {
-            setSelectedMethods(selectedMethods.filter(id => id !== methodId));
-        } else {
-            setSelectedMethods([...selectedMethods, methodId]);
-        }
-    };
+
 
     // Handle share button click
     const handleShare = async () => {
@@ -208,51 +190,25 @@ const EquipmentShareModal: React.FC<EquipmentShareModalProps> = ({
                                 </button>
                             </div>
 
-                            {/* 方案选择 */}
-                            {methods.length > 0 ? (
-                                <div className="space-y-3">
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-sm text-neutral-600 dark:text-neutral-400">
-                                            选择要包含的自定义方案
-                                        </span>
-                                        <button
-                                            onClick={handleSelectAll}
-                                            className="text-xs text-blue-600 dark:text-blue-400 hover:opacity-80"
-                                        >
-                                            {selectedMethods.length === methods.length ? '取消全选' : '全选'}
-                                        </button>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        {methods.map(method => (
-                                            <label
-                                                key={method.id || method.name}
-                                                className="flex items-center p-2.5 rounded-lg bg-neutral-100/60 dark:bg-neutral-800/30 hover:opacity-80 cursor-pointer"
-                                            >
-                                                <input
-                                                    type="checkbox"
-                                                    checked={selectedMethods.includes(method.id || method.name)}
-                                                    onChange={() => handleToggleMethod(method.id || method.name)}
-                                                    className="w-4 h-4 rounded-sm border-neutral-300 dark:border-neutral-600 text-blue-600 dark:text-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400"
-                                                />
-                                                <span className="ml-3 text-sm text-neutral-800 dark:text-neutral-200">
-                                                    {method.name}
-                                                </span>
-                                            </label>
-                                        ))}
-                                    </div>
-
-                                    <p className="text-xs text-neutral-500 dark:text-neutral-500 bg-neutral-100/60 dark:bg-neutral-800/30 p-2.5 rounded-lg">
-                                        通用方案会根据器具类型自动加载，无需包含
-                                    </p>
-                                </div>
-                            ) : (
+                            {/* 导出内容说明 */}
+                            <div className="mb-6">
                                 <div className="p-4 bg-neutral-100/60 dark:bg-neutral-800/30 rounded-lg">
-                                    <p className="text-sm text-neutral-600 dark:text-neutral-400 text-center">
-                                        该器具没有自定义方案
-                                    </p>
+                                    <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200 mb-2">
+                                        将导出以下内容：
+                                    </div>
+                                    <div className="space-y-1 text-xs text-neutral-600 dark:text-neutral-400">
+                                        <div>• 器具配置：{equipment.name}</div>
+                                        {methods.length > 0 ? (
+                                            <div>• 自定义方案：{methods.length} 个</div>
+                                        ) : (
+                                            <div>• 自定义方案：无</div>
+                                        )}
+                                        <div className="mt-2 text-neutral-500 dark:text-neutral-500">
+                                            通用方案会根据器具类型自动加载，无需包含
+                                        </div>
+                                    </div>
                                 </div>
-                            )}
+                            </div>
 
                             {/* 按钮 */}
                             <button

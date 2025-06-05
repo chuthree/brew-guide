@@ -973,13 +973,43 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     };
   }, [isRunning, resetTimer, processExpansion]);
 
-  // 在组件挂载后，同步外部冲煮状态到内部状态
+  // 简化状态同步：只在明确重置时同步
   useEffect(() => {
-    if (isCoffeeBrewed !== undefined) {
-      setShowComplete(isCoffeeBrewed);
-      setIsCompleted(isCoffeeBrewed);
+    if (isCoffeeBrewed === false) {
+      setShowComplete(false);
+      setIsCompleted(false);
     }
   }, [isCoffeeBrewed]);
+
+  // 监听从记录页面返回到冲煮页面的事件，确保状态正确重置
+  useEffect(() => {
+    const handleBrewingReset = () => {
+      // 重置所有相关状态，确保跳过功能能正常工作
+      setShowComplete(false);
+      setIsCompleted(false);
+      setCurrentTime(0);
+      setHasStartedOnce(false);
+      setIsRunning(false);
+      setCurrentWaterAmount(0);
+      setCountdownTime(null);
+      prevCountdownTimeRef.current = null;
+
+      // 清除计时器
+      clearTimerAndStates();
+
+      // 清除笔记进度标记
+      localStorage.setItem("brewingNoteInProgress", "false");
+      setNoteFormInitialData(null);
+      setShowNoteForm(false);
+    };
+
+    // 监听brewing:reset事件
+    window.addEventListener("brewing:reset", handleBrewingReset);
+
+    return () => {
+      window.removeEventListener("brewing:reset", handleBrewingReset);
+    };
+  }, [clearTimerAndStates]);
 
   // 监听当前阶段变化并发送事件
   useEffect(() => {
@@ -1047,27 +1077,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     }, 300); // 添加300ms延迟，模拟正常完成过程
   }, [currentBrewingMethod, handleComplete, clearTimerAndStates]);
 
-  // 新增：从初始状态跳过到记录阶段的函数
-  const handleSkipToNotes = useCallback(() => {
-    if (!currentBrewingMethod) return;
 
-    // 获取总冲煮时间（如果有阶段的话）
-    const totalTime = expandedStagesRef.current.length > 0
-      ? expandedStagesRef.current[expandedStagesRef.current.length - 1].endTime
-      : 0;
-
-    // 设置当前时间为总时间
-    setCurrentTime(totalTime);
-
-    // 模拟正常完成流程，添加短暂延迟
-    setTimeout(() => {
-      // 触发完成处理，这会处理所有必要的逻辑
-      handleComplete();
-
-      // 完成处理后，主页面的自动导航逻辑会自动处理跳转到记录页面
-      // 不需要额外的事件触发
-    }, 0);
-  }, [currentBrewingMethod, handleComplete]);
 
   // 监听阶段变化以显示跳过按钮
   useEffect(() => {
@@ -1798,10 +1808,9 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
             </motion.button>
             <motion.button
               onClick={
-                // 判断是否处于初始状态：时间为0，未开始过，且未运行
-                currentTime === 0 && !hasStartedOnce && !isRunning
-                  ? handleSkipToNotes  // 初始状态：跳过到记录
-                  : resetTimer         // 非初始状态：重置计时器
+                currentTime === 0 && !hasStartedOnce && !isRunning && !showComplete && !isCompleted && !isCoffeeBrewed
+                  ? handleSkip // 初始状态：跳过到记录页面
+                  : resetTimer // 非初始状态：重置计时器
               }
               className={`${localShowFlowRate ? 'w-12 h-12' : 'w-14 h-14'} flex items-center justify-center rounded-full bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400 transform-gpu`}
               whileTap={{ scale: 0.95 }}
@@ -1814,7 +1823,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
               }}
             >
               {/* 根据计时器状态显示不同图标 */}
-              {currentTime === 0 && !hasStartedOnce && !isRunning ? (
+              {currentTime === 0 && !hasStartedOnce && !isRunning && !showComplete && !isCompleted && !isCoffeeBrewed ? (
                 // 初始状态：显示跳过图标
                 <svg
                   xmlns="http://www.w3.org/2000/svg"

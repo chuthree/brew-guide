@@ -40,6 +40,7 @@ import { loadCustomEquipments, saveCustomEquipment, deleteCustomEquipment } from
 import CustomEquipmentFormModal from '@/components/equipment/forms/CustomEquipmentFormModal'
 import EquipmentImportModal from '@/components/equipment/import/EquipmentImportModal'
 import DataMigrationModal from '@/components/common/modals/DataMigrationModal'
+import { showToast } from '@/components/common/feedback/GlobalToast'
 
 // 为Window对象声明类型扩展
 declare global {
@@ -178,7 +179,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         showComplete, setShowComplete,
         methodType, setMethodType,
         countdownTime, setCountdownTime,
-        isPourVisualizerPreloaded,
         customMethods, setCustomMethods,
         selectedCoffeeBean, selectedCoffeeBeanData, setSelectedCoffeeBean, setSelectedCoffeeBeanData,
         showCustomForm, setShowCustomForm,
@@ -270,9 +270,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
     const methodSelector = useMethodSelector({
         selectedEquipment,
-        methodType,
         customMethods,
-        selectedCoffeeBean,
         setSelectedMethod,
         setCurrentBrewingMethod,
         setEditableParams,
@@ -280,8 +278,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         setActiveTab,
         setActiveBrewingStep,
         updateBrewingSteps,
-        showComplete,
-        resetBrewingState
     });
 
     const { handleMethodSelect } = methodSelector;
@@ -761,11 +757,15 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             }
         }
 
-        // 检查是否从记录返回到方案，这是一种特殊情况
-        if (activeBrewingStep === 'notes' && step === 'method') {
+        // 检查是否从记录返回到其他步骤，这是一种特殊情况
+        if (activeBrewingStep === 'notes' && (step === 'method' || step === 'brewing')) {
+            // 触发brewing:reset事件，确保计时器状态正确重置
+            window.dispatchEvent(new CustomEvent("brewing:reset"));
+
             // 确保冲煮状态已重置
             setShowComplete(false);
             setIsCoffeeBrewed(false);
+            setHasAutoNavigatedToNotes(false);
         }
 
         // 使用navigateToStep来处理导航，它会处理更复杂的导航逻辑
@@ -846,6 +846,17 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 preserveMethod: true
             });
         } else {
+            // 特殊处理：从记录步骤返回到注水步骤
+            if (activeBrewingStep === 'notes' && backStep === 'brewing') {
+                // 触发brewing:reset事件，确保计时器状态正确重置
+                window.dispatchEvent(new CustomEvent("brewing:reset"));
+
+                // 重置冲煮完成状态
+                setShowComplete(false);
+                setIsCoffeeBrewed(false);
+                setHasAutoNavigatedToNotes(false);
+            }
+
             // 其他步骤的返回导航
             navigateToStep(backStep, {
                 preserveCoffeeBean: true,
@@ -1339,28 +1350,15 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         };
     }, []);
 
-    // 在冲煮页面组件初始化时，添加对笔记状态的处理
+    // 简化笔记状态处理
     useEffect(() => {
-        // 检查是否有未完成的笔记记录过程
-        const brewingNoteInProgress = localStorage.getItem('brewingNoteInProgress');
-
-        // 检查是否是从记录到注水的特殊跳转
-        const fromNotesToBrewing = localStorage.getItem("fromNotesToBrewing");
-
-        // 在每次进入冲煮页面时，检查笔记状态
-        if (activeMainTab === '冲煮') {
-            // 如果有未保存的笔记或者从记录到注水的特殊跳转，确保状态一致
-            if (brewingNoteInProgress === 'true' || fromNotesToBrewing === 'true') {
-                // 确保isCoffeeBrewed为true
+        if (activeMainTab === '冲煮' && activeBrewingStep === 'notes') {
+            const brewingNoteInProgress = localStorage.getItem('brewingNoteInProgress');
+            if (brewingNoteInProgress === 'true') {
                 setIsCoffeeBrewed(true);
-
-                // 只有在特殊跳转时才清除标记
-                if (fromNotesToBrewing === 'true') {
-                    localStorage.removeItem('fromNotesToBrewing');
-                }
             }
         }
-    }, [activeMainTab, setIsCoffeeBrewed]);
+    }, [activeMainTab, activeBrewingStep, setIsCoffeeBrewed]);
 
     // 添加扩展阶段状态 - 使用ref而不是state
     const expandedStagesRef = useRef<{
@@ -2013,11 +2011,24 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                     setShowEquipmentForm(true);
                 }}
                 onDeleteEquipment={handleDeleteEquipment}
-                onShareEquipment={(equipment) => {
-                    // 触发分享器具事件，让TabContent处理
-                    document.dispatchEvent(new CustomEvent('equipment:share', {
-                        detail: { equipment }
-                    }));
+                onShareEquipment={async (equipment) => {
+                    // 直接处理分享器具，复制到剪贴板
+                    try {
+                        const methods = customMethods[equipment.id || equipment.name] || [];
+                        const { copyEquipmentToClipboard } = await import('@/lib/managers/customMethods');
+                        await copyEquipmentToClipboard(equipment, methods);
+                        showToast({
+                            type: 'success',
+                            title: '已复制到剪贴板',
+                            duration: 2000
+                        });
+                    } catch (_error) {
+                        showToast({
+                            type: 'error',
+                            title: '复制失败，请重试',
+                            duration: 2000
+                        });
+                    }
                 }}
                 onBackClick={handleBackClick}
             />
@@ -2037,21 +2048,16 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                         showComplete={showComplete}
                         currentStage={currentStage}
                         isWaiting={isStageWaiting}
-                        _isPourVisualizerPreloaded={isPourVisualizerPreloaded}
                         selectedEquipment={selectedEquipment}
                         selectedCoffeeBean={selectedCoffeeBean}
                         selectedCoffeeBeanData={selectedCoffeeBeanData}
                         countdownTime={countdownTime}
-                        _methodType={methodType}
                         customMethods={customMethods}
                         actionMenuStates={actionMenuStates}
                         setActionMenuStates={setActionMenuStates}
-                        _showCustomForm={showCustomForm}
                         setShowCustomForm={setShowCustomForm}
-                        _showImportForm={showImportForm}
                         setShowImportForm={setShowImportForm}
                         settings={settings}
-                        onEquipmentSelect={handleEquipmentSelectWithName}
                         onMethodSelect={handleMethodSelectWrapper}
                         onCoffeeBeanSelect={handleCoffeeBeanSelect}
                         onEditMethod={handleEditCustomMethod}
@@ -2060,13 +2066,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                         resetBrewingState={resetBrewingState}
                         setIsNoteSaved={setIsNoteSaved}
                         customEquipments={customEquipments}
-                        setCustomEquipments={setCustomEquipments}
                         expandedStages={expandedStagesRef.current}
                         setShowEquipmentForm={setShowEquipmentForm}
                         setEditingEquipment={setEditingEquipment}
-                        handleSaveEquipment={handleSaveEquipment}
                         handleDeleteEquipment={handleDeleteEquipment}
-                        setShowEquipmentImportForm={setShowEquipmentImportForm}
                     />
                 </div>
             )}

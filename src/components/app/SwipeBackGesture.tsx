@@ -164,6 +164,12 @@ const SwipeBackGesture: React.FC<SwipeBackGestureProps> = ({
           preserveMethod: true
         });
       } else {
+        // 特殊处理：从记录步骤返回到注水步骤
+        if (activeBrewingStep === 'notes' && backStep === 'brewing') {
+          // 触发brewing:reset事件，确保计时器状态正确重置
+          window.dispatchEvent(new CustomEvent("brewing:reset"));
+        }
+
         // 其他步骤的返回导航
         navigateToStep(backStep, {
           preserveCoffeeBean: true,

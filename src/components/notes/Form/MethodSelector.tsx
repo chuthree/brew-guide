@@ -10,7 +10,7 @@ interface MethodSelectorProps {
   commonMethods: Method[]
   onMethodSelect: (methodId: string) => void
   onParamsChange: (method: Method) => void
-  onSkipMethodSelection?: () => void // 新增：跳过方案选择的回调
+  // onSkipMethodSelection?: () => void // 暂时移除跳过方案选择功能
 }
 
 const MethodSelector: React.FC<MethodSelectorProps> = ({
@@ -20,7 +20,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
   commonMethods,
   onMethodSelect,
   onParamsChange,
-  onSkipMethodSelection
+  // onSkipMethodSelection // 暂时移除
 }) => {
   // 本地状态管理参数
   const [coffeeAmount, setCoffeeAmount] = useState<string>('15')
@@ -284,26 +284,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
               )
             )}
 
-            {/* 跳过方案选择选项 - 始终显示（如果提供了回调函数） */}
-            {onSkipMethodSelection && (
-              <div
-                className="group relative border-l border-neutral-200 dark:border-neutral-800 pl-6 cursor-pointer text-neutral-500 dark:text-neutral-400 mt-4"
-                onClick={onSkipMethodSelection}
-              >
-                <div className="cursor-pointer">
-                  <div className="flex items-baseline justify-between">
-                    <div className="flex items-baseline gap-3 min-w-0 overflow-hidden">
-                      <h3 className="text-xs font-medium  tracking-wider truncate">
-                        跳过方案选择
-                      </h3>
-                    </div>
-                  </div>
-                  <div className="mt-2">
-                    <p className="text-xs font-medium">直接跳到记录</p>
-                  </div>
-                </div>
-              </div>
-            )}
+            {/* 暂时移除跳过方案选择选项，避免意外触发 */}
           </div>
         ) : (
           <div className="text-xs text-neutral-500 dark:text-neutral-400 border-l border-neutral-200 dark:border-neutral-800 pl-6">
