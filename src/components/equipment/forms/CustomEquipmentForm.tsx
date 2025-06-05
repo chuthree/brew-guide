@@ -176,11 +176,23 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
     const animationEditorRef = useRef<AnimationEditorRef>(null);
     const [isPlaying, setIsPlaying] = useState(false);
 
-    // 预设方案状态 - 根据初始值设置，如果是聪明杯则设置为clever
-    const [selectedPreset, setSelectedPreset] = useState<(typeof PRESET_OPTIONS)[number]['value'] | 'espresso'>(
-        initialEquipment?.hasValve ? 'clever' :
-            initialEquipment?.animationType === 'custom' ? 'custom' : 'v60'
-    );
+    // 预设方案状态 - 根据初始值设置
+    const [selectedPreset, setSelectedPreset] = useState<(typeof PRESET_OPTIONS)[number]['value'] | 'espresso'>(() => {
+        if (!initialEquipment) return 'v60';
+
+        // 根据animationType确定预设类型
+        switch (initialEquipment.animationType) {
+            case 'espresso':
+                return 'espresso';
+            case 'clever':
+                return 'clever';
+            case 'custom':
+                return 'custom';
+            case 'v60':
+            default:
+                return 'v60';
+        }
+    });
 
     // 添加杯型选择状态（默认/自定义）
     const [cupShapeType, setCupShapeType] = useState<'default' | 'custom'>(
@@ -241,8 +253,11 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
             return anim;
         });
 
+        // 根据初始器具的animationType判断是否为自定义预设
+        const isCustomPreset = initialEquipment?.animationType === 'custom';
+
         // 如果是自定义预设，只返回用户自定义的注水动画
-        if (selectedPreset === 'custom') {
+        if (isCustomPreset) {
             return processedUserCustom;
         }
 
