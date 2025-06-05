@@ -37,6 +37,7 @@ export interface SettingsOptions {
     showOnlyBeanName: boolean // 是否只显示咖啡豆名称
     showFlavorPeriod: boolean // 是否显示赏味期信息而不是烘焙日期
     customGrinders?: CustomGrinder[] // 添加自定义磨豆机列表
+    simpleBeanFormMode: boolean // 咖啡豆表单简单模式
     safeAreaMargins?: {
         top: number // 顶部边距
         bottom: number // 底部边距
@@ -63,6 +64,7 @@ export const defaultSettings: SettingsOptions = {
     showOnlyBeanName: true, // 默认简化咖啡豆名称
     showFlavorPeriod: false, // 默认显示烘焙日期而不是赏味期
     customGrinders: [], // 默认无自定义磨豆机
+    simpleBeanFormMode: false, // 默认使用完整表单模式
     safeAreaMargins: {
         top: 38, // 默认顶部边距 42px
         bottom: 38 // 默认底部边距 42px

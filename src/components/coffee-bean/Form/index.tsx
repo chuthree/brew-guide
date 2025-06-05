@@ -9,6 +9,8 @@ import DetailInfo from './components/DetailInfo'
 import FlavorInfo from './components/FlavorInfo'
 import Complete from './components/Complete'
 import { addCustomPreset, DEFAULT_ORIGINS, DEFAULT_PROCESSES, DEFAULT_VARIETIES } from './constants'
+import { Storage } from '@/lib/core/storage'
+import { defaultSettings, type SettingsOptions } from '@/components/settings/Settings'
 
 // 二次压缩函数：将base64图片再次压缩
 function compressBase64(base64: string, quality = 0.7, maxWidth = 800): Promise<string> {
@@ -119,6 +121,9 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
     onCancel,
     initialBean,
 }) => {
+    // 简单模式状态 - 从设置中读取
+    const [isSimpleMode, setIsSimpleMode] = useState(false)
+
     // 当前步骤状态
     const [currentStep, setCurrentStep] = useState<Step>('basic')
     const inputRef = useRef<HTMLInputElement>(null)
@@ -206,6 +211,26 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
     // 定义额外的状态来跟踪风味标签输入
     const [flavorInput, setFlavorInput] = useState('');
 
+    // 从设置中加载简单模式状态
+    useEffect(() => {
+        const loadSimpleModeFromSettings = async () => {
+            try {
+                const settingsStr = await Storage.get('brewGuideSettings')
+                if (settingsStr) {
+                    const settings: SettingsOptions = JSON.parse(settingsStr)
+                    setIsSimpleMode(settings.simpleBeanFormMode ?? defaultSettings.simpleBeanFormMode)
+                } else {
+                    setIsSimpleMode(defaultSettings.simpleBeanFormMode)
+                }
+            } catch (error) {
+                console.error('加载简单模式设置失败:', error)
+                setIsSimpleMode(defaultSettings.simpleBeanFormMode)
+            }
+        }
+
+        loadSimpleModeFromSettings()
+    }, [])
+
     // 自动聚焦输入框
     useEffect(() => {
         if (currentStep === 'basic' && inputRef.current) {
@@ -238,6 +263,12 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
     // 下一步
     const handleNextStep = () => {
         validateRemaining();
+
+        // 简单模式直接提交
+        if (isSimpleMode) {
+            handleSubmit();
+            return;
+        }
 
         const currentIndex = getCurrentStepIndex();
         if (currentIndex < steps.length - 1) {
@@ -496,6 +527,34 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
         }));
     };
 
+    // 切换简单模式并保存到设置
+    const handleSimpleModeToggle = async (newSimpleMode: boolean) => {
+        setIsSimpleMode(newSimpleMode)
+
+        try {
+            // 获取当前设置
+            const settingsStr = await Storage.get('brewGuideSettings')
+            let settings: SettingsOptions = defaultSettings
+
+            if (settingsStr) {
+                settings = { ...defaultSettings, ...JSON.parse(settingsStr) }
+            }
+
+            // 更新简单模式设置
+            const newSettings = { ...settings, simpleBeanFormMode: newSimpleMode }
+
+            // 保存到存储
+            await Storage.set('brewGuideSettings', JSON.stringify(newSettings))
+
+            // 触发设置变更事件
+            window.dispatchEvent(new CustomEvent('storageChange', {
+                detail: { key: 'brewGuideSettings' }
+            }))
+        } catch (error) {
+            console.error('保存简单模式设置失败:', error)
+        }
+    };
+
     // 处理图片上传
     const handleImageUpload = async (file: File) => {
         try {
@@ -632,6 +691,21 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
 
     // 渲染步骤内容
     const renderStepContent = () => {
+        // 简单模式只显示基本信息
+        if (isSimpleMode) {
+            return (
+                <BasicInfo
+                    bean={bean}
+                    onBeanChange={handleInputChange}
+                    onImageUpload={handleImageUpload}
+                    editingRemaining={editingRemaining}
+                    validateRemaining={validateRemaining}
+                    toggleInTransitState={toggleInTransitState}
+                    isSimpleMode={true}
+                />
+            );
+        }
+
         switch (currentStep) {
             case 'basic':
                 return (
@@ -642,6 +716,7 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                         editingRemaining={editingRemaining}
                         validateRemaining={validateRemaining}
                         toggleInTransitState={toggleInTransitState}
+                        isSimpleMode={false}
                     />
                 );
 
@@ -690,8 +765,8 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
     const renderNextButton = () => {
         const isLastStep = getCurrentStepIndex() === steps.length - 1;
         const valid = isStepValid();
-        const canSave = valid && ['basic', 'detail', 'flavor'].includes(currentStep);
-        
+        const canSave = valid && ['basic', 'detail', 'flavor'].includes(currentStep) && !isSimpleMode;
+
         const springTransition = {
             type: "spring",
             stiffness: 500,
@@ -703,7 +778,7 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
         return (
             <div className="modal-bottom-button flex items-center justify-center">
                 <div className="flex items-center justify-center gap-2">
-                    {/* 保存按钮 */}
+                    {/* 保存按钮 - 简单模式下不显示 */}
                     <AnimatePresence mode="popLayout">
                         {canSave && (
                             <motion.button
@@ -737,10 +812,10 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                         className={`
                             ${buttonBaseClass} flex items-center justify-center
                             ${!valid ? 'opacity-0 cursor-not-allowed' : ''}
-                            ${isLastStep ? 'px-6 py-3' : 'p-4'}
+                            ${isLastStep || isSimpleMode ? 'px-6 py-3' : 'p-4'}
                         `}
                     >
-                        {isLastStep ? (
+                        {isLastStep || isSimpleMode ? (
                             <span className="font-medium">完成</span>
                         ) : (
                             <ArrowRight className="w-4 h-4" strokeWidth="3" />
@@ -760,6 +835,7 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
         <div className="flex flex-col">
             {/* 顶部导航栏 */}
             <div className="flex items-center justify-between mt-3 mb-6">
+                {/* 左侧：返回按钮 */}
                 <button
                     type="button"
                     onClick={handleBack}
@@ -767,11 +843,44 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                 >
                     <ArrowLeft className="w-5 h-5 text-neutral-800 dark:text-neutral-200" />
                 </button>
-                <div className="w-full px-4">
-                    {renderProgressBar()}
-                </div>
-                <div className="text-sm font-medium text-neutral-600 dark:text-neutral-400">
-                    {getCurrentStepIndex() + 1}/{steps.length}
+
+                {/* 中间：进度条（仅在非简单模式下显示） */}
+                {!isSimpleMode && (
+                    <div className="flex-1 px-4">
+                        {renderProgressBar()}
+                    </div>
+                )}
+
+                {/* 右侧：简单模式开关或步骤计数 */}
+                <div className="flex items-center gap-3">
+                    {/* 简单模式开关 */}
+                    <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={isSimpleMode}
+                            onChange={(e) => handleSimpleModeToggle(e.target.checked)}
+                            className="sr-only"
+                        />
+                        <div className={`
+                            relative w-8 h-4 rounded-full transition-colors duration-200
+                            ${isSimpleMode ? 'bg-neutral-800 dark:bg-neutral-200' : 'bg-neutral-300 dark:bg-neutral-600'}
+                        `}>
+                            <div className={`
+                                absolute top-0.5 w-3 h-3 bg-white dark:bg-neutral-800 rounded-full transition-transform duration-200
+                                ${isSimpleMode ? 'translate-x-4' : 'translate-x-0.5'}
+                            `} />
+                        </div>
+                        <span className="text-xs font-medium text-neutral-600 dark:text-neutral-400">
+                            简单
+                        </span>
+                    </label>
+
+                    {/* 步骤计数（仅在非简单模式下显示） */}
+                    {!isSimpleMode && (
+                        <div className="text-sm font-medium text-neutral-600 dark:text-neutral-400">
+                            {getCurrentStepIndex() + 1}/{steps.length}
+                        </div>
+                    )}
                 </div>
             </div>
 
