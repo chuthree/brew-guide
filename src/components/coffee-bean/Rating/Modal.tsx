@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CoffeeBean } from '@/types/app'
 import StarRating from '../ui/StarRating'
+import AutoResizeTextarea from '@/components/common/forms/AutoResizeTextarea'
 
 interface CoffeeBeanRatingModalProps {
     showModal: boolean
@@ -125,11 +126,13 @@ const CoffeeBeanRatingModal: React.FC<CoffeeBeanRatingModalProps> = ({
                                 <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
                                     备注
                                 </label>
-                                <textarea
+                                <AutoResizeTextarea
                                     value={ratingNotes}
                                     onChange={(e) => setRatingNotes(e.target.value)}
                                     placeholder="添加对这款咖啡豆的备注"
-                                    className="w-full py-2 bg-transparent outline-hidden border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400 min-h-[60px] resize-none"
+                                    className="w-full py-2 bg-transparent outline-hidden border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
+                                    minRows={2}
+                                    maxRows={6}
                                 />
                             </div>
 
