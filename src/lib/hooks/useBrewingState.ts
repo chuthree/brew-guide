@@ -16,7 +16,7 @@ import { getMainTabPreference, saveMainTabPreference } from "@/lib/navigation/na
 
 // 器具选择缓存
 const MODULE_NAME = 'brewing-equipment';
-const DEFAULT_EQUIPMENT = 'v60';
+const DEFAULT_EQUIPMENT = 'V60';
 
 export const getSelectedEquipmentPreference = (): string => {
     return getStringState(MODULE_NAME, 'selectedEquipment', DEFAULT_EQUIPMENT);

@@ -166,6 +166,8 @@ const DetailInfo: React.FC<DetailInfoProps> = ({
                     onChange={(e) => onBeanChange('notes')(e.target.value)}
                     placeholder="其他备注信息..."
                     className="w-full py-2 bg-transparent outline-hidden border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
+                    minRows={2}
+                    maxRows={8}
                 />
             </div>
         </motion.div>
