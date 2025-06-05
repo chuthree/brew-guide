@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useMemo, useRef, useEffect } from 'react'
+import Image from 'next/image'
 import type { CoffeeBean } from '@/types/app'
 
 interface CoffeeBeanSelectorProps {
@@ -304,9 +305,11 @@ const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
                       <div className="relative self-start">
                         <div className="w-14 h-14 relative shrink-0 cursor-pointer rounded border border-neutral-200/50 dark:border-neutral-800/50 bg-neutral-100 dark:bg-neutral-800/20 overflow-hidden">
                           {bean.image ? (
-                            <img
+                            <Image
                               src={bean.image}
                               alt={bean.name || '咖啡豆图片'}
+                              width={56}
+                              height={56}
                               className="w-full h-full object-cover"
                               onError={(e) => {
                                 const target = e.target as HTMLImageElement;
