@@ -52,3 +52,11 @@ export const clearNavigationCache = (): void => {
         }
     }
 };
+
+// 监听全局缓存重置事件，自动清除导航缓存
+if (typeof window !== 'undefined') {
+    window.addEventListener('globalCacheReset', () => {
+        clearNavigationCache();
+        console.log('导航缓存已重置');
+    });
+}

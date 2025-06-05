@@ -181,6 +181,32 @@ globalCache.rankingBeanType = getRankingBeanTypePreference();
 globalCache.rankingEditMode = getRankingEditModePreference();
 globalCache.bloggerYear = getBloggerYearPreference();
 
+// 监听全局缓存重置事件
+if (typeof window !== 'undefined') {
+    window.addEventListener('globalCacheReset', () => {
+        // 重置所有缓存数据到初始状态
+        globalCache.beans = [];
+        globalCache.ratedBeans = [];
+        globalCache.filteredBeans = [];
+        globalCache.bloggerBeans = { 2024: [], 2025: [] };
+        globalCache.varieties = [];
+        globalCache.selectedVariety = null;
+        globalCache.selectedBeanType = 'all';
+        globalCache.showEmptyBeans = false;
+        globalCache.viewMode = 'inventory';
+        globalCache.sortOption = 'remaining_days_asc';
+        globalCache.inventorySortOption = 'remaining_days_asc';
+        globalCache.rankingSortOption = 'rating_desc';
+        globalCache.bloggerSortOption = 'original';
+        globalCache.rankingBeanType = 'all';
+        globalCache.rankingEditMode = false;
+        globalCache.bloggerYear = 2025;
+        globalCache.initialized = false;
+
+        console.log('咖啡豆全局缓存已重置');
+    });
+}
+
 // 检查咖啡豆是否用完
 export const isBeanEmpty = (bean: ExtendedCoffeeBean): boolean => {
     // 如果没有capacity属性，视为非空

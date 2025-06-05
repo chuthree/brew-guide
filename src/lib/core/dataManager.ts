@@ -336,7 +336,7 @@ export const DataManager = {
 			// 清除列表中的数据
 			for (const key of APP_DATA_KEYS) {
 				await Storage.remove(key);
-				
+
 				// 确保IndexedDB中的主要表也被清理
 				if (key === 'brewingNotes') {
 					await db.brewingNotes.clear();
@@ -349,42 +349,73 @@ export const DataManager = {
 			if (completeReset) {
 				// 获取所有存储键
 				const allKeys = await Storage.keys();
-				
+
 				// 清除所有自定义方案
 				const methodKeys = allKeys.filter(key => key.startsWith("customMethods_"));
 				for (const key of methodKeys) {
 					await Storage.remove(key);
 				}
-				
+
 				// 同时清除IndexedDB数据
 				await db.customEquipments.clear();
 				await db.customMethods.clear();
-				
+				await db.settings.clear(); // 清除设置表，包括迁移标记
+
 				// 清除所有自定义预设
 				if (isBrowser) {
 					for (const key of CUSTOM_PRESETS_KEYS) {
 						localStorage.removeItem(`${CUSTOM_PRESETS_PREFIX}${key}`);
 					}
+
+					// 清除所有状态持久化数据（brew-guide: 前缀的键）
+					const localStorageKeys = Object.keys(localStorage);
+					const stateKeys = localStorageKeys.filter(key => key.startsWith("brew-guide:"));
+					for (const key of stateKeys) {
+						localStorage.removeItem(key);
+					}
+
+					// 清除冲煮相关的临时状态
+					const brewingStateKeys = [
+						'brewingNoteInProgress',
+						'skipMethodToNotes',
+						'dataMigrationSkippedThisSession'
+					];
+					for (const key of brewingStateKeys) {
+						localStorage.removeItem(key);
+					}
+
+					// 清除sessionStorage中的临时数据
+					try {
+						sessionStorage.clear();
+					} catch (error) {
+						console.warn('清除sessionStorage失败:', error);
+					}
 				}
 			}
-			
+
 			// 触发数据变更事件，通知应用中的组件重新加载数据
-			if (isBrowser && completeReset) {
+			if (isBrowser) {
 				// 触发自定义器具更新事件
 				const equipmentEvent = new CustomEvent('customEquipmentUpdate', {
 					detail: { source: 'resetAllData' }
 				});
 				window.dispatchEvent(equipmentEvent);
-				
+
 				// 触发自定义方案更新事件
 				const methodEvent = new CustomEvent('customMethodUpdate', {
 					detail: { source: 'resetAllData' }
 				});
 				window.dispatchEvent(methodEvent);
-				
+
+				// 触发全局缓存重置事件
+				const cacheResetEvent = new CustomEvent('globalCacheReset', {
+					detail: { source: 'resetAllData' }
+				});
+				window.dispatchEvent(cacheResetEvent);
+
 				// 触发一个通用的数据更改事件
-				const dataChangeEvent = new CustomEvent('storage:changed', { 
-					detail: { key: 'allData', action: 'reset' } 
+				const dataChangeEvent = new CustomEvent('storage:changed', {
+					detail: { key: 'allData', action: 'reset' }
 				});
 				window.dispatchEvent(dataChangeEvent);
 			}
@@ -396,6 +427,7 @@ export const DataManager = {
 					: "已重置主要数据",
 			};
 		} catch (_error) {
+			console.error('重置数据失败:', _error);
 			return {
 				success: false,
 				message: "重置数据失败",
