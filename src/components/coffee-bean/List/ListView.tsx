@@ -374,27 +374,46 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
         <div className="space-y-5 pb-20">
             {/* 添加"不选择咖啡豆"选项 */}
             <div
-                className={`group relative border-l border-neutral-200 dark:border-neutral-800 pl-6 cursor-pointer text-neutral-500 dark:text-neutral-400`}
+                className="group relative cursor-pointer text-neutral-500 dark:text-neutral-400 transition-all duration-300"
                 onClick={() => onSelect(null, null)}
             >
                 <div className="cursor-pointer">
-                    <div className="flex items-baseline justify-between">
-                        <div className="flex items-baseline gap-3 min-w-0 overflow-hidden">
-                            <h3 className="text-xs font-medium text-neutral-800 dark:text-neutral-100 tracking-wider truncate">
-                                不使用咖啡豆
-                            </h3>
+                    <div className="flex gap-3">
+                        {/* 左侧图标区域 - 实线边框，空内容 */}
+                        <div className="relative self-start">
+                            <div className="w-14 h-14 relative shrink-0 rounded border border-neutral-200/40 dark:border-neutral-900/60 bg-neutral-100 dark:bg-neutral-800">
+                                {/* 空内容，表示"不选择" */}
+                            </div>
                         </div>
-                    </div>
-                    <div className="mt-2">
-                        <p className="text-xs font-medium text-neutral-600 dark:text-neutral-400">跳过咖啡豆选择</p>
+
+                        {/* 右侧内容区域 - 与图片等高 */}
+                        <div className="flex-1 min-w-0 flex flex-col justify-center gap-y-1.5 h-14">
+                            {/* 选项名称 */}
+                            <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100 leading-tight line-clamp-2 text-justify">
+                                不使用咖啡豆
+                            </div>
+
+                            {/* 描述信息 */}
+                            <div className="flex items-center text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
+                                <span className="shrink-0">跳过咖啡豆选择</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
             {/* 显示无搜索结果的提示 */}
             {filteredBeans.length === 0 && searchQuery.trim() !== '' && (
-                <div className="text-xs text-neutral-500 dark:text-neutral-400 border-l border-neutral-200 dark:border-neutral-800 pl-6">
-                    没有找到匹配&amp;quot;{searchQuery.trim()}&amp;quot;的咖啡豆
+                <div className="flex gap-3">
+                    {/* 左侧占位区域 - 与咖啡豆图片保持一致的尺寸 */}
+                    <div className="w-14 h-14 shrink-0"></div>
+
+                    {/* 右侧内容区域 */}
+                    <div className="flex-1 min-w-0 flex flex-col justify-center h-14">
+                        <div className="text-xs text-neutral-500 dark:text-neutral-400">
+                            没有找到匹配&quot;{searchQuery.trim()}&quot;的咖啡豆
+                        </div>
+                    </div>
                 </div>
             )}
 
@@ -467,9 +486,6 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
                     infoItems.push(formatPricePerGram(bean.price, bean.capacity));
                 }
 
-                // 确定是否高亮当前咖啡豆
-                const isHighlighted = highlightedBeanId === bean.id;
-
                 // 获取状态圆点的颜色
                 const getStatusDotColor = (phase: string): string => {
                     switch (phase) {
@@ -496,10 +512,7 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
                     <div
                         key={bean.id}
                         ref={setItemRef(bean.id)}
-                        className={`group relative border-l ${isHighlighted
-                            ? 'border-neutral-800 dark:border-neutral-100'
-                            : 'border-neutral-200 dark:border-neutral-800'}
-                            pl-6 cursor-pointer text-neutral-500 dark:text-neutral-400 transition-all duration-300`}
+                        className="group relative cursor-pointer text-neutral-500 dark:text-neutral-400 transition-all duration-300"
                         onClick={() => onSelect(bean.id, bean)}
                     >
                         <div className="cursor-pointer">
