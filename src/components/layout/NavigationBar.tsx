@@ -190,6 +190,15 @@ const EquipmentIndicator: React.FC<EquipmentIndicatorProps> = ({
         return () => clearTimeout(timer)
     }, [scrollToSelected])
 
+    // 当编辑模式状态变化时触发滚动（从编辑模式退出到正常模式时）
+    React.useEffect(() => {
+        if (!editingEquipment && selectedEquipment) {
+            // 从编辑模式退出时，延迟更长时间确保AnimatePresence动画完成后DOM已更新
+            const timer = setTimeout(scrollToSelected, 300)
+            return () => clearTimeout(timer)
+        }
+    }, [editingEquipment, selectedEquipment, scrollToSelected])
+
     // 构建所有项目数据
     const allItems = [
         ...allEquipments.map(equipment => ({
@@ -275,32 +284,32 @@ const EquipmentIndicator: React.FC<EquipmentIndicatorProps> = ({
                                 const equipment = allEquipments.find(eq => eq.id === editingEquipment)
                                 return equipment ? (
                                     <>
-                                        <span className="text-[12px] tracking-widest text-neutral-800 dark:text-neutral-100 pb-3">
+                                        <span className="text-xs font-medium tracking-widest text-neutral-800 dark:text-neutral-100 pb-3">
                                             {equipment.name}
                                         </span>
                                         <span className="text-[12px] tracking-widest text-neutral-400 dark:text-neutral-500 pb-3">｜</span>
                                         <button
                                             onClick={() => handlers.edit(equipment)}
-                                            className="text-[12px] tracking-widest cursor-pointer text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-100 pb-3 transition-colors duration-150"
+                                            className="text-xs font-medium tracking-widest cursor-pointer text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-100 pb-3 transition-colors duration-150"
                                         >
                                             编辑
                                         </button>
                                         <button
                                             onClick={() => handlers.delete(equipment)}
-                                            className="text-[12px] tracking-widest cursor-pointer text-neutral-500 dark:text-neutral-400 hover:text-red-600 dark:hover:text-red-400 pb-3 transition-colors duration-150"
+                                            className="text-xs font-medium tracking-widest cursor-pointer text-neutral-500 dark:text-neutral-400 hover:text-red-600 dark:hover:text-red-400 pb-3 transition-colors duration-150"
                                         >
                                             删除
                                         </button>
                                         <button
                                             onClick={() => handlers.share(equipment)}
-                                            className="text-[12px] tracking-widest cursor-pointer text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-100 pb-3 transition-colors duration-150"
+                                            className="text-xs font-medium tracking-widest cursor-pointer text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-100 pb-3 transition-colors duration-150"
                                         >
                                             分享
                                         </button>
                                         <span className="text-[12px] tracking-widest text-neutral-400 dark:text-neutral-500 pb-3">｜</span>
                                         <button
                                             onClick={handlers.exitEdit}
-                                            className="text-[12px] tracking-widest cursor-pointer text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-100 pb-3 transition-colors duration-150"
+                                            className="text-xs font-medium tracking-widest cursor-pointer text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-100 pb-3 transition-colors duration-150"
                                         >
                                             返回
                                         </button>

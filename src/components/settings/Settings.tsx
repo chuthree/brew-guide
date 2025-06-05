@@ -498,7 +498,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                     <div className="space-y-5">
                         {/* 提示音 */}
                         <div className="flex items-center justify-between">
-                            <div className="text-sm text-neutral-800 dark:text-neutral-200">
+                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
                                 提示音
                             </div>
                             <label className="relative inline-flex cursor-pointer items-center">
@@ -516,7 +516,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
 
                         {/* 震动反馈 */}
                         <div className="flex items-center justify-between">
-                            <div className="text-sm text-neutral-800 dark:text-neutral-200">
+                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
                                 震动反馈
                             </div>
                             <label className="relative inline-flex cursor-pointer items-center">
@@ -547,7 +547,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                     <div className="space-y-5">
                         {/* 语言选择 */}
                         <div className="flex items-center justify-between">
-                            <div className="text-sm text-neutral-800 dark:text-neutral-200">
+                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
                                 语言(Beta)
                             </div>
                             <div className="text-sm text-neutral-400 dark:text-neutral-500">
@@ -588,7 +588,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
 
                         {/* 外观模式 */}
                         <div className="flex items-center justify-between">
-                            <div className="text-sm text-neutral-800 dark:text-neutral-200">
+                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
                                 外观模式
                             </div>
                             <div className="text-sm text-neutral-400 dark:text-neutral-500">
@@ -646,7 +646,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                         {isTextZoomEnabled && (
                             <div className="mb-4">
                                 <div className="flex items-center justify-between mb-3">
-                                    <div className="text-sm text-neutral-800 dark:text-neutral-200">
+                                    <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
                                         文本大小
                                     </div>
                                     <div className="text-sm text-neutral-400 dark:text-neutral-500">
@@ -708,7 +708,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                         {/* 顶部边距 */}
                         <div>
                             <div className="flex items-center justify-between mb-2">
-                                <div className="text-sm text-neutral-800 dark:text-neutral-200">
+                                <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
                                     顶部边距
                                 </div>
                                 <button
@@ -756,7 +756,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                         {/* 底部边距 */}
                         <div>
                             <div className="flex items-center justify-between mb-2">
-                                <div className="text-sm text-neutral-800 dark:text-neutral-200">
+                                <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
                                     底部边距
                                 </div>
                                 <button
@@ -820,7 +820,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                             <button
                                 key={value}
                                 onClick={() => removeDecrementPreset(value)}
-                                className="px-3 py-1.5 bg-neutral-100 dark:bg-neutral-800 rounded-lg text-sm text-neutral-800 dark:text-neutral-200 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+                                className="px-3 py-1.5 bg-neutral-100 dark:bg-neutral-800 rounded-lg text-sm font-medium text-neutral-800 dark:text-neutral-200 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
                             >
                                 -{value}g ×
                             </button>
@@ -877,7 +877,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                     <div className="space-y-5">
                         {/* 简化咖啡豆名称 */}
                         <div className="flex items-center justify-between">
-                            <div className="text-sm text-neutral-800 dark:text-neutral-200">
+                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
                                 简化咖啡豆名称
                             </div>
                             <label className="relative inline-flex cursor-pointer items-center">
@@ -893,7 +893,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
 
                         {/* 显示赏味期信息 */}
                         <div className="flex items-center justify-between">
-                            <div className="text-sm text-neutral-800 dark:text-neutral-200">
+                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
                                 显示赏味期信息
                             </div>
                             <label className="relative inline-flex cursor-pointer items-center">
@@ -919,7 +919,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
 
                         {/* 阶段信息布局反转 */}
                         <div className="flex items-center justify-between">
-                            <div className="text-sm text-neutral-800 dark:text-neutral-200">
+                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
                                 阶段信息布局反转
                             </div>
                             <label className="relative inline-flex cursor-pointer items-center">
@@ -941,7 +941,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
 
                         {/* 控制区布局反转 */}
                         <div className="flex items-center justify-between">
-                            <div className="text-sm text-neutral-800 dark:text-neutral-200">
+                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
                                 控制区布局反转
                             </div>
                             <label className="relative inline-flex cursor-pointer items-center">
@@ -963,7 +963,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
 
                         {/* 始终显示计时器信息 */}
                         <div className="flex items-center justify-between">
-                            <div className="text-sm text-neutral-800 dark:text-neutral-200">
+                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
                                 始终显示计时器信息
                             </div>
                             <label className="relative inline-flex cursor-pointer items-center">
@@ -985,7 +985,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
 
                         {/* 显示阶段分隔线 */}
                         <div className="flex items-center justify-between">
-                            <div className="text-sm text-neutral-800 dark:text-neutral-200">
+                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
                                 显示阶段分隔线
                             </div>
                             <label className="relative inline-flex cursor-pointer items-center">
@@ -1007,7 +1007,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
 
                         {/* 显示流速 */}
                         <div className="flex items-center justify-between">
-                            <div className="text-sm text-neutral-800 dark:text-neutral-200">
+                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
                                 显示流速
                             </div>
                             <label className="relative inline-flex cursor-pointer items-center">
@@ -1023,7 +1023,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
 
                         {/* 进度条高度 */}
                         <div className="flex items-center justify-between mb-2">
-                            <div className="text-sm text-neutral-800 dark:text-neutral-200">
+                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
                                 进度条高度
                             </div>
                             <div className="text-sm text-neutral-400 dark:text-neutral-500">

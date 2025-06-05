@@ -497,9 +497,9 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
             <div className="p-4 max-w-xs mx-auto text-center">
                 <button
                     onClick={onStatsShare}
-                    className="mx-auto text-center pb-1.5 text-[11px] relative text-neutral-600 dark:text-neutral-400"
+                    className="mx-auto text-center pb-1.5 text-[11px] font-medium relative text-neutral-600 dark:text-neutral-400"
             >
-                <span className="relative underline underline-offset-2 decoration-sky-500">分享 (不包含费用数据)</span>
+                <span className="relative underline underline-offset-2 decoration-sky-500">分享 (包含费用数据)</span>
                     <ArrowUpRight className="inline-block ml-1 w-3 h-3" />
                 </button>
             </div>

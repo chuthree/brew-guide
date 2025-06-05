@@ -336,12 +336,12 @@ const EquipmentImportModal: React.FC<EquipmentImportModalProps> = ({
                                     }`}
                             >
                                 <div className="text-center">
-                                    <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-2">
+                                    <p className="text-sm font-medium text-neutral-600 dark:text-neutral-400 mb-2">
                                         拖放JSON文件到此处，或
                                     </p>
                                     <button
                                         onClick={handleFileButtonClick}
-                                        className="inline-flex items-center justify-center px-4 py-2 text-sm text-neutral-800 dark:text-neutral-200 bg-neutral-100/60 dark:bg-neutral-800/30 rounded-lg hover:opacity-80 transition-opacity"
+                                        className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-neutral-800 dark:text-neutral-200 bg-neutral-100/60 dark:bg-neutral-800/30 rounded-lg hover:opacity-80 transition-opacity"
                                     >
                                         <svg
                                             className="w-4 h-4 mr-2"

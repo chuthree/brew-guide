@@ -258,7 +258,7 @@ const SteppedFormModal: React.FC<SteppedFormModalProps> = ({
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     placeholder="搜索咖啡豆名称..."
-                                    className="w-48 text-sm bg-neutral-100 dark:bg-neutral-800 rounded-full py-[14px] px-5 border-none outline-hidden text-neutral-800 dark:text-neutral-100 placeholder-neutral-400 dark:placeholder-neutral-500"
+                                    className="w-48 text-sm font-medium bg-neutral-100 dark:bg-neutral-800 rounded-full py-[14px] px-5 border-none outline-hidden text-neutral-800 dark:text-neutral-100 placeholder-neutral-400 dark:placeholder-neutral-500"
                                     autoComplete="off"
                                     onKeyDown={(e) => {
                                         if (e.key === 'Escape') {

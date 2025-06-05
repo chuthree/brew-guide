@@ -5,7 +5,7 @@ import { formatNumber2Digits } from './utils'
 // 生成统计项，单个值
 export const StatItem: React.FC<StatItemProps> = ({ label, value, unit = '' }) => (
     <div className="flex justify-between items-center w-full py-1.5">
-        <span className="pr-3 text-neutral-600 dark:text-neutral-400 text-[11px] overflow-hidden text-ellipsis whitespace-nowrap">{label}</span>
+        <span className="pr-3 text-neutral-600 dark:text-neutral-400 text-[11px] font-medium overflow-hidden text-ellipsis whitespace-nowrap">{label}</span>
         <span className="text-neutral-800 dark:text-neutral-100 text-[11px] font-medium whitespace-nowrap">{value}{unit ? ` ${unit}` : ''}</span>
     </div>
 )
@@ -21,7 +21,7 @@ export const StatSection: React.FC<StatSectionProps> = ({ title, children }) => 
 // 带编号的统计类别
 export const StatCategory: React.FC<StatCategoryProps> = ({ number, title, children, animStyle }) => (
     <div className="flex" style={animStyle}>
-        <div className="text-[11px] text-neutral-800 dark:text-neutral-100 mr-3">
+        <div className="text-[11px] font-medium text-neutral-800 dark:text-neutral-100 mr-3">
             {formatNumber2Digits(number)}
         </div>
         <StatSection title={title}>
