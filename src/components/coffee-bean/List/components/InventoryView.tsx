@@ -8,7 +8,7 @@ import RemainingEditor from './RemainingEditor'
 import BeanDetailModal from '@/components/coffee-bean/Detail/BeanDetailModal'
 
 // 每页加载的咖啡豆数量 - 增大分页大小减少加载次数
-const PAGE_SIZE = 5;
+const PAGE_SIZE = 8;
 
 interface InventoryViewProps {
     filteredBeans: ExtendedCoffeeBean[]

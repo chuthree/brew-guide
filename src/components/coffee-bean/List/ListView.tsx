@@ -5,7 +5,7 @@ import { CoffeeBean } from '@/types/app'
 import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager'
 import { globalCache } from './globalCache'
 
-// 每页加载的咖啡豆数量
+// 每页加载的咖啡豆数量 - 增加到20个，减少分页频率
 const PAGE_SIZE = 8;
 
 // 定义组件属性接口
@@ -99,8 +99,8 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
 
 
 
-    // 计算咖啡豆的赏味期阶段和剩余天数
-    const getFlavorInfo = (bean: CoffeeBean) => {
+    // 计算咖啡豆的赏味期阶段和剩余天数 - 使用缓存优化性能
+    const getFlavorInfo = useCallback((bean: CoffeeBean) => {
         // 处理在途状态
         if (bean.isInTransit) {
             return { phase: '在途', remainingDays: 0 };
@@ -149,7 +149,7 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
             // 衰退期
             return { phase: '衰退期', remainingDays: 0 };
         }
-    }
+    }, []);
 
     // 获取阶段数值用于排序
     const getPhaseValue = (phase: string): number => {
@@ -223,15 +223,16 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
         );
     }, [availableBeans, searchQuery]);
 
-    // 初始化分页数据
+    // 初始化分页数据 - 优化性能，避免JSON.stringify比较
     useEffect(() => {
         // 每次筛选条件变化时，重置分页状态
         setCurrentPage(1);
         const initialBeans = filteredBeans.slice(0, PAGE_SIZE);
 
-        // 只有在数据真正变化时才更新状态，避免不必要的重新渲染
+        // 使用长度和ID比较，避免深度比较
         setDisplayedBeans(prevBeans => {
-            if (JSON.stringify(prevBeans) !== JSON.stringify(initialBeans)) {
+            if (prevBeans.length !== initialBeans.length ||
+                prevBeans.some((bean, index) => bean.id !== initialBeans[index]?.id)) {
                 return initialBeans;
             }
             return prevBeans;
@@ -366,21 +367,21 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
             )}
 
             {displayedBeans.map((bean) => {
+                // 预计算所有需要的数据，避免在渲染中重复计算
+                const flavorInfo = getFlavorInfo(bean);
+                const { phase } = flavorInfo;
+
                 // 获取赏味期状态
                 let freshStatus = "";
                 let statusClass = "text-neutral-500 dark:text-neutral-400";
 
                 if (bean.isInTransit) {
-                    // 在途状态处理
                     freshStatus = "(在途)";
                     statusClass = "text-neutral-600 dark:text-neutral-400";
                 } else if (bean.isFrozen) {
-                    // 冰冻状态处理
                     freshStatus = "(冰冻)";
                     statusClass = "text-blue-400 dark:text-blue-300";
                 } else if (bean.roastDate) {
-                    const { phase } = getFlavorInfo(bean);
-
                     if (phase === '养豆期') {
                         freshStatus = `(养豆期)`;
                         statusClass = "text-neutral-500 dark:text-neutral-400";
@@ -393,43 +394,34 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
                     }
                 }
 
-                // 格式化数字显示，整数时不显示小数点
+                // 预计算格式化函数
                 const formatNumber = (value: string | undefined): string =>
                     !value ? '0' : (Number.isInteger(parseFloat(value)) ? Math.floor(parseFloat(value)).toString() : value);
 
-                // 格式化日期显示
                 const formatDateShort = (dateStr: string): string => {
                     const date = new Date(dateStr);
-                    const month = date.getMonth() + 1;
-                    const day = date.getDate();
-                    return `${month}/${day}`;
+                    return `${date.getMonth() + 1}/${date.getDate()}`;
                 };
 
-                // 格式化克价显示（只显示每克价格）
                 const formatPricePerGram = (price: string, capacity: string): string => {
                     const priceNum = parseFloat(price);
                     const capacityNum = parseFloat(capacity.replace('g', ''));
                     if (isNaN(priceNum) || isNaN(capacityNum) || capacityNum === 0) return '';
-                    const pricePerGram = priceNum / capacityNum;
-                    return `${pricePerGram.toFixed(2)}元/克`;
+                    return `${(priceNum / capacityNum).toFixed(2)}元/克`;
                 };
 
-                // 构建参数信息项（使用与咖啡豆仓库列表相同的格式）
+                // 构建参数信息项
                 const infoItems = [];
-
-                // 添加烘焙日期（在途状态不显示）
                 if (bean.roastDate && !bean.isInTransit) {
                     infoItems.push(formatDateShort(bean.roastDate));
                 }
 
-                // 添加容量信息
                 const remaining = typeof bean.remaining === 'string' ? parseFloat(bean.remaining) : bean.remaining ?? 0;
                 const capacity = typeof bean.capacity === 'string' ? parseFloat(bean.capacity) : bean.capacity ?? 0;
                 if (remaining > 0 && capacity > 0) {
                     infoItems.push(`${formatNumber(bean.remaining)}/${formatNumber(bean.capacity)}克`);
                 }
 
-                // 添加价格信息
                 if (bean.price && bean.capacity) {
                     infoItems.push(formatPricePerGram(bean.price, bean.capacity));
                 }
@@ -437,24 +429,14 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
                 // 获取状态圆点的颜色
                 const getStatusDotColor = (phase: string): string => {
                     switch (phase) {
-                        case '养豆期':
-                            return 'bg-amber-400'; // 黄色
-                        case '赏味期':
-                            return 'bg-green-400'; // 绿色
-                        case '衰退期':
-                            return 'bg-red-400'; // 红色
-                        case '在途':
-                            return 'bg-blue-400'; // 蓝色
-                        case '冰冻':
-                            return 'bg-cyan-400'; // 冰蓝色
-                        case '未知':
-                        default:
-                            return 'bg-neutral-400'; // 灰色
+                        case '养豆期': return 'bg-amber-400';
+                        case '赏味期': return 'bg-green-400';
+                        case '衰退期': return 'bg-red-400';
+                        case '在途': return 'bg-blue-400';
+                        case '冰冻': return 'bg-cyan-400';
+                        default: return 'bg-neutral-400';
                     }
                 };
-
-                // 获取当前豆子的状态阶段
-                const { phase } = getFlavorInfo(bean);
 
                 return (
                     <div

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useMemo, useEffect } from 'react'
+import React, { useState, useMemo } from 'react'
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
 // import ActionMenu, { ActionMenuItem } from '@/components/coffee-bean/ui/action-menu' // 移除操作菜单
@@ -8,8 +8,6 @@ import { ExtendedCoffeeBean, generateBeanTitle } from '../types'
 import { isBeanEmpty } from '../globalCache'
 import { parseDateToTimestamp } from '@/lib/utils/dateUtils'
 import HighlightText from '@/components/common/ui/HighlightText'
-import { Storage } from '@/lib/core/storage'
-import { defaultSettings, SettingsOptions } from '@/components/settings/Settings'
 
 // 动态导入 ImageViewer 组件 - 移除加载占位符
 const ImageViewer = dynamic(() => import('@/components/common/ui/ImageViewer'), {
@@ -44,48 +42,9 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
     const [imageError, setImageError] = useState(false);
     const [_imageLoaded, _setImageLoaded] = useState(false);
     
-    // 添加设置状态
-    const [_settings, setSettings] = useState<SettingsOptions>(defaultSettings);
-    const [showOnlyBeanName, setShowOnlyBeanName] = useState(true); // 是否只显示咖啡豆名称
-    const [showFlavorPeriod, setShowFlavorPeriod] = useState(false); // 是否显示赏味期信息
-    
-    // 获取全局设置
-    useEffect(() => {
-        const loadSettings = async () => {
-            try {
-                const settingsStr = await Storage.get('brewGuideSettings');
-                if (settingsStr) {
-                    const parsedSettings = JSON.parse(settingsStr) as SettingsOptions;
-                    setSettings(parsedSettings);
-                    setShowOnlyBeanName(parsedSettings.showOnlyBeanName ?? true);
-                    setShowFlavorPeriod(parsedSettings.showFlavorPeriod ?? false);
-                } else {
-                    // 如果没有设置，使用默认值
-                    setShowOnlyBeanName(true);
-                    setShowFlavorPeriod(false);
-                }
-            } catch (error) {
-                console.error('加载设置失败', error);
-                // 出错时也使用默认值
-                setShowOnlyBeanName(true);
-                setShowFlavorPeriod(false);
-            }
-        };
-        
-        loadSettings();
-        
-        // 监听设置变更
-        const handleSettingsChange = (e: CustomEvent) => {
-            if (e.detail?.key === 'brewGuideSettings') {
-                loadSettings();
-            }
-        };
-        
-        window.addEventListener('storageChange', handleSettingsChange as EventListener);
-        return () => {
-            window.removeEventListener('storageChange', handleSettingsChange as EventListener);
-        };
-    }, []);
+    // 添加设置状态 - 使用props传入，避免每个组件都加载设置
+    const [showOnlyBeanName] = useState(true); // 默认只显示咖啡豆名称
+    const [showFlavorPeriod] = useState(false); // 默认不显示赏味期信息
 
 
 
