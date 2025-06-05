@@ -170,23 +170,30 @@ const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
       <div>
         <div className="space-y-5">
           {/* 不选择咖啡豆选项 */}
-          <div 
-            className="group relative text-neutral-500 dark:text-neutral-400"
+          <div
+            className="group relative cursor-pointer text-neutral-500 dark:text-neutral-400 transition-all duration-300"
             onClick={() => onSelect(null)}
           >
-            <div className="group relative border-l border-neutral-200 dark:border-neutral-800 pl-6 cursor-pointer">
-              <div className="cursor-pointer">
-                <div className="flex items-baseline justify-between">
-                  <div className="flex items-baseline gap-3 min-w-0 overflow-hidden">
-                    <h3 className="text-xs font-medium text-neutral-800 dark:text-neutral-100 tracking-wider truncate">
-                      不选择咖啡豆
-                    </h3>
+            <div className="cursor-pointer">
+              <div className="flex gap-3">
+                {/* 左侧图标区域 - 实线边框，空内容 */}
+                <div className="relative self-start">
+                  <div className="w-14 h-14 relative shrink-0 rounded border border-neutral-200/50 dark:border-neutral-800/50 bg-neutral-100 dark:bg-neutral-800/20">
+                    {/* 空内容，表示"不选择" */}
                   </div>
                 </div>
-                <div className="mt-2">
-                  <p className="text-xs font-medium text-neutral-600 dark:text-neutral-400">
-                    不记录咖啡豆信息，也不会减少咖啡豆剩余量
-                  </p>
+
+                {/* 右侧内容区域 - 与图片等高 */}
+                <div className="flex-1 min-w-0 flex flex-col justify-center gap-y-1.5 h-14">
+                  {/* 选项名称 */}
+                  <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100 leading-tight line-clamp-2 text-justify">
+                    不使用咖啡豆
+                  </div>
+
+                  {/* 描述信息 */}
+                  <div className="flex items-center text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
+                    <span className="shrink-0">跳过咖啡豆选择</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -262,9 +269,6 @@ const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
                 infoItems.push(formatPricePerGram(bean.price, bean.capacity));
               }
 
-              // 确定是否高亮当前咖啡豆
-              const isHighlighted = highlightedBeanId === bean.id;
-
               // 获取状态圆点的颜色
               const getStatusDotColor = (phase: string): string => {
                 switch (phase) {
@@ -290,60 +294,57 @@ const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
               return (
                 <div
                   key={bean.id}
-                  className="group relative text-neutral-500 dark:text-neutral-400"
+                  className="group relative cursor-pointer text-neutral-500 dark:text-neutral-400 transition-all duration-300"
                   onClick={() => onSelect(bean)}
                   ref={setItemRef(bean.id)}
                 >
-                  <div className={`group relative border-l ${isHighlighted
-                    ? 'border-neutral-800 dark:border-neutral-100'
-                    : 'border-neutral-200 dark:border-neutral-800'}
-                    pl-6 cursor-pointer transition-all duration-300`}>
-                    <div className="cursor-pointer">
-                      <div className="flex gap-3">
-                        {/* 左侧图片区域 - 固定显示，缩小尺寸 */}
-                        <div className="relative self-start">
-                          <div className="w-14 h-14 relative shrink-0 rounded border border-neutral-200/40 dark:border-neutral-900/60 bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
-                            {bean.image ? (
-                              <img
-                                src={bean.image}
-                                alt={bean.name || '咖啡豆图片'}
-                                className="w-full h-full object-cover"
-                                onError={(e) => {
-                                  const target = e.target as HTMLImageElement;
-                                  target.style.display = 'none';
-                                }}
-                              />
-                            ) : (
-                              <div className="absolute inset-0 flex items-center justify-center text-xs font-medium text-neutral-400 dark:text-neutral-600 bg-neutral-200/20 dark:bg-neutral-900/80">
-                                {bean.name ? bean.name.charAt(0) : '豆'}
-                              </div>
-                            )}
-                          </div>
-
-                          {/* 状态圆点 - 右下角，边框超出图片边界 */}
-                          <div className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full ${getStatusDotColor(phase)} border-2 border-neutral-50 dark:border-neutral-900`} />
+                  <div className="cursor-pointer">
+                    <div className="flex gap-3">
+                      {/* 左侧图片区域 - 固定显示，缩小尺寸 */}
+                      <div className="relative self-start">
+                        <div className="w-14 h-14 relative shrink-0 cursor-pointer rounded border border-neutral-200/50 dark:border-neutral-800/50 bg-neutral-100 dark:bg-neutral-800/20 overflow-hidden">
+                          {bean.image ? (
+                            <img
+                              src={bean.image}
+                              alt={bean.name || '咖啡豆图片'}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                              }}
+                            />
+                          ) : (
+                            <div className="absolute inset-0 flex items-center justify-center text-xs font-medium text-neutral-400 dark:text-neutral-600">
+                              {bean.name ? bean.name.charAt(0) : '豆'}
+                            </div>
+                          )}
                         </div>
 
-                        {/* 右侧内容区域 - 与图片等高 */}
-                        <div className="flex-1 min-w-0 flex flex-col justify-center gap-y-1.5 h-14">
-                          {/* 咖啡豆名称和烘焙度 */}
-                          <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100 leading-tight line-clamp-2 text-justify">
-                            {bean.name}
-                            {bean.roastLevel && ` ${bean.roastLevel}`}
-                            <span className={statusClass}> {freshStatus}</span>
-                          </div>
+                        {/* 状态圆点 - 右下角，边框超出图片边界 - 只有当有赏味期数据时才显示 */}
+                        {bean.roastDate && (bean.startDay || bean.endDay || bean.roastLevel) && (
+                          <div className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full ${getStatusDotColor(phase)} border-2 border-neutral-50 dark:border-neutral-900`} />
+                        )}
+                      </div>
 
-                          {/* 其他信息 */}
-                          <div className="flex items-center text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
-                            {infoItems.map((item, i) => (
-                              <React.Fragment key={i}>
-                                <span className="shrink-0">{item}</span>
-                                {i < infoItems.length - 1 && (
-                                  <span className="mx-2 text-neutral-400 dark:text-neutral-600">·</span>
-                                )}
-                              </React.Fragment>
-                            ))}
-                          </div>
+                      {/* 右侧内容区域 - 与图片等高 */}
+                      <div className="flex-1 min-w-0 flex flex-col justify-center gap-y-1.5 h-14">
+                        {/* 咖啡豆名称和烘焙度 */}
+                        <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100 leading-tight line-clamp-2 text-justify">
+                          {bean.name}
+                          {bean.roastLevel && ` ${bean.roastLevel}`}
+                          <span className={statusClass}> {freshStatus}</span>
+                        </div>
+
+                        {/* 其他信息 */}
+                        <div className="flex items-center text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
+                          {infoItems.map((item, i) => (
+                            <React.Fragment key={i}>
+                              <span className="shrink-0">{item}</span>
+                              {i < infoItems.length - 1 && (
+                                <span className="mx-2 text-neutral-400 dark:text-neutral-600">·</span>
+                              )}
+                            </React.Fragment>
+                          ))}
                         </div>
                       </div>
                     </div>
@@ -352,11 +353,19 @@ const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
               );
             })
           ) : (
-            <div className="text-xs text-neutral-500 dark:text-neutral-400 border-l border-neutral-200 dark:border-neutral-800 pl-6">
-              {searchQuery.trim() 
-                ? `没有找到匹配"${searchQuery.trim()}"的咖啡豆`
-                : "没有可用的咖啡豆，请先添加咖啡豆"
-              }
+            <div className="flex gap-3">
+              {/* 左侧占位区域 - 与咖啡豆图片保持一致的尺寸 */}
+              <div className="w-14 h-14 shrink-0"></div>
+
+              {/* 右侧内容区域 */}
+              <div className="flex-1 min-w-0 flex flex-col justify-center h-14">
+                <div className="text-xs text-neutral-500 dark:text-neutral-400">
+                  {searchQuery.trim()
+                    ? `没有找到匹配"${searchQuery.trim()}"的咖啡豆`
+                    : "没有可用的咖啡豆，请先添加咖啡豆"
+                  }
+                </div>
+              </div>
             </div>
           )}
         </div>

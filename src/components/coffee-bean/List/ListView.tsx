@@ -381,7 +381,7 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
                     <div className="flex gap-3">
                         {/* 左侧图标区域 - 实线边框，空内容 */}
                         <div className="relative self-start">
-                            <div className="w-14 h-14 relative shrink-0 rounded border border-neutral-200/40 dark:border-neutral-900/60 bg-neutral-100 dark:bg-neutral-800">
+                            <div className="w-14 h-14 relative shrink-0 rounded border border-neutral-200/50 dark:border-neutral-800/50 bg-neutral-100 dark:bg-neutral-800/20">
                                 {/* 空内容，表示"不选择" */}
                             </div>
                         </div>
@@ -519,7 +519,7 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
                             <div className="flex gap-3">
                                 {/* 左侧图片区域 - 固定显示，缩小尺寸 */}
                                 <div className="relative self-start">
-                                    <div className="w-14 h-14 relative shrink-0 rounded border border-neutral-200/40 dark:border-neutral-900/60 bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
+                                    <div className="w-14 h-14 relative shrink-0 cursor-pointer rounded border border-neutral-200/50 dark:border-neutral-800/50 bg-neutral-100 dark:bg-neutral-800/20 overflow-hidden">
                                         {bean.image ? (
                                             <img
                                                 src={bean.image}
@@ -531,14 +531,16 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
                                                 }}
                                             />
                                         ) : (
-                                            <div className="absolute inset-0 flex items-center justify-center text-xs font-medium text-neutral-400 dark:text-neutral-600 bg-neutral-200/20 dark:bg-neutral-900/80">
+                                            <div className="absolute inset-0 flex items-center justify-center text-xs font-medium text-neutral-400 dark:text-neutral-600">
                                                 {bean.name ? bean.name.charAt(0) : '豆'}
                                             </div>
                                         )}
                                     </div>
 
-                                    {/* 状态圆点 - 右下角，边框超出图片边界 */}
-                                    <div className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full ${getStatusDotColor(phase)} border-2 border-neutral-50 dark:border-neutral-900`} />
+                                    {/* 状态圆点 - 右下角，边框超出图片边界 - 只有当有赏味期数据时才显示 */}
+                                    {bean.roastDate && (bean.startDay || bean.endDay || bean.roastLevel) && (
+                                        <div className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full ${getStatusDotColor(phase)} border-2 border-neutral-50 dark:border-neutral-900`} />
+                                    )}
                                 </div>
 
                                 {/* 右侧内容区域 - 与图片等高 */}

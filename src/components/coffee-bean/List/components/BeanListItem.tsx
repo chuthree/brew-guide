@@ -264,7 +264,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
         <div
             className={`group ${isLast ? '' : ''} ${
                 isEmpty ? 'bg-neutral-100/60 dark:bg-neutral-800/30' : ''
-            } ${onDetailClick ? 'cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors' : ''}`}
+            } ${onDetailClick ? 'cursor-pointer transition-colors' : ''}`}
             onClick={handleCardClick}
         >
             {/* 左右布局：左侧图片，右侧所有内容（包括备注） */}
@@ -272,7 +272,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                 {/* 左侧图片区域 - 固定显示，缩小尺寸，使用 self-start 防止被拉伸 */}
                 <div className="relative self-start">
                     <div
-                        className="w-14 h-14 relative shrink-0 cursor-pointer rounded border border-neutral-200/40 dark:border-neutral-900/60 bg-neutral-100 dark:bg-neutral-800 overflow-hidden"
+                        className="w-14 h-14 relative shrink-0 cursor-pointer rounded border border-neutral-200/50 dark:border-neutral-800/50 bg-neutral-100 dark:bg-neutral-800/20 overflow-hidden"
                         onClick={() => bean.image && !imageError && setImageViewerOpen(true)}
                         data-click-area="image"
                     >
@@ -294,14 +294,16 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                             />
                         ) : (
                             // 没有图片时显示灰色背景和名称首字
-                            <div className="absolute inset-0 flex items-center justify-center text-xs font-medium text-neutral-400 dark:text-neutral-600 bg-neutral-200/20 dark:bg-neutral-900/80">
+                            <div className="absolute inset-0 flex items-center justify-center text-xs font-medium text-neutral-400 dark:text-neutral-600">
                                 {bean.name ? bean.name.charAt(0) : '豆'}
                             </div>
                         )}
                     </div>
 
-                    {/* 状态圆点 - 右下角，边框超出图片边界 */}
-                    <div className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full ${getStatusDotColor(flavorInfo.phase)} border-2 border-neutral-50 dark:border-neutral-900`} />
+                    {/* 状态圆点 - 右下角，边框超出图片边界 - 只有当有赏味期数据时才显示 */}
+                    {bean.roastDate && (bean.startDay || bean.endDay || bean.roastLevel) && (
+                        <div className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full ${getStatusDotColor(flavorInfo.phase)} border-2 border-neutral-50 dark:border-neutral-900`} />
+                    )}
                 </div>
 
                 {/* 图片查看器 */}
