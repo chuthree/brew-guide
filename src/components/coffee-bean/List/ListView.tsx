@@ -29,8 +29,6 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
         globalCache.initialized ? globalCache.beans : []
     )
     const [_isPending, startTransition] = useTransition()
-    // 如果缓存已经有数据，就不显示加载动画
-    const [isFirstLoad, setIsFirstLoad] = useState(!globalCache.initialized || globalCache.beans.length === 0)
     const [forceRefreshKey, setForceRefreshKey] = useState(0) // 添加强制刷新的key
 
     // 移除了极简模式相关的设置状态
@@ -57,27 +55,6 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
 
     // 移除了极简模式相关的设置加载逻辑
 
-    // 检查咖啡豆是否用完
-    const _isBeanEmpty = (bean: CoffeeBean): boolean => {
-        // 处理remaining可能是字符串或数字的情况
-        if (typeof bean.remaining === 'number') {
-            return bean.remaining <= 0;
-        }
-
-        // 处理remaining是字符串的情况
-        if (typeof bean.remaining === 'string') {
-            // 移除所有非数字字符（除了小数点）并转换为数字
-            const numericValue = parseFloat(bean.remaining.replace(/[^\d.]/g, ''));
-            return isNaN(numericValue) || numericValue <= 0;
-        }
-
-        // 如果remaining未定义或为null，也视为空
-        return true;
-    }
-
-
-
-
 
     // 优化的加载咖啡豆数据函数 - 使用全局缓存避免重复加载
     const loadBeans = useCallback(async () => {
@@ -85,11 +62,6 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
             // 如果全局缓存已初始化且有数据，什么都不做，避免状态变化导致闪烁
             if (globalCache.initialized && globalCache.beans.length > 0) {
                 return;
-            }
-
-            // 只有在真正需要加载时才显示加载状态
-            if (!globalCache.initialized) {
-                setIsFirstLoad(true);
             }
 
             const loadedBeans = await CoffeeBeanManager.getAllBeans();
@@ -101,11 +73,9 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
             // 使用 useTransition 包裹状态更新，避免界面闪烁
             startTransition(() => {
                 setBeans(loadedBeans);
-                setIsFirstLoad(false);
             });
         } catch (error) {
             console.error("加载咖啡豆数据失败:", error);
-            setIsFirstLoad(false);
         }
     }, []);
 
@@ -127,22 +97,7 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
         };
     }, []);
 
-    // 计算单价
-    const _calculateUnitPrice = (bean: CoffeeBean): string => {
-        if (!bean.price || !bean.capacity) return "未知";
 
-        try {
-            const price = parseFloat(bean.price.replace(/[^\d.]/g, ''));
-            const capacity = parseFloat(bean.capacity.replace(/[^\d.]/g, ''));
-
-            if (isNaN(price) || isNaN(capacity) || capacity === 0) return "未知";
-
-            const unitPrice = price / capacity;
-            return unitPrice.toFixed(2);
-        } catch {
-            return "未知";
-        }
-    }
 
     // 计算咖啡豆的赏味期阶段和剩余天数
     const getFlavorInfo = (bean: CoffeeBean) => {
@@ -361,14 +316,7 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
         }
     }, [highlightedBeanId]);
 
-    // 使用isFirstLoad替代原来的loading状态
-    if (isFirstLoad) {
-        return (
-            <div className="flex flex-col items-center justify-center h-64">
-                <div className="w-8 h-8 border-t-2 border-neutral-800 dark:border-neutral-200 rounded-full animate-spin"></div>
-            </div>
-        )
-    }
+    // 删除加载动画，直接显示内容
 
     return (
         <div className="space-y-5 pb-20">
