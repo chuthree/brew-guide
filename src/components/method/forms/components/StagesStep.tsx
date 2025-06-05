@@ -806,6 +806,8 @@ const StagesStep: React.FC<StagesStepProps> = ({
                   onChange={(e) => onStageChange(index, 'detail', e.target.value)}
                   placeholder="描述这个阶段的注水方式"
                   className="w-full py-2 bg-transparent outline-hidden border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
+                  minRows={2}
+                  maxRows={6}
                 />
               </div>
             </div>
