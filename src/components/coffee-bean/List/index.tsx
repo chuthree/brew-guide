@@ -1130,7 +1130,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
                     buttons={[
                         {
                             icon: '+',
-                            text: '添加咖啡豆',
+                            text: '手动添加',
                             onClick: () => {
                                 if (showBeanForm) {
                                     showBeanForm(null);
@@ -1141,7 +1141,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
                         },
                         {
                             icon: '↓',
-                            text: '导入咖啡豆',
+                            text: '快速添加',
                             onClick: () => {
                                 if (onShowImport) onShowImport();
                             }

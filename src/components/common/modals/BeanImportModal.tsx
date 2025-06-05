@@ -526,24 +526,24 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
 
     // 渲染上传部分
     const renderUploadSection = () => (
-        <div className="p-3 border relative border-neutral-200 dark:border-neutral-700 rounded-md bg-neutral-50 dark:bg-neutral-800">
+        <div className="p-3 border text-xs font-medium relative border-neutral-200 dark:border-neutral-700 rounded-md bg-neutral-100/80 dark:bg-neutral-800">
             <button
                 onClick={toggleManualMode}
-                className="text-xs px-2 py-1 absolute right-0 top-0 rounded-bl bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300"
+                className="px-2 py-1 absolute right-0 top-0 rounded-bl bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300"
             >
                 {manualMode ? '切换识图' : '切换手动'}
             </button>
             <div className="flex flex-col space-y-3">
                 <div className="flex justify-between items-center">
-                    <p className="text-xs text-neutral-600 dark:text-neutral-400">
-                        {manualMode ? '手动填写咖啡豆信息' : '上传咖啡豆包装图片，自动识别信息'}
+                    <p className="text-neutral-600 dark:text-neutral-400">
+                        {manualMode ? '手动填写咖啡豆信息' : '上传咖啡豆包装图片，AI自动识别信息'}
                     </p>
                 </div>
 
                 {manualMode ? (
                     <div className="space-y-4 py-1">
-                        <div className="bg-neutral-100 dark:bg-neutral-800 p-4 rounded-lg text-xs text-neutral-600 dark:text-neutral-400">
-                            <ol className="list-decimal pl-5 space-y-1 text-[11px]">
+                        <div className="bg-neutral-100 dark:bg-neutral-800 rounded-lg text-neutral-600 dark:text-neutral-400">
+                            <ol className="list-decimal pl-4 space-y-1">
                                 <li>准备好咖啡豆商品图、excel表格等</li>
                                 <li>
                                     <span>发送至</span>
@@ -551,7 +551,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                                     href="https://doubao.com/bot/duJYQEFd" 
                                     target="_blank" 
                                     rel="noopener noreferrer"
-                                    className="pb-1.5 text-[11px] relative text-neutral-600 dark:text-neutral-400"
+                                    className="pb-1.5 relative text-neutral-600 dark:text-neutral-400"
                                 >
                                     <span className="relative underline underline-offset-2 decoration-sky-600 ml-1">豆包定制智能体</span>
                                     <svg viewBox="0 0 24 24" className="inline-block ml-1 w-3 h-3" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor">
@@ -561,12 +561,12 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                                 <li>将返回的 JSON 数据粘贴到下方文本框</li>
                                 
                             </ol>
-                            <details className="mt-3 p-2 bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-200 dark:border-neutral-700 rounded-md text-[10px]">
+                            <details className="mt-3 p-2 bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-200 dark:border-neutral-700 rounded-md">
                                 <summary className="text-neutral-500 dark:text-neutral-400 cursor-pointer">提示词（点击展开）</summary>
                                 <textarea
                                     readOnly
                                     value={_templatePrompt}
-                                    className="w-full text-neutral-700 dark:text-neutral-300 text-[10px] p-2 mt-2 bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-200 dark:border-neutral-700 rounded-md h-20 overflow-auto"
+                                    className="w-full text-neutral-700 dark:text-neutral-300 p-2 mt-2 bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-200 dark:border-neutral-700 rounded-md h-20 overflow-auto"
                                     onFocus={(e) => e.target.select()}
                                 />
                                 <div className="flex justify-end mt-1">
@@ -575,7 +575,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                                             clearMessages();
                                             _copyTextToClipboard(_templatePrompt);
                                         }}
-                                        className="text-neutral-500 dark:text-neutral-400 px-2 py-0.5 rounded-sm text-[10px] bg-neutral-200/80 dark:bg-neutral-800/80 hover:bg-neutral-300 dark:hover:bg-neutral-700 transition-colors"
+                                        className="text-neutral-500 dark:text-neutral-400 px-2 py-0.5 rounded-sm  bg-neutral-200/80 dark:bg-neutral-800/80 hover:bg-neutral-300 dark:hover:bg-neutral-700 transition-colors"
                                     >
                                         复制
                                     </button>
@@ -772,15 +772,13 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                                 <div className="space-y-4 mt-2">
                                     {renderUploadSection()}
                                     <div className="flex items-center mb-1">
-                                        <p className="text-xs text-neutral-500 dark:text-neutral-400 flex-1">
+                                        <p className="text-xs text-neutral-300 dark:text-neutral-700 flex-1">
                                             {manualMode ? 'JSON 数据' : 'JSON 数据'}
                                         </p>
                                     </div>
                                     <textarea
-                                        className="w-full h-40 p-3 border border-neutral-300 dark:border-neutral-700 rounded-md bg-transparent focus:border-neutral-800 dark:focus:border-neutral-400 focus:outline-hidden text-neutral-800 dark:text-neutral-200"
-                                        placeholder={manualMode ? 
-                                            '单个：{"name":"埃塞俄比亚耶加雪菲", "capacity":"200",...}\n多个：[{"name":"耶加雪菲",...},{"name":"瑰夏",...}]' : 
-                                            '支持单个或多个咖啡豆数据，多个豆使用数组格式[{},{},...]'}
+                                        className="w-full p-3 border border-neutral-300/50 dark:border-neutral-700/80 rounded-md bg-transparent focus:outline-hidden text-neutral-800 dark:text-neutral-200"
+                                        placeholder=""
                                         value={importData}
                                         onChange={(e) => setImportData(e.target.value)}
                                     />
