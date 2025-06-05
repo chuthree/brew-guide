@@ -338,12 +338,21 @@ const EquipmentIndicator: React.FC<EquipmentIndicatorProps> = ({
                                         </div>
                                     ) : (
                                         <div className="whitespace-nowrap flex items-center relative">
-                                            <TabButton
-                                                tab={item.name}
-                                                isActive={item.isSelected}
+                                            <div
                                                 onClick={item.onClick}
-                                                dataTab={item.id}
-                                            />
+                                                className="text-xs font-medium tracking-widest whitespace-nowrap pb-3 relative cursor-pointer"
+                                                data-tab={item.id}
+                                            >
+                                                <span className={`relative ${item.isSelected
+                                                    ? 'text-neutral-800 dark:text-neutral-100'
+                                                    : 'text-neutral-500 dark:text-neutral-400'
+                                                }`}>
+                                                    {item.name}
+                                                </span>
+                                                {item.isSelected && (
+                                                    <span className="absolute bottom-0 left-0 w-full h-px bg-neutral-800 dark:bg-neutral-100"></span>
+                                                )}
+                                            </div>
                                         </div>
                                     )}
                                 </div>
