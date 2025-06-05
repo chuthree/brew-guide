@@ -39,9 +39,10 @@ interface TabButtonProps {
     onClick: () => void
     children: React.ReactNode
     className?: string
+    dataTab?: string
 }
 
-const TabButton: React.FC<TabButtonProps> = ({ isActive, onClick, children, className = '' }) => (
+const TabButton: React.FC<TabButtonProps> = ({ isActive, onClick, children, className = '', dataTab }) => (
     <button
         onClick={onClick}
         className={`pb-1.5 text-xs font-medium relative whitespace-nowrap ${
@@ -49,6 +50,7 @@ const TabButton: React.FC<TabButtonProps> = ({ isActive, onClick, children, clas
                 ? 'text-neutral-800 dark:text-neutral-100'
                 : 'text-neutral-600 dark:text-neutral-400 hover:opacity-80'
         } ${className}`}
+        data-tab={dataTab}
     >
         <span className="relative">{children}</span>
         {isActive && (
@@ -215,6 +217,45 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
     const [isFilterExpanded, setIsFilterExpanded] = useState(false);
     const filterExpandRef = useRef<HTMLDivElement>(null);
 
+    // 滚动容器引用
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+    // 滚动到选中项的函数
+    const scrollToSelected = () => {
+        if (!scrollContainerRef.current) return
+
+        const selectedId = filterMode === 'equipment' ? selectedEquipment : selectedBean
+        if (!selectedId) return
+
+        const selectedElement = scrollContainerRef.current.querySelector(`[data-tab="${selectedId}"]`)
+        if (!selectedElement) return
+
+        const container = scrollContainerRef.current
+        const containerRect = container.getBoundingClientRect()
+        const elementRect = selectedElement.getBoundingClientRect()
+
+        // 计算元素相对于容器的位置
+        const elementLeft = elementRect.left - containerRect.left + container.scrollLeft
+        const elementWidth = elementRect.width
+        const containerWidth = containerRect.width
+
+        // 计算目标滚动位置（将选中项居中）
+        const targetScrollLeft = elementLeft - (containerWidth - elementWidth) / 2
+
+        // 平滑滚动到目标位置
+        container.scrollTo({
+            left: Math.max(0, targetScrollLeft),
+            behavior: 'smooth'
+        })
+    }
+
+    // 当选中项变化时滚动到选中项
+    useEffect(() => {
+        // 延迟执行以确保DOM已更新
+        const timer = setTimeout(scrollToSelected, 100)
+        return () => clearTimeout(timer)
+    }, [selectedEquipment, selectedBean, filterMode])
+
     // 处理搜索图标点击
     const handleSearchClick = () => {
         if (onSearchClick) {
@@ -258,6 +299,7 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                 <div className="px-6 relative">
                     {!isSearching ? (
                         <div
+                            ref={scrollContainerRef}
                             className="flex pr-20 overflow-x-auto"
                             style={{
                                 scrollbarWidth: 'none',
@@ -282,6 +324,7 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                                     }
                                 }}
                                 className="mr-1"
+                                dataTab="all"
                             >
                                 全部
                             </TabButton>
@@ -302,6 +345,7 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                                         isActive={selectedEquipment === equipment}
                                         onClick={() => selectedEquipment !== equipment && onEquipmentClick(equipment)}
                                         className="mr-3"
+                                        dataTab={equipment}
                                     >
                                         {equipmentNames[equipment] || equipment}
                                     </TabButton>
@@ -313,6 +357,7 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                                         isActive={selectedBean === bean}
                                         onClick={() => selectedBean !== bean && onBeanClick(bean)}
                                         className="mr-3"
+                                        dataTab={bean}
                                     >
                                         {bean}
                                     </TabButton>

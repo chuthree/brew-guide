@@ -50,9 +50,10 @@ interface TabButtonProps {
     onClick: () => void
     children: React.ReactNode
     className?: string
+    dataTab?: string
 }
 
-const TabButton: React.FC<TabButtonProps> = ({ isActive, onClick, children, className = '' }) => (
+const TabButton: React.FC<TabButtonProps> = ({ isActive, onClick, children, className = '', dataTab }) => (
     <button
         onClick={onClick}
         className={`pb-1.5 text-xs font-medium relative whitespace-nowrap ${
@@ -60,6 +61,7 @@ const TabButton: React.FC<TabButtonProps> = ({ isActive, onClick, children, clas
                 ? 'text-neutral-800 dark:text-neutral-100'
                 : 'text-neutral-600 dark:text-neutral-400 hover:opacity-80'
         } ${className}`}
+        data-tab={dataTab}
     >
         <span className="relative">{children}</span>
         {isActive && (
@@ -255,6 +257,76 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
     const filterExpandRef = useRef<HTMLDivElement>(null);
     const [hideTotalWeight, setHideTotalWeight] = useState(false);
 
+    // 滚动容器引用
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const rankingScrollContainerRef = useRef<HTMLDivElement>(null);
+
+    // 滚动到选中项的函数 - 用于品种筛选
+    const scrollToSelected = () => {
+        if (!scrollContainerRef.current || !selectedVariety) return
+
+        const selectedElement = scrollContainerRef.current.querySelector(`[data-tab="${selectedVariety}"]`)
+        if (!selectedElement) return
+
+        const container = scrollContainerRef.current
+        const containerRect = container.getBoundingClientRect()
+        const elementRect = selectedElement.getBoundingClientRect()
+
+        // 计算元素相对于容器的位置
+        const elementLeft = elementRect.left - containerRect.left + container.scrollLeft
+        const elementWidth = elementRect.width
+        const containerWidth = containerRect.width
+
+        // 计算目标滚动位置（将选中项居中）
+        const targetScrollLeft = elementLeft - (containerWidth - elementWidth) / 2
+
+        // 平滑滚动到目标位置
+        container.scrollTo({
+            left: Math.max(0, targetScrollLeft),
+            behavior: 'smooth'
+        })
+    }
+
+    // 滚动到选中项的函数 - 用于榜单豆子类型筛选
+    const scrollToRankingSelected = () => {
+        if (!rankingScrollContainerRef.current || !rankingBeanType) return
+
+        const selectedElement = rankingScrollContainerRef.current.querySelector(`[data-tab="${rankingBeanType}"]`)
+        if (!selectedElement) return
+
+        const container = rankingScrollContainerRef.current
+        const containerRect = container.getBoundingClientRect()
+        const elementRect = selectedElement.getBoundingClientRect()
+
+        // 计算元素相对于容器的位置
+        const elementLeft = elementRect.left - containerRect.left + container.scrollLeft
+        const elementWidth = elementRect.width
+        const containerWidth = containerRect.width
+
+        // 计算目标滚动位置（将选中项居中）
+        const targetScrollLeft = elementLeft - (containerWidth - elementWidth) / 2
+
+        // 平滑滚动到目标位置
+        container.scrollTo({
+            left: Math.max(0, targetScrollLeft),
+            behavior: 'smooth'
+        })
+    }
+
+    // 当选中项变化时滚动到选中项
+    useEffect(() => {
+        // 延迟执行以确保DOM已更新
+        const timer = setTimeout(scrollToSelected, 100)
+        return () => clearTimeout(timer)
+    }, [selectedVariety])
+
+    // 当榜单豆子类型变化时滚动到选中项
+    useEffect(() => {
+        // 延迟执行以确保DOM已更新
+        const timer = setTimeout(scrollToRankingSelected, 100)
+        return () => clearTimeout(timer)
+    }, [rankingBeanType])
+
     // 获取全局设置
     useEffect(() => {
         const loadSettings = async () => {
@@ -378,11 +450,25 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                         {/* 豆子筛选选项卡 */}
                         <div className="flex justify-between px-6">
                             <div className="flex items-center">
-                                <div className="relative flex items-center">
+                                <div
+                                    ref={rankingScrollContainerRef}
+                                    className="relative flex items-center overflow-x-auto"
+                                    style={{
+                                        scrollbarWidth: 'none',
+                                        msOverflowStyle: 'none',
+                                        WebkitOverflowScrolling: 'touch'
+                                    }}
+                                >
+                                    <style jsx>{`
+                                        div::-webkit-scrollbar {
+                                            display: none;
+                                        }
+                                    `}</style>
                                     <TabButton
                                         isActive={rankingBeanType === 'all'}
                                         onClick={() => onRankingBeanTypeChange?.('all')}
                                         className="mr-1"
+                                        dataTab="all"
                                     >
                                         全部
                                     </TabButton>
@@ -394,22 +480,24 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                                     >
                                         <AlignLeft size={12} color="currentColor" />
                                     </button>
-                                </div>
 
-                                <TabButton
-                                    isActive={rankingBeanType === 'espresso'}
-                                    onClick={() => onRankingBeanTypeChange?.('espresso')}
-                                    className="mr-3"
-                                >
-                                    意式豆
-                                </TabButton>
-                                <TabButton
-                                    isActive={rankingBeanType === 'filter'}
-                                    onClick={() => onRankingBeanTypeChange?.('filter')}
-                                    className="mr-3"
-                                >
-                                    手冲豆
-                                </TabButton>
+                                    <TabButton
+                                        isActive={rankingBeanType === 'espresso'}
+                                        onClick={() => onRankingBeanTypeChange?.('espresso')}
+                                        className="mr-3"
+                                        dataTab="espresso"
+                                    >
+                                        意式豆
+                                    </TabButton>
+                                    <TabButton
+                                        isActive={rankingBeanType === 'filter'}
+                                        onClick={() => onRankingBeanTypeChange?.('filter')}
+                                        className="mr-3"
+                                        dataTab="filter"
+                                    >
+                                        手冲豆
+                                    </TabButton>
+                                </div>
                             </div>
 
                             <div className="flex items-center">
@@ -497,6 +585,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                         <div className="px-6 relative">
                             {!isSearching ? (
                                 <div
+                                    ref={scrollContainerRef}
                                     className="flex pr-20 overflow-x-auto"
                                     style={{
                                         scrollbarWidth: 'none',
@@ -515,6 +604,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                                         isActive={selectedVariety === null}
                                         onClick={() => selectedVariety !== null && onVarietyClick?.(null)}
                                         className="mr-1"
+                                        dataTab="all"
                                     >
                                         <span onDoubleClick={() => onToggleImageFlowMode?.()}>
                                             全部
@@ -539,6 +629,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                                             isActive={selectedVariety === variety}
                                             onClick={() => selectedVariety !== variety && onVarietyClick?.(variety)}
                                             className="mr-3"
+                                            dataTab={variety}
                                         >
                                             {variety}
                                         </TabButton>
