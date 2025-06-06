@@ -867,10 +867,10 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                         `}>
                             <div className={`
                                 absolute top-0.5 w-3 h-3 bg-white dark:bg-neutral-800 rounded-full transition-transform duration-200
-                                ${isSimpleMode ? 'translate-x-4' : 'translate-x-0.5'}
+                                ${isSimpleMode ? 'translate-x-4.5' : 'translate-x-0.5'}
                             `} />
                         </div>
-                        <span className="text-xs font-medium text-neutral-600 dark:text-neutral-400">
+                        <span className="text-sm font-medium text-neutral-600 dark:text-neutral-400">
                             简单
                         </span>
                     </label>
