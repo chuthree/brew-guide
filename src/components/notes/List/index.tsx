@@ -753,7 +753,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                                 <div className="grow border-t border-neutral-200 dark:border-neutral-800"></div>
                                 <button
                                     onClick={handleCancelShare}
-                                    className="flex items-center justify-center text-[11px] text-neutral-800 dark:text-neutral-100 hover:opacity-80 mx-3"
+                                    className="flex items-center justify-center text-xs font-medium text-neutral-600 dark:text-neutral-400 hover:opacity-80 mx-3"
                                 >
                                     取消
                                 </button>
@@ -761,7 +761,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                                 <button
                                     onClick={handleSaveNotes}
                                     disabled={selectedNotes.length === 0 || isSaving}
-                                    className={`flex items-center justify-center text-[11px] text-neutral-800 dark:text-neutral-100 hover:opacity-80 mx-3 ${
+                                    className={`flex items-center justify-center text-xs font-medium text-neutral-600 dark:text-neutral-400 hover:opacity-80 mx-3 ${
                                         (selectedNotes.length === 0 || isSaving) ? 'opacity-50 cursor-not-allowed' : ''
                                     }`}
                                 >
