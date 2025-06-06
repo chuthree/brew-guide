@@ -401,7 +401,8 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
 
                 const formatDateShort = (dateStr: string): string => {
                     const date = new Date(dateStr);
-                    return `${date.getMonth() + 1}/${date.getDate()}`;
+                    const year = date.getFullYear().toString().slice(-2); // 获取年份的最后两位
+                    return `${year}-${date.getMonth() + 1}-${date.getDate()}`;
                 };
 
                 const formatPricePerGram = (price: string, capacity: string): string => {

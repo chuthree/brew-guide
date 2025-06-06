@@ -236,9 +236,8 @@ const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
               // 格式化日期显示
               const formatDateShort = (dateStr: string): string => {
                 const date = new Date(dateStr);
-                const month = date.getMonth() + 1;
-                const day = date.getDate();
-                return `${month}/${day}`;
+                const year = date.getFullYear().toString().slice(-2); // 获取年份的最后两位
+                return `${year}-${date.getMonth() + 1}-${date.getDate()}`;
               };
 
               // 格式化克价显示（只显示每克价格）
