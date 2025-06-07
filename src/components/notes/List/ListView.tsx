@@ -106,8 +106,19 @@ const NotesListView: React.FC<NotesListViewProps> = ({
                 return;
             }
 
-            // 如果全局缓存已初始化且有数据，什么都不做，避免状态变化导致闪烁
-            if (globalCache.initialized && globalCache.notes.length > 0) {
+            // 如果全局缓存已初始化，优先使用缓存中的过滤结果
+            if (globalCache.initialized && globalCache.notes.length >= 0) {
+                // 使用全局缓存中的过滤结果
+                const filteredNotes = globalCache.filteredNotes;
+
+                startTransition(() => {
+                    setNotes(filteredNotes);
+                    setIsFirstLoad(false);
+                    // 重置分页状态
+                    setCurrentPage(1);
+                    setDisplayedNotes(filteredNotes.slice(0, PAGE_SIZE));
+                    setHasMore(filteredNotes.length > PAGE_SIZE);
+                });
                 return;
             }
 
@@ -170,6 +181,8 @@ const NotesListView: React.FC<NotesListViewProps> = ({
             });
         }
     }, [preFilteredNotes]);
+
+
 
     // 加载更多笔记
     const loadMoreNotes = useCallback(() => {

@@ -47,11 +47,7 @@ export interface NoteItemProps {
     onToggleSelect?: (noteId: string, enterShareMode?: boolean) => void
 }
 
-// 排序选择器属性
-export interface SortSelectorProps {
-    sortOption: SortOption
-    onSortChange: (option: SortOption) => void
-}
+
 
 // 筛选标签页属性
 export interface FilterTabsProps {

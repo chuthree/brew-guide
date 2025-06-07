@@ -10,7 +10,7 @@ import AddNoteButton from './AddNoteButton'
 import Toast from '../ui/Toast'
 import { BrewingNoteForm } from '@/components/notes'
 import { BrewingNoteData } from '@/types/app'
-import { getEquipmentName, normalizeEquipmentId } from '../utils'
+import { getEquipmentName, normalizeEquipmentId, sortNotes } from '../utils'
 import { globalCache, saveSelectedEquipmentPreference, saveSelectedBeanPreference, saveFilterModePreference, saveSortOptionPreference, calculateTotalCoffeeConsumption, formatConsumption, initializeGlobalCache } from './globalCache'
 import ListView from './ListView'
 import { SortOption } from '../types'
@@ -134,31 +134,33 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
             globalCache.totalConsumption = totalConsumption; // 更新全局缓存中的消耗量
             totalCoffeeConsumption.current = totalConsumption;
             
-            // 根据当前筛选条件更新过滤后的笔记列表
-            let filteredNotes = parsedNotes;
+            // 更新全局缓存的原始数据
+            globalCache.notes = parsedNotes;
+            
+            // 确保globalCache.initialized设置为true
+            globalCache.initialized = true;
+
+            // 处理排序和筛选
+            const sortedNotes = sortNotes(parsedNotes, sortOption);
+            let filteredNotes = sortedNotes;
             if (filterMode === 'equipment' && selectedEquipment) {
-                filteredNotes = parsedNotes.filter(note => note.equipment === selectedEquipment);
+                filteredNotes = sortedNotes.filter(note => note.equipment === selectedEquipment);
             } else if (filterMode === 'bean' && selectedBean) {
-                filteredNotes = parsedNotes.filter(note => 
+                filteredNotes = sortedNotes.filter(note =>
                     note.coffeeBeanInfo?.name === selectedBean
                 );
             }
             globalCache.filteredNotes = filteredNotes;
-            
-            // 确保globalCache.initialized设置为true
-            globalCache.initialized = true;
-            
-            // 触发重新渲染以更新显示
-            triggerRerender();
-            
-            // 触发brewingNotesUpdated事件，更新ListView组件
-            if (window.refreshBrewingNotes) {
+
+            // 触发重新渲染
+            if (typeof window !== 'undefined' && window.refreshBrewingNotes) {
                 window.refreshBrewingNotes();
             }
+            triggerRerender();
         } catch (error) {
             console.error("加载设备和咖啡豆数据失败:", error);
         }
-    }, [isOpen, filterMode, selectedEquipment, selectedBean, triggerRerender]);
+    }, [isOpen, sortOption, filterMode, selectedEquipment, selectedBean, triggerRerender]);
     
     // 初始化 - 确保在组件挂载时正确初始化数据
     useEffect(() => {
@@ -412,25 +414,14 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
             // 保存更新后的笔记
             await Storage.set('brewingNotes', JSON.stringify(parsedNotes))
 
-            // 立即更新全局缓存，确保UI能立即反映变化
+            // 立即更新全局缓存
             globalCache.notes = parsedNotes;
-
-            // 重新计算过滤后的笔记
-            let filteredNotes = parsedNotes;
-            if (filterMode === 'equipment' && selectedEquipment) {
-                filteredNotes = parsedNotes.filter(note => note.equipment === selectedEquipment);
-            } else if (filterMode === 'bean' && selectedBean) {
-                filteredNotes = parsedNotes.filter(note =>
-                    note.coffeeBeanInfo?.name === selectedBean
-                );
-            }
-            globalCache.filteredNotes = filteredNotes;
 
             // 重新计算总消耗量
             globalCache.totalConsumption = calculateTotalCoffeeConsumption(parsedNotes);
 
-            // 触发重新渲染
-            triggerRerender();
+            // 使用统一的数据处理函数
+            updateNotesData();
 
             // 触发存储变更事件
             window.dispatchEvent(new CustomEvent('customStorageChange', {
@@ -463,32 +454,72 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         }
     };
     
+    // 统一的数据处理函数 - 处理排序和筛选
+    const updateNotesData = useCallback(() => {
+        // 获取原始笔记数据
+        const rawNotes = globalCache.notes;
+        if (!rawNotes || rawNotes.length === 0) return;
+
+        // 1. 先排序
+        const sortedNotes = sortNotes(rawNotes, sortOption);
+
+        // 2. 再筛选
+        let filteredNotes = sortedNotes;
+        if (filterMode === 'equipment' && selectedEquipment) {
+            filteredNotes = sortedNotes.filter(note => note.equipment === selectedEquipment);
+        } else if (filterMode === 'bean' && selectedBean) {
+            filteredNotes = sortedNotes.filter(note =>
+                note.coffeeBeanInfo?.name === selectedBean
+            );
+        }
+
+        // 3. 更新全局缓存
+        globalCache.filteredNotes = filteredNotes;
+
+        // 4. 触发重新渲染
+        if (typeof window !== 'undefined' && window.refreshBrewingNotes) {
+            window.refreshBrewingNotes();
+        }
+        triggerRerender();
+    }, [sortOption, filterMode, selectedEquipment, selectedBean, triggerRerender]);
+
     // 处理排序选项变化
     const handleSortChange = (option: typeof sortOption) => {
         setSortOption(option);
         saveSortOptionPreference(option);
         globalCache.sortOption = option;
+        updateNotesData();
     };
-    
+
     // 处理过滤模式变化
     const handleFilterModeChange = (mode: 'equipment' | 'bean') => {
         setFilterMode(mode);
         saveFilterModePreference(mode);
         globalCache.filterMode = mode;
+        // 切换模式时清空选择
+        setSelectedEquipment(null);
+        setSelectedBean(null);
+        saveSelectedEquipmentPreference(null);
+        saveSelectedBeanPreference(null);
+        globalCache.selectedEquipment = null;
+        globalCache.selectedBean = null;
+        updateNotesData();
     };
-    
+
     // 处理设备选择变化
     const handleEquipmentClick = (equipment: string | null) => {
         setSelectedEquipment(equipment);
         saveSelectedEquipmentPreference(equipment);
         globalCache.selectedEquipment = equipment;
+        updateNotesData();
     };
-    
+
     // 处理咖啡豆选择变化
     const handleBeanClick = (bean: string | null) => {
         setSelectedBean(bean);
         saveSelectedBeanPreference(bean);
         globalCache.selectedBean = bean;
+        updateNotesData();
     };
     
     // 处理笔记选择/取消选择

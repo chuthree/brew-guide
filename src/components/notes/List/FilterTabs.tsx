@@ -154,7 +154,7 @@ const SortSection: React.FC<SortSectionProps> = ({ sortOption, onSortChange }) =
                     <FilterButton
                         isActive={currentType === 'time'}
                         onClick={() => {
-                            const newOption = getSortOption('time', 'desc');
+                            const newOption = getSortOption('time', currentOrder);
                             onSortChange(newOption);
                         }}
                     >
@@ -163,7 +163,7 @@ const SortSection: React.FC<SortSectionProps> = ({ sortOption, onSortChange }) =
                     <FilterButton
                         isActive={currentType === 'rating'}
                         onClick={() => {
-                            const newOption = getSortOption('rating', 'desc');
+                            const newOption = getSortOption('rating', currentOrder);
                             onSortChange(newOption);
                         }}
                     >
