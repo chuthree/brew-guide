@@ -270,9 +270,23 @@ export const calculateEstimatedFinishDateAdvanced = (
     }
 
     // 添加时间范围提示
-    if (daysRemaining <= 7) {
+    const today = new Date();
+
+    // 计算本周末（周日）
+    const dayOfWeek = today.getDay(); // 0=周日, 1=周一, ..., 6=周六
+    const daysUntilSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek; // 如果今天是周日，就是0天
+    const thisWeekEnd = new Date(today);
+    thisWeekEnd.setDate(today.getDate() + daysUntilSunday);
+    thisWeekEnd.setHours(23, 59, 59, 999); // 设置为当天最后一刻
+
+    // 计算本月末
+    const thisMonthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    thisMonthEnd.setHours(23, 59, 59, 999); // 设置为当天最后一刻
+
+    // 判断预计完成日期是否在本周内或本月内
+    if (finishDate <= thisWeekEnd) {
         dateString += ' (本周内)';
-    } else if (daysRemaining <= 30) {
+    } else if (finishDate <= thisMonthEnd) {
         dateString += ' (本月内)';
     } else if (daysRemaining > 365) {
         dateString = '1年以上';

@@ -4,7 +4,7 @@ import React, { useMemo, useRef, useState, useEffect } from 'react'
 import { StatsViewProps } from './types'
 import { calculateStats, stardomFontStyle, formatNumber } from './utils'
 import BeanImageGallery from './BeanImageGallery'
-import StatsSummary, { calculateAverageConsumption, calculateEstimatedFinishDate } from './StatsSummary'
+import StatsSummary, { calculateEstimatedFinishDate } from './StatsSummary'
 import StatsCategories from './StatsCategories'
 import { useAnimation } from './useAnimation'
 import { useConsumption } from './useConsumption'
@@ -88,13 +88,7 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
         }
     }, [beans])
     
-    // 计算平均消耗和预计用完日期
-    const averageConsumption = useMemo(() => 
-        calculateAverageConsumption(stats), [stats]);
-    
-    const estimatedFinishDate = useMemo(() => 
-        calculateEstimatedFinishDate(stats, todayConsumption > 0 ? todayConsumption : averageConsumption), 
-        [stats, todayConsumption, averageConsumption]);
+
     
     // 动画控制
     const { imagesLoaded, textLoaded: _textLoaded, styles } = useAnimation()
@@ -413,53 +407,8 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
                                 );
                             }
 
-                            // 如果没有任何豆子，显示总体统计（兜底情况）
-                            return (
-                                <div className="space-y-2">
-                                    <div className="flex justify-between items-center text-xs">
-                                        <span className="text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">容量概览</span>
-                                        <span className="text-neutral-800 dark:text-white font-mono">
-                                            {formatNumber(stats.remainingWeight)}/{formatNumber(stats.totalWeight)}克
-                                        </span>
-                                    </div>
-
-                                    {/* 进度条 */}
-                                    <div className="relative h-1 bg-neutral-200 dark:bg-neutral-800">
-                                        {/* 剩余部分 - 实色（表示还有的） */}
-                                        <div
-                                            className="absolute top-0 left-0 h-full bg-neutral-800 dark:bg-neutral-200 transition-all duration-300"
-                                            style={{
-                                                width: `${stats.totalWeight > 0 ? (stats.remainingWeight / stats.totalWeight) * 100 : 0}%`
-                                            }}
-                                        />
-                                        {/* 消耗部分 - 斜线纹理（表示已用掉的） */}
-                                        <div
-                                            className="absolute top-0 h-full transition-all duration-300"
-                                            style={{
-                                                left: `${stats.totalWeight > 0 ? (stats.remainingWeight / stats.totalWeight) * 100 : 0}%`,
-                                                width: `${stats.totalWeight > 0 ? (stats.consumedWeight / stats.totalWeight) * 100 : 100}%`,
-                                                background: 'repeating-linear-gradient(45deg, transparent, transparent 1px, rgba(0,0,0,0.15) 1px, rgba(0,0,0,0.15) 2px)'
-                                            }}
-                                        />
-                                    </div>
-
-                                    {/* 消耗预估 */}
-                                    <div className="space-y-1 text-xs">
-                                        <div className="flex justify-between">
-                                            <span className="text-neutral-600 dark:text-neutral-400">今日</span>
-                                            <span className="text-neutral-800 dark:text-white font-mono">{formatNumber(todayConsumption)}克</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-neutral-600 dark:text-neutral-400">平均</span>
-                                            <span className="text-neutral-800 dark:text-white font-mono">{formatNumber(averageConsumption)}克/天</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-neutral-600 dark:text-neutral-400">预计用完</span>
-                                            <span className="text-neutral-800 dark:text-white font-mono">{estimatedFinishDate}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            );
+                            // 如果没有任何豆子，不显示统计信息
+                            return null;
                         })()}
 
 
