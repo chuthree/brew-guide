@@ -12,6 +12,252 @@ interface CoffeeBeanRandomPickerProps {
   onSelect: (bean: CoffeeBean) => void
 }
 
+// 刮刮卡组件
+const ScratchCard: React.FC<{
+  bean: CoffeeBean
+  onReveal: () => void
+  onConfirm: () => void
+  onClose: () => void
+}> = ({ bean, onReveal, onConfirm, onClose }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [isRevealed, setIsRevealed] = useState(false)
+  const [isDrawing, setIsDrawing] = useState(false)
+  const [revealPercentage, setRevealPercentage] = useState(0)
+  const [isCanvasVisible, setIsCanvasVisible] = useState(true)
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })
+    if (!ctx) return
+
+    // 设置画布尺寸
+    const rect = canvas.getBoundingClientRect()
+    canvas.width = rect.width * window.devicePixelRatio
+    canvas.height = rect.height * window.devicePixelRatio
+    ctx.scale(window.devicePixelRatio, window.devicePixelRatio)
+
+    // 绘制简洁的刮刮卡表面
+    ctx.fillStyle = '#9ca3af'
+    ctx.fillRect(0, 0, rect.width, rect.height)
+
+    // 设置混合模式为擦除
+    ctx.globalCompositeOperation = 'destination-out'
+  }, [])
+
+  const lastPositionRef = useRef<{ x: number; y: number } | null>(null)
+
+  const scratch = useCallback((x: number, y: number) => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })
+    if (!ctx) return
+
+    const rect = canvas.getBoundingClientRect()
+    const scaleX = canvas.width / rect.width
+    const scaleY = canvas.height / rect.height
+
+    const currentX = (x - rect.left) * scaleX / window.devicePixelRatio
+    const currentY = (y - rect.top) * scaleY / window.devicePixelRatio
+
+    // 如果有上一个位置，绘制连接线让刮擦更丝滑
+    if (lastPositionRef.current) {
+      ctx.lineWidth = 40
+      ctx.lineCap = 'round'
+      ctx.lineJoin = 'round'
+      ctx.beginPath()
+      ctx.moveTo(lastPositionRef.current.x, lastPositionRef.current.y)
+      ctx.lineTo(currentX, currentY)
+      ctx.stroke()
+    } else {
+      // 第一次点击，绘制圆形
+      ctx.beginPath()
+      ctx.arc(currentX, currentY, 20, 0, 2 * Math.PI)
+      ctx.fill()
+    }
+
+    lastPositionRef.current = { x: currentX, y: currentY }
+
+    // 每隔几次刮擦才检查一次百分比，提高性能
+    if (Math.random() < 0.3) {
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+      const pixels = imageData.data
+      let transparentPixels = 0
+
+      for (let i = 3; i < pixels.length; i += 4) {
+        if (pixels[i] === 0) transparentPixels++
+      }
+
+      const percentage = (transparentPixels / (pixels.length / 4)) * 100
+      setRevealPercentage(percentage)
+
+      if (percentage > 25 && !isRevealed) {
+        setIsRevealed(true)
+        onReveal()
+        // 刮开足够多时，使用动画清除刮刮层
+        setTimeout(() => {
+          setIsCanvasVisible(false)
+        }, 500)
+      }
+    }
+  }, [isRevealed, onReveal])
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsDrawing(true)
+    lastPositionRef.current = null // 重置位置
+    scratch(e.clientX, e.clientY)
+  }
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isDrawing) {
+      scratch(e.clientX, e.clientY)
+    }
+  }
+
+  const handleMouseUp = () => {
+    setIsDrawing(false)
+    lastPositionRef.current = null // 重置位置
+  }
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    e.preventDefault()
+    setIsDrawing(true)
+    lastPositionRef.current = null // 重置位置
+    const touch = e.touches[0]
+    scratch(touch.clientX, touch.clientY)
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    e.preventDefault()
+    if (isDrawing) {
+      const touch = e.touches[0]
+      scratch(touch.clientX, touch.clientY)
+    }
+  }
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    e.preventDefault()
+    setIsDrawing(false)
+    lastPositionRef.current = null // 重置位置
+  }
+
+  const springTransition = { type: "spring", stiffness: 500, damping: 25 }
+
+  return (
+    <div className="relative flex flex-col items-center justify-center w-full h-full p-6">
+      {/* 刮刮卡区域 */}
+      <div className="relative w-full max-w-sm">
+        <div className="text-center mb-6">
+          <h2 className="text-xl font-medium text-neutral-800 dark:text-neutral-100 mb-2">
+            发现隐藏的咖啡豆
+          </h2>
+          <p className="text-sm text-neutral-600 dark:text-neutral-400">
+            刮开表面看看是什么豆子
+          </p>
+        </div>
+
+        {/* 卡片容器 - 固定高度防止布局变形 */}
+        <div className="relative w-full h-64 rounded-lg overflow-hidden bg-white dark:bg-neutral-800 border-2 border-neutral-200 dark:border-neutral-700">
+          {/* 底层内容 - 咖啡豆信息 */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center p-6">
+            {bean.image ? (
+              <div className="w-20 h-20 relative mb-4">
+                <Image
+                  src={bean.image}
+                  alt={bean.name}
+                  fill
+                  className="object-contain"
+                  sizes="80px"
+                />
+              </div>
+            ) : (
+              <div className="w-20 h-20 flex items-center justify-center mb-4">
+                <span className="text-4xl">☕</span>
+              </div>
+            )}
+            <h3 className="text-lg font-medium text-center text-neutral-800 dark:text-neutral-100">
+              {bean.name}
+            </h3>
+            {bean.origin && (
+              <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-1">
+                {bean.origin}
+              </p>
+            )}
+          </div>
+
+          {/* 刮刮层 - 使用动画控制显示/隐藏 */}
+          <motion.canvas
+            ref={canvasRef}
+            className="absolute inset-0 w-full h-full cursor-pointer touch-none"
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            style={{ touchAction: 'none' }}
+            animate={{
+              opacity: isCanvasVisible ? 1 : 0,
+            }}
+            transition={{
+              duration: 0.3,
+              ease: [0.4, 0.0, 0.2, 1]
+            }}
+          />
+        </div>
+
+        {/* 固定高度的提示区域防止布局变形 */}
+        <div className="mt-4 h-6 flex items-center justify-center">
+          {revealPercentage > 10 && revealPercentage < 25 && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="text-sm text-neutral-600 dark:text-neutral-400"
+            >
+              继续刮开...
+            </motion.div>
+          )}
+        </div>
+      </div>
+
+      {/* 底部按钮 - 固定高度防止布局变形 */}
+      <div className="mt-8 h-12 flex items-center justify-center gap-4">
+        <AnimatePresence>
+          {isRevealed && (
+            <>
+              <motion.button
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ delay: 0.2, ...springTransition }}
+                className="px-8 py-3 rounded-full bg-neutral-800 dark:bg-neutral-100 text-white dark:text-neutral-900"
+                onClick={onConfirm}
+              >
+                使用
+              </motion.button>
+
+              <motion.button
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ delay: 0.3, ...springTransition }}
+                className="px-8 py-3 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100"
+                onClick={onClose}
+              >
+                取消
+              </motion.button>
+            </>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+  )
+}
+
 const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
   beans,
   isOpen,
@@ -28,6 +274,8 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
   const [_selectedIndex, setSelectedIndex] = useState<number>(0)
   // 容器引用
   const containerRef = useRef<HTMLDivElement>(null)
+  // 刮刮卡状态
+  const [showScratchCard, setShowScratchCard] = useState(false)
   // 卡片宽度(px)
   const cardWidth = 160
   // 卡片间距(px)
@@ -56,10 +304,14 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
     return remaining > 0;
   })
 
+  // 检查是否只有一款咖啡豆
+  const isSingleBean = validBeans.length === 1
+
   // 重置组件状态
   const resetState = useCallback(() => {
     setAnimationState('initial')
     setSelectedBean(null)
+    setShowScratchCard(false)
     controls.set({ x: 0 })
   }, [controls])
 
@@ -129,6 +381,24 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
     }
   }, [selectedBean, onSelect, onClose])
 
+  // 刮刮卡揭示处理
+  const handleScratchReveal = useCallback(() => {
+    // 刮开后的处理逻辑，可以添加触感反馈等
+  }, [])
+
+  // 刮刮卡确认处理
+  const handleScratchConfirm = useCallback(() => {
+    if (selectedBean) {
+      onSelect(selectedBean)
+      onClose()
+    }
+  }, [selectedBean, onSelect, onClose])
+
+  // 刮刮卡取消处理
+  const handleScratchCancel = useCallback(() => {
+    onClose()
+  }, [onClose])
+
   // 容器变体
   const containerVariants = {
     open: {
@@ -141,13 +411,19 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
     }
   }
 
-  // 自动开始动画
+  // 自动开始动画或显示刮刮卡
   useEffect(() => {
     if (isOpen && animationState === 'initial' && validBeans.length > 0) {
-      // 短暂延迟，等待过渡动画完成
-      startRandomSelection()
+      if (isSingleBean) {
+        // 只有一款咖啡豆时显示刮刮卡
+        setSelectedBean(validBeans[0])
+        setShowScratchCard(true)
+      } else {
+        // 多款咖啡豆时开始滚动动画
+        startRandomSelection()
+      }
     }
-  }, [isOpen, animationState, validBeans.length, startRandomSelection])
+  }, [isOpen, animationState, validBeans.length, isSingleBean, validBeans, startRandomSelection])
 
   // 为动画准备数据 - 创建足够长的序列
   // 优化：减少渲染的卡片数量以提高性能
@@ -163,84 +439,94 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
           exit="closed"
           variants={containerVariants}
         >
-          <div className="relative flex flex-col items-center justify-center w-full h-full p-6">
-            {/* 中间指示器和卡片容器 */}
-            <div className="relative w-full max-w-md" ref={containerRef}>
-              {/* 中间指示器 - 永远在中间 */}
-              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[160px] h-[132px] border-2 border-neutral-800 dark:border-neutral-100 rounded-lg z-10 pointer-events-none"></div>
+          {/* 根据是否为单个咖啡豆显示不同内容 */}
+          {showScratchCard && selectedBean ? (
+            <ScratchCard
+              bean={selectedBean}
+              onReveal={handleScratchReveal}
+              onConfirm={handleScratchConfirm}
+              onClose={handleScratchCancel}
+            />
+          ) : (
+            <div className="relative flex flex-col items-center justify-center w-full h-full p-6">
+              {/* 中间指示器和卡片容器 */}
+              <div className="relative w-full max-w-md" ref={containerRef}>
+                {/* 中间指示器 - 永远在中间 */}
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[160px] h-[132px] border-2 border-neutral-800 dark:border-neutral-100 rounded-lg z-10 pointer-events-none"></div>
 
-              {/* 创建渐变遮罩效果 */}
-              <div className="absolute inset-0 bg-linear-to-r from-white/95 via-transparent to-white/95 dark:from-neutral-900/95 dark:via-transparent dark:to-neutral-900/95 z-20 pointer-events-none"></div>
+                {/* 创建渐变遮罩效果 */}
+                <div className="absolute inset-0 bg-linear-to-r from-white/95 via-transparent to-white/95 dark:from-neutral-900/95 dark:via-transparent dark:to-neutral-900/95 z-20 pointer-events-none"></div>
 
-              {/* 横向卡片容器 */}
-              <div className="relative w-full h-[132px] overflow-hidden">
-                <motion.div
-                  className="flex space-x-3 absolute"
-                  animate={controls}
-                  style={{ willChange: "transform" }} // 性能优化
-                >
-                  {displayBeans.map((bean, index) => (
-                    <div
-                      key={`${bean.id}-${index}`}
-                      className="w-[160px] h-[132px] shrink-0 flex flex-col items-center justify-center p-3 rounded-lg bg-white dark:bg-neutral-800 border-2 border-neutral-200 dark:border-neutral-700"
-                    >
-                      {bean.image ? (
-                        <div className="w-full h-16 relative mb-2">
-                          <Image
-                            src={bean.image}
-                            alt={bean.name}
-                            fill
-                            className="object-contain"
-                            sizes="(max-width: 768px) 100vw, 160px"
-                            loading="eager"
-                            priority={index < 10} // 只对前几张图片设置优先加载
-                          />
+                {/* 横向卡片容器 */}
+                <div className="relative w-full h-[132px] overflow-hidden">
+                  <motion.div
+                    className="flex space-x-3 absolute"
+                    animate={controls}
+                    style={{ willChange: "transform" }} // 性能优化
+                  >
+                    {displayBeans.map((bean, index) => (
+                      <div
+                        key={`${bean.id}-${index}`}
+                        className="w-[160px] h-[132px] shrink-0 flex flex-col items-center justify-center p-3 rounded-lg bg-white dark:bg-neutral-800 border-2 border-neutral-200 dark:border-neutral-700"
+                      >
+                        {bean.image ? (
+                          <div className="w-full h-16 relative mb-2">
+                            <Image
+                              src={bean.image}
+                              alt={bean.name}
+                              fill
+                              className="object-contain"
+                              sizes="(max-width: 768px) 100vw, 160px"
+                              loading="eager"
+                              priority={index < 10} // 只对前几张图片设置优先加载
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-full h-16 flex items-center justify-center mb-2">
+                            <span className="text-2xl">☕</span>
+                          </div>
+                        )}
+                        <div className="text-center w-full">
+                          <h3 className="text-sm font-medium">{bean.name}</h3>
                         </div>
-                      ) : (
-                        <div className="w-full h-16 flex items-center justify-center mb-2">
-                          <span className="text-2xl">☕</span>
-                        </div>
-                      )}
-                      <div className="text-center w-full">
-                        <h3 className="text-sm font-medium">{bean.name}</h3>
                       </div>
-                    </div>
-                  ))}
-                </motion.div>
+                    ))}
+                  </motion.div>
+                </div>
+              </div>
+
+              {/* 底部按钮 - 使用固定高度避免布局抖动 */}
+              <div className="mt-12 flex items-center justify-center gap-4 h-[56px]">
+                <AnimatePresence>
+                  {animationState === 'selected' && (
+                    <>
+                      <motion.button
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        transition={{ delay: 0.2, ...springTransition }}
+                        className="px-8 py-3 rounded-full bg-neutral-800 dark:bg-neutral-100 text-white dark:text-neutral-900"
+                        onClick={handleConfirm}
+                      >
+                        使用
+                      </motion.button>
+
+                      <motion.button
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        transition={{ delay: 0.3, ...springTransition }}
+                        className="px-8 py-3 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100"
+                        onClick={handleReshuffle}
+                      >
+                        重选
+                      </motion.button>
+                    </>
+                  )}
+                </AnimatePresence>
               </div>
             </div>
-
-            {/* 底部按钮 - 使用固定高度避免布局抖动 */}
-            <div className="mt-12 flex items-center justify-center gap-4 h-[56px]">
-              <AnimatePresence>
-                {animationState === 'selected' && (
-                  <>
-                    <motion.button
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.9 }}
-                      transition={{ delay: 0.2, ...springTransition }}
-                      className="px-8 py-3 rounded-full bg-neutral-800 dark:bg-neutral-100 text-white dark:text-neutral-900"
-                      onClick={handleConfirm}
-                    >
-                      使用
-                    </motion.button>
-
-                    <motion.button
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.9 }}
-                      transition={{ delay: 0.3, ...springTransition }}
-                      className="px-8 py-3 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100"
-                      onClick={handleReshuffle}
-                    >
-                      重选
-                    </motion.button>
-                  </>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
+          )}
 
           {/* 关闭按钮 */}
           <motion.button
