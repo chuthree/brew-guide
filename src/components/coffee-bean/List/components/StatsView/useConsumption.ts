@@ -25,10 +25,10 @@ export const useConsumption = (beans: ExtendedCoffeeBean[]): TodayConsumptionDat
                 // 计算今天的时间戳范围（当天0点到现在）
                 const now = new Date()
                 const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
-                
+
                 // 筛选今天的冲煮记录
                 const todayNotes = notes.filter(note => note.timestamp >= today)
-                
+
                 // 计算今日消耗的咖啡量
                 let consumption = 0
                 let cost = 0
@@ -92,7 +92,7 @@ export const useConsumption = (beans: ExtendedCoffeeBean[]): TodayConsumptionDat
                         }
                     }
                 })
-                
+
                 setTodayConsumption(consumption)
                 setTodayCost(cost)
                 setTodayEspressoConsumption(espressoConsumption)

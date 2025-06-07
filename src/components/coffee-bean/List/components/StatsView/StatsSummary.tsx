@@ -308,17 +308,44 @@ export const calculateEstimatedFinishDateAdvanced = (
 
 
 
-const StatsSummary: React.FC<StatsSummaryProps> = ({ stats, todayConsumption: _todayConsumption }) => {
+const StatsSummary: React.FC<StatsSummaryProps> = ({
+    stats,
+    todayConsumption: _todayConsumption,
+    selectedTimeRange = '目前为止',
+    onToggleTimeRangeDropdown,
+    showTimeRangeDropdown = false
+}) => {
     return (
         <div className="p-4 text-justify text-sm font-medium max-w-xs">
-{stats.beanTypeCount.filter > stats.beanTypeCount.espresso ?
+            {/* 集成时间区间到文本中 */}
+            {!showTimeRangeDropdown ? (
+                <button
+                    ref={(el) => {
+                        // 将按钮引用传递给全局
+                        if (el && typeof window !== 'undefined') {
+                            (window as any).timeRangeButtonRef = el;
+                        }
+                    }}
+                    onClick={onToggleTimeRangeDropdown}
+                    className="text-sm font-medium text-neutral-800 dark:text-neutral-100 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors cursor-pointer underline underline-offset-2 decoration-neutral-500"
+                    data-time-range-selector
+                >
+                    {selectedTimeRange}
+                </button>
+            ) : (
+                <span className="text-sm font-medium text-neutral-800 dark:text-neutral-100 opacity-0">
+                    {selectedTimeRange}
+                </span>
+            )}
+            ，
+            {stats.beanTypeCount.filter > stats.beanTypeCount.espresso ?
                 `偏爱手冲豆` :
                 stats.beanTypeCount.espresso > stats.beanTypeCount.filter ?
                     `偏爱意式豆` :
                     `手冲意式均衡`}，
             以{Object.entries(stats.roastLevelCount).sort((a, b) => b[1] - a[1])[0]?.[0] || '中度'}烘焙为主。
-            
-            {stats.topFlavors.length > 0 ? 
+
+            {stats.topFlavors.length > 0 ?
                 `风味偏爱${stats.topFlavors.slice(0, 2).map(([flavor]) => flavor).join('和')}` : ''}。
         </div>
     )

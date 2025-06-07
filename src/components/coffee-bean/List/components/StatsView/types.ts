@@ -99,6 +99,10 @@ export interface TodayConsumptionData {
 export interface StatsSummaryProps {
     stats: StatsData
     todayConsumption: number
+    // 时间区间切换相关props
+    selectedTimeRange?: string
+    onToggleTimeRangeDropdown?: () => void
+    showTimeRangeDropdown?: boolean
 }
 
 export interface StatCategoryProps {

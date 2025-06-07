@@ -11,6 +11,136 @@ import { useConsumption } from './useConsumption'
 import { Storage } from '@/lib/core/storage'
 import { ArrowUpRight } from 'lucide-react'
 import type { BrewingNote } from '@/lib/core/config'
+import { motion, AnimatePresence } from 'framer-motion'
+
+// 时间区间选项
+export type TimeRange = 'all' | 'week' | 'month'
+
+export const TIME_RANGE_LABELS: Record<TimeRange, string> = {
+    all: '目前为止',
+    week: '近一周内',
+    month: '近一个月内'
+}
+
+// 根据时间区间计算消耗数据
+const calculateTimeRangeConsumption = async (beans: any[], timeRange: TimeRange) => {
+    try {
+        // 获取所有冲煮记录
+        const notesStr = await Storage.get('brewingNotes')
+        if (!notesStr) return {
+            consumption: 0,
+            cost: 0,
+            espressoConsumption: 0,
+            espressoCost: 0,
+            filterConsumption: 0,
+            filterCost: 0
+        }
+
+        const notes: BrewingNote[] = JSON.parse(notesStr)
+        if (!Array.isArray(notes)) return {
+            consumption: 0,
+            cost: 0,
+            espressoConsumption: 0,
+            espressoCost: 0,
+            filterConsumption: 0,
+            filterCost: 0
+        }
+
+        // 计算时间范围
+        const now = Date.now()
+        const dayInMs = 24 * 60 * 60 * 1000
+        let cutoffTime = 0
+
+        if (timeRange === 'week') {
+            cutoffTime = now - (7 * dayInMs)
+        } else if (timeRange === 'month') {
+            cutoffTime = now - (30 * dayInMs)
+        } else {
+            // 'all' - 不设置时间限制
+            cutoffTime = 0
+        }
+
+        // 筛选时间范围内的冲煮记录
+        const filteredNotes = timeRange === 'all'
+            ? notes
+            : notes.filter(note => note.timestamp >= cutoffTime)
+
+        // 计算消耗数据
+        let consumption = 0
+        let cost = 0
+        let espressoConsumption = 0
+        let espressoCost = 0
+        let filterConsumption = 0
+        let filterCost = 0
+
+        filteredNotes.forEach(note => {
+            if (note.params?.coffee) {
+                // 提取咖啡量中的数字部分
+                const match = note.params.coffee.match(/(\d+(\.\d+)?)/);
+                if (match) {
+                    const coffeeAmount = parseFloat(match[0]);
+                    if (!isNaN(coffeeAmount)) {
+                        consumption += coffeeAmount;
+
+                        // 判断是否是意式咖啡
+                        const isEspresso = note.equipment === 'Espresso' ||
+                                         note.equipment === '意式咖啡机' ||
+                                         note.equipment === 'espresso' ||
+                                         note.equipment?.toLowerCase().includes('espresso') ||
+                                         note.equipment?.toLowerCase().includes('意式') ||
+                                         (note.coffeeBeanInfo?.name &&
+                                          beans.find(b => b.name === note.coffeeBeanInfo?.name)?.beanType === 'espresso');
+
+                        // 分别统计手冲和意式消耗
+                        if (isEspresso) {
+                            espressoConsumption += coffeeAmount;
+                        } else {
+                            filterConsumption += coffeeAmount;
+                        }
+
+                        // 计算花费
+                        if (note.coffeeBeanInfo?.name) {
+                            const bean = beans.find(b => b.name === note.coffeeBeanInfo?.name)
+                            if (bean && bean.price && bean.capacity) {
+                                const price = parseFloat(bean.price.toString().replace(/[^\d.]/g, ''))
+                                const capacity = parseFloat(bean.capacity.toString().replace(/[^\d.]/g, ''))
+                                if (!isNaN(price) && !isNaN(capacity) && capacity > 0) {
+                                    const noteCost = coffeeAmount * price / capacity
+                                    cost += noteCost
+
+                                    if (isEspresso) {
+                                        espressoCost += noteCost;
+                                    } else {
+                                        filterCost += noteCost;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        })
+
+        return {
+            consumption,
+            cost,
+            espressoConsumption,
+            espressoCost,
+            filterConsumption,
+            filterCost
+        }
+    } catch (error) {
+        console.error('计算时间区间消耗失败:', error)
+        return {
+            consumption: 0,
+            cost: 0,
+            espressoConsumption: 0,
+            espressoCost: 0,
+            filterConsumption: 0,
+            filterCost: 0
+        }
+    }
+}
 
 const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsShare }) => {
     const statsContainerRef = useRef<HTMLDivElement>(null)
@@ -18,19 +148,118 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
     const [espressoAverageConsumption, setEspressoAverageConsumption] = useState<number>(0)
     const [filterAverageConsumption, setFilterAverageConsumption] = useState<number>(0)
 
-    // 获取今日消耗数据
-    const todayConsumptionData = useConsumption(beans)
-    const { consumption: todayConsumption, cost: todayCost } = todayConsumptionData
+    // 时间区间状态
+    const [selectedTimeRange, setSelectedTimeRange] = useState<TimeRange>('all')
+    const [showTimeRangeDropdown, setShowTimeRangeDropdown] = useState(false)
+    const [timeRangeButtonPosition, setTimeRangeButtonPosition] = useState<{
+        top: number;
+        left: number;
+        width: number;
+    } | null>(null)
 
-    // 获取统计数据
-    const stats = useMemo(() => calculateStats(beans, showEmptyBeans, {
-        espressoConsumption: todayConsumptionData.espressoConsumption,
-        espressoCost: todayConsumptionData.espressoCost,
-        filterConsumption: todayConsumptionData.filterConsumption,
-        filterCost: todayConsumptionData.filterCost
-    }), [beans, showEmptyBeans, todayConsumptionData])
+    // 根据时间区间过滤咖啡豆数据
+    const filteredBeans = useMemo(() => {
+        if (selectedTimeRange === 'all') {
+            return beans
+        }
 
-    // 新的平均消耗计算函数
+        const now = Date.now()
+        const dayInMs = 24 * 60 * 60 * 1000
+        let cutoffTime = 0
+
+        if (selectedTimeRange === 'week') {
+            cutoffTime = now - (7 * dayInMs)
+        } else if (selectedTimeRange === 'month') {
+            cutoffTime = now - (30 * dayInMs)
+        }
+
+        // 过滤在指定时间范围内有活动的咖啡豆
+        return beans.filter(bean => {
+            // 如果没有时间戳，保留所有豆子（向后兼容）
+            if (!bean.timestamp) return true
+
+            // 检查豆子的创建时间或最后更新时间
+            return bean.timestamp >= cutoffTime
+        })
+    }, [beans, selectedTimeRange])
+
+    // 根据时间区间获取消耗数据（暂时保留，可能用于未来功能）
+    const [_timeRangeConsumptionData, _setTimeRangeConsumptionData] = useState({
+        consumption: 0,
+        cost: 0,
+        espressoConsumption: 0,
+        espressoCost: 0,
+        filterConsumption: 0,
+        filterCost: 0
+    })
+
+    // 异步计算时间区间消耗数据（暂时保留，可能用于未来功能）
+    useEffect(() => {
+        const loadTimeRangeConsumption = async () => {
+            const data = await calculateTimeRangeConsumption(filteredBeans, selectedTimeRange)
+            _setTimeRangeConsumptionData(data)
+        }
+        loadTimeRangeConsumption()
+    }, [filteredBeans, selectedTimeRange])
+
+    // 获取今日消耗数据（保持原有逻辑用于"今日"显示）
+    const todayConsumptionData = useConsumption(filteredBeans)
+    const { consumption: todayConsumption } = todayConsumptionData
+
+    // 获取统计数据 - 修复今日消耗显示问题
+    const stats = useMemo(() => {
+        // 对于"今日"显示，应该使用真正的今日消耗数据，而不是时间区间数据
+        const todayConsumptionForStats = {
+            espressoConsumption: todayConsumptionData.espressoConsumption,
+            espressoCost: todayConsumptionData.espressoCost,
+            filterConsumption: todayConsumptionData.filterConsumption,
+            filterCost: todayConsumptionData.filterCost
+        };
+
+        return calculateStats(filteredBeans, showEmptyBeans, todayConsumptionForStats);
+    }, [filteredBeans, showEmptyBeans, todayConsumptionData])
+
+    // 时间区间切换处理函数
+    const updateTimeRangeButtonPosition = () => {
+        const buttonElement = (window as any).timeRangeButtonRef
+        if (buttonElement) {
+            const rect = buttonElement.getBoundingClientRect()
+            setTimeRangeButtonPosition({
+                top: rect.top,
+                left: rect.left,
+                width: rect.width
+            })
+        }
+    }
+
+    const handleToggleTimeRangeDropdown = () => {
+        if (!showTimeRangeDropdown) {
+            updateTimeRangeButtonPosition()
+        }
+        setShowTimeRangeDropdown(!showTimeRangeDropdown)
+    }
+
+    const handleTimeRangeChange = (timeRange: TimeRange) => {
+        setSelectedTimeRange(timeRange)
+        setShowTimeRangeDropdown(false)
+    }
+
+    // 点击外部关闭时间区间下拉菜单
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (showTimeRangeDropdown) {
+                const target = event.target as Element
+                if (!target.closest('[data-time-range-selector]')) {
+                    setShowTimeRangeDropdown(false)
+                }
+            }
+        }
+
+        document.addEventListener('mousedown', handleClickOutside)
+        return () => document.removeEventListener('mousedown', handleClickOutside)
+    }, [showTimeRangeDropdown])
+
+    // 新的平均消耗计算函数 - 基于时间区间
     const calculateNewAverageConsumption = useMemo(() => {
         return async (beanType: 'espresso' | 'filter'): Promise<number> => {
             try {
@@ -41,28 +270,47 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
                 const notes: BrewingNote[] = JSON.parse(notesStr)
                 if (!Array.isArray(notes)) return 0
 
+                // 计算时间范围
+                const now = Date.now()
+                const dayInMs = 24 * 60 * 60 * 1000
+                let cutoffTime = 0
+                let totalDays = 1
+
+                if (selectedTimeRange === 'week') {
+                    cutoffTime = now - (7 * dayInMs)
+                    totalDays = 7
+                } else if (selectedTimeRange === 'month') {
+                    cutoffTime = now - (30 * dayInMs)
+                    totalDays = 30
+                } else {
+                    // 'all' - 使用全部数据计算
+                    cutoffTime = 0
+                }
+
                 // 获取该类型的咖啡豆名称列表
-                const beanNames = beans
+                const beanNames = filteredBeans
                     .filter(bean => bean.beanType === beanType)
                     .map(bean => bean.name)
 
                 if (beanNames.length === 0) return 0
 
                 // 筛选出相关的笔记记录
-                const relevantNotes = notes.filter(note => {
+                let relevantNotes = notes.filter(note => {
                     return note.coffeeBeanInfo?.name && beanNames.includes(note.coffeeBeanInfo.name)
                 })
 
+                // 根据时间区间过滤
+                if (selectedTimeRange !== 'all') {
+                    relevantNotes = relevantNotes.filter(note => note.timestamp >= cutoffTime)
+                } else {
+                    // 对于"目前为止"，计算实际的天数
+                    if (relevantNotes.length > 0) {
+                        const firstNoteTimestamp = Math.min(...relevantNotes.map(note => note.timestamp))
+                        totalDays = Math.max(1, Math.ceil((now - firstNoteTimestamp) / dayInMs))
+                    }
+                }
+
                 if (relevantNotes.length === 0) return 0
-
-                // 找到第一次记录日期
-                const firstNoteTimestamp = Math.min(...relevantNotes.map(note => note.timestamp))
-                const firstDate = new Date(firstNoteTimestamp)
-                const today = new Date()
-
-                // 计算总天数（从第一次记录到今天）
-                const dayInMs = 24 * 60 * 60 * 1000
-                const totalDays = Math.max(1, Math.ceil((today.getTime() - firstDate.getTime()) / dayInMs))
 
                 // 计算总消耗量
                 let totalConsumption = 0
@@ -86,7 +334,7 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
                 return 0
             }
         }
-    }, [beans])
+    }, [filteredBeans, selectedTimeRange])
     
 
     
@@ -139,6 +387,168 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
 
     return (
         <div className="bg-neutral-50 dark:bg-neutral-900 overflow-x-hidden coffee-bean-stats-container">
+            {/* 时间区间下拉菜单 - 参考导航栏风格 */}
+            <AnimatePresence>
+                {showTimeRangeDropdown && (
+                    <>
+                        {/* 背景模糊层 */}
+                        <motion.div
+                            initial={{
+                                opacity: 0,
+                                backdropFilter: 'blur(0px)'
+                            }}
+                            animate={{
+                                opacity: 1,
+                                backdropFilter: 'blur(20px)',
+                                transition: {
+                                    opacity: {
+                                        duration: 0.2,
+                                        ease: [0.25, 0.46, 0.45, 0.94]
+                                    },
+                                    backdropFilter: {
+                                        duration: 0.3,
+                                        ease: [0.25, 0.46, 0.45, 0.94]
+                                    }
+                                }
+                            }}
+                            exit={{
+                                opacity: 0,
+                                backdropFilter: 'blur(0px)',
+                                transition: {
+                                    opacity: {
+                                        duration: 0.15,
+                                        ease: [0.4, 0.0, 1, 1]
+                                    },
+                                    backdropFilter: {
+                                        duration: 0.2,
+                                        ease: [0.4, 0.0, 1, 1]
+                                    }
+                                }
+                            }}
+                            className="fixed inset-0 z-[60]"
+                            style={{
+                                backgroundColor: 'color-mix(in srgb, var(--background) 40%, transparent)',
+                                WebkitBackdropFilter: 'blur(4px)'
+                            }}
+                            onClick={() => setShowTimeRangeDropdown(false)}
+                        />
+
+                        {/* 当前选中的时间区间选项 */}
+                        {timeRangeButtonPosition && (
+                            <motion.div
+                                initial={{ opacity: 1, scale: 1 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{
+                                    opacity: 0,
+                                    scale: 0.98,
+                                    transition: {
+                                        duration: 0.12,
+                                        ease: [0.4, 0.0, 1, 1]
+                                    }
+                                }}
+                                className="fixed z-[80]"
+                                style={{
+                                    top: `${timeRangeButtonPosition.top}px`,
+                                    left: `${timeRangeButtonPosition.left}px`,
+                                    minWidth: `${timeRangeButtonPosition.width}px`
+                                }}
+                                data-time-range-selector
+                            >
+                                <motion.button
+                                    initial={{ opacity: 1 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 1 }}
+                                    onClick={() => setShowTimeRangeDropdown(false)}
+                                    className="text-sm font-medium tracking-widest whitespace-nowrap transition-colors text-left flex items-center text-neutral-800 dark:text-neutral-100 cursor-pointer"
+                                >
+                                    <span className="relative inline-block">
+                                        {TIME_RANGE_LABELS[selectedTimeRange]}
+                                    </span>
+                                </motion.button>
+                            </motion.div>
+                        )}
+
+                        {/* 其他时间区间选项 */}
+                        {timeRangeButtonPosition && (
+                            <motion.div
+                                initial={{
+                                    opacity: 0,
+                                    y: -8,
+                                    scale: 0.96
+                                }}
+                                animate={{
+                                    opacity: 1,
+                                    y: 0,
+                                    scale: 1,
+                                    transition: {
+                                        duration: 0.25,
+                                        ease: [0.25, 0.46, 0.45, 0.94]
+                                    }
+                                }}
+                                exit={{
+                                    opacity: 0,
+                                    y: -6,
+                                    scale: 0.98,
+                                    transition: {
+                                        duration: 0.15,
+                                        ease: [0.4, 0.0, 1, 1]
+                                    }
+                                }}
+                                className="fixed z-[80]"
+                                style={{
+                                    top: `${timeRangeButtonPosition.top + 30}px`,
+                                    left: `${timeRangeButtonPosition.left}px`,
+                                    minWidth: `${timeRangeButtonPosition.width}px`
+                                }}
+                                data-time-range-selector
+                            >
+                                <div className="flex flex-col">
+                                    {Object.entries(TIME_RANGE_LABELS)
+                                        .filter(([key]) => key !== selectedTimeRange)
+                                        .map(([key, label], index) => (
+                                            <motion.button
+                                                key={key}
+                                                initial={{
+                                                    opacity: 0,
+                                                    y: -6,
+                                                    scale: 0.98
+                                                }}
+                                                animate={{
+                                                    opacity: 1,
+                                                    y: 0,
+                                                    scale: 1,
+                                                    transition: {
+                                                        delay: index * 0.04,
+                                                        duration: 0.2,
+                                                        ease: [0.25, 0.46, 0.45, 0.94]
+                                                    }
+                                                }}
+                                                exit={{
+                                                    opacity: 0,
+                                                    y: -4,
+                                                    scale: 0.98,
+                                                    transition: {
+                                                        delay: (Object.keys(TIME_RANGE_LABELS).length - index - 1) * 0.02,
+                                                        duration: 0.12,
+                                                        ease: [0.4, 0.0, 1, 1]
+                                                    }
+                                                }}
+                                                onClick={() => handleTimeRangeChange(key as TimeRange)}
+                                                className="text-sm font-medium tracking-widest whitespace-nowrap transition-colors text-left pb-3 flex items-center text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300"
+                                                style={{ paddingBottom: '12px' }}
+                                            >
+                                                <span className="relative inline-block">
+                                                    {label}
+                                                </span>
+                                            </motion.button>
+                                        ))}
+                                </div>
+                            </motion.div>
+                        )}
+                    </>
+                )}
+            </AnimatePresence>
+
             {/* 添加字体定义 */}
             <style jsx global>{`
                 @font-face {
@@ -175,12 +585,18 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
                         <p className='mt-6'>{username ? `@${username}` : ''}</p>
                     </div>
                     
-                    <div 
+                    <div
                         className="w-full flex justify-between items-center space-x-2 text-[10px] uppercase tracking-widest"
                         style={styles.infoAnimStyle}
                     >
                         <div className="">✦</div>
-                        <StatsSummary stats={stats} todayConsumption={todayConsumption} />
+                        <StatsSummary
+                            stats={stats}
+                            todayConsumption={todayConsumption}
+                            selectedTimeRange={TIME_RANGE_LABELS[selectedTimeRange]}
+                            onToggleTimeRangeDropdown={handleToggleTimeRangeDropdown}
+                            showTimeRangeDropdown={showTimeRangeDropdown}
+                        />
                         <div className="">✦</div>
                     </div>
                     
@@ -433,9 +849,9 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
                 <div className="p-4 max-w-xs mx-auto">
                     <StatsCategories
                         stats={stats}
-                        beans={beans}
-                        todayConsumption={todayConsumption}
-                        todayCost={todayCost}
+                        beans={filteredBeans}
+                        todayConsumption={todayConsumptionData.consumption}
+                        todayCost={todayConsumptionData.cost}
                         styles={styles}
                     />
                 </div>
