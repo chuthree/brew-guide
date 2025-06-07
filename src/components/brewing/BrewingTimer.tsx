@@ -584,9 +584,12 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     }
   }, [countdownTime, onCountdownChange]);
 
-  // 修改保存笔记函数，添加保存成功反馈
+  // 修改保存笔记函数，统一数据流避免竞态条件
   const handleSaveNote = useCallback(async (note: BrewingNoteData) => {
     try {
+      // 动态导入全局缓存，避免循环依赖
+      const { globalCache } = await import('@/components/notes/List/globalCache');
+
       // 从Storage获取现有笔记
       const existingNotesStr = await Storage.get("brewingNotes");
       const existingNotes = existingNotesStr
@@ -605,7 +608,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
           ? existingNotes.find((n: BrewingNoteData) => n.id === note.id)?.timestamp || Date.now()
           : Date.now(),
       };
-      
+
       // 如果存在coffeeBean字段，移除它
       if ('coffeeBean' in noteData) {
         delete noteData.coffeeBean;
@@ -622,20 +625,15 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         updatedNotes = [noteData, ...existingNotes];
       }
 
-      // 存储更新后的笔记列表
-      await Storage.set("brewingNotes", JSON.stringify(updatedNotes));
+      // 立即同步更新全局缓存，避免竞态条件
+      globalCache.notes = updatedNotes;
 
-      // 触发自定义事件通知数据变更
-      const storageEvent = new CustomEvent('storage:changed', {
-        detail: { key: 'brewingNotes', id: noteData.id }
-      });
-      window.dispatchEvent(storageEvent);
-      
-      // 同时触发customStorageChange事件，确保所有组件都能收到通知
-      const customEvent = new CustomEvent('customStorageChange', {
-        detail: { key: 'brewingNotes' }
-      });
-      window.dispatchEvent(customEvent);
+      // 重新计算总消耗量
+      const { calculateTotalCoffeeConsumption } = await import('@/components/notes/List/globalCache');
+      globalCache.totalConsumption = calculateTotalCoffeeConsumption(updatedNotes);
+
+      // 存储更新后的笔记列表 - Storage.set() 会自动触发事件
+      await Storage.set("brewingNotes", JSON.stringify(updatedNotes));
 
       // 设置笔记已保存标记
       localStorage.setItem("brewingNoteInProgress", "false");

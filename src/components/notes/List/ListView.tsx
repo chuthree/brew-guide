@@ -233,24 +233,22 @@ const NotesListView: React.FC<NotesListViewProps> = ({
         };
     }, [hasMore, loadMoreNotes]);
 
-    // 监听笔记更新事件
+    // 监听笔记更新事件 - 移除重复的customStorageChange监听，由父组件处理
     useEffect(() => {
         // 处理笔记更新事件
         const handleNotesUpdated = () => {
             loadNotes();
         };
 
-        // 添加事件监听
+        // 只监听特定的笔记更新事件，避免与父组件重复
         window.addEventListener('brewingNotesUpdated', handleNotesUpdated);
-        window.addEventListener('customStorageChange', handleNotesUpdated as EventListener);
-        
+
         // 全局刷新函数
         window.refreshBrewingNotes = handleNotesUpdated;
-        
+
         // 清理函数
         return () => {
             window.removeEventListener('brewingNotesUpdated', handleNotesUpdated);
-            window.removeEventListener('customStorageChange', handleNotesUpdated as EventListener);
             delete window.refreshBrewingNotes;
         };
     }, [loadNotes]);

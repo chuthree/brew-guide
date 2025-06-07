@@ -311,7 +311,7 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 		loadMethods();
 	}, []);
 
-	// 简化的保存笔记函数
+	// 简化的保存笔记函数 - 统一数据流避免竞态条件
 	const handleSaveNote = useCallback(
 		async (data: BrewingNoteData) => {
 			try {
@@ -327,6 +327,20 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 				};
 
 				const updatedNotes = [newNote, ...notes];
+
+				// 立即同步更新全局缓存，避免竞态条件
+				try {
+					const { globalCache } = await import('@/components/notes/List/globalCache');
+					globalCache.notes = updatedNotes;
+
+					// 重新计算总消耗量
+					const { calculateTotalCoffeeConsumption } = await import('@/components/notes/List/globalCache');
+					globalCache.totalConsumption = calculateTotalCoffeeConsumption(updatedNotes);
+				} catch (error) {
+					console.error('更新全局缓存失败:', error);
+				}
+
+				// 保存到存储 - Storage.set() 会自动触发事件
 				await Storage.set("brewingNotes", JSON.stringify(updatedNotes));
 
 				// 扣减咖啡豆用量

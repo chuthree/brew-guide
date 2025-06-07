@@ -1607,9 +1607,12 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         setShowNoteFormModal(true);
     };
 
-    // 处理保存冲煮笔记
+    // 处理保存冲煮笔记 - 统一数据流避免竞态条件
     const handleSaveBrewingNote = async (note: BrewingNoteData) => {
         try {
+            // 动态导入全局缓存，避免循环依赖
+            const { globalCache } = await import('@/components/notes/List/globalCache');
+
             // 获取现有笔记
             const existingNotesStr = await Storage.get('brewingNotes');
             const existingNotes = existingNotesStr ? JSON.parse(existingNotesStr) : [];
@@ -1643,25 +1646,15 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 updatedNotes = [newNote, ...existingNotes];
             }
 
-            // 使用Storage API保存
+            // 立即同步更新全局缓存，避免竞态条件
+            globalCache.notes = updatedNotes;
+
+            // 重新计算总消耗量
+            const { calculateTotalCoffeeConsumption } = await import('@/components/notes/List/globalCache');
+            globalCache.totalConsumption = calculateTotalCoffeeConsumption(updatedNotes);
+
+            // 使用Storage API保存 - Storage.set() 会自动触发事件
             await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
-
-            // 触发自定义事件通知
-            const dataChangeEvent = new CustomEvent('storage:changed', {
-                detail: { key: 'brewingNotes', id: newNoteId }
-            });
-            window.dispatchEvent(dataChangeEvent);
-
-            // 同时触发customStorageChange事件，确保所有组件都能收到通知
-            const customEvent = new CustomEvent('customStorageChange', {
-                detail: { key: 'brewingNotes' }
-            });
-            window.dispatchEvent(customEvent);
-
-            // 如果window上有刷新方法，调用它
-            if (window.refreshBrewingNotes) {
-                setTimeout(() => window.refreshBrewingNotes?.(), 50);
-            }
 
             // 关闭表单
             setShowNoteFormModal(false);

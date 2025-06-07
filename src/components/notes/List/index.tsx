@@ -197,6 +197,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         
         const handleCustomStorageChange = (e: CustomEvent) => {
             if (e.detail?.key === 'brewingNotes') {
+                // 总是重新加载数据以确保UI同步，但避免重复的网络请求
+                console.log('笔记数据变更，重新加载');
                 loadEquipmentsAndBeans();
             }
         };
@@ -306,23 +308,24 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         }, 3000);
     };
     
-    // 处理删除笔记
+    // 处理删除笔记 - 统一数据流避免竞态条件
     const handleDelete = async (noteId: string) => {
         try {
             const savedNotes = await Storage.get('brewingNotes');
             if (!savedNotes) return;
-            
+
             const notes = JSON.parse(savedNotes) as BrewingNote[];
             const updatedNotes = notes.filter(note => note.id !== noteId);
-            
+
+            // 立即同步更新全局缓存
+            globalCache.notes = updatedNotes;
+
+            // 重新计算总消耗量
+            globalCache.totalConsumption = calculateTotalCoffeeConsumption(updatedNotes);
+
+            // 保存到存储 - Storage.set() 会自动触发事件
             await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
-            
-            // 派发自定义事件以通知其他组件
-            const event = new CustomEvent('customStorageChange', {
-                detail: { key: 'brewingNotes' }
-            });
-            window.dispatchEvent(event);
-            
+
             showToast('笔记已删除', 'success');
         } catch (error) {
             console.error('删除笔记失败:', error);
@@ -374,9 +377,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                 return note
             })
 
-            // 保存更新后的笔记
-            await Storage.set('brewingNotes', JSON.stringify(parsedNotes))
-
             // 立即更新全局缓存
             globalCache.notes = parsedNotes;
 
@@ -386,10 +386,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
             // 使用统一的数据处理函数
             updateNotesData();
 
-            // 触发存储变更事件
-            window.dispatchEvent(new CustomEvent('customStorageChange', {
-                detail: { key: 'brewingNotes' }
-            }))
+            // 保存更新后的笔记 - Storage.set() 会自动触发事件
+            await Storage.set('brewingNotes', JSON.stringify(parsedNotes))
 
             // 关闭编辑
             setEditingNote(null)

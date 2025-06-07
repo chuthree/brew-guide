@@ -209,7 +209,7 @@ const TabContent: React.FC<TabContentProps> = ({
         };
     }, []);
 
-    // 简化的保存笔记处理
+    // 简化的保存笔记处理 - 统一数据流避免竞态条件
     const handleSaveNote = async (note: BrewingNoteData) => {
         try {
             const Storage = (await import('@/lib/core/storage')).Storage;
@@ -229,7 +229,21 @@ const TabContent: React.FC<TabContentProps> = ({
                 ? existingNotes.map((n: BrewingNoteData) => n.id === noteData.id ? noteData : n)
                 : [noteData, ...existingNotes];
 
+            // 立即同步更新全局缓存，避免竞态条件
+            try {
+                const { globalCache } = await import('@/components/notes/List/globalCache');
+                globalCache.notes = updatedNotes;
+
+                // 重新计算总消耗量
+                const { calculateTotalCoffeeConsumption } = await import('@/components/notes/List/globalCache');
+                globalCache.totalConsumption = calculateTotalCoffeeConsumption(updatedNotes);
+            } catch (error) {
+                console.error('更新全局缓存失败:', error);
+            }
+
+            // 保存到存储 - Storage.set() 会自动触发事件
             await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
+
             setNoteSaved(true);
             setIsNoteSaved?.(true);
 

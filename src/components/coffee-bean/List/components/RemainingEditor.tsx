@@ -250,23 +250,30 @@ const RemainingEditor: React.FC<RemainingEditorProps> = ({
             
             const existingNotesStr = await Storage.get('brewingNotes')
             if (!isMounted.current) return
-            
+
             const existingNotes = existingNotesStr ? JSON.parse(existingNotesStr) : []
             const updatedNotes = [newNote, ...existingNotes]
-            
-            await Storage.set('brewingNotes', JSON.stringify(updatedNotes))
-            
+
+            // 立即同步更新全局缓存，避免竞态条件
+            try {
+                const { globalCache } = await import('@/components/notes/List/globalCache');
+                globalCache.notes = updatedNotes;
+
+                // 重新计算总消耗量
+                const { calculateTotalCoffeeConsumption } = await import('@/components/notes/List/globalCache');
+                globalCache.totalConsumption = calculateTotalCoffeeConsumption(updatedNotes);
+            } catch (error) {
+                console.error('更新全局缓存失败:', error);
+            }
+
             if (!isMounted.current) return
-            
-            // 使用setTimeout延迟触发事件
-            setTimeout(() => {
-                if (isMounted.current) {
-                    window.dispatchEvent(new CustomEvent('customStorageChange', {
-                        detail: { key: 'brewingNotes' }
-                    }))
-                    console.log('快捷扣除自动创建笔记成功')
-                }
-            }, 100)
+
+            // 保存到存储 - Storage.set() 会自动触发事件
+            await Storage.set('brewingNotes', JSON.stringify(updatedNotes))
+
+            if (isMounted.current) {
+                console.log('快捷扣除自动创建笔记成功')
+            }
         } catch (error) {
             console.error('创建快捷扣除笔记失败:', error)
         }
