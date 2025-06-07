@@ -210,16 +210,9 @@ export function cn(...inputs: ClassValue[]): string {
 }
 ```
 
-#### locales/
-- 按语言分类的翻译文件
-- 支持多语言切换
-- 使用 JSON 或 YAML 格式
-- 按功能模块组织翻译内容
-
 #### providers/
 - 全局状态管理
 - 主题配置
-- 国际化配置
 - 认证状态
 
 #### services/

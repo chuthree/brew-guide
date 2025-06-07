@@ -8,7 +8,7 @@ import hapticsUtils from '@/lib/ui/haptics'
 import textZoomUtils from '@/lib/utils/textZoomUtils'
 import { useTheme } from 'next-themes'
 import { LayoutSettings } from '../brewing/Timer/Settings'
-import { notifyLanguageChange } from '@/providers/TranslationsProvider'
+
 import Image from 'next/image'
 import GrinderSettings from './GrinderSettings'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -30,7 +30,6 @@ export interface SettingsOptions {
     grindType: string
     textZoomLevel: number
     layoutSettings?: LayoutSettings // 添加布局设置
-    language: string // 添加语言设置
     showFlowRate: boolean // 添加显示流速选项
     username: string // 添加用户名
     decrementPresets: number[] // 添加咖啡豆库存快捷扣除量预设值
@@ -57,7 +56,6 @@ export const defaultSettings: SettingsOptions = {
         alwaysShowTimerInfo: true, // 默认显示计时器信息
         showStageDivider: true // 默认显示阶段分隔线
     },
-    language: 'zh', // 默认使用中文
     showFlowRate: false, // 默认不显示流速
     username: '', // 默认用户名为空
     decrementPresets: [15, 16, 18], // 默认的库存扣除量预设值
@@ -235,10 +233,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
         detail: { key: 'brewGuideSettings' }
     }))
 
-    // 当语言设置改变时，触发自定义事件
-    if (key === 'language') {
-        notifyLanguageChange()
-    }
+
 }
 
     // 处理文本缩放变更
@@ -547,47 +542,6 @@ const handleChange = async <K extends keyof SettingsOptions>(
                     </h3>
 
                     <div className="space-y-5">
-                        {/* 语言选择 */}
-                        <div className="flex items-center justify-between">
-                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                                语言(Beta)
-                            </div>
-                            <div className="text-sm text-neutral-400 dark:text-neutral-500">
-                                <div className="inline-flex rounded-lg bg-neutral-100 p-1 dark:bg-neutral-800">
-                                    <button
-                                        className={`px-2 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                                            settings.language === 'zh'
-                                                ? 'bg-white dark:bg-neutral-600 text-neutral-900 dark:text-neutral-100 shadow-xs'
-                                                : 'text-neutral-600 dark:text-neutral-400'
-                                        }`}
-                                        onClick={() => {
-                                            handleChange('language', 'zh')
-                                            if (settings.hapticFeedback) {
-                                                hapticsUtils.light();
-                                            }
-                                        }}
-                                    >
-                                        中文
-                                    </button>
-                                    <button
-                                        className={`px-2 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                                            settings.language === 'en'
-                                                ? 'bg-white dark:bg-neutral-600 text-neutral-900 dark:text-neutral-100 shadow-xs'
-                                                : 'text-neutral-600 dark:text-neutral-400'
-                                        }`}
-                                        onClick={() => {
-                                            handleChange('language', 'en')
-                                            if (settings.hapticFeedback) {
-                                                hapticsUtils.light();
-                                            }
-                                        }}
-                                    >
-                                        English
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
                         {/* 外观模式 */}
                         <div className="flex items-center justify-between">
                             <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">

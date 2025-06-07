@@ -9,7 +9,7 @@ import { formatGrindSize } from '@/lib/utils/grindUtils'
 import { BREWING_EVENTS, ParameterInfo } from '@/lib/brewing/constants'
 import { listenToEvent } from '@/lib/brewing/events'
 import { updateParameterInfo, getEquipmentName } from '@/lib/brewing/parameters'
-import { useTranslations } from 'next-intl'
+
 import { Equal, ArrowLeft, ChevronsUpDown } from 'lucide-react'
 import { saveStringState } from '@/lib/core/statePersistence'
 import { saveMainTabPreference } from '@/lib/navigation/navigationCache'
@@ -574,12 +574,12 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
     handleExtractionTimeChange, customEquipments = [], onEquipmentSelect,
     onAddEquipment, onEditEquipment, onDeleteEquipment, onShareEquipment, onBackClick,
 }) => {
-    const t = useTranslations('nav')
+
     const { canGoBack } = useNavigation(activeBrewingStep, activeMainTab, hasCoffeeBeans)
 
     // 获取当前视图的显示名称
     const getCurrentViewLabel = () => {
-        if (!currentBeanView) return t('main.beans')
+        if (!currentBeanView) return '咖啡豆'
         return VIEW_LABELS[currentBeanView]
     }
 
@@ -719,7 +719,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                     ) : (
                                         <Equal className="w-4 h-4 mr-1" />
                                     )}
-                                    {!(canGoBack() && onBackClick) && <span>{t('title')}</span>}
+                                    {!(canGoBack() && onBackClick) && <span></span>}
                                 </div>
 
                                 {/* 主导航按钮 - 保持固定高度避免抖动 */}
@@ -731,7 +731,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                         }}
                                     >
                                         <TabButton
-                                            tab={t('main.brewing')}
+                                            tab="冲煮"
                                             isActive={activeMainTab === '冲煮'}
                                             onClick={() => handleMainTabClick('冲煮')}
                                             dataTab="冲煮"
@@ -832,7 +832,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                         }}
                                     >
                                         <TabButton
-                                            tab={t('main.notes')}
+                                            tab="笔记"
                                             isActive={activeMainTab === '笔记'}
                                             onClick={() => handleMainTabClick('笔记')}
                                             dataTab="笔记"

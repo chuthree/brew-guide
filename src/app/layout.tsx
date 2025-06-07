@@ -15,7 +15,7 @@ import KeyboardManager from '@/components/layout/KeyboardManager'
 import { Suspense } from 'react'
 import CapacitorInit from '@/providers/CapacitorProvider'
 import StorageInit from '@/providers/StorageProvider'
-import { TranslationsProvider } from '@/providers/TranslationsProvider'
+
 import { BaiduAnalytics } from '@/components/common/BaiduAnalytics'
 
 // 配置 Inter 字体
@@ -178,19 +178,17 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <TranslationsProvider>
-            <ToastProvider>
-              <Suspense>
-                <CapacitorInit />
-                <StorageInit />
-                <KeyboardManager />
-              </Suspense>
-              <div className="h-full w-full overflow-hidden max-w-[500px] mx-auto">
-                {children}
-              </div>
-              <AppInstallAndUpdatePrompt />
-            </ToastProvider>
-          </TranslationsProvider>
+          <ToastProvider>
+            <Suspense>
+              <CapacitorInit />
+              <StorageInit />
+              <KeyboardManager />
+            </Suspense>
+            <div className="h-full w-full overflow-hidden max-w-[500px] mx-auto">
+              {children}
+            </div>
+            <AppInstallAndUpdatePrompt />
+          </ToastProvider>
         </ThemeProvider>
         <Analytics />
       </body>

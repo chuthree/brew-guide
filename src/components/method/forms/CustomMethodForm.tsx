@@ -296,9 +296,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         if (!parsedSettings.layoutSettings) {
           parsedSettings.layoutSettings = defaultSettings.layoutSettings;
         }
-        if (!parsedSettings.language) {
-          parsedSettings.language = defaultSettings.language;
-        }
+
         setLocalSettings(parsedSettings);
       } catch (e) {
         console.error("Failed to parse settings from storage:", e);
