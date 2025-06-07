@@ -355,7 +355,16 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         if (setAlternativeHeaderContent && setShowAlternativeHeader) {
             // 获取原始时间戳作为Date对象
             const timestamp = new Date(note.timestamp);
-            
+
+            // 处理时间戳修改
+            const handleTimestampChange = (newTimestamp: Date) => {
+                // 更新编辑中的笔记数据
+                setEditingNote(prev => prev ? {
+                    ...prev,
+                    timestamp: newTimestamp.getTime()
+                } : null);
+            };
+
             // 创建笔记编辑头部内容
             const headerContent = (
                 <NoteFormHeader
@@ -374,10 +383,11 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                         }
                     }}
                     showSaveButton={true}
-                    timestamp={timestamp}
+                    timestamp={editingNote ? new Date(editingNote.timestamp) : timestamp}
+                    onTimestampChange={handleTimestampChange}
                 />
             );
-            
+
             // 设置替代头部内容并显示
             setAlternativeHeaderContent(headerContent);
             setShowAlternativeHeader(true);

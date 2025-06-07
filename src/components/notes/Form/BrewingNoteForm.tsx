@@ -147,6 +147,11 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         },
         notes: initialData?.notes || ''
     });
+
+    // 添加时间戳状态管理
+    const [timestamp, setTimestamp] = useState<Date>(
+        initialData.timestamp ? new Date(initialData.timestamp) : new Date()
+    );
     
     // 添加方案参数状态
     const [methodParams, setMethodParams] = useState({
@@ -421,8 +426,8 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         // 创建完整的笔记数据
         const noteData: BrewingNoteData = {
             id: id || Date.now().toString(),
-            // 编辑现有笔记时保留原始时间戳，新建笔记时使用当前时间
-            timestamp: initialData.timestamp || Date.now(),
+            // 使用当前的时间戳状态
+            timestamp: timestamp.getTime(),
             ...formData,
             equipment: initialData.equipment,
             method: initialData.method,
@@ -474,6 +479,8 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                         onBack={onClose}
                         onSave={() => formRef.current?.requestSubmit()}
                         showSaveButton={showSaveButton}
+                        timestamp={timestamp}
+                        onTimestampChange={setTimestamp}
                     />
                 </div>
             )}
