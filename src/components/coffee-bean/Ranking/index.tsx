@@ -369,7 +369,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                         >
                             <div className="flex items-start px-6 py-3">
                                 {/* 序号 - 极简风格 */}
-                                <div className="text-xs font-medium text-neutral-600 dark:text-neutral-400 w-4 mr-2 shrink-0 leading-none">
+                                <div className="text-xs font-medium text-neutral-600 dark:text-neutral-400 w-4 mr-2 shrink-0">
                                     {index + 1}
                                 </div>
 
@@ -567,9 +567,9 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
             {/* 数据来源 - 仅在博主榜单模式下显示 */}
             {viewMode === 'blogger' && ratedBeans.length > 0 && (
                 <div className="mt-4 text-center text-[10px] text-neutral-500 dark:text-neutral-400">
-                    <span 
+                    <span
                         className="cursor-pointer underline"
-                        onClick={() => openLink('https://kdocs.cn/l/cr1urhFNvrgK')}
+                        onClick={() => openLink(year === 2024 ? 'https://www.kdocs.cn/l/cmx9enIek2Hm' : 'https://kdocs.cn/l/cr1urhFNvrgK')}
                     >
                         数据来自于 Peter 咖啡豆评测榜单
                     </span>
