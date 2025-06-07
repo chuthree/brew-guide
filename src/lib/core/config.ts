@@ -1230,4 +1230,5 @@ export const sponsorsList = [
 	"▲",
 	"古神",
 	"Arbalest",
+	"林書晨",
 ];
