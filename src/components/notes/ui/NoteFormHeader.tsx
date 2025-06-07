@@ -71,7 +71,7 @@ const NoteFormHeader: React.FC<NoteFormHeaderProps> = ({
                         }`}
                         disabled={!onTimestampChange}
                     >
-                        {`${timestamp.getFullYear()}-${String(timestamp.getMonth() + 1).padStart(2, '0')}-${String(timestamp.getDate()).padStart(2, '0')} ${String(timestamp.getHours()).padStart(2, '0')}:${String(timestamp.getMinutes()).padStart(2, '0')}`}
+                        {`${timestamp.getFullYear()}-${String(timestamp.getMonth() + 1).padStart(2, '0')}-${String(timestamp.getDate()).padStart(2, '0')}`}
                     </button>
 
                     {/* 日期选择器 */}

@@ -37,6 +37,7 @@ interface BrewingNoteFormProps {
     showSaveButton?: boolean;
     onSaveSuccess?: () => void;
     hideHeader?: boolean;
+    onTimestampChange?: (timestamp: Date) => void;
 }
 
 // 图片压缩函数
@@ -133,6 +134,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     showSaveButton = true,
     onSaveSuccess,
     hideHeader = false,
+    onTimestampChange,
 }) => {
 
     const [formData, setFormData] = useState<FormData>({
@@ -152,6 +154,19 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     const [timestamp, setTimestamp] = useState<Date>(
         initialData.timestamp ? new Date(initialData.timestamp) : new Date()
     );
+
+    // 监听initialData.timestamp的变化，同步更新内部状态
+    useEffect(() => {
+        if (initialData.timestamp) {
+            setTimestamp(new Date(initialData.timestamp));
+        }
+    }, [initialData.timestamp]);
+
+    // 处理时间戳变化，同时通知外部组件
+    const handleTimestampChange = (newTimestamp: Date) => {
+        setTimestamp(newTimestamp);
+        onTimestampChange?.(newTimestamp);
+    };
     
     // 添加方案参数状态
     const [methodParams, setMethodParams] = useState({
@@ -480,7 +495,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                         onSave={() => formRef.current?.requestSubmit()}
                         showSaveButton={showSaveButton}
                         timestamp={timestamp}
-                        onTimestampChange={setTimestamp}
+                        onTimestampChange={handleTimestampChange}
                     />
                 </div>
             )}

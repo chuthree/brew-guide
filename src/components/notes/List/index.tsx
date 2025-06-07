@@ -353,45 +353,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         // 设置编辑笔记数据
         setEditingNote(noteToEdit);
         
-        // 如果提供了导航栏替代头部功能，则使用
+        // 如果提供了导航栏替代头部功能，则启用
         if (setAlternativeHeaderContent && setShowAlternativeHeader) {
-            // 获取原始时间戳作为Date对象
-            const timestamp = new Date(note.timestamp);
-
-            // 处理时间戳修改
-            const handleTimestampChange = (newTimestamp: Date) => {
-                // 更新编辑中的笔记数据
-                setEditingNote(prev => prev ? {
-                    ...prev,
-                    timestamp: newTimestamp.getTime()
-                } : null);
-            };
-
-            // 创建笔记编辑头部内容
-            const headerContent = (
-                <NoteFormHeader
-                    isEditMode={true}
-                    onBack={() => {
-                        // 关闭编辑并恢复正常导航栏
-                        setEditingNote(null);
-                        setShowAlternativeHeader(false);
-                        setAlternativeHeaderContent(null);
-                    }}
-                    onSave={() => {
-                        // 获取表单元素并触发提交
-                        const form = document.querySelector('form');
-                        if (form) {
-                            form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
-                        }
-                    }}
-                    showSaveButton={true}
-                    timestamp={editingNote ? new Date(editingNote.timestamp) : timestamp}
-                    onTimestampChange={handleTimestampChange}
-                />
-            );
-
-            // 设置替代头部内容并显示
-            setAlternativeHeaderContent(headerContent);
             setShowAlternativeHeader(true);
         }
     };
@@ -453,7 +416,44 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
             onAddNote();
         }
     };
-    
+
+    // 处理表单内部的时间戳变化 - 使用useCallback避免无限循环
+    const handleFormTimestampChange = useCallback((newTimestamp: Date) => {
+        // 更新编辑中的笔记数据
+        setEditingNote(prev => prev ? {
+            ...prev,
+            timestamp: newTimestamp.getTime()
+        } : null);
+    }, []);
+
+    // 监听editingNote变化，更新替代头部
+    useEffect(() => {
+        if (editingNote && setAlternativeHeaderContent && setShowAlternativeHeader) {
+            const updatedHeaderContent = (
+                <NoteFormHeader
+                    isEditMode={true}
+                    onBack={() => {
+                        // 关闭编辑并恢复正常导航栏
+                        setEditingNote(null);
+                        setShowAlternativeHeader(false);
+                        setAlternativeHeaderContent(null);
+                    }}
+                    onSave={() => {
+                        // 获取表单元素并触发提交
+                        const form = document.querySelector('form');
+                        if (form) {
+                            form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+                        }
+                    }}
+                    showSaveButton={true}
+                    timestamp={new Date(editingNote.timestamp)}
+                    onTimestampChange={handleFormTimestampChange}
+                />
+            );
+            setAlternativeHeaderContent(updatedHeaderContent);
+        }
+    }, [editingNote?.timestamp, setAlternativeHeaderContent, setShowAlternativeHeader, handleFormTimestampChange]);
+
     // 统一的数据处理函数 - 处理排序和筛选
     const updateNotesData = useCallback(() => {
         // 获取原始笔记数据
@@ -732,6 +732,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                     onSave={handleSaveEdit}
                     initialData={editingNote}
                     hideHeader={!!setAlternativeHeaderContent && !!setShowAlternativeHeader}
+                    onTimestampChange={handleFormTimestampChange}
                 />
             ) : (
                 <>
