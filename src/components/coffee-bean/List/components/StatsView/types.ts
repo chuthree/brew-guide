@@ -103,6 +103,11 @@ export interface StatsSummaryProps {
     selectedTimeRange?: string
     onToggleTimeRangeDropdown?: () => void
     showTimeRangeDropdown?: boolean
+    // 计算方式切换相关props
+    calculationMode?: string
+    onToggleCalculationMode?: () => void
+    // 天数信息
+    actualDays?: number
 }
 
 export interface StatCategoryProps {

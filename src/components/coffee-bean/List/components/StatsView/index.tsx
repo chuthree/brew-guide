@@ -22,6 +22,14 @@ export const TIME_RANGE_LABELS: Record<TimeRange, string> = {
     month: '近一个月内'
 }
 
+// 计算方式选项
+export type CalculationMode = 'natural' | 'coffee'
+
+export const CALCULATION_MODE_LABELS: Record<CalculationMode, string> = {
+    natural: '按照自然日',
+    coffee: '按照咖啡日'
+}
+
 // 根据时间区间计算消耗数据
 const calculateTimeRangeConsumption = async (beans: any[], timeRange: TimeRange) => {
     try {
@@ -157,6 +165,12 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
         width: number;
     } | null>(null)
 
+    // 计算方式状态
+    const [calculationMode, setCalculationMode] = useState<CalculationMode>('coffee')
+
+    // 实际天数状态
+    const [actualDays, setActualDays] = useState<number>(1)
+
     // 根据时间区间过滤咖啡豆数据
     const filteredBeans = useMemo(() => {
         if (selectedTimeRange === 'all') {
@@ -244,6 +258,91 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
         setShowTimeRangeDropdown(false)
     }
 
+    // 计算方式切换处理函数
+    const handleCalculationModeToggle = () => {
+        setCalculationMode(prev => prev === 'natural' ? 'coffee' : 'natural')
+    }
+
+    // 计算实际天数的函数
+    const calculateActualDays = useMemo(() => {
+        return async (): Promise<number> => {
+            try {
+                // 获取所有冲煮笔记
+                const notesStr = await Storage.get('brewingNotes')
+                if (!notesStr) return 1
+
+                const notes: BrewingNote[] = JSON.parse(notesStr)
+                if (!Array.isArray(notes)) return 1
+
+                // 计算时间范围
+                const now = Date.now()
+                const dayInMs = 24 * 60 * 60 * 1000
+                let cutoffTime = 0
+                let totalDays = 1
+
+                if (selectedTimeRange === 'week') {
+                    cutoffTime = now - (7 * dayInMs)
+                    totalDays = 7
+                } else if (selectedTimeRange === 'month') {
+                    cutoffTime = now - (30 * dayInMs)
+                    totalDays = 30
+                } else {
+                    // 'all' - 使用全部数据计算
+                    cutoffTime = 0
+                }
+
+                // 获取所有咖啡豆名称列表
+                const beanNames = filteredBeans.map(bean => bean.name)
+                if (beanNames.length === 0) return 1
+
+                // 筛选出相关的笔记记录
+                let relevantNotes = notes.filter(note => {
+                    return note.coffeeBeanInfo?.name && beanNames.includes(note.coffeeBeanInfo.name)
+                })
+
+                // 根据时间区间过滤
+                if (selectedTimeRange !== 'all') {
+                    relevantNotes = relevantNotes.filter(note => note.timestamp >= cutoffTime)
+                } else {
+                    // 对于"目前为止"，计算实际的天数
+                    if (relevantNotes.length > 0) {
+                        const firstNoteTimestamp = Math.min(...relevantNotes.map(note => note.timestamp))
+                        totalDays = Math.max(1, Math.ceil((now - firstNoteTimestamp) / dayInMs))
+                    }
+                }
+
+                if (relevantNotes.length === 0) return totalDays
+
+                // 根据计算模式确定实际天数
+                if (calculationMode === 'coffee' && selectedTimeRange !== 'all') {
+                    // 咖啡日模式：计算实际有冲煮记录的天数
+                    const uniqueDays = new Set<string>()
+                    relevantNotes.forEach(note => {
+                        const date = new Date(note.timestamp)
+                        const dateKey = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`
+                        uniqueDays.add(dateKey)
+                    })
+                    totalDays = Math.max(1, uniqueDays.size)
+                } else if (calculationMode === 'coffee' && selectedTimeRange === 'all') {
+                    // 咖啡日模式且为"目前为止"：计算实际有冲煮记录的天数
+                    const uniqueDays = new Set<string>()
+                    relevantNotes.forEach(note => {
+                        const date = new Date(note.timestamp)
+                        const dateKey = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`
+                        uniqueDays.add(dateKey)
+                    })
+                    totalDays = Math.max(1, uniqueDays.size)
+                }
+                // 自然日模式：使用固定的天数（已在上面设置）
+
+                return totalDays
+            } catch (error) {
+                console.error('计算实际天数失败:', error)
+                return 1
+            }
+        }
+    }, [filteredBeans, selectedTimeRange, calculationMode])
+
     // 点击外部关闭时间区间下拉菜单
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -259,8 +358,8 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
         return () => document.removeEventListener('mousedown', handleClickOutside)
     }, [showTimeRangeDropdown])
 
-    // 新的平均消耗计算函数 - 基于时间区间
-    const calculateNewAverageConsumption = useMemo(() => {
+    // 平均消耗计算函数 - 基于时间区间和冲煮记录
+    const calculateAverageConsumption = useMemo(() => {
         return async (beanType: 'espresso' | 'filter'): Promise<number> => {
             try {
                 // 获取所有冲煮笔记
@@ -312,6 +411,19 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
 
                 if (relevantNotes.length === 0) return 0
 
+                // 根据计算模式确定实际天数
+                if (calculationMode === 'coffee' && selectedTimeRange !== 'all') {
+                    // 咖啡日模式：计算实际有冲煮记录的天数
+                    const uniqueDays = new Set<string>()
+                    relevantNotes.forEach(note => {
+                        const date = new Date(note.timestamp)
+                        const dateKey = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`
+                        uniqueDays.add(dateKey)
+                    })
+                    totalDays = Math.max(1, uniqueDays.size)
+                }
+                // 自然日模式：使用固定的天数（已在上面设置）
+
                 // 计算总消耗量
                 let totalConsumption = 0
                 relevantNotes.forEach(note => {
@@ -334,7 +446,7 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
                 return 0
             }
         }
-    }, [filteredBeans, selectedTimeRange])
+    }, [filteredBeans, selectedTimeRange, calculationMode])
     
 
     
@@ -365,25 +477,35 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
         fetchUsername();
     }, []);
 
-    // 计算新的平均消耗
+    // 计算平均消耗
     useEffect(() => {
         const calculateConsumptions = async () => {
             const hasEspresso = stats.espressoStats && stats.espressoStats.totalBeans > 0;
             const hasFilter = stats.filterStats && stats.filterStats.totalBeans > 0;
 
             if (hasEspresso) {
-                const espressoAvg = await calculateNewAverageConsumption('espresso');
+                const espressoAvg = await calculateAverageConsumption('espresso');
                 setEspressoAverageConsumption(espressoAvg);
             }
 
             if (hasFilter) {
-                const filterAvg = await calculateNewAverageConsumption('filter');
+                const filterAvg = await calculateAverageConsumption('filter');
                 setFilterAverageConsumption(filterAvg);
             }
         };
 
         calculateConsumptions();
-    }, [stats, calculateNewAverageConsumption]);
+    }, [stats, calculateAverageConsumption]);
+
+    // 计算实际天数
+    useEffect(() => {
+        const updateActualDays = async () => {
+            const days = await calculateActualDays();
+            setActualDays(days);
+        };
+
+        updateActualDays();
+    }, [calculateActualDays]);
 
     return (
         <div className="bg-neutral-50 dark:bg-neutral-900 overflow-x-hidden coffee-bean-stats-container">
@@ -596,6 +718,9 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
                             selectedTimeRange={TIME_RANGE_LABELS[selectedTimeRange]}
                             onToggleTimeRangeDropdown={handleToggleTimeRangeDropdown}
                             showTimeRangeDropdown={showTimeRangeDropdown}
+                            calculationMode={CALCULATION_MODE_LABELS[calculationMode]}
+                            onToggleCalculationMode={handleCalculationModeToggle}
+                            actualDays={actualDays}
                         />
                         <div className="">✦</div>
                     </div>
