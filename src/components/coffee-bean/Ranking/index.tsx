@@ -151,7 +151,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
 
             if (viewMode === 'blogger') {
                 // Use CSV utility function with the current year state
-                ratedBeansData = getBloggerBeans(beanType, year);
+                ratedBeansData = await getBloggerBeans(beanType, year);
                 unratedBeansData = []; // Blogger view doesn't show unrated
             } else {
                 // Load personal rated beans
@@ -391,9 +391,24 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                                                 infoArray.push(bean.beanType === 'espresso' ? '意式豆' : '手冲豆');
                                             }
                                             
-                                            // Roast Level - Conditionally display
-                                            if (bean.roastLevel && bean.roastLevel !== '未知') {
-                                                infoArray.push(bean.roastLevel);
+                                            // 处理法和烘焙度 - 博主榜单2025手冲豆特殊处理
+                                            if (viewMode === 'blogger' && (bean as BloggerBean).year === 2025 && bean.beanType === 'filter') {
+                                                // 2025手冲豆：处理法 · 烘焙度
+                                                const processInfo = bean.process && bean.process !== '/' ? bean.process : '';
+                                                const roastInfo = bean.roastLevel && bean.roastLevel !== '未知' && bean.roastLevel !== '/' ? bean.roastLevel : '';
+
+                                                if (processInfo && roastInfo) {
+                                                    infoArray.push(`${processInfo} · ${roastInfo}`);
+                                                } else if (processInfo) {
+                                                    infoArray.push(processInfo);
+                                                } else if (roastInfo) {
+                                                    infoArray.push(roastInfo);
+                                                }
+                                            } else {
+                                                // 其他情况：只显示烘焙度
+                                                if (bean.roastLevel && bean.roastLevel !== '未知') {
+                                                    infoArray.push(bean.roastLevel);
+                                                }
                                             }
                                             
                                             // 视频期数 - 博主榜单模式下显示

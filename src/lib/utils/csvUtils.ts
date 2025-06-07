@@ -1,10 +1,54 @@
 import { CoffeeBean } from '@/types/app';
-// Import 2025 data (assuming these are the current files)
-import filterBeans2025CSV from '/public/data/filter-beans.csv';
-import espressoBeans2025CSV from '/public/data/espresso-beans.csv';
-// Import 2024 data
-import filterBeans2024CSV from '/public/data/filter-beans-2024.csv';
-import espressoBeans2024CSV from '/public/data/espresso-beans-2024.csv';
+
+// 动态导入CSV数据以避免构建时问题
+let filterBeans2025CSV: any[] = [];
+let espressoBeans2025CSV: any[] = [];
+let filterBeans2024CSV: any[] = [];
+let espressoBeans2024CSV: any[] = [];
+
+// 异步加载CSV数据
+const loadCSVData = async () => {
+    try {
+        // 使用fetch来加载CSV数据
+        const [filter2025, espresso2025, filter2024, espresso2024] = await Promise.all([
+            fetch('/data/filter-beans.csv').then(r => r.text()),
+            fetch('/data/espresso-beans.csv').then(r => r.text()),
+            fetch('/data/filter-beans-2024.csv').then(r => r.text()),
+            fetch('/data/espresso-beans-2024.csv').then(r => r.text())
+        ]);
+
+        // 简单的CSV解析函数
+        const parseCSV = (csvText: string) => {
+            return csvText.split('\n').map(line => {
+                // 简单的CSV解析，处理逗号分隔
+                const values = [];
+                let current = '';
+                let inQuotes = false;
+
+                for (let i = 0; i < line.length; i++) {
+                    const char = line[i];
+                    if (char === '"') {
+                        inQuotes = !inQuotes;
+                    } else if (char === ',' && !inQuotes) {
+                        values.push(current.trim());
+                        current = '';
+                    } else {
+                        current += char;
+                    }
+                }
+                values.push(current.trim());
+                return values;
+            });
+        };
+
+        filterBeans2025CSV = parseCSV(filter2025);
+        espressoBeans2025CSV = parseCSV(espresso2025);
+        filterBeans2024CSV = parseCSV(filter2024);
+        espressoBeans2024CSV = parseCSV(espresso2024);
+    } catch (error) {
+        console.error('加载CSV数据失败:', error);
+    }
+};
 
 export interface BloggerBean extends CoffeeBean {
     isBloggerRecommended: boolean;
@@ -17,62 +61,95 @@ export interface BloggerBean extends CoffeeBean {
 // Parsing function for 2025 CSV data
 function parseCSVContent2025(records: unknown[], beanType: 'espresso' | 'filter'): BloggerBean[] {
     // Skip header rows (adjust if necessary, assuming 2 header rows)
-    const dataRows = records.slice(2); 
-    
+    const dataRows = records.slice(2);
+
     return dataRows
         .filter(row => {
             if (!Array.isArray(row) || row.length < 6) return false; // Basic validation for 2025 format
-            const [_序号, 品牌, 咖啡豆, _烘焙度, 克价, 喜好星值] = row;
-            return 品牌 && 咖啡豆 && 克价 !== undefined && 喜好星值 !== undefined; // Ensure essential fields exist
+            // 手冲豆有处理法列，意式豆没有处理法列
+            if (beanType === 'filter') {
+                if (row.length < 7) return false; // 手冲豆需要至少7列（包含处理法）
+                const [_序号, 品牌, 咖啡豆, _处理法, _烘焙度, 克价, 喜好星值] = row;
+                return 品牌 && 咖啡豆 && 克价 !== undefined && 喜好星值 !== undefined;
+            } else {
+                // 意式豆没有处理法列
+                const [_序号, 品牌, 咖啡豆, _烘焙度, 克价, 喜好星值] = row;
+                return 品牌 && 咖啡豆 && 克价 !== undefined && 喜好星值 !== undefined;
+            }
         })
         .map(row => {
-            const rowArray = row as [
-                string | number, // 序号
-                string,         // 品牌 
-                string,         // 咖啡豆
-                string,         // 烘焙度
-                string | number, // 克价
-                string | number, // 喜好星值
-                string | number, // 视频期数
-                string | number, // 美式分数(意式豆) 或 购买渠道(手冲豆)
-                string | number, // 奶咖分数(意式豆) 或 其他数据
-                string | number, // 购买渠道(意式豆) 或 其他数据
-                string | number, // 备注(意式豆) 或 其他数据
-                ...unknown[]    // 其他数据
-            ];
-            
-            const [序号, 品牌, 咖啡豆, 烘焙度, 克价, 喜好星值, videoEpisode, ...rest] = rowArray;
+            let 序号: string | number, 品牌: string, 咖啡豆: string, 处理法: string, 烘焙度: string, 克价: string | number, 喜好星值: string | number, videoEpisode: string | number, rest: unknown[];
+
+            if (beanType === 'filter') {
+                // 手冲豆：序号,品牌,咖啡豆,处理法,烘焙度,克价（元）,喜好星值,视频期数,备注,购买渠道
+                const rowArray = row as [
+                    string | number, // 序号
+                    string,         // 品牌
+                    string,         // 咖啡豆
+                    string,         // 处理法
+                    string,         // 烘焙度
+                    string | number, // 克价
+                    string | number, // 喜好星值
+                    string | number, // 视频期数
+                    string | number, // 备注
+                    string | number, // 购买渠道
+                    ...unknown[]    // 其他数据
+                ];
+                [序号, 品牌, 咖啡豆, 处理法, 烘焙度, 克价, 喜好星值, videoEpisode, ...rest] = rowArray;
+            } else {
+                // 意式豆：序号,品牌,咖啡豆,烘焙度,克价（元）,喜好星值,视频期数,美式,奶咖,备注,购买渠道
+                const rowArray = row as [
+                    string | number, // 序号
+                    string,         // 品牌
+                    string,         // 咖啡豆
+                    string,         // 烘焙度
+                    string | number, // 克价
+                    string | number, // 喜好星值
+                    string | number, // 视频期数
+                    string | number, // 美式分数
+                    string | number, // 奶咖分数
+                    string | number, // 备注
+                    string | number, // 购买渠道
+                    ...unknown[]    // 其他数据
+                ];
+                [序号, 品牌, 咖啡豆, 烘焙度, 克价, 喜好星值, videoEpisode, ...rest] = rowArray;
+                处理法 = ''; // 意式豆没有处理法信息
+            }
             
             const beanId = 序号 !== undefined ? String(序号).trim() : '';
             const price = parseFloat(String(克价)) || 0;
             const rating = parseFloat(String(喜好星值)) || 0;
             const name = `${品牌} ${咖啡豆}`;
             const capacity = '200'; // Default capacity
-            
+            const processMethod = String(处理法 || '').trim(); // 处理法信息
+
             let 备注 = '';
             let purchaseChannel = '';
-            
+
             if (beanType === 'espresso') {
-                if (rest.length >= 3) {
-                    purchaseChannel = String(rest[2] || ''); // 意式豆 - 购买渠道 (Index 9 in original rowArray, rest index 2)
-                    备注 = String(rest[3] || ''); // 意式豆 - 备注 (Index 10 in original rowArray, rest index 3)
+                // 意式豆：rest = [美式分数, 奶咖分数, 备注, 购买渠道, ...]
+                if (rest.length >= 2) {
+                    备注 = String(rest[2] || ''); // 备注
+                    purchaseChannel = String(rest[3] || ''); // 购买渠道
                 }
             } else if (beanType === 'filter') {
-                 if (rest.length >= 1) {
-                     purchaseChannel = String(rest[0] || ''); // 手冲豆 - 购买渠道 (Index 7 in original rowArray, rest index 0)
-                     备注 = String(rest[1] || ''); // 手冲豆 - 备注 (Index 8 in original rowArray, rest index 1)
-                 }
+                // 手冲豆：rest = [备注, 购买渠道, ...]
+                if (rest.length >= 1) {
+                    备注 = String(rest[0] || ''); // 备注
+                    purchaseChannel = String(rest[1] || ''); // 购买渠道
+                }
             }
-            
+
             const episode = videoEpisode ? String(videoEpisode).trim() : '';
-            const uniqueId = `blogger-${beanType}-2025-${beanId}-${name}-${Math.random().toString(36).substr(2, 5)}`;
-            
+            const uniqueId = `blogger-${beanType}-2025-${beanId}-${name}-${Math.random().toString(36).substring(2, 7)}`;
+
             return {
                 id: uniqueId,
                 name,
                 beanType,
                 year: 2025, // Add year
                 roastLevel: String(烘焙度 || '未知'), // Handle potentially undefined roast level
+                process: processMethod, // 添加处理法信息
                 price: `${(price * 100).toFixed(2)}`, // Convert price per gram to price per 100g
                 capacity,
                 remaining: capacity,
@@ -87,11 +164,11 @@ function parseCSVContent2025(records: unknown[], beanType: 'espresso' | 'filter'
                     ratingEspresso: ((value) => {
                         const parsed = parseFloat(String(value));
                         return isNaN(parsed) ? undefined : parsed; // Use undefined if NaN
-                    })(rest[0]), // Espresso score (Index 7 in original rowArray, rest index 0)
+                    })(rest[0]), // 美式分数
                     ratingMilkBased: ((value) => {
                         const parsed = parseFloat(String(value));
                         return isNaN(parsed) ? undefined : parsed; // Use undefined if NaN
-                    })(rest[1]) // Milk score (Index 8 in original rowArray, rest index 1)
+                    })(rest[1]) // 奶咖分数
                 })
             } as BloggerBean;
         });
@@ -168,7 +245,7 @@ function parseCSVContent2024(records: unknown[], beanType: 'espresso' | 'filter'
             const capacity = '200'; 
             const episode = 期 ? String(期).trim() : '';
 
-            const uniqueId = `blogger-${beanType}-2024-${beanId}-${name.replace(/\s+/g, '-')}-${Math.random().toString(36).substr(2, 5)}`;
+            const uniqueId = `blogger-${beanType}-2024-${beanId}-${name.replace(/\s+/g, '-')}-${Math.random().toString(36).substring(2, 7)}`;
 
             return {
                 id: uniqueId,
@@ -192,7 +269,12 @@ function parseCSVContent2024(records: unknown[], beanType: 'espresso' | 'filter'
 }
 
 
-export function getBloggerBeans(type: 'all' | 'espresso' | 'filter' = 'all', year: 2024 | 2025 = 2025): BloggerBean[] {
+export async function getBloggerBeans(type: 'all' | 'espresso' | 'filter' = 'all', year: 2024 | 2025 = 2025): Promise<BloggerBean[]> {
+    // 确保CSV数据已加载
+    if (filterBeans2025CSV.length === 0) {
+        await loadCSVData();
+    }
+
     let beans: BloggerBean[] = [];
     const parseFn = year === 2024 ? parseCSVContent2024 : parseCSVContent2025;
     const filterCSV = year === 2024 ? filterBeans2024CSV : filterBeans2025CSV;
@@ -208,7 +290,45 @@ export function getBloggerBeans(type: 'all' | 'espresso' | 'filter' = 'all', yea
             const espressoBeans = parseFn(espressoCSV, 'espresso');
             beans = [...beans, ...espressoBeans];
         }
-        
+
+        // Sort based on the original index from the CSV file
+        return beans.sort((a, b) => {
+            // Use originalIndex for stable sorting based on CSV order
+            const indexA = a.originalIndex ?? Infinity;
+            const indexB = b.originalIndex ?? Infinity;
+            return indexA - indexB;
+        });
+
+    } catch (error) {
+        console.error(`解析 ${year} 博主榜单咖啡豆数据失败:`, error);
+        return [];
+    }
+}
+
+// 为了向后兼容，提供一个同步版本（返回空数组，但会触发异步加载）
+export function getBloggerBeansSync(type: 'all' | 'espresso' | 'filter' = 'all', year: 2024 | 2025 = 2025): BloggerBean[] {
+    // 如果数据还没加载，触发加载但返回空数组
+    if (filterBeans2025CSV.length === 0) {
+        loadCSVData();
+        return [];
+    }
+
+    let beans: BloggerBean[] = [];
+    const parseFn = year === 2024 ? parseCSVContent2024 : parseCSVContent2025;
+    const filterCSV = year === 2024 ? filterBeans2024CSV : filterBeans2025CSV;
+    const espressoCSV = year === 2024 ? espressoBeans2024CSV : espressoBeans2025CSV;
+
+    try {
+        if (type === 'all' || type === 'filter') {
+            const filterBeans = parseFn(filterCSV, 'filter');
+            beans = [...beans, ...filterBeans];
+        }
+
+        if (type === 'all' || type === 'espresso') {
+            const espressoBeans = parseFn(espressoCSV, 'espresso');
+            beans = [...beans, ...espressoBeans];
+        }
+
         // Sort based on the original index from the CSV file
         return beans.sort((a, b) => {
             // Use originalIndex for stable sorting based on CSV order

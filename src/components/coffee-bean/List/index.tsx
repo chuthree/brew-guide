@@ -242,7 +242,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
 
         try {
             // 直接调用csvUtils中的函数，传入选定的年份
-            const bloggerBeansData = getBloggerBeans(rankingBeanType, bloggerYear);
+            const bloggerBeansData = await getBloggerBeans(rankingBeanType, bloggerYear);
 
             // 更新博主榜单豆子数量
             setBloggerBeansCount(bloggerBeansData.length);
