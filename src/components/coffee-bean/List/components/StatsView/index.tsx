@@ -6,6 +6,7 @@ import { calculateStats, stardomFontStyle, formatNumber } from './utils'
 import BeanImageGallery from './BeanImageGallery'
 import StatsSummary, { calculateEstimatedFinishDate } from './StatsSummary'
 import StatsCategories from './StatsCategories'
+
 import { useAnimation } from './useAnimation'
 import { useConsumption } from './useConsumption'
 import { Storage } from '@/lib/core/storage'
@@ -90,19 +91,17 @@ const calculateTimeRangeConsumption = async (beans: any[], timeRange: TimeRange)
                     if (!isNaN(coffeeAmount)) {
                         consumption += coffeeAmount;
 
-                        // 判断是否是意式咖啡
-                        const isEspresso = note.equipment === 'Espresso' ||
-                                         note.equipment === '意式咖啡机' ||
-                                         note.equipment === 'espresso' ||
-                                         note.equipment?.toLowerCase().includes('espresso') ||
-                                         note.equipment?.toLowerCase().includes('意式') ||
-                                         (note.coffeeBeanInfo?.name &&
-                                          beans.find(b => b.name === note.coffeeBeanInfo?.name)?.beanType === 'espresso');
+                        // 根据咖啡豆类型判断消耗分类
+                        const bean = note.coffeeBeanInfo?.name ?
+                                   beans.find(b => b.name === note.coffeeBeanInfo?.name) : null;
+
+                        const isEspresso = bean?.beanType === 'espresso';
+                        const isFilter = bean?.beanType === 'filter';
 
                         // 分别统计手冲和意式消耗
                         if (isEspresso) {
                             espressoConsumption += coffeeAmount;
-                        } else {
+                        } else if (isFilter) {
                             filterConsumption += coffeeAmount;
                         }
 
@@ -118,7 +117,7 @@ const calculateTimeRangeConsumption = async (beans: any[], timeRange: TimeRange)
 
                                     if (isEspresso) {
                                         espressoCost += noteCost;
-                                    } else {
+                                    } else if (isFilter) {
                                         filterCost += noteCost;
                                     }
                                 }
@@ -170,6 +169,8 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
 
     // 实际天数状态
     const [actualDays, setActualDays] = useState<number>(1)
+
+
 
     // 根据时间区间过滤咖啡豆数据
     const filteredBeans = useMemo(() => {
@@ -314,17 +315,8 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
                 if (relevantNotes.length === 0) return totalDays
 
                 // 根据计算模式确定实际天数
-                if (calculationMode === 'coffee' && selectedTimeRange !== 'all') {
+                if (calculationMode === 'coffee') {
                     // 咖啡日模式：计算实际有冲煮记录的天数
-                    const uniqueDays = new Set<string>()
-                    relevantNotes.forEach(note => {
-                        const date = new Date(note.timestamp)
-                        const dateKey = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`
-                        uniqueDays.add(dateKey)
-                    })
-                    totalDays = Math.max(1, uniqueDays.size)
-                } else if (calculationMode === 'coffee' && selectedTimeRange === 'all') {
-                    // 咖啡日模式且为"目前为止"：计算实际有冲煮记录的天数
                     const uniqueDays = new Set<string>()
                     relevantNotes.forEach(note => {
                         const date = new Date(note.timestamp)
@@ -412,7 +404,7 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
                 if (relevantNotes.length === 0) return 0
 
                 // 根据计算模式确定实际天数
-                if (calculationMode === 'coffee' && selectedTimeRange !== 'all') {
+                if (calculationMode === 'coffee') {
                     // 咖啡日模式：计算实际有冲煮记录的天数
                     const uniqueDays = new Set<string>()
                     relevantNotes.forEach(note => {
@@ -798,6 +790,8 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
                                                     <span className="text-neutral-800 dark:text-white font-mono">{espressoFinishDate}</span>
                                                 </div>
                                             </div>
+
+
                                         </div>
 
                                         {/* 手冲豆统计 */}
@@ -844,6 +838,8 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
                                                     <span className="text-neutral-800 dark:text-white font-mono">{filterFinishDate}</span>
                                                 </div>
                                             </div>
+
+
                                         </div>
                                     </>
                                 );
@@ -895,6 +891,8 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
                                                 <span className="text-neutral-800 dark:text-white font-mono">{espressoFinishDate}</span>
                                             </div>
                                         </div>
+
+
                                     </div>
                                 );
                             }
@@ -944,6 +942,8 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
                                                 <span className="text-neutral-800 dark:text-white font-mono">{filterFinishDate}</span>
                                             </div>
                                         </div>
+
+
                                     </div>
                                 );
                             }
@@ -981,8 +981,9 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
                     />
                 </div>
 
-                
+
             </div>
+
             {/* 分享按钮 */}
             <div className="p-4 max-w-xs mx-auto text-center">
                 <button

@@ -46,24 +46,17 @@ export const useConsumption = (beans: ExtendedCoffeeBean[]): TodayConsumptionDat
                             if (!isNaN(coffeeAmount)) {
                                 consumption += coffeeAmount;
 
-                                // 判断是否是意式咖啡 - 改进判断逻辑
-                                const isEspresso = note.equipment === 'Espresso' ||
-                                                 note.equipment === '意式咖啡机' ||
-                                                 note.equipment === 'espresso' ||
-                                                 note.equipment?.toLowerCase().includes('espresso') ||
-                                                 note.equipment?.toLowerCase().includes('意式') ||
-                                                 (note.stages && Array.isArray(note.stages) &&
-                                                  note.stages.some((stage: any) =>
-                                                    stage.pourType === 'extraction' || stage.pourType === 'beverage'
-                                                  )) ||
-                                                 // 如果咖啡豆信息中标明是意式豆，也算作意式咖啡
-                                                 (note.coffeeBeanInfo?.name &&
-                                                  beans.find(b => b.name === note.coffeeBeanInfo?.name)?.beanType === 'espresso');
+                                // 根据咖啡豆类型判断消耗分类
+                                const bean = note.coffeeBeanInfo?.name ?
+                                           beans.find(b => b.name === note.coffeeBeanInfo?.name) : null;
+
+                                const isEspresso = bean?.beanType === 'espresso';
+                                const isFilter = bean?.beanType === 'filter';
 
                                 // 分别统计手冲和意式消耗
                                 if (isEspresso) {
                                     espressoConsumption += coffeeAmount;
-                                } else {
+                                } else if (isFilter) {
                                     filterConsumption += coffeeAmount;
                                 }
 
@@ -82,7 +75,7 @@ export const useConsumption = (beans: ExtendedCoffeeBean[]): TodayConsumptionDat
                                             // 分别统计手冲和意式花费
                                             if (isEspresso) {
                                                 espressoCost += noteCost;
-                                            } else {
+                                            } else if (isFilter) {
                                                 filterCost += noteCost;
                                             }
                                         }
