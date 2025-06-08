@@ -1028,21 +1028,10 @@ const handleChange = async <K extends keyof SettingsOptions>(
                     <p>[版本号]</p>
                     <p>v{APP_VERSION}</p>
 
-                    <p className='mt-12'>[来自开发者的小废话]</p>
-                    <div className="mt-4 whitespace-pre-wrap text-left mx-auto max-w-52 leading-relaxed">
-                       Hi！感谢你愿意尝试这个小工具，还看到了这里，
-                       <br /><br />
-                       起初，因为自己记不住方案，也把握不好注水节奏，就开发了这个小工具
-                       <br /> <br />
-                       没想到发到群里后，能收到这么多支持和反馈，还认识到了好多大佬！
-                       <br /> <br />
-                       真的谢谢你们，希望我们能一起进步ww
-                    </div>
-
                     <p className='mt-12'>[感谢]</p>
 
                     <p>感谢以下赞助者的支持</p>
-                    <p className="mt-4 mx-auto max-w-56">
+                    <p className="mt-4 mx-auto max-w-48 text-left leading-relaxed">
                         {sponsorsList
                             .sort((a, b) => {
                                 const isAEnglish = /^[A-Za-z0-9\s:]+$/.test(a.charAt(0));
@@ -1053,7 +1042,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                 return a.localeCompare(b, 'zh-CN');
                             })
                             .join('、')}
-                        {' 。 and You。'}
+                        、and You
                     </p>
                     <p className="mt-12">
                         <a

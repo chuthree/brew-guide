@@ -1197,7 +1197,7 @@ export function createEditableMethodFromCommon(method: Method, namePrefix: strin
 export const sponsorsList = [
 	"Asura",
 	"QD",
-	"dio 哒哒哒的",
+	"dio 哒哒哒",
 	"H.M.S Cheshire",
 	"Peter",
 	"Wang王",
