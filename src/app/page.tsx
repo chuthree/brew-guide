@@ -2088,6 +2088,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                         onShowImport={() => setShowImportBeanForm(true)}
                         externalViewMode={currentBeanView}
                         onExternalViewChange={handleBeanViewChange}
+                        settings={{
+                            showFlavorPeriod: settings.showFlavorPeriod,
+                            showOnlyBeanName: settings.showOnlyBeanName
+                        }}
                     />
                 </ErrorBoundary>
             )}

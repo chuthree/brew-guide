@@ -42,6 +42,11 @@ export interface CoffeeBeansProps {
     // 添加外部视图控制相关props
     externalViewMode?: ViewOption
     onExternalViewChange?: (view: ViewOption) => void
+    // 添加设置参数
+    settings?: {
+        showFlavorPeriod?: boolean
+        showOnlyBeanName?: boolean
+    }
 }
 
 // 导出工具函数

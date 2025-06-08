@@ -24,6 +24,11 @@ interface BeanListItemProps {
     onRemainingClick: (bean: ExtendedCoffeeBean, event: React.MouseEvent) => void
     onDetailClick?: (bean: ExtendedCoffeeBean) => void
     searchQuery?: string
+    // 添加设置参数
+    settings?: {
+        showFlavorPeriod?: boolean
+        showOnlyBeanName?: boolean
+    }
 }
 
 const BeanListItem: React.FC<BeanListItemProps> = ({
@@ -35,16 +40,17 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
     // onShare, // 移至详情页面
     onRemainingClick,
     onDetailClick,
-    searchQuery = ''
+    searchQuery = '',
+    settings
 }) => {
     // 图片查看器状态和错误状态
     const [imageViewerOpen, setImageViewerOpen] = useState(false);
     const [imageError, setImageError] = useState(false);
     const [_imageLoaded, _setImageLoaded] = useState(false);
     
-    // 添加设置状态 - 使用props传入，避免每个组件都加载设置
-    const [showOnlyBeanName] = useState(true); // 默认只显示咖啡豆名称
-    const [showFlavorPeriod] = useState(false); // 默认不显示赏味期信息
+    // 从props中获取设置，如果没有传入则使用默认值
+    const showOnlyBeanName = settings?.showOnlyBeanName ?? true; // 默认只显示咖啡豆名称
+    const showFlavorPeriod = settings?.showFlavorPeriod ?? false; // 默认不显示赏味期信息
 
 
 

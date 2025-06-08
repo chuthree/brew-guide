@@ -60,7 +60,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     showBeanForm,
     onShowImport,
     externalViewMode,
-    onExternalViewChange
+    onExternalViewChange,
+    settings
 }) => {
     const { copyText, showFailureModal, failureContent, closeFailureModal } = useCopy()
 
@@ -1093,6 +1094,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
                             isSearching={isSearching}
                             searchQuery={searchQuery}
                             isImageFlowMode={isImageFlowMode}
+                            settings={settings}
                         />
                     )}
                     {/* 添加统计视图 */}

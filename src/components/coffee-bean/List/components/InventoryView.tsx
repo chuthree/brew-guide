@@ -29,7 +29,11 @@ interface InventoryViewProps {
     searchQuery?: string
     // 新增图片流模式相关props
     isImageFlowMode?: boolean
-
+    // 添加设置参数
+    settings?: {
+        showFlavorPeriod?: boolean
+        showOnlyBeanName?: boolean
+    }
 }
 
 const InventoryView: React.FC<InventoryViewProps> = ({
@@ -49,7 +53,8 @@ const InventoryView: React.FC<InventoryViewProps> = ({
     onQuickDecrement,
     isSearching = false,
     searchQuery = '',
-    isImageFlowMode = false
+    isImageFlowMode = false,
+    settings
 }) => {
     // 添加剩余量编辑状态
     const [editingRemaining, setEditingRemaining] = useState<{
@@ -257,6 +262,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                             onRemainingClick={handleRemainingClick}
                             onDetailClick={handleDetailClick}
                             searchQuery={isSearching ? searchQuery : ''}
+                            settings={settings}
                         />
                     ))}
 
