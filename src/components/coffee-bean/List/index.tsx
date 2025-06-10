@@ -44,7 +44,6 @@ import { Filesystem, Directory } from '@capacitor/filesystem'
 import { Capacitor } from '@capacitor/core'
 import { toPng } from 'html-to-image'
 import { useToast } from '@/components/common/feedback/GlobalToast'
-import { Storage } from '@/lib/core/storage'
 import { exportStatsView } from './components/StatsView/StatsExporter'
 
 // 重命名导入组件以避免混淆
@@ -806,6 +805,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
             tempContainer.appendChild(clone);
 
             // 获取用户名
+            const { Storage } = await import('@/lib/core/storage');
             const settingsStr = await Storage.get('brewGuideSettings');
             let username = '';
             if (settingsStr) {

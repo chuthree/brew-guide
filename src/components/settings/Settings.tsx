@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { APP_VERSION, sponsorsList } from '@/lib/core/config'
-import { Storage } from '@/lib/core/storage'
 import DataManager from '../common/data/DataManager'
 import hapticsUtils from '@/lib/ui/haptics'
 import textZoomUtils from '@/lib/utils/textZoomUtils'
@@ -226,6 +225,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
     // 直接更新设置并保存到存储
     const newSettings = { ...settings, [key]: value }
     setSettings(newSettings)
+    const { Storage } = await import('@/lib/core/storage');
     await Storage.set('brewGuideSettings', JSON.stringify(newSettings))
 
     // 触发自定义事件通知其他组件设置已更改

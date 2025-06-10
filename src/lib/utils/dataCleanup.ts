@@ -3,8 +3,13 @@
  * 用于清理咖啡豆数据中的占位符和无效信息
  */
 
-import { Storage } from '@/lib/core/storage'
 import { db } from '@/lib/core/db'
+
+// 动态导入 Storage 的辅助函数
+const getStorage = async () => {
+    const { Storage } = await import('@/lib/core/storage');
+    return Storage;
+};
 
 // 占位符文本列表
 const PLACEHOLDER_TEXTS = [
@@ -91,7 +96,8 @@ const cleanBeanData = (bean: any): { cleanedBean: any; hasChanges: boolean } => 
  */
 export const analyzePlaceholderData = async () => {
     try {
-        const beansStr = await Storage.get('coffeeBeans')
+        const storage = await getStorage();
+        const beansStr = await storage.get('coffeeBeans')
         if (!beansStr) {
             return {
                 totalBeans: 0,
@@ -173,7 +179,8 @@ export const analyzePlaceholderData = async () => {
  */
 export const cleanAllPlaceholderData = async () => {
     try {
-        const beansStr = await Storage.get('coffeeBeans')
+        const storage = await getStorage();
+        const beansStr = await storage.get('coffeeBeans')
         if (!beansStr) {
             return {
                 success: true,
@@ -204,8 +211,8 @@ export const cleanAllPlaceholderData = async () => {
 
         // 如果有清理，更新存储
         if (cleanedBeans > 0) {
-            await Storage.set('coffeeBeans', JSON.stringify(cleanedBeansArray))
-            
+            await storage.set('coffeeBeans', JSON.stringify(cleanedBeansArray))
+
             // 同时更新IndexedDB
             try {
                 await db.coffeeBeans.clear()

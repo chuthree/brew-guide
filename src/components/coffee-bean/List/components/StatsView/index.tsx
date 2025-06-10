@@ -9,7 +9,6 @@ import StatsCategories from './StatsCategories'
 
 import { useAnimation } from './useAnimation'
 import { useConsumption } from './useConsumption'
-import { Storage } from '@/lib/core/storage'
 import { ArrowUpRight } from 'lucide-react'
 import type { BrewingNote } from '@/lib/core/config'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -35,6 +34,7 @@ export const CALCULATION_MODE_LABELS: Record<CalculationMode, string> = {
 const calculateTimeRangeConsumption = async (beans: any[], timeRange: TimeRange) => {
     try {
         // 获取所有冲煮记录
+        const { Storage } = await import('@/lib/core/storage');
         const notesStr = await Storage.get('brewingNotes')
         if (!notesStr) return {
             consumption: 0,
@@ -269,6 +269,7 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
         return async (): Promise<number> => {
             try {
                 // 获取所有冲煮笔记
+                const { Storage } = await import('@/lib/core/storage');
                 const notesStr = await Storage.get('brewingNotes')
                 if (!notesStr) return 1
 
@@ -355,6 +356,7 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
         return async (beanType: 'espresso' | 'filter'): Promise<number> => {
             try {
                 // 获取所有冲煮笔记
+                const { Storage } = await import('@/lib/core/storage');
                 const notesStr = await Storage.get('brewingNotes')
                 if (!notesStr) return 0
 
@@ -456,6 +458,7 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
     useEffect(() => {
         const fetchUsername = async () => {
             try {
+                const { Storage } = await import('@/lib/core/storage');
                 const settingsStr = await Storage.get('brewGuideSettings');
                 if (settingsStr) {
                     const settings = JSON.parse(settingsStr);

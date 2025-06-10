@@ -4,7 +4,6 @@
 import React, { useState, useEffect, useCallback, useRef, ReactNode } from 'react'
 import dynamic from 'next/dynamic'
 import { equipmentList, APP_VERSION, commonMethods, CustomEquipment, type Method } from '@/lib/core/config'
-import { Storage } from '@/lib/core/storage'
 import { initCapacitor } from '@/lib/app/capacitor'
 // 只导入需要的类型
 import type { CoffeeBean } from '@/types/app'
@@ -21,7 +20,6 @@ import MethodTypeSelector from '@/components/method/forms/MethodTypeSelector'
 import Onboarding from '@/components/onboarding/Onboarding'
 import CoffeeBeanFormModal from '@/components/coffee-bean/Form/Modal'
 import ImportModal from '@/components/common/modals/BeanImportModal'
-import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager'
 import textZoomUtils from '@/lib/utils/textZoomUtils'
 import { saveMainTabPreference } from '@/lib/navigation/navigationCache'
 import { ViewOption, VIEW_OPTIONS, VIEW_LABELS } from '@/components/coffee-bean/List/types'
@@ -74,7 +72,22 @@ const BrewingHistory = dynamic(() => import('@/components/notes/List'), { ssr: f
 const AppLoader = ({ onInitialized }: { onInitialized: (params: { hasBeans: boolean }) => void }) => {
     useEffect(() => {
         const loadInitialData = async () => {
+            // 确保只在客户端执行
+            if (typeof window === 'undefined') {
+                onInitialized({ hasBeans: false });
+                return;
+            }
+
             try {
+                // 动态导入所有需要的模块
+                const [
+                    { Storage },
+                    { CoffeeBeanManager }
+                ] = await Promise.all([
+                    import('@/lib/core/storage'),
+                    import('@/lib/managers/coffeeBeanManager')
+                ]);
+
                 // 检查咖啡豆状态
                 const beans = await CoffeeBeanManager.getAllBeans();
                 const hasBeans = beans.length > 0;
@@ -305,6 +318,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 // 检查coffee beans而不是直接调用不存在的函数
                 let hasCoffeeBeans = initialHasBeans;
                 try {
+                    const { Storage } = await import('@/lib/core/storage');
                     const beansStr = await Storage.get('coffeeBeans');
                     if (beansStr) {
                         const beans = JSON.parse(beansStr);
@@ -345,6 +359,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
                 // 1. 加载设置
                 try {
+                    const { Storage } = await import('@/lib/core/storage');
                     const savedSettings = await Storage.get('brewGuideSettings');
                     if (savedSettings && isMounted) {
                         const parsedSettings = JSON.parse(savedSettings) as SettingsOptions;
@@ -361,6 +376,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
                 // 2. 检查是否首次使用
                 try {
+                    const { Storage } = await import('@/lib/core/storage');
                     const onboardingCompleted = await Storage.get('onboardingCompleted');
                     if (isMounted) {
                         setShowOnboarding(!onboardingCompleted);
@@ -940,6 +956,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     const handleSettingsChange = async (newSettings: SettingsOptions) => {
         setSettings(newSettings);
         try {
+            const { Storage } = await import('@/lib/core/storage');
             await Storage.set('brewGuideSettings', JSON.stringify(newSettings))
 
             // 如果文本缩放设置发生变化，应用新的缩放级别
@@ -1052,6 +1069,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 }
 
                 // 添加到数据库
+                const { CoffeeBeanManager } = await import('@/lib/managers/coffeeBeanManager');
                 const newBean = await CoffeeBeanManager.addBean(bean);
                 lastImportedBean = newBean;
                 importCount++;
@@ -1093,6 +1111,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     // 完全重写checkCoffeeBeans函数，简化逻辑
     const checkCoffeeBeans = useCallback(async () => {
         try {
+            const { CoffeeBeanManager } = await import('@/lib/managers/coffeeBeanManager');
             const beans = await CoffeeBeanManager.getAllBeans();
             const hasAnyBeans = beans.length > 0;
             const wasHasBeans = hasCoffeeBeans;
@@ -1221,6 +1240,9 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     // 简化处理保存咖啡豆 - 统一数据更新机制
     const handleSaveBean = async (bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>) => {
         try {
+            // 动态导入 CoffeeBeanManager
+            const { CoffeeBeanManager } = await import('@/lib/managers/coffeeBeanManager');
+
             // 获取当前咖啡豆数量，用于判断是否是首次添加
             const currentBeans = await CoffeeBeanManager.getAllBeans();
             const isFirstBean = !editingBean && currentBeans.length === 0;
@@ -1387,6 +1409,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     const handleDataChange = async () => {
         try {
             // 重新加载设置
+            const { Storage } = await import('@/lib/core/storage');
             const savedSettings = await Storage.get('brewGuideSettings');
             if (savedSettings) {
                 setSettings(JSON.parse(savedSettings) as SettingsOptions);
@@ -1451,15 +1474,20 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             }
         };
 
-        const handleCoffeeBeanSelection = (e: CustomEvent) => {
+        const handleCoffeeBeanSelection = async (e: CustomEvent) => {
             const { beanName } = e.detail;
             if (beanName) {
-                // 查找匹配的咖啡豆并选择它
-                CoffeeBeanManager.getBeanByName(beanName).then(bean => {
+                try {
+                    // 动态导入 CoffeeBeanManager
+                    const { CoffeeBeanManager } = await import('@/lib/managers/coffeeBeanManager');
+                    // 查找匹配的咖啡豆并选择它
+                    const bean = await CoffeeBeanManager.getBeanByName(beanName);
                     if (bean) {
                         handleCoffeeBeanSelect(bean.id, bean);
                     }
-                });
+                } catch (error) {
+                    console.error('查找咖啡豆失败:', error);
+                }
             }
         };
 
@@ -1519,7 +1547,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         // 添加事件监听
         document.addEventListener(BREWING_EVENTS.NAVIGATE_TO_MAIN_TAB, handleMainTabNavigation as EventListener);
         document.addEventListener(BREWING_EVENTS.NAVIGATE_TO_STEP, handleStepNavigation as EventListener);
-        document.addEventListener(BREWING_EVENTS.SELECT_COFFEE_BEAN, handleCoffeeBeanSelection as EventListener);
+        document.addEventListener(BREWING_EVENTS.SELECT_COFFEE_BEAN, handleCoffeeBeanSelection as unknown as EventListener);
         document.addEventListener(BREWING_EVENTS.SELECT_EQUIPMENT, handleEquipmentSelection as EventListener);
         document.addEventListener(BREWING_EVENTS.SELECT_METHOD, handleMethodSelection as EventListener);
         document.addEventListener(BREWING_EVENTS.UPDATE_BREWING_PARAMS, handleParamsUpdate as EventListener);
@@ -1529,7 +1557,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             // 移除事件监听
             document.removeEventListener(BREWING_EVENTS.NAVIGATE_TO_MAIN_TAB, handleMainTabNavigation as EventListener);
             document.removeEventListener(BREWING_EVENTS.NAVIGATE_TO_STEP, handleStepNavigation as EventListener);
-            document.removeEventListener(BREWING_EVENTS.SELECT_COFFEE_BEAN, handleCoffeeBeanSelection as EventListener);
+            document.removeEventListener(BREWING_EVENTS.SELECT_COFFEE_BEAN, handleCoffeeBeanSelection as unknown as EventListener);
             document.removeEventListener(BREWING_EVENTS.SELECT_EQUIPMENT, handleEquipmentSelection as EventListener);
             document.removeEventListener(BREWING_EVENTS.SELECT_METHOD, handleMethodSelection as EventListener);
             document.removeEventListener(BREWING_EVENTS.UPDATE_BREWING_PARAMS, handleParamsUpdate as EventListener);
@@ -1614,6 +1642,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             const { globalCache } = await import('@/components/notes/List/globalCache');
 
             // 获取现有笔记
+            const { Storage } = await import('@/lib/core/storage');
             const existingNotesStr = await Storage.get('brewingNotes');
             const existingNotes = existingNotesStr ? JSON.parse(existingNotesStr) : [];
 
@@ -1654,6 +1683,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             globalCache.totalConsumption = calculateTotalCoffeeConsumption(updatedNotes);
 
             // 使用Storage API保存 - Storage.set() 会自动触发事件
+            // 注意：Storage 已经在上面导入了
             await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
 
             // 关闭表单

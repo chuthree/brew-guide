@@ -75,6 +75,10 @@ export const Storage = {
 				const { keys } = await Preferences.keys();
 				return keys;
 			} else {
+				// 检查是否在客户端环境
+				if (typeof window === 'undefined') {
+					return [];
+				}
 				// 在 Web 平台上使用 localStorage
 				return Object.keys(localStorage);
 			}
@@ -91,6 +95,10 @@ export const Storage = {
 	 */
 	getSync(key: string): string | null {
 		try {
+			// 检查是否在客户端环境
+			if (typeof window === 'undefined') {
+				return null;
+			}
 			return localStorage.getItem(key);
 		} catch (_error) {
 			console.error(`同步获取数据失败 [${key}]:`, _error);
@@ -105,6 +113,10 @@ export const Storage = {
 	 */
 	setSync(key: string, value: string): void {
 		try {
+			// 检查是否在客户端环境
+			if (typeof window === 'undefined') {
+				return;
+			}
 			localStorage.setItem(key, value);
 		} catch (_error) {
 			console.error(`同步保存数据失败 [${key}]:`, _error);

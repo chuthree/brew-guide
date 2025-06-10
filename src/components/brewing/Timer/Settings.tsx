@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Storage } from "@/lib/core/storage";
 
 // 布局设置接口
 export interface LayoutSettings {
@@ -61,6 +60,8 @@ const BrewingTimerSettings: React.FC<BrewingTimerSettingsProps> = ({
     // 将更新保存到 Storage 以确保持久化
     const updateSettings = async () => {
       try {
+        // 动态导入 Storage
+        const { Storage } = await import('@/lib/core/storage');
         // 先获取当前设置
         const currentSettingsStr = await Storage.get('brewGuideSettings');
         if (currentSettingsStr) {

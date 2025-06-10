@@ -6,7 +6,6 @@ import { ExtendedCoffeeBean } from '@/types/app'
 import { BrewingNote } from '@/lib/core/config'
 import { parseDateToTimestamp } from '@/lib/utils/dateUtils'
 import HighlightText from '@/components/common/ui/HighlightText'
-import { Storage } from '@/lib/core/storage'
 import { getEquipmentName } from '@/components/notes/utils'
 import { formatDate, formatRating } from '@/components/notes/utils'
 import {
@@ -305,6 +304,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
 
             setIsLoadingNotes(true)
             try {
+                const { Storage } = await import('@/lib/core/storage');
                 const notesStr = await Storage.get('brewingNotes')
                 if (!notesStr) {
                     setRelatedNotes([])

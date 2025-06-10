@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Storage } from '@/lib/core/storage'
 import { SettingsOptions, defaultSettings } from '@/components/settings/Settings'
 import textZoomUtils from '@/lib/utils/textZoomUtils'
 import confetti from 'canvas-confetti'
@@ -71,6 +70,8 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
     // 处理完成按钮点击
     const handleComplete = async () => {
         try {
+            // 动态导入 Storage
+            const { Storage } = await import('@/lib/core/storage');
             // 保存用户设置
             await Storage.set('brewGuideSettings', JSON.stringify(settings))
             // 标记引导已完成

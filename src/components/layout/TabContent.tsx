@@ -7,7 +7,6 @@ import { SettingsOptions } from '../settings/Settings';
 import { TabType, MainTabType, Content, Step as BaseStep } from '@/lib/hooks/useBrewingState';
 import { CoffeeBean } from '@/types/app';
 import type { BrewingNoteData } from '@/types/app';
-import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager'
 import { saveMainTabPreference } from '@/lib/navigation/navigationCache';
 import { showToast } from "@/components/common/feedback/GlobalToast";
 import { getEquipmentName } from '@/lib/brewing/parameters';
@@ -178,6 +177,7 @@ const TabContent: React.FC<TabContentProps> = ({
     useEffect(() => {
         const loadBeans = async () => {
             try {
+                const { CoffeeBeanManager } = await import('@/lib/managers/coffeeBeanManager');
                 const beans = await CoffeeBeanManager.getAllBeans();
                 setAllBeans(beans);
             } catch (error) {
@@ -195,6 +195,7 @@ const TabContent: React.FC<TabContentProps> = ({
     useEffect(() => {
         const handleBeansUpdated = async () => {
             try {
+                const { CoffeeBeanManager } = await import('@/lib/managers/coffeeBeanManager');
                 const beans = await CoffeeBeanManager.getAllBeans();
                 setAllBeans(beans);
             } catch (error) {
@@ -251,6 +252,7 @@ const TabContent: React.FC<TabContentProps> = ({
             if (selectedCoffeeBean && currentBrewingMethod?.params.coffee) {
                 const coffeeAmount = parseFloat(currentBrewingMethod.params.coffee);
                 if (!isNaN(coffeeAmount) && coffeeAmount > 0) {
+                    const { CoffeeBeanManager } = await import('@/lib/managers/coffeeBeanManager');
                     await CoffeeBeanManager.updateBeanRemaining(selectedCoffeeBean, coffeeAmount);
                 }
             }
@@ -425,6 +427,7 @@ const TabContent: React.FC<TabContentProps> = ({
         await triggerHapticFeedback();
         try {
             if (allBeans.length === 0) {
+                const { CoffeeBeanManager } = await import('@/lib/managers/coffeeBeanManager');
                 const beans = await CoffeeBeanManager.getAllBeans();
                 setAllBeans(beans);
             }

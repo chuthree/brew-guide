@@ -107,8 +107,11 @@ export const StorageUtils = {
         const notesCount = await db.brewingNotes.count();
         
         // 如果数据库为空但localStorage有数据，重置迁移标志强制重新迁移
-        if ((beansCount === 0 || notesCount === 0) && 
-            (localStorage.getItem('coffeeBeans') || localStorage.getItem('brewingNotes'))) {
+        // 检查是否在客户端环境
+        const hasLocalStorageData = typeof window !== 'undefined' &&
+          (localStorage.getItem('coffeeBeans') || localStorage.getItem('brewingNotes'));
+
+        if ((beansCount === 0 || notesCount === 0) && hasLocalStorageData) {
           console.log('虽然标记为已迁移，但数据似乎丢失，重新执行迁移...');
           // 重置迁移标志
           await db.settings.delete('migrated');
@@ -122,6 +125,12 @@ export const StorageUtils = {
       let migrationSuccessful = true;
       
       // 从localStorage获取所有需要迁移到IndexedDB的大数据项
+      // 检查是否在客户端环境
+      if (typeof window === 'undefined') {
+        console.log('不在客户端环境，跳过localStorage迁移');
+        return false;
+      }
+
       for (const key in STORAGE_TYPE_MAPPING) {
         if (STORAGE_TYPE_MAPPING[key] === StorageType.INDEXED_DB) {
           const value = localStorage.getItem(key);
@@ -205,8 +214,9 @@ export const StorageUtils = {
           if (key === 'brewingNotes') {
             const count = await db.brewingNotes.count();
             // 只有在IndexedDB中确实有数据，且localStorage中也有此数据时才清除
-            const localData = localStorage.getItem(key);
-            if (count > 0 && localData) {
+            // 检查是否在客户端环境
+            const localData = typeof window !== 'undefined' ? localStorage.getItem(key) : null;
+            if (count > 0 && localData && typeof window !== 'undefined') {
               localStorage.removeItem(key);
               console.log(`已从localStorage中清除${key}数据`);
             } else {
@@ -215,8 +225,9 @@ export const StorageUtils = {
           } else if (key === 'coffeeBeans') {
             const count = await db.coffeeBeans.count();
             // 只有在IndexedDB中确实有数据，且localStorage中也有此数据时才清除
-            const localData = localStorage.getItem(key);
-            if (count > 0 && localData) {
+            // 检查是否在客户端环境
+            const localData = typeof window !== 'undefined' ? localStorage.getItem(key) : null;
+            if (count > 0 && localData && typeof window !== 'undefined') {
               localStorage.removeItem(key);
               console.log(`已从localStorage中清除${key}数据`);
             } else {
@@ -224,7 +235,9 @@ export const StorageUtils = {
             }
           } else {
             const item = await db.settings.get(key);
-            if (item && localStorage.getItem(key)) {
+            // 检查是否在客户端环境
+            const hasLocalData = typeof window !== 'undefined' && localStorage.getItem(key);
+            if (item && hasLocalData) {
               localStorage.removeItem(key);
               console.log(`已从localStorage中清除${key}数据`);
             }
@@ -429,26 +442,29 @@ export const StorageUtils = {
       if (Capacitor.isNativePlatform()) {
         await Preferences.set({ key, value });
       } else {
-        localStorage.setItem(key, value);
-        
-        // 验证保存是否成功
-        const saved = localStorage.getItem(key);
-        if (saved !== value) {
-          // 重试一次
+        // 检查是否在客户端环境
+        if (typeof window !== 'undefined') {
           localStorage.setItem(key, value);
+
+          // 验证保存是否成功
+          const saved = localStorage.getItem(key);
+          if (saved !== value) {
+            // 重试一次
+            localStorage.setItem(key, value);
+          }
+
+          // 触发自定义事件
+          const storageEvent = new CustomEvent('storage:changed', {
+            detail: { key, source: 'internal' }
+          });
+          window.dispatchEvent(storageEvent);
+
+          // 同时触发 customStorageChange 事件，以确保所有组件都能收到通知
+          const customEvent = new CustomEvent('customStorageChange', {
+            detail: { key }
+          });
+          window.dispatchEvent(customEvent);
         }
-        
-        // 触发自定义事件
-        const storageEvent = new CustomEvent('storage:changed', {
-          detail: { key, source: 'internal' }
-        });
-        window.dispatchEvent(storageEvent);
-        
-        // 同时触发 customStorageChange 事件，以确保所有组件都能收到通知
-        const customEvent = new CustomEvent('customStorageChange', {
-          detail: { key }
-        });
-        window.dispatchEvent(customEvent);
       }
     }
   },
@@ -491,7 +507,12 @@ export const StorageUtils = {
         const { value } = await Preferences.get({ key });
         return value;
       } else {
-        return localStorage.getItem(key);
+        // 检查是否在客户端环境
+        if (typeof window !== 'undefined') {
+          return localStorage.getItem(key);
+        } else {
+          return null;
+        }
       }
     }
   },
@@ -519,7 +540,10 @@ export const StorageUtils = {
       if (Capacitor.isNativePlatform()) {
         await Preferences.remove({ key });
       } else {
-        localStorage.removeItem(key);
+        // 检查是否在客户端环境
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem(key);
+        }
       }
     }
   },
@@ -535,7 +559,10 @@ export const StorageUtils = {
     if (Capacitor.isNativePlatform()) {
       await Preferences.clear();
     } else {
-      localStorage.clear();
+      // 检查是否在客户端环境
+      if (typeof window !== 'undefined') {
+        localStorage.clear();
+      }
     }
   },
   
@@ -661,7 +688,12 @@ export const StorageUtils = {
         return keys;
       } else {
         // 在 Web 平台上使用 localStorage
-        return Object.keys(localStorage);
+        // 检查是否在客户端环境
+        if (typeof window !== 'undefined') {
+          return Object.keys(localStorage);
+        } else {
+          return [];
+        }
       }
     } catch (e) {
       console.error('获取存储键失败:', e);

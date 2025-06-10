@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { type Method, type CustomEquipment, brewingMethods } from '@/lib/core/config'
-import { Storage } from '@/lib/core/storage'
 
 interface UseMethodManagementProps {
   selectedEquipment: string
@@ -85,6 +84,7 @@ export function useMethodManagement({
           }
 
           // 尝试从localStorage加载
+          const { Storage } = await import('@/lib/core/storage');
           const customMethodsStr = await Storage.get('customMethods')
           if (customMethodsStr) {
             const parsedData = JSON.parse(customMethodsStr)

@@ -6,7 +6,6 @@ import dynamic from 'next/dynamic'
 import ActionMenu from '@/components/coffee-bean/ui/action-menu'
 import { NoteItemProps } from '../types'
 import { formatDate, formatRating } from '../utils'
-import { Storage } from '@/lib/core/storage'
 import { SettingsOptions, defaultSettings } from '@/components/settings/Settings'
 import { formatGrindSize as _formatGrindSize } from '@/lib/utils/grindUtils'
 import { availableGrinders } from '@/lib/core/config'
@@ -45,6 +44,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
     useEffect(() => {
         const loadSettings = async () => {
             try {
+                const { Storage } = await import('@/lib/core/storage');
                 const settingsStr = await Storage.get('brewGuideSettings');
                 if (settingsStr) {
                     const parsedSettings = JSON.parse(settingsStr) as SettingsOptions;

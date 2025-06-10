@@ -1,4 +1,3 @@
-import { Storage } from "@/lib/core/storage";
 import { Method as _Method, CustomEquipment } from "@/lib/core/config";
 import { CoffeeBean as _CoffeeBean, BlendComponent } from "@/types/app";
 import { APP_VERSION } from "@/lib/core/config";
@@ -8,6 +7,12 @@ import { db } from "@/lib/core/db";
 
 // 检查是否在浏览器环境中
 const isBrowser = typeof window !== 'undefined';
+
+// 动态导入 Storage 的辅助函数
+const getStorage = async () => {
+	const { Storage } = await import('@/lib/core/storage');
+	return Storage;
+};
 
 // 定义导出数据的接口
 interface ExportData {
@@ -83,13 +88,14 @@ export const DataManager = {
 			};
 
 			// 获取所有数据
+			const storage = await getStorage();
 			for (const key of APP_DATA_KEYS) {
-				const value = await Storage.get(key);
+				const value = await storage.get(key);
 				if (value) {
 					try {
 						// 尝试解析JSON
 						exportData.data[key] = JSON.parse(value);
-						
+
 						// 如果是冲煮笔记数据，清理冗余的咖啡豆信息
 						if (key === "brewingNotes" && Array.isArray(exportData.data[key])) {
 							exportData.data[key] = this.cleanBrewingNotesForExport(exportData.data[key] as BrewingNote[]);
@@ -104,23 +110,23 @@ export const DataManager = {
 			// 获取所有自定义方案
 			try {
 				// 获取所有存储键
-				const allKeys = await Storage.keys();
-				
+				const allKeys = await storage.keys();
+
 				// 过滤出自定义方案键
-				const methodKeys = allKeys.filter(key => key.startsWith("customMethods_"));
-				
+				const methodKeys = allKeys.filter((key: string) => key.startsWith("customMethods_"));
+
 				// 如果有自定义方案，将它们添加到导出数据中
 				if (methodKeys.length > 0) {
 					// 初始化自定义方案存储结构
 					exportData.data.customMethodsByEquipment = {};
-					
+
 					// 处理每个器具的自定义方案
 					for (const key of methodKeys) {
 						// 提取器具ID
 						const equipmentId = key.replace("customMethods_", "");
-						
+
 						// 加载该器具的方案
-						const methodsJson = await Storage.get(key);
+						const methodsJson = await storage.get(key);
 						if (methodsJson) {
 							try {
 								const methods = JSON.parse(methodsJson);
@@ -219,6 +225,7 @@ export const DataManager = {
 			}
 
 			// 导入所有数据
+			const storage = await getStorage();
 			for (const key of APP_DATA_KEYS) {
 				if (importData.data[key] !== undefined) {
 					// 如果是对象或数组，转换为JSON字符串
@@ -226,8 +233,8 @@ export const DataManager = {
 						typeof importData.data[key] === "object"
 							? JSON.stringify(importData.data[key])
 							: String(importData.data[key]);
-					await Storage.set(key, value);
-					
+					await storage.set(key, value);
+
 					// 对于自定义器具，同时更新IndexedDB
 					if (key === 'customEquipments' && typeof importData.data[key] === 'object') {
 						const rawEquipments = importData.data[key] as unknown[];
@@ -260,8 +267,8 @@ export const DataManager = {
 					if (Array.isArray(methods)) {
 						// 保存该器具的所有方案
 						const storageKey = `customMethods_${equipmentId}`;
-						await Storage.set(storageKey, JSON.stringify(methods));
-						
+						await storage.set(storageKey, JSON.stringify(methods));
+
 						// 同时更新IndexedDB
 						await db.customMethods.put({
 							equipmentId,
@@ -334,8 +341,9 @@ export const DataManager = {
 	): Promise<{ success: boolean; message: string }> {
 		try {
 			// 清除列表中的数据
+			const storage = await getStorage();
 			for (const key of APP_DATA_KEYS) {
-				await Storage.remove(key);
+				await storage.remove(key);
 
 				// 确保IndexedDB中的主要表也被清理
 				if (key === 'brewingNotes') {
@@ -348,12 +356,12 @@ export const DataManager = {
 			// 如果是完全重置，还需要清除其他数据
 			if (completeReset) {
 				// 获取所有存储键
-				const allKeys = await Storage.keys();
+				const allKeys = await storage.keys();
 
 				// 清除所有自定义方案
-				const methodKeys = allKeys.filter(key => key.startsWith("customMethods_"));
+				const methodKeys = allKeys.filter((key: string) => key.startsWith("customMethods_"));
 				for (const key of methodKeys) {
-					await Storage.remove(key);
+					await storage.remove(key);
 				}
 
 				// 同时清除IndexedDB数据
@@ -475,7 +483,8 @@ export const DataManager = {
 	async detectLegacyBeanData(): Promise<{ hasLegacyData: boolean; legacyCount: number; totalCount: number }> {
 		try {
 			// 获取所有咖啡豆数据
-			const beansStr = await Storage.get('coffeeBeans');
+			const storage = await getStorage();
+			const beansStr = await storage.get('coffeeBeans');
 			if (!beansStr) {
 				return { hasLegacyData: false, legacyCount: 0, totalCount: 0 };
 			}
@@ -516,7 +525,8 @@ export const DataManager = {
 	async migrateLegacyBeanData(): Promise<{ success: boolean; migratedCount: number; message: string }> {
 		try {
 			// 获取所有咖啡豆数据
-			const beansStr = await Storage.get('coffeeBeans');
+			const storage = await getStorage();
+			const beansStr = await storage.get('coffeeBeans');
 			if (!beansStr) {
 				return { success: true, migratedCount: 0, message: '没有找到咖啡豆数据' };
 			}
@@ -571,7 +581,7 @@ export const DataManager = {
 
 			// 如果有迁移，更新存储
 			if (migratedCount > 0) {
-				await Storage.set('coffeeBeans', JSON.stringify(migratedBeans));
+				await storage.set('coffeeBeans', JSON.stringify(migratedBeans));
 
 				// 同时更新IndexedDB
 				try {
@@ -605,7 +615,8 @@ export const DataManager = {
 	async fixBlendBeansData(): Promise<{ success: boolean; fixedCount: number }> {
 		try {
 			// 获取所有咖啡豆数据
-			const beansStr = await Storage.get('coffeeBeans');
+			const storage = await getStorage();
+			const beansStr = await storage.get('coffeeBeans');
 			if (!beansStr) {
 				return { success: true, fixedCount: 0 };
 			}
@@ -674,7 +685,7 @@ export const DataManager = {
 
 			// 如果有修复，更新存储
 			if (fixedCount > 0) {
-				await Storage.set('coffeeBeans', JSON.stringify(fixedBeans));
+				await storage.set('coffeeBeans', JSON.stringify(fixedBeans));
 			}
 
 			return { success: true, fixedCount };

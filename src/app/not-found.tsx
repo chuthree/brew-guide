@@ -1,10 +1,8 @@
-'use client'
-
 import Link from 'next/link'
 
 export default function NotFound() {
     return (
-        <div className="flex h-full w-full flex-col items-center justify-center px-6  py-4 pt-safe-top pb-safe-bottom">
+        <div className="flex h-full w-full flex-col items-center justify-center px-6 py-4">
             <h2 className="text-xl font-light tracking-wide">页面未找到</h2>
             <p className="mt-4 text-sm text-neutral-500">无法找到请求的页面</p>
             <Link
@@ -15,4 +13,4 @@ export default function NotFound() {
             </Link>
         </div>
     )
-} 
+}

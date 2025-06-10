@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { ExtendedCoffeeBean } from '../types'
-import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager'
 
 export const useBeanOperations = () => {
     const [forceRefreshKey, setForceRefreshKey] = useState(0)
@@ -10,6 +9,7 @@ export const useBeanOperations = () => {
     // 处理添加咖啡豆 - 简化为直接存储更新，依赖统一事件机制
     const handleSaveBean = async (bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>, editingBean: ExtendedCoffeeBean | null) => {
         try {
+            const { CoffeeBeanManager } = await import('@/lib/managers/coffeeBeanManager');
             let resultBean: ExtendedCoffeeBean;
 
             if (editingBean) {
@@ -61,6 +61,7 @@ export const useBeanOperations = () => {
 
         try {
             // 执行删除操作
+            const { CoffeeBeanManager } = await import('@/lib/managers/coffeeBeanManager');
             const success = await CoffeeBeanManager.deleteBean(bean.id);
 
             if (!success) {
@@ -87,6 +88,7 @@ export const useBeanOperations = () => {
     // 保存咖啡豆评分 - 使用统一事件机制
     const handleSaveRating = async (id: string, ratings: Partial<ExtendedCoffeeBean>) => {
         try {
+            const { CoffeeBeanManager } = await import('@/lib/managers/coffeeBeanManager');
             const updatedBean = await CoffeeBeanManager.updateBeanRatings(id, ratings);
             if (updatedBean) {
                 // 触发数据更新事件
@@ -125,6 +127,7 @@ export const useBeanOperations = () => {
             }
 
             // 更新数据库
+            const { CoffeeBeanManager } = await import('@/lib/managers/coffeeBeanManager');
             await CoffeeBeanManager.updateBean(beanId, { remaining: valueToSave });
 
             // 触发数据更新事件
@@ -161,6 +164,7 @@ export const useBeanOperations = () => {
             const formattedValue = newValue.toFixed(1);
 
             // 更新数据库
+            const { CoffeeBeanManager } = await import('@/lib/managers/coffeeBeanManager');
             await CoffeeBeanManager.updateBean(beanId, { remaining: formattedValue });
 
             // 触发数据更新事件

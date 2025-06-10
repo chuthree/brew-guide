@@ -13,7 +13,6 @@ import {
     getAvailableSortTypesForView
 } from '../SortSelector'
 import { X, ArrowUpRight, AlignLeft } from 'lucide-react'
-import { Storage } from '@/lib/core/storage'
 import { AnimatePresence, motion } from 'framer-motion'
 
 // Apple风格动画配置
@@ -331,6 +330,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
     useEffect(() => {
         const loadSettings = async () => {
             try {
+                const { Storage } = await import('@/lib/core/storage');
                 const settingsStr = await Storage.get('brewGuideSettings');
                 if (settingsStr) {
                     // 移除极简模式相关设置

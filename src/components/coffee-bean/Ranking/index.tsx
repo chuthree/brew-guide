@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 import { CoffeeBean } from '@/types/app'
-import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager'
 import { getBloggerBeans, BloggerBean, getVideoUrlFromEpisode } from '@/lib/utils/csvUtils'
 
 // 用于检测当前运行环境
@@ -155,6 +154,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                 unratedBeansData = []; // Blogger view doesn't show unrated
             } else {
                 // Load personal rated beans
+                const { CoffeeBeanManager } = await import('@/lib/managers/coffeeBeanManager');
                 if (beanType === 'all') {
                     ratedBeansData = await CoffeeBeanManager.getRatedBeans();
                 } else {

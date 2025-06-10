@@ -7,7 +7,6 @@ import type { BrewingNoteData, CoffeeBean } from "@/types/app";
 import type { Method, Stage } from "@/lib/core/config";
 import type { SettingsOptions } from "@/components/settings/Settings";
 import hapticsUtils from "@/lib/ui/haptics";
-import { Storage } from "@/lib/core/storage";
 import { equipmentList } from "@/lib/core/config";
 import { 
   BrewingTimerSettings, 
@@ -167,6 +166,8 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     // 将更新保存到 Storage 以确保持久化
     const updateSettings = async () => {
       try {
+        // 动态导入 Storage
+        const { Storage } = await import('@/lib/core/storage');
         // 先获取当前设置
         const currentSettingsStr = await Storage.get('brewGuideSettings');
         if (currentSettingsStr) {
@@ -591,6 +592,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
       const { globalCache } = await import('@/components/notes/List/globalCache');
 
       // 从Storage获取现有笔记
+      const { Storage } = await import('@/lib/core/storage');
       const existingNotesStr = await Storage.get("brewingNotes");
       const existingNotes = existingNotesStr
         ? JSON.parse(existingNotesStr)

@@ -5,7 +5,6 @@ import { ArrowRight } from 'lucide-react'
 import { CustomEquipment } from '@/lib/core/config'
 import { isEspressoMachine, getDefaultPourType, getPourTypeName } from '@/lib/utils/equipmentUtils'
 import { SettingsOptions, defaultSettings } from '@/components/settings/Settings'
-import { Storage } from '@/lib/core/storage'
 import {
     Steps,
     NameStep,
@@ -287,6 +286,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
   // 加载设置
   useEffect(() => {
     const loadSettings = async () => {
+      const { Storage } = await import('@/lib/core/storage');
       const savedSettings = await Storage.get('brewGuideSettings');
       if (!savedSettings) return;
 

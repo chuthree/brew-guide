@@ -2,7 +2,6 @@
 
 import React, { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Storage } from '@/lib/core/storage'
 import { defaultSettings, SettingsOptions } from '@/components/settings/Settings'
 import { cn } from '@/lib/utils/classNameUtils'
 import { CoffeeBean } from '@/types/app'
@@ -77,6 +76,7 @@ const RemainingEditor: React.FC<RemainingEditorProps> = ({
     useEffect(() => {
         const loadPresets = async () => {
             try {
+                const { Storage } = await import('@/lib/core/storage');
                 const settingsStr = await Storage.get('brewGuideSettings')
                 if (settingsStr) {
                     const settings = JSON.parse(settingsStr) as SettingsOptions
@@ -248,6 +248,7 @@ const RemainingEditor: React.FC<RemainingEditorProps> = ({
                 }
             }
             
+            const { Storage } = await import('@/lib/core/storage');
             const existingNotesStr = await Storage.get('brewingNotes')
             if (!isMounted.current) return
 

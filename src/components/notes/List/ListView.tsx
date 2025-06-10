@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useCallback, useTransition, useRef } from 'react'
 import { BrewingNote } from '@/lib/core/config'
-import { Storage } from '@/lib/core/storage'
 import { globalCache } from './globalCache'
 import NoteItem from './NoteItem'
 import QuickDecrementNoteItem from './QuickDecrementNoteItem'
@@ -125,6 +124,7 @@ const NotesListView: React.FC<NotesListViewProps> = ({
             isLoadingRef.current = true;
 
             // 从存储中加载数据
+            const { Storage } = await import('@/lib/core/storage');
             const savedNotes = await Storage.get('brewingNotes');
             const parsedNotes: BrewingNote[] = savedNotes ? JSON.parse(savedNotes) : [];
 

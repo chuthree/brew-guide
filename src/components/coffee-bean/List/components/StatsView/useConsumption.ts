@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { ExtendedCoffeeBean } from '../../types'
-import { Storage } from '@/lib/core/storage'
 import { TodayConsumptionData } from './types'
 
 export const useConsumption = (beans: ExtendedCoffeeBean[]): TodayConsumptionData => {
@@ -16,6 +15,7 @@ export const useConsumption = (beans: ExtendedCoffeeBean[]): TodayConsumptionDat
         const loadTodayConsumption = async () => {
             try {
                 // 获取所有冲煮记录
+                const { Storage } = await import('@/lib/core/storage');
                 const notesStr = await Storage.get('brewingNotes')
                 if (!notesStr) return
                 

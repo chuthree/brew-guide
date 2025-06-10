@@ -2,7 +2,6 @@ import { BrewingNote } from '@/lib/core/config';
 import { SortOption, SORT_OPTIONS } from '../types';
 import { getStringState, saveStringState } from '@/lib/core/statePersistence';
 import { calculateTotalCoffeeConsumption as calculateConsumption, formatConsumption as formatConsumptionUtil } from '../utils';
-import { Storage } from '@/lib/core/storage';
 
 // 模块名称
 const MODULE_NAME = 'brewing-notes';
@@ -96,6 +95,7 @@ export const initializeGlobalCache = async (): Promise<void> => {
         globalCache.sortOption = getSortOptionPreference();
         
         // 加载笔记数据
+        const { Storage } = await import('@/lib/core/storage');
         const savedNotes = await Storage.get('brewingNotes');
         const parsedNotes: BrewingNote[] = savedNotes ? JSON.parse(savedNotes) : [];
         globalCache.notes = parsedNotes;
@@ -123,8 +123,10 @@ export const initializeGlobalCache = async (): Promise<void> => {
     }
 };
 
-// 立即尝试初始化全局缓存
-initializeGlobalCache();
+// 只在客户端环境下初始化全局缓存
+if (typeof window !== 'undefined') {
+    initializeGlobalCache();
+}
 
 // 初始化全局缓存的状态
 globalCache.selectedEquipment = getSelectedEquipmentPreference();

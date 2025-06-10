@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Method, equipmentList, commonMethods, CustomEquipment } from "@/lib/core/config";
-import { Storage } from "@/lib/core/storage";
 import { BrewingNoteData, CoffeeBean } from "@/types/app";
 import {
 	loadCustomMethods,
@@ -8,7 +7,6 @@ import {
 	deleteCustomMethod as apiDeleteCustomMethod,
 } from "@/lib/managers/customMethods";
 import { loadCustomEquipments } from "@/lib/managers/customEquipments";
-import { CoffeeBeanManager } from "@/lib/managers/coffeeBeanManager";
 import { NavigationOptions, STEP_RULES } from "../brewing/constants";
 import { updateParameterInfo } from "../brewing/parameters";
 import { getStringState, saveStringState } from "@/lib/core/statePersistence";
@@ -315,6 +313,8 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 	const handleSaveNote = useCallback(
 		async (data: BrewingNoteData) => {
 			try {
+				// 动态导入 Storage 模块
+				const { Storage } = await import('@/lib/core/storage');
 				const notesStr = await Storage.get("brewingNotes");
 				const notes = notesStr ? JSON.parse(notesStr) : [];
 
@@ -349,6 +349,8 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 					if (match) {
 						const coffeeAmount = parseFloat(match[1]);
 						if (!isNaN(coffeeAmount) && coffeeAmount > 0) {
+							// 动态导入 CoffeeBeanManager
+							const { CoffeeBeanManager } = await import('@/lib/managers/coffeeBeanManager');
 							await CoffeeBeanManager.updateBeanRemaining(selectedCoffeeBean, coffeeAmount);
 						}
 					}

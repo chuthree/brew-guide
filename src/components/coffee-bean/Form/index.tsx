@@ -9,7 +9,6 @@ import DetailInfo from './components/DetailInfo'
 import FlavorInfo from './components/FlavorInfo'
 import Complete from './components/Complete'
 import { addCustomPreset, DEFAULT_ORIGINS, DEFAULT_PROCESSES, DEFAULT_VARIETIES } from './constants'
-import { Storage } from '@/lib/core/storage'
 import { defaultSettings, type SettingsOptions } from '@/components/settings/Settings'
 
 // 二次压缩函数：将base64图片再次压缩
@@ -215,6 +214,7 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
     useEffect(() => {
         const loadSimpleModeFromSettings = async () => {
             try {
+                const { Storage } = await import('@/lib/core/storage');
                 const settingsStr = await Storage.get('brewGuideSettings')
                 if (settingsStr) {
                     const settings: SettingsOptions = JSON.parse(settingsStr)
@@ -533,6 +533,7 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
 
         try {
             // 获取当前设置
+            const { Storage } = await import('@/lib/core/storage');
             const settingsStr = await Storage.get('brewGuideSettings')
             let settings: SettingsOptions = defaultSettings
 

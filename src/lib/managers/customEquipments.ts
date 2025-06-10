@@ -1,6 +1,5 @@
 import { type CustomEquipment, type Method } from "@/lib/core/config";
 import { saveCustomMethod, loadCustomMethodsForEquipment } from "@/lib/managers/customMethods";
-import { Storage } from "@/lib/core/storage";
 import { db } from "@/lib/core/db";
 // @ts-expect-error - keshi类型声明问题，目前仍在使用其默认导出
 import Keshi from "keshi";
@@ -9,6 +8,12 @@ const STORAGE_KEY = "customEquipments";
 
 // 创建Keshi缓存实例（高性能内存缓存）
 const equipmentsCache = new Keshi();
+
+// 动态导入 Storage 的辅助函数
+const getStorage = async () => {
+	const { Storage } = await import('@/lib/core/storage');
+	return Storage;
+};
 
 /**
  * 自定义器具操作错误类型
@@ -46,7 +51,8 @@ export async function loadCustomEquipments(): Promise<CustomEquipment[]> {
 				}
 				
 				// 如果IndexedDB中没有数据，尝试从localStorage/Preferences迁移
-				const savedEquipments = await Storage.get(STORAGE_KEY);
+				const storage = await getStorage();
+				const savedEquipments = await storage.get(STORAGE_KEY);
 				if (savedEquipments) {
 					const parsedEquipments = JSON.parse(savedEquipments) as CustomEquipment[];
 					
@@ -150,7 +156,8 @@ export async function saveCustomEquipment(
 		}
 
 		// 同时更新localStorage（作为备份，后期可移除）
-		await Storage.set(STORAGE_KEY, JSON.stringify(equipments));
+		const storage = await getStorage();
+		await storage.set(STORAGE_KEY, JSON.stringify(equipments));
 
 		// 使缓存失效，确保下次获取最新数据
 		invalidateEquipmentsCache();
@@ -238,7 +245,8 @@ export async function updateCustomEquipment(
 		console.log(`[updateCustomEquipment] 更新了IndexedDB中的器具: ${id}`);
 		
 		// 同时更新localStorage作为备份
-		await Storage.set(STORAGE_KEY, JSON.stringify(equipments));
+		const storage = await getStorage();
+		await storage.set(STORAGE_KEY, JSON.stringify(equipments));
 		console.log(`[updateCustomEquipment] 同时更新了localStorage作为备份`);
 		
 		// 使缓存失效
@@ -274,17 +282,18 @@ export async function deleteCustomEquipment(id: string): Promise<void> {
 		console.log(`[deleteCustomEquipment] 从IndexedDB删除了器具: ${id}`);
 		
 		// 同时更新localStorage作为备份
-		await Storage.set(STORAGE_KEY, JSON.stringify(filteredEquipments));
+		const storage = await getStorage();
+		await storage.set(STORAGE_KEY, JSON.stringify(filteredEquipments));
 		console.log(`[deleteCustomEquipment] 同时更新了localStorage作为备份`);
-		
+
 		// 使缓存失效
 		invalidateEquipmentsCache();
-		
+
 		// 尝试清理相关方案
 		try {
 			// 检查是否有对应的方案数据
 			const methodsKey = `customMethods_${id}`;
-			await Storage.remove(methodsKey);
+			await storage.remove(methodsKey);
 			console.log(`[deleteCustomEquipment] 尝试清理相关方案数据: ${methodsKey}`);
 			
 			// 从IndexedDB中删除方案

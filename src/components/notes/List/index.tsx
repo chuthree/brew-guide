@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState, useEffect, useRef, useCallback, useReducer, useMemo } from 'react'
-import { Storage } from '@/lib/core/storage'
 import { BrewingNote } from '@/lib/core/config'
 import { BrewingHistoryProps } from '../types'
 
@@ -73,6 +72,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
             if (!isOpen) return;
             
             // 从存储中加载数据
+            const { Storage } = await import('@/lib/core/storage');
             const savedNotes = await Storage.get('brewingNotes');
             const parsedNotes: BrewingNote[] = savedNotes ? JSON.parse(savedNotes) : [];
             
@@ -207,9 +207,10 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         const fixMethodIdsInNotes = async () => {
             try {
                 // 获取现有笔记
+                const { Storage } = await import('@/lib/core/storage');
                 const savedNotes = await Storage.get('brewingNotes')
                 if (!savedNotes) return
-                
+
                 let parsedNotes: BrewingNote[] = JSON.parse(savedNotes)
                 let hasChanges = false
                 
@@ -277,7 +278,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                 if (hasChanges) {
                     await Storage.set('brewingNotes', JSON.stringify(parsedNotes))
                     console.log('已修复笔记数据问题')
-                    
+
                     // 触发重新加载
                     loadEquipmentsAndBeans()
                 }
@@ -311,6 +312,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     // 处理删除笔记 - 统一数据流避免竞态条件
     const handleDelete = async (noteId: string) => {
         try {
+            const { Storage } = await import('@/lib/core/storage');
             const savedNotes = await Storage.get('brewingNotes');
             if (!savedNotes) return;
 
@@ -366,6 +368,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     const handleSaveEdit = async (updatedData: BrewingNoteData) => {
         try {
             // 获取现有笔记
+            const { Storage } = await import('@/lib/core/storage');
             const savedNotes = await Storage.get('brewingNotes')
             let parsedNotes: BrewingNote[] = savedNotes ? JSON.parse(savedNotes) : []
 

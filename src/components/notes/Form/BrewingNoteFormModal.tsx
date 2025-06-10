@@ -9,7 +9,6 @@ import type { BrewingNoteData, CoffeeBean } from '@/types/app'
 import { brewingMethods as commonMethods } from '@/lib/core/config'
 import SteppedFormModal, { Step } from '@/components/common/modals/SteppedFormModal'
 import { type Method, type CustomEquipment } from '@/lib/core/config'
-import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager'
 import { loadCustomEquipments } from '@/lib/managers/customEquipments'
 import { getSelectedEquipmentPreference, saveSelectedEquipmentPreference } from '@/lib/hooks/useBrewingState'
 // 导入随机选择器组件
@@ -75,7 +74,8 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
   // 加载咖啡豆列表
   useEffect(() => {
     if (showForm) {
-      CoffeeBeanManager.getAllBeans()
+      import('@/lib/managers/coffeeBeanManager')
+        .then(({ CoffeeBeanManager }) => CoffeeBeanManager.getAllBeans())
         .then(beans => {
           setCoffeeBeans(beans)
         })
@@ -298,7 +298,8 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
       // 减少咖啡豆剩余量
       const coffeeAmount = getCoffeeAmount()
       if (coffeeAmount > 0) {
-        CoffeeBeanManager.updateBeanRemaining(selectedCoffeeBean.id, coffeeAmount)
+        import('@/lib/managers/coffeeBeanManager')
+          .then(({ CoffeeBeanManager }) => CoffeeBeanManager.updateBeanRemaining(selectedCoffeeBean.id, coffeeAmount))
           .catch(error => console.error('减少咖啡豆剩余量失败:', error))
       }
     }

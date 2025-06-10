@@ -4,7 +4,6 @@ import { Capacitor } from '@capacitor/core'
 import { Share } from '@capacitor/share'
 import { Filesystem, Directory } from '@capacitor/filesystem'
 import { toPng } from 'html-to-image'
-import { Storage } from '@/lib/core/storage'
 
 interface NotesExporterProps {
   selectedNotes: string[]
@@ -139,6 +138,7 @@ export async function exportSelectedNotes({
     });
     
     // 获取用户名
+    const { Storage } = await import('@/lib/core/storage');
     const settingsStr = await Storage.get('brewGuideSettings');
     let username = '';
     if (settingsStr) {

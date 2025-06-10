@@ -1,4 +1,3 @@
-import { Storage } from "@/lib/core/storage";
 import { CoffeeBean } from "@/types/app";
 import { nanoid } from "nanoid";
 import { db } from "@/lib/core/db";
@@ -12,6 +11,12 @@ const beanCache = new Keshi();
 const BEAN_CACHE_KEY = "allBeans";
 const RATED_BEANS_CACHE_KEY = "ratedBeans";
 const BEANS_BY_TYPE_PREFIX = "beansByType_";
+
+// 动态导入 Storage 的辅助函数
+const getStorage = async () => {
+	const { Storage } = await import('@/lib/core/storage');
+	return Storage;
+};
 
 /**
  * 咖啡豆管理工具类
@@ -33,7 +38,8 @@ export const CoffeeBeanManager = {
 					}
 
 					// 如果IndexedDB中没有数据，尝试从Storage加载
-					const data = await Storage.get("coffeeBeans");
+					const storage = await getStorage();
+					const data = await storage.get("coffeeBeans");
 					if (!data) return [];
 
 					const parsedBeans = JSON.parse(data) as CoffeeBean[];
@@ -120,8 +126,9 @@ export const CoffeeBeanManager = {
 			beans.push(newBean);
 			
 			// 保存到存储
-			await Storage.set("coffeeBeans", JSON.stringify(beans));
-			
+			const storage = await getStorage();
+			await storage.set("coffeeBeans", JSON.stringify(beans));
+
 			// 保存到IndexedDB
 			await db.coffeeBeans.put(newBean);
 			
@@ -165,8 +172,9 @@ export const CoffeeBeanManager = {
 			beans[index] = updatedBean;
 
 			// 保存更新后的数据
-			await Storage.set("coffeeBeans", JSON.stringify(beans));
-			
+			const storage = await getStorage();
+			await storage.set("coffeeBeans", JSON.stringify(beans));
+
 			// 更新IndexedDB
 			await db.coffeeBeans.put(updatedBean);
 			
@@ -199,8 +207,9 @@ export const CoffeeBeanManager = {
 			}
 
 			// 保存更新后的数组
-			await Storage.set("coffeeBeans", JSON.stringify(filtered));
-			
+			const storage = await getStorage();
+			await storage.set("coffeeBeans", JSON.stringify(filtered));
+
 			// 从IndexedDB删除
 			await db.coffeeBeans.delete(id);
 			

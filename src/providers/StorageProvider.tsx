@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Storage } from '@/lib/core/storage'
 
 /**
  * 存储系统初始化组件
@@ -9,11 +8,13 @@ import { Storage } from '@/lib/core/storage'
  */
 export default function StorageInit() {
   const [initialized, setInitialized] = useState(false)
-  
+
   useEffect(() => {
     async function initStorage() {
-      if (!initialized) {
+      if (!initialized && typeof window !== 'undefined') {
         try {
+          // 动态导入存储模块，避免服务端渲染问题
+          const { Storage } = await import('@/lib/core/storage')
           await Storage.initialize()
           setInitialized(true)
         } catch (error) {
@@ -21,10 +22,10 @@ export default function StorageInit() {
         }
       }
     }
-    
+
     initStorage()
   }, [initialized])
-  
+
   // 这个组件不会渲染任何内容，它只是初始化存储系统
   return null
-} 
+}
