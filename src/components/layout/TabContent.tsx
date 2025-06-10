@@ -760,17 +760,28 @@ const TabContent: React.FC<TabContentProps> = ({
                                         index={index}
                                         onClick={() => {
                                             if (activeTab === '方案' && !step.isDivider) {
+                                                console.log(`[TabContent] 点击方案: ${step.title}`, {
+                                                    isCustom: step.isCustom,
+                                                    isCommonMethod: step.isCommonMethod,
+                                                    methodIndex: step.methodIndex,
+                                                    selectedEquipment,
+                                                    step
+                                                });
+
                                                 if (step.isCustom && selectedEquipment && customMethods[selectedEquipment]) {
                                                     const methodIndex = customMethods[selectedEquipment].findIndex(m =>
                                                         m.id === step.methodId || m.name === step.title);
                                                     if (methodIndex !== -1) {
+                                                        console.log(`[TabContent] 选择自定义方案，索引: ${methodIndex}`);
                                                         onMethodSelect(methodIndex, { ...step, explicitMethodType: 'custom' });
                                                         return;
                                                     }
                                                 } else if (step.isCommonMethod && step.methodIndex !== undefined) {
+                                                    console.log(`[TabContent] 选择通用方案，索引: ${step.methodIndex}`);
                                                     onMethodSelect(step.methodIndex, { ...step, explicitMethodType: 'common' });
                                                     return;
                                                 }
+                                                console.log(`[TabContent] 使用默认方案选择逻辑，索引: ${index}`);
                                                 onMethodSelect(index, step);
                                             }
                                         }}

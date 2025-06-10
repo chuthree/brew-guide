@@ -138,6 +138,9 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
     return selectedMethod === method.id || selectedMethod === method.name;
   }
 
+  // 添加调试信息
+  console.log(`[MethodSelector] 器具: ${selectedEquipment}, 自定义方案数量: ${customMethods.length}, 通用方案数量: ${commonMethods.length}`)
+
   // 创建分隔符
   const divider = (customMethods.length > 0 && commonMethods.length > 0) ? (
     <div className="py-3 flex items-center">
@@ -272,14 +275,15 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
             {divider}
 
             {/* 通用方案 */}
-            {commonMethods.length > 0 ? (
+            {commonMethods.length > 0 && (
               commonMethods.map((method) => renderMethod(method, false))
-            ) : (
-              !customMethods.length && (
+            )}
+
+            {/* 没有方案时的提示 */}
+            {customMethods.length === 0 && commonMethods.length === 0 && (
                 <div className="text-xs text-neutral-500 dark:text-neutral-400 border-l border-neutral-200 dark:border-neutral-800 pl-6">
                   没有可用的冲煮方案，请前往“冲煮”页面添加
                 </div>
-              )
             )}
           </div>
         ) : (

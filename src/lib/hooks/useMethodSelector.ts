@@ -101,7 +101,15 @@ export function useMethodSelector({
 			methodType: string,
 			step?: StepWithCustomParams
 		): Promise<Method | null> => {
+			console.log(`[useMethodSelector] handleMethodSelect 调用`, {
+				selectedEquipment,
+				methodIndex,
+				methodType,
+				step: step ? { title: step.title, isCommonMethod: step.isCommonMethod } : null
+			});
+
 			if (!selectedEquipment || selectedEquipment.trim() === '') {
+				console.log(`[useMethodSelector] 无效的设备选择: ${selectedEquipment}`);
 				return null;
 			}
 
@@ -111,10 +119,71 @@ export function useMethodSelector({
 			if (methodType === "predefined" || methodType === "custom") {
 				if (customMethods?.[selectedEquipment]?.[methodIndex]) {
 					method = customMethods[selectedEquipment][methodIndex];
+					console.log(`[useMethodSelector] 找到自定义方案: ${method.name}`);
+				} else {
+					console.log(`[useMethodSelector] 未找到自定义方案`, {
+						hasCustomMethods: !!customMethods?.[selectedEquipment],
+						methodCount: customMethods?.[selectedEquipment]?.length || 0,
+						methodIndex
+					});
 				}
 			} else if (methodType === "common") {
-				if (commonMethods?.[selectedEquipment]?.[methodIndex]) {
-					method = commonMethods[selectedEquipment][methodIndex];
+				// 对于自定义器具，需要找到对应的基础器具ID
+				let targetEquipmentId = selectedEquipment;
+
+				// 检查是否是自定义器具（通过ID或名称）
+				const { equipmentList } = await import('@/lib/core/config');
+				const customEquipmentById = equipmentList.find(e => e.id === selectedEquipment && 'animationType' in e);
+				const customEquipmentByName = !customEquipmentById
+					? equipmentList.find(e => e.name === selectedEquipment && 'animationType' in e)
+					: null;
+				const customEquipment = customEquipmentById || customEquipmentByName;
+
+				if (customEquipment && 'animationType' in customEquipment) {
+					// 这是自定义器具，需要找到基础器具ID
+					const animationType = (customEquipment as any).animationType?.toLowerCase();
+					switch (animationType) {
+						case 'v60': targetEquipmentId = 'V60'; break;
+						case 'clever': targetEquipmentId = 'CleverDripper'; break;
+						case 'espresso': targetEquipmentId = 'Espresso'; break;
+						case 'kalita': targetEquipmentId = 'Kalita'; break;
+						case 'origami': targetEquipmentId = 'Origami'; break;
+						case 'custom':
+							// 自定义预设器具不使用通用方案
+							targetEquipmentId = '';
+							break;
+						default: targetEquipmentId = 'V60';
+					}
+					console.log(`[useMethodSelector] 自定义器具 ${selectedEquipment} (${animationType}) 映射到基础器具 ${targetEquipmentId}`);
+				} else if (selectedEquipment.startsWith('custom-')) {
+					// 通过ID推断器具类型的逻辑（兼容旧版本）
+					if (selectedEquipment.includes('-v60-')) {
+						targetEquipmentId = 'V60';
+					} else if (selectedEquipment.includes('-clever-')) {
+						targetEquipmentId = 'CleverDripper';
+					} else if (selectedEquipment.includes('-kalita-')) {
+						targetEquipmentId = 'Kalita';
+					} else if (selectedEquipment.includes('-origami-')) {
+						targetEquipmentId = 'Origami';
+					} else if (selectedEquipment.includes('-espresso-')) {
+						targetEquipmentId = 'Espresso';
+					} else {
+						targetEquipmentId = 'V60'; // 默认
+					}
+					console.log(`[useMethodSelector] 通过ID推断自定义器具 ${selectedEquipment} 映射到基础器具 ${targetEquipmentId}`);
+				}
+
+				if (targetEquipmentId && commonMethods?.[targetEquipmentId]?.[methodIndex]) {
+					method = commonMethods[targetEquipmentId][methodIndex];
+					console.log(`[useMethodSelector] 找到通用方案: ${method.name} (来自 ${targetEquipmentId})`);
+				} else {
+					console.log(`[useMethodSelector] 未找到通用方案`, {
+						selectedEquipment,
+						targetEquipmentId,
+						hasCommonMethods: !!commonMethods?.[targetEquipmentId],
+						methodCount: commonMethods?.[targetEquipmentId]?.length || 0,
+						methodIndex
+					});
 				}
 			}
 

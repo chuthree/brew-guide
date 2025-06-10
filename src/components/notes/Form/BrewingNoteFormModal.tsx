@@ -6,7 +6,7 @@ import { MethodSelector, CoffeeBeanSelector } from '@/components/notes/Form'
 import EquipmentCategoryBar from './EquipmentCategoryBar'
 import { useMethodManagement } from '@/components/notes/Form/hooks/useMethodManagement'
 import type { BrewingNoteData, CoffeeBean } from '@/types/app'
-import { brewingMethods as commonMethods } from '@/lib/core/config'
+
 import SteppedFormModal, { Step } from '@/components/common/modals/SteppedFormModal'
 import { type Method, type CustomEquipment } from '@/lib/core/config'
 import { loadCustomEquipments } from '@/lib/managers/customEquipments'
@@ -340,7 +340,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
               selectedEquipment={selectedEquipment}
               selectedMethod={selectedMethod}
               customMethods={customMethods}
-              commonMethods={selectedEquipment ? (commonMethods as any)[selectedEquipment] || [] : []}
+              commonMethods={availableMethods}
               onMethodSelect={setSelectedMethod}
               onParamsChange={_handleMethodParamsChange}
             />
