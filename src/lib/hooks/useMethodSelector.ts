@@ -24,6 +24,8 @@ interface StepWithCustomParams {
 	methodIndex?: number;
 	isCommonMethod?: boolean;
 	customParams?: Record<string, string>;
+	title?: string;
+	explicitMethodType?: string;
 }
 
 export function useMethodSelector({
@@ -101,15 +103,7 @@ export function useMethodSelector({
 			methodType: string,
 			step?: StepWithCustomParams
 		): Promise<Method | null> => {
-			console.log(`[useMethodSelector] handleMethodSelect 调用`, {
-				selectedEquipment,
-				methodIndex,
-				methodType,
-				step: step ? { title: step.title, isCommonMethod: step.isCommonMethod } : null
-			});
-
 			if (!selectedEquipment || selectedEquipment.trim() === '') {
-				console.log(`[useMethodSelector] 无效的设备选择: ${selectedEquipment}`);
 				return null;
 			}
 
@@ -119,13 +113,6 @@ export function useMethodSelector({
 			if (methodType === "predefined" || methodType === "custom") {
 				if (customMethods?.[selectedEquipment]?.[methodIndex]) {
 					method = customMethods[selectedEquipment][methodIndex];
-					console.log(`[useMethodSelector] 找到自定义方案: ${method.name}`);
-				} else {
-					console.log(`[useMethodSelector] 未找到自定义方案`, {
-						hasCustomMethods: !!customMethods?.[selectedEquipment],
-						methodCount: customMethods?.[selectedEquipment]?.length || 0,
-						methodIndex
-					});
 				}
 			} else if (methodType === "common") {
 				// 对于自定义器具，需要找到对应的基础器具ID
@@ -154,7 +141,6 @@ export function useMethodSelector({
 							break;
 						default: targetEquipmentId = 'V60';
 					}
-					console.log(`[useMethodSelector] 自定义器具 ${selectedEquipment} (${animationType}) 映射到基础器具 ${targetEquipmentId}`);
 				} else if (selectedEquipment.startsWith('custom-')) {
 					// 通过ID推断器具类型的逻辑（兼容旧版本）
 					if (selectedEquipment.includes('-v60-')) {
@@ -170,20 +156,10 @@ export function useMethodSelector({
 					} else {
 						targetEquipmentId = 'V60'; // 默认
 					}
-					console.log(`[useMethodSelector] 通过ID推断自定义器具 ${selectedEquipment} 映射到基础器具 ${targetEquipmentId}`);
 				}
 
 				if (targetEquipmentId && commonMethods?.[targetEquipmentId]?.[methodIndex]) {
 					method = commonMethods[targetEquipmentId][methodIndex];
-					console.log(`[useMethodSelector] 找到通用方案: ${method.name} (来自 ${targetEquipmentId})`);
-				} else {
-					console.log(`[useMethodSelector] 未找到通用方案`, {
-						selectedEquipment,
-						targetEquipmentId,
-						hasCommonMethods: !!commonMethods?.[targetEquipmentId],
-						methodCount: commonMethods?.[targetEquipmentId]?.length || 0,
-						methodIndex
-					});
 				}
 			}
 

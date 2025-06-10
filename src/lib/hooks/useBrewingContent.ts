@@ -163,14 +163,10 @@ export function useBrewingContent({
 								baseEquipmentId = 'V60'; // 默认使用 V60 的方案
 						}
 
-						console.log(`[useBrewingContent] 自定义器具 ${selectedEquipment} (${animationType}) 映射到基础器具 ${baseEquipmentId}`);
-
 						if (baseEquipmentId) {
 							commonMethodsForEquipment = commonMethods[baseEquipmentId] || [];
-							console.log(`[useBrewingContent] 找到 ${commonMethodsForEquipment.length} 个通用方案`);
 						} else {
 							commonMethodsForEquipment = [];
-							console.log(`[useBrewingContent] 该器具类型不使用通用方案`);
 						}
 					} else {
 						// 预定义器具，直接使用其通用方案

@@ -350,22 +350,16 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
 
     // 监听预设方案变化
     useEffect(() => {
-        console.log(`[CustomEquipmentForm] 预设方案变化: ${selectedPreset}`)
-
         if (selectedPreset === 'v60') {
-            console.log(`[CustomEquipmentForm] 应用V60预设`)
             handleChange('animationType', 'v60');
             handleChange('hasValve', false);
         } else if (selectedPreset === 'clever') {
-            console.log(`[CustomEquipmentForm] 应用聪明杯预设`)
             handleChange('animationType', 'clever');
             handleChange('hasValve', true);
         } else if (selectedPreset === 'espresso') {
-            console.log(`[CustomEquipmentForm] 应用意式机预设`)
             handleChange('animationType', 'espresso');
             handleChange('hasValve', false);
         } else if (selectedPreset === 'custom') {
-            console.log(`[CustomEquipmentForm] 应用自定义预设`)
             handleChange('animationType', 'custom');
             // 自定义预设强制使用自定义杯型
             setCupShapeType('custom');

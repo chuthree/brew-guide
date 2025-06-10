@@ -138,9 +138,6 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
     return selectedMethod === method.id || selectedMethod === method.name;
   }
 
-  // 添加调试信息
-  console.log(`[MethodSelector] 器具: ${selectedEquipment}, 自定义方案数量: ${customMethods.length}, 通用方案数量: ${commonMethods.length}`)
-
   // 创建分隔符
   const divider = (customMethods.length > 0 && commonMethods.length > 0) ? (
     <div className="py-3 flex items-center">
