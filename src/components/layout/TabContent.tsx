@@ -318,7 +318,7 @@ const TabContent: React.FC<TabContentProps> = ({
 
         return (
             <BrewingNoteForm
-                id="brewingNoteForm"
+                id={undefined}
                 isOpen={true}
                 onClose={handleCloseNoteForm}
                 onSave={handleSaveNote}

@@ -699,6 +699,9 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     // 触发一个事件通知其他组件重置
     const event = new CustomEvent("brewing:reset");
     window.dispatchEvent(event);
+
+    // 同时重置自动跳转标志
+    window.dispatchEvent(new CustomEvent("brewing:resetAutoNavigation"));
   }, [clearTimerAndStates, triggerHaptic]);
 
   const pauseTimer = useCallback(() => {
@@ -1043,7 +1046,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     }
   }, [currentExpandedStageIndex, currentTime, onStageChange]);
 
-  // 修改跳过处理函数
+  // 简化跳过处理函数
   const handleSkip = useCallback(() => {
     if (!currentBrewingMethod || !expandedStagesRef.current.length) return;
 
@@ -1059,22 +1062,13 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     // 设置当前时间为最后阶段的结束时间
     setCurrentTime(lastStage.endTime);
 
-    // 添加短暂延迟，模拟正常完成过程
+    // 重置自动跳转标志，确保跳过操作能触发自动跳转
+    window.dispatchEvent(new CustomEvent("brewing:resetAutoNavigation"));
+
+    // 触发完成处理
     setTimeout(() => {
-      // 触发完成处理
       handleComplete();
-
-      // 确保状态完全同步
-      setShowComplete(true);
-      setIsCompleted(true);
-
-      // 触发完成事件
-      window.dispatchEvent(
-        new CustomEvent("brewing:complete", {
-          detail: { skipped: true, totalTime: lastStage.endTime },
-        })
-      );
-    }, 300); // 添加300ms延迟，模拟正常完成过程
+    }, 100);
   }, [currentBrewingMethod, handleComplete, clearTimerAndStates]);
 
 
@@ -1141,7 +1135,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
   return (
     <>
       <div
-        className="px-6 sticky bottom-0 bg-neutral-50 pt-6 dark:bg-neutral-900 pb-safe-bottom relative"
+        className="px-6 sticky bottom-0 bg-neutral-50 pt-6 dark:bg-neutral-900 pb-safe-bottom"
       >
         {/* 添加设置点和边框 */}
         <div className="absolute top-0 left-0 right-0 flex items-center justify-center">
@@ -1808,7 +1802,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
             </motion.button>
             <motion.button
               onClick={
-                currentTime === 0 && !hasStartedOnce && !isRunning && !showComplete && !isCompleted && !isCoffeeBrewed
+                currentTime === 0 && !hasStartedOnce && !isRunning && !showComplete && !isCompleted
                   ? handleSkip // 初始状态：跳过到记录页面
                   : resetTimer // 非初始状态：重置计时器
               }
@@ -1823,7 +1817,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
               }}
             >
               {/* 根据计时器状态显示不同图标 */}
-              {currentTime === 0 && !hasStartedOnce && !isRunning && !showComplete && !isCompleted && !isCoffeeBrewed ? (
+              {currentTime === 0 && !hasStartedOnce && !isRunning && !showComplete && !isCompleted ? (
                 // 初始状态：显示跳过图标
                 <svg
                   xmlns="http://www.w3.org/2000/svg"

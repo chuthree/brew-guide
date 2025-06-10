@@ -639,6 +639,11 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             setIsCoffeeBrewed(false);
         };
 
+        const handleResetAutoNavigation = () => {
+            // 重置自动跳转标志，允许跳过操作触发自动跳转
+            setHasAutoNavigatedToNotes(false);
+        };
+
         const handleMethodToBrewing = () => {
             // 重置冲煮完成状态，但保留其他状态
             setShowComplete(false);
@@ -726,6 +731,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         // 添加事件监听
         window.addEventListener('brewing:complete', handleBrewingComplete);
         window.addEventListener('brewing:reset', handleBrewingReset);
+        window.addEventListener('brewing:resetAutoNavigation', handleResetAutoNavigation);
         window.addEventListener('brewing:methodToBrewing', handleMethodToBrewing);
         window.addEventListener('brewing:getParams', handleGetParams);
         window.addEventListener('brewing:timerStatus', handleTimerStatusChange as EventListener);
@@ -737,6 +743,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         return () => {
             window.removeEventListener('brewing:complete', handleBrewingComplete);
             window.removeEventListener('brewing:reset', handleBrewingReset);
+            window.removeEventListener('brewing:resetAutoNavigation', handleResetAutoNavigation);
             window.removeEventListener('brewing:methodToBrewing', handleMethodToBrewing);
             window.removeEventListener('brewing:getParams', handleGetParams);
             window.removeEventListener('brewing:timerStatus', handleTimerStatusChange as EventListener);
