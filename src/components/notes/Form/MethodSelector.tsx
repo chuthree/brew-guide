@@ -10,7 +10,6 @@ interface MethodSelectorProps {
   commonMethods: Method[]
   onMethodSelect: (methodId: string) => void
   onParamsChange: (method: Method) => void
-  // onSkipMethodSelection?: () => void // 暂时移除跳过方案选择功能
 }
 
 const MethodSelector: React.FC<MethodSelectorProps> = ({
@@ -20,7 +19,6 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
   commonMethods,
   onMethodSelect,
   onParamsChange,
-  // onSkipMethodSelection // 暂时移除
 }) => {
   // 本地状态管理参数
   const [coffeeAmount, setCoffeeAmount] = useState<string>('15')
@@ -283,8 +281,6 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
                 </div>
               )
             )}
-
-            {/* 暂时移除跳过方案选择选项，避免意外触发 */}
           </div>
         ) : (
           <div className="text-xs text-neutral-500 dark:text-neutral-400 border-l border-neutral-200 dark:border-neutral-800 pl-6">

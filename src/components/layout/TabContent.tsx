@@ -258,7 +258,6 @@ const TabContent: React.FC<TabContentProps> = ({
             }
 
             // 清理状态
-            localStorage.removeItem('skipMethodToNotes');
             localStorage.removeItem('brewingNoteInProgress');
 
             if (setActiveMainTab) {
@@ -278,9 +277,6 @@ const TabContent: React.FC<TabContentProps> = ({
     // 处理关闭笔记表单
     const handleCloseNoteForm = () => {
         if (noteSaved && setActiveMainTab) {
-            // 清除跳过方案选择的标记（如果存在）
-            localStorage.removeItem('skipMethodToNotes');
-
             // 清除笔记进行中的标记
             localStorage.removeItem('brewingNoteInProgress');
 
@@ -696,13 +692,9 @@ const TabContent: React.FC<TabContentProps> = ({
         <>
             <div className="space-y-4 content-area">
                 {showEmptyMethodsMessage ? (
-                    <>
-                        {/* 暂时移除跳过方案选择选项，避免意外触发 */}
-
-                        <div className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400 mt-4">
-                            [ 当前器具暂无自定义方案，请点击下方按钮添加 ]
-                        </div>
-                    </>
+                    <div className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400 mt-4">
+                        [ 当前器具暂无自定义方案，请点击下方按钮添加 ]
+                    </div>
                 ) : (
                     <>
                         {content[activeTab]?.steps.map((step: Step, index: number) => {
@@ -796,8 +788,6 @@ const TabContent: React.FC<TabContentProps> = ({
                                 </React.Fragment>
                             );
                         })}
-
-                        {/* 暂时移除跳过方案选择选项，避免意外触发 */}
                     </>
                 )}
             </div>

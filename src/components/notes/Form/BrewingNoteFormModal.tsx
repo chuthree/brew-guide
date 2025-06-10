@@ -157,13 +157,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
     }, 0);
   }, [])
 
-  // 暂时移除跳过方案选择功能
-  // const handleSkipMethodSelection = useCallback(() => {
-  //   // 清空方案选择
-  //   setSelectedMethod('')
-  //   // 直接跳转到笔记表单步骤
-  //   setCurrentStep(2) // 假设笔记表单是第3步（索引为2）
-  // }, [])
+
 
   // 计算咖啡粉量
   const getCoffeeAmount = () => {
@@ -349,7 +343,6 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
               commonMethods={selectedEquipment ? (commonMethods as any)[selectedEquipment] || [] : []}
               onMethodSelect={setSelectedMethod}
               onParamsChange={_handleMethodParamsChange}
-              // onSkipMethodSelection={handleSkipMethodSelection} // 暂时移除
             />
           )}
         </div>

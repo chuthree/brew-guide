@@ -816,14 +816,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
         // 确定当前步骤是否可以返回，以及应返回到哪个步骤
         const getBackStep = (): BrewingStep | null => {
-            // 特殊处理：如果是从方案步骤跳过到记录步骤，返回时应该回到方案步骤
-            if (activeBrewingStep === 'notes') {
-                const skipMethodToNotes = localStorage.getItem('skipMethodToNotes');
-                if (skipMethodToNotes === 'true') {
-                    return 'method';
-                }
-            }
-
             // 如果当前是方案步骤且没有咖啡豆，则不允许返回到咖啡豆步骤
             if (activeBrewingStep === 'method' && !hasCoffeeBeans) {
                 return null;
@@ -833,21 +825,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
         const backStep = getBackStep();
         if (!backStep) return;
-
-        // 处理从记录步骤返回到方案步骤的特殊情况（跳过方案选择）
-        if (activeBrewingStep === 'notes' && backStep === 'method') {
-            // 清除跳过方案选择的标记
-            localStorage.removeItem('skipMethodToNotes');
-
-            // 使用navigateToStep返回到方案步骤
-            navigateToStep(backStep, {
-                force: true,
-                preserveStates: ["all"],
-                preserveCoffeeBean: true,
-                preserveEquipment: true,
-                preserveMethod: false // 不保留方案，因为用户跳过了方案选择
-            });
-        }
         // 处理从注水步骤返回到方案步骤的特殊情况
         else if (activeBrewingStep === 'brewing' && backStep === 'method') {
             // 设置特殊标记，确保可以正常导航

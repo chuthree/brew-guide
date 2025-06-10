@@ -385,7 +385,6 @@ export const DataManager = {
 					// 清除冲煮相关的临时状态
 					const brewingStateKeys = [
 						'brewingNoteInProgress',
-						'skipMethodToNotes',
 						'dataMigrationSkippedThisSession'
 					];
 					for (const key of brewingStateKeys) {
