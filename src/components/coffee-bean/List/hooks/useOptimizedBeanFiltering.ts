@@ -43,8 +43,9 @@ export const useOptimizedBeanFiltering = ({
         }
 
         // 2. 按是否显示空豆子筛选
-        if (!showEmptyBeans) {
-            filtered = filtered.filter(bean => !isBeanEmpty(bean))
+        if (showEmptyBeans) {
+            // 仅显示已用完的咖啡豆
+            filtered = filtered.filter(bean => isBeanEmpty(bean))
         }
 
         // 3. 按品种筛选
@@ -94,8 +95,9 @@ export const useOptimizedBeanFiltering = ({
 
         // 再按是否显示空豆子筛选
         let beansForVarieties = typeFilteredBeans
-        if (!showEmptyBeans) {
-            beansForVarieties = typeFilteredBeans.filter(bean => !isBeanEmpty(bean))
+        if (showEmptyBeans) {
+            // 仅显示已用完的咖啡豆
+            beansForVarieties = typeFilteredBeans.filter(bean => isBeanEmpty(bean))
         }
 
         // 使用工具函数提取品种并去重
