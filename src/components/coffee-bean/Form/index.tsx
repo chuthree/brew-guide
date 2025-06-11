@@ -702,6 +702,7 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                     handleCapacityBlur={handleCapacityBlur}
                     toggleInTransitState={toggleInTransitState}
                     isSimpleMode={true}
+                    isEdit={!!initialBean}
                 />
             );
         }
@@ -718,6 +719,7 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                         handleCapacityBlur={handleCapacityBlur}
                         toggleInTransitState={toggleInTransitState}
                         isSimpleMode={false}
+                        isEdit={!!initialBean}
                     />
                 );
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { CornerDownRight } from 'lucide-react';
 import AutocompleteInput from '@/components/common/forms/AutocompleteInput';
 import AutoResizeTextarea from '@/components/common/forms/AutoResizeTextarea';
 import { ExtendedCoffeeBean } from '../types';
@@ -17,6 +18,7 @@ interface BasicInfoProps {
     handleCapacityBlur?: () => void;
     toggleInTransitState: () => void;
     isSimpleMode?: boolean;
+    isEdit?: boolean;
 }
 
 const BasicInfo: React.FC<BasicInfoProps> = ({
@@ -28,11 +30,17 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
     handleCapacityBlur,
     toggleInTransitState,
     isSimpleMode = false,
+    isEdit = false,
 }) => {
     // 处理容量和剩余容量的状态
     const [capacityValue, setCapacityValue] = useState('');
     const [remainingValue, setRemainingValue] = useState('');
-    
+
+    // 续购功能状态
+    const [showRepurchase, setShowRepurchase] = useState(false);
+    const [repurchaseWeight, setRepurchaseWeight] = useState('');
+    const [repurchasePrice, setRepurchasePrice] = useState('');
+
     // 初始化和同步容量值
     useEffect(() => {
         setCapacityValue(bean.capacity || '');
@@ -76,6 +84,49 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
         }
         setRemainingValue(value);
         onBeanChange('remaining')(value);
+    };
+
+    // 处理续购功能
+    const handleRepurchaseToggle = () => {
+        setShowRepurchase(!showRepurchase);
+        if (showRepurchase) {
+            // 关闭时清空续购数据
+            setRepurchaseWeight('');
+            setRepurchasePrice('');
+        }
+    };
+
+    // 处理续购确认
+    const handleRepurchaseConfirm = () => {
+        if (!repurchaseWeight || !repurchasePrice) return;
+
+        const currentCapacity = parseFloat(capacityValue) || 0;
+        const currentRemaining = parseFloat(remainingValue) || 0;
+        const currentPrice = parseFloat(bean.price || '0') || 0;
+
+        const addWeight = parseFloat(repurchaseWeight);
+        const addPrice = parseFloat(repurchasePrice);
+
+        if (isNaN(addWeight) || isNaN(addPrice)) return;
+
+        // 更新总量和剩余量
+        const newCapacity = (currentCapacity + addWeight).toString();
+        const newRemaining = (currentRemaining + addWeight).toString();
+        const newPrice = (currentPrice + addPrice).toString();
+
+        // 更新状态
+        setCapacityValue(newCapacity);
+        setRemainingValue(newRemaining);
+
+        // 更新主表单数据
+        onBeanChange('capacity')(newCapacity);
+        onBeanChange('remaining')(newRemaining);
+        onBeanChange('price')(newPrice);
+
+        // 关闭续购界面并清空数据
+        setShowRepurchase(false);
+        setRepurchaseWeight('');
+        setRepurchasePrice('');
     };
 
     // 处理图片选择逻辑 (相册或拍照)
@@ -281,6 +332,19 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
                             />
                         </div>
                     </div>
+
+                    {/* 续购按钮 - 只在编辑模式下显示 */}
+                    {isEdit && (
+                        <button
+                            type="button"
+                            onClick={handleRepurchaseToggle}
+                            className="flex items-center text-xs text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200 transition-colors mt-1"
+                            title="续购"
+                        >
+                            <CornerDownRight className="w-3 h-3 mr-1" />
+                            续购
+                        </button>
+                    )}
                 </div>
 
                 <div className="space-y-2">
@@ -300,6 +364,72 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
                     />
                 </div>
             </div>
+
+            {/* 续购表单 */}
+            <AnimatePresence>
+                {showRepurchase && (
+                    <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="w-full space-y-4"
+                    >
+                        <div className="space-y-4">
+                            <div className="grid grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                                        续购重量(g)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        inputMode="decimal"
+                                        step="0.1"
+                                        value={repurchaseWeight}
+                                        onChange={(e) => setRepurchaseWeight(e.target.value)}
+                                        placeholder="例如：250"
+                                        className="bg-transparent outline-none w-full text-left border-b border-neutral-300 dark:border-neutral-700 py-2 focus:border-neutral-800 dark:focus:border-neutral-400"
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                                        续购价格(¥)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        inputMode="decimal"
+                                        step="0.01"
+                                        value={repurchasePrice}
+                                        onChange={(e) => setRepurchasePrice(e.target.value)}
+                                        placeholder="例如：88"
+                                        className="bg-transparent outline-none w-full text-left border-b border-neutral-300 dark:border-neutral-700 py-2 focus:border-neutral-800 dark:focus:border-neutral-400"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex justify-start space-x-4 text-xs">
+                                <span
+                                    onClick={handleRepurchaseToggle}
+                                    className="text-neutral-600 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200 cursor-pointer underline transition-colors"
+                                >
+                                    取消
+                                </span>
+                                <span
+                                    onClick={handleRepurchaseConfirm}
+                                    className={`cursor-pointer underline transition-colors ${
+                                        !repurchaseWeight || !repurchasePrice
+                                            ? 'text-neutral-400 dark:text-neutral-600 cursor-not-allowed'
+                                            : 'text-neutral-800 dark:text-neutral-200 hover:text-neutral-600 dark:hover:text-neutral-400'
+                                    }`}
+                                >
+                                    添加续购
+                                </span>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {!isSimpleMode && (
                 <div className="grid grid-cols-2 gap-6 w-full">
