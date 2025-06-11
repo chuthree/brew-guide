@@ -12,6 +12,9 @@ const BEAN_CACHE_KEY = "allBeans";
 const RATED_BEANS_CACHE_KEY = "ratedBeans";
 const BEANS_BY_TYPE_PREFIX = "beansByType_";
 
+// 批量操作标志
+let isBatchOperation = false;
+
 // 动态导入 Storage 的辅助函数
 const getStorage = async () => {
 	const { Storage } = await import('@/lib/core/storage');
@@ -134,7 +137,12 @@ export const CoffeeBeanManager = {
 			
 			// 使缓存失效，确保下次获取最新数据
 			this._invalidateCaches();
-			
+
+			// 触发咖啡豆更新事件（除非在批量操作中）
+			if (typeof window !== 'undefined' && !isBatchOperation) {
+				window.dispatchEvent(new CustomEvent('coffeeBeansUpdated'));
+			}
+
 			return newBean;
 		} catch (error) {
 			console.error('添加咖啡豆失败:', error);
@@ -180,10 +188,15 @@ export const CoffeeBeanManager = {
 			
 			// 使缓存失效，确保下次获取最新数据
 			this._invalidateCaches();
-			
+
 			// 特别使单个豆子的缓存失效
 			beanCache.delete(`bean_${id}`);
-			
+
+			// 触发咖啡豆更新事件（除非在批量操作中）
+			if (typeof window !== 'undefined' && !isBatchOperation) {
+				window.dispatchEvent(new CustomEvent('coffeeBeansUpdated'));
+			}
+
 			return updatedBean;
 		} catch (error) {
 			console.error('更新咖啡豆失败:', error);
@@ -215,10 +228,15 @@ export const CoffeeBeanManager = {
 			
 			// 使缓存失效
 			this._invalidateCaches();
-			
+
 			// 特别使单个豆子的缓存失效
 			beanCache.delete(`bean_${id}`);
-			
+
+			// 触发咖啡豆更新事件（除非在批量操作中）
+			if (typeof window !== 'undefined' && !isBatchOperation) {
+				window.dispatchEvent(new CustomEvent('coffeeBeansUpdated'));
+			}
+
 			return true;
 		} catch (error) {
 			console.error('删除咖啡豆失败:', error);
@@ -394,6 +412,24 @@ export const CoffeeBeanManager = {
 		);
 	},
 	
+	/**
+	 * 开始批量操作（禁用自动事件触发）
+	 */
+	startBatchOperation() {
+		isBatchOperation = true;
+	},
+
+	/**
+	 * 结束批量操作（重新启用自动事件触发并触发一次更新事件）
+	 */
+	endBatchOperation() {
+		isBatchOperation = false;
+		// 触发一次更新事件
+		if (typeof window !== 'undefined') {
+			window.dispatchEvent(new CustomEvent('coffeeBeansUpdated'));
+		}
+	},
+
 	/**
 	 * 使所有相关缓存失效（私有方法）
 	 */

@@ -57,44 +57,74 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
     // 移除了极简模式相关的设置加载逻辑
 
 
-    // 优化的加载咖啡豆数据函数 - 使用全局缓存避免重复加载
-    const loadBeans = useCallback(async () => {
+    // 优化的加载咖啡豆数据函数 - 支持强制刷新
+    const loadBeans = useCallback(async (forceReload = false) => {
         try {
-            // 如果全局缓存已初始化且有数据，什么都不做，避免状态变化导致闪烁
-            if (globalCache.initialized && globalCache.beans.length > 0) {
-                return;
+            // 如果强制刷新或缓存未初始化，则重新加载数据
+            if (forceReload || !globalCache.initialized || globalCache.beans.length === 0) {
+                console.log('ListView: 重新加载咖啡豆数据', { forceReload, initialized: globalCache.initialized, beansCount: globalCache.beans.length });
+
+                const loadedBeans = await CoffeeBeanManager.getAllBeans();
+
+                // 更新全局缓存
+                globalCache.beans = loadedBeans;
+                globalCache.initialized = true;
+
+                // 使用 useTransition 包裹状态更新，避免界面闪烁
+                startTransition(() => {
+                    setBeans(loadedBeans);
+                });
+            } else {
+                // 使用缓存数据
+                startTransition(() => {
+                    setBeans(globalCache.beans);
+                });
             }
-
-            const loadedBeans = await CoffeeBeanManager.getAllBeans();
-
-            // 更新全局缓存
-            globalCache.beans = loadedBeans;
-            globalCache.initialized = true;
-
-            // 使用 useTransition 包裹状态更新，避免界面闪烁
-            startTransition(() => {
-                setBeans(loadedBeans);
-            });
         } catch (error) {
             console.error("加载咖啡豆数据失败:", error);
         }
     }, []);
 
-    // 优化的数据加载逻辑 - 只在首次挂载和强制刷新时加载
+    // 优化的数据加载逻辑 - 首次挂载和强制刷新时加载
     useEffect(() => {
-        loadBeans();
+        const shouldForceReload = forceRefreshKey > 0;
+        loadBeans(shouldForceReload);
     }, [forceRefreshKey, loadBeans]);
 
-    // 监听咖啡豆更新事件
+    // 监听咖啡豆更新事件 - 统一监听所有相关事件
     useEffect(() => {
-        const handleBeansUpdated = () => {
-            setForceRefreshKey(prev => prev + 1);
+        const handleBeansUpdated = async (event?: Event) => {
+            console.log('ListView: 检测到咖啡豆数据更新事件', event?.type);
+
+            // 清除CoffeeBeanManager缓存
+            try {
+                const { CoffeeBeanManager } = await import('@/lib/managers/coffeeBeanManager');
+                CoffeeBeanManager.clearCache();
+            } catch (error) {
+                console.error('清除CoffeeBeanManager缓存失败:', error);
+            }
+
+            // 清除全局缓存，强制重新加载
+            globalCache.beans = [];
+            globalCache.initialized = false;
+
+            // 强制刷新组件，确保触发重新加载
+            setForceRefreshKey(prev => {
+                const newKey = prev + 1;
+                console.log('ListView: 设置强制刷新key', newKey);
+                return newKey;
+            });
         };
 
+        // 监听所有相关的咖啡豆更新事件
         window.addEventListener('coffeeBeansUpdated', handleBeansUpdated);
+        window.addEventListener('coffeeBeanDataChanged', handleBeansUpdated);
+        window.addEventListener('coffeeBeanListChanged', handleBeansUpdated);
 
         return () => {
             window.removeEventListener('coffeeBeansUpdated', handleBeansUpdated);
+            window.removeEventListener('coffeeBeanDataChanged', handleBeansUpdated);
+            window.removeEventListener('coffeeBeanListChanged', handleBeansUpdated);
         };
     }, []);
 
@@ -459,9 +489,14 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
                                                 width={56}
                                                 height={56}
                                                 className="w-full h-full object-cover"
+                                                key={`${bean.id}-${forceRefreshKey}`} // 添加key强制重新加载图片
                                                 onError={(e) => {
                                                     const target = e.target as HTMLImageElement;
                                                     target.style.display = 'none';
+                                                }}
+                                                onLoad={(e) => {
+                                                    const target = e.target as HTMLImageElement;
+                                                    target.style.display = 'block';
                                                 }}
                                             />
                                         ) : (

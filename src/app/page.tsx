@@ -986,7 +986,15 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
             let importCount = 0;
             let lastImportedBean: ExtendedCoffeeBean | null = null;
-            for (const beanData of beansToImport) {
+
+            // 动态导入 CoffeeBeanManager
+            const { CoffeeBeanManager } = await import('@/lib/managers/coffeeBeanManager');
+
+            // 开始批量操作，禁用单个添加时的事件触发
+            CoffeeBeanManager.startBatchOperation();
+
+            try {
+                for (const beanData of beansToImport) {
                 // 将导入的咖啡豆转换为ExtendedCoffeeBean类型
                 const bean = {
                     name: beanData.name,
@@ -1052,11 +1060,14 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                     bean.beanType = 'filter';
                 }
 
-                // 添加到数据库
-                const { CoffeeBeanManager } = await import('@/lib/managers/coffeeBeanManager');
-                const newBean = await CoffeeBeanManager.addBean(bean);
-                lastImportedBean = newBean;
-                importCount++;
+                    // 添加到数据库
+                    const newBean = await CoffeeBeanManager.addBean(bean);
+                    lastImportedBean = newBean;
+                    importCount++;
+                }
+            } finally {
+                // 结束批量操作，触发更新事件
+                CoffeeBeanManager.endBatchOperation();
             }
 
             if (importCount === 0) {
@@ -1066,7 +1077,21 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             // 关闭导入表单
             setShowImportBeanForm(false);
 
-            // 更新咖啡豆状态
+            // 统一的数据更新通知机制
+            // 1. 触发咖啡豆数据变更事件，让所有相关组件监听并更新
+            window.dispatchEvent(
+                new CustomEvent('coffeeBeanDataChanged', {
+                    detail: {
+                        action: 'import',
+                        importCount: importCount
+                    }
+                })
+            );
+
+            // 2. 延迟一下确保批量操作完全结束
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            // 3. 更新咖啡豆状态
             handleBeanListChange();
 
             // 切换到咖啡豆标签页，跳过过渡动画
