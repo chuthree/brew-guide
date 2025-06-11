@@ -62,8 +62,6 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
         try {
             // 如果强制刷新或缓存未初始化，则重新加载数据
             if (forceReload || !globalCache.initialized || globalCache.beans.length === 0) {
-                console.log('ListView: 重新加载咖啡豆数据', { forceReload, initialized: globalCache.initialized, beansCount: globalCache.beans.length });
-
                 const loadedBeans = await CoffeeBeanManager.getAllBeans();
 
                 // 更新全局缓存
@@ -93,9 +91,25 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
 
     // 监听咖啡豆更新事件 - 统一监听所有相关事件
     useEffect(() => {
-        const handleBeansUpdated = async (event?: Event) => {
-            console.log('ListView: 检测到咖啡豆数据更新事件', event?.type);
+        // 组件挂载时立即检查并获取最新数据，防止错过事件
+        const loadLatestData = async () => {
+            try {
+                const { CoffeeBeanManager } = await import('@/lib/managers/coffeeBeanManager');
+                const beans = await CoffeeBeanManager.getAllBeans();
 
+                // 更新全局缓存
+                globalCache.beans = beans;
+                globalCache.initialized = true;
+
+                setBeans(beans);
+            } catch (error) {
+                console.error('挂载时加载数据失败:', error);
+            }
+        };
+
+        loadLatestData(); // 立即加载最新数据
+
+        const handleBeansUpdated = async () => {
             // 清除CoffeeBeanManager缓存
             try {
                 const { CoffeeBeanManager } = await import('@/lib/managers/coffeeBeanManager');
@@ -109,11 +123,7 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
             globalCache.initialized = false;
 
             // 强制刷新组件，确保触发重新加载
-            setForceRefreshKey(prev => {
-                const newKey = prev + 1;
-                console.log('ListView: 设置强制刷新key', newKey);
-                return newKey;
-            });
+            setForceRefreshKey(prev => prev + 1);
         };
 
         // 监听所有相关的咖啡豆更新事件
@@ -126,9 +136,7 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
             window.removeEventListener('coffeeBeanDataChanged', handleBeansUpdated);
             window.removeEventListener('coffeeBeanListChanged', handleBeansUpdated);
         };
-    }, []);
-
-
+    }, []); // 空依赖数组，只在挂载时执行一次
 
     // 计算咖啡豆的赏味期阶段和剩余天数 - 使用缓存优化性能
     const getFlavorInfo = useCallback((bean: CoffeeBean) => {

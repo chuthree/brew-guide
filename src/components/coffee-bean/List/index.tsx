@@ -302,10 +302,39 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         };
     }, [updateFilteredBeansAndCategories]);
 
-    // 监听咖啡豆更新事件
+    // 监听咖啡豆更新事件 - 使用 useRef 避免重新挂载
+    const handleBeansUpdatedRef = useRef<((event?: Event) => void) | null>(null);
+
+    // 创建稳定的事件处理函数
     useEffect(() => {
-        const handleBeansUpdated = () => {
+        handleBeansUpdatedRef.current = (event?: Event) => {
             setForceRefreshKey(prev => prev + 1);
+        };
+    });
+
+    // 只在组件挂载时设置事件监听器，避免重复挂载
+    useEffect(() => {
+        // 组件挂载时立即检查并获取最新数据，防止错过事件
+        const loadLatestData = async () => {
+            try {
+                const loadedBeans = await CoffeeBeanManager.getAllBeans() as ExtendedCoffeeBean[];
+
+                // 更新状态和全局缓存
+                setBeans(loadedBeans);
+                globalCache.beans = loadedBeans;
+                globalCache.initialized = true;
+                updateFilteredBeansAndCategories(loadedBeans);
+            } catch (error) {
+                console.error('挂载时加载数据失败:', error);
+            }
+        };
+
+        loadLatestData(); // 立即加载最新数据
+
+        const handleBeansUpdated = (event?: Event) => {
+            if (handleBeansUpdatedRef.current) {
+                handleBeansUpdatedRef.current(event);
+            }
         };
 
         window.addEventListener('coffeeBeansUpdated', handleBeansUpdated);
@@ -315,7 +344,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
             window.removeEventListener('coffeeBeansUpdated', handleBeansUpdated);
             window.removeEventListener('coffeeBeanListChanged', handleBeansUpdated);
         };
-    }, []);
+    }, []); // 空依赖数组，只在挂载时执行一次
 
     // 清理unmountTimeout
     useEffect(() => {

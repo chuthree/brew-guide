@@ -191,9 +191,12 @@ const TabContent: React.FC<TabContentProps> = ({
         }
     }, [activeTab, allBeans.length]);
 
-    // 监听咖啡豆更新事件，同步更新数据
+    // 监听咖啡豆更新事件 - 使用 useRef 避免重新挂载
+    const handleBeansUpdatedRef = useRef<((event?: Event) => Promise<void>) | null>(null);
+
+    // 创建稳定的事件处理函数
     useEffect(() => {
-        const handleBeansUpdated = async () => {
+        handleBeansUpdatedRef.current = async (event?: Event) => {
             try {
                 const { CoffeeBeanManager } = await import('@/lib/managers/coffeeBeanManager');
                 const beans = await CoffeeBeanManager.getAllBeans();
@@ -202,13 +205,35 @@ const TabContent: React.FC<TabContentProps> = ({
                 console.error('更新咖啡豆数据失败:', error);
             }
         };
+    });
+
+    // 只在组件挂载时设置事件监听器，避免重复挂载
+    useEffect(() => {
+        // 组件挂载时立即获取最新数据，防止错过事件
+        const loadLatestData = async () => {
+            try {
+                const { CoffeeBeanManager } = await import('@/lib/managers/coffeeBeanManager');
+                const beans = await CoffeeBeanManager.getAllBeans();
+                setAllBeans(beans);
+            } catch (error) {
+                console.error('挂载时加载数据失败:', error);
+            }
+        };
+
+        loadLatestData(); // 立即加载最新数据
+
+        const handleBeansUpdated = (event?: Event) => {
+            if (handleBeansUpdatedRef.current) {
+                handleBeansUpdatedRef.current(event);
+            }
+        };
 
         window.addEventListener('coffeeBeansUpdated', handleBeansUpdated);
 
         return () => {
             window.removeEventListener('coffeeBeansUpdated', handleBeansUpdated);
         };
-    }, []);
+    }, []); // 空依赖数组，只在挂载时执行一次
 
     // 简化的保存笔记处理 - 统一数据流避免竞态条件
     const handleSaveNote = async (note: BrewingNoteData) => {
@@ -303,8 +328,6 @@ const TabContent: React.FC<TabContentProps> = ({
 
         return undefined;
     }, [selectedEquipment, customEquipments]);
-
-
 
     // 笔记表单包装组件
     const NoteFormWrapper = () => {
@@ -410,8 +433,6 @@ const TabContent: React.FC<TabContentProps> = ({
             }
         };
     };
-
-
 
     // 通用方案折叠状态
     const [isCommonMethodsCollapsed, setIsCommonMethodsCollapsed] = useState(false);
