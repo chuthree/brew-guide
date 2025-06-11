@@ -247,7 +247,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                             selectedBeanType !== 'all' ?
                                 `[ 没有${selectedBeanType === 'espresso' ? '意式' : '手冲'}咖啡豆 ]` :
                                 beans.length > 0 ?
-                                    (showEmptyBeans ? '[ 没有已用完的咖啡豆 ]' : '[ 暂无咖啡豆，请点击下方按钮添加 ]') :
+                                    (showEmptyBeans ? '[ 暂无咖啡豆，请点击下方按钮添加 ]' : '[ 所有咖啡豆已用完，点击"已用完"查看 ]') :
                                     '[ 暂无咖啡豆，请点击下方按钮添加 ]'
                     }
                 </div>
