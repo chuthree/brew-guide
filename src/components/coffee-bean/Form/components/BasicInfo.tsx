@@ -14,6 +14,7 @@ interface BasicInfoProps {
     onImageUpload: (file: File) => void;
     editingRemaining: string | null;
     validateRemaining: () => void;
+    handleCapacityBlur?: () => void;
     toggleInTransitState: () => void;
     isSimpleMode?: boolean;
 }
@@ -24,6 +25,7 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
     onImageUpload,
     editingRemaining,
     validateRemaining,
+    handleCapacityBlur,
     toggleInTransitState,
     isSimpleMode = false,
 }) => {
@@ -60,15 +62,10 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
         return undefined;
     };
     
-    // 处理容量变化
+    // 处理容量变化 - 只更新本地状态，不触发主表单更新
     const handleCapacityChange = (value: string) => {
         setCapacityValue(value);
-        onBeanChange('capacity')(value);
-        // 如果剩余容量为空或者剩余容量大于总容量，则同步剩余容量
-        if (!remainingValue || (parseFloat(value) < parseFloat(remainingValue))) {
-            setRemainingValue(value);
-            onBeanChange('remaining')(value);
-        }
+        // 不再实时调用 onBeanChange，只在失焦时处理
     };
     
     // 处理剩余容量变化
@@ -268,6 +265,19 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
                                 onChange={(e) => handleCapacityChange(e.target.value)}
                                 placeholder="总量"
                                 className="bg-transparent outline-none w-full text-center border-b border-neutral-300 dark:border-neutral-700 py-2"
+                                onBlur={() => {
+                                    // 失焦时更新主表单的总量
+                                    onBeanChange('capacity')(capacityValue);
+
+                                    // 失焦时判断是否需要同步剩余量
+                                    if (capacityValue && (!remainingValue || remainingValue.trim() === '')) {
+                                        setRemainingValue(capacityValue);
+                                        onBeanChange('remaining')(capacityValue);
+                                    }
+
+                                    // 调用主表单的失焦处理函数（用于其他逻辑）
+                                    handleCapacityBlur?.();
+                                }}
                             />
                         </div>
                     </div>

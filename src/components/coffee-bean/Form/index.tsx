@@ -255,6 +255,11 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
         }
     }, [bean.capacity, bean.remaining]);
 
+    // 处理总量失焦时的同步逻辑（现在主要逻辑在BasicInfo组件中处理）
+    const handleCapacityBlur = useCallback(() => {
+        // 预留给其他可能的失焦处理逻辑
+    }, []);
+
     // 获取当前步骤索引
     const getCurrentStepIndex = () => {
         return steps.findIndex(step => step.id === currentStep);
@@ -322,34 +327,27 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
         if (field === 'capacity') {
             // 修改正则表达式以允许小数点
             const numericValue = safeValue.replace(/[^0-9.]/g, '');
-            
+
             // 确保只有一个小数点
             const dotCount = (numericValue.match(/\./g) || []).length;
-            let sanitizedValue = dotCount > 1 ? 
-                numericValue.substring(0, numericValue.lastIndexOf('.')) : 
+            let sanitizedValue = dotCount > 1 ?
+                numericValue.substring(0, numericValue.lastIndexOf('.')) :
                 numericValue;
-                
+
             // 限制小数点后只能有一位数字
             const dotIndex = sanitizedValue.indexOf('.');
             if (dotIndex !== -1 && dotIndex < sanitizedValue.length - 2) {
                 sanitizedValue = sanitizedValue.substring(0, dotIndex + 2);
             }
 
-            if (sanitizedValue.trim() !== '') {
-                setBean(prev => ({
-                    ...prev,
-                    capacity: sanitizedValue,
-                    remaining: sanitizedValue
-                }));
-                setEditingRemaining(null);
-            } else {
-                setBean(prev => ({
-                    ...prev,
-                    capacity: '',
-                    remaining: ''
-                }));
-                setEditingRemaining(null);
-            }
+            // 更新总量，不实时同步剩余量
+            setBean(prev => ({
+                ...prev,
+                capacity: sanitizedValue,
+                // 总量清空时，剩余量也清空
+                remaining: sanitizedValue.trim() === '' ? '' : prev.remaining
+            }));
+            setEditingRemaining(null);
         } else if (field === 'remaining') {
             // 修改正则表达式以允许小数点
             const numericValue = safeValue.replace(/[^0-9.]/g, '');
@@ -701,6 +699,7 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                     onImageUpload={handleImageUpload}
                     editingRemaining={editingRemaining}
                     validateRemaining={validateRemaining}
+                    handleCapacityBlur={handleCapacityBlur}
                     toggleInTransitState={toggleInTransitState}
                     isSimpleMode={true}
                 />
@@ -716,6 +715,7 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                         onImageUpload={handleImageUpload}
                         editingRemaining={editingRemaining}
                         validateRemaining={validateRemaining}
+                        handleCapacityBlur={handleCapacityBlur}
                         toggleInTransitState={toggleInTransitState}
                         isSimpleMode={false}
                     />
