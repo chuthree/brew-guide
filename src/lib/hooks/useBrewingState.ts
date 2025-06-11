@@ -373,14 +373,32 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 			try {
 				if (!selectedEquipment) throw new Error("未选择设备");
 
-				await apiSaveCustomMethod(method, selectedEquipment, customMethods, editingMethod);
+				// 检查是否是从通用方案创建的新方案
+				const isFromCommonMethod = (method as any)._isFromCommonMethod;
+
+				// 清理临时标记
+				const cleanMethod = { ...method };
+				delete (cleanMethod as any)._isFromCommonMethod;
+				delete (cleanMethod as any)._originalCommonMethod;
+
+				// 如果是从通用方案创建的，不传递 editingMethod（作为新方案保存）
+				// 如果是编辑现有自定义方案，传递 editingMethod
+				const editingMethodToPass = isFromCommonMethod ? undefined : editingMethod;
+
+				await apiSaveCustomMethod(cleanMethod, selectedEquipment, customMethods, editingMethodToPass);
 				const methods = await loadCustomMethods();
 				setCustomMethods(methods);
 
-				const savedMethod = methods[selectedEquipment]?.find(m => m.name === method.name);
-				setSelectedMethod(savedMethod || method);
+				const savedMethod = methods[selectedEquipment]?.find(m => m.name === cleanMethod.name);
+				setSelectedMethod(savedMethod || cleanMethod);
 				setShowCustomForm(false);
 				setEditingMethod(undefined);
+
+				// 如果是从通用方案创建的新方案，显示成功提示
+				if (isFromCommonMethod) {
+					const { showToast } = await import("@/components/common/feedback/GlobalToast");
+					showToast({ type: 'success', title: '已保存通用方案到自定义列表', duration: 2000 });
+				}
 			} catch (error) {
 				console.error("保存方案失败:", error);
 				alert("保存方案失败，请重试");

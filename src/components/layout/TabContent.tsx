@@ -12,7 +12,7 @@ import { showToast } from "@/components/common/feedback/GlobalToast";
 import { getEquipmentName } from '@/lib/brewing/parameters';
 import BottomActionBar from '@/components/layout/BottomActionBar';
 import CoffeeBeanList from '@/components/coffee-bean/List/ListView';
-import { saveCustomMethod } from '@/lib/managers/customMethods';
+
 import { Search, X, Shuffle } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 // 分享模态框已移除，改为直接复制到剪贴板
@@ -456,8 +456,8 @@ const TabContent: React.FC<TabContentProps> = ({
         return 'V60'; // 默认
     };
 
-    // 复制通用方案到自定义列表
-    const copyCommonMethodToCustom = async (step: Step, selectedEquipment: string) => {
+    // 编辑通用方案 - 创建临时副本进入编辑模式，不立即保存
+    const editCommonMethod = (step: Step, selectedEquipment: string) => {
         let commonMethodsList = commonMethods[selectedEquipment];
 
         if (!commonMethodsList && selectedEquipment.startsWith('custom-')) {
@@ -471,14 +471,16 @@ const TabContent: React.FC<TabContentProps> = ({
             m.id === step.methodId || m.name === step.title);
 
         if (methodIndex >= 0 && methodIndex < commonMethodsList.length) {
-            try {
-                const methodCopy = createEditableMethodFromCommon(commonMethodsList[methodIndex]);
-                await saveCustomMethod(selectedEquipment, methodCopy);
-                setTimeout(() => onEditMethod(methodCopy), 100);
-                showToast({ type: 'success', title: '已复制通用方案到自定义列表', duration: 2000 });
-            } catch {
-                showToast({ type: 'error', title: '复制方案失败，请重试', duration: 2000 });
-            }
+            // 创建通用方案的临时副本，但不保存到自定义列表
+            const methodCopy = createEditableMethodFromCommon(commonMethodsList[methodIndex]);
+            // 添加标记表示这是从通用方案创建的新方案
+            const methodWithFlag = {
+                ...methodCopy,
+                _isFromCommonMethod: true, // 临时标记，用于区分编辑模式
+                _originalCommonMethod: commonMethodsList[methodIndex] // 保存原始通用方案引用
+            };
+            // 直接进入编辑模式，不显示成功提示
+            onEditMethod(methodWithFlag);
         }
     };
 
@@ -725,7 +727,7 @@ const TabContent: React.FC<TabContentProps> = ({
                                     editHandler = () => onEditMethod(customMethods[selectedEquipment!][methodIndex]);
                                 }
                             } else if (!step.isCustom && selectedEquipment) {
-                                editHandler = () => copyCommonMethodToCustom(step, selectedEquipment);
+                                editHandler = () => editCommonMethod(step, selectedEquipment);
                             }
                         } else if (step.isCustom) {
                             editHandler = getEditEquipmentHandler(step);

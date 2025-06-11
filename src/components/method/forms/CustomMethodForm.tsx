@@ -1079,7 +1079,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                     <NameStep
                         name={method.name}
                         onChange={(name) => setMethod({ ...method, name })}
-                        isEdit={!!initialMethod}
+                        isEdit={!!initialMethod && !(initialMethod as any)._isFromCommonMethod}
                     />
                 );
 
@@ -1156,7 +1156,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                         water={method.params.water}
                         ratio={method.params.ratio}
                         totalTime={calculateTotalTime()}
-                        isEdit={!!initialMethod}
+                        isEdit={!!initialMethod && !(initialMethod as any)._isFromCommonMethod}
                         formatTime={formatTime}
                         isEspressoMachine={isEspressoMachine(customEquipment)}
                         formattedEspressoWater={isEspressoMachine(customEquipment) ? formatEspressoTotalWater() : undefined}
