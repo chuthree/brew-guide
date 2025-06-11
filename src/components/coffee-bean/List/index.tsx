@@ -307,7 +307,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
 
     // 创建稳定的事件处理函数
     useEffect(() => {
-        handleBeansUpdatedRef.current = (event?: Event) => {
+        handleBeansUpdatedRef.current = (_event?: Event) => {
             setForceRefreshKey(prev => prev + 1);
         };
     });
@@ -331,9 +331,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
 
         loadLatestData(); // 立即加载最新数据
 
-        const handleBeansUpdated = (event?: Event) => {
+        const handleBeansUpdated = (_event?: Event) => {
             if (handleBeansUpdatedRef.current) {
-                handleBeansUpdatedRef.current(event);
+                handleBeansUpdatedRef.current(_event);
             }
         };
 

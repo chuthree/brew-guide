@@ -196,7 +196,7 @@ const TabContent: React.FC<TabContentProps> = ({
 
     // 创建稳定的事件处理函数
     useEffect(() => {
-        handleBeansUpdatedRef.current = async (event?: Event) => {
+        handleBeansUpdatedRef.current = async (_event?: Event) => {
             try {
                 const { CoffeeBeanManager } = await import('@/lib/managers/coffeeBeanManager');
                 const beans = await CoffeeBeanManager.getAllBeans();
@@ -222,9 +222,9 @@ const TabContent: React.FC<TabContentProps> = ({
 
         loadLatestData(); // 立即加载最新数据
 
-        const handleBeansUpdated = (event?: Event) => {
+        const handleBeansUpdated = (_event?: Event) => {
             if (handleBeansUpdatedRef.current) {
-                handleBeansUpdatedRef.current(event);
+                handleBeansUpdatedRef.current(_event);
             }
         };
 
