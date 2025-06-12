@@ -8,6 +8,7 @@ import { ExtendedCoffeeBean } from '../types';
 import { pageVariants, pageTransition } from '../constants';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/coffee-bean/ui/select';
 import { DatePicker } from '@/components/common/ui/DatePicker';
+import { captureImage } from '@/lib/utils/imageCapture';
 
 interface BasicInfoProps {
     bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>;
@@ -130,34 +131,20 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
     };
 
     // 处理图片选择逻辑 (相册或拍照)
-    const handleImageSelect = (source: 'camera' | 'gallery') => {
+    const handleImageSelect = async (source: 'camera' | 'gallery') => {
         try {
-            const fileInput = document.createElement('input');
-            fileInput.type = 'file';
-            fileInput.accept = 'image/*';
-            
-            // 根据来源设置不同的capture属性
-            if (source === 'camera') {
-                fileInput.setAttribute('capture', 'environment');
-            }
-            
-            fileInput.onchange = (e) => {
-                const input = e.target as HTMLInputElement;
-                if (!input.files || input.files.length === 0) return;
-                
-                const file = input.files[0];
-                if (file.type.startsWith('image/')) {
-                    // 先预览一下图片，以便用户知道已经选择了图片
-                    const tempUrl = URL.createObjectURL(file);
-                    // 临时设置图片预览
-                    onBeanChange('image')(tempUrl);
-                    // 然后正常处理添加
-                    handleFileSelect(file);
-                    // 释放URL对象
-                    setTimeout(() => URL.revokeObjectURL(tempUrl), 5000);
-                }
-            };
-            fileInput.click();
+            const result = await captureImage({ source });
+
+            // 先预览一下图片，以便用户知道已经选择了图片
+            onBeanChange('image')(result.dataUrl);
+
+            // 将 dataUrl 转换为 File 对象
+            const response = await fetch(result.dataUrl);
+            const blob = await response.blob();
+            const file = new File([blob], `image.${result.format}`, { type: `image/${result.format}` });
+
+            // 然后正常处理添加
+            handleFileSelect(file);
         } catch (error) {
             console.error('打开相机/相册失败:', error);
         }

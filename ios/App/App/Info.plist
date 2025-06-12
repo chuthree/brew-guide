@@ -45,5 +45,11 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>此应用需要访问相机来拍摄咖啡豆照片和冲煮笔记图片</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>此应用需要访问相册来选择咖啡豆照片和冲煮笔记图片</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>此应用需要访问相册来保存咖啡相关图片</string>
 </dict>
 </plist>

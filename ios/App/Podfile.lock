@@ -3,6 +3,8 @@ PODS:
     - CapacitorCordova
   - CapacitorBrowser (7.0.1):
     - Capacitor
+  - CapacitorCamera (7.0.1):
+    - Capacitor
   - CapacitorCommunityKeepAwake (7.0.0):
     - Capacitor
   - CapacitorCommunitySafeArea (7.0.0-alpha.1):
@@ -34,6 +36,7 @@ PODS:
 DEPENDENCIES:
   - "Capacitor (from `../../node_modules/.pnpm/@capacitor+ios@7.2.0_@capacitor+core@7.2.0/node_modules/@capacitor/ios`)"
   - "CapacitorBrowser (from `../../node_modules/.pnpm/@capacitor+browser@7.0.1_@capacitor+core@7.2.0/node_modules/@capacitor/browser`)"
+  - "CapacitorCamera (from `../../node_modules/.pnpm/@capacitor+camera@7.0.1_@capacitor+core@7.2.0/node_modules/@capacitor/camera`)"
   - "CapacitorCommunityKeepAwake (from `../../node_modules/.pnpm/@capacitor-community+keep-awake@7.0.0_@capacitor+core@7.2.0/node_modules/@capacitor-community/keep-awake`)"
   - "CapacitorCommunitySafeArea (from `../../node_modules/.pnpm/@capacitor-community+safe-area@7.0.0-alpha.1_@capacitor+core@7.2.0/node_modules/@capacitor-community/safe-area`)"
   - "CapacitorCordova (from `../../node_modules/.pnpm/@capacitor+ios@7.2.0_@capacitor+core@7.2.0/node_modules/@capacitor/ios`)"
@@ -57,6 +60,8 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/.pnpm/@capacitor+ios@7.2.0_@capacitor+core@7.2.0/node_modules/@capacitor/ios"
   CapacitorBrowser:
     :path: "../../node_modules/.pnpm/@capacitor+browser@7.0.1_@capacitor+core@7.2.0/node_modules/@capacitor/browser"
+  CapacitorCamera:
+    :path: "../../node_modules/.pnpm/@capacitor+camera@7.0.1_@capacitor+core@7.2.0/node_modules/@capacitor/camera"
   CapacitorCommunityKeepAwake:
     :path: "../../node_modules/.pnpm/@capacitor-community+keep-awake@7.0.0_@capacitor+core@7.2.0/node_modules/@capacitor-community/keep-awake"
   CapacitorCommunitySafeArea:
@@ -87,6 +92,7 @@ EXTERNAL SOURCES:
 SPEC CHECKSUMS:
   Capacitor: 03bc7cbdde6a629a8b910a9d7d78c3cc7ed09ea7
   CapacitorBrowser: 6299776d496e968505464884d565992faa20444a
+  CapacitorCamera: 6e73f1fc6c629a672658705a02409b60854bc0f1
   CapacitorCommunityKeepAwake: ae762ce29b53147d28cfcaae5273cd1db0c38fc4
   CapacitorCommunitySafeArea: 3f049619072ab5d0da2529bcb05b358ff6c13dc1
   CapacitorCordova: 5967b9ba03915ef1d585469d6e31f31dc49be96f
@@ -102,6 +108,6 @@ SPEC CHECKSUMS:
   CapawesomeCapacitorFilePicker: 30eddd52b12826b7477a3995e06ff0f4304bafae
   OSInAppBrowserLib: 232c74691cffb9959aa07b1d5ff57d96fca2af7f
 
-PODFILE CHECKSUM: 99bf93340726774d1cf31164d88b5857281dab9a
+PODFILE CHECKSUM: 788b8e156d849d0f3ec30f3162fe463e098fcb5c
 
 COCOAPODS: 1.16.2

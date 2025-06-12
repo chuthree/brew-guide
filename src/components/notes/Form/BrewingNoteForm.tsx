@@ -6,6 +6,7 @@ import Image from 'next/image'
 import type { BrewingNoteData, CoffeeBean } from '@/types/app'
 import AutoResizeTextarea from '@/components/common/forms/AutoResizeTextarea'
 import NoteFormHeader from '@/components/notes/ui/NoteFormHeader'
+import { captureImage } from '@/lib/utils/imageCapture'
 
 interface TasteRatings {
     acidity: number;
@@ -414,24 +415,20 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     };
     
     // 处理图片选择
-    const handleImageSelect = (source: 'camera' | 'gallery') => {
-        const fileInput = document.createElement('input');
-        fileInput.type = 'file';
-        fileInput.accept = 'image/*';
+    const handleImageSelect = async (source: 'camera' | 'gallery') => {
+        try {
+            const result = await captureImage({ source });
 
-        if (source === 'camera') {
-            fileInput.setAttribute('capture', 'environment');
+            // 将 dataUrl 转换为 File 对象
+            const response = await fetch(result.dataUrl);
+            const blob = await response.blob();
+            const file = new File([blob], `image.${result.format}`, { type: `image/${result.format}` });
+
+            // 处理图片上传
+            handleImageUpload(file);
+        } catch (error) {
+            console.error('打开相机/相册失败:', error);
         }
-
-        fileInput.onchange = (e) => {
-            const input = e.target as HTMLInputElement;
-            const file = input.files?.[0];
-            if (file?.type.startsWith('image/')) {
-                handleImageUpload(file);
-            }
-        };
-
-        fileInput.click();
     };
 
     // 保存笔记的处理函数

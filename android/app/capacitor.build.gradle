@@ -12,6 +12,7 @@ dependencies {
     implementation project(':capacitor-community-keep-awake')
     implementation project(':capacitor-community-safe-area')
     implementation project(':capacitor-browser')
+    implementation project(':capacitor-camera')
     implementation project(':capacitor-filesystem')
     implementation project(':capacitor-haptics')
     implementation project(':capacitor-inappbrowser')

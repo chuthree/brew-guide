@@ -11,6 +11,9 @@ project(':capacitor-community-safe-area').projectDir = new File('../node_modules
 include ':capacitor-browser'
 project(':capacitor-browser').projectDir = new File('../node_modules/.pnpm/@capacitor+browser@7.0.1_@capacitor+core@7.2.0/node_modules/@capacitor/browser/android')
 
+include ':capacitor-camera'
+project(':capacitor-camera').projectDir = new File('../node_modules/.pnpm/@capacitor+camera@7.0.1_@capacitor+core@7.2.0/node_modules/@capacitor/camera/android')
+
 include ':capacitor-filesystem'
 project(':capacitor-filesystem').projectDir = new File('../node_modules/.pnpm/@capacitor+filesystem@7.0.1_@capacitor+core@7.2.0/node_modules/@capacitor/filesystem/android')
 

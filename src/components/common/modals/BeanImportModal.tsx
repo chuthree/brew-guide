@@ -6,6 +6,7 @@ import ReactCrop, { Crop } from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
 import { recognizeImage, RecognitionError } from '@/services/recognition'
 import { debounce } from 'lodash'
+import { captureImage } from '@/lib/utils/imageCapture'
 
 interface BeanImportModalProps {
     showForm: boolean
@@ -437,39 +438,27 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
     };
 
     // Function to handle image selection from camera or gallery
-    const handleImageSelect = (source: 'camera' | 'gallery') => {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = 'image/*';
-        if (source === 'camera') {
-            input.capture = 'environment';
+    const handleImageSelect = async (source: 'camera' | 'gallery') => {
+        try {
+            const result = await captureImage({ source });
+
+            setSelectedImage(result.dataUrl);
+            // 重置裁剪状态
+            setIsCropActive(false);
+            setCroppedImage(null);
+            // 设置默认裁切框为图片中心的一个区域
+            setCrop({
+                unit: '%',
+                width: 60,
+                height: 60,
+                x: 20,
+                y: 20
+            });
+            // 设置裁剪状态为激活
+            setIsCropActive(true);
+        } catch (error) {
+            console.error('打开相机/相册失败:', error);
         }
-
-        input.onchange = (e) => {
-            const file = (e.target as HTMLInputElement).files?.[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = () => {
-                    setSelectedImage(reader.result as string);
-                    // 重置裁剪状态
-                    setIsCropActive(false);
-                    setCroppedImage(null);
-                    // 设置默认裁切框为图片中心的一个区域
-                    setCrop({
-                        unit: '%',
-                        width: 60,
-                        height: 60,
-                        x: 20,
-                        y: 20
-                    });
-                    // 设置裁剪状态为激活
-                    setIsCropActive(true);
-                };
-                reader.readAsDataURL(file);
-            }
-        };
-
-        input.click();
     };
 
     // Function to handle image recognition process

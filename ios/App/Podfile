@@ -14,6 +14,7 @@ def capacitor_pods
   pod 'CapacitorCommunityKeepAwake', :path => '../../node_modules/.pnpm/@capacitor-community+keep-awake@7.0.0_@capacitor+core@7.2.0/node_modules/@capacitor-community/keep-awake'
   pod 'CapacitorCommunitySafeArea', :path => '../../node_modules/.pnpm/@capacitor-community+safe-area@7.0.0-alpha.1_@capacitor+core@7.2.0/node_modules/@capacitor-community/safe-area'
   pod 'CapacitorBrowser', :path => '../../node_modules/.pnpm/@capacitor+browser@7.0.1_@capacitor+core@7.2.0/node_modules/@capacitor/browser'
+  pod 'CapacitorCamera', :path => '../../node_modules/.pnpm/@capacitor+camera@7.0.1_@capacitor+core@7.2.0/node_modules/@capacitor/camera'
   pod 'CapacitorFilesystem', :path => '../../node_modules/.pnpm/@capacitor+filesystem@7.0.1_@capacitor+core@7.2.0/node_modules/@capacitor/filesystem'
   pod 'CapacitorHaptics', :path => '../../node_modules/.pnpm/@capacitor+haptics@7.0.1_@capacitor+core@7.2.0/node_modules/@capacitor/haptics'
   pod 'CapacitorInappbrowser', :path => '../../node_modules/.pnpm/@capacitor+inappbrowser@2.1.0_@capacitor+core@7.2.0/node_modules/@capacitor/inappbrowser'
