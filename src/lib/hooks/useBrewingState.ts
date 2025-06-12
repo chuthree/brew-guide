@@ -173,24 +173,7 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 		};
 	}, [selectedEquipment]);
 
-	// 简化的前置条件检查
-	const checkPrerequisites = useCallback(
-		(step: BrewingStep): boolean => {
-			switch (step) {
-				case "brewing":
-					return !!selectedMethod;
-				case "notes":
-					return showComplete;
-				default:
-					return true;
-			}
-		},
-		[selectedMethod, showComplete]
-	);
-
-
-
-	// 简化的步骤导航函数
+	// 简化的步骤导航函数 - 线性流程
 	const navigateToStep = useCallback(
 		(step: BrewingStep, options?: NavigationOptions) => {
 			const { force = false } = options || {};
@@ -204,13 +187,8 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 				return false;
 			}
 
-			// 检查计时器状态
-			if (isTimerRunning && !showComplete && !force) {
-				return false;
-			}
-
-			// 检查前置条件
-			if (!force && !checkPrerequisites(step)) {
+			// 只在计时器运行时阻止导航（除非强制）
+			if (isTimerRunning && !force) {
 				return false;
 			}
 
@@ -232,28 +210,30 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 		[
 			activeMainTab,
 			isTimerRunning,
-			showComplete,
-			checkPrerequisites,
 			selectedEquipment,
 			selectedMethod,
 			customEquipments,
 		]
 	);
 
-	// 简化的重置函数
+	// 简化的重置函数 - 重置到初始状态
 	const resetBrewingState = useCallback(
 		(preserveMethod = false) => {
+			// 重置基本状态
+			setShowComplete(false);
+			setCurrentStage(-1);
+			setCountdownTime(null);
+
 			if (preserveMethod && selectedMethod) {
 				navigateToStep("brewing");
 			} else {
-				const cachedEquipment = getSelectedEquipmentPreference();
-				if (cachedEquipment) {
-					setSelectedEquipment(cachedEquipment);
-				}
+				// 重置方法选择
+				setSelectedMethod(null);
+				setCurrentBrewingMethod(null);
 				navigateToStep("method");
 			}
 		},
-		[navigateToStep, selectedMethod]
+		[navigateToStep, selectedMethod, setShowComplete, setCurrentStage, setCountdownTime, setSelectedMethod, setCurrentBrewingMethod]
 	);
 
 	// 简化的器具选择处理
@@ -268,9 +248,8 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 				return equipmentName;
 			}
 
-			// 如果冲煮已完成，重置状态
+			// 重置冲煮状态
 			if (showComplete) {
-				resetBrewingState(true);
 				window.dispatchEvent(new CustomEvent("brewing:reset"));
 			}
 
@@ -279,18 +258,15 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 			setSelectedEquipment(equipment);
 			saveSelectedEquipmentPreference(equipment);
 
-			// 重置方案状态
+			// 重置方案状态并导航到方案步骤
 			setSelectedMethod(null);
 			setCurrentBrewingMethod(null);
 			setMethodType('common');
-
-			// 导航到方案步骤
-			setActiveTab("方案");
-			setActiveBrewingStep("method");
+			navigateToStep("method");
 
 			return equipmentName;
 		},
-		[activeMainTab, showComplete, resetBrewingState]
+		[activeMainTab, showComplete, navigateToStep]
 	);
 
 	// 加载自定义方案

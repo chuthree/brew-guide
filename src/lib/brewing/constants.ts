@@ -7,33 +7,8 @@ export type ParameterRule =
 	| { showAll: true }
 	| { preserve: true };
 
-// 定义统一的步骤导航规则
+// 简化的步骤导航规则 - 线性流程
 export const STEP_RULES = {
-	// 每个步骤的前置条件
-	prerequisites: {
-		coffeeBean: [], // 咖啡豆步骤没有前置条件
-		method: [], // 方案步骤可以直接访问（合并了器具选择）
-		brewing: ["method"], // 需要先完成方案步骤
-		notes: ["brewing", "showComplete"], // 需要完成冲煮且显示完成
-	},
-
-	// 每个步骤需要保留的状态
-	preservedStates: {
-		coffeeBean: [], // 咖啡豆步骤不保留任何状态
-		method: [
-			"selectedCoffeeBean",
-			"selectedCoffeeBeanData",
-		], // 方案步骤保留咖啡豆状态（包含器具选择）
-		brewing: [
-			"selectedCoffeeBean",
-			"selectedCoffeeBeanData",
-			"selectedEquipment",
-			"selectedMethod",
-			"currentBrewingMethod",
-		], // 注水步骤保留所有已选状态
-		notes: ["all"], // 记录步骤保留所有状态
-	},
-
 	// 步骤对应的标签映射
 	tabMapping: {
 		coffeeBean: "咖啡豆" as TabType,
