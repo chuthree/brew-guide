@@ -1,6 +1,7 @@
-import { ExtendedCoffeeBean, BeanType, ViewOption, BloggerBeansYear } from './types';
+import { ExtendedCoffeeBean, BeanType, ViewOption, BloggerBeansYear, BeanFilterMode } from './types';
 import { getBooleanState, saveBooleanState, getStringState, saveStringState, getNumberState, saveNumberState } from '@/lib/core/statePersistence';
 import { SortOption } from './SortSelector';
+import { FlavorPeriodStatus } from '@/lib/utils/beanVarietyUtils';
 
 // 模块名称
 const MODULE_NAME = 'coffee-beans';
@@ -17,6 +18,14 @@ export const globalCache: {
     varieties: string[];
     selectedVariety: string | null;
     selectedBeanType: BeanType;
+    // 新增分类相关状态
+    filterMode: BeanFilterMode;
+    selectedOrigin: string | null;
+    selectedFlavorPeriod: FlavorPeriodStatus | null;
+    selectedRoaster: string | null;
+    availableOrigins: string[];
+    availableFlavorPeriods: FlavorPeriodStatus[];
+    availableRoasters: string[];
     showEmptyBeans: boolean;
     viewMode: ViewOption;
     sortOption: SortOption;
@@ -36,6 +45,14 @@ export const globalCache: {
     varieties: [],
     selectedVariety: null,
     selectedBeanType: 'all',
+    // 新增分类相关状态初始值
+    filterMode: 'variety',
+    selectedOrigin: null,
+    selectedFlavorPeriod: null,
+    selectedRoaster: null,
+    availableOrigins: [],
+    availableFlavorPeriods: [],
+    availableRoasters: [],
     showEmptyBeans: false,
     viewMode: 'inventory',
     sortOption: 'remaining_days_asc',
@@ -168,6 +185,50 @@ export const saveBloggerYearPreference = (value: BloggerBeansYear): void => {
     saveNumberState(MODULE_NAME, 'bloggerYear', value);
 };
 
+// 从localStorage读取分类模式
+export const getFilterModePreference = (): BeanFilterMode => {
+    const value = getStringState(MODULE_NAME, 'filterMode', 'variety');
+    return value as BeanFilterMode;
+};
+
+// 保存分类模式到localStorage
+export const saveFilterModePreference = (value: BeanFilterMode): void => {
+    saveStringState(MODULE_NAME, 'filterMode', value);
+};
+
+// 从localStorage读取选中的产地
+export const getSelectedOriginPreference = (): string | null => {
+    const value = getStringState(MODULE_NAME, 'selectedOrigin', '');
+    return value === '' ? null : value;
+};
+
+// 保存选中的产地到localStorage
+export const saveSelectedOriginPreference = (value: string | null): void => {
+    saveStringState(MODULE_NAME, 'selectedOrigin', value || '');
+};
+
+// 从localStorage读取选中的赏味期状态
+export const getSelectedFlavorPeriodPreference = (): FlavorPeriodStatus | null => {
+    const value = getStringState(MODULE_NAME, 'selectedFlavorPeriod', '');
+    return value === '' ? null : (value as FlavorPeriodStatus);
+};
+
+// 保存选中的赏味期状态到localStorage
+export const saveSelectedFlavorPeriodPreference = (value: FlavorPeriodStatus | null): void => {
+    saveStringState(MODULE_NAME, 'selectedFlavorPeriod', value || '');
+};
+
+// 从localStorage读取选中的烘焙商
+export const getSelectedRoasterPreference = (): string | null => {
+    const value = getStringState(MODULE_NAME, 'selectedRoaster', '');
+    return value === '' ? null : value;
+};
+
+// 保存选中的烘焙商到localStorage
+export const saveSelectedRoasterPreference = (value: string | null): void => {
+    saveStringState(MODULE_NAME, 'selectedRoaster', value || '');
+};
+
 // 初始化全局缓存的状态
 globalCache.showEmptyBeans = getShowEmptyBeansPreference();
 globalCache.selectedVariety = getSelectedVarietyPreference();
@@ -180,6 +241,11 @@ globalCache.bloggerSortOption = getBloggerSortOptionPreference();
 globalCache.rankingBeanType = getRankingBeanTypePreference();
 globalCache.rankingEditMode = getRankingEditModePreference();
 globalCache.bloggerYear = getBloggerYearPreference();
+// 初始化新增的分类相关状态
+globalCache.filterMode = getFilterModePreference();
+globalCache.selectedOrigin = getSelectedOriginPreference();
+globalCache.selectedFlavorPeriod = getSelectedFlavorPeriodPreference();
+globalCache.selectedRoaster = getSelectedRoasterPreference();
 
 // 监听全局缓存重置事件
 if (typeof window !== 'undefined') {
@@ -192,6 +258,14 @@ if (typeof window !== 'undefined') {
         globalCache.varieties = [];
         globalCache.selectedVariety = null;
         globalCache.selectedBeanType = 'all';
+        // 重置新增的分类相关状态
+        globalCache.filterMode = 'variety';
+        globalCache.selectedOrigin = null;
+        globalCache.selectedFlavorPeriod = null;
+        globalCache.selectedRoaster = null;
+        globalCache.availableOrigins = [];
+        globalCache.availableFlavorPeriods = [];
+        globalCache.availableRoasters = [];
         globalCache.showEmptyBeans = false;
         globalCache.viewMode = 'inventory';
         globalCache.sortOption = 'remaining_days_asc';

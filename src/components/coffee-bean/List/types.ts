@@ -35,6 +35,17 @@ export const VIEW_LABELS: Record<ViewOption, string> = {
     [VIEW_OPTIONS.STATS]: '统计视图',
 };
 
+// 咖啡豆分类模式
+export type BeanFilterMode = 'variety' | 'origin' | 'flavorPeriod' | 'roaster';
+
+// 分类模式显示名称
+export const BEAN_FILTER_LABELS: Record<BeanFilterMode, string> = {
+    variety: '按品种',
+    origin: '按产地',
+    flavorPeriod: '按赏味期',
+    roaster: '按烘焙商 BETA',
+};
+
 export interface CoffeeBeansProps {
     isOpen: boolean
     showBeanForm?: (bean: ExtendedCoffeeBean | null) => void

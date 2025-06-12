@@ -18,7 +18,8 @@ import {
     BeanType,
     BloggerBeansYear,
     VIEW_OPTIONS,
-    ViewOption
+    ViewOption,
+    BeanFilterMode
 } from './types'
 import {
     globalCache,
@@ -32,10 +33,15 @@ import {
     saveBloggerSortOptionPreference,
     saveRankingBeanTypePreference,
     saveRankingEditModePreference,
-    saveBloggerYearPreference
+    saveBloggerYearPreference,
+    saveFilterModePreference,
+    saveSelectedOriginPreference,
+    saveSelectedFlavorPeriodPreference,
+    saveSelectedRoasterPreference
 } from './globalCache'
 import { useBeanOperations } from './hooks/useBeanOperations'
-import { useOptimizedBeanFiltering } from './hooks/useOptimizedBeanFiltering'
+import { useEnhancedBeanFiltering } from './hooks/useEnhancedBeanFiltering'
+import { FlavorPeriodStatus } from '@/lib/utils/beanVarietyUtils'
 import ViewSwitcher from './components/ViewSwitcher'
 import InventoryView from './components/InventoryView'
 import StatsView from './components/StatsView'
@@ -92,6 +98,12 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     const [selectedBeanType, setSelectedBeanType] = useState<BeanType>(globalCache.selectedBeanType)
     const [showEmptyBeans, setShowEmptyBeans] = useState<boolean>(globalCache.showEmptyBeans)
 
+    // 新增分类相关状态
+    const [filterMode, setFilterMode] = useState<BeanFilterMode>(globalCache.filterMode)
+    const [selectedOrigin, setSelectedOrigin] = useState<string | null>(globalCache.selectedOrigin)
+    const [selectedFlavorPeriod, setSelectedFlavorPeriod] = useState<FlavorPeriodStatus | null>(globalCache.selectedFlavorPeriod)
+    const [selectedRoaster, setSelectedRoaster] = useState<string | null>(globalCache.selectedRoaster)
+
     // 榜单视图状态
     const [rankingBeanType, setRankingBeanType] = useState<BeanType>(globalCache.rankingBeanType)
     const [rankingEditMode, setRankingEditMode] = useState<boolean>(globalCache.rankingEditMode)
@@ -147,25 +159,37 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         }
     };
 
-    // 使用优化的筛选Hook
+    // 使用增强的筛选Hook
     const {
         filteredBeans,
         availableVarieties,
+        availableOrigins,
+        availableFlavorPeriods,
+        availableRoasters,
         debouncedUpdateFilters
-    } = useOptimizedBeanFiltering({
+    } = useEnhancedBeanFiltering({
         beans,
+        filterMode,
         selectedVariety,
+        selectedOrigin,
+        selectedFlavorPeriod,
+        selectedRoaster,
         selectedBeanType,
         showEmptyBeans,
         sortOption
     })
 
+
+
     // 更新过滤后的豆子和分类 - 简化版本，主要用于更新全局缓存
     const updateFilteredBeansAndCategories = useCallback((_beansToSort: ExtendedCoffeeBean[]) => {
         // 优化的Hook已经处理了筛选和排序，这里只需要更新全局缓存
         globalCache.varieties = availableVarieties;
+        globalCache.availableOrigins = availableOrigins;
+        globalCache.availableFlavorPeriods = availableFlavorPeriods;
+        globalCache.availableRoasters = availableRoasters;
         globalCache.filteredBeans = filteredBeans;
-    }, [availableVarieties, filteredBeans]);
+    }, [availableVarieties, availableOrigins, availableFlavorPeriods, availableRoasters, filteredBeans]);
 
     // 加载咖啡豆数据 - 优化防抖动和缓存
     const loadBeans = React.useCallback(async () => {
@@ -418,10 +442,14 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
             globalCache.showEmptyBeans = showEmptyBeans;
             globalCache.selectedVariety = selectedVariety;
             globalCache.selectedBeanType = selectedBeanType;
+            globalCache.filterMode = filterMode;
+            globalCache.selectedOrigin = selectedOrigin;
+            globalCache.selectedFlavorPeriod = selectedFlavorPeriod;
+            globalCache.selectedRoaster = selectedRoaster;
             // 优化的Hook会自动处理筛选，这里只需要更新缓存
             updateFilteredBeansAndCategories(globalCache.beans);
         }
-    }, [showEmptyBeans, selectedVariety, selectedBeanType, updateFilteredBeansAndCategories]);
+    }, [showEmptyBeans, selectedVariety, selectedBeanType, filterMode, selectedOrigin, selectedFlavorPeriod, selectedRoaster, updateFilteredBeansAndCategories]);
 
     // 视图切换时更新排序选项
     useEffect(() => {
@@ -608,6 +636,59 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         // 使用防抖更新筛选
         debouncedUpdateFilters({ showEmptyBeans: newShowEmptyBeans });
     }, [showEmptyBeans, debouncedUpdateFilters]);
+
+    // 处理分类模式变更
+    const handleFilterModeChange = useCallback((mode: BeanFilterMode) => {
+        setFilterMode(mode);
+        // 更新全局缓存并保存到本地存储
+        globalCache.filterMode = mode;
+        saveFilterModePreference(mode);
+        // 清除当前选中的分类项
+        setSelectedVariety(null);
+        setSelectedOrigin(null);
+        setSelectedFlavorPeriod(null);
+        setSelectedRoaster(null);
+        globalCache.selectedVariety = null;
+        globalCache.selectedOrigin = null;
+        globalCache.selectedFlavorPeriod = null;
+        globalCache.selectedRoaster = null;
+        saveSelectedVarietyPreference(null);
+        saveSelectedOriginPreference(null);
+        saveSelectedFlavorPeriodPreference(null);
+        saveSelectedRoasterPreference(null);
+        // 防抖更新筛选
+        debouncedUpdateFilters({ filterMode: mode });
+    }, [debouncedUpdateFilters]);
+
+    // 处理产地点击
+    const handleOriginClick = useCallback((origin: string | null) => {
+        setSelectedOrigin(origin);
+        // 更新全局缓存并保存到本地存储
+        globalCache.selectedOrigin = origin;
+        saveSelectedOriginPreference(origin);
+        // 防抖更新筛选
+        debouncedUpdateFilters({ selectedOrigin: origin });
+    }, [debouncedUpdateFilters]);
+
+    // 处理赏味期状态点击
+    const handleFlavorPeriodClick = useCallback((status: FlavorPeriodStatus | null) => {
+        setSelectedFlavorPeriod(status);
+        // 更新全局缓存并保存到本地存储
+        globalCache.selectedFlavorPeriod = status;
+        saveSelectedFlavorPeriodPreference(status);
+        // 防抖更新筛选
+        debouncedUpdateFilters({ selectedFlavorPeriod: status });
+    }, [debouncedUpdateFilters]);
+
+    // 处理烘焙商点击
+    const handleRoasterClick = useCallback((roaster: string | null) => {
+        setSelectedRoaster(roaster);
+        // 更新全局缓存并保存到本地存储
+        globalCache.selectedRoaster = roaster;
+        saveSelectedRoasterPreference(roaster);
+        // 防抖更新筛选
+        debouncedUpdateFilters({ selectedRoaster: roaster });
+    }, [debouncedUpdateFilters]);
 
     // 当榜单豆子类型变更时更新数据
     useEffect(() => {
@@ -1099,6 +1180,18 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
                         bloggerBeansCount={bloggerBeansCount}
                         isImageFlowMode={isImageFlowMode}
                         onToggleImageFlowMode={handleToggleImageFlowMode}
+                        // 新增分类相关属性
+                        filterMode={filterMode}
+                        onFilterModeChange={handleFilterModeChange}
+                        selectedOrigin={selectedOrigin}
+                        onOriginClick={handleOriginClick}
+                        selectedFlavorPeriod={selectedFlavorPeriod}
+                        onFlavorPeriodClick={handleFlavorPeriodClick}
+                        selectedRoaster={selectedRoaster}
+                        onRoasterClick={handleRoasterClick}
+                        availableOrigins={availableOrigins}
+                        availableFlavorPeriods={availableFlavorPeriods}
+                        availableRoasters={availableRoasters}
                     />
                 </div>
 

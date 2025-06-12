@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useRef, useState, useEffect } from 'react'
-import { ViewOption, VIEW_OPTIONS, BeanType, BloggerBeansYear } from '../types'
+import { ViewOption, VIEW_OPTIONS, BeanType, BloggerBeansYear, BeanFilterMode } from '../types'
 import {
     SortOption,
     SORT_ORDERS,
@@ -14,6 +14,7 @@ import {
 } from '../SortSelector'
 import { X, ArrowUpRight, AlignLeft } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
+import { FlavorPeriodStatus, FLAVOR_PERIOD_LABELS } from '@/lib/utils/beanVarietyUtils'
 
 // Apple风格动画配置
 const FILTER_ANIMATION = {
@@ -180,6 +181,46 @@ const BeanTypeFilter: React.FC<BeanTypeFilterProps> = ({
     </div>
 )
 
+// 分类模式选择组件
+interface FilterModeSectionProps {
+    filterMode: BeanFilterMode
+    onFilterModeChange: (mode: BeanFilterMode) => void
+}
+
+const FilterModeSection: React.FC<FilterModeSectionProps> = ({ filterMode, onFilterModeChange }) => {
+    return (
+        <div>
+            <div className="text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-2">分类方式</div>
+            <div className="flex items-center flex-wrap gap-2">
+                <FilterButton
+                    isActive={filterMode === 'variety'}
+                    onClick={() => onFilterModeChange('variety')}
+                >
+                    按品种
+                </FilterButton>
+                <FilterButton
+                    isActive={filterMode === 'origin'}
+                    onClick={() => onFilterModeChange('origin')}
+                >
+                    按产地
+                </FilterButton>
+                <FilterButton
+                    isActive={filterMode === 'flavorPeriod'}
+                    onClick={() => onFilterModeChange('flavorPeriod')}
+                >
+                    按赏味期
+                </FilterButton>
+                <FilterButton
+                    isActive={filterMode === 'roaster'}
+                    onClick={() => onFilterModeChange('roaster')}
+                >
+                    按烘焙商 BETA
+                </FilterButton>
+            </div>
+        </div>
+    );
+};
+
 interface ViewSwitcherProps {
     viewMode: ViewOption
     sortOption: SortOption
@@ -213,6 +254,18 @@ interface ViewSwitcherProps {
     // 新增图片流模式相关props
     isImageFlowMode?: boolean
     onToggleImageFlowMode?: () => void
+    // 新增分类相关props
+    filterMode?: BeanFilterMode
+    onFilterModeChange?: (mode: BeanFilterMode) => void
+    selectedOrigin?: string | null
+    onOriginClick?: (origin: string | null) => void
+    selectedFlavorPeriod?: FlavorPeriodStatus | null
+    onFlavorPeriodClick?: (status: FlavorPeriodStatus | null) => void
+    selectedRoaster?: string | null
+    onRoasterClick?: (roaster: string | null) => void
+    availableOrigins?: string[]
+    availableFlavorPeriods?: FlavorPeriodStatus[]
+    availableRoasters?: string[]
 }
 
 const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
@@ -247,6 +300,18 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
     bloggerBeansCount,
     isImageFlowMode = false,
     onToggleImageFlowMode,
+    // 新增分类相关参数
+    filterMode = 'variety',
+    onFilterModeChange,
+    selectedOrigin,
+    onOriginClick,
+    selectedFlavorPeriod,
+    onFlavorPeriodClick,
+    selectedRoaster,
+    onRoasterClick,
+    availableOrigins = [],
+    availableFlavorPeriods = [],
+    availableRoasters = [],
 }) => {
     // 添加极简模式状态
     const [_isMinimalistMode, setIsMinimalistMode] = useState(false);
@@ -601,8 +666,23 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
 
                                     {/* 全部按钮 - 带筛选图标 */}
                                     <TabButton
-                                        isActive={selectedVariety === null}
-                                        onClick={() => selectedVariety !== null && onVarietyClick?.(null)}
+                                        isActive={
+                                            (filterMode === 'variety' && selectedVariety === null) ||
+                                            (filterMode === 'origin' && selectedOrigin === null) ||
+                                            (filterMode === 'flavorPeriod' && selectedFlavorPeriod === null) ||
+                                            (filterMode === 'roaster' && selectedRoaster === null)
+                                        }
+                                        onClick={() => {
+                                            if (filterMode === 'variety' && selectedVariety !== null) {
+                                                onVarietyClick?.(null)
+                                            } else if (filterMode === 'origin' && selectedOrigin !== null) {
+                                                onOriginClick?.(null)
+                                            } else if (filterMode === 'flavorPeriod' && selectedFlavorPeriod !== null) {
+                                                onFlavorPeriodClick?.(null)
+                                            } else if (filterMode === 'roaster' && selectedRoaster !== null) {
+                                                onRoasterClick?.(null)
+                                            }
+                                        }}
                                         className="mr-1"
                                         dataTab="all"
                                     >
@@ -622,8 +702,8 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                                         <AlignLeft size={12} color="currentColor" />
                                     </button>
 
-                                    {/* 品种筛选按钮 */}
-                                    {availableVarieties?.map((variety: string) => (
+                                    {/* 根据分类模式显示不同的筛选按钮 */}
+                                    {filterMode === 'variety' && availableVarieties?.map((variety: string) => (
                                         <TabButton
                                             key={variety}
                                             isActive={selectedVariety === variety}
@@ -632,6 +712,42 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                                             dataTab={variety}
                                         >
                                             {variety}
+                                        </TabButton>
+                                    ))}
+
+                                    {filterMode === 'origin' && availableOrigins?.map((origin: string) => (
+                                        <TabButton
+                                            key={origin}
+                                            isActive={selectedOrigin === origin}
+                                            onClick={() => selectedOrigin !== origin && onOriginClick?.(origin)}
+                                            className="mr-3"
+                                            dataTab={origin}
+                                        >
+                                            {origin}
+                                        </TabButton>
+                                    ))}
+
+                                    {filterMode === 'flavorPeriod' && availableFlavorPeriods?.map((status: FlavorPeriodStatus) => (
+                                        <TabButton
+                                            key={status}
+                                            isActive={selectedFlavorPeriod === status}
+                                            onClick={() => selectedFlavorPeriod !== status && onFlavorPeriodClick?.(status)}
+                                            className="mr-3"
+                                            dataTab={status}
+                                        >
+                                            {FLAVOR_PERIOD_LABELS[status]}
+                                        </TabButton>
+                                    ))}
+
+                                    {filterMode === 'roaster' && availableRoasters?.map((roaster: string) => (
+                                        <TabButton
+                                            key={roaster}
+                                            isActive={selectedRoaster === roaster}
+                                            onClick={() => selectedRoaster !== roaster && onRoasterClick?.(roaster)}
+                                            className="mr-3"
+                                            dataTab={roaster}
+                                        >
+                                            {roaster}
                                         </TabButton>
                                     ))}
                                 </div>
@@ -690,6 +806,14 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                                     >
                                         <div className="px-6 py-4">
                                             <div className="space-y-4">
+                                                {/* 分类模式选择 - 仅在仓库视图显示 */}
+                                                {viewMode === VIEW_OPTIONS.INVENTORY && onFilterModeChange && (
+                                                    <FilterModeSection
+                                                        filterMode={filterMode}
+                                                        onFilterModeChange={onFilterModeChange}
+                                                    />
+                                                )}
+
                                                 <SortSection
                                                     viewMode={viewMode}
                                                     sortOption={sortOption}

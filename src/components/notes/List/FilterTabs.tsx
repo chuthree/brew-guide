@@ -117,7 +117,7 @@ interface FilterModeSectionProps {
 const FilterModeSection: React.FC<FilterModeSectionProps> = ({ filterMode, onFilterModeChange }) => {
     return (
         <div>
-            <div className="text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-2">筛选方式</div>
+            <div className="text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-2">分类方式</div>
             <div className="flex items-center flex-wrap gap-2">
                 <FilterButton
                     isActive={filterMode === 'equipment'}
