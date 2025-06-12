@@ -234,7 +234,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
     }
 
     return (
-        <div className="w-full h-full overflow-y-auto scroll-with-bottom-bar relative">
+        <div className="w-full h-full overflow-y-auto scroll-with-bottom-bar relative coffee-bean-inventory-container">
             {/* 咖啡豆列表 */}
             {filteredBeans.length === 0 ? (
                 <div
@@ -253,30 +253,34 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                 </div>
             ) : (
                 // 使用传统滚动
-                <div className="min-h-full pb-20 mx-6 flex flex-col gap-y-5 mt-5">
-                    {displayedBeans.map((bean, index) => (
-                        <BeanListItem
-                            key={bean.id}
-                            bean={bean}
-                            isLast={index === displayedBeans.length - 1}
-                            onRemainingClick={handleRemainingClick}
-                            onDetailClick={handleDetailClick}
-                            searchQuery={isSearching ? searchQuery : ''}
-                            settings={settings}
-                        />
-                    ))}
+                <div className="min-h-full pb-20 flex flex-col">
+                    <div className="mx-6 flex flex-col gap-y-5 mt-5">
+                        {displayedBeans.map((bean, index) => (
+                            <BeanListItem
+                                key={bean.id}
+                                bean={bean}
+                                isLast={index === displayedBeans.length - 1}
+                                onRemainingClick={handleRemainingClick}
+                                onDetailClick={handleDetailClick}
+                                searchQuery={isSearching ? searchQuery : ''}
+                                settings={settings}
+                            />
+                        ))}
 
-                    {/* 加载更多指示器 */}
-                    {hasMore && (
-                        <div
-                            ref={loaderRef}
-                            className="flex justify-center items-center py-4"
-                        >
-                            <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
-                                {isLoading ? '正在加载...' : '上滑加载更多'}
+                        {/* 加载更多指示器 */}
+                        {hasMore && (
+                            <div
+                                ref={loaderRef}
+                                className="flex justify-center items-center py-4"
+                            >
+                                <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
+                                    {isLoading ? '正在加载...' : '上滑加载更多'}
+                                </div>
                             </div>
-                        </div>
-                    )}
+                        )}
+                    </div>
+
+
                 </div>
             )}
 

@@ -1069,6 +1069,193 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         }
     };
 
+    // 添加库存分享状态
+    const [isExportingInventory, setIsExportingInventory] = useState(false);
+
+    // 处理库存分享
+    const handleInventoryShare = async () => {
+        if (isExportingInventory) return;
+
+        // 找到库存容器
+        const inventoryContainer = document.querySelector('.coffee-bean-inventory-container');
+        if (!inventoryContainer) {
+            toast.showToast({
+                type: 'error',
+                title: '无法找到库存数据容器'
+            });
+            return;
+        }
+
+        setIsExportingInventory(true);
+
+        try {
+            // 创建一个临时容器用于导出
+            const tempContainer = document.createElement('div');
+            const isDarkMode = document.documentElement.classList.contains('dark');
+            const backgroundColor = isDarkMode ? '#171717' : '#fafafa';
+
+            // 设置样式
+            tempContainer.style.backgroundColor = backgroundColor;
+            tempContainer.style.maxWidth = '100%';
+            tempContainer.style.width = '350px';
+            tempContainer.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+
+            if (isDarkMode) {
+                tempContainer.classList.add('dark');
+            }
+
+            // 复制库存内容到临时容器
+            const clone = inventoryContainer.cloneNode(true) as HTMLElement;
+
+            // 移除分享按钮
+            const shareButton = clone.querySelector('.inventory-share-button');
+            if (shareButton) {
+                shareButton.remove();
+            }
+
+            // 调整克隆内容的样式，移除多余的内边距
+            clone.style.padding = '0';
+            clone.style.paddingTop = '0';
+            clone.style.paddingBottom = '0';
+
+            // 移除底部额外的内边距
+            if (clone.classList.contains('pb-20')) {
+                clone.classList.remove('pb-20');
+                clone.style.paddingBottom = '0';
+            }
+
+            // 计算库存统计信息
+            const currentBeans = isSearching ? searchFilteredBeans : filteredBeans;
+            const totalCount = currentBeans.length;
+            const totalWeight = currentBeans.reduce((sum, bean) => {
+                const remaining = bean.remaining ? parseFloat(bean.remaining.toString().replace(/[^\d.]/g, '')) : 0;
+                return sum + (isNaN(remaining) ? 0 : remaining);
+            }, 0);
+
+            // 添加标题
+            const title = document.createElement('h2');
+            title.innerText = `咖啡豆库存 · ${totalCount} 款咖啡豆 · 共${(totalWeight / 1000).toFixed(2)} kg`;
+            title.style.textAlign = 'left';
+            title.style.marginBottom = '4px';
+            title.style.fontSize = '12px';
+            title.style.color = isDarkMode ? '#f5f5f5' : '#262626';
+            title.style.paddingLeft = '24px';
+            title.style.paddingRight = '24px';
+            title.style.paddingTop = '24px';
+            title.style.paddingBottom = '8px';
+
+            tempContainer.appendChild(title);
+            tempContainer.appendChild(clone);
+
+            // 获取用户名
+            const { Storage } = await import('@/lib/core/storage');
+            const settingsStr = await Storage.get('brewGuideSettings');
+            let username = '';
+            if (settingsStr) {
+                try {
+                    const settings = JSON.parse(settingsStr);
+                    username = settings.username?.trim() || '';
+                } catch (e) {
+                    console.error('解析用户设置失败', e);
+                }
+            }
+
+            // 添加底部标记
+            const footer = document.createElement('p');
+            footer.style.textAlign = 'left';
+            footer.style.marginTop = '4px';
+            footer.style.fontSize = '11px';
+            footer.style.color = isDarkMode ? '#a3a3a3' : '#525252';
+            footer.style.paddingLeft = '24px';
+            footer.style.paddingRight = '24px';
+            footer.style.paddingTop = '8px';
+            footer.style.paddingBottom = '24px';
+            footer.style.display = 'flex';
+            footer.style.justifyContent = 'space-between';
+
+            if (username) {
+                // 如果有用户名，将用户名放在左边，Brew Guide放在右边
+                const usernameSpan = document.createElement('span');
+                usernameSpan.innerText = `@${username}`;
+
+                const appNameSpan = document.createElement('span');
+                appNameSpan.innerText = '—— Brew Guide';
+
+                footer.appendChild(usernameSpan);
+                footer.appendChild(appNameSpan);
+            } else {
+                // 如果没有用户名，保持原样
+                footer.innerText = '—— Brew Guide';
+            }
+
+            tempContainer.appendChild(footer);
+
+            // 添加到文档以便能够导出
+            document.body.appendChild(tempContainer);
+
+            // 使用html-to-image生成PNG
+            const imageData = await toPng(tempContainer, {
+                quality: 1,
+                pixelRatio: 5,
+                backgroundColor: backgroundColor,
+            });
+
+            // 删除临时容器
+            document.body.removeChild(tempContainer);
+
+            // 在移动设备上使用Capacitor分享
+            if (Capacitor.isNativePlatform()) {
+                // 保存到文件
+                const timestamp = new Date().getTime();
+                const fileName = `coffee-inventory-${timestamp}.png`;
+
+                // 确保正确处理base64数据
+                const base64Data = imageData.split(',')[1];
+
+                // 写入文件
+                await Filesystem.writeFile({
+                    path: fileName,
+                    data: base64Data,
+                    directory: Directory.Cache,
+                    recursive: true
+                });
+
+                // 获取文件URI
+                const uriResult = await Filesystem.getUri({
+                    path: fileName,
+                    directory: Directory.Cache
+                });
+
+                // 分享文件
+                await Share.share({
+                    title: '我的咖啡豆库存',
+                    text: '我的咖啡豆库存',
+                    files: [uriResult.uri],
+                    dialogTitle: '分享我的咖啡豆库存'
+                });
+            } else {
+                // 在网页上下载图片
+                const link = document.createElement('a');
+                link.download = `coffee-inventory-${new Date().getTime()}.png`;
+                link.href = imageData;
+                link.click();
+            }
+
+            toast.showToast({
+                type: 'success',
+                title: '库存已保存为图片'
+            });
+        } catch (error) {
+            console.error('生成库存图片失败', error);
+            toast.showToast({
+                type: 'error',
+                title: '生成图片失败'
+            });
+        } finally {
+            setIsExportingInventory(false);
+        }
+    };
+
     // 处理排序选项变更
     const handleSortChange = (option: SortOption) => {
         setSortOption(option);
@@ -1192,6 +1379,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
                         availableOrigins={availableOrigins}
                         availableFlavorPeriods={availableFlavorPeriods}
                         availableRoasters={availableRoasters}
+                        onInventoryShare={handleInventoryShare}
                     />
                 </div>
 
