@@ -69,20 +69,23 @@ const NotesListView: React.FC<NotesListViewProps> = ({
     const isSimpleQuickDecrementNote = useCallback((note: BrewingNote) => {
         // 如果不是快捷扣除来源，直接返回false
         if (note.source !== 'quick-decrement') return false;
-        
-        // 通过单个标志检查是否有任何自定义/编辑过的内容
-        const hasCustomContent = 
+
+        // 检查是否有任何自定义/编辑过的内容
+        const hasCustomContent =
             // 检查是否有详细评分
             (note.taste && Object.values(note.taste).some(value => value > 0)) ||
-            // 检查笔记内容是否已编辑（不是默认文本）
-            (note.notes && !/^快捷扣除\d+g咖啡豆/.test(note.notes)) ||
             // 检查是否有评分
             note.rating > 0 ||
-            // 检查是否设置了冲煮方法和设备
-            note.method || (note.equipment && note.equipment !== '未指定') ||
+            // 检查是否设置了冲煮方法和设备（空字符串和undefined都不算设置）
+            (note.method && note.method.trim() !== '') ||
+            (note.equipment && note.equipment.trim() !== '' && note.equipment !== '未指定') ||
             // 检查是否有图片
-            !!note.image;
-        
+            !!note.image ||
+            // 检查笔记内容是否已编辑（不是默认的快捷扣除文本格式）
+            (note.notes && !(/^快捷扣除\d+g咖啡豆/.test(note.notes)));
+
+
+
         // 返回是否是简单笔记（没有自定义内容）
         return !hasCustomContent;
     }, []);
@@ -126,7 +129,34 @@ const NotesListView: React.FC<NotesListViewProps> = ({
             // 从存储中加载数据
             const { Storage } = await import('@/lib/core/storage');
             const savedNotes = await Storage.get('brewingNotes');
-            const parsedNotes: BrewingNote[] = savedNotes ? JSON.parse(savedNotes) : [];
+            let parsedNotes: BrewingNote[] = savedNotes ? JSON.parse(savedNotes) : [];
+
+            // 修复现有的快捷扣除记录，确保它们有必需的字段
+            let needsUpdate = false;
+            parsedNotes = parsedNotes.map(note => {
+                if (note.source === 'quick-decrement') {
+                    const updatedNote = { ...note };
+                    if (updatedNote.equipment === undefined) {
+                        updatedNote.equipment = '';
+                        needsUpdate = true;
+                    }
+                    if (updatedNote.method === undefined) {
+                        updatedNote.method = '';
+                        needsUpdate = true;
+                    }
+                    if (updatedNote.totalTime === undefined) {
+                        updatedNote.totalTime = 0;
+                        needsUpdate = true;
+                    }
+                    return updatedNote;
+                }
+                return note;
+            });
+
+            // 如果有更新，保存回存储
+            if (needsUpdate) {
+                await Storage.set('brewingNotes', JSON.stringify(parsedNotes));
+            }
 
             // 排序笔记
             const sortedNotes = sortNotes(parsedNotes, sortOption);

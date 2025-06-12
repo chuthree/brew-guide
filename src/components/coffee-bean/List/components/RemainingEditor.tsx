@@ -231,6 +231,8 @@ const RemainingEditor: React.FC<RemainingEditorProps> = ({
                 source: 'quick-decrement',
                 quickDecrementAmount: actualAmount, // 使用实际扣除量
                 beanId: coffeeBean.id,
+                equipment: '', // 添加空的equipment字段，避免显示"未知器具"
+                method: '', // 添加空的method字段
                 coffeeBeanInfo: {
                     name: coffeeBean.name || '',
                     roastLevel: coffeeBean.roastLevel || '中度烘焙',
@@ -247,7 +249,8 @@ const RemainingEditor: React.FC<RemainingEditorProps> = ({
                     ratio: '',
                     grindSize: '',
                     temp: ''
-                }
+                },
+                totalTime: 0 // 添加totalTime字段，快捷扣除记录没有时间概念
             }
             
             const { Storage } = await import('@/lib/core/storage');

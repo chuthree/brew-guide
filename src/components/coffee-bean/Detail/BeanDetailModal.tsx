@@ -13,6 +13,7 @@ import {
     DrawerContent,
     DrawerHeader,
     DrawerTitle,
+    DrawerDescription,
 } from '@/components/ui/drawer'
 
 // 信息项类型定义
@@ -366,6 +367,9 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     return (
         <Drawer open={isOpen} onOpenChange={handleOpenChange}>
             <DrawerContent className="max-h-[85vh]">
+                <DrawerDescription id="drawer-description" className="sr-only">
+                    咖啡豆详情信息，包含基本信息、产地信息、风味描述和相关冲煮记录
+                </DrawerDescription>
                 <DrawerHeader className="border-b border-neutral-200/60 dark:border-neutral-800/40 shrink-0 px-4 py-3">
                     <div className="relative flex items-center justify-between">
                         {/* 左侧按钮 */}
@@ -542,10 +546,37 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                             ) : (
                                 <div className="space-y-2">
                                     {relatedNotes.map((note) => {
-                                        // 获取器具名称
-                                        const equipmentName = note.equipment ? (equipmentNames[note.equipment] || note.equipment) : '未知器具'
+                                        // 判断是否为简单的快捷扣除记录
+                                        const isSimpleQuickDecrementNote = note.source === 'quick-decrement' &&
+                                            !(note.taste && Object.values(note.taste).some(value => value > 0)) &&
+                                            note.rating === 0 &&
+                                            (!note.method || note.method.trim() === '') &&
+                                            (!note.equipment || note.equipment.trim() === '' || note.equipment === '未指定') &&
+                                            !note.image &&
+                                            note.notes && /^快捷扣除\d+g咖啡豆/.test(note.notes);
 
-                                        // 检查是否有备注
+                                        // 如果是简单快捷扣除记录，使用简洁显示
+                                        if (isSimpleQuickDecrementNote) {
+                                            const amount = note.quickDecrementAmount || 0;
+                                            return (
+                                                <div key={note.id} className="flex items-center justify-between py-1.5 px-2 bg-neutral-50/30 dark:bg-neutral-800/20 border border-neutral-200/30 dark:border-neutral-800/30">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100">
+                                                            {bean?.name || '咖啡豆'}
+                                                        </div>
+                                                        <div className="text-xs font-medium bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded-xs text-neutral-600 dark:text-neutral-400">
+                                                            -{amount}g
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-xs text-neutral-600 dark:text-neutral-400">
+                                                        {formatDate(note.timestamp)}
+                                                    </div>
+                                                </div>
+                                            );
+                                        }
+
+                                        // 普通记录的显示逻辑
+                                        const equipmentName = note.equipment ? (equipmentNames[note.equipment] || note.equipment) : '未知器具'
                                         const hasNotes = note.notes && note.notes.trim()
 
                                         return (

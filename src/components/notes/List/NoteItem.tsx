@@ -36,7 +36,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
     // 预先计算一些条件，避免在JSX中重复计算
     const hasTasteRatings = Object.values(note.taste).some(value => value > 0);
     const hasNotes = Boolean(note.notes);
-    const equipmentName = equipmentNames[note.equipment] || note.equipment;
+    const equipmentName = (note.equipment && note.equipment.trim() !== '') ? (equipmentNames[note.equipment] || note.equipment) : '未知器具';
     const beanName = note.coffeeBeanInfo?.name;
     const beanUnitPrice = beanName ? (unitPriceCache[beanName] || 0) : 0;
 
