@@ -87,10 +87,11 @@ const saveCustomPresets = (key: string, presets: string[]): void => {
 // 添加自定义预设
 export const addCustomPreset = (key: 'origins' | 'processes' | 'varieties', value: string): void => {
     if (!isBrowser || !value.trim()) return;
-    
+
     const presets = getCustomPresets(key);
     if (!presets.includes(value)) {
-        presets.push(value);
+        // 将新预设添加到数组开头，这样最新的预设会优先显示
+        presets.unshift(value);
         saveCustomPresets(key, presets);
     }
 };
@@ -113,14 +114,15 @@ export const isCustomPreset = (key: 'origins' | 'processes' | 'varieties', value
     return getCustomPresets(key).includes(value);
 };
 
-// 获取完整预设列表（默认+自定义）
+// 获取完整预设列表（自定义+默认）
 export const getFullPresets = (key: 'origins' | 'processes' | 'varieties'): string[] => {
     const defaults = {
         'origins': DEFAULT_ORIGINS,
         'processes': DEFAULT_PROCESSES,
         'varieties': DEFAULT_VARIETIES
     };
-    return [...defaults[key], ...getCustomPresets(key)];
+    // 将自定义预设放在前面，这样用户最近添加的内容会优先显示
+    return [...getCustomPresets(key), ...defaults[key]];
 };
 
 // 导出合并后的预设（向后兼容）
