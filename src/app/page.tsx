@@ -304,15 +304,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             try {
                 console.log('初始化应用...');
 
-                // 首先修复现有方案数据关联
-                try {
-                    console.log('检查并修复方案关联...');
-                    const methodsModule = await import('@/lib/managers/customMethods');
-                    await methodsModule.repairMethodsAssociation();
-                    console.log('方案修复完成');
-                } catch (error) {
-                    console.error('方案修复出错:', error);
-                }
+
 
                 // 继续原有初始化流程
                 // 检查coffee beans而不是直接调用不存在的函数
