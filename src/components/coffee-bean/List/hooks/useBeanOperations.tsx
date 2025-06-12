@@ -147,15 +147,18 @@ export const useBeanOperations = () => {
         }
     };
 
-    // 处理快捷减量按钮点击 - 使用统一事件机制
+    // 处理快捷减量按钮点击 - 使用统一事件机制，确保扣除量合理
     const handleQuickDecrement = async (beanId: string, currentValue: string, decrementAmount: number) => {
         try {
             // 获取当前值（不带单位）
             const currentValueNum = parseFloat(currentValue);
             if (isNaN(currentValueNum)) return { success: false, error: new Error('当前值无效') };
 
+            // 计算实际扣除量（不能超过当前剩余量）
+            const actualDecrementAmount = Math.min(decrementAmount, currentValueNum);
+
             // 计算新值，确保不小于0
-            const newValue = Math.max(0, currentValueNum - decrementAmount);
+            const newValue = Math.max(0, currentValueNum - actualDecrementAmount);
 
             // 是否减到0（剩余量不足）
             const reducedToZero = currentValueNum < decrementAmount;
@@ -180,6 +183,7 @@ export const useBeanOperations = () => {
             return {
                 success: true,
                 value: formattedValue,
+                actualDecrementAmount, // 返回实际扣除量
                 reducedToZero
             };
         } catch (error) {

@@ -217,30 +217,32 @@ const RemainingEditor: React.FC<RemainingEditorProps> = ({
         e.stopPropagation()
     }
     
-    // 创建自动笔记
-    const createAutoNote = async (decrementAmount: number) => {
+    // 创建自动笔记 - 根据实际扣除量创建变动记录
+    const createAutoNote = async (requestedAmount: number, actualAmount: number) => {
         if (!coffeeBean || !isMounted.current) return
-        
+
         const processingTimestamp = Date.now()
-        
+
         try {
             // 创建一个默认的笔记数据
             const newNote: BrewingNoteData = {
                 id: processingTimestamp.toString(),
                 timestamp: processingTimestamp,
                 source: 'quick-decrement',
-                quickDecrementAmount: decrementAmount,
+                quickDecrementAmount: actualAmount, // 使用实际扣除量
                 beanId: coffeeBean.id,
                 coffeeBeanInfo: {
                     name: coffeeBean.name || '',
                     roastLevel: coffeeBean.roastLevel || '中度烘焙',
                     roastDate: coffeeBean.roastDate
                 },
-                notes: `快捷扣除${decrementAmount}g咖啡豆`,
+                notes: actualAmount < requestedAmount
+                    ? `快捷扣除${actualAmount}g咖啡豆（剩余不足，已全部扣除）`
+                    : `快捷扣除${actualAmount}g咖啡豆`,
                 rating: 0,
                 taste: { acidity: 0, sweetness: 0, bitterness: 0, body: 0 },
                 params: {
-                    coffee: `${decrementAmount}g`,
+                    coffee: `${actualAmount}g`, // 使用实际扣除量
                     water: '',
                     ratio: '',
                     grindSize: '',
@@ -280,15 +282,24 @@ const RemainingEditor: React.FC<RemainingEditorProps> = ({
         }
     }
     
-    // 安全处理按钮点击
+    // 安全处理按钮点击 - 修改为先计算实际扣除量
     const handleDecrementClick = async (e: React.MouseEvent, value: number) => {
         e.stopPropagation()
-        if (!isMounted.current) return
-        
+        if (!isMounted.current || !coffeeBean) return
+
         try {
             setOpen(false)
+
+            // 获取当前剩余量
+            const currentRemaining = parseFloat(coffeeBean.remaining || '0')
+            // 计算实际扣除量（不能超过剩余量）
+            const actualDecrementAmount = Math.min(value, currentRemaining)
+
+            // 执行快捷扣除
             onQuickDecrement(value)
-            await createAutoNote(value)
+
+            // 创建变动记录，传入请求量和实际扣除量
+            await createAutoNote(value, actualDecrementAmount)
         } catch (error) {
             console.error('快捷扣除操作失败:', error)
         }

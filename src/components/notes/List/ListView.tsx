@@ -75,7 +75,7 @@ const NotesListView: React.FC<NotesListViewProps> = ({
             // 检查是否有详细评分
             (note.taste && Object.values(note.taste).some(value => value > 0)) ||
             // 检查笔记内容是否已编辑（不是默认文本）
-            (note.notes && !/^快捷扣除\d+g咖啡豆$/.test(note.notes)) ||
+            (note.notes && !/^快捷扣除\d+g咖啡豆/.test(note.notes)) ||
             // 检查是否有评分
             note.rating > 0 ||
             // 检查是否设置了冲煮方法和设备
@@ -260,7 +260,7 @@ const NotesListView: React.FC<NotesListViewProps> = ({
         }
     }, [onToggleSelect]);
     
-    // 切换显示快捷扣除笔记
+    // 切换显示变动记录
     const toggleShowQuickDecrementNotes = useCallback(() => {
         setShowQuickDecrementNotes(prev => !prev);
     }, []);
@@ -302,7 +302,7 @@ const NotesListView: React.FC<NotesListViewProps> = ({
                 />
             ))}
             </div>
-            {/* 快捷扣除笔记区域 */}
+            {/* 变动记录区域 */}
             {quickDecrementNotes.length > 0 && (
                 <div className="mt-2">
                     <div
@@ -311,7 +311,7 @@ const NotesListView: React.FC<NotesListViewProps> = ({
                     >
                         <div className="grow border-t border-neutral-200 dark:border-neutral-800"></div>
                         <button className="flex items-center justify-center mx-3 px-2 py-0.5 rounded-sm text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400 transition-colors">
-                            {quickDecrementNotes.length}条快捷扣除记录
+                            {quickDecrementNotes.length}条变动记录
                             <svg
                                 className={`ml-1 w-3 h-3 transition-transform duration-200 ${showQuickDecrementNotes ? 'rotate-180' : ''}`}
                                 viewBox="0 0 24 24"
@@ -324,7 +324,7 @@ const NotesListView: React.FC<NotesListViewProps> = ({
                         <div className="grow border-t border-neutral-200 dark:border-neutral-800"></div>
                     </div>
 
-                    {/* 快捷扣除笔记列表 - 仅在展开时显示 */}
+                    {/* 变动记录列表 - 仅在展开时显示 */}
                     {showQuickDecrementNotes && (
                         <div className="opacity-80">
                             {quickDecrementNotes.map((note) => (
