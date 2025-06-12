@@ -33,6 +33,7 @@ interface InventoryViewProps {
     settings?: {
         showFlavorPeriod?: boolean
         showOnlyBeanName?: boolean
+        showFlavorInfo?: boolean
     }
 }
 

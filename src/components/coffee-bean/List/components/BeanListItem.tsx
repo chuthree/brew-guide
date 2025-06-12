@@ -28,6 +28,7 @@ interface BeanListItemProps {
     settings?: {
         showFlavorPeriod?: boolean
         showOnlyBeanName?: boolean
+        showFlavorInfo?: boolean
     }
 }
 
@@ -51,6 +52,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
     // 从props中获取设置，如果没有传入则使用默认值
     const showOnlyBeanName = settings?.showOnlyBeanName ?? true; // 默认只显示咖啡豆名称
     const showFlavorPeriod = settings?.showFlavorPeriod ?? false; // 默认不显示赏味期信息
+    const showFlavorInfo = settings?.showFlavorInfo ?? false; // 默认不显示风味信息
 
 
 
@@ -225,6 +227,32 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
         }
     };
 
+    // 生成完整的备注内容（包含风味信息）
+    const getFullNotesContent = () => {
+        let content = '';
+
+        // 如果开启了风味信息显示且有风味数据，则添加到最上面
+        if (showFlavorInfo && bean.flavor && bean.flavor.length > 0) {
+            const flavorText = bean.flavor.join(' · ');
+            content = flavorText;
+
+            // 如果还有原始备注，则换两行添加（多一个空行分隔）
+            if (bean.notes) {
+                content += '\n\n' + bean.notes;
+            }
+        } else if (bean.notes) {
+            // 如果没有开启风味信息显示或没有风味数据，只显示原始备注
+            content = bean.notes;
+        }
+
+        return content;
+    };
+
+    // 检查是否应该显示备注区域
+    const shouldShowNotes = () => {
+        return (showFlavorInfo && bean.flavor && bean.flavor.length > 0) || bean.notes;
+    };
+
     return (
         <div
             className={`group ${isLast ? '' : ''} ${
@@ -284,7 +312,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                 {/* 右侧内容区域 - 包含标题、参数和备注 */}
                 <div className="flex-1 min-w-0 flex flex-col gap-y-2">
                     {/* 标题和参数区域 - 根据是否有备注决定高度 */}
-                    <div className={`flex flex-col justify-center gap-y-1.5 ${bean.notes ? '' : 'h-14'}`}>
+                    <div className={`flex flex-col justify-center gap-y-1.5 ${shouldShowNotes() ? '' : 'h-14'}`}>
                         {/* 顶部：标题 */}
                         <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100 pr-2 leading-tight line-clamp-2">
                             {searchQuery ? (
@@ -344,17 +372,17 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                         </div>
                     </div>
 
-                    {/* 备注区域 - 现在在右侧内容区域内 */}
-                    {bean.notes && (
+                    {/* 备注区域 - 现在在右侧内容区域内，包含风味信息 */}
+                    {shouldShowNotes() && (
                         <div className="text-xs font-medium bg-neutral-200/30 dark:bg-neutral-800/40 p-1.5 rounded tracking-widest text-neutral-800/70 dark:text-neutral-400/85 whitespace-pre-line leading-tight">
                             {searchQuery ? (
                                 <HighlightText
-                                    text={bean.notes}
+                                    text={getFullNotesContent()}
                                     highlight={searchQuery}
                                     className="text-neutral-600 dark:text-neutral-400"
                                 />
                             ) : (
-                                bean.notes
+                                getFullNotesContent()
                             )}
                         </div>
                     )}

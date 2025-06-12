@@ -1610,7 +1610,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                         onExternalViewChange={handleBeanViewChange}
                         settings={{
                             showFlavorPeriod: settings.showFlavorPeriod,
-                            showOnlyBeanName: settings.showOnlyBeanName
+                            showOnlyBeanName: settings.showOnlyBeanName,
+                            showFlavorInfo: settings.showFlavorInfo
                         }}
                     />
                 </ErrorBoundary>

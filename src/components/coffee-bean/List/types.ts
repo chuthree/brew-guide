@@ -57,6 +57,7 @@ export interface CoffeeBeansProps {
     settings?: {
         showFlavorPeriod?: boolean
         showOnlyBeanName?: boolean
+        showFlavorInfo?: boolean
     }
 }
 
