@@ -837,7 +837,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                                                             isActive={showEmptyBeans || false}
                                                             onClick={() => onToggleShowEmptyBeans?.()}
                                                         >
-                                                            已用完
+                                                            包含已用完
                                                         </FilterButton>
                                                         {onToggleImageFlowMode && (
                                                             <FilterButton

@@ -21,8 +21,52 @@ interface ImportedBean {
     [key: string]: unknown;
 }
 
-// 添加图片压缩函数
-const compressImage = async (file: File, maxSizeMB: number = 2): Promise<Blob> => {
+// 常量定义
+const DEFAULT_CROP: Crop = {
+    unit: '%',
+    width: 60,
+    height: 60,
+    x: 20,
+    y: 20
+}
+
+const EMPTY_CROP: Crop = {
+    unit: '%',
+    width: 0,
+    height: 0,
+    x: 0,
+    y: 0
+}
+
+const IMAGE_COMPRESSION_CONFIG = {
+    maxSizeMB: 2,
+    maxDimension: 2048,
+    quality: 0.9,
+    minQuality: 0.1,
+    format: 'image/jpeg' as const
+}
+
+// 样式常量
+const STYLES = {
+    button: {
+        primary: "px-4 py-2 bg-neutral-800 dark:bg-neutral-200 text-neutral-100 dark:text-neutral-800 rounded-md text-sm",
+        secondary: "px-4 py-2 border border-neutral-300 dark:border-neutral-700 text-neutral-800 dark:text-neutral-200 rounded-md text-sm",
+        small: "px-3 py-1 text-sm",
+        upload: "flex-1 py-2 px-4 border border-dashed border-neutral-300 dark:border-neutral-600 rounded-md text-sm text-neutral-600 dark:text-neutral-400"
+    },
+    text: {
+        muted: "text-neutral-600 dark:text-neutral-400",
+        small: "text-xs",
+        error: "text-sm text-red-500 dark:text-red-400",
+        success: "text-sm text-green-500 dark:text-green-400"
+    },
+    container: {
+        modal: "p-3 border text-xs font-medium relative border-neutral-200 dark:border-neutral-700 rounded-md bg-neutral-100/80 dark:bg-neutral-800"
+    }
+} as const;
+
+// 图片压缩工具函数
+const compressImage = async (file: File, maxSizeMB: number = IMAGE_COMPRESSION_CONFIG.maxSizeMB): Promise<Blob> => {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.readAsDataURL(file);
@@ -31,21 +75,15 @@ const compressImage = async (file: File, maxSizeMB: number = 2): Promise<Blob> =
             img.src = event.target?.result as string;
             img.onload = () => {
                 const canvas = document.createElement('canvas');
-                let width = img.width;
-                let height = img.height;
-                
-                // 如果图片尺寸太大，先缩小尺寸
-                const maxDimension = 2048; // 最大尺寸
-                if (width > maxDimension || height > maxDimension) {
-                    if (width > height) {
-                        height = Math.round((height * maxDimension) / width);
-                        width = maxDimension;
-                    } else {
-                        width = Math.round((width * maxDimension) / height);
-                        height = maxDimension;
-                    }
+                let { width, height } = img;
+
+                // 缩放图片尺寸
+                if (width > IMAGE_COMPRESSION_CONFIG.maxDimension || height > IMAGE_COMPRESSION_CONFIG.maxDimension) {
+                    const scale = IMAGE_COMPRESSION_CONFIG.maxDimension / Math.max(width, height);
+                    width = Math.round(width * scale);
+                    height = Math.round(height * scale);
                 }
-                
+
                 canvas.width = width;
                 canvas.height = height;
                 const ctx = canvas.getContext('2d');
@@ -53,11 +91,11 @@ const compressImage = async (file: File, maxSizeMB: number = 2): Promise<Blob> =
                     reject(new Error('无法创建canvas上下文'));
                     return;
                 }
-                
+
                 ctx.drawImage(img, 0, 0, width, height);
-                
-                // 压缩图片质量
-                let quality = 0.9;
+
+                // 递归压缩
+                let quality = IMAGE_COMPRESSION_CONFIG.quality;
                 const compress = () => {
                     canvas.toBlob(
                         (blob) => {
@@ -65,20 +103,19 @@ const compressImage = async (file: File, maxSizeMB: number = 2): Promise<Blob> =
                                 reject(new Error('压缩失败'));
                                 return;
                             }
-                            
-                            // 检查大小
-                            if (blob.size > maxSizeMB * 1024 * 1024 && quality > 0.1) {
+
+                            if (blob.size > maxSizeMB * 1024 * 1024 && quality > IMAGE_COMPRESSION_CONFIG.minQuality) {
                                 quality -= 0.1;
                                 compress();
                             } else {
                                 resolve(blob);
                             }
                         },
-                        'image/jpeg',
+                        IMAGE_COMPRESSION_CONFIG.format,
                         quality
                     );
                 };
-                
+
                 compress();
             };
             img.onerror = () => reject(new Error('图片加载失败'));
@@ -87,41 +124,50 @@ const compressImage = async (file: File, maxSizeMB: number = 2): Promise<Blob> =
     });
 };
 
+// 工具函数：重置图片相关状态
+const resetImageStates = (
+    setSelectedImage: (value: string | null) => void,
+    setCroppedImage: (value: string | null) => void,
+    setIsCropActive: (value: boolean) => void,
+    setCrop: (value: Crop) => void
+) => {
+    setSelectedImage(null);
+    setCroppedImage(null);
+    setIsCropActive(false);
+    setCrop(EMPTY_CROP);
+};
+
+// 工具函数：设置默认裁剪区域
+const setDefaultCrop = (
+    setCrop: (value: Crop) => void,
+    setIsCropActive: (value: boolean) => void
+) => {
+    setCrop(DEFAULT_CROP);
+    setIsCropActive(true);
+};
+
 const BeanImportModal: React.FC<BeanImportModalProps> = ({
     showForm,
     onImport,
     onClose
 }) => {
-    // 导入数据的状态
+    // 状态管理
     const [importData, setImportData] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
     const [isUploading, setIsUploading] = useState(false);
-    const _fileInputRef = useRef<HTMLInputElement>(null);
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
-    const [crop, setCrop] = useState<Crop>({
-        unit: '%',
-        width: 0,
-        height: 0,
-        x: 0,
-        y: 0
-    });
+    const [crop, setCrop] = useState<Crop>(EMPTY_CROP);
     const [croppedImage, setCroppedImage] = useState<string | null>(null);
-    const [_showCropper, setShowCropper] = useState(false);
-    // 添加状态标记用户是否进行了裁剪操作
     const [isCropActive, setIsCropActive] = useState(false);
-    const imgRef = useRef<HTMLImageElement>(null);
-
-    // 添加手动模式状态
     const [manualMode, setManualMode] = useState(false);
 
-    // Function to handle crop complete - 移到前面并使用useCallback并添加防抖处理
+    const imgRef = useRef<HTMLImageElement>(null);
+
+    // 裁剪处理逻辑
     const handleCropComplete = useCallback(
         debounce(async (crop: Crop) => {
-            if (!selectedImage || !imgRef.current || !isCropActive) return;
-
-            // 检查用户是否实际进行了裁剪
-            if (crop.width === 0 || crop.height === 0) {
+            if (!selectedImage || !imgRef.current || !isCropActive || !crop.width || !crop.height) {
                 setCroppedImage(null);
                 return;
             }
@@ -129,98 +175,77 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
             const image = new Image();
             image.src = selectedImage;
 
-            // 等待图片加载完成
-            await new Promise((resolve) => {
-                if (image.complete) {
-                    resolve(true);
-                } else {
-                    image.onload = () => resolve(true);
-                }
+            // 等待图片加载
+            await new Promise<void>((resolve) => {
+                if (image.complete) resolve();
+                else image.onload = () => resolve();
             });
 
             const canvas = document.createElement('canvas');
-            // 获取显示的图片元素
             const displayedImage = imgRef.current;
-
-            // 计算实际比例
             const scaleX = image.naturalWidth / displayedImage.width;
             const scaleY = image.naturalHeight / displayedImage.height;
 
-            // 根据单位计算裁剪区域的实际尺寸
-            let cropWidth, cropHeight, cropX, cropY;
-            if (crop.unit === '%') {
-                cropWidth = (crop.width! / 100) * displayedImage.width;
-                cropHeight = (crop.height! / 100) * displayedImage.height;
-                cropX = (crop.x! / 100) * displayedImage.width;
-                cropY = (crop.y! / 100) * displayedImage.height;
-            } else {
-                cropWidth = crop.width!;
-                cropHeight = crop.height!;
-                cropX = crop.x!;
-                cropY = crop.y!;
-            }
+            // 计算裁剪区域
+            const isPercentage = crop.unit === '%';
+            const cropWidth = isPercentage ? (crop.width / 100) * displayedImage.width : crop.width;
+            const cropHeight = isPercentage ? (crop.height / 100) * displayedImage.height : crop.height;
+            const cropX = isPercentage ? (crop.x / 100) * displayedImage.width : crop.x;
+            const cropY = isPercentage ? (crop.y / 100) * displayedImage.height : crop.y;
 
-            // 降低画布分辨率以提升性能，减小输出图片的尺寸
-            const maxCanvasSize = 800; // 最大尺寸限制，防止生成过大的图片
-            const aspectRatio = cropWidth / cropHeight;
-            
+            // 优化画布尺寸
+            const maxCanvasSize = 800;
             let finalWidth = cropWidth * scaleX;
             let finalHeight = cropHeight * scaleY;
-            
-            // 如果图片过大，则按比例缩小
+
             if (finalWidth > maxCanvasSize || finalHeight > maxCanvasSize) {
-                if (aspectRatio >= 1) {
-                    finalWidth = maxCanvasSize;
-                    finalHeight = finalWidth / aspectRatio;
-                } else {
-                    finalHeight = maxCanvasSize;
-                    finalWidth = finalHeight * aspectRatio;
-                }
+                const scale = maxCanvasSize / Math.max(finalWidth, finalHeight);
+                finalWidth *= scale;
+                finalHeight *= scale;
             }
-            
-            // 设置画布尺寸为调整后的大小
+
             canvas.width = finalWidth;
             canvas.height = finalHeight;
 
             const ctx = canvas.getContext('2d');
             if (!ctx) return;
 
-            // 使用更高效的绘图方式
             ctx.drawImage(
                 image,
-                cropX * scaleX,
-                cropY * scaleY,
-                cropWidth * scaleX,
-                cropHeight * scaleY,
-                0,
-                0,
-                finalWidth,
-                finalHeight
+                cropX * scaleX, cropY * scaleY,
+                cropWidth * scaleX, cropHeight * scaleY,
+                0, 0, finalWidth, finalHeight
             );
 
-            // 使用较低的图片质量来提高性能
-            const croppedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
-            setCroppedImage(croppedDataUrl);
-        }, 150), // 150毫秒的防抖延迟
+            setCroppedImage(canvas.toDataURL('image/jpeg', 0.8));
+        }, 150),
         [selectedImage, isCropActive]
     );
 
-    // 用户开始裁剪时激活裁剪状态
-    const handleCropStart = () => {
+    const handleCropStart = () => setIsCropActive(true);
+    const handleCropChange = (newCrop: Crop) => {
+        setCrop(newCrop);
         setIsCropActive(true);
     };
 
-    // 用户修改裁剪区域时
-    const handleCropChange = (newCrop: Crop) => {
-        setCrop(newCrop);
-        setIsCropActive(true); // 确保裁剪状态激活
-    };
+    // 清除消息状态
+    const clearMessages = useCallback(() => {
+        setError(null);
+        setSuccess(null);
+    }, []);
 
-    // Automatically trigger crop complete when cropper is shown
+    // 重置所有状态
+    const resetAllStates = useCallback(() => {
+        setImportData('');
+        resetImageStates(setSelectedImage, setCroppedImage, setIsCropActive, setCrop);
+        clearMessages();
+    }, []);
+
+    // 自动触发裁剪完成
     useEffect(() => {
         if (selectedImage && isCropActive && crop.width && crop.height) {
             const imageElement = imgRef.current;
-            if (imageElement && imageElement.complete) {
+            if (imageElement?.complete) {
                 handleCropComplete(crop);
             } else if (imageElement) {
                 imageElement.onload = () => handleCropComplete(crop);
@@ -228,47 +253,28 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
         }
     }, [selectedImage, crop, handleCropComplete, isCropActive]);
 
-    // 增加图片加载后自动设置裁剪区域的效果
+    // 设置默认裁剪区域
     useEffect(() => {
         if (selectedImage && !isCropActive) {
-            // 设置默认裁切框为图片中心的一个区域
-            setCrop({
-                unit: '%',
-                width: 60,
-                height: 60,
-                x: 20,
-                y: 20
-            });
-            setIsCropActive(true);
+            setDefaultCrop(setCrop, setIsCropActive);
         }
     }, [selectedImage, isCropActive]);
 
-    // 清除所有状态消息
-    const clearMessages = () => {
-        setError(null);
-        setSuccess(null);
-    };
-
-    // 监听showForm变化，当表单关闭时清除输入框内容
+    // 表单关闭时重置状态
     useEffect(() => {
         if (!showForm) {
-            setImportData('');
-            clearMessages();
+            resetAllStates();
         }
-    }, [showForm]);
+    }, [showForm, resetAllStates]);
 
-    // 关闭并清除输入
-    const handleClose = () => {
-        setImportData('');
-        clearMessages();
+    // 关闭处理
+    const handleClose = useCallback(() => {
+        resetAllStates();
         onClose();
-    };
+    }, [resetAllStates, onClose]);
 
-    // 生成模板提示词
-    const _templatePrompt = (() => {
-        // 不再使用模板生成
-        // const templateJson = generateBeanTemplateJson();
-        return `提取咖啡豆信息，返回JSON格式。
+// 模板提示词常量
+const TEMPLATE_PROMPT = `提取咖啡豆信息，返回JSON格式。
 
 单个咖啡豆使用：{...}
 多个咖啡豆使用：[{...},{...}]
@@ -303,180 +309,123 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
 - 每个成分的origin/process/variety只能填一个值，不能用逗号连接
 - 不确定的字段留空字符串""或空数组[]
 - 产地、处理法、品种信息请放在blendComponents数组中`;
-    })();
 
-    // 兼容性更好的复制文本方法
-    const _copyTextToClipboard = async (text: string) => {
+    // 复制文本到剪贴板
+    const copyTextToClipboard = useCallback(async (text: string) => {
         try {
-            // 首先尝试使用现代API
-            if (navigator.clipboard && navigator.clipboard.writeText) {
+            if (navigator.clipboard?.writeText) {
                 await navigator.clipboard.writeText(text);
                 setSuccess('复制成功');
                 setTimeout(() => setSuccess(null), 2000);
                 return;
             }
 
-            // 回退方法：创建临时textarea元素
+            // 降级方案
             const textArea = document.createElement('textarea');
             textArea.value = text;
-
-            // 设置样式使其不可见
-            textArea.style.position = 'fixed';
-            textArea.style.left = '-999999px';
-            textArea.style.top = '-999999px';
+            textArea.style.cssText = 'position:fixed;left:-999999px;top:-999999px;';
             document.body.appendChild(textArea);
-
-            // 选择文本并复制
             textArea.focus();
             textArea.select();
 
-            const successful = document.execCommand('copy');
-            if (successful) {
+            try {
+                document.execCommand('copy');
                 setSuccess('复制成功');
-                setTimeout(() => setSuccess(null), 2000);
-            } else {
+            } catch {
                 setError('复制失败');
-                setTimeout(() => setError(null), 2000);
+            } finally {
+                document.body.removeChild(textArea);
+                setTimeout(() => {
+                    setSuccess(null);
+                    setError(null);
+                }, 2000);
             }
-        } catch (_err) {
+        } catch {
             setError('复制失败');
             setTimeout(() => setError(null), 2000);
-        } finally {
-            if (document.querySelector('textarea[style*="-999999px"]')) {
-                document.body.removeChild(document.querySelector('textarea[style*="-999999px"]')!);
-            }
         }
-    }
+    }, []);
 
-    // 处理导入数据，添加时间戳
-    const handleImport = () => {
-        if (!importData) {
-            setError('请输入要导入的数据');
+    // 确保字段为字符串类型
+    const ensureStringFields = useCallback((item: ImportedBean): ImportedBean => {
+        const result = { ...item };
+        ['capacity', 'remaining', 'price'].forEach(field => {
+            if (result[field] !== undefined && result[field] !== null) {
+                result[field] = String(result[field]);
+            }
+        });
+        return result;
+    }, []);
+
+    // 处理添加数据
+    const handleImport = useCallback(async () => {
+        if (!importData.trim()) {
+            setError('请输入要添加的数据');
             return;
         }
 
-        // 确保某些字段始终是字符串类型
-        const ensureStringFields = (item: ImportedBean) => {
-            const result = { ...item };
-            // 确保 capacity 和 remaining 是字符串
-            if (result.capacity !== undefined && result.capacity !== null) {
-                result.capacity = String(result.capacity);
-            }
-            if (result.remaining !== undefined && result.remaining !== null) {
-                result.remaining = String(result.remaining);
-            }
-            // 确保 price 是字符串
-            if (result.price !== undefined && result.price !== null) {
-                result.price = String(result.price);
-            }
-            return result;
-        };
-
         try {
-            // 尝试从文本中提取数据
-            import('@/lib/utils/jsonUtils').then(async ({ extractJsonFromText }) => {
-                setError(null);
-                const beanData = extractJsonFromText(importData);
+            const { extractJsonFromText } = await import('@/lib/utils/jsonUtils');
+            setError(null);
+            const beanData = extractJsonFromText(importData);
 
-                if (!beanData) {
-                    setError('无法从输入中提取有效数据');
-                    return;
-                }
+            if (!beanData) {
+                setError('无法从输入中提取有效数据');
+                return;
+            }
 
-                // 处理单个或多个咖啡豆数据
-                if (Array.isArray(beanData)) {
-                    // 处理多个咖啡豆
-                    // 验证每个条目都是咖啡豆
-                    if (!beanData.every(item => 'roastLevel' in item)) {
-                        setError('部分数据不是有效的咖啡豆信息');
-                        return;
-                    }
-                    
-                    // 处理数组中的每个咖啡豆对象
-                    const processedBeans = beanData.map(bean => ({
-                        ...ensureStringFields(bean as unknown as ImportedBean),
-                        timestamp: Date.now()
-                    }));
-                    
-                    try {
-                        setSuccess('正在批量导入咖啡豆数据...');
-                        await onImport(JSON.stringify(processedBeans));
-                        handleClose();
-                    } catch (error) {
-                        setError('导入失败: ' + (error instanceof Error ? error.message : '未知错误'));
-                        setSuccess(null);
-                    }
-                } else {
-                    // 处理单个咖啡豆
-                    if (!('roastLevel' in beanData)) {
-                        setError('提取的数据不是有效的咖啡豆信息');
-                        return;
-                    }
-                    
-                    const dataWithTimestamp = {
-                        ...ensureStringFields(beanData as unknown as ImportedBean),
-                        timestamp: Date.now()
-                    };
-                    
-                    try {
-                        setSuccess('正在导入咖啡豆数据...');
-                        await onImport(JSON.stringify([dataWithTimestamp])); // 始终返回数组格式
-                        handleClose();
-                    } catch (error) {
-                        setError('导入失败: ' + (error instanceof Error ? error.message : '未知错误'));
-                        setSuccess(null);
-                    }
-                }
-            }).catch(err => {
-                setError('数据处理失败: ' + (err instanceof Error ? err.message : '未知错误'));
-                setSuccess(null);
-            });
-        } catch (err) {
-            setError('处理数据时出错: ' + (err instanceof Error ? err.message : '未知错误'));
+            const isArray = Array.isArray(beanData);
+            const dataArray = isArray ? beanData : [beanData];
+
+            // 验证数据
+            if (!dataArray.every(item => typeof item === 'object' && item !== null && 'roastLevel' in item)) {
+                setError(isArray ? '部分数据不是有效的咖啡豆信息' : '提取的数据不是有效的咖啡豆信息');
+                return;
+            }
+
+            // 处理数据
+            const processedBeans = dataArray.map(bean => ({
+                ...ensureStringFields(bean as unknown as ImportedBean),
+                timestamp: Date.now()
+            }));
+
+            setSuccess(isArray ? '正在批量添加咖啡豆数据...' : '正在添加咖啡豆数据...');
+            await onImport(JSON.stringify(processedBeans));
+            handleClose();
+
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : '未知错误';
+            setError(`添加失败: ${errorMessage}`);
             setSuccess(null);
         }
-    };
+    }, [importData, ensureStringFields, onImport, handleClose]);
 
-    // Function to handle image selection from camera or gallery
-    const handleImageSelect = async (source: 'camera' | 'gallery') => {
+    // 图片选择处理
+    const handleImageSelect = useCallback(async (source: 'camera' | 'gallery') => {
         try {
             const result = await captureImage({ source });
-
             setSelectedImage(result.dataUrl);
-            // 重置裁剪状态
-            setIsCropActive(false);
             setCroppedImage(null);
-            // 设置默认裁切框为图片中心的一个区域
-            setCrop({
-                unit: '%',
-                width: 60,
-                height: 60,
-                x: 20,
-                y: 20
-            });
-            // 设置裁剪状态为激活
-            setIsCropActive(true);
+            setIsCropActive(false); // 将在 useEffect 中自动设置为 true
         } catch (error) {
             console.error('打开相机/相册失败:', error);
+            setError('打开相机/相册失败，请重试');
         }
-    };
+    }, []);
 
-    // Function to handle image recognition process
-    const handleImageRecognition = async () => {
+    // 图片识别处理
+    const handleImageRecognition = useCallback(async () => {
         if (!selectedImage) return;
 
         setIsUploading(true);
         clearMessages();
 
         try {
-            // 仅当用户进行了裁剪操作且裁剪图片存在时使用裁剪图片
             const imageToUse = (isCropActive && croppedImage) ? croppedImage : selectedImage;
-            
-            // 将 base64 转换为 Blob
+
+            // 转换为 Blob 并压缩
             const response = await fetch(imageToUse);
             const originalBlob = await response.blob();
-            
-            // 压缩图片
             const compressedBlob = await compressImage(
                 new File([originalBlob], 'coffee-bean.jpg', { type: 'image/jpeg' })
             );
@@ -490,32 +439,24 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                 setImportData(JSON.stringify(data.result, null, 2));
                 setSuccess('✨ AI识别成功！请检查识别结果是否正确');
             }
-
         } catch (err) {
             console.error('识别失败:', err);
-            if (err instanceof RecognitionError) {
-                setError(err.message);
-            } else {
-                setError('图片识别失败，请重试');
-            }
+            setError(err instanceof RecognitionError ? err.message : '图片识别失败，请重试');
         } finally {
             setIsUploading(false);
-            setSelectedImage(null);
-            setCroppedImage(null);
-            setShowCropper(false);
-            setIsCropActive(false);
+            resetImageStates(setSelectedImage, setCroppedImage, setIsCropActive, setCrop);
         }
-    };
+    }, [selectedImage, isCropActive, croppedImage, clearMessages]);
 
     // 手动模式切换
-    const toggleManualMode = () => {
-        setManualMode(!manualMode);
+    const toggleManualMode = useCallback(() => {
+        setManualMode(prev => !prev);
         clearMessages();
-    };
+    }, [clearMessages]);
 
     // 渲染上传部分
     const renderUploadSection = () => (
-        <div className="p-3 border text-xs font-medium relative border-neutral-200 dark:border-neutral-700 rounded-md bg-neutral-100/80 dark:bg-neutral-800">
+        <div className={STYLES.container.modal}>
             <button
                 onClick={toggleManualMode}
                 className="px-2 py-1 absolute right-0 top-0 rounded-bl bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300"
@@ -524,7 +465,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
             </button>
             <div className="flex flex-col space-y-3">
                 <div className="flex justify-between items-center">
-                    <p className="text-neutral-600 dark:text-neutral-400">
+                    <p className={STYLES.text.muted}>
                         {manualMode ? '手动填写咖啡豆信息' : '上传咖啡豆包装图片，AI自动识别信息'}
                     </p>
                 </div>
@@ -554,7 +495,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                                 <summary className="text-neutral-500 dark:text-neutral-400 cursor-pointer">提示词（点击展开）</summary>
                                 <textarea
                                     readOnly
-                                    value={_templatePrompt}
+                                    value={TEMPLATE_PROMPT}
                                     className="w-full text-neutral-700 dark:text-neutral-300 p-2 mt-2 bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-200 dark:border-neutral-700 rounded-md h-20 overflow-auto"
                                     onFocus={(e) => e.target.select()}
                                 />
@@ -562,7 +503,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                                     <button
                                         onClick={() => {
                                             clearMessages();
-                                            _copyTextToClipboard(_templatePrompt);
+                                            copyTextToClipboard(TEMPLATE_PROMPT);
                                         }}
                                         className="text-neutral-500 dark:text-neutral-400 px-2 py-0.5 rounded-sm  bg-neutral-200/80 dark:bg-neutral-800/80 hover:bg-neutral-300 dark:hover:bg-neutral-700 transition-colors"
                                     >
@@ -607,13 +548,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                                         onClick={() => {
                                             setIsCropActive(false);
                                             setCroppedImage(null);
-                                            setCrop({
-                                                unit: '%',
-                                                width: 0,
-                                                height: 0,
-                                                x: 0,
-                                                y: 0
-                                            });
+                                            setCrop(EMPTY_CROP);
                                         }}
                                         className="text-[10px] px-2 py-0.5 bg-neutral-200 dark:bg-neutral-700 rounded-sm text-neutral-700 dark:text-neutral-300"
                                     >
@@ -629,13 +564,13 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                                     setCroppedImage(null);
                                     setIsCropActive(false);
                                 }}
-                                className="px-3 py-1 text-sm border border-neutral-300 dark:border-neutral-600 rounded-sm"
+                                className={`${STYLES.button.small} border border-neutral-300 dark:border-neutral-600 rounded-sm`}
                             >
                                 重新选择
                             </button>
                             <button
                                 onClick={handleImageRecognition}
-                                className="px-3 py-1 text-sm bg-neutral-800 dark:bg-neutral-200 text-neutral-100 dark:text-neutral-800 rounded-sm"
+                                className={`${STYLES.button.small} bg-neutral-800 dark:bg-neutral-200 text-neutral-100 dark:text-neutral-800 rounded-sm`}
                             >
                                 确认裁剪并识别
                             </button>
@@ -646,7 +581,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                         <button
                             onClick={() => handleImageSelect('camera')}
                             disabled={isUploading}
-                            className="flex-1 py-2 px-4 border border-dashed border-neutral-300 dark:border-neutral-600 rounded-md text-sm text-neutral-600 dark:text-neutral-400"
+                            className={STYLES.button.upload}
                         >
                             <span className="flex items-center justify-center space-x-2">
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -659,7 +594,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                         <button
                             onClick={() => handleImageSelect('gallery')}
                             disabled={isUploading}
-                            className="flex-1 py-2 px-4 border border-dashed border-neutral-300 dark:border-neutral-600 rounded-md text-sm text-neutral-600 dark:text-neutral-400"
+                            className={STYLES.button.upload}
                         >
                             <span className="flex items-center justify-center space-x-2">
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -753,7 +688,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                                             />
                                         </svg>
                                     </button>
-                                    <h3 className="text-base font-medium">导入咖啡豆数据</h3>
+                                    <h3 className="text-base font-medium">添加咖啡豆数据</h3>
                                     <div className="w-8"></div>
                                 </div>
 
@@ -762,7 +697,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                                     {renderUploadSection()}
                                     <div className="flex items-center mb-1">
                                         <p className="text-xs text-neutral-300 dark:text-neutral-700 flex-1">
-                                            {manualMode ? 'JSON 数据' : 'JSON 数据'}
+                                            JSON 数据或分享的文本
                                         </p>
                                     </div>
                                     <textarea
@@ -772,27 +707,27 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                                         onChange={(e) => setImportData(e.target.value)}
                                     />
                                     {error && (
-                                        <div className="text-sm text-red-500 dark:text-red-400">
+                                        <div className={STYLES.text.error}>
                                             {error}
                                         </div>
                                     )}
                                     {success && (
-                                        <div className="text-sm text-green-500 dark:text-green-400">
+                                        <div className={STYLES.text.success}>
                                             {success}
                                         </div>
                                     )}
                                     <div className="flex justify-end space-x-3 my-4">
                                         <button
                                             onClick={handleClose}
-                                            className="px-4 py-2 border border-neutral-300 dark:border-neutral-700 text-neutral-800 dark:text-neutral-200 rounded-md text-sm"
+                                            className={STYLES.button.secondary}
                                         >
                                             取消
                                         </button>
                                         <button
                                             onClick={handleImport}
-                                            className="px-4 py-2 bg-neutral-800 dark:bg-neutral-200 text-neutral-100 dark:text-neutral-800 rounded-md text-sm"
+                                            className={STYLES.button.primary}
                                         >
-                                            导入
+                                            添加
                                         </button>
                                     </div>
                                 </div>
