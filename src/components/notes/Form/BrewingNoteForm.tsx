@@ -41,8 +41,8 @@ interface BrewingNoteFormProps {
     onTimestampChange?: (timestamp: Date) => void;
 }
 
-// 图片压缩函数
-const compressBase64 = (base64: string, quality = 0.7, maxWidth = 800): Promise<string> => {
+// 图片压缩函数，包含Canvas渲染失败检测
+const compressBase64 = (base64: string, quality = 0.8, maxWidth = 1200): Promise<string> => {
   return new Promise((resolve, reject) => {
     // 如果图片小于200kb，直接返回原图
     if (base64.length * 0.75 <= 200 * 1024) {
@@ -70,7 +70,20 @@ const compressBase64 = (base64: string, quality = 0.7, maxWidth = 800): Promise<
         if (!ctx) throw new Error('无法获取canvas上下文');
 
         ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', quality));
+        const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+
+        // 检测Canvas渲染失败的情况
+        const compressionRatio = ((base64.length - compressedBase64.length) / base64.length * 100);
+        const compressedSizeKB = Math.round(compressedBase64.length * 0.75 / 1024);
+
+        // 如果压缩率超过97%且最终文件小于50KB，很可能是Canvas渲染失败
+        if (compressionRatio > 97 && compressedSizeKB < 50) {
+          // 返回原图，避免使用损坏的压缩结果
+          resolve(base64);
+          return;
+        }
+
+        resolve(compressedBase64);
       } catch (error) {
         reject(error);
       }
@@ -393,7 +406,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                 const base64 = reader.result as string;
                 if (!base64) return;
 
-                const compressedBase64 = await compressBase64(base64, 0.5, 800);
+                const compressedBase64 = await compressBase64(base64, 0.8, 1200);
                 setFormData(prev => ({ ...prev, image: compressedBase64 }));
             } catch (error) {
                 console.error('图片处理失败:', error);

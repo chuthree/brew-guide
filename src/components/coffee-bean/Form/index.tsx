@@ -11,41 +11,32 @@ import Complete from './components/Complete'
 import { addCustomPreset, DEFAULT_ORIGINS, DEFAULT_PROCESSES, DEFAULT_VARIETIES } from './constants'
 import { defaultSettings, type SettingsOptions } from '@/components/settings/Settings'
 
-// 二次压缩函数：将base64图片再次压缩
-function compressBase64(base64: string, quality = 0.7, maxWidth = 800): Promise<string> {
+// 二次压缩函数：将base64图片再次压缩，包含Canvas渲染失败检测
+function compressBase64(base64: string, quality = 0.8, maxWidth = 1200): Promise<string> {
   return new Promise((resolve, reject) => {
     try {
-      console.log('compressBase64开始, quality:', quality, 'maxWidth:', maxWidth);
-      
       // 计算base64字符串大小（近似值）
-      // base64字符串长度 * 0.75 = 字节数，因为base64编码会使文件大小增加约33%
       const approximateSizeInBytes = base64.length * 0.75;
-      
+
       // 如果图片小于200kb，直接返回原图，不进行压缩
       if (approximateSizeInBytes <= 200 * 1024) {
-        console.log('图片小于200kb，无需压缩');
         resolve(base64);
         return;
       }
-      
+
       const img = new Image();
-      
-      // 添加错误处理
-      img.onerror = (err) => {
-        console.error('图片加载失败:', err);
+
+      img.onerror = () => {
         reject(new Error('图片加载失败'));
       };
-      
-      // 设置图片加载超时
+
       const imgLoadTimeout = setTimeout(() => {
-        console.warn('图片加载超时');
         reject(new Error('图片加载超时'));
-      }, 10000); // 10秒超时
-      
+      }, 10000);
+
       img.onload = () => {
         clearTimeout(imgLoadTimeout);
-        console.log('图片加载成功, 原始尺寸:', img.width, 'x', img.height);
-        
+
         try {
           let width = img.width;
           let height = img.height;
@@ -55,48 +46,47 @@ function compressBase64(base64: string, quality = 0.7, maxWidth = 800): Promise<
             height = height * (maxWidth / width);
             width = maxWidth;
           }
-          
-          console.log('缩放后尺寸:', width, 'x', height);
 
           const canvas = document.createElement('canvas');
           canvas.width = width;
           canvas.height = height;
           const ctx = canvas.getContext('2d');
           if (!ctx) {
-            console.error('无法获取canvas上下文');
             throw new Error('无法获取canvas上下文');
           }
-          
-          // 绘制图片到Canvas
+
           ctx.drawImage(img, 0, 0, width, height);
 
-          // 转换成新的Base64，使用较低的质量以确保在移动设备上也能运行良好
           try {
             const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
-            console.log('压缩成功, 原始base64长度:', base64.length, '压缩后长度:', compressedBase64.length);
+
+            // 检测Canvas渲染失败的情况
+            const compressionRatio = ((base64.length - compressedBase64.length) / base64.length * 100);
+            const compressedSizeKB = Math.round(compressedBase64.length * 0.75 / 1024);
+
+            // 如果压缩率超过97%且最终文件小于50KB，很可能是Canvas渲染失败
+            if (compressionRatio > 97 && compressedSizeKB < 50) {
+              // 返回原图，避免使用损坏的压缩结果
+              resolve(base64);
+              return;
+            }
+
             resolve(compressedBase64);
           } catch (toDataURLError) {
-            console.error('toDataURL失败:', toDataURLError);
             reject(toDataURLError);
           }
         } catch (canvasError) {
-          console.error('Canvas处理失败:', canvasError);
           reject(canvasError);
         }
       };
-      
-      // 设置图片源并开始加载
-      console.log('设置图片源...');
+
       img.src = base64;
-      
-      // 对于已经缓存的图片，onload可能不会触发，所以检查complete属性
+
       if (img.complete) {
-        console.log('图片已缓存，立即处理');
         clearTimeout(imgLoadTimeout);
         img.onload?.(new Event('load'));
       }
     } catch (error) {
-      console.error('compressBase64整体错误:', error);
       reject(error);
     }
   });
