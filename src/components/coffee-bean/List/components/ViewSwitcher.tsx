@@ -266,8 +266,6 @@ interface ViewSwitcherProps {
     availableOrigins?: string[]
     availableFlavorPeriods?: FlavorPeriodStatus[]
     availableRoasters?: string[]
-    // 新增库存分享功能
-    onInventoryShare?: () => void
 }
 
 const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
@@ -314,7 +312,6 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
     availableOrigins = [],
     availableFlavorPeriods = [],
     availableRoasters = [],
-    onInventoryShare,
 }) => {
     // 添加极简模式状态
     const [_isMinimalistMode, setIsMinimalistMode] = useState(false);
@@ -850,18 +847,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                                                     </div>
                                                 </div>
 
-                                                {/* 分享按钮 - 仅在库存视图且咖啡豆数量超过10个时显示 */}
-                                                {viewMode === VIEW_OPTIONS.INVENTORY && onInventoryShare && beansCount > 10 && (
-                                                    <div className="pt-2 border-t border-neutral-200/30 dark:border-neutral-700/30">
-                                                        <FilterButton
-                                                            isActive={false}
-                                                            onClick={onInventoryShare}
-                                                        >
-                                                            分享为图片
-                                                            <ArrowUpRight className="inline-block ml-1 w-3 h-3" />
-                                                        </FilterButton>
-                                                    </div>
-                                                )}
+
                                             </div>
                                         </div>
                                     </motion.div>
