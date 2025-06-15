@@ -7,6 +7,9 @@ import type { BrewingNoteData, CoffeeBean } from '@/types/app'
 import AutoResizeTextarea from '@/components/common/forms/AutoResizeTextarea'
 import NoteFormHeader from '@/components/notes/ui/NoteFormHeader'
 import { captureImage } from '@/lib/utils/imageCapture'
+import { equipmentList, commonMethods, type Method, type CustomEquipment } from '@/lib/core/config'
+import { loadCustomEquipments } from '@/lib/managers/customEquipments'
+import { loadCustomMethods } from '@/lib/managers/customMethods'
 
 interface TasteRatings {
     acidity: number;
@@ -190,6 +193,14 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         grindSize: initialData?.params?.grindSize || '中细',
         temp: initialData?.params?.temp || '92°C',
     });
+
+    // 添加器具和方案选择相关状态
+    const [availableEquipments, setAvailableEquipments] = useState<(typeof equipmentList[0] | CustomEquipment)[]>([]);
+    const [availableMethods, setAvailableMethods] = useState<Method[]>([]);
+    const [customMethods, setCustomMethods] = useState<Record<string, Method[]>>({});
+    const [showEquipmentMethodSelector, setShowEquipmentMethodSelector] = useState(false);
+    const [selectedEquipment, setSelectedEquipment] = useState(initialData.equipment || '');
+    const [selectedMethod, setSelectedMethod] = useState(initialData.method || '');
     
     const formRef = useRef<HTMLFormElement>(null);
     const [currentSliderValue, setCurrentSliderValue] = useState<number | null>(null);
@@ -223,6 +234,38 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         onTouchEnd: () => setCurrentSliderValue(null)
     });
     
+    // 加载器具和方案数据
+    useEffect(() => {
+        const loadEquipmentsAndMethods = async () => {
+            try {
+                // 加载自定义器具
+                const customEquips = await loadCustomEquipments();
+
+                // 合并所有器具
+                const allEquipments = [
+                    ...equipmentList.map(eq => ({ ...eq, isCustom: false })),
+                    ...customEquips
+                ];
+                setAvailableEquipments(allEquipments);
+
+                // 加载自定义方案
+                const customMethods = await loadCustomMethods();
+                setCustomMethods(customMethods);
+
+                // 如果有选中的器具，加载对应的方案
+                if (initialData.equipment) {
+                    const equipmentMethods = customMethods[initialData.equipment] || [];
+                    const commonEquipmentMethods = commonMethods[initialData.equipment] || [];
+                    setAvailableMethods([...equipmentMethods, ...commonEquipmentMethods]);
+                }
+            } catch (error) {
+                console.error('加载器具和方案数据失败:', error);
+            }
+        };
+
+        loadEquipmentsAndMethods();
+    }, [initialData.equipment]);
+
     // 事件监听
     useEffect(() => {
         const handleGlobalTouchEnd = () => setCurrentSliderValue(null);
@@ -240,12 +283,22 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
             }
         };
 
+        // 点击外部区域关闭下拉选择器
+        const handleClickOutside = (e: MouseEvent) => {
+            const target = e.target as HTMLElement;
+            if (!target.closest('[data-equipment-method-selector]')) {
+                setShowEquipmentMethodSelector(false);
+            }
+        };
+
         document.addEventListener('touchend', handleGlobalTouchEnd);
         document.addEventListener('methodParamsChanged', handleMethodParamsChange as EventListener);
+        document.addEventListener('click', handleClickOutside);
 
         return () => {
             document.removeEventListener('touchend', handleGlobalTouchEnd);
             document.removeEventListener('methodParamsChanged', handleMethodParamsChange as EventListener);
+            document.removeEventListener('click', handleClickOutside);
         };
     }, []);
 
@@ -366,6 +419,83 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         }));
     };
 
+    // 处理器具选择
+    const handleEquipmentSelect = async (equipmentId: string) => {
+        try {
+            // 更新选中的器具
+            setSelectedEquipment(equipmentId);
+
+            // 加载该器具的方案
+            const equipmentMethods = customMethods[equipmentId] || [];
+            const commonEquipmentMethods = commonMethods[equipmentId] || [];
+            const allMethods = [...equipmentMethods, ...commonEquipmentMethods];
+            setAvailableMethods(allMethods);
+
+            // 如果有方案，默认选择第一个并更新参数
+            if (allMethods.length > 0) {
+                const firstMethod = allMethods[0];
+                // 优先使用方案名称，只有在名称不存在时才使用ID
+                const methodIdentifier = firstMethod.name || firstMethod.id || '';
+                setSelectedMethod(methodIdentifier);
+                setMethodParams({
+                    coffee: firstMethod.params.coffee,
+                    water: firstMethod.params.water,
+                    ratio: firstMethod.params.ratio,
+                    grindSize: firstMethod.params.grindSize,
+                    temp: firstMethod.params.temp,
+                });
+            } else {
+                setSelectedMethod('');
+            }
+
+            setShowEquipmentMethodSelector(false);
+        } catch (error) {
+            console.error('选择器具失败:', error);
+        }
+    };
+
+    // 处理方案选择
+    const handleMethodSelect = (methodIdentifier: string) => {
+        try {
+            // 优先通过名称查找，然后通过ID查找
+            const selectedMethodObj = availableMethods.find(m =>
+                m.name === methodIdentifier || m.id === methodIdentifier
+            );
+            if (selectedMethodObj) {
+                // 更新选中的方案，优先使用名称
+                const methodToStore = selectedMethodObj.name || selectedMethodObj.id || '';
+                setSelectedMethod(methodToStore);
+
+                // 只更新方案参数，不保存
+                setMethodParams({
+                    coffee: selectedMethodObj.params.coffee,
+                    water: selectedMethodObj.params.water,
+                    ratio: selectedMethodObj.params.ratio,
+                    grindSize: selectedMethodObj.params.grindSize,
+                    temp: selectedMethodObj.params.temp,
+                });
+            }
+            setShowEquipmentMethodSelector(false);
+        } catch (error) {
+            console.error('选择方案失败:', error);
+        }
+    };
+
+    // 获取当前器具名称
+    const getCurrentEquipmentName = () => {
+        const equipment = availableEquipments.find(eq => eq.id === selectedEquipment);
+        return equipment?.name || selectedEquipment || '未知器具';
+    };
+
+    // 获取当前方案名称
+    const getCurrentMethodName = () => {
+        // 优先通过名称查找，然后通过ID查找
+        const method = availableMethods.find(m =>
+            m.name === selectedMethod || m.id === selectedMethod
+        );
+        return method?.name || selectedMethod || '未知方案';
+    };
+
     // Inside the component, add a new state for showing/hiding flavor ratings
     const [showFlavorRatings, setShowFlavorRatings] = useState(() => {
         // 初始化时检查是否有任何风味评分大于0
@@ -454,15 +584,15 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
             // 使用当前的时间戳状态
             timestamp: timestamp.getTime(),
             ...formData,
-            equipment: initialData.equipment,
-            method: initialData.method,
+            equipment: selectedEquipment || initialData.equipment,
+            method: selectedMethod || initialData.method,
             params: {
-                // 优先使用MethodSelector中更新的参数，如果没有则使用初始参数，最后使用默认值
-                coffee: methodParams.coffee || initialData.params?.coffee || '',
-                water: methodParams.water || initialData.params?.water || '',
-                ratio: methodParams.ratio || initialData.params?.ratio || '',
-                grindSize: methodParams.grindSize || initialData.params?.grindSize || '',
-                temp: methodParams.temp || initialData.params?.temp || ''
+                // 使用当前的方案参数
+                coffee: methodParams.coffee,
+                water: methodParams.water,
+                ratio: methodParams.ratio,
+                grindSize: methodParams.grindSize,
+                temp: methodParams.temp
             },
             totalTime: initialData.totalTime,
             // 确保保留beanId，这是与咖啡豆的关联字段
@@ -589,7 +719,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                 {/* 咖啡豆信息 */}
                 <div className="space-y-4">
                     <div className="text-xs font-medium  tracking-widest text-neutral-500 dark:text-neutral-400">
-                        {initialData.coffeeBean ? (
+                        {(initialData.coffeeBean || (initialData.id && formData.coffeeBeanInfo.name)) ? (
                             // 显示选择的咖啡豆信息，直接在标题后面
                             <>咖啡豆信息 · {formData.coffeeBeanInfo.name || '未知咖啡豆'}</>
                         ) : (
@@ -597,7 +727,8 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                             '咖啡豆信息'
                         )}
                     </div>
-                    {!initialData.coffeeBean && (
+                    {/* 只有在新建笔记且没有选择咖啡豆时才显示输入框 */}
+                    {!initialData.coffeeBean && !initialData.id && (
                         <div className="grid gap-6">
                             <div className="grid grid-cols-2 gap-6">
                                 <div>
@@ -647,9 +778,80 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                 {/* 添加方案参数编辑 - 只在编辑记录时显示 */}
                 {initialData?.id && (
                 <div className="space-y-4">
-                    <div className="text-[10px] font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
-                        方案参数
+                    <div className="flex items-center justify-between" data-equipment-method-selector>
+                        <div className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400 flex-1 min-w-0 mr-3">
+                            <span className="truncate block">
+                                方案参数 · {getCurrentEquipmentName()}_{getCurrentMethodName()}
+                            </span>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setShowEquipmentMethodSelector(!showEquipmentMethodSelector)}
+                            className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400 underline hover:text-neutral-700 dark:hover:text-neutral-300 flex-shrink-0"
+                        >
+                            [ 选择 ]
+                        </button>
                     </div>
+
+                    {/* 器具和方案选择下拉框 */}
+                    {showEquipmentMethodSelector && (
+                        <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg p-4 space-y-4 bg-neutral-50 dark:bg-neutral-900" data-equipment-method-selector>
+                            {/* 器具选择 */}
+                            <div className="space-y-2">
+                                <div className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
+                                    选择器具
+                                </div>
+                                <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
+                                    {availableEquipments.map((equipment) => (
+                                        <button
+                                            key={equipment.id}
+                                            type="button"
+                                            onClick={() => handleEquipmentSelect(equipment.id)}
+                                            className={`text-xs p-2 rounded border text-left ${
+                                                selectedEquipment === equipment.id
+                                                    ? 'border-neutral-800 dark:border-white bg-neutral-100 dark:bg-neutral-800'
+                                                    : 'border-neutral-200 dark:border-neutral-700 hover:border-neutral-400 dark:hover:border-neutral-500'
+                                            }`}
+                                        >
+                                            {equipment.name}
+                                            {'isCustom' in equipment && equipment.isCustom && (
+                                                <span className="ml-1 text-neutral-400 dark:text-neutral-500">(自定义)</span>
+                                            )}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* 方案选择 */}
+                            {availableMethods.length > 0 && (
+                                <div className="space-y-2">
+                                    <div className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
+                                        选择方案
+                                    </div>
+                                    <div className="space-y-1 max-h-32 overflow-y-auto">
+                                        {availableMethods.map((method) => {
+                                            // 优先使用名称作为标识符
+                                            const methodIdentifier = method.name || method.id || '';
+                                            return (
+                                                <button
+                                                    key={method.id || method.name}
+                                                    type="button"
+                                                    onClick={() => handleMethodSelect(methodIdentifier)}
+                                                    className={`w-full text-xs p-2 rounded border text-left ${
+                                                        selectedMethod === methodIdentifier
+                                                            ? 'border-neutral-800 dark:border-white bg-neutral-100 dark:bg-neutral-800'
+                                                            : 'border-neutral-200 dark:border-neutral-700 hover:border-neutral-400 dark:hover:border-neutral-500'
+                                                    }`}
+                                                >
+                                                    {method.name}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
                     <div className="grid grid-cols-4 gap-6">
                         <div>
                             <input
