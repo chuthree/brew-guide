@@ -16,6 +16,16 @@ import {
     DrawerDescription,
 } from '@/components/ui/drawer'
 
+// 样式常量
+const STYLES = {
+    label: 'text-xs text-neutral-500 dark:text-neutral-400',
+    value: 'text-xs font-medium text-neutral-800 dark:text-neutral-100',
+    muted: 'text-xs text-neutral-600 dark:text-neutral-400',
+    border: 'border-neutral-200/40 dark:border-neutral-800/40',
+    bgLight: 'bg-neutral-50/50 dark:bg-neutral-800/30',
+    bgLighter: 'bg-neutral-50/30 dark:bg-neutral-800/20'
+} as const
+
 // 信息项类型定义
 interface InfoItem {
     key: string
@@ -38,13 +48,13 @@ const InfoGrid: React.FC<{
         <div className={`grid gap-3 ${gridCols} ${className}`}>
             {items.map((item) => (
                 <div key={item.key}>
-                    <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-0.5">
+                    <div className={`${STYLES.label} mb-0.5`}>
                         {item.label}
                     </div>
                     <div className={`text-xs font-medium ${
                         item.type === 'status' && item.color ?
                         item.color :
-                        'text-neutral-800 dark:text-neutral-100'
+                        STYLES.value.replace('text-xs font-medium ', '')
                     }`}>
                         {item.value}
                     </div>
@@ -202,86 +212,73 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
         return items
     }
 
+    // 工具函数：检查是否有拼配组件
+    const hasBlendComponents = (): boolean => {
+        return !!(bean?.blendComponents && Array.isArray(bean.blendComponents) && bean.blendComponents.length > 0)
+    }
+
+    // 工具函数：从拼配组件中提取并去重字段值
+    const extractFromBlendComponents = (field: 'origin' | 'process' | 'variety'): string[] => {
+        if (!hasBlendComponents() || !bean?.blendComponents) return []
+
+        return Array.from(new Set(
+            bean.blendComponents
+                .map(comp => comp[field])
+                .filter((value): value is string =>
+                    value !== undefined && value !== null && value.trim() !== ''
+                )
+        ))
+    }
+
+    // 工具函数：创建信息项
+    const createInfoItem = (
+        key: string,
+        label: string,
+        blendField: 'origin' | 'process' | 'variety',
+        fallbackValue?: string,
+        enableHighlight = false
+    ): InfoItem | null => {
+        if (hasBlendComponents()) {
+            const values = extractFromBlendComponents(blendField)
+            if (values.length === 0) return null
+
+            const text = values.join(', ')
+            return {
+                key,
+                label,
+                value: enableHighlight && searchQuery ? (
+                    <HighlightText text={text} highlight={searchQuery} />
+                ) : text
+            }
+        } else if (fallbackValue) {
+            return {
+                key,
+                label,
+                value: enableHighlight && searchQuery ? (
+                    <HighlightText text={fallbackValue} highlight={searchQuery} />
+                ) : fallbackValue
+            }
+        }
+        return null
+    }
+
     // 工具函数：生成产地信息项
     const getOriginInfoItems = (): InfoItem[] => {
         const items: InfoItem[] = []
 
-        // 处理产地信息
-        if (bean?.blendComponents && Array.isArray(bean.blendComponents) && bean.blendComponents.length > 0) {
-            // 从blendComponents中提取产地信息
-            const origins = bean.blendComponents
-                .map(comp => comp.origin)
-                .filter((origin): origin is string => origin !== undefined && origin !== null && origin.trim() !== '')
+        // 产地信息
+        const originItem = createInfoItem('origin', '产地', 'origin', bean?.origin, true)
+        if (originItem) items.push(originItem)
 
-            if (origins.length > 0) {
-                const uniqueOrigins = Array.from(new Set(origins))
-                items.push({
-                    key: 'origin',
-                    label: '产地',
-                    value: searchQuery ? (
-                        <HighlightText text={uniqueOrigins.join(', ')} highlight={searchQuery} />
-                    ) : uniqueOrigins.join(', ')
-                })
-            }
-        } else if (bean?.origin) {
-            // 兼容旧数据格式
-            items.push({
-                key: 'origin',
-                label: '产地',
-                value: searchQuery ? (
-                    <HighlightText text={bean.origin} highlight={searchQuery} />
-                ) : bean.origin
-            })
-        }
+        // 处理法信息
+        const processItem = createInfoItem('process', '处理法', 'process', bean?.process)
+        if (processItem) items.push(processItem)
 
-        // 处理处理法信息
-        if (bean?.blendComponents && Array.isArray(bean.blendComponents) && bean.blendComponents.length > 0) {
-            // 从blendComponents中提取处理法信息
-            const processes = bean.blendComponents
-                .map(comp => comp.process)
-                .filter((process): process is string => process !== undefined && process !== null && process.trim() !== '')
+        // 品种信息
+        const varietyItem = createInfoItem('variety', '品种', 'variety', bean?.variety)
+        if (varietyItem) items.push(varietyItem)
 
-            if (processes.length > 0) {
-                const uniqueProcesses = Array.from(new Set(processes))
-                items.push({
-                    key: 'process',
-                    label: '处理法',
-                    value: uniqueProcesses.join(', ')
-                })
-            }
-        } else if (bean?.process) {
-            // 兼容旧数据格式
-            items.push({
-                key: 'process',
-                label: '处理法',
-                value: bean.process
-            })
-        }
-
-        // 处理品种信息
-        if (bean?.blendComponents && Array.isArray(bean.blendComponents) && bean.blendComponents.length > 0) {
-            // 从blendComponents中提取品种信息
-            const varieties = bean.blendComponents
-                .map(comp => comp.variety)
-                .filter((variety): variety is string => variety !== undefined && variety !== null && variety.trim() !== '')
-
-            if (varieties.length > 0) {
-                const uniqueVarieties = Array.from(new Set(varieties))
-                items.push({
-                    key: 'variety',
-                    label: '品种',
-                    value: uniqueVarieties.join(', ')
-                })
-            }
-        } else if (bean?.variety) {
-            // 兼容旧数据格式
-            items.push({
-                key: 'variety',
-                label: '品种',
-                value: bean.variety
-            })
-        }
-
+        // 烘焙度
         if (bean?.roastLevel) {
             items.push({
                 key: 'roastLevel',
@@ -293,7 +290,143 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
         return items
     }
 
+    // 渲染快捷扣除记录
+    const renderQuickDecrementNote = (note: BrewingNote) => {
+        const amount = note.quickDecrementAmount || 0
+        return (
+            <div key={note.id} className={`flex items-center justify-between py-1.5 px-2 ${STYLES.bgLighter} border border-neutral-200/30 dark:border-neutral-800/30`}>
+                <div className="flex items-center gap-2">
+                    <div className={STYLES.value}>
+                        {bean?.name || '咖啡豆'}
+                    </div>
+                    <div className={`${STYLES.value} bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded-xs ${STYLES.muted.replace('text-xs ', '')}`}>
+                        -{amount}g
+                    </div>
+                </div>
+                <div className={STYLES.muted}>
+                    {formatDate(note.timestamp)}
+                </div>
+            </div>
+        )
+    }
 
+    // 渲染普通冲煮记录
+    const renderBrewingNote = (note: BrewingNote) => {
+        const equipmentName = note.equipment ? (equipmentNames[note.equipment] || note.equipment) : '未知器具'
+        const hasNotes = note.notes && note.notes.trim()
+        const displayTitle = note.method && note.method.trim() !== '' ? note.method : equipmentName
+
+        return (
+            <div key={note.id} className={`p-2 ${STYLES.bgLight} border ${STYLES.border} space-y-1.5`}>
+                {/* 标题行 */}
+                <div className="flex justify-between items-center">
+                    <div className="flex-1 min-w-0">
+                        <div className={`${STYLES.value} truncate`}>
+                            {displayTitle}
+                        </div>
+                    </div>
+                    <div className={`${STYLES.muted} ml-2`}>
+                        {formatDate(note.timestamp)}
+                    </div>
+                </div>
+
+                {/* 参数行 */}
+                {note.params && (
+                    <div className={STYLES.muted}>
+                        {note.params.coffee} · {note.params.ratio}
+                        {(note.params.grindSize || note.params.temp) && (
+                            <span> · {[note.params.grindSize, note.params.temp].filter(Boolean).join(' · ')}</span>
+                        )}
+                    </div>
+                )}
+
+                {/* 评分行 */}
+                <div className="flex justify-between items-center">
+                    <div className={STYLES.muted}>总体评分</div>
+                    <div className={STYLES.muted}>{formatRating(note.rating)}</div>
+                </div>
+
+                {/* 备注信息 */}
+                {hasNotes && (
+                    <div className={`${STYLES.muted} whitespace-pre-line leading-tight`}>
+                        {note.notes}
+                    </div>
+                )}
+            </div>
+        )
+    }
+
+    // 渲染拼配组件
+    const renderBlendComponents = () => (
+        <div>
+            <div className={`${STYLES.label} mb-1.5`}>拼配成分</div>
+            <div className="grid gap-3 grid-cols-2">
+                {bean!.blendComponents!.map((comp: any, index: number) => {
+                    const parts = [comp.origin, comp.variety, comp.process].filter(Boolean)
+                    const displayText = parts.length > 0 ? parts.join(' · ') : `组成 ${index + 1}`
+
+                    return (
+                        <div key={index} className="flex items-center gap-2">
+                            <span className={STYLES.value}>
+                                {displayText}
+                            </span>
+                            {comp.percentage !== undefined && comp.percentage !== null && (
+                                <span className={`${STYLES.value} ${STYLES.muted.replace('text-xs ', '')}`}>
+                                    {comp.percentage}%
+                                </span>
+                            )}
+                        </div>
+                    )
+                })}
+            </div>
+        </div>
+    )
+
+    // 渲染风味标签
+    const renderFlavorTags = () => (
+        <div>
+            <div className={`${STYLES.label} mb-1.5`}>风味</div>
+            <div className="flex flex-wrap gap-1">
+                {bean!.flavor!.map((flavor: any, index: number) => (
+                    <span
+                        key={index}
+                        className="px-1.5 py-0.5 bg-neutral-100 dark:bg-neutral-700/50 text-xs text-neutral-700 dark:text-neutral-300"
+                    >
+                        {flavor}
+                    </span>
+                ))}
+            </div>
+        </div>
+    )
+
+    // 渲染备注
+    const renderNotes = () => (
+        <div>
+            <div className={`${STYLES.label} mb-1.5`}>备注</div>
+            <div className="text-xs text-neutral-700 dark:text-neutral-300 leading-relaxed whitespace-pre-line">
+                {searchQuery ? (
+                    <HighlightText
+                        text={bean!.notes!}
+                        highlight={searchQuery}
+                        className="text-neutral-700 dark:text-neutral-300"
+                    />
+                ) : (
+                    bean!.notes
+                )}
+            </div>
+        </div>
+    )
+
+    // 判断是否为简单的快捷扣除记录
+    const isSimpleQuickDecrementNote = (note: BrewingNote): boolean => {
+        return !!(note.source === 'quick-decrement' &&
+            !(note.taste && Object.values(note.taste).some(value => value > 0)) &&
+            note.rating === 0 &&
+            (!note.method || note.method.trim() === '') &&
+            (!note.equipment || note.equipment.trim() === '' || note.equipment === '未指定') &&
+            !note.image &&
+            note.notes && /^快捷扣除\d+g咖啡豆/.test(note.notes))
+    }
 
     // 获取相关的冲煮记录
     useEffect(() => {
@@ -458,74 +591,24 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                             </div>
                         </div>
 
-                        {/* 详细信息区域 - 更紧凑的布局 */}
-                        {getOriginInfoItems().length > 0 && (
+                        {/* 详细信息区域 - 更紧凑的布局，拼配豆不显示汇总信息 */}
+                        {getOriginInfoItems().length > 0 && !hasBlendComponents() && (
                             <div className="space-y-2">
-                                <div className="text-xs text-neutral-500 dark:text-neutral-400">详细信息</div>
                                 <InfoGrid items={getOriginInfoItems()} />
                             </div>
                         )}
 
                         {/* 拼配、风味、备注 - 合并为一个紧凑区域 */}
-                        {((bean.blendComponents && bean.blendComponents.length > 1) ||
-                          (bean.flavor && bean.flavor.length > 0) ||
-                          bean.notes) && (
+                        {(hasBlendComponents() || (bean.flavor && bean.flavor.length > 0) || bean.notes) && (
                             <div className="space-y-3">
                                 {/* 拼配信息 */}
-                                {bean.blendComponents && bean.blendComponents.length > 1 && (
-                                    <div>
-                                        <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-1.5">拼配组成</div>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            {bean.blendComponents.map((comp: any, index: number) => (
-                                                <div key={index} className="flex justify-between items-center">
-                                                    <span className="text-xs text-neutral-800 dark:text-neutral-100 truncate">
-                                                        {comp.origin || `组成 ${index + 1}`}
-                                                    </span>
-                                                    {comp.percentage !== undefined && comp.percentage !== null && (
-                                                        <span className="text-xs font-medium text-neutral-600 dark:text-neutral-400 ml-2">
-                                                            {comp.percentage}%
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
+                                {hasBlendComponents() && renderBlendComponents()}
 
                                 {/* 风味标签 */}
-                                {bean.flavor && bean.flavor.length > 0 && (
-                                    <div>
-                                        <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-1.5">风味</div>
-                                        <div className="flex flex-wrap gap-1">
-                                            {bean.flavor.map((flavor: any, index: number) => (
-                                                <span
-                                                    key={index}
-                                                    className="px-1.5 py-0.5 bg-neutral-100 dark:bg-neutral-700/50 text-xs text-neutral-700 dark:text-neutral-300"
-                                                >
-                                                    {flavor}
-                                                </span>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
+                                {bean.flavor && bean.flavor.length > 0 && renderFlavorTags()}
 
                                 {/* 备注 */}
-                                {bean.notes && (
-                                    <div>
-                                        <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-1.5">备注</div>
-                                        <div className="text-xs text-neutral-700 dark:text-neutral-300 leading-relaxed whitespace-pre-line">
-                                            {searchQuery ? (
-                                                <HighlightText
-                                                    text={bean.notes}
-                                                    highlight={searchQuery}
-                                                    className="text-neutral-700 dark:text-neutral-300"
-                                                />
-                                            ) : (
-                                                bean.notes
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
+                                {bean.notes && renderNotes()}
                             </div>
                         )}
 
@@ -545,83 +628,11 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                 </div>
                             ) : (
                                 <div className="space-y-2">
-                                    {relatedNotes.map((note) => {
-                                        // 判断是否为简单的快捷扣除记录
-                                        const isSimpleQuickDecrementNote = note.source === 'quick-decrement' &&
-                                            !(note.taste && Object.values(note.taste).some(value => value > 0)) &&
-                                            note.rating === 0 &&
-                                            (!note.method || note.method.trim() === '') &&
-                                            (!note.equipment || note.equipment.trim() === '' || note.equipment === '未指定') &&
-                                            !note.image &&
-                                            note.notes && /^快捷扣除\d+g咖啡豆/.test(note.notes);
-
-                                        // 如果是简单快捷扣除记录，使用简洁显示
-                                        if (isSimpleQuickDecrementNote) {
-                                            const amount = note.quickDecrementAmount || 0;
-                                            return (
-                                                <div key={note.id} className="flex items-center justify-between py-1.5 px-2 bg-neutral-50/30 dark:bg-neutral-800/20 border border-neutral-200/30 dark:border-neutral-800/30">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100">
-                                                            {bean?.name || '咖啡豆'}
-                                                        </div>
-                                                        <div className="text-xs font-medium bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded-xs text-neutral-600 dark:text-neutral-400">
-                                                            -{amount}g
-                                                        </div>
-                                                    </div>
-                                                    <div className="text-xs text-neutral-600 dark:text-neutral-400">
-                                                        {formatDate(note.timestamp)}
-                                                    </div>
-                                                </div>
-                                            );
-                                        }
-
-                                        // 普通记录的显示逻辑
-                                        const equipmentName = note.equipment ? (equipmentNames[note.equipment] || note.equipment) : '未知器具'
-                                        const hasNotes = note.notes && note.notes.trim()
-
-                                        return (
-                                            <div key={note.id} className="p-2 bg-neutral-50/50 dark:bg-neutral-800/30 border border-neutral-200/40 dark:border-neutral-800/40 space-y-1.5">
-                                                {/* 标题行 - 更紧凑 */}
-                                                <div className="flex justify-between items-center">
-                                                    <div className="flex-1 min-w-0">
-                                                        <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100 truncate">
-                                                            {note.method && note.method.trim() !== '' ? note.method : equipmentName}
-                                                        </div>
-                                                    </div>
-                                                    <div className="text-xs text-neutral-600 dark:text-neutral-400 ml-2">
-                                                        {formatDate(note.timestamp)}
-                                                    </div>
-                                                </div>
-
-                                                {/* 参数行 - 简化显示 */}
-                                                {note.params && (
-                                                    <div className="text-xs text-neutral-600 dark:text-neutral-400">
-                                                        {note.params.coffee} · {note.params.ratio}
-                                                        {(note.params.grindSize || note.params.temp) && (
-                                                            <span> · {note.params.grindSize || ''}{note.params.grindSize && note.params.temp ? ' · ' : ''}{note.params.temp || ''}</span>
-                                                        )}
-                                                    </div>
-                                                )}
-
-                                                {/* 评分行 - 简化显示 */}
-                                                <div className="flex justify-between items-center">
-                                                    <div className="text-xs text-neutral-600 dark:text-neutral-400">
-                                                        总体评分
-                                                    </div>
-                                                    <div className="text-xs text-neutral-600 dark:text-neutral-400">
-                                                        {formatRating(note.rating)}
-                                                    </div>
-                                                </div>
-
-                                                {/* 备注信息 */}
-                                                {hasNotes && (
-                                                    <div className="text-xs text-neutral-600 dark:text-neutral-400 whitespace-pre-line leading-tight">
-                                                        {note.notes}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )
-                                    })}
+                                    {relatedNotes.map((note) =>
+                                        isSimpleQuickDecrementNote(note) ?
+                                            renderQuickDecrementNote(note) :
+                                            renderBrewingNote(note)
+                                    )}
                                 </div>
                             )}
                         </div>
