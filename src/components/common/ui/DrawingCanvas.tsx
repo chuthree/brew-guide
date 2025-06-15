@@ -137,7 +137,10 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
         const importedLines = svgToLines(defaultSvg);
         setLines(importedLines);
       } catch (error) {
-        console.error('无法导入SVG:', error);
+        // Log error in development only
+        if (process.env.NODE_ENV === 'development') {
+          console.error('无法导入SVG:', error);
+        }
       }
     }
   }, [defaultSvg]);
@@ -164,14 +167,20 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
     const svgToUse = referenceSvg;
     
     if (!svgToUse || !svgToUse.trim()) {
-      console.log('[SVG加载] 没有SVG数据');
+      // Log in development only
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[SVG加载] 没有SVG数据');
+      }
       return () => {
         mounted = false;
       };
     }
 
     try {
-      console.log('[SVG加载] 开始处理SVG数据，长度:', svgToUse.length);
+      // Log in development only
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[SVG加载] 开始处理SVG数据，长度:', svgToUse.length);
+      }
       
       // 处理SVG颜色 - 根据当前主题模式设置颜色
       let processedSvg = svgToUse;
@@ -195,7 +204,10 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
 
       img.onload = () => {
         if (mounted) {
-          console.log('[SVG加载] 图像加载完成');
+          // Log in development only
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[SVG加载] 图像加载完成');
+          }
           referenceImageRef.current = img;
           setReferenceLoaded(true);
         }
@@ -204,7 +216,10 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
       // 添加错误处理
       img.onerror = (error) => {
         if (mounted) {
-          console.error('[SVG加载] 图像加载出错:', error);
+          // Log error in development only
+          if (process.env.NODE_ENV === 'development') {
+            console.error('[SVG加载] 图像加载出错:', error);
+          }
         }
       };
 
@@ -218,7 +233,10 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
         }
       };
     } catch (error) {
-      console.error('[SVG加载] 处理SVG时出错:', error);
+      // Log error in development only
+      if (process.env.NODE_ENV === 'development') {
+        console.error('[SVG加载] 处理SVG时出错:', error);
+      }
       if (currentBlobUrl) {
         URL.revokeObjectURL(currentBlobUrl);
       }
@@ -231,7 +249,10 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
 
     // 如果有自定义杯型，就不加载默认杯型
     if (_customReferenceSvg) {
-      console.log('[杯型加载] 使用自定义杯型');
+      // Log in development only
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[杯型加载] 使用自定义杯型');
+      }
       setUrlReferenceLoaded(false);
       urlReferenceImageRef.current = null;
       return () => {
@@ -247,14 +268,20 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
       };
     }
     
-    console.log('[杯型加载] 开始加载默认杯型图像:', referenceSvgUrl);
-    
+    // Log in development only
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[杯型加载] 开始加载默认杯型图像:', referenceSvgUrl);
+    }
+
     const img = new Image();
     img.src = referenceSvgUrl;
-    
+
     img.onload = () => {
       if (mounted) {
-        console.log('[杯型加载] 默认杯型图像加载完成');
+        // Log in development only
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[杯型加载] 默认杯型图像加载完成');
+        }
         urlReferenceImageRef.current = img;
         setUrlReferenceLoaded(true);
       }
@@ -262,7 +289,10 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
 
     img.onerror = (error) => {
       if (mounted) {
-        console.error('[杯型加载] 默认杯型图像加载失败:', error);
+        // Log error in development only
+        if (process.env.NODE_ENV === 'development') {
+          console.error('[杯型加载] 默认杯型图像加载失败:', error);
+        }
       }
     };
     
@@ -285,7 +315,10 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
     }
 
     try {
-      console.log('[自定义杯型] 开始处理SVG数据，长度:', _customReferenceSvg.length);
+      // Log in development only
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[自定义杯型] 开始处理SVG数据，长度:', _customReferenceSvg.length);
+      }
       
       // 处理SVG颜色 - 根据当前主题模式设置颜色
       let processedSvg = _customReferenceSvg;
@@ -309,7 +342,10 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
 
       img.onload = () => {
         if (mounted) {
-          console.log('[自定义杯型] 图像加载完成');
+          // Log in development only
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[自定义杯型] 图像加载完成');
+          }
           urlReferenceImageRef.current = img;
           setUrlReferenceLoaded(true);
         }
@@ -317,7 +353,10 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
 
       img.onerror = (error) => {
         if (mounted) {
-          console.error('[自定义杯型] 图像加载失败:', error);
+          // Log error in development only
+          if (process.env.NODE_ENV === 'development') {
+            console.error('[自定义杯型] 图像加载失败:', error);
+          }
         }
       };
 
@@ -330,7 +369,10 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
         }
       };
     } catch (error) {
-      console.error('[自定义杯型] 处理SVG时出错:', error);
+      // Log error in development only
+      if (process.env.NODE_ENV === 'development') {
+        console.error('[自定义杯型] 处理SVG时出错:', error);
+      }
       if (currentBlobUrl) {
         URL.revokeObjectURL(currentBlobUrl);
       }

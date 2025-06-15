@@ -421,6 +421,10 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                     .filter(animation => !animation.isSystemDefault) // 确保过滤掉系统默认注水方式
                     .map(animation => {
                         if (animation.frames && animation.frames.length > 1) {
+                            // 多帧动画处理逻辑
+                            if (process.env.NODE_ENV === 'development') {
+                                console.log(`处理多帧动画: ${animation.name}, 帧数: ${animation.frames.length}`);
+                            }
                         }
                         return animation;
                     });
@@ -434,24 +438,32 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                 };
 
                 // 检查杯型SVG数据是否存在
-                if (equipmentToSave.customShapeSvg) {
+                if (equipmentToSave.customShapeSvg && process.env.NODE_ENV === 'development') {
+                    console.log('保存自定义杯型SVG数据');
                 }
 
                 // 检查自定义阀门SVG数据是否存在
-                if (equipmentToSave.customValveSvg) {
+                if (equipmentToSave.customValveSvg && process.env.NODE_ENV === 'development') {
+                    console.log('保存自定义阀门SVG数据');
                 }
 
                 // 检查自定义阀门开启状态SVG数据是否存在
-                if (equipmentToSave.customValveOpenSvg) {
+                if (equipmentToSave.customValveOpenSvg && process.env.NODE_ENV === 'development') {
+                    console.log('保存自定义阀门开启状态SVG数据');
                 }
 
                 // 检查最终传递的自定义注水动画数据
-                if (equipmentToSave.customPourAnimations) {
+                if (equipmentToSave.customPourAnimations && process.env.NODE_ENV === 'development') {
+                    console.log(`保存${equipmentToSave.customPourAnimations.length}个自定义注水动画`);
                 }
 
                 onSave(equipmentToSave);
             }
-        } catch (_error) {
+        } catch (error) {
+            // Log error in development only
+            if (process.env.NODE_ENV === 'development') {
+                console.error('保存设备时发生错误:', error);
+            }
         } finally {
             setIsSubmitting(false);
         }
@@ -473,6 +485,10 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                 customShapeSvg: svg
             };
         } else {
+            // Log warning in development only
+            if (process.env.NODE_ENV === 'development') {
+                console.warn('绘制完成但SVG数据为空');
+            }
         }
     };
 
@@ -500,6 +516,10 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
             setHasValveDrawn(true);
             setValveShapeType('custom');
         } else {
+            // Log warning in development only
+            if (process.env.NODE_ENV === 'development') {
+                console.warn('阀门绘制完成但SVG数据为空');
+            }
         }
     };
 
@@ -512,7 +532,11 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                 const svgString = canvasRef.current.save();
                 handleDrawingComplete(svgString);
                 setShowDrawingCanvas(false);
-            } catch (_error) {
+            } catch (error) {
+                // Log error in development only
+                if (process.env.NODE_ENV === 'development') {
+                    console.error('保存绘图时发生错误:', error);
+                }
             }
         }
     };
@@ -526,7 +550,11 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                 const svgString = canvasRef.current.save();
                 handleValveDrawingComplete(svgString);
                 setShowValveDrawingCanvas(false);
-            } catch (_error) {
+            } catch (error) {
+                // Log error in development only
+                if (process.env.NODE_ENV === 'development') {
+                    console.error('保存阀门绘图时发生错误:', error);
+                }
             }
         }
     };
@@ -661,7 +689,11 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                     setShowPourAnimationCanvas(false);
                     setCurrentEditingAnimation(null);
                 }
-            } catch (_error) {
+            } catch (error) {
+                // Log error in development only
+                if (process.env.NODE_ENV === 'development') {
+                    console.error('保存注水动画时发生错误:', error);
+                }
             }
         }
     };
@@ -740,7 +772,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
         if (!currentEditingAnimation) return [{ id: 'frame-1', svgData: '' }];
 
         if (process.env.NODE_ENV === 'development') {
-
+            console.log('开发模式：初始化帧数据', currentEditingAnimation);
         }
 
         if (currentEditingAnimation.frames && currentEditingAnimation.frames.length > 0) {
@@ -1128,7 +1160,11 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                                 try {
                                     const svgString = canvasRef.current.save();
                                     handleValveDrawingComplete(svgString);
-                                } catch (_error) {
+                                } catch (error) {
+                                    // Log error in development only
+                                    if (process.env.NODE_ENV === 'development') {
+                                        console.error('切换阀门状态时保存失败:', error);
+                                    }
                                 }
                             }
                             // 切换到另一个状态

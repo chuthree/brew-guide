@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
@@ -50,15 +50,23 @@ const SwipeBackGesture: React.FC<SwipeBackGestureProps> = ({
   };
 
   // 确定当前步骤是否可以返回，以及应返回到哪个步骤
-  const getBackStep = (): BrewingStep | null => {
+  const getBackStep = useCallback((): BrewingStep | null => {
     // 如果当前是方案步骤且没有咖啡豆，则不允许返回到咖啡豆步骤
     if (activeBrewingStep === 'method' && !hasCoffeeBeans) {
       return null;
     }
     return NAVIGABLE_STEPS[activeBrewingStep];
-  };
+  }, [activeBrewingStep, hasCoffeeBeans, NAVIGABLE_STEPS]);
 
-  const handleTouchStart = (e: TouchEvent) => {
+  // 重置手势状态
+  const resetGesture = useCallback(() => {
+    setIsActive(false);
+    setProgress(0);
+    touchStartRef.current = null;
+    touchCurrentRef.current = null;
+  }, []);
+
+  const handleTouchStart = useCallback((e: TouchEvent) => {
     // 如果禁用了滑动或计时器正在运行且未完成，不处理手势
     if (disabled || (isTimerRunning && !showComplete)) {
       return;
@@ -82,9 +90,9 @@ const SwipeBackGesture: React.FC<SwipeBackGestureProps> = ({
         setProgress(0);
       }
     }
-  };
+  }, [disabled, isTimerRunning, showComplete, getBackStep]);
 
-  const handleTouchMove = (e: TouchEvent) => {
+  const handleTouchMove = useCallback((e: TouchEvent) => {
     if (!isActive || !touchStartRef.current || !touchCurrentRef.current) {
       return;
     }
@@ -123,9 +131,9 @@ const SwipeBackGesture: React.FC<SwipeBackGestureProps> = ({
         hapticsUtils.light();
       }
     }
-  };
+  }, [isActive, progress, resetGesture]);
 
-  const handleTouchEnd = () => {
+  const handleTouchEnd = useCallback(() => {
     if (!isActive || !touchStartRef.current || !touchCurrentRef.current) {
       return;
     }
@@ -184,15 +192,7 @@ const SwipeBackGesture: React.FC<SwipeBackGestureProps> = ({
 
     // 重置手势状态
     resetGesture();
-  };
-
-  // 重置手势状态
-  const resetGesture = () => {
-    setIsActive(false);
-    setProgress(0);
-    touchStartRef.current = null;
-    touchCurrentRef.current = null;
-  };
+  }, [isActive, activeBrewingStep, getBackStep, navigateToStep, resetGesture]);
 
   // 添加触摸事件监听
   useEffect(() => {
@@ -209,7 +209,7 @@ const SwipeBackGesture: React.FC<SwipeBackGestureProps> = ({
         document.removeEventListener('touchcancel', resetGesture);
       };
     }
-  }, [isActive, activeBrewingStep, isTimerRunning, showComplete, isNative, disabled, progress, hasCoffeeBeans]);
+  }, [isNative, handleTouchStart, handleTouchMove, handleTouchEnd, resetGesture]);
 
   // 如果不是原生平台，不显示任何内容
   if (!isNative || !getBackStep()) {

@@ -157,7 +157,10 @@ const SteppedFormModal: React.FC<SteppedFormModalProps> = ({
 
         // 为咖啡豆选择器添加搜索查询参数和高亮ID
         return React.cloneElement(
-            currentStepContent.content as React.ReactElement<any>,
+            currentStepContent.content as React.ReactElement<{
+                searchQuery?: string;
+                highlightedBeanId?: string | null;
+            }>,
             {
                 searchQuery,
                 highlightedBeanId
@@ -217,7 +220,10 @@ const SteppedFormModal: React.FC<SteppedFormModalProps> = ({
                 });
             }
         } catch (error) {
-            console.error('随机选择咖啡豆失败:', error);
+            // Log error in development only
+            if (process.env.NODE_ENV === 'development') {
+                console.error('随机选择咖啡豆失败:', error);
+            }
             showToast({
                 type: 'error',
                 title: '随机选择失败',

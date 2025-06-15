@@ -159,16 +159,12 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
                 return;
             }
 
-            console.log('选择的文件信息:', {
-                name: file.name,
-                type: file.type,
-                size: file.size,
-            });
+            // 选择的文件信息
 
             // 使用传入的onImageUpload函数处理文件
             onImageUpload(file);
-        } catch (error) {
-            console.error('图片添加失败:', error);
+        } catch (_error) {
+            // 图片添加失败
         }
     };
 

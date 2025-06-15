@@ -65,7 +65,10 @@ export const setFontZoom = (value: number): void => {
             detail: { zoomLevel: safeValue }
         }));
     } catch (error) {
-        console.warn('Failed to set font zoom:', error);
+        // Log warning in development only
+        if (process.env.NODE_ENV === 'development') {
+            console.warn('Failed to set font zoom:', error);
+        }
     }
 };
 

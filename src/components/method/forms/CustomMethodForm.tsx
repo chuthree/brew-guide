@@ -18,7 +18,7 @@ import type { Step } from './components'
 
 
 // 数据规范化辅助函数
-const normalizeMethodData = (method: any): MethodWithStages => {
+const normalizeMethodData = (method: Partial<MethodWithStages> & Record<string, unknown>): MethodWithStages => {
     const normalizedMethod = { ...method };
 
     // 确保params存在
@@ -37,15 +37,19 @@ const normalizeMethodData = (method: any): MethodWithStages => {
         normalizedMethod.params = { ...normalizedMethod.params };
 
         // 确保水量、咖啡粉量是字符串格式
-        ['water', 'coffee'].forEach(field => {
-            if (normalizedMethod.params[field] !== undefined) {
-                if (typeof normalizedMethod.params[field] === 'number') {
-                    normalizedMethod.params[field] = `${normalizedMethod.params[field]}g`;
-                } else if (typeof normalizedMethod.params[field] === 'string' && !normalizedMethod.params[field].endsWith('g')) {
-                    normalizedMethod.params[field] = `${normalizedMethod.params[field]}g`;
+        if (normalizedMethod.params) {
+            ['water', 'coffee'].forEach(field => {
+                const fieldKey = field as keyof typeof normalizedMethod.params;
+                if (normalizedMethod.params![fieldKey] !== undefined) {
+                    const fieldValue = normalizedMethod.params![fieldKey];
+                    if (typeof fieldValue === 'number') {
+                        (normalizedMethod.params as Record<string, unknown>)[fieldKey] = `${fieldValue}g`;
+                    } else if (typeof fieldValue === 'string' && !fieldValue.endsWith('g')) {
+                        (normalizedMethod.params as Record<string, unknown>)[fieldKey] = `${fieldValue}g`;
+                    }
                 }
-            }
-        });
+            });
+        }
 
         // 确保温度是字符串格式
         if (normalizedMethod.params.temp !== undefined) {
@@ -58,8 +62,8 @@ const normalizeMethodData = (method: any): MethodWithStages => {
 
         // 规范化每个阶段的水量
         if (Array.isArray(normalizedMethod.params.stages)) {
-            normalizedMethod.params.stages = normalizedMethod.params.stages.map((stage: Record<string, any>) => {
-                const normalizedStage = { ...stage };
+            normalizedMethod.params.stages = normalizedMethod.params.stages.map((stage) => {
+                const normalizedStage = { ...stage } as Record<string, unknown>;
                 if (normalizedStage.water !== undefined) {
                     if (typeof normalizedStage.water === 'number') {
                         normalizedStage.water = `${normalizedStage.water}g`;
@@ -67,7 +71,7 @@ const normalizeMethodData = (method: any): MethodWithStages => {
                         normalizedStage.water = `${normalizedStage.water}g`;
                     }
                 }
-                return normalizedStage;
+                return normalizedStage as unknown as Stage;
             });
         }
     }
@@ -299,7 +303,10 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
 
         setLocalSettings(parsedSettings);
       } catch (e) {
-        console.error("Failed to parse settings from storage:", e);
+        // Log error in development only
+        if (process.env.NODE_ENV === 'development') {
+          console.error("Failed to parse settings from storage:", e);
+        }
       }
     };
 
@@ -325,7 +332,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
   useEffect(() => {
     if (initialMethod) {
       // 使用初始方法
-      const normalizedMethod = normalizeMethodData(initialMethod);
+      const normalizedMethod = normalizeMethodData(initialMethod as Partial<MethodWithStages> & Record<string, unknown>);
 
       // 处理聪明杯标签特殊情况
       if (customEquipment.hasValve && normalizedMethod.params.stages) {
@@ -645,7 +652,10 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                     localStorage.setItem('userBeverageSuggestions', JSON.stringify(uniqueBeverages));
                 }
             } catch (error) {
-                console.error('保存饮料名称失败:', error);
+                // Log error in development only
+                if (process.env.NODE_ENV === 'development') {
+                    console.error('保存饮料名称失败:', error);
+                }
                 // 继续执行，不影响主要功能
             }
         }
@@ -1079,7 +1089,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                     <NameStep
                         name={method.name}
                         onChange={(name) => setMethod({ ...method, name })}
-                        isEdit={!!initialMethod && !(initialMethod as any)._isFromCommonMethod}
+                        isEdit={!!initialMethod && !((initialMethod as MethodWithStages & { _isFromCommonMethod?: boolean })._isFromCommonMethod)}
                     />
                 );
 
@@ -1156,7 +1166,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                         water={method.params.water}
                         ratio={method.params.ratio}
                         totalTime={calculateTotalTime()}
-                        isEdit={!!initialMethod && !(initialMethod as any)._isFromCommonMethod}
+                        isEdit={!!initialMethod && !((initialMethod as MethodWithStages & { _isFromCommonMethod?: boolean })._isFromCommonMethod)}
                         formatTime={formatTime}
                         isEspressoMachine={isEspressoMachine(customEquipment)}
                         formattedEspressoWater={isEspressoMachine(customEquipment) ? formatEspressoTotalWater() : undefined}
@@ -1255,7 +1265,10 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                 try {
                     handleSubmit();
                 } catch (error) {
-                    console.error('提交表单失败', error);
+                    // Log error in development only
+                    if (process.env.NODE_ENV === 'development') {
+                        console.error('提交表单失败', error);
+                    }
                 }
             } else {
                 handleNextStep();

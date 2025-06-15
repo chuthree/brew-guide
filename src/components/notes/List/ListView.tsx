@@ -157,7 +157,10 @@ const NotesListView: React.FC<NotesListViewProps> = ({
                 setHasMore(filteredNotes.length > PAGE_SIZE);
             });
         } catch (error) {
-            console.error("加载笔记数据失败:", error);
+            // Log error in development only
+            if (process.env.NODE_ENV === 'development') {
+                console.error("加载笔记数据失败:", error);
+            }
             isLoadingRef.current = false;
         }
     }, [sortOption, selectedEquipment, selectedBean, filterMode, preFilteredNotes]);

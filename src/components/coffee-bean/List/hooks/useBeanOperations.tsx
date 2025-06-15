@@ -232,7 +232,10 @@ export const useBeanOperations = () => {
                 return { success: true, usedFallback: true };
             }
         } catch (error) {
-            console.error('分享咖啡豆信息时出错:', error);
+            // Log error in development only
+            if (process.env.NODE_ENV === 'development') {
+                console.error('分享咖啡豆信息时出错:', error);
+            }
             return { success: false, error };
         }
     };

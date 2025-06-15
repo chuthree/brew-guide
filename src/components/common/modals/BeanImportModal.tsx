@@ -408,7 +408,10 @@ const TEMPLATE_PROMPT = `提取咖啡豆信息，返回JSON格式。
             setCroppedImage(null);
             setIsCropActive(false); // 将在 useEffect 中自动设置为 true
         } catch (error) {
-            console.error('打开相机/相册失败:', error);
+            // Log error in development only
+            if (process.env.NODE_ENV === 'development') {
+                console.error('打开相机/相册失败:', error);
+            }
             setError('打开相机/相册失败，请重试');
         }
     }, []);
@@ -440,7 +443,10 @@ const TEMPLATE_PROMPT = `提取咖啡豆信息，返回JSON格式。
                 setSuccess('✨ AI识别成功！请检查识别结果是否正确');
             }
         } catch (err) {
-            console.error('识别失败:', err);
+            // Log error in development only
+            if (process.env.NODE_ENV === 'development') {
+                console.error('识别失败:', err);
+            }
             setError(err instanceof RecognitionError ? err.message : '图片识别失败，请重试');
         } finally {
             setIsUploading(false);

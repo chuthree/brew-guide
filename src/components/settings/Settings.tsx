@@ -114,7 +114,8 @@ const Settings: React.FC<SettingsProps> = ({
 
     // 添加彩蛋动画状态
     const [showEasterEgg, setShowEasterEgg] = useState(false)
-    const lottieRef = useRef<any>(null)
+    const lottieRef = useRef<unknown>(null)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [LottieComponent, setLottieComponent] = useState<any>(null)
 
     // 创建音效播放引用
@@ -319,7 +320,10 @@ const handleChange = async <K extends keyof SettingsOptions>(
             audioRef.current.currentTime = 0
             // 播放音效
             audioRef.current.play().catch(err => {
-                console.log('音频播放失败:', err)
+                // Log error in development only
+                if (process.env.NODE_ENV === 'development') {
+                    console.log('音频播放失败:', err)
+                }
             })
         }
     }

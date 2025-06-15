@@ -387,7 +387,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                 setCurrentMotionIndex(1);
             }
         };
-    }, [isRunning, currentStage, countdownTime, stages, isWaiting, availableAnimations]);
+    }, [isRunning, currentStage, countdownTime, stages, isWaiting, availableAnimations, getCurrentPourType]);
 
     // 更新阀门状态 - 针对聪明杯或带阀门的自定义器具
     useEffect(() => {
@@ -520,7 +520,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
         const hasViewBox = /viewBox="[^"]*"/.test(processedSvg);
 
         // 添加 SVG 属性和类名
-        processedSvg = processedSvg.replace(/<svg([^>]*)>/, (match, attributes) => {
+        processedSvg = processedSvg.replace(/<svg([^>]*)>/, (_, attributes) => {
             // 添加缺失的 viewBox
             const viewBoxAttr = hasViewBox ? '' : ' viewBox="0 0 300 300"';
             // 添加统一的宽高和类名
@@ -528,7 +528,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
         });
 
         // 确保所有路径使用统一的线条粗细（保持原有的stroke-width属性）
-        processedSvg = processedSvg.replace(/<path([^>]*)>/g, (match, attributes) => {
+        processedSvg = processedSvg.replace(/<path([^>]*)>/g, (_, attributes) => {
             // 如果属性中没有stroke属性，添加默认stroke
             if (!attributes.includes('stroke=')) {
                 attributes += ' stroke="var(--custom-shape-color)"';

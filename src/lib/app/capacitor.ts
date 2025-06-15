@@ -38,7 +38,9 @@ export const initCapacitor = async (): Promise<void> => {
 
 					// 添加平台标识，用于 Tailwind 的数据属性选择器
 					document.documentElement.setAttribute("data-platform", platform);
-				} catch {}
+				} catch (error) {
+					console.error('Capacitor状态栏初始化失败:', error);
+				}
 			}
 
 			// 监听系统深色模式变化
@@ -55,7 +57,9 @@ export const initCapacitor = async (): Promise<void> => {
 							statusBarContent: e.matches ? 'light' : 'dark',
 							navigationBarContent: e.matches ? 'light' : 'dark',
 						});
-					} catch {}
+					} catch (error) {
+						console.error('状态栏设置失败:', error);
+					}
 				});
 		}
 	} catch (e) {

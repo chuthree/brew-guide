@@ -259,7 +259,10 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                     setAvailableMethods([...equipmentMethods, ...commonEquipmentMethods]);
                 }
             } catch (error) {
-                console.error('加载器具和方案数据失败:', error);
+                // Log error in development only
+                if (process.env.NODE_ENV === 'development') {
+                    console.error('加载器具和方案数据失败:', error);
+                }
             }
         };
 
@@ -450,7 +453,10 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
 
             setShowEquipmentMethodSelector(false);
         } catch (error) {
-            console.error('选择器具失败:', error);
+            // Log error in development only
+            if (process.env.NODE_ENV === 'development') {
+                console.error('选择器具失败:', error);
+            }
         }
     };
 
@@ -477,7 +483,10 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
             }
             setShowEquipmentMethodSelector(false);
         } catch (error) {
-            console.error('选择方案失败:', error);
+            // Log error in development only
+            if (process.env.NODE_ENV === 'development') {
+                console.error('选择方案失败:', error);
+            }
         }
     };
 
@@ -539,7 +548,10 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                 const compressedBase64 = await compressBase64(base64, 0.8, 1200);
                 setFormData(prev => ({ ...prev, image: compressedBase64 }));
             } catch (error) {
-                console.error('图片处理失败:', error);
+                // Log error in development only
+                if (process.env.NODE_ENV === 'development') {
+                    console.error('图片处理失败:', error);
+                }
                 // 降级使用原始文件
                 const objectUrl = URL.createObjectURL(file);
                 setFormData(prev => ({ ...prev, image: objectUrl }));
@@ -548,7 +560,10 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         };
 
         reader.onerror = () => {
-            console.error('文件读取失败');
+            // Log error in development only
+            if (process.env.NODE_ENV === 'development') {
+                console.error('文件读取失败');
+            }
             const objectUrl = URL.createObjectURL(file);
             setFormData(prev => ({ ...prev, image: objectUrl }));
             setTimeout(() => URL.revokeObjectURL(objectUrl), 30000);
@@ -570,7 +585,10 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
             // 处理图片上传
             handleImageUpload(file);
         } catch (error) {
-            console.error('打开相机/相册失败:', error);
+            // Log error in development only
+            if (process.env.NODE_ENV === 'development') {
+                console.error('打开相机/相册失败:', error);
+            }
         }
     };
 
@@ -608,7 +626,10 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                 onSaveSuccess();
             }
         } catch (error) {
-            console.error('保存笔记时出错:', error);
+            // Log error in development only
+            if (process.env.NODE_ENV === 'development') {
+                console.error('保存笔记时出错:', error);
+            }
             alert('保存笔记时出错，请重试');
         }
     }

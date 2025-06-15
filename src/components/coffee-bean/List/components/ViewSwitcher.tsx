@@ -403,7 +403,10 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                     setHideTotalWeight(false); // 始终显示总重量
                 }
             } catch (error) {
-                console.error('加载设置失败', error);
+                // Log error in development only
+                if (process.env.NODE_ENV === 'development') {
+                    console.error('加载设置失败', error);
+                }
             }
         };
 

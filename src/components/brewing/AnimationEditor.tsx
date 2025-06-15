@@ -150,11 +150,7 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(({
   const mergePreviousFrames = useCallback((endIndex: number) => {
     if (endIndex <= 0 || frames.length === 0) return '';
     
-    console.log('[合并前帧] 开始合并:', {
-      endIndex,
-      framesCount: frames.length,
-      framesWithData: frames.filter(f => f.svgData).length
-    });
+    // 开始合并前帧
     
     // 创建一个临时的SVG文档
     const parser = new DOMParser();
@@ -166,11 +162,11 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(({
     for (let i = 0; i < endIndex; i++) {
       const frameSvg = frames[i]?.svgData || '';
       if (!frameSvg || frameSvg.trim() === '') {
-        console.log(`[合并前帧] 跳过空帧 ${i + 1}`);
+        // 跳过空帧
         continue;
       }
       
-      console.log(`[合并前帧] 处理帧 ${i + 1}, SVG长度:`, frameSvg.length);
+      // 处理帧
       
       const svgDoc = parser.parseFromString(frameSvg, 'image/svg+xml');
       
@@ -182,7 +178,7 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(({
         
         // 为基础 SVG 添加类名
         svgDoc.documentElement.setAttribute('class', 'custom-cup-shape outline-only');
-        console.log(`[合并前帧] 使用帧 ${i + 1} 作为基础SVG`);
+        // 使用帧作为基础SVG
         continue;
       }
       
@@ -196,13 +192,13 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(({
             );
           }
         });
-        console.log(`[合并前帧] 合并帧 ${i + 1} 的路径到基础SVG`);
+        // 合并帧的路径到基础SVG
       }
     }
     
     // 如果没有有效的SVG帧，返回空字符串
     if (!combinedSvgDoc) {
-      console.log('[合并前帧] 没有找到有效的SVG帧');
+      // 没有找到有效的SVG帧
       return '';
     }
     
@@ -218,7 +214,7 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(({
     // 将DOM转换回字符串
     const serializer = new XMLSerializer();
     const result = serializer.serializeToString(combinedSvgDoc);
-    console.log('[合并前帧] 完成合并, 结果SVG长度:', result.length);
+    // 完成合并
     return result;
   }, [frames, width, height]);
   
@@ -237,8 +233,8 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(({
           : frame
       ));
       
-    } catch (error) {
-      console.error('保存帧数据失败:', error);
+    } catch (_error) {
+      // 保存帧数据失败
     }
   }, [currentFrameIndex, frames.length]);
   
@@ -251,7 +247,7 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(({
     
     // 更新前面帧的合并SVG
     const mergedSvg = mergePreviousFrames(index);
-    console.log('[切换帧] 合并前帧SVG长度:', mergedSvg.length);
+    // 切换帧
     setPreviousFramesSvg(mergedSvg);
     
     // 切换到新帧
@@ -263,8 +259,8 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(({
         // 如果有保存的内容则加载
         try {
           // 不需要额外操作，defaultSvg变化会自动触发DrawingCanvas的useEffect
-        } catch (error) {
-          console.error('无法加载帧内容:', error);
+        } catch (_error) {
+          // 无法加载帧内容
         }
       } else {
         // 如果是空帧则清空画布
@@ -299,7 +295,7 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(({
       
       // 更新前面帧的合并SVG
       const mergedSvg = mergePreviousFrames(newIndex);
-      console.log('[添加新帧] 合并前帧SVG长度:', mergedSvg.length);
+      // 添加新帧
       setPreviousFramesSvg(mergedSvg);
       
       // 更新当前帧索引
@@ -382,14 +378,14 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(({
   // 确保参考图像在组件挂载时正确初始化
   useEffect(() => {
     if (referenceImages.length > 0 && !referenceSrc) {
-      console.log('[参考图像] 初始化默认参考图像:', referenceImages[0].url);
+      // 初始化默认参考图像
       setReferenceSrc(referenceImages[0].url);
     }
   }, [referenceImages, referenceSrc]);
   
   // 选择参考图像
   const selectReferenceImage = useCallback((src: string | null) => {
-    console.log('[参考图像] 切换参考图像:', src);
+    // 切换参考图像
     setReferenceSrc(src);
     hapticsUtils.light();
   }, []);
@@ -399,10 +395,10 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(({
     // 首先保存当前帧
     saveCurrentFrame();
     
-    console.log(`[保存动画] 总帧数: ${frames.length}`);
+    // 保存动画
     
     return frames;
-  }, [frames, onAnimationComplete, saveCurrentFrame]);
+  }, [frames, saveCurrentFrame]);
   
   // 切换到下一帧/上一帧
   const nextFrame = useCallback(() => {
@@ -463,15 +459,15 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(({
   useEffect(() => {
     // 只有在有多个帧，且当前帧索引大于0时才需要设置底图
     if (frames.length > 1 && currentFrameIndex > 0) {
-      console.log(`[更新底图] 当前帧 ${currentFrameIndex + 1}, 合并前 ${currentFrameIndex} 帧`);
+      // 更新底图
       
       // 合并当前帧之前的所有帧作为底图
       const mergedPreviousSvg = mergePreviousFrames(currentFrameIndex);
-      console.log('[更新底图] 合并前帧SVG长度:', mergedPreviousSvg.length);
+      // 合并前帧SVG
       setPreviousFramesSvg(mergedPreviousSvg);
     } else if (currentFrameIndex === 0) {
       // 第一帧不需要底图
-      console.log('[更新底图] 第一帧，清空底图');
+      // 第一帧，清空底图
       setPreviousFramesSvg('');
     }
   }, [currentFrameIndex, frames, mergePreviousFrames]);

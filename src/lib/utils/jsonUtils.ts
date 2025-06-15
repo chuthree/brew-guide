@@ -125,10 +125,15 @@ export function cleanJsonString(jsonString: string): string {
 				// 验证提取的内容是否是有效的JSON
 				JSON.parse(potentialJson);
 				cleanedString = potentialJson;
-				console.log("成功从文本中提取有效JSON");
+				// Log in development only
+				if (process.env.NODE_ENV === 'development') {
+					console.log("成功从文本中提取有效JSON");
+				}
 			} catch (_extractErr) {
 				// 如果提取的内容仍然不是有效的JSON，保持原样
-				console.error("尝试提取JSON失败:", _extractErr);
+				if (process.env.NODE_ENV === 'development') {
+					console.error("尝试提取JSON失败:", _extractErr);
+				}
 			}
 		}
 	}
@@ -152,19 +157,28 @@ export function extractJsonFromText(
 
 		// 检查是否是冲煮方案文本格式
 		if (originalText.startsWith("【冲煮方案】")) {
-			console.log("检测到冲煮方案文本格式");
+			// Log in development only
+			if (process.env.NODE_ENV === 'development') {
+				console.log("检测到冲煮方案文本格式");
+			}
 			return parseMethodText(originalText, customEquipment);
 		}
 
 		// 检查是否是咖啡豆文本格式
 		if (originalText.startsWith("【咖啡豆】") || originalText.startsWith("【咖啡豆信息】")) {
-			console.log("检测到咖啡豆文本格式");
+			// Log in development only
+			if (process.env.NODE_ENV === 'development') {
+				console.log("检测到咖啡豆文本格式");
+			}
 			return parseCoffeeBeanText(originalText);
 		}
 
 		// 检查是否是冲煮记录文本格式
 		if (originalText.startsWith("【冲煮记录】")) {
-			console.log("检测到冲煮记录文本格式");
+			// Log in development only
+			if (process.env.NODE_ENV === 'development') {
+				console.log("检测到冲煮记录文本格式");
+			}
 			return parseBrewingNoteText(originalText);
 		}
 
@@ -178,10 +192,16 @@ export function extractJsonFromText(
 		if (Array.isArray(data)) {
 			// 验证每个元素是否都是咖啡豆数据
 			if (data.every(item => typeof item === 'object' && item !== null && 'roastLevel' in item)) {
-				console.log("检测到咖啡豆数组格式");
+				// Log in development only
+				if (process.env.NODE_ENV === 'development') {
+					console.log("检测到咖啡豆数组格式");
+				}
 				return data as CoffeeBean[];
 			}
-			console.log('无法识别的数组JSON结构:', data);
+			// Log in development only
+			if (process.env.NODE_ENV === 'development') {
+				console.log('无法识别的数组JSON结构:', data);
+			}
 			return null;
 		}
 		
@@ -240,10 +260,16 @@ export function extractJsonFromText(
 			return data as BrewingNote;
 		}
 
-		console.log('无法识别的JSON结构:', data);
+		// Log in development only
+		if (process.env.NODE_ENV === 'development') {
+			console.log('无法识别的JSON结构:', data);
+		}
 		return null;
 	} catch (error) {
-		console.error('解析JSON失败:', error);
+		// Log error in development only
+		if (process.env.NODE_ENV === 'development') {
+			console.error('解析JSON失败:', error);
+		}
 		return null;
 	}
 }
@@ -281,7 +307,7 @@ export function parseMethodFromJson(jsonString: string): Method | null {
 
 		// 构建Method对象 - 始终生成新的ID，避免ID冲突
 		const method: Method = {
-			id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+			id: `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
 			name: methodName,
 			params: {
 				coffee: parsedData.params?.coffee || "15g",
@@ -374,11 +400,16 @@ export function parseMethodFromJson(jsonString: string): Method | null {
 		}
 
 		// 调试信息
-		console.log("解析后的Method对象:", method);
+		if (process.env.NODE_ENV === 'development') {
+			console.log("解析后的Method对象:", method);
+		}
 
 		return method;
 	} catch (err) {
-		console.error("解析方法JSON出错:", err);
+		// Log error in development only
+		if (process.env.NODE_ENV === 'development') {
+			console.error("解析方法JSON出错:", err);
+		}
 		return null;
 	}
 }
@@ -591,20 +622,7 @@ export function beanToReadableText(bean: CoffeeBean): string {
 	return text;
 }
 
-// 获取自定义注水方式的名称
-function _getCustomPourTypeName(pourType: string, customEquipment?: CustomEquipment): string {
-	// 如果有自定义器具配置
-	if (customEquipment?.customPourAnimations) {
-		// 查找对应的自定义注水动画
-		const customAnimation = customEquipment.customPourAnimations.find(
-			anim => anim.id === pourType
-		);
-		if (customAnimation) {
-			return customAnimation.name;
-		}
-	}
-	return pourType;
-}
+
 
 /**
  * 根据注水方式名称查找对应的自定义注水方式ID
@@ -625,7 +643,10 @@ function findCustomPourTypeIdByName(name: string, customEquipment?: CustomEquipm
 
 	// 如果找到匹配的动画，返回其ID
 	if (customAnimation) {
-		console.log(`[jsonUtils] 找到自定义注水方式ID: ${customAnimation.id}，名称: ${name}`);
+		// Log in development only
+		if (process.env.NODE_ENV === 'development') {
+			console.log(`[jsonUtils] 找到自定义注水方式ID: ${customAnimation.id}，名称: ${name}`);
+		}
 		return customAnimation.id;
 	}
 

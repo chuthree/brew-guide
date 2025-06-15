@@ -86,8 +86,8 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
             onSettingsChange(settings)
             // 调用完成回调
             onComplete()
-        } catch {
-
+        } catch (error) {
+            console.error('完成引导设置时发生错误:', error);
         }
     }
 

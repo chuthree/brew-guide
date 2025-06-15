@@ -64,17 +64,21 @@ export const StorageUtils = {
       // 基于平台选择正确的迁移方法
       if (Capacitor.isNativePlatform()) {
         // 移动端：从Preferences迁移
-        console.log('检测到移动端环境，准备从Preferences迁移数据...');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('检测到移动端环境，准备从Preferences迁移数据...');
+        }
         migrationResult = await this.migrateFromPreferences();
-        if (migrationResult) {
+        if (migrationResult && process.env.NODE_ENV === 'development') {
           console.log('移动端数据迁移成功，数据已保存到IndexedDB');
           // 注意：暂时不清理Preferences中的数据，以防万一
         }
       } else {
         // 网页端：从localStorage迁移
-        console.log('检测到网页端环境，准备从localStorage迁移数据...');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('检测到网页端环境，准备从localStorage迁移数据...');
+        }
         migrationResult = await this.migrateFromLocalStorage();
-        if (migrationResult) {
+        if (migrationResult && process.env.NODE_ENV === 'development') {
           console.log('数据迁移成功，准备清理localStorage中的大数据...');
           await this.cleanupLocalStorage();
         }
@@ -86,9 +90,14 @@ export const StorageUtils = {
       // 迁移自定义方案数据
       await this.migrateCustomMethods();
       
-      console.log('存储系统初始化完成');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('存储系统初始化完成');
+      }
     } catch (error) {
-      console.error('存储系统初始化失败:', error);
+      // Log error in development only
+      if (process.env.NODE_ENV === 'development') {
+        console.error('存储系统初始化失败:', error);
+      }
       throw error;
     }
   },

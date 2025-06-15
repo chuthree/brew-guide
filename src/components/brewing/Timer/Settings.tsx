@@ -70,7 +70,7 @@ const BrewingTimerSettings: React.FC<BrewingTimerSettingsProps> = ({
           const newSettings = { ...currentSettings, showFlowRate };
           // 保存回存储
           await Storage.set('brewGuideSettings', JSON.stringify(newSettings));
-          console.log('流速设置已保存', showFlowRate);
+          // 流速设置已保存
         }
       } catch (error) {
         console.error('保存流速设置失败', error);

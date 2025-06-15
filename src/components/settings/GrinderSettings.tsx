@@ -416,7 +416,7 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({
             return null;
         }
 
-        const { basicGrindSizes, applicationGrindSizes } = getCategorizedGrindSizes(settings.grindType, settings.customGrinders);
+        const { basicGrindSizes, applicationGrindSizes } = getCategorizedGrindSizes(settings.grindType, settings.customGrinders as Record<string, unknown>[] | undefined);
 
         const elements = [];
 

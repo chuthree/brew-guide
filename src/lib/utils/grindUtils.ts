@@ -111,7 +111,7 @@ export function formatGrindSize(
  * @param customGrinders 自定义磨豆机列表
  * @returns 研磨度映射对象，如果未找到则返回空对象
  */
-export function getReferenceGrindSizes(grinderId: string, customGrinders?: any[]): Record<string, string> {
+export function getReferenceGrindSizes(grinderId: string, customGrinders?: Record<string, unknown>[]): Record<string, string> {
 	// 先在内置磨豆机中查找
 	const grinder = availableGrinders.find(g => g.id === grinderId);
 
@@ -124,7 +124,7 @@ export function getReferenceGrindSizes(grinderId: string, customGrinders?: any[]
 	if (customGrinders) {
 		const customGrinder = customGrinders.find(g => g.id === grinderId);
 		if (customGrinder && customGrinder.grindSizes) {
-			return customGrinder.grindSizes;
+			return customGrinder.grindSizes as Record<string, string>;
 		}
 	}
 
@@ -138,7 +138,7 @@ export function getReferenceGrindSizes(grinderId: string, customGrinders?: any[]
  * @param customGrinders 自定义磨豆机列表
  * @returns 包含基础研磨度和特定应用研磨度两个分类的对象
  */
-export function getCategorizedGrindSizes(grinderId: string, customGrinders?: any[]): {
+export function getCategorizedGrindSizes(grinderId: string, customGrinders?: Record<string, unknown>[]): {
 	basicGrindSizes: Record<string, string>;
 	applicationGrindSizes: Record<string, string>;
 } {

@@ -116,7 +116,11 @@ export const analyzePlaceholderData = async () => {
         }
 
         let beansWithPlaceholders = 0
-        const placeholderDetails: any[] = []
+        const placeholderDetails: Array<{
+            beanIndex: number;
+            beanName: string;
+            issues: string[];
+        }> = []
 
         beans.forEach((bean, index) => {
             const issues: string[] = []
@@ -163,7 +167,10 @@ export const analyzePlaceholderData = async () => {
             placeholderDetails
         }
     } catch (error) {
-        console.error('分析占位符数据失败:', error)
+        // Log error in development only
+        if (process.env.NODE_ENV === 'development') {
+            console.error('分析占位符数据失败:', error)
+        }
         return {
             totalBeans: 0,
             beansWithPlaceholders: 0,
@@ -218,7 +225,10 @@ export const cleanAllPlaceholderData = async () => {
                 await db.coffeeBeans.clear()
                 await db.coffeeBeans.bulkPut(cleanedBeansArray)
             } catch (dbError) {
-                console.error('更新IndexedDB失败:', dbError)
+                // Log error in development only
+                if (process.env.NODE_ENV === 'development') {
+                    console.error('更新IndexedDB失败:', dbError)
+                }
             }
         }
 
@@ -231,7 +241,10 @@ export const cleanAllPlaceholderData = async () => {
                 : '没有发现需要清理的占位符数据'
         }
     } catch (error) {
-        console.error('清理占位符数据失败:', error)
+        // Log error in development only
+        if (process.env.NODE_ENV === 'development') {
+            console.error('清理占位符数据失败:', error)
+        }
         return {
             success: false,
             totalBeans: 0,

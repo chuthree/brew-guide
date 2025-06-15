@@ -46,7 +46,10 @@ export function showToast(options: Omit<ToastMessage, 'id'>) {
     if (showToastFn) {
         showToastFn(options)
     } else {
-        console.warn('Toast callback not set')
+        // Toast callback not set - silently ignore in production
+        if (process.env.NODE_ENV === 'development') {
+            console.warn('Toast callback not set')
+        }
     }
 }
 

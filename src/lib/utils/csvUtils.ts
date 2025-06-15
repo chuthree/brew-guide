@@ -1,10 +1,10 @@
 import { CoffeeBean } from '@/types/app';
 
 // 动态导入CSV数据以避免构建时问题
-let filterBeans2025CSV: any[] = [];
-let espressoBeans2025CSV: any[] = [];
-let filterBeans2024CSV: any[] = [];
-let espressoBeans2024CSV: any[] = [];
+let filterBeans2025CSV: Record<string, string>[] = [];
+let espressoBeans2025CSV: Record<string, string>[] = [];
+let filterBeans2024CSV: Record<string, string>[] = [];
+let espressoBeans2024CSV: Record<string, string>[] = [];
 
 // 异步加载CSV数据
 const loadCSVData = async () => {
@@ -41,10 +41,10 @@ const loadCSVData = async () => {
             });
         };
 
-        filterBeans2025CSV = parseCSV(filter2025);
-        espressoBeans2025CSV = parseCSV(espresso2025);
-        filterBeans2024CSV = parseCSV(filter2024);
-        espressoBeans2024CSV = parseCSV(espresso2024);
+        filterBeans2025CSV = parseCSV(filter2025) as unknown as Record<string, string>[];
+        espressoBeans2025CSV = parseCSV(espresso2025) as unknown as Record<string, string>[];
+        filterBeans2024CSV = parseCSV(filter2024) as unknown as Record<string, string>[];
+        espressoBeans2024CSV = parseCSV(espresso2024) as unknown as Record<string, string>[];
     } catch (error) {
         console.error('加载CSV数据失败:', error);
     }

@@ -73,10 +73,10 @@ interface BrewingTimerProps {
 
 const BrewingTimer: React.FC<BrewingTimerProps> = ({
   currentBrewingMethod,
-  onTimerComplete,
+  onTimerComplete: _onTimerComplete,
   onStatusChange,
   onStageChange,
-  onComplete,
+  onComplete: _onComplete,
   onCountdownChange,
   onExpandedStagesChange,
   settings,
@@ -139,7 +139,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     setLocalLayoutSettings(newSettings);
     
     // 记录日志
-    console.log('发送布局设置变更:', newSettings);
+    // 发送布局设置变更
     
     // 然后派发事件，通知其他组件
     window.dispatchEvent(
@@ -176,7 +176,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
           const newSettings = { ...currentSettings, showFlowRate };
           // 保存回存储
           await Storage.set('brewGuideSettings', JSON.stringify(newSettings));
-          console.log('流速设置已保存', showFlowRate);
+          // 流速设置已保存
         }
       } catch (error) {
         console.error('保存流速设置失败', error);
@@ -392,11 +392,8 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     }
   }, [
     clearTimerAndStates,
-    onComplete,
-    onTimerComplete,
     playSoundEffect,
     currentTime,
-    isCompleted,
     triggerHaptic,
     currentBrewingMethod,
     selectedEquipment,

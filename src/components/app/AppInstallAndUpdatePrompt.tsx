@@ -120,12 +120,14 @@ export default function AppInstallAndUpdatePrompt() {
             await deferredPrompt.prompt()
             const choiceResult = await deferredPrompt.userChoice
             if (choiceResult.outcome === 'accepted') {
-
+                // 用户接受了安装提示
+            } else {
+                // 用户拒绝了安装提示
             }
             setDeferredPrompt(null)
             setShowInstallPrompt(false)
-        } catch {
-
+        } catch (error) {
+            console.error('安装提示失败:', error)
         }
     }
 

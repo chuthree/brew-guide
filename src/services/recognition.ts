@@ -1,6 +1,6 @@
 // 定义响应类型
 interface RecognitionResponse {
-    result?: any;
+    result?: Record<string, unknown>;
     error?: string;
 }
 
@@ -85,7 +85,10 @@ export async function recognizeImage(formData: FormData): Promise<RecognitionRes
         }
 
         // 其他未知错误
-        console.error('Recognition error:', error);
+        // Log error in development only
+        if (process.env.NODE_ENV === 'development') {
+            console.error('Recognition error:', error);
+        }
         throw new RecognitionError('识别过程出现未知错误', 'SERVER_ERROR');
     }
 } 

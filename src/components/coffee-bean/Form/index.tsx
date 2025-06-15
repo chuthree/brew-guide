@@ -547,11 +547,8 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
     // 处理图片上传
     const handleImageUpload = async (file: File) => {
         try {
-            console.log('开始处理图片上传:', file.name, file.type, file.size);
-            
             // 检查文件类型
             if (!file.type.startsWith('image/')) {
-                console.error('文件类型不是图片:', file.type);
                 return;
             }
             
@@ -560,7 +557,6 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
             
             // 设置超时处理，防止移动设备上FileReader挂起
             const readerTimeout = setTimeout(() => {
-                console.warn('FileReader读取超时，可能是移动设备兼容性问题');
                 // 尝试使用URL.createObjectURL作为备选方案
                 try {
                     const objectUrl = URL.createObjectURL(file);
@@ -570,46 +566,37 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                     }));
                     // 清理URL对象
                     setTimeout(() => URL.revokeObjectURL(objectUrl), 30000);
-                } catch (urlError) {
-                    console.error('备选方案也失败了:', urlError);
+                } catch {
+                    // 备选方案失败，静默处理
                 }
             }, 5000);
             
             reader.onloadend = async () => {
                 clearTimeout(readerTimeout);
                 try {
-                    console.log('FileReader加载完成');
                     const originalBase64 = reader.result as string;
-                    
+
                     if (!originalBase64 || typeof originalBase64 !== 'string') {
-                        console.error('FileReader读取结果无效:', originalBase64);
                         return;
                     }
-                    
-                    console.log('读取到base64数据，长度:', originalBase64.length);
-                    
+
                     try {
                         // 使用canvas方法进行压缩
-                        console.log('开始压缩图片...');
                         const compressedBase64 = await compressBase64(originalBase64, 0.5, 800);
-                        console.log('图片压缩完成，新base64长度:', compressedBase64.length);
-                        
+
                         // 更新状态
                         setBean(prev => ({
                             ...prev,
                             image: compressedBase64
                         }));
-                    } catch (compressError) {
-                        console.error('图片压缩失败:', compressError);
+                    } catch {
                         // 如果压缩失败，使用原始图片
-                        console.log('使用原始图片作为备选');
                         setBean(prev => ({
                             ...prev,
                             image: originalBase64
                         }));
                     }
-                } catch (error) {
-                    console.error('onloadend回调中处理失败:', error);
+                } catch {
                     // 如果处理失败，尝试使用URL.createObjectURL
                     try {
                         const objectUrl = URL.createObjectURL(file);
@@ -619,15 +606,14 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                         }));
                         // 清理URL对象
                         setTimeout(() => URL.revokeObjectURL(objectUrl), 30000);
-                    } catch (urlError) {
-                        console.error('URL.createObjectURL也失败了:', urlError);
+                    } catch {
+                        // URL.createObjectURL失败，静默处理
                     }
                 }
             };
             
-            reader.onerror = (error) => {
+            reader.onerror = () => {
                 clearTimeout(readerTimeout);
-                console.error('FileReader读取出错:', error);
                 // 如果读取出错，尝试使用URL.createObjectURL
                 try {
                     const objectUrl = URL.createObjectURL(file);
@@ -637,15 +623,14 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                     }));
                     // 清理URL对象
                     setTimeout(() => URL.revokeObjectURL(objectUrl), 30000);
-                } catch (urlError) {
-                    console.error('URL.createObjectURL也失败了:', urlError);
+                } catch {
+                    // URL.createObjectURL失败，静默处理
                 }
             };
-            
-            console.log('开始调用readAsDataURL...');
+
             reader.readAsDataURL(file);
-        } catch (error) {
-            console.error('图片处理整体失败:', error);
+        } catch {
+            // 图片处理失败，静默处理
         }
     };
 
