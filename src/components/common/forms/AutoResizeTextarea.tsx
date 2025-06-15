@@ -49,6 +49,13 @@ const AutoResizeTextarea: React.FC<AutoResizeTextareaProps> = ({
         // 设置新高度，限制在最小和最大值之间
         const newHeight = Math.min(Math.max(scrollHeight, minHeight), maxHeight);
         textarea.style.height = `${newHeight}px`;
+
+        // 如果内容超过最大高度，显示滚动条
+        if (scrollHeight > maxHeight) {
+            textarea.style.overflowY = 'auto';
+        } else {
+            textarea.style.overflowY = 'hidden';
+        }
     };
 
     // 当value变化时调整高度
@@ -74,7 +81,7 @@ const AutoResizeTextarea: React.FC<AutoResizeTextareaProps> = ({
             placeholder={placeholder}
             readOnly={readOnly}
             style={{
-                overflow: 'hidden',
+                overflowX: 'hidden',
                 ...style
             }}
             {...props}
