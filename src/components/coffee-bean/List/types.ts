@@ -58,6 +58,8 @@ export interface CoffeeBeansProps {
         showFlavorPeriod?: boolean
         showOnlyBeanName?: boolean
         showFlavorInfo?: boolean
+        limitNotesLines?: boolean
+        notesMaxLines?: number
     }
 }
 

@@ -34,6 +34,8 @@ interface InventoryViewProps {
         showFlavorPeriod?: boolean
         showOnlyBeanName?: boolean
         showFlavorInfo?: boolean
+        limitNotesLines?: boolean
+        notesMaxLines?: number
     }
 }
 

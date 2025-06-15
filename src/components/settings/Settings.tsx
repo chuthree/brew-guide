@@ -35,6 +35,8 @@ export interface SettingsOptions {
     showOnlyBeanName: boolean // 是否只显示咖啡豆名称
     showFlavorPeriod: boolean // 是否显示赏味期信息而不是烘焙日期
     showFlavorInfo: boolean // 是否在备注中显示风味信息
+    limitNotesLines: boolean // 是否限制备注显示行数
+    notesMaxLines: number // 备注最大显示行数
     customGrinders?: CustomGrinder[] // 添加自定义磨豆机列表
     simpleBeanFormMode: boolean // 咖啡豆表单简单模式
     safeAreaMargins?: {
@@ -62,6 +64,8 @@ export const defaultSettings: SettingsOptions = {
     showOnlyBeanName: true, // 默认简化咖啡豆名称
     showFlavorPeriod: false, // 默认显示烘焙日期而不是赏味期
     showFlavorInfo: false, // 默认不显示风味信息
+    limitNotesLines: true, // 默认限制备注显示行数
+    notesMaxLines: 3, // 默认最大显示3行
     customGrinders: [], // 默认无自定义磨豆机
     simpleBeanFormMode: false, // 默认使用完整表单模式
     safeAreaMargins: {
@@ -883,6 +887,51 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                 <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
                             </label>
                         </div>
+
+                        {/* 限制备注显示行数 */}
+                        <div className="flex items-center justify-between">
+                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                                限制备注显示行数
+                            </div>
+                            <label className="relative inline-flex cursor-pointer items-center">
+                                <input
+                                    type="checkbox"
+                                    checked={settings.limitNotesLines || false}
+                                    onChange={(e) => handleChange('limitNotesLines', e.target.checked)}
+                                    className="peer sr-only"
+                                />
+                                <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
+                            </label>
+                        </div>
+
+                        {/* 备注最大显示行数 - 只有在开启限制时才显示 */}
+                        {settings.limitNotesLines && (
+                            <div className="ml-4 border-l-2 border-neutral-200 dark:border-neutral-700 pl-4">
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                                        最大显示行数
+                                    </div>
+                                    <div className="text-sm text-neutral-400 dark:text-neutral-500">
+                                        {settings.notesMaxLines || 3}行
+                                    </div>
+                                </div>
+                                <div className="px-1">
+                                    <input
+                                        type="range"
+                                        min="1"
+                                        max="6"
+                                        step="1"
+                                        value={settings.notesMaxLines || 3}
+                                        onChange={(e) => handleChange('notesMaxLines', parseInt(e.target.value))}
+                                        className="w-full h-1.5 bg-neutral-200 rounded-full appearance-none cursor-pointer dark:bg-neutral-700"
+                                    />
+                                    <div className="flex justify-between mt-1 text-xs text-neutral-500">
+                                        <span>1行</span>
+                                        <span>6行</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
 

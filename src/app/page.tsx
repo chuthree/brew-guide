@@ -1614,7 +1614,9 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                         settings={{
                             showFlavorPeriod: settings.showFlavorPeriod,
                             showOnlyBeanName: settings.showOnlyBeanName,
-                            showFlavorInfo: settings.showFlavorInfo
+                            showFlavorInfo: settings.showFlavorInfo,
+                            limitNotesLines: settings.limitNotesLines,
+                            notesMaxLines: settings.notesMaxLines
                         }}
                     />
                 </ErrorBoundary>

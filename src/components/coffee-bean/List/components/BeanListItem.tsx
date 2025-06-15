@@ -29,6 +29,8 @@ interface BeanListItemProps {
         showFlavorPeriod?: boolean
         showOnlyBeanName?: boolean
         showFlavorInfo?: boolean
+        limitNotesLines?: boolean
+        notesMaxLines?: number
     }
 }
 
@@ -48,11 +50,16 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
     const [imageViewerOpen, setImageViewerOpen] = useState(false);
     const [imageError, setImageError] = useState(false);
     const [_imageLoaded, _setImageLoaded] = useState(false);
+
+    // 备注展开状态
+    const [isNotesExpanded, setIsNotesExpanded] = useState(false);
     
     // 从props中获取设置，如果没有传入则使用默认值
     const showOnlyBeanName = settings?.showOnlyBeanName ?? true; // 默认只显示咖啡豆名称
     const showFlavorPeriod = settings?.showFlavorPeriod ?? false; // 默认不显示赏味期信息
     const showFlavorInfo = settings?.showFlavorInfo ?? false; // 默认不显示风味信息
+    const limitNotesLines = settings?.limitNotesLines ?? true; // 默认限制备注显示行数
+    const notesMaxLines = settings?.notesMaxLines ?? 3; // 默认最大显示3行
 
 
 
@@ -213,10 +220,11 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
         // 检查点击的目标是否在需要避开的区域内
         const target = e.target as HTMLElement;
 
-        // 避开图片区域、剩余量编辑区域
+        // 避开图片区域、剩余量编辑区域、备注区域
         if (
             target.closest('[data-click-area="image"]') ||
-            target.closest('[data-click-area="remaining-edit"]')
+            target.closest('[data-click-area="remaining-edit"]') ||
+            target.closest('[data-click-area="notes"]')
         ) {
             return;
         }
@@ -251,6 +259,27 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
     // 检查是否应该显示备注区域
     const shouldShowNotes = () => {
         return (showFlavorInfo && bean.flavor && bean.flavor.length > 0) || bean.notes;
+    };
+
+    // 处理备注区域点击
+    const handleNotesClick = (e: React.MouseEvent) => {
+        e.stopPropagation(); // 阻止事件冒泡到卡片点击
+        if (limitNotesLines) {
+            setIsNotesExpanded(!isNotesExpanded);
+        }
+    };
+
+    // 获取对应的 line-clamp 类名
+    const getLineClampClass = (lines: number): string => {
+        switch (lines) {
+            case 1: return 'line-clamp-1';
+            case 2: return 'line-clamp-2';
+            case 3: return 'line-clamp-3';
+            case 4: return 'line-clamp-4';
+            case 5: return 'line-clamp-5';
+            case 6: return 'line-clamp-6';
+            default: return 'line-clamp-3';
+        }
     };
 
     return (
@@ -374,16 +403,24 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
 
                     {/* 备注区域 - 现在在右侧内容区域内，包含风味信息 */}
                     {shouldShowNotes() && (
-                        <div className="text-xs font-medium bg-neutral-200/30 dark:bg-neutral-800/40 p-1.5 rounded tracking-widest text-neutral-800/70 dark:text-neutral-400/85 whitespace-pre-line leading-tight">
-                            {searchQuery ? (
-                                <HighlightText
-                                    text={getFullNotesContent()}
-                                    highlight={searchQuery}
-                                    className="text-neutral-600 dark:text-neutral-400"
-                                />
-                            ) : (
-                                getFullNotesContent()
-                            )}
+                        <div
+                            className={`text-xs font-medium bg-neutral-200/30 dark:bg-neutral-800/40 p-1.5 rounded tracking-widest text-neutral-800/70 dark:text-neutral-400/85 whitespace-pre-line leading-tight ${
+                                limitNotesLines ? 'cursor-pointer hover:bg-neutral-200/40 dark:hover:bg-neutral-800/50 transition-colors' : ''
+                            }`}
+                            onClick={handleNotesClick}
+                            data-click-area="notes"
+                        >
+                            <div className={`${!isNotesExpanded && limitNotesLines ? getLineClampClass(notesMaxLines) : ''}`}>
+                                {searchQuery ? (
+                                    <HighlightText
+                                        text={getFullNotesContent()}
+                                        highlight={searchQuery}
+                                        className="text-neutral-600 dark:text-neutral-400"
+                                    />
+                                ) : (
+                                    getFullNotesContent()
+                                )}
+                            </div>
                         </div>
                     )}
                 </div>
