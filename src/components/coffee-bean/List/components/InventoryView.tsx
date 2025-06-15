@@ -7,7 +7,6 @@ import ImageFlowView from './ImageFlowView'
 import RemainingEditor from './RemainingEditor'
 import BeanDetailModal from '@/components/coffee-bean/Detail/BeanDetailModal'
 
-// 每页加载的咖啡豆数量 - 增大分页大小减少加载次数
 const PAGE_SIZE = 8;
 
 interface InventoryViewProps {
@@ -15,21 +14,14 @@ interface InventoryViewProps {
     selectedVariety: string | null
     showEmptyBeans: boolean
     selectedBeanType: BeanType
-    _onVarietyClick: (variety: string | null) => void
-    _onBeanTypeChange: (type: BeanType) => void
-    _onToggleShowEmptyBeans: () => void
-    _availableVarieties: string[]
     beans: ExtendedCoffeeBean[]
     onEdit: (bean: ExtendedCoffeeBean) => void
     onDelete: (bean: ExtendedCoffeeBean) => void
     onShare: (bean: ExtendedCoffeeBean) => void
-    _onRemainingUpdate: (beanId: string, value: string) => Promise<{ success: boolean, value?: string, error?: Error }>
     onQuickDecrement: (beanId: string, currentValue: string, decrementAmount: number) => Promise<{ success: boolean, value?: string, reducedToZero?: boolean, error?: Error }>
     isSearching?: boolean
     searchQuery?: string
-    // 新增图片流模式相关props
     isImageFlowMode?: boolean
-    // 添加设置参数
     settings?: {
         showFlavorPeriod?: boolean
         showOnlyBeanName?: boolean
@@ -44,165 +36,107 @@ const InventoryView: React.FC<InventoryViewProps> = ({
     selectedVariety,
     showEmptyBeans,
     selectedBeanType,
-    _onVarietyClick,
-    _onBeanTypeChange,
-    _onToggleShowEmptyBeans,
-    _availableVarieties,
     beans,
     onEdit,
     onDelete,
     onShare,
-    _onRemainingUpdate,
     onQuickDecrement,
     isSearching = false,
     searchQuery = '',
     isImageFlowMode = false,
     settings
 }) => {
-    // 添加剩余量编辑状态
+    // 剩余量编辑状态
     const [editingRemaining, setEditingRemaining] = useState<{
         beanId: string,
         value: string,
         targetElement: HTMLElement | null,
-        bean: ExtendedCoffeeBean // 存储完整的咖啡豆对象
+        bean: ExtendedCoffeeBean
     } | null>(null);
 
-    // 添加详情弹窗状态
+    // 详情弹窗状态
     const [detailBean, setDetailBean] = useState<ExtendedCoffeeBean | null>(null);
     const [showDetailModal, setShowDetailModal] = useState(false);
 
-    // 处理详情点击
     const handleDetailClick = (bean: ExtendedCoffeeBean) => {
         setDetailBean(bean);
         setShowDetailModal(true);
     };
 
-    // 处理详情弹窗关闭
     const handleDetailClose = () => {
         setShowDetailModal(false);
-        // 延迟清除 bean 数据，让 Drawer 有时间播放关闭动画
-        setTimeout(() => {
-            setDetailBean(null);
-        }, 300); // 300ms 应该足够 Drawer 的关闭动画
+        setTimeout(() => setDetailBean(null), 300);
     };
 
-    // 处理剩余量点击
     const handleRemainingClick = (bean: ExtendedCoffeeBean, event: React.MouseEvent) => {
         event.stopPropagation();
-        try {
-            const target = event.target as HTMLElement;
+        const target = event.target as HTMLElement;
 
-            // 检查目标元素是否有效
-            if (!target || !document.body.contains(target)) {
-                console.warn('无效的目标元素');
-                return;
-            }
+        if (!target || !document.body.contains(target)) return;
 
-            setEditingRemaining({
-                beanId: bean.id,
-                value: bean.remaining || '',
-                targetElement: target,
-                bean: bean // 存储完整的咖啡豆对象
-            });
-        } catch (error) {
-            console.error('处理剩余量点击失败:', error);
-        }
+        setEditingRemaining({
+            beanId: bean.id,
+            value: bean.remaining || '',
+            targetElement: target,
+            bean: bean
+        });
     };
 
-    // 处理快捷减量
     const handleQuickDecrement = async (decrementAmount: number) => {
         if (!editingRemaining) return;
+
+        const { beanId, value } = editingRemaining;
+        setEditingRemaining(null);
+
         try {
-            // 保存当前的bean引用，以防在异步操作中状态变化
-            const currentBeanId = editingRemaining.beanId;
-            const currentValue = editingRemaining.value;
-
-            // 先关闭弹出层，防止在处理过程中组件卸载导致错误
-            setEditingRemaining(null);
-
-            const result = await onQuickDecrement(
-                currentBeanId,
-                currentValue,
-                decrementAmount
-            );
-
+            const result = await onQuickDecrement(beanId, value, decrementAmount);
             if (result.success) {
-                // 强制更新筛选后的咖啡豆列表，确保UI显示正确
-                const updatedBean = filteredBeans.find(bean => bean.id === currentBeanId);
+                const updatedBean = filteredBeans.find(bean => bean.id === beanId);
                 if (updatedBean) {
                     updatedBean.remaining = result.value || "0";
-
-                    // 检查组件是否仍然挂载
-                    if (loaderRef.current) {
-                        // 刷新当前显示的咖啡豆
-                        setDisplayedBeans(prev =>
-                            prev.map(bean =>
-                                bean.id === currentBeanId ? {...bean, remaining: result.value || "0"} : bean
-                            )
-                        );
-                    }
+                    setDisplayedBeans(prev =>
+                        prev.map(bean =>
+                            bean.id === beanId ? {...bean, remaining: result.value || "0"} : bean
+                        )
+                    );
                 }
             }
         } catch (error) {
             console.error('快捷减量失败:', error);
-            // 确保组件状态一致
-            setEditingRemaining(null);
         }
     };
 
-    // 处理剩余量编辑取消
-    const handleRemainingCancel = () => {
-        setEditingRemaining(null);
-    };
-
-    // 分页状态（仅在非虚拟化模式下使用）
+    // 分页状态
     const [displayedBeans, setDisplayedBeans] = useState<ExtendedCoffeeBean[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
     const [isLoading, setIsLoading] = useState(false);
     const loaderRef = useRef<HTMLDivElement>(null);
 
-
-
-
-
     // 初始化分页数据
     useEffect(() => {
-        // 每次筛选条件变化时，重置分页状态
         setCurrentPage(1);
         const initialBeans = filteredBeans.slice(0, PAGE_SIZE);
         setDisplayedBeans(initialBeans);
         setHasMore(filteredBeans.length > PAGE_SIZE);
     }, [filteredBeans]);
 
-    // 加载更多咖啡豆 - 移除setTimeout，直接同步更新
+    // 加载更多数据
     const loadMoreBeans = useCallback(() => {
         if (!hasMore || isLoading) return;
 
         setIsLoading(true);
+        const nextPage = currentPage + 1;
+        const endIndex = nextPage * PAGE_SIZE;
+        const newDisplayedBeans = filteredBeans.slice(0, endIndex);
 
-        try {
-            // 计算下一页的咖啡豆
-            const nextPage = currentPage + 1;
-            const endIndex = nextPage * PAGE_SIZE;
-
-            // 使用筛选后的咖啡豆作为数据源
-            const newDisplayedBeans = filteredBeans.slice(0, endIndex);
-
-            // 如果加载的数量和筛选后的总数一样，说明没有更多数据了
-            const noMoreBeans = newDisplayedBeans.length >= filteredBeans.length;
-
-            setDisplayedBeans(newDisplayedBeans);
-            setCurrentPage(nextPage);
-            setHasMore(!noMoreBeans);
-        } catch (error) {
-            console.error('加载更多咖啡豆失败:', error);
-        } finally {
-            setIsLoading(false);
-        }
+        setDisplayedBeans(newDisplayedBeans);
+        setCurrentPage(nextPage);
+        setHasMore(newDisplayedBeans.length < filteredBeans.length);
+        setIsLoading(false);
     }, [currentPage, filteredBeans, hasMore, isLoading]);
 
-    // 设置IntersectionObserver来监听加载更多的元素
+    // 监听滚动加载
     useEffect(() => {
         if (!loaderRef.current) return;
 
@@ -212,16 +146,11 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                     loadMoreBeans();
                 }
             },
-            { threshold: 0.1 } // 降低阈值，提高加载触发敏感度
+            { threshold: 0.1 }
         );
 
         observer.observe(loaderRef.current);
-
-        return () => {
-            if (loaderRef.current) {
-                observer.unobserve(loaderRef.current);
-            }
-        };
+        return () => observer.disconnect();
     }, [hasMore, loadMoreBeans]);
 
     // 如果是图片流模式，直接返回图片流视图
@@ -237,12 +166,9 @@ const InventoryView: React.FC<InventoryViewProps> = ({
     }
 
     return (
-        <div className="w-full h-full overflow-y-auto scroll-with-bottom-bar relative coffee-bean-inventory-container">
-            {/* 咖啡豆列表 */}
+        <div className="w-full h-full overflow-y-auto scroll-with-bottom-bar relative">
             {filteredBeans.length === 0 ? (
-                <div
-                    className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400"
-                >
+                <div className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
                     {searchQuery.trim() ?
                         `[ 没有找到匹配"${searchQuery.trim()}"的咖啡豆 ]` :
                         selectedVariety ?
@@ -255,8 +181,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                     }
                 </div>
             ) : (
-                // 使用传统滚动
-                <div className="min-h-full pb-20 flex flex-col">
+                <div className="min-h-full pb-20">
                     <div className="mx-6 flex flex-col gap-y-5 mt-5">
                         {displayedBeans.map((bean, index) => (
                             <BeanListItem
@@ -270,20 +195,14 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                             />
                         ))}
 
-                        {/* 加载更多指示器 */}
                         {hasMore && (
-                            <div
-                                ref={loaderRef}
-                                className="flex justify-center items-center py-4"
-                            >
+                            <div ref={loaderRef} className="flex justify-center items-center py-4">
                                 <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
                                     {isLoading ? '正在加载...' : '上滑加载更多'}
                                 </div>
                             </div>
                         )}
                     </div>
-
-
                 </div>
             )}
 
@@ -292,9 +211,9 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                 targetElement={editingRemaining?.targetElement || null}
                 isOpen={!!editingRemaining}
                 onOpenChange={(open) => !open && setEditingRemaining(null)}
-                onCancel={handleRemainingCancel}
+                onCancel={() => setEditingRemaining(null)}
                 onQuickDecrement={handleQuickDecrement}
-                coffeeBean={editingRemaining?.bean} // 传递咖啡豆对象
+                coffeeBean={editingRemaining?.bean}
             />
 
             {/* 详情弹窗 */}

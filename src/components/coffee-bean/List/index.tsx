@@ -121,24 +121,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         handleSaveBean,
         handleDelete,
         handleSaveRating,
-        handleRemainingUpdate: baseHandleRemainingUpdate,
         handleQuickDecrement: baseHandleQuickDecrement,
         handleShare
     } = useBeanOperations()
-
-    // 使用类型包装函数解决类型不匹配问题
-    const handleRemainingUpdate = async (beanId: string, value: string): Promise<{ success: boolean, value?: string, error?: Error }> => {
-        try {
-            const result = await baseHandleRemainingUpdate(beanId, value);
-            return {
-                success: result.success,
-                value: result.value,
-                error: result.error ? new Error(String(result.error)) : undefined
-            };
-        } catch (error) {
-            return { success: false, error: error instanceof Error ? error : new Error(String(error)) };
-        }
-    };
 
     const handleQuickDecrement = async (
         beanId: string,
@@ -180,9 +165,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
 
 
 
-    // 更新过滤后的豆子和分类 - 简化版本，主要用于更新全局缓存
     const updateFilteredBeansAndCategories = useCallback((_beansToSort: ExtendedCoffeeBean[]) => {
-        // 优化的Hook已经处理了筛选和排序，这里只需要更新全局缓存
         globalCache.varieties = availableVarieties;
         globalCache.availableOrigins = availableOrigins;
         globalCache.availableFlavorPeriods = availableFlavorPeriods;
@@ -190,12 +173,10 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         globalCache.filteredBeans = filteredBeans;
     }, [availableVarieties, availableOrigins, availableFlavorPeriods, availableRoasters, filteredBeans]);
 
-    // 加载咖啡豆数据 - 优化防抖动和缓存
     const loadBeans = React.useCallback(async () => {
-        if (isLoadingRef.current) return; // 防止重复加载
+        if (isLoadingRef.current) return;
 
         try {
-            // 如果全局缓存已初始化且有数据，直接使用缓存，避免重新加载导致闪烁
             if (globalCache.initialized && globalCache.beans.length > 0) {
                 setBeans(globalCache.beans);
                 updateFilteredBeansAndCategories(globalCache.beans);
@@ -204,18 +185,12 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
             }
 
             isLoadingRef.current = true;
-
-            // 直接从存储加载新数据
             const loadedBeans = await CoffeeBeanManager.getAllBeans() as ExtendedCoffeeBean[];
 
-            // 批量更新状态，减少重新渲染
             setBeans(loadedBeans);
             globalCache.beans = loadedBeans;
             globalCache.initialized = true;
-
-            // 更新过滤后的豆子和分类
             updateFilteredBeansAndCategories(loadedBeans);
-
             setIsFirstLoad(false);
         } catch (error) {
             console.error("加载咖啡豆数据失败:", error);
@@ -1200,15 +1175,10 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
                     selectedVariety={selectedVariety}
                     showEmptyBeans={showEmptyBeans}
                     selectedBeanType={selectedBeanType}
-                    _onVarietyClick={handleVarietyClick}
-                    _onBeanTypeChange={handleBeanTypeChange}
-                    _onToggleShowEmptyBeans={toggleShowEmptyBeans}
-                    _availableVarieties={availableVarieties}
                     beans={beans}
                     onEdit={handleEdit}
                     onDelete={handleDelete}
                     onShare={(bean) => handleShare(bean, copyText)}
-                    _onRemainingUpdate={handleRemainingUpdate}
                     onQuickDecrement={handleQuickDecrement}
                     isSearching={isSearching}
                     searchQuery={searchQuery}

@@ -754,24 +754,17 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
         }
     };
 
-    // 渲染下一步按钮
     const renderNextButton = () => {
         const isLastStep = getCurrentStepIndex() === steps.length - 1;
         const valid = isStepValid();
         const canSave = valid && ['basic', 'detail', 'flavor'].includes(currentStep) && !isSimpleMode;
 
-        const springTransition = {
-            type: "spring",
-            stiffness: 500,
-            damping: 25
-        };
-
+        const springTransition = { type: "spring", stiffness: 500, damping: 25 };
         const buttonBaseClass = "rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100";
 
         return (
             <div className="modal-bottom-button flex items-center justify-center">
                 <div className="flex items-center justify-center gap-2">
-                    {/* 保存按钮 - 简单模式下不显示 */}
                     <AnimatePresence mode="popLayout">
                         {canSave && (
                             <motion.button
@@ -793,7 +786,6 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                         )}
                     </AnimatePresence>
 
-                    {/* 下一步/完成按钮 */}
                     <motion.button
                         layout
                         type="button"
@@ -802,11 +794,7 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                         transition={springTransition}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        className={`
-                            ${buttonBaseClass} flex items-center justify-center
-                            ${!valid ? 'opacity-0 cursor-not-allowed' : ''}
-                            ${isLastStep || isSimpleMode ? 'px-6 py-3' : 'p-4'}
-                        `}
+                        className={`${buttonBaseClass} flex items-center justify-center ${!valid ? 'opacity-0 cursor-not-allowed' : ''} ${isLastStep || isSimpleMode ? 'px-6 py-3' : 'p-4'}`}
                     >
                         {isLastStep || isSimpleMode ? (
                             <span className="font-medium">完成</span>
@@ -826,27 +814,18 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
 
     return (
         <div className="flex flex-col">
-            {/* 顶部导航栏 */}
             <div className="flex items-center justify-between mt-3 mb-6">
-                {/* 左侧：返回按钮 */}
-                <button
-                    type="button"
-                    onClick={handleBack}
-                    className="rounded-full"
-                >
+                <button type="button" onClick={handleBack} className="rounded-full">
                     <ArrowLeft className="w-5 h-5 text-neutral-800 dark:text-neutral-200" />
                 </button>
 
-                {/* 中间：进度条（仅在非简单模式下显示） */}
                 {!isSimpleMode && (
                     <div className="flex-1 px-4">
                         {renderProgressBar()}
                     </div>
                 )}
 
-                {/* 右侧：简单模式开关或步骤计数 */}
                 <div className="flex items-center gap-3">
-                    {/* 简单模式开关 */}
                     <label className="flex items-center gap-2 cursor-pointer">
                         <input
                             type="checkbox"
@@ -854,21 +833,12 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                             onChange={(e) => handleSimpleModeToggle(e.target.checked)}
                             className="sr-only"
                         />
-                        <div className={`
-                            relative w-8 h-4 rounded-full transition-colors duration-200
-                            ${isSimpleMode ? 'bg-neutral-800 dark:bg-neutral-200' : 'bg-neutral-300 dark:bg-neutral-600'}
-                        `}>
-                            <div className={`
-                                absolute top-0.5 w-3 h-3 bg-white dark:bg-neutral-800 rounded-full transition-transform duration-200
-                                ${isSimpleMode ? 'translate-x-4.5' : 'translate-x-0.5'}
-                            `} />
+                        <div className={`relative w-8 h-4 rounded-full transition-colors duration-200 ${isSimpleMode ? 'bg-neutral-800 dark:bg-neutral-200' : 'bg-neutral-300 dark:bg-neutral-600'}`}>
+                            <div className={`absolute top-0.5 w-3 h-3 bg-white dark:bg-neutral-800 rounded-full transition-transform duration-200 ${isSimpleMode ? 'translate-x-4.5' : 'translate-x-0.5'}`} />
                         </div>
-                        <span className="text-sm font-medium text-neutral-600 dark:text-neutral-400">
-                            简单
-                        </span>
+                        <span className="text-sm font-medium text-neutral-600 dark:text-neutral-400">简单</span>
                     </label>
 
-                    {/* 步骤计数（仅在非简单模式下显示） */}
                     {!isSimpleMode && (
                         <div className="text-sm font-medium text-neutral-600 dark:text-neutral-400">
                             {getCurrentStepIndex() + 1}/{steps.length}
@@ -877,14 +847,12 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                 </div>
             </div>
 
-            {/* 步骤内容 */}
             <div className="flex-1 overflow-y-auto pb-4">
                 <AnimatePresence mode="wait">
                     {renderStepContent()}
                 </AnimatePresence>
             </div>
 
-            {/* 下一步按钮 */}
             {renderNextButton()}
         </div>
     );

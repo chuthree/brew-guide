@@ -400,62 +400,28 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                 </DrawerDescription>
                 <DrawerHeader className="border-b border-neutral-200/60 dark:border-neutral-800/40 shrink-0 px-4 py-3">
                     <div className="relative flex items-center justify-between">
-                        {/* 左侧返回按钮 */}
                         <div className="flex items-center">
                             <button
                                 onClick={onClose}
                                 className="text-xs font-medium text-neutral-600 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200 transition-colors px-2 py-1"
-                            >
-                                {/* 返回 */}
-                            </button>
+                            />
                         </div>
 
-                        {/* 绝对居中的标题 */}
                         <DrawerTitle className="absolute left-1/2 transform -translate-x-1/2 text-base font-medium text-neutral-800 dark:text-neutral-100 leading-tight max-w-[50%]">
                             <div className="truncate text-center">
                                 {searchQuery ? (
-                                    <HighlightText
-                                        text={bean?.name || '未命名'}
-                                        highlight={searchQuery}
-                                    />
-                                ) : (
-                                    bean?.name || '未命名'
-                                )}
+                                    <HighlightText text={bean?.name || '未命名'} highlight={searchQuery} />
+                                ) : (bean?.name || '未命名')}
                             </div>
                         </DrawerTitle>
 
-                        {/* 右侧三点菜单 */}
                         <div className="flex items-center">
                             {bean && (onEdit || onShare || onDelete) && (
                                 <ActionMenu
                                     items={[
-                                        ...(onEdit ? [{
-                                            id: 'edit',
-                                            label: '编辑',
-                                            onClick: () => {
-                                                onEdit(bean)
-                                                onClose()
-                                            },
-                                            color: 'default' as const
-                                        }] : []),
-                                        ...(onShare ? [{
-                                            id: 'share',
-                                            label: '分享',
-                                            onClick: () => {
-                                                onShare(bean)
-                                                onClose()
-                                            },
-                                            color: 'default' as const
-                                        }] : []),
-                                        ...(onDelete ? [{
-                                            id: 'delete',
-                                            label: '删除',
-                                            onClick: () => {
-                                                onDelete(bean)
-                                                onClose()
-                                            },
-                                            color: 'danger' as const
-                                        }] : [])
+                                        ...(onEdit ? [{ id: 'edit', label: '编辑', onClick: () => { onEdit(bean); onClose(); }, color: 'default' as const }] : []),
+                                        ...(onShare ? [{ id: 'share', label: '分享', onClick: () => { onShare(bean); onClose(); }, color: 'default' as const }] : []),
+                                        ...(onDelete ? [{ id: 'delete', label: '删除', onClick: () => { onDelete(bean); onClose(); }, color: 'danger' as const }] : [])
                                     ]}
                                     triggerClassName="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
                                 />
@@ -466,44 +432,29 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
 
                 {bean ? (
                     <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-safe-bottom">
-                        {/* 顶部核心信息区域 - 图片与基础信息横向排列 */}
                         <div className="flex gap-4 pb-3 border-b border-neutral-200/40 dark:border-neutral-800/40">
-                            {/* 图片 */}
                             {bean.image && (
                                 <div className="w-16 h-16 relative rounded border border-neutral-200 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800 overflow-hidden flex-shrink-0">
                                     {imageError ? (
-                                        <div className="absolute inset-0 flex items-center justify-center text-xs text-neutral-500 dark:text-neutral-400">
-                                            失败
-                                        </div>
+                                        <div className="absolute inset-0 flex items-center justify-center text-xs text-neutral-500 dark:text-neutral-400">失败</div>
                                     ) : (
-                                        <Image
-                                            src={bean.image}
-                                            alt={bean.name || '咖啡豆图片'}
-                                            fill
-                                            className="object-cover"
-                                            onError={() => setImageError(true)}
-                                        />
+                                        <Image src={bean.image} alt={bean.name || '咖啡豆图片'} fill className="object-cover" onError={() => setImageError(true)} />
                                     )}
                                 </div>
                             )}
-
-                            {/* 核心信息 */}
                             <div className="flex-1 min-w-0">
                                 <InfoGrid items={getBasicInfoItems()} />
                             </div>
                         </div>
 
-                        {/* 详细信息区域 - 更紧凑的布局，拼配豆不显示汇总信息 */}
                         {getOriginInfoItems().length > 0 && !hasBlendComponents() && (
                             <div className="space-y-2">
                                 <InfoGrid items={getOriginInfoItems()} />
                             </div>
                         )}
 
-                        {/* 拼配、风味、备注 - 合并为一个紧凑区域 */}
                         {(hasBlendComponents() || (bean.flavor && bean.flavor.length > 0) || bean.notes) && (
                             <div className="space-y-3">
-                                {/* 拼配信息 */}
                                 {hasBlendComponents() && (
                                     <div>
                                         <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-1.5">拼配成分</div>
@@ -514,13 +465,9 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
 
                                                 return (
                                                     <div key={index} className="flex items-center gap-2">
-                                                        <span className="text-xs font-medium text-neutral-800 dark:text-neutral-100">
-                                                            {displayText}
-                                                        </span>
+                                                        <span className="text-xs font-medium text-neutral-800 dark:text-neutral-100">{displayText}</span>
                                                         {comp.percentage !== undefined && comp.percentage !== null && (
-                                                            <span className="text-xs font-medium text-neutral-600 dark:text-neutral-400">
-                                                                {comp.percentage}%
-                                                            </span>
+                                                            <span className="text-xs font-medium text-neutral-600 dark:text-neutral-400">{comp.percentage}%</span>
                                                         )}
                                                     </div>
                                                 )
@@ -529,16 +476,12 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                     </div>
                                 )}
 
-                                {/* 风味标签 */}
                                 {bean.flavor && bean.flavor.length > 0 && (
                                     <div>
                                         <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-1.5">风味</div>
                                         <div className="flex flex-wrap gap-1">
                                             {bean.flavor.map((flavor: any, index: number) => (
-                                                <span
-                                                    key={index}
-                                                    className="px-1.5 py-0.5 bg-neutral-100 dark:bg-neutral-700/50 text-xs text-neutral-700 dark:text-neutral-300"
-                                                >
+                                                <span key={index} className="px-1.5 py-0.5 bg-neutral-100 dark:bg-neutral-700/50 text-xs text-neutral-700 dark:text-neutral-300">
                                                     {flavor}
                                                 </span>
                                             ))}
@@ -546,20 +489,13 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                     </div>
                                 )}
 
-                                {/* 备注 */}
                                 {bean.notes && (
                                     <div>
                                         <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-1.5">备注</div>
                                         <div className="text-xs text-neutral-700 dark:text-neutral-300 leading-relaxed whitespace-pre-line">
                                             {searchQuery ? (
-                                                <HighlightText
-                                                    text={bean.notes}
-                                                    highlight={searchQuery}
-                                                    className="text-neutral-700 dark:text-neutral-300"
-                                                />
-                                            ) : (
-                                                bean.notes
-                                            )}
+                                                <HighlightText text={bean.notes} highlight={searchQuery} className="text-neutral-700 dark:text-neutral-300" />
+                                            ) : bean.notes}
                                         </div>
                                     </div>
                                 )}

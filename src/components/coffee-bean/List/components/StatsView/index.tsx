@@ -951,29 +951,11 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
                                 );
                             }
 
-                            // 如果没有任何豆子，不显示统计信息
                             return null;
                         })()}
-
-
                     </div>
                 </div>
 
-                {/* 这里添加一个剩余容量信息百分比，有个圆形图，先由线条画一个圆圈， */}
-                {/* <div 
-                    className="p-4 max-w-xs mx-auto"
-                    style={styles.statsAnimStyle(0)}
-                >
-                    <div className="w-full flex justify-start">
-                        <CapacityCircle 
-                            remainingPercentage={stats.totalWeight > 0 
-                                ? (stats.remainingWeight / stats.totalWeight) * 100 
-                                : 100}
-                        />
-                    </div>
-                </div> */}
-                
-                {/* 这些数据只是用于编写代码时参考 */}
                 <div className="p-4 max-w-xs mx-auto">
                     <StatsCategories
                         stats={stats}
@@ -983,17 +965,14 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
                         styles={styles}
                     />
                 </div>
-
-
             </div>
 
-            {/* 分享按钮 */}
             <div className="p-4 max-w-xs mx-auto text-center">
                 <button
                     onClick={onStatsShare}
                     className="mx-auto text-center pb-1.5 text-[11px] font-medium relative text-neutral-600 dark:text-neutral-400"
-            >
-                <span className="relative underline underline-offset-2 decoration-sky-500">分享 (包含费用数据)</span>
+                >
+                    <span className="relative underline underline-offset-2 decoration-sky-500">分享 (包含费用数据)</span>
                     <ArrowUpRight className="inline-block ml-1 w-3 h-3" />
                 </button>
             </div>

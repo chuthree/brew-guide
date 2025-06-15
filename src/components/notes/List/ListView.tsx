@@ -43,25 +43,22 @@ const NotesListView: React.FC<NotesListViewProps> = ({
 }) => {
     const [_isPending, startTransition] = useTransition()
     const [notes, setNotes] = useState<BrewingNote[]>(globalCache.filteredNotes)
-    const [_isFirstLoad, setIsFirstLoad] = useState<boolean>(!globalCache.initialized)
-    const [unitPriceCache, _setUnitPriceCache] = useState<Record<string, number>>(globalCache.beanPrices)
+    const [unitPriceCache] = useState<Record<string, number>>(globalCache.beanPrices)
     const [showQuickDecrementNotes, setShowQuickDecrementNotes] = useState(false)
     const isLoadingRef = useRef<boolean>(false)
 
-    // 分页相关状态 - 如果缓存有数据，直接初始化分页数据
-    const [displayedNotes, setDisplayedNotes] = useState<BrewingNote[]>(() => {
-        if (globalCache.initialized && globalCache.filteredNotes.length > 0) {
-            return globalCache.filteredNotes.slice(0, PAGE_SIZE);
-        }
-        return [];
-    })
+    // 分页状态
+    const [displayedNotes, setDisplayedNotes] = useState<BrewingNote[]>(() =>
+        globalCache.initialized && globalCache.filteredNotes.length > 0
+            ? globalCache.filteredNotes.slice(0, PAGE_SIZE)
+            : []
+    )
     const [currentPage, setCurrentPage] = useState(1)
-    const [hasMore, setHasMore] = useState(() => {
-        if (globalCache.initialized && globalCache.filteredNotes.length > 0) {
-            return globalCache.filteredNotes.length > PAGE_SIZE;
-        }
-        return true;
-    })
+    const [hasMore, setHasMore] = useState(() =>
+        globalCache.initialized && globalCache.filteredNotes.length > 0
+            ? globalCache.filteredNotes.length > PAGE_SIZE
+            : true
+    )
     const [isLoading, setIsLoading] = useState(false)
     const loaderRef = useRef<HTMLDivElement>(null)
     
@@ -90,17 +87,14 @@ const NotesListView: React.FC<NotesListViewProps> = ({
         return !hasCustomContent;
     }, []);
     
-    // 加载笔记数据 - 优化加载流程以避免不必要的加载状态显示
+    // 加载笔记数据
     const loadNotes = useCallback(async () => {
         if (isLoadingRef.current) return;
 
         try {
-            // 如果已经有预过滤的笔记列表，则直接使用
             if (preFilteredNotes) {
                 startTransition(() => {
                     setNotes(preFilteredNotes);
-                    setIsFirstLoad(false);
-                    // 重置分页状态
                     setCurrentPage(1);
                     setDisplayedNotes(preFilteredNotes.slice(0, PAGE_SIZE));
                     setHasMore(preFilteredNotes.length > PAGE_SIZE);
@@ -108,15 +102,10 @@ const NotesListView: React.FC<NotesListViewProps> = ({
                 return;
             }
 
-            // 如果全局缓存已初始化，优先使用缓存中的过滤结果
             if (globalCache.initialized && globalCache.notes.length >= 0) {
-                // 使用全局缓存中的过滤结果
                 const filteredNotes = globalCache.filteredNotes;
-
                 startTransition(() => {
                     setNotes(filteredNotes);
-                    setIsFirstLoad(false);
-                    // 重置分页状态
                     setCurrentPage(1);
                     setDisplayedNotes(filteredNotes.slice(0, PAGE_SIZE));
                     setHasMore(filteredNotes.length > PAGE_SIZE);
@@ -126,85 +115,61 @@ const NotesListView: React.FC<NotesListViewProps> = ({
 
             isLoadingRef.current = true;
 
-            // 从存储中加载数据
             const { Storage } = await import('@/lib/core/storage');
             const savedNotes = await Storage.get('brewingNotes');
             let parsedNotes: BrewingNote[] = savedNotes ? JSON.parse(savedNotes) : [];
 
-            // 修复现有的快捷扣除记录，确保它们有必需的字段
+            // 修复快捷扣除记录
             let needsUpdate = false;
             parsedNotes = parsedNotes.map(note => {
                 if (note.source === 'quick-decrement') {
                     const updatedNote = { ...note };
-                    if (updatedNote.equipment === undefined) {
-                        updatedNote.equipment = '';
-                        needsUpdate = true;
-                    }
-                    if (updatedNote.method === undefined) {
-                        updatedNote.method = '';
-                        needsUpdate = true;
-                    }
-                    if (updatedNote.totalTime === undefined) {
-                        updatedNote.totalTime = 0;
-                        needsUpdate = true;
-                    }
+                    if (updatedNote.equipment === undefined) { updatedNote.equipment = ''; needsUpdate = true; }
+                    if (updatedNote.method === undefined) { updatedNote.method = ''; needsUpdate = true; }
+                    if (updatedNote.totalTime === undefined) { updatedNote.totalTime = 0; needsUpdate = true; }
                     return updatedNote;
                 }
                 return note;
             });
 
-            // 如果有更新，保存回存储
             if (needsUpdate) {
                 await Storage.set('brewingNotes', JSON.stringify(parsedNotes));
             }
 
-            // 排序笔记
             const sortedNotes = sortNotes(parsedNotes, sortOption);
 
-            // 过滤笔记
             let filteredNotes = sortedNotes;
             if (filterMode === 'equipment' && selectedEquipment) {
                 filteredNotes = sortedNotes.filter(note => note.equipment === selectedEquipment);
             } else if (filterMode === 'bean' && selectedBean) {
-                filteredNotes = sortedNotes.filter(note =>
-                    note.coffeeBeanInfo?.name === selectedBean
-                );
+                filteredNotes = sortedNotes.filter(note => note.coffeeBeanInfo?.name === selectedBean);
             }
 
-            // 更新全局缓存
             globalCache.notes = sortedNotes;
             globalCache.filteredNotes = filteredNotes;
             globalCache.initialized = true;
 
-            // 使用 useTransition 包裹状态更新，避免界面闪烁
             startTransition(() => {
-                // 更新本地状态
                 setNotes(filteredNotes);
-                setIsFirstLoad(false);
                 isLoadingRef.current = false;
-                // 重置分页状态
                 setCurrentPage(1);
                 setDisplayedNotes(filteredNotes.slice(0, PAGE_SIZE));
                 setHasMore(filteredNotes.length > PAGE_SIZE);
             });
         } catch (error) {
             console.error("加载笔记数据失败:", error);
-            setIsFirstLoad(false);
             isLoadingRef.current = false;
         }
     }, [sortOption, selectedEquipment, selectedBean, filterMode, preFilteredNotes]);
 
-    // 优化的数据加载逻辑 - 只在首次挂载和强制刷新时加载
     useEffect(() => {
         loadNotes();
     }, [loadNotes]);
 
-    // 专门监听搜索结果变化
     useEffect(() => {
         if (preFilteredNotes) {
             startTransition(() => {
                 setNotes(preFilteredNotes);
-                // 重置分页状态
                 setCurrentPage(1);
                 setDisplayedNotes(preFilteredNotes.slice(0, PAGE_SIZE));
                 setHasMore(preFilteredNotes.length > PAGE_SIZE);
@@ -212,36 +177,20 @@ const NotesListView: React.FC<NotesListViewProps> = ({
         }
     }, [preFilteredNotes]);
 
-
-
-    // 加载更多笔记
     const loadMoreNotes = useCallback(() => {
         if (!hasMore || isLoading) return;
 
         setIsLoading(true);
+        const nextPage = currentPage + 1;
+        const endIndex = nextPage * PAGE_SIZE;
+        const newDisplayedNotes = notes.slice(0, endIndex);
 
-        try {
-            // 计算下一页的笔记
-            const nextPage = currentPage + 1;
-            const endIndex = nextPage * PAGE_SIZE;
-
-            // 使用当前的笔记数据作为数据源
-            const newDisplayedNotes = notes.slice(0, endIndex);
-
-            // 如果加载的数量和总数一样，说明没有更多数据了
-            const noMoreNotes = newDisplayedNotes.length >= notes.length;
-
-            setDisplayedNotes(newDisplayedNotes);
-            setCurrentPage(nextPage);
-            setHasMore(!noMoreNotes);
-        } catch (error) {
-            console.error('加载更多笔记失败:', error);
-        } finally {
-            setIsLoading(false);
-        }
+        setDisplayedNotes(newDisplayedNotes);
+        setCurrentPage(nextPage);
+        setHasMore(newDisplayedNotes.length < notes.length);
+        setIsLoading(false);
     }, [currentPage, notes, hasMore, isLoading]);
 
-    // 设置IntersectionObserver来监听加载更多的元素
     useEffect(() => {
         if (!loaderRef.current) return;
 
@@ -251,51 +200,32 @@ const NotesListView: React.FC<NotesListViewProps> = ({
                     loadMoreNotes();
                 }
             },
-            { threshold: 0.1 } // 降低阈值，提高加载触发敏感度
+            { threshold: 0.1 }
         );
 
         observer.observe(loaderRef.current);
-
-        return () => {
-            if (loaderRef.current) {
-                observer.unobserve(loaderRef.current);
-            }
-        };
+        return () => observer.disconnect();
     }, [hasMore, loadMoreNotes]);
 
-    // 监听笔记更新事件 - 移除重复的customStorageChange监听，由父组件处理
     useEffect(() => {
-        // 处理笔记更新事件
-        const handleNotesUpdated = () => {
-            loadNotes();
-        };
-
-        // 只监听特定的笔记更新事件，避免与父组件重复
+        const handleNotesUpdated = () => loadNotes();
         window.addEventListener('brewingNotesUpdated', handleNotesUpdated);
-
-        // 全局刷新函数
         window.refreshBrewingNotes = handleNotesUpdated;
 
-        // 清理函数
         return () => {
             window.removeEventListener('brewingNotesUpdated', handleNotesUpdated);
             delete window.refreshBrewingNotes;
         };
     }, [loadNotes]);
 
-    // 处理笔记选择
     const handleToggleSelect = useCallback((noteId: string, enterShareMode?: boolean) => {
-        if (onToggleSelect) {
-            onToggleSelect(noteId, enterShareMode);
-        }
+        onToggleSelect?.(noteId, enterShareMode);
     }, [onToggleSelect]);
-    
-    // 切换显示变动记录
+
     const toggleShowQuickDecrementNotes = useCallback(() => {
         setShowQuickDecrementNotes(prev => !prev);
     }, []);
 
-    // 渲染空状态 - 只有在确实没有数据时才显示
     if (notes.length === 0) {
         return (
             <div className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
@@ -310,7 +240,6 @@ const NotesListView: React.FC<NotesListViewProps> = ({
         );
     }
 
-    // 分隔笔记 - 使用分页后的数据
     const regularNotes = displayedNotes.filter(note => !isSimpleQuickDecrementNote(note));
     const quickDecrementNotes = displayedNotes.filter(note => isSimpleQuickDecrementNote(note));
 
