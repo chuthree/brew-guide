@@ -35,7 +35,10 @@ const ImageViewer: React.FC<ImageViewerProps> = ({
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.2 }}
                     className="fixed inset-0 z-100 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4"
-                    onClick={onClose}
+                    onClick={(e) => {
+                        e.stopPropagation()
+                        onClose()
+                    }}
                 >
                     <motion.div
                         initial={{ scale: 0.9 }}
@@ -69,9 +72,12 @@ const ImageViewer: React.FC<ImageViewerProps> = ({
                             )}
                         </div>
                         
-                        <button 
+                        <button
                             className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full bg-neutral-800/50 text-white"
-                            onClick={onClose}
+                            onClick={(e) => {
+                                e.stopPropagation()
+                                onClose()
+                            }}
                         >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

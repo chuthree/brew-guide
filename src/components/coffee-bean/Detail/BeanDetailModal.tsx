@@ -746,7 +746,10 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                 isOpen={imageViewerOpen}
                 imageUrl={currentImageUrl}
                 alt="笔记图片"
-                onClose={() => setImageViewerOpen(false)}
+                onClose={() => {
+                    setImageViewerOpen(false)
+                    setCurrentImageUrl('')
+                }}
             />
         )}
     </>
