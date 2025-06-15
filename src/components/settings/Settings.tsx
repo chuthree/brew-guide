@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { APP_VERSION, sponsorsList } from '@/lib/core/config'
 import DataManager from '../common/data/DataManager'
 import hapticsUtils from '@/lib/ui/haptics'
-import textZoomUtils from '@/lib/utils/textZoomUtils'
+import fontZoomUtils from '@/lib/utils/fontZoomUtils'
 import { useTheme } from 'next-themes'
 import { LayoutSettings } from '../brewing/Timer/Settings'
 
@@ -88,11 +88,11 @@ const Settings: React.FC<SettingsProps> = ({
     // 添加数据管理状态
     const [isDataManagerOpen, setIsDataManagerOpen] = useState(false)
 
-    // 添加文本缩放状态追踪
+    // 添加字体缩放状态追踪
     const [zoomLevel, setZoomLevel] = useState(settings.textZoomLevel || 1.0)
 
-    // 添加检查TextZoom是否可用的状态
-    const [isTextZoomEnabled, setIsTextZoomEnabled] = useState(false)
+    // 添加检查字体缩放是否可用的状态
+    const [isFontZoomEnabled, setIsFontZoomEnabled] = useState(false)
 
     // 获取主题相关方法
     const { theme, setTheme } = useTheme()
@@ -200,20 +200,20 @@ const Settings: React.FC<SettingsProps> = ({
         }
     }, [theme]);
 
-    // 初始化时检查TextZoom功能是否可用并加载当前缩放级别
+    // 初始化时检查字体缩放功能是否可用并加载当前缩放级别
     useEffect(() => {
-        // 检查TextZoom功能是否可用
-        setIsTextZoomEnabled(textZoomUtils.isAvailable());
+        // 检查字体缩放功能是否可用
+        setIsFontZoomEnabled(fontZoomUtils.isAvailable());
 
-        const loadTextZoomLevel = async () => {
-            if (textZoomUtils.isAvailable()) {
-                const currentZoom = await textZoomUtils.get();
+        const loadFontZoomLevel = () => {
+            if (fontZoomUtils.isAvailable()) {
+                const currentZoom = fontZoomUtils.get();
                 setZoomLevel(currentZoom);
             }
         };
 
         if (isOpen) {
-            loadTextZoomLevel();
+            loadFontZoomLevel();
         }
     }, [isOpen]);
 
@@ -238,10 +238,10 @@ const handleChange = async <K extends keyof SettingsOptions>(
 
 }
 
-    // 处理文本缩放变更
-    const handleTextZoomChange = async (newValue: number) => {
+    // 处理字体缩放变更
+    const handleFontZoomChange = async (newValue: number) => {
         setZoomLevel(newValue);
-        await textZoomUtils.set(newValue);
+        fontZoomUtils.set(newValue);
         await handleChange('textZoomLevel', newValue);
 
         // 触发震动反馈
@@ -600,12 +600,12 @@ const handleChange = async <K extends keyof SettingsOptions>(
                             </div>
                         </div>
 
-                        {/* 文本缩放设置 - 只在原生应用中显示 */}
-                        {isTextZoomEnabled && (
+                        {/* 字体缩放设置 - 统一的字体缩放功能 */}
+                        {isFontZoomEnabled && (
                             <div className="mb-4">
                                 <div className="flex items-center justify-between mb-3">
                                     <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                                        文本大小
+                                        字体大小
                                     </div>
                                     <div className="text-sm text-neutral-400 dark:text-neutral-500">
                                         {zoomLevel.toFixed(1)}×
@@ -618,20 +618,23 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                         max="1.4"
                                         step="0.1"
                                         value={zoomLevel}
-                                        onChange={(e) => handleTextZoomChange(parseFloat(e.target.value))}
+                                        onChange={(e) => handleFontZoomChange(parseFloat(e.target.value))}
                                         className="w-full h-1.5 bg-neutral-200 rounded-full appearance-none cursor-pointer dark:bg-neutral-700"
                                     />
                                     <div className="flex justify-between mt-1 text-xs text-neutral-500">
                                         <span>小</span>
                                         <span
-                                            className={`px-2 py-0.5 rounded-sm ${Math.abs(zoomLevel - 1.0) < 0.05 ? 'bg-neutral-800 text-neutral-100 dark:bg-neutral-200 dark:text-neutral-900' : ''}`}
-                                            onClick={() => handleTextZoomChange(1.0)}
+                                            className={`px-2 py-0.5 rounded-sm cursor-pointer transition-colors ${Math.abs(zoomLevel - 1.0) < 0.05 ? 'bg-neutral-800 text-neutral-100 dark:bg-neutral-200 dark:text-neutral-900' : 'hover:bg-neutral-100 dark:hover:bg-neutral-800'}`}
+                                            onClick={() => handleFontZoomChange(1.0)}
                                         >
                                             标准
                                         </span>
                                         <span>大</span>
                                     </div>
                                 </div>
+                                <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
+                                    调整应用的字体大小，设置会自动保存
+                                </p>
                             </div>
                         )}
 

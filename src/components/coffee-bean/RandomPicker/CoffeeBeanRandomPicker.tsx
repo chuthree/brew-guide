@@ -276,12 +276,16 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
   const containerRef = useRef<HTMLDivElement>(null)
   // 刮刮卡状态
   const [showScratchCard, setShowScratchCard] = useState(false)
-  // 卡片宽度(px)
-  const cardWidth = 160
-  // 卡片间距(px)
-  const cardMargin = 12
-  // 卡片总宽度
-  const cardTotalWidth = cardWidth + cardMargin
+  // 卡片引用，用于动态获取实际尺寸
+  const cardRef = useRef<HTMLDivElement>(null)
+  // 动态获取的卡片尺寸
+  const [cardDimensions, setCardDimensions] = useState({
+    width: 160,
+    margin: 12,
+    totalWidth: 172
+  })
+  // 卡片尺寸是否已初始化
+  const [cardDimensionsReady, setCardDimensionsReady] = useState(false)
 
   // 动画过渡参数
   const springTransition = { type: "spring", stiffness: 500, damping: 25 }
@@ -312,8 +316,62 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
     setAnimationState('initial')
     setSelectedBean(null)
     setShowScratchCard(false)
+    setCardDimensionsReady(false)
     controls.set({ x: 0 })
   }, [controls])
+
+  // 动态获取卡片尺寸
+  useEffect(() => {
+    const updateCardDimensions = () => {
+      if (cardRef.current && cardRef.current.nextElementSibling) {
+        const rect = cardRef.current.getBoundingClientRect()
+        const nextRect = (cardRef.current.nextElementSibling as HTMLElement).getBoundingClientRect()
+
+        // 计算实际的卡片间距
+        const actualMargin = nextRect.left - rect.right
+
+        setCardDimensions({
+          width: rect.width,
+          margin: actualMargin,
+          totalWidth: rect.width + actualMargin
+        })
+        setCardDimensionsReady(true)
+
+        console.log('Card dimensions updated:', {
+          width: rect.width,
+          margin: actualMargin,
+          totalWidth: rect.width + actualMargin
+        })
+      }
+    }
+
+    // 初始化时获取尺寸
+    if (isOpen) {
+      // 延迟一帧确保DOM已渲染
+      requestAnimationFrame(updateCardDimensions)
+    }
+
+    // 监听字体缩放变化
+    const handleFontZoomChange = () => {
+      requestAnimationFrame(() => {
+        updateCardDimensions()
+        // 如果当前正在显示动画，重新开始
+        if (isOpen && animationState === 'selecting' && !isSingleBean) {
+          setTimeout(() => {
+            resetState()
+          }, 50)
+        }
+      })
+    }
+
+    window.addEventListener('fontZoomChange', handleFontZoomChange)
+    window.addEventListener('resize', updateCardDimensions)
+
+    return () => {
+      window.removeEventListener('fontZoomChange', handleFontZoomChange)
+      window.removeEventListener('resize', updateCardDimensions)
+    }
+  }, [isOpen])
 
   // 当isOpen变化时重置状态
   useEffect(() => {
@@ -336,11 +394,22 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
       const randomIndex = Math.floor(Math.random() * validBeans.length)
 
       // 计算初始位置和最终位置
-      const initialX = (containerWidth - cardWidth) / 2 // 让第一个卡片在中心
+      const initialX = (containerWidth - cardDimensions.width) / 2 // 让第一个卡片在中心
 
       // 简化动画算法：直接计算最终位置
       // 让动画滚动足够多的卡片来营造旋转效果，最终停在选中的卡片
-      const totalScrollDistance = (validBeans.length * 3 + randomIndex) * cardTotalWidth
+      const totalScrollDistance = (validBeans.length * 3 + randomIndex) * cardDimensions.totalWidth
+
+      console.log('Animation calculation:', {
+        containerWidth,
+        cardWidth: cardDimensions.width,
+        cardMargin: cardDimensions.margin,
+        cardTotalWidth: cardDimensions.totalWidth,
+        randomIndex,
+        initialX,
+        totalScrollDistance,
+        finalX: initialX - totalScrollDistance
+      })
 
       // 设置初始位置并直接执行动画
       controls.set({ x: initialX })
@@ -365,7 +434,7 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
       setAnimationState('initial')
     }
 
-  }, [validBeans, controls, cardWidth, cardTotalWidth])
+  }, [validBeans, controls, cardDimensions.width, cardDimensions.totalWidth])
 
   // 重新选择
   const handleReshuffle = useCallback(() => {
@@ -413,7 +482,7 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
 
   // 自动开始动画或显示刮刮卡
   useEffect(() => {
-    if (isOpen && animationState === 'initial' && validBeans.length > 0) {
+    if (isOpen && animationState === 'initial' && validBeans.length > 0 && cardDimensionsReady) {
       if (isSingleBean) {
         // 只有一款咖啡豆时显示刮刮卡
         setSelectedBean(validBeans[0])
@@ -423,7 +492,7 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
         startRandomSelection()
       }
     }
-  }, [isOpen, animationState, validBeans.length, isSingleBean, validBeans, startRandomSelection])
+  }, [isOpen, animationState, validBeans.length, isSingleBean, validBeans, startRandomSelection, cardDimensionsReady])
 
   // 为动画准备数据 - 创建足够长的序列
   // 优化：减少渲染的卡片数量以提高性能
@@ -452,7 +521,13 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
               {/* 中间指示器和卡片容器 */}
               <div className="relative w-full max-w-md" ref={containerRef}>
                 {/* 中间指示器 - 永远在中间 */}
-                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[160px] h-[132px] border-2 border-neutral-800 dark:border-neutral-100 rounded-lg z-10 pointer-events-none"></div>
+                <div
+                  className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 border-2 border-neutral-800 dark:border-neutral-100 rounded-lg z-10 pointer-events-none"
+                  style={{
+                    width: `${cardDimensions.width}px`,
+                    height: '132px' // 高度保持固定，因为它不受字体缩放影响
+                  }}
+                ></div>
 
                 {/* 创建渐变遮罩效果 */}
                 <div className="absolute inset-0 bg-linear-to-r from-white/95 via-transparent to-white/95 dark:from-neutral-900/95 dark:via-transparent dark:to-neutral-900/95 z-20 pointer-events-none"></div>
@@ -467,6 +542,7 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
                     {displayBeans.map((bean, index) => (
                       <div
                         key={`${bean.id}-${index}`}
+                        ref={index === 0 ? cardRef : null}
                         className="w-[160px] h-[132px] shrink-0 flex flex-col items-center justify-center p-3 rounded-lg bg-white dark:bg-neutral-800 border-2 border-neutral-200 dark:border-neutral-700"
                       >
                         {bean.image ? (

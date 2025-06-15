@@ -20,7 +20,7 @@ import MethodTypeSelector from '@/components/method/forms/MethodTypeSelector'
 import Onboarding from '@/components/onboarding/Onboarding'
 import CoffeeBeanFormModal from '@/components/coffee-bean/Form/Modal'
 import ImportModal from '@/components/common/modals/BeanImportModal'
-import textZoomUtils from '@/lib/utils/textZoomUtils'
+import fontZoomUtils from '@/lib/utils/fontZoomUtils'
 import { saveMainTabPreference } from '@/lib/navigation/navigationCache'
 import { ViewOption, VIEW_OPTIONS, VIEW_LABELS } from '@/components/coffee-bean/List/types'
 import { getStringState, saveStringState } from '@/lib/core/statePersistence'
@@ -330,9 +330,9 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                         const parsedSettings = JSON.parse(savedSettings) as SettingsOptions;
                         setSettings(parsedSettings);
 
-                        // 应用文本缩放级别
+                        // 应用字体缩放级别
                         if (parsedSettings.textZoomLevel) {
-                            await textZoomUtils.set(parsedSettings.textZoomLevel);
+                            fontZoomUtils.set(parsedSettings.textZoomLevel);
                         }
                     }
                 } catch {
@@ -350,7 +350,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                     // 静默处理错误
                 }
 
-                // 3. 初始化 Capacitor
+                // 3. 初始化字体缩放
+                fontZoomUtils.init();
+
+                // 4. 初始化 Capacitor
                 initCapacitor();
             } catch {
                 // 静默处理错误
@@ -733,7 +736,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             await Storage.set('brewGuideSettings', JSON.stringify(newSettings))
 
             if (newSettings.textZoomLevel) {
-                await textZoomUtils.set(newSettings.textZoomLevel);
+                fontZoomUtils.set(newSettings.textZoomLevel);
             }
         } catch {
             // 静默处理错误

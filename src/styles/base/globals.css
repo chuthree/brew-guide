@@ -31,6 +31,9 @@
   --keyboard-height: 0px;
   --custom-shape-color: #000000;
   --legacy-mode: 0;
+  /* 网页版字体缩放变量 */
+  --font-scale: 1;
+  --base-font-size: 16px;
   --radius: 0.625rem;
   --background: #FAFAFA;
   --foreground: oklch(0.145 0 0);
@@ -160,6 +163,11 @@ select:focus,
 [role="button"]:focus {
   outline: none !important;
   box-shadow: none !important;
+}
+
+html {
+  /* 动态字体大小：基础大小 × 缩放比例 */
+  font-size: calc(var(--base-font-size) * var(--font-scale));
 }
 
 html,

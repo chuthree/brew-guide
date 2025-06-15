@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { SettingsOptions, defaultSettings } from '@/components/settings/Settings'
-import textZoomUtils from '@/lib/utils/textZoomUtils'
+import fontZoomUtils from '@/lib/utils/fontZoomUtils'
 import confetti from 'canvas-confetti'
 import { availableGrinders } from '@/lib/core/config'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/coffee-bean/ui/select'
@@ -17,13 +17,13 @@ interface OnboardingProps {
 const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete }) => {
     // 设置选项
     const [settings, setSettings] = useState<SettingsOptions>(defaultSettings)
-    // 检查TextZoom功能是否可用
-    const [isTextZoomEnabled, setIsTextZoomEnabled] = useState(false)
+    // 检查字体缩放功能是否可用
+    const [isFontZoomEnabled, setIsFontZoomEnabled] = useState(false)
 
     // 初始化
     useEffect(() => {
-        // 检查文本缩放功能是否可用
-        setIsTextZoomEnabled(textZoomUtils.isAvailable());
+        // 检查字体缩放功能是否可用
+        setIsFontZoomEnabled(fontZoomUtils.isAvailable());
     }, [])
 
     // 触发彩带特效
@@ -56,9 +56,9 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
             return newSettings
         })
 
-        // 当改变文本缩放级别时立即应用
+        // 当改变字体缩放级别时立即应用
         if (key === 'textZoomLevel') {
-            textZoomUtils.set(value as number)
+            fontZoomUtils.set(value as number)
         }
 
         // 当选择幻刺时触发彩带特效
@@ -77,9 +77,9 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
             // 标记引导已完成
             await Storage.set('onboardingCompleted', 'true')
 
-            // 应用文本缩放级别
+            // 应用字体缩放级别
             if (settings.textZoomLevel) {
-                await textZoomUtils.set(settings.textZoomLevel);
+                fontZoomUtils.set(settings.textZoomLevel);
             }
 
             // 通知上层组件设置已变更
@@ -119,12 +119,12 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
 
                             <div className="w-full space-y-4">
 
-                                {/* 文本缩放选项 - 仅在可用时显示 */}
-                                {isTextZoomEnabled && (
+                                {/* 字体缩放选项 - 仅在可用时显示 */}
+                                {isFontZoomEnabled && (
                                     <div className="flex items-center justify-between bg-neutral-100 dark:bg-neutral-900 p-4 rounded-xl">
                                         <div className="flex flex-col">
                                             <label className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                                                文本大小
+                                                字体大小
                                             </label>
                                             <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
                                                 缩放级别: {settings.textZoomLevel.toFixed(1)}×
