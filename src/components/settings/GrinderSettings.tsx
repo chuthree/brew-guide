@@ -106,7 +106,7 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({
 
     // 开始创建自定义磨豆机
     const startCreatingCustomGrinder = () => {
-        // 保存当前选中的磨豆机类型
+        // 保存当前选中的磨豆机型号
         setPreviousGrinderType(settings.grindType)
         setIsCreatingCustom(true)
         setEditingCustomId(null)
@@ -133,7 +133,7 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({
 
     // 开始编辑自定义磨豆机
     const startEditingCustomGrinder = (grinder: CustomGrinder) => {
-        // 保存当前选中的磨豆机类型
+        // 保存当前选中的磨豆机型号
         setPreviousGrinderType(settings.grindType)
         setIsCreatingCustom(true)
         setEditingCustomId(grinder.id)
@@ -377,7 +377,7 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({
         return selectedGrinder ? selectedGrinder.name : '选择磨豆机';
     }, [settings.grindType, allGrinders, editingCustomId]);
 
-    // 处理磨豆机类型变更
+    // 处理磨豆机型号变更
     const handleGrinderChange = (value: string) => {
         // 如果选择的是"添加自定义磨豆机"，则开始创建流程
         if (value === 'add_custom') {
@@ -527,7 +527,7 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({
                     htmlFor={`grinder-select-${settings.grindType}`}
                     className="text-sm font-medium text-neutral-800 dark:text-neutral-200"
                 >
-                    磨豆机类型
+                    磨豆机型号
                 </label>
                 <div className="relative">
                     <Select

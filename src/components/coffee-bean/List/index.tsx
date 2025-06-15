@@ -113,7 +113,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     const [_isFirstLoad, setIsFirstLoad] = useState<boolean>(!globalCache.initialized)
     const unmountTimeoutRef = useRef<NodeJS.Timeout | null>(null)
     const isLoadingRef = useRef<boolean>(false)
-    const containerRef = React.useRef<HTMLDivElement>(null)
 
     // 使用自定义钩子处理咖啡豆操作
     const {
@@ -1104,8 +1103,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         CoffeeBeanManager.clearCache();
     };
 
-    if (!isOpen) return null;
-
     return (
         <>
             {/* 咖啡豆表单弹出框 */}
@@ -1138,119 +1135,113 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
                 }}
             />
 
-            <div className={`relative flex flex-col h-full ${isOpen ? 'block' : 'hidden'}`}>
-                <div className="w-full" ref={containerRef}>
-                    <ViewSwitcher
-                        viewMode={viewMode}
-                        sortOption={sortOption}
-                        onSortChange={handleSortChange}
-                        beansCount={isSearching ? searchFilteredBeans.length : filteredBeans.length}
-                        totalBeans={beans.length}
-                        totalWeight={calculateTotalWeight()}
-                        rankingBeanType={rankingBeanType}
-                        onRankingBeanTypeChange={(newType) => {
-                            setRankingBeanType(newType);
-                            // 保存到本地存储
-                            globalCache.rankingBeanType = newType;
-                            saveRankingBeanTypePreference(newType);
-                        }}
-                        bloggerYear={bloggerYear}
-                        onBloggerYearChange={(newYear) => {
-                            setBloggerYear(newYear);
-                            // 保存到本地存储
-                            globalCache.bloggerYear = newYear;
-                            saveBloggerYearPreference(newYear);
-                        }}
-                        rankingEditMode={rankingEditMode}
-                        onRankingEditModeChange={(newMode) => {
-                            setRankingEditMode(newMode);
-                            // 保存到本地存储
-                            globalCache.rankingEditMode = newMode;
-                            saveRankingEditModePreference(newMode);
-                        }}
-                        onRankingShare={handleRankingShare}
-                        selectedBeanType={selectedBeanType}
-                        onBeanTypeChange={handleBeanTypeChange}
-                        selectedVariety={selectedVariety}
-                        onVarietyClick={handleVarietyClick}
+            <ViewSwitcher
+                viewMode={viewMode}
+                sortOption={sortOption}
+                onSortChange={handleSortChange}
+                beansCount={isSearching ? searchFilteredBeans.length : filteredBeans.length}
+                totalBeans={beans.length}
+                totalWeight={calculateTotalWeight()}
+                rankingBeanType={rankingBeanType}
+                onRankingBeanTypeChange={(newType) => {
+                    setRankingBeanType(newType);
+                    // 保存到本地存储
+                    globalCache.rankingBeanType = newType;
+                    saveRankingBeanTypePreference(newType);
+                }}
+                bloggerYear={bloggerYear}
+                onBloggerYearChange={(newYear) => {
+                    setBloggerYear(newYear);
+                    // 保存到本地存储
+                    globalCache.bloggerYear = newYear;
+                    saveBloggerYearPreference(newYear);
+                }}
+                rankingEditMode={rankingEditMode}
+                onRankingEditModeChange={(newMode) => {
+                    setRankingEditMode(newMode);
+                    // 保存到本地存储
+                    globalCache.rankingEditMode = newMode;
+                    saveRankingEditModePreference(newMode);
+                }}
+                onRankingShare={handleRankingShare}
+                selectedBeanType={selectedBeanType}
+                onBeanTypeChange={handleBeanTypeChange}
+                selectedVariety={selectedVariety}
+                onVarietyClick={handleVarietyClick}
+                showEmptyBeans={showEmptyBeans}
+                onToggleShowEmptyBeans={toggleShowEmptyBeans}
+                availableVarieties={availableVarieties}
+                isSearching={isSearching}
+                setIsSearching={setIsSearching}
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                rankingBeansCount={rankingBeansCount}
+                bloggerBeansCount={bloggerBeansCount}
+                isImageFlowMode={isImageFlowMode}
+                onToggleImageFlowMode={handleToggleImageFlowMode}
+                // 新增分类相关属性
+                filterMode={filterMode}
+                onFilterModeChange={handleFilterModeChange}
+                selectedOrigin={selectedOrigin}
+                onOriginClick={handleOriginClick}
+                selectedFlavorPeriod={selectedFlavorPeriod}
+                onFlavorPeriodClick={handleFlavorPeriodClick}
+                selectedRoaster={selectedRoaster}
+                onRoasterClick={handleRoasterClick}
+                availableOrigins={availableOrigins}
+                availableFlavorPeriods={availableFlavorPeriods}
+                availableRoasters={availableRoasters}
+            />
+
+            {/* 根据视图模式显示不同内容 */}
+            {viewMode === VIEW_OPTIONS.INVENTORY && (
+                <InventoryView
+                    filteredBeans={isSearching ? searchFilteredBeans : filteredBeans}
+                    selectedVariety={selectedVariety}
+                    showEmptyBeans={showEmptyBeans}
+                    selectedBeanType={selectedBeanType}
+                    _onVarietyClick={handleVarietyClick}
+                    _onBeanTypeChange={handleBeanTypeChange}
+                    _onToggleShowEmptyBeans={toggleShowEmptyBeans}
+                    _availableVarieties={availableVarieties}
+                    beans={beans}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                    onShare={(bean) => handleShare(bean, copyText)}
+                    _onRemainingUpdate={handleRemainingUpdate}
+                    onQuickDecrement={handleQuickDecrement}
+                    isSearching={isSearching}
+                    searchQuery={searchQuery}
+                    isImageFlowMode={isImageFlowMode}
+                    settings={settings}
+                />
+            )}
+            {/* 添加统计视图 */}
+            {viewMode === VIEW_OPTIONS.STATS && (
+                <div className="w-full h-full overflow-y-auto scroll-with-bottom-bar">
+                    <StatsView
+                        beans={beans}
                         showEmptyBeans={showEmptyBeans}
-                        onToggleShowEmptyBeans={toggleShowEmptyBeans}
-                        availableVarieties={availableVarieties}
-                        isSearching={isSearching}
-                        setIsSearching={setIsSearching}
-                        searchQuery={searchQuery}
-                        setSearchQuery={setSearchQuery}
-                        rankingBeansCount={rankingBeansCount}
-                        bloggerBeansCount={bloggerBeansCount}
-                        isImageFlowMode={isImageFlowMode}
-                        onToggleImageFlowMode={handleToggleImageFlowMode}
-                        // 新增分类相关属性
-                        filterMode={filterMode}
-                        onFilterModeChange={handleFilterModeChange}
-                        selectedOrigin={selectedOrigin}
-                        onOriginClick={handleOriginClick}
-                        selectedFlavorPeriod={selectedFlavorPeriod}
-                        onFlavorPeriodClick={handleFlavorPeriodClick}
-                        selectedRoaster={selectedRoaster}
-                        onRoasterClick={handleRoasterClick}
-                        availableOrigins={availableOrigins}
-                        availableFlavorPeriods={availableFlavorPeriods}
-                        availableRoasters={availableRoasters}
+                        onStatsShare={handleStatsShare}
                     />
                 </div>
-
-                <div className="flex-1 overflow-hidden">
-                    {/* 根据视图模式显示不同内容 */}
-                    {viewMode === VIEW_OPTIONS.INVENTORY && (
-                        <InventoryView
-                            filteredBeans={isSearching ? searchFilteredBeans : filteredBeans}
-                            selectedVariety={selectedVariety}
-                            showEmptyBeans={showEmptyBeans}
-                            selectedBeanType={selectedBeanType}
-                            _onVarietyClick={handleVarietyClick}
-                            _onBeanTypeChange={handleBeanTypeChange}
-                            _onToggleShowEmptyBeans={toggleShowEmptyBeans}
-                            _availableVarieties={availableVarieties}
-                            beans={beans}
-                            onEdit={handleEdit}
-                            onDelete={handleDelete}
-                            onShare={(bean) => handleShare(bean, copyText)}
-                            _onRemainingUpdate={handleRemainingUpdate}
-                            onQuickDecrement={handleQuickDecrement}
-                            isSearching={isSearching}
-                            searchQuery={searchQuery}
-                            isImageFlowMode={isImageFlowMode}
-                            settings={settings}
-                        />
-                    )}
-                    {/* 添加统计视图 */}
-                    {viewMode === VIEW_OPTIONS.STATS && (
-                        <div className="w-full h-full overflow-y-auto scroll-with-bottom-bar">
-                            <StatsView
-                                beans={beans}
-                                showEmptyBeans={showEmptyBeans}
-                                onStatsShare={handleStatsShare}
-                            />
-                        </div>
-                    )}
-                    {/* 添加榜单和博主榜单视图 */}
-                    {(viewMode === VIEW_OPTIONS.RANKING || viewMode === VIEW_OPTIONS.BLOGGER) && (
-                        <div className="w-full h-full overflow-y-auto scroll-with-bottom-bar">
-                            <CoffeeBeanRanking
-                                isOpen={viewMode === VIEW_OPTIONS.RANKING || viewMode === VIEW_OPTIONS.BLOGGER}
-                                onShowRatingForm={handleShowRatingForm}
-                                sortOption={convertToRankingSortOption(sortOption, viewMode)}
-                                updatedBeanId={lastRatedBeanId}
-                                hideFilters={true}
-                                beanType={rankingBeanType}
-                                editMode={rankingEditMode}
-                                viewMode={viewMode === VIEW_OPTIONS.BLOGGER ? 'blogger' : 'personal'}
-                                year={viewMode === VIEW_OPTIONS.BLOGGER ? bloggerYear : undefined}
-                            />
-                        </div>
-                    )}
+            )}
+            {/* 添加榜单和博主榜单视图 */}
+            {(viewMode === VIEW_OPTIONS.RANKING || viewMode === VIEW_OPTIONS.BLOGGER) && (
+                <div className="w-full h-full overflow-y-auto scroll-with-bottom-bar">
+                    <CoffeeBeanRanking
+                        isOpen={viewMode === VIEW_OPTIONS.RANKING || viewMode === VIEW_OPTIONS.BLOGGER}
+                        onShowRatingForm={handleShowRatingForm}
+                        sortOption={convertToRankingSortOption(sortOption, viewMode)}
+                        updatedBeanId={lastRatedBeanId}
+                        hideFilters={true}
+                        beanType={rankingBeanType}
+                        editMode={rankingEditMode}
+                        viewMode={viewMode === VIEW_OPTIONS.BLOGGER ? 'blogger' : 'personal'}
+                        year={viewMode === VIEW_OPTIONS.BLOGGER ? bloggerYear : undefined}
+                    />
                 </div>
-            </div>
+            )}
 
             {/* 添加和导入按钮 - 仅在仓库视图显示 */}
             {viewMode === VIEW_OPTIONS.INVENTORY && (

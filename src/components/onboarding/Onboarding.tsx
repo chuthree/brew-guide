@@ -161,7 +161,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
                                 {/* 磨豆机选择 */}
                                 <div id="onboarding-grinder-select-wrapper" className="bg-neutral-100 dark:bg-neutral-900 p-4 rounded-xl">
                                     <label className="text-sm font-medium text-neutral-800 dark:text-neutral-200 mb-1 block">
-                                        磨豆机类型
+                                        磨豆机型号
                                     </label>
                                     <div className="relative">
                                         <Select

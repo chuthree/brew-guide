@@ -19,9 +19,8 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
         type: null,
         message: ''
     })
-    const [isExporting, setIsExporting] = useState(false)
-    const [isImporting, setIsImporting] = useState(false)
-    const [isResetting, setIsResetting] = useState(false)
+
+
     const [showConfirmReset, setShowConfirmReset] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -29,8 +28,6 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
 
     const handleExport = async () => {
         try {
-            setIsExporting(true)
-            setStatus({ type: 'info', message: '正在导出数据...' })
 
             const jsonData = await DataManagerUtil.exportAllData()
             const fileName = `brew-guide-data-${new Date().toISOString().slice(0, 10)}.json`
@@ -92,8 +89,6 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
             }
         } catch (_error) {
             setStatus({ type: 'error', message: `导出失败: ${(_error as Error).message}` })
-        } finally {
-            setIsExporting(false)
         }
     }
 
@@ -108,9 +103,6 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
         if (!file) return
 
         try {
-            setIsImporting(true)
-            setStatus({ type: 'info', message: '正在导入数据...' })
-
             const reader = new FileReader()
             reader.onload = async (event) => {
                 try {
@@ -128,7 +120,6 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
                 } catch (_error) {
                     setStatus({ type: 'error', message: `导入失败: ${(_error as Error).message}` })
                 } finally {
-                    setIsImporting(false)
                     // 重置文件输入，以便可以重新选择同一个文件
                     if (fileInputRef.current) {
                         fileInputRef.current.value = ''
@@ -138,21 +129,16 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
 
             reader.onerror = () => {
                 setStatus({ type: 'error', message: '读取文件失败' })
-                setIsImporting(false)
             }
 
             reader.readAsText(file)
         } catch (_error) {
             setStatus({ type: 'error', message: `导入失败: ${(_error as Error).message}` })
-            setIsImporting(false)
         }
     }
 
     const handleReset = async () => {
         try {
-            setIsResetting(true)
-            setStatus({ type: 'info', message: '正在重置数据...' })
-
             const result = await DataManagerUtil.resetAllData(true)
 
             if (result.success) {
@@ -160,7 +146,7 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
                 if (onDataChange) {
                     onDataChange()
                 }
-                
+
                 // 设置一个短暂延迟后刷新页面
                 setTimeout(() => {
                     window.location.reload()
@@ -171,7 +157,6 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
         } catch (_error) {
             setStatus({ type: 'error', message: `重置失败: ${(_error as Error).message}` })
         } finally {
-            setIsResetting(false)
             setShowConfirmReset(false)
         }
     }
@@ -242,10 +227,9 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
                         <div>
                             <button
                                 onClick={handleExport}
-                                disabled={isExporting}
-                                className="w-full rounded-md bg-neutral-100 px-4 py-2 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 disabled:opacity-50 dark:bg-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-600"
+                                className="w-full rounded text-sm py-2 font-medium bg-neutral-100 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-500"
                             >
-                                {isExporting ? '导出中...' : '导出所有数据'}
+                                <span className="text-neutral-800 dark:text-neutral-200">导出</span>所有数据
                             </button>
                             <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
                                 {isNative
@@ -257,10 +241,9 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
                         <div>
                             <button
                                 onClick={handleImportClick}
-                                disabled={isImporting}
-                                className="w-full rounded-md bg-neutral-100 px-4 py-2 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 disabled:opacity-50 dark:bg-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-600"
+                                className="w-full rounded text-sm py-2 font-medium bg-neutral-100 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-500"
                             >
-                                {isImporting ? '导入中...' : '导入数据（替换）'}
+                               <span className="text-neutral-800 dark:text-neutral-200">导入</span>数据（<span className="text-neutral-800 dark:text-neutral-200">替换</span>）
                             </button>
                             <input
                                 ref={fileInputRef}
@@ -321,10 +304,9 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
                                             <button
                                                 type="button"
                                                 onClick={handleReset}
-                                                disabled={isResetting}
-                                                className="px-3 py-1.5 text-xs rounded-md bg-red-600 text-neutral-100 transition-colors hover:bg-red-700 disabled:opacity-50"
+                                                className="px-3 py-1.5 text-xs rounded-md bg-red-600 text-neutral-100 transition-colors hover:bg-red-700"
                                             >
-                                                {isResetting ? '重置中...' : '确认重置'}
+                                                确认重置
                                             </button>
                                         </div>
                                     </div>

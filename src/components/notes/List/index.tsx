@@ -628,7 +628,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     if (!isOpen) return null;
     
     return (
-        <div className="h-full flex flex-col overflow-y-scroll">
+        <>
             {editingNote ? (
                 <BrewingNoteForm
                     id={editingNote.id}
@@ -738,7 +738,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                 message={toast.message}
                 type={toast.type}
             />
-        </div>
+        </>
     );
 };
 

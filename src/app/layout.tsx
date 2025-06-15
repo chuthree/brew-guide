@@ -171,25 +171,23 @@ export default function RootLayout({
           </>
         )}
       </head>
-      <body className={`${inter.className} bg-neutral-50 dark:bg-neutral-900 fixed inset-0 overflow-hidden`}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <ToastProvider>
-            <Suspense>
-              <CapacitorInit />
-              <StorageInit />
-              <KeyboardManager />
-            </Suspense>
-            <div className="h-full w-full overflow-hidden max-w-[500px] mx-auto">
-              {children}
-            </div>
-            <AppInstallAndUpdatePrompt />
-          </ToastProvider>
-        </ThemeProvider>
+      <body className={`${inter.className} bg-neutral-50 dark:bg-neutral-900 max-w-[500px] mx-auto fixed inset-0 overflow-hidden`}>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <ToastProvider>
+              <Suspense>
+                <CapacitorInit />
+                <StorageInit />
+                <KeyboardManager />
+              </Suspense>
+                {children}
+              <AppInstallAndUpdatePrompt />
+            </ToastProvider>
+          </ThemeProvider>
         <Analytics />
       </body>
     </html>

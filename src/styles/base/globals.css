@@ -218,6 +218,19 @@ select:focus,
   scroll-margin-bottom: 100px;
 }
 
+/* 修复 vaul drawer 滚动锁定时的 body 样式问题 */
+body[data-scroll-locked] {
+  overflow: hidden !important;
+  overscroll-behavior: contain;
+  /* 保持原有的 position: fixed 和 inset: 0 以维持布局 */
+  position: fixed !important;
+  inset: 0 !important;
+  padding-left: 0 !important;
+  padding-top: 0 !important;
+  padding-right: 0 !important;
+  /* 不重置 margin，让 mx-auto 能正常工作 */
+}
+
 /* 模态框底部按钮 */
 .modal-bottom-button {
   position: sticky;

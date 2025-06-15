@@ -31,7 +31,6 @@ import { BREWING_EVENTS } from '@/lib/brewing/constants'
 import type { BrewingNoteData } from '@/types/app'
 import { updateParameterInfo } from '@/lib/brewing/parameters'
 import BrewingNoteFormModal from '@/components/notes/Form/BrewingNoteFormModal'
-import ErrorBoundary from '@/components/common/ui/ErrorBoundary'
 import CoffeeBeans from '@/components/coffee-bean/List'
 import SwipeBackGesture from '@/components/app/SwipeBackGesture'
 import { loadCustomEquipments, saveCustomEquipment, deleteCustomEquipment } from '@/lib/managers/customEquipments'
@@ -1324,7 +1323,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     const [showAlternativeHeader, setShowAlternativeHeader] = useState(false);
 
     return (
-        <div className="relative h-full flex flex-col overflow-hidden">
+        <>
             {/* 页面级别的视图选择覆盖层 */}
             <AnimatePresence>
                 {showViewDropdown && activeMainTab === '咖啡豆' && (
@@ -1603,23 +1602,21 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 />
             )}
             {activeMainTab === '咖啡豆' && (
-                <ErrorBoundary>
-                    <CoffeeBeans
-                        key={beanListKey}
-                        isOpen={activeMainTab === '咖啡豆'}
-                        showBeanForm={handleBeanForm}
-                        onShowImport={() => setShowImportBeanForm(true)}
-                        externalViewMode={currentBeanView}
-                        onExternalViewChange={handleBeanViewChange}
-                        settings={{
-                            showFlavorPeriod: settings.showFlavorPeriod,
-                            showOnlyBeanName: settings.showOnlyBeanName,
-                            showFlavorInfo: settings.showFlavorInfo,
-                            limitNotesLines: settings.limitNotesLines,
-                            notesMaxLines: settings.notesMaxLines
-                        }}
-                    />
-                </ErrorBoundary>
+                <CoffeeBeans
+                    key={beanListKey}
+                    isOpen={activeMainTab === '咖啡豆'}
+                    showBeanForm={handleBeanForm}
+                    onShowImport={() => setShowImportBeanForm(true)}
+                    externalViewMode={currentBeanView}
+                    onExternalViewChange={handleBeanViewChange}
+                    settings={{
+                        showFlavorPeriod: settings.showFlavorPeriod,
+                        showOnlyBeanName: settings.showOnlyBeanName,
+                        showFlavorInfo: settings.showFlavorInfo,
+                        limitNotesLines: settings.limitNotesLines,
+                        notesMaxLines: settings.notesMaxLines
+                    }}
+                />
             )}
 
             {activeMainTab === '冲煮' && activeBrewingStep === 'method' && selectedEquipment && (
@@ -1781,7 +1778,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                         onComplete={handleOnboardingComplete}
                     />
             )}
-        </div>
+        </>
     )
 }
 
