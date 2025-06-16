@@ -119,13 +119,72 @@ export const calculateNoteCost = async (note: BrewingNote): Promise<number> => {
 // 计算总花费的函数
 export const calculateTotalCost = async (notes: BrewingNote[]): Promise<number> => {
     let totalCost = 0;
-    
+
     for (const note of notes) {
         const cost = await calculateNoteCost(note);
         totalCost += cost;
     }
-    
+
     return totalCost;
+};
+
+/**
+ * 从笔记中提取咖啡豆使用量
+ * @param note 笔记对象
+ * @returns 咖啡豆使用量(g)，如果无法提取则返回0
+ */
+export const extractCoffeeAmountFromNote = (note: BrewingNote): number => {
+    try {
+        // 输入验证
+        if (!note) {
+            console.warn('extractCoffeeAmountFromNote: 笔记对象为空');
+            return 0;
+        }
+
+        // 处理快捷扣除笔记
+        if (note.source === 'quick-decrement' && note.quickDecrementAmount) {
+            const amount = typeof note.quickDecrementAmount === 'number'
+                ? note.quickDecrementAmount
+                : parseFloat(String(note.quickDecrementAmount));
+
+            if (!isNaN(amount) && amount > 0) {
+                return amount;
+            }
+        }
+
+        // 处理普通笔记
+        if (note.params && note.params.coffee) {
+            // 提取咖啡量中的数字部分（如"18g" -> 18）
+            const match = note.params.coffee.match(/(\d+(\.\d+)?)/);
+            if (match) {
+                const coffeeAmount = parseFloat(match[0]);
+                if (!isNaN(coffeeAmount) && coffeeAmount > 0) {
+                    return coffeeAmount;
+                }
+            }
+        }
+
+        return 0;
+    } catch (error) {
+        console.error('提取笔记咖啡量失败:', error, note);
+        return 0;
+    }
+};
+
+/**
+ * 获取笔记关联的咖啡豆ID
+ * @param note 笔记对象
+ * @returns 咖啡豆ID，如果没有关联则返回null
+ */
+export const getNoteAssociatedBeanId = (note: BrewingNote): string | null => {
+    // 优先使用beanId字段
+    if (note.beanId) {
+        return note.beanId;
+    }
+
+    // 如果没有beanId，但有咖啡豆信息，可以尝试通过名称查找
+    // 但这种情况下我们无法直接获取ID，需要调用者自行处理
+    return null;
 };
 
 // 笔记排序函数

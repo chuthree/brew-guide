@@ -304,6 +304,88 @@ export const CoffeeBeanManager = {
 	},
 
 	/**
+	 * 增加咖啡豆剩余量（用于删除笔记时恢复容量）
+	 * @param id 咖啡豆ID
+	 * @param restoreAmount 要恢复的咖啡量(g)
+	 * @returns 更新后的咖啡豆对象，如果不存在则返回null
+	 */
+	async increaseBeanRemaining(
+		id: string,
+		restoreAmount: number
+	): Promise<CoffeeBean | null> {
+		try {
+			// 输入验证
+			if (!id || typeof id !== 'string' || id.trim() === '') {
+				console.warn('increaseBeanRemaining: 咖啡豆ID无效', id);
+				return null;
+			}
+
+			if (typeof restoreAmount !== 'number' || isNaN(restoreAmount) || restoreAmount <= 0) {
+				console.warn('increaseBeanRemaining: 恢复量无效', restoreAmount);
+				return null;
+			}
+
+			// 获取咖啡豆信息
+			const bean = await this.getBeanById(id);
+			if (!bean) {
+				console.warn('increaseBeanRemaining: 未找到咖啡豆，可能已被删除', id);
+				return null;
+			}
+
+			// 转换为数字计算，处理字符串类型的remaining
+			let currentRemaining = 0;
+			if (bean.remaining) {
+				const remainingStr = typeof bean.remaining === 'string'
+					? bean.remaining.replace(/[^\d.-]/g, '') // 移除非数字字符
+					: String(bean.remaining);
+				currentRemaining = parseFloat(remainingStr);
+				if (isNaN(currentRemaining)) {
+					console.warn('increaseBeanRemaining: 当前剩余量格式异常', bean.remaining);
+					currentRemaining = 0;
+				}
+			}
+
+			// 增加剩余量
+			const newRemaining = currentRemaining + restoreAmount;
+
+			// 如果有总容量限制，确保不超过总容量
+			let finalRemaining = newRemaining;
+			if (bean.capacity) {
+				const capacityStr = typeof bean.capacity === 'string'
+					? bean.capacity.replace(/[^\d.-]/g, '') // 移除非数字字符
+					: String(bean.capacity);
+				const totalCapacity = parseFloat(capacityStr);
+
+				if (!isNaN(totalCapacity) && totalCapacity > 0) {
+					if (finalRemaining > totalCapacity) {
+						console.warn(`increaseBeanRemaining: 恢复后容量(${finalRemaining}g)超过总容量(${totalCapacity}g)，已限制为总容量`);
+						finalRemaining = totalCapacity;
+					}
+				}
+			}
+
+			// 格式化结果
+			const formattedNewRemaining = this.formatNumber(finalRemaining);
+
+			// 更新咖啡豆剩余量（timestamp会在updateBean中自动更新）
+			const result = await this.updateBean(id, {
+				remaining: formattedNewRemaining,
+			});
+
+			if (result) {
+				console.log(`咖啡豆容量恢复成功: ${bean.name} +${restoreAmount}g (${currentRemaining}g -> ${formattedNewRemaining}g)`);
+			} else {
+				console.error('increaseBeanRemaining: 更新咖啡豆失败');
+			}
+
+			return result;
+		} catch (error) {
+			console.error('恢复咖啡豆剩余量失败:', error, { id, restoreAmount });
+			return null;
+		}
+	},
+
+	/**
 	 * 更新咖啡豆评分
 	 * @param id 咖啡豆ID
 	 * @param ratings 评分数据

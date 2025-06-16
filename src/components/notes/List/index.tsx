@@ -222,7 +222,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         }, 3000);
     };
     
-    // 处理删除笔记 - 统一数据流避免竞态条件
+    // 处理删除笔记 - 统一数据流避免竞态条件，并恢复咖啡豆容量
     const handleDelete = async (noteId: string) => {
         try {
             const { Storage } = await import('@/lib/core/storage');
@@ -230,6 +230,32 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
             if (!savedNotes) return;
 
             const notes = JSON.parse(savedNotes) as BrewingNote[];
+
+            // 找到要删除的笔记
+            const noteToDelete = notes.find(note => note.id === noteId);
+            if (!noteToDelete) {
+                console.warn('未找到要删除的笔记:', noteId);
+                return;
+            }
+
+            // 提取咖啡豆使用量和关联的咖啡豆ID
+            const { extractCoffeeAmountFromNote, getNoteAssociatedBeanId } = await import('../utils');
+            const coffeeAmount = extractCoffeeAmountFromNote(noteToDelete);
+            const beanId = getNoteAssociatedBeanId(noteToDelete);
+
+            // 恢复咖啡豆容量（如果有关联的咖啡豆和使用量）
+            if (beanId && coffeeAmount > 0) {
+                try {
+                    const { CoffeeBeanManager } = await import('@/lib/managers/coffeeBeanManager');
+                    await CoffeeBeanManager.increaseBeanRemaining(beanId, coffeeAmount);
+                    console.log(`删除笔记时恢复咖啡豆容量: ${coffeeAmount}g`);
+                } catch (error) {
+                    console.error('恢复咖啡豆容量失败:', error);
+                    // 容量恢复失败不应阻止笔记删除，但需要记录错误
+                }
+            }
+
+            // 删除笔记
             const updatedNotes = notes.filter(note => note.id !== noteId);
 
             // 立即同步更新全局缓存
