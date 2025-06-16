@@ -185,7 +185,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         onTimestampChange?.(newTimestamp);
     };
     
-    // 添加方案参数状态
+    // 添加方案参数状态 - 分离数值和单位
     const [methodParams, setMethodParams] = useState({
         coffee: initialData?.params?.coffee || '15g',
         water: initialData?.params?.water || '225g',
@@ -193,6 +193,20 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         grindSize: initialData?.params?.grindSize || '中细',
         temp: initialData?.params?.temp || '92°C',
     });
+
+    // 提取纯数字值的辅助函数
+    const extractNumericValue = (param: string): string => {
+        const match = param.match(/(\d+(\.\d+)?)/);
+        return match ? match[0] : '';
+    };
+
+    // 分离的数值状态（用于输入框显示）
+    const [numericValues, setNumericValues] = useState(() => ({
+        coffee: extractNumericValue(initialData?.params?.coffee || '15g'),
+        water: extractNumericValue(initialData?.params?.water || '225g'),
+        temp: extractNumericValue(initialData?.params?.temp || '92°C'),
+        ratio: extractNumericValue(initialData?.params?.ratio?.split(':')[1] || '15')
+    }));
 
     // 添加器具和方案选择相关状态
     const [availableEquipments, setAvailableEquipments] = useState<(typeof equipmentList[0] | CustomEquipment)[]>([]);
@@ -376,9 +390,17 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         
         // 检查方法参数变化
         const hasParamsChanged = JSON.stringify(prevInitialDataRef.current.params) !== JSON.stringify(initialData.params);
-        
+
         if (hasParamsChanged && initialData.params) {
             setMethodParams(initialData.params);
+            // 同步更新数值状态
+            const updateNumericValues = (params: typeof initialData.params) => ({
+                coffee: extractNumericValue(params?.coffee || '15g'),
+                water: extractNumericValue(params?.water || '225g'),
+                temp: extractNumericValue(params?.temp || '92°C'),
+                ratio: extractNumericValue(params?.ratio?.split(':')[1] || '15')
+            });
+            setNumericValues(updateNumericValues(initialData.params));
         }
         
         // 更新引用
@@ -413,12 +435,49 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         return methodParams.water;
     };
 
+    // 数值输入验证
+    const validateNumericInput = (value: string): boolean => {
+        return /^$|^[0-9]*\.?[0-9]*$/.test(value);
+    };
+
     // 处理咖啡粉量变化
     const handleCoffeeChange = (value: string) => {
+        if (!validateNumericInput(value)) return;
+
+        setNumericValues(prev => ({ ...prev, coffee: value }));
+
+        const coffeeWithUnit = value ? `${value}g` : '';
         setMethodParams(prev => ({
             ...prev,
-            coffee: value,
-            water: calculateWater(value, prev.ratio)
+            coffee: coffeeWithUnit,
+            water: calculateWater(coffeeWithUnit, prev.ratio)
+        }));
+    };
+
+    // 处理水粉比变化
+    const handleRatioChange = (value: string) => {
+        if (!validateNumericInput(value)) return;
+
+        setNumericValues(prev => ({ ...prev, ratio: value }));
+
+        const ratioWithFormat = value ? `1:${value}` : '1:15';
+        setMethodParams(prev => ({
+            ...prev,
+            ratio: ratioWithFormat,
+            water: calculateWater(prev.coffee, ratioWithFormat)
+        }));
+    };
+
+    // 处理温度变化
+    const handleTempChange = (value: string) => {
+        if (!validateNumericInput(value)) return;
+
+        setNumericValues(prev => ({ ...prev, temp: value }));
+
+        const tempWithUnit = value ? `${value}°C` : '';
+        setMethodParams(prev => ({
+            ...prev,
+            temp: tempWithUnit
         }));
     };
 
@@ -480,6 +539,15 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                     grindSize: selectedMethodObj.params.grindSize,
                     temp: selectedMethodObj.params.temp,
                 });
+
+                // 同步更新数值状态
+                const updateNumericValues = (params: typeof selectedMethodObj.params) => ({
+                    coffee: extractNumericValue(params.coffee || '15g'),
+                    water: extractNumericValue(params.water || '225g'),
+                    temp: extractNumericValue(params.temp || '92°C'),
+                    ratio: extractNumericValue(params.ratio?.split(':')[1] || '15')
+                });
+                setNumericValues(updateNumericValues(selectedMethodObj.params));
             }
             setShowEquipmentMethodSelector(false);
         } catch (error) {
@@ -593,8 +661,29 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     };
 
     // 保存笔记的处理函数
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
+
+        // 编辑笔记时同步咖啡豆容量
+        if (initialData.id && initialData.beanId) {
+            try {
+                const { CapacitySyncManager, CoffeeBeanManager } = await import('@/lib/managers/coffeeBeanManager');
+
+                const oldCoffeeAmount = CapacitySyncManager.extractCoffeeAmount(initialData.params?.coffee || '0g');
+                const newCoffeeAmount = CapacitySyncManager.extractCoffeeAmount(methodParams.coffee);
+                const amountDiff = newCoffeeAmount - oldCoffeeAmount;
+
+                if (Math.abs(amountDiff) > 0.01) {
+                    if (amountDiff > 0) {
+                        await CoffeeBeanManager.updateBeanRemaining(initialData.beanId, amountDiff);
+                    } else {
+                        await CoffeeBeanManager.increaseBeanRemaining(initialData.beanId, Math.abs(amountDiff));
+                    }
+                }
+            } catch (error) {
+                console.error('同步咖啡豆容量失败:', error);
+            }
+        }
 
         // 创建完整的笔记数据
         const noteData: BrewingNoteData = {
@@ -620,7 +709,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         try {
             // 保存笔记
             onSave(noteData);
-            
+
             // 如果提供了保存成功的回调，则调用它
             if (onSaveSuccess) {
                 onSaveSuccess();
@@ -874,30 +963,29 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                         </div>
                     )}
                     <div className="grid grid-cols-4 gap-6">
-                        <div>
+                        <div className="relative">
                             <input
                                 type="text"
-                                value={methodParams.coffee}
+                                inputMode="decimal"
+                                value={numericValues.coffee}
                                 onChange={(e) => handleCoffeeChange(e.target.value)}
-                                className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-hidden transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
-                                placeholder="咖啡粉量 (如: 15g)"
+                                className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-hidden transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none pr-4"
+                                placeholder="15"
                             />
+                            <span className="absolute right-0 bottom-2 text-xs text-neutral-400 dark:text-neutral-500">g</span>
                         </div>
-                        <div>
-                            <input
-                                type="text"
-                                value={methodParams.ratio}
-                                onChange={(e) => {
-                                    const newRatio = e.target.value;
-                                    setMethodParams(prev => ({
-                                        ...prev,
-                                        ratio: newRatio,
-                                        water: calculateWater(prev.coffee, newRatio)
-                                    }));
-                                }}
-                                className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-hidden transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
-                                placeholder="粉水比 (如: 1:15)"
-                            />
+                        <div className="relative">
+                            <div className="flex items-center">
+                                <span className="text-xs text-neutral-400 dark:text-neutral-500 mr-1">1:</span>
+                                <input
+                                    type="text"
+                                    inputMode="decimal"
+                                    value={numericValues.ratio}
+                                    onChange={(e) => handleRatioChange(e.target.value)}
+                                    className="flex-1 border-b border-neutral-200 bg-transparent py-2 text-xs outline-hidden transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
+                                    placeholder="15"
+                                />
+                            </div>
                         </div>
                         <div>
                             <input
@@ -905,17 +993,19 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                                 value={methodParams.grindSize}
                                 onChange={(e) => setMethodParams({...methodParams, grindSize: e.target.value})}
                                 className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-hidden transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
-                                placeholder="研磨度 (如: 中细)"
+                                placeholder="中细"
                             />
                         </div>
-                        <div>
+                        <div className="relative">
                             <input
                                 type="text"
-                                value={methodParams.temp}
-                                onChange={(e) => setMethodParams({...methodParams, temp: e.target.value})}
-                                className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-hidden transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
-                                placeholder="水温 (如: 92°C)"
+                                inputMode="decimal"
+                                value={numericValues.temp}
+                                onChange={(e) => handleTempChange(e.target.value)}
+                                className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-hidden transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none pr-8"
+                                placeholder="92"
                             />
+                            <span className="absolute right-0 bottom-2 text-xs text-neutral-400 dark:text-neutral-500">°C</span>
                         </div>
                     </div>
                 </div>

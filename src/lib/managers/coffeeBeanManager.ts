@@ -22,6 +22,36 @@ const getStorage = async () => {
 };
 
 /**
+ * 容量同步管理器 - 处理笔记与咖啡豆之间的双向数据同步
+ */
+export const CapacitySyncManager = {
+
+
+	/**
+	 * 从笔记参数中提取咖啡粉量（纯数字）
+	 * @param coffeeParam 咖啡参数（如"15g"或"15"）
+	 * @returns 纯数字值
+	 */
+	extractCoffeeAmount(coffeeParam: string): number {
+		if (!coffeeParam) return 0;
+		const match = coffeeParam.match(/(\d+(\.\d+)?)/);
+		return match ? parseFloat(match[0]) : 0;
+	},
+
+	/**
+	 * 格式化咖啡参数为带单位的字符串
+	 * @param amount 数量
+	 * @param unit 单位（默认为'g'）
+	 * @returns 格式化后的字符串
+	 */
+	formatCoffeeParam(amount: number | string, unit: string = 'g'): string {
+		const numAmount = typeof amount === 'number' ? amount : parseFloat(String(amount));
+		if (isNaN(numAmount)) return `0${unit}`;
+		return `${CoffeeBeanManager.formatNumber(numAmount)}${unit}`;
+	}
+};
+
+/**
  * 咖啡豆管理工具类
  */
 export const CoffeeBeanManager = {

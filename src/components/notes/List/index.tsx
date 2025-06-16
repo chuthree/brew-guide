@@ -291,12 +291,14 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
             rating: note.rating,
             taste: note.taste,
             notes: note.notes,
-            totalTime: note.totalTime
+            totalTime: note.totalTime,
+            // 确保包含beanId字段，这是咖啡豆容量同步的关键
+            beanId: note.beanId
         };
-        
+
         // 设置编辑笔记数据
         setEditingNote(noteToEdit);
-        
+
         // 如果提供了导航栏替代头部功能，则启用
         if (setAlternativeHeaderContent && setShowAlternativeHeader) {
             setShowAlternativeHeader(true);
