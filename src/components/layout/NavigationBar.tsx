@@ -659,7 +659,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
         }
     }
 
-    const shouldShowContent = activeMainTab === '冲煮' && (!isTimerRunning || showComplete)
+    const shouldShowContent = activeMainTab === '冲煮' && (!isTimerRunning || showComplete || activeBrewingStep === 'notes')
     const shouldShowParams = parameterInfo.method
 
     const handleTimeChange = (value: string) => {

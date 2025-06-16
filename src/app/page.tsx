@@ -854,12 +854,15 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
     useEffect(() => {
         if (showComplete && activeMainTab === '冲煮' && activeBrewingStep === 'brewing' && !hasAutoNavigatedToNotes) {
-            const timer = setTimeout(() => {
+            // 确保清理替代头部状态
+            setShowAlternativeHeader(false);
+            setAlternativeHeaderContent(null);
+
+            // 使用setTimeout确保状态更新完成后再跳转
+            setTimeout(() => {
                 navigateToStep('notes', { force: true });
                 setHasAutoNavigatedToNotes(true);
-            }, 1000);
-
-            return () => clearTimeout(timer);
+            }, 0);
         }
     }, [showComplete, activeMainTab, activeBrewingStep, navigateToStep, hasAutoNavigatedToNotes]);
 
@@ -1386,7 +1389,13 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                     setParameterInfo(prevInfo => ({
                         ...prevInfo, // Keep existing equipment name
                         method: selectedMethodObject.name,
-                        params: null // Clear params when method changes
+                        params: {
+                            coffee: selectedMethodObject.params.coffee,
+                            water: selectedMethodObject.params.water,
+                            ratio: selectedMethodObject.params.ratio,
+                            grindSize: selectedMethodObject.params.grindSize,
+                            temp: selectedMethodObject.params.temp,
+                        }
                     }));
                     handleMethodSelectWrapper(methodIndex);
                 }
@@ -1394,11 +1403,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         };
 
         const handleParamsUpdate = (e: CustomEvent) => {
-            // 注意: 暂未实现参数更新逻辑，保留此函数以匹配事件监听需要
-            const { params } = e.detail; // Assuming params is the full params object
+            const { params } = e.detail;
             if (params) {
-                // 将在未来实现
-                console.log("参数更新请求", params);
                 // Update parameterInfo when params change
                 setParameterInfo(prevInfo => ({
                     ...prevInfo, // Keep existing equipment and method
@@ -1670,6 +1676,20 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     // 添加导航栏替代头部相关状态
     const [alternativeHeaderContent, setAlternativeHeaderContent] = useState<ReactNode | null>(null);
     const [showAlternativeHeader, setShowAlternativeHeader] = useState(false);
+
+    // 监听清理替代头部事件
+    useEffect(() => {
+        const handleClearAlternativeHeader = () => {
+            setShowAlternativeHeader(false);
+            setAlternativeHeaderContent(null);
+        };
+
+        window.addEventListener('clearAlternativeHeader', handleClearAlternativeHeader);
+
+        return () => {
+            window.removeEventListener('clearAlternativeHeader', handleClearAlternativeHeader);
+        };
+    }, []);
 
     return (
         <div className="h-full flex flex-col overflow-y-scroll">

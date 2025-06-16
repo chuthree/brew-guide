@@ -16,6 +16,7 @@ export interface AudioState {
     correct: number;
   };
   loaded: boolean;
+  activeSources: AudioBufferSourceNode[]; // 跟踪活跃的音频源
 }
 
 /**
@@ -34,6 +35,7 @@ export const createInitialAudioState = (): AudioState => ({
     correct: 0,
   },
   loaded: false,
+  activeSources: [],
 });
 
 /**
@@ -106,11 +108,49 @@ export const resumeAudioContext = (audioState: AudioState): void => {
 /**
  * 清理音频系统
  */
-export const cleanupAudioSystem = (audioState: AudioState): void => {
+export const cleanupAudioSystem = (audioState: AudioState, immediate: boolean = false): void => {
   if (audioState.audioContext) {
-    audioState.audioContext.close().catch(() => {
-      // 静默处理错误
-    });
+    if (immediate) {
+      // 立即停止所有活跃的音频源并清理
+      audioState.activeSources.forEach(source => {
+        try {
+          source.stop();
+        } catch {
+          // 静默处理错误
+        }
+      });
+      audioState.activeSources = [];
+      audioState.audioContext.close().catch(() => {
+        // 静默处理错误
+      });
+    } else {
+      // 智能清理：如果有活跃的音频源，等待它们播放完毕
+      const checkAndCleanup = () => {
+        if (audioState.activeSources.length === 0) {
+          // 没有活跃的音频源，可以安全清理
+          if (audioState.audioContext) {
+            audioState.audioContext.close().catch(() => {
+              // 静默处理错误
+            });
+          }
+        } else {
+          // 还有活跃的音频源，继续等待
+          setTimeout(checkAndCleanup, 100);
+        }
+      };
+
+      // 最多等待3秒，然后强制清理
+      setTimeout(() => {
+        if (audioState.audioContext) {
+          audioState.audioContext.close().catch(() => {
+            // 静默处理错误
+          });
+        }
+      }, 3000);
+
+      // 开始检查
+      checkAndCleanup();
+    }
   }
 };
 
@@ -143,6 +183,25 @@ export const playSound = (
     source.connect(gainNode);
     gainNode.connect(audioState.audioContext.destination);
 
+    // 跟踪活跃的音频源
+    audioState.activeSources.push(source);
+
+    // 当音频播放结束时，从活跃列表中移除
+    source.onended = () => {
+      const index = audioState.activeSources.indexOf(source);
+      if (index > -1) {
+        audioState.activeSources.splice(index, 1);
+      }
+    };
+
+    // 添加错误处理，确保在出错时也能从列表中移除
+    source.onerror = () => {
+      const index = audioState.activeSources.indexOf(source);
+      if (index > -1) {
+        audioState.activeSources.splice(index, 1);
+      }
+    };
+
     source.start(0);
 
     // 更新最后播放时间
@@ -150,4 +209,4 @@ export const playSound = (
   } catch {
     // 静默处理播放失败
   }
-}; 
+};

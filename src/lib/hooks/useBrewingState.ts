@@ -216,11 +216,17 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 			setActiveBrewingStep(step);
 			setActiveTab(STEP_RULES.tabMapping[step]);
 
-			// 更新参数栏
+			// 如果跳转到记录步骤，清理替代头部状态
+			if (step === 'notes') {
+				window.dispatchEvent(new CustomEvent('clearAlternativeHeader'));
+			}
+
+			// 更新参数栏 - 在记录步骤中使用currentBrewingMethod
+			const methodForUpdate = step === 'notes' && currentBrewingMethod ? currentBrewingMethod : selectedMethod;
 			updateParameterInfo(
 				step,
 				selectedEquipment,
-				selectedMethod,
+				methodForUpdate,
 				equipmentList,
 				customEquipments
 			);
@@ -234,6 +240,7 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 			checkPrerequisites,
 			selectedEquipment,
 			selectedMethod,
+			currentBrewingMethod,
 			customEquipments,
 		]
 	);

@@ -8,17 +8,14 @@ import type { Method, Stage } from "@/lib/core/config";
 import type { SettingsOptions } from "@/components/settings/Settings";
 import hapticsUtils from "@/lib/ui/haptics";
 import { equipmentList } from "@/lib/core/config";
-import { 
-  BrewingTimerSettings, 
-  formatTime, 
-  handleScreenWake, 
+import {
+  BrewingTimerSettings,
+  formatTime,
+  handleScreenWake,
   cleanupScreenWake,
   calculateTargetFlowRate,
   // 音频模块
-  createInitialAudioState, 
-  initAudioSystem, 
-  cleanupAudioSystem, 
-  playSound,
+  createInitialAudioState,
   // 阶段处理器
   createExpandedStages,
   getCurrentStageIndex,
@@ -27,12 +24,13 @@ import {
   // 计时器控制器
   startMainTimer as startTimerController,
 } from "@/components/brewing/Timer";
-import type { 
-  ExpandedStage, 
+import type {
+  ExpandedStage,
   LayoutSettings,
   AudioState,
   TimerCallbacks,
 } from "@/components/brewing/Timer";
+import { globalAudioManager } from "@/lib/audio/globalAudioManager";
 
 // 保留布局设置接口的导出，但使用从Timer模块导入的定义
 export type { LayoutSettings } from "@/components/brewing/Timer";
@@ -210,16 +208,16 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     [isHapticsSupported, settings.hapticFeedback]
   );
 
-  // 音频系统初始化
+  // 音频系统初始化 - 使用全局音频管理器
   useEffect(() => {
-    // 初始化音频系统
+    // 初始化全局音频管理器
     const setup = async () => {
-      audioState.current = await initAudioSystem(audioState.current);
+      await globalAudioManager.initialize();
     };
-    
+
     setup();
 
-    // 添加用户交互事件监听器
+    // 添加用户交互事件监听器（仍然需要用于本地音频状态）
     const handleUserInteraction = () => {
       if (audioState.current.audioContext?.state === "suspended") {
         audioState.current.audioContext.resume();
@@ -234,13 +232,20 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     return () => {
       document.removeEventListener("click", handleUserInteraction);
       document.removeEventListener("touchstart", handleUserInteraction);
-      cleanupAudioSystem(audioState.current);
+      // 不再立即清理音频系统，让全局管理器处理
+      // 只在有活跃音频时等待完成
+      if (globalAudioManager.isAudioPlaying()) {
+        globalAudioManager.waitForAudioCompletion().then(() => {
+          // 音频播放完毕后的清理可以在这里进行
+        });
+      }
     };
   }, []);
 
   const playSoundEffect = useCallback(
     (type: "start" | "ding" | "correct") => {
-      playSound(type, audioState.current, settings.notificationSound);
+      // 使用全局音频管理器播放音效
+      globalAudioManager.playSound(type, settings.notificationSound);
     },
     [settings.notificationSound]
   );
@@ -337,9 +342,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     const totalBrewingTime = currentTime;
 
     // 触发触感反馈
-    setTimeout(() => {
-      triggerHaptic("success");
-    }, 20);
+    triggerHaptic("success");
 
     // 播放完成音效
     playSoundEffect("correct");
@@ -512,20 +515,17 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
               }
             }
             
-            // 添加额外的延迟确保倒计时UI完全更新
-            setTimeout(() => {
-              // 确保方法和阶段都存在
-              if (currentBrewingMethod && expandedStagesRef.current.length > 0) {
-                startMainTimer();
-                
-                // 派发事件以确保其他组件收到通知
-                window.dispatchEvent(
-                  new CustomEvent("brewing:mainTimerStarted", {
-                    detail: { started: true },
-                  })
-                );
-              }
-            }, 50);
+            // 确保方法和阶段都存在
+            if (currentBrewingMethod && expandedStagesRef.current.length > 0) {
+              startMainTimer();
+
+              // 派发事件以确保其他组件收到通知
+              window.dispatchEvent(
+                new CustomEvent("brewing:mainTimerStarted", {
+                  detail: { started: true },
+                })
+              );
+            }
           }, 0);
           
           return 0;
@@ -1063,9 +1063,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     window.dispatchEvent(new CustomEvent("brewing:resetAutoNavigation"));
 
     // 触发完成处理
-    setTimeout(() => {
-      handleComplete();
-    }, 100);
+    handleComplete();
   }, [currentBrewingMethod, handleComplete, clearTimerAndStates]);
 
 

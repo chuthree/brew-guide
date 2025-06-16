@@ -457,20 +457,17 @@ export const skipCurrentStage = (
     callbacks.onTimeUpdate(lastStage.endTime);
   }
   
-  // 添加短暂延迟，模拟正常完成过程
-  setTimeout(() => {
-    // 触发完成回调
-    if (callbacks.onComplete) {
-      callbacks.onComplete(lastStage.endTime);
-    }
-    
-    // 派发完成事件
-    window.dispatchEvent(
-      new CustomEvent("brewing:complete", {
-        detail: { skipped: true, totalTime: lastStage.endTime },
-      })
-    );
-  }, 300);
+  // 触发完成回调
+  if (callbacks.onComplete) {
+    callbacks.onComplete(lastStage.endTime);
+  }
+
+  // 派发完成事件
+  window.dispatchEvent(
+    new CustomEvent("brewing:complete", {
+      detail: { skipped: true, totalTime: lastStage.endTime },
+    })
+  );
   
   // 返回更新后的状态
   return {
