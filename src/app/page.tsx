@@ -1672,7 +1672,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     const [showAlternativeHeader, setShowAlternativeHeader] = useState(false);
 
     return (
-        <>
+        <div className="h-full flex flex-col overflow-y-scroll">
             {/* 页面级别的视图选择覆盖层 */}
             <AnimatePresence>
                 {showViewDropdown && activeMainTab === '咖啡豆' && (
@@ -2142,7 +2142,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                         onComplete={handleOnboardingComplete}
                     />
             )}
-        </>
+        </div>
     )
 }
 
