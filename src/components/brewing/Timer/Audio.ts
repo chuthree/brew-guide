@@ -194,14 +194,6 @@ export const playSound = (
       }
     };
 
-    // 添加错误处理，确保在出错时也能从列表中移除
-    source.onerror = () => {
-      const index = audioState.activeSources.indexOf(source);
-      if (index > -1) {
-        audioState.activeSources.splice(index, 1);
-      }
-    };
-
     source.start(0);
 
     // 更新最后播放时间
