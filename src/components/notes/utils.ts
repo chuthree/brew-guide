@@ -59,7 +59,19 @@ export const normalizeEquipmentId = async (equipmentIdOrName: string): Promise<s
 // 计算总咖啡消耗量的函数
 export const calculateTotalCoffeeConsumption = (notes: BrewingNote[]): number => {
     return notes.reduce((total, note) => {
-        if (note.params && note.params.coffee) {
+        // 只排除容量调整记录，快捷扣除记录需要计入统计
+        if (note.source === 'capacity-adjustment') {
+            return total;
+        }
+
+        // 处理快捷扣除记录
+        if (note.source === 'quick-decrement' && note.quickDecrementAmount) {
+            const coffeeAmount = note.quickDecrementAmount;
+            if (!isNaN(coffeeAmount)) {
+                return total + coffeeAmount;
+            }
+        } else if (note.params && note.params.coffee) {
+            // 处理普通冲煮笔记
             // 提取咖啡量中的数字部分
             const match = note.params.coffee.match(/(\d+(\.\d+)?)/);
             if (match) {
@@ -121,17 +133,32 @@ export const calculateTotalCost = async (notes: BrewingNote[]): Promise<number> 
     let totalCost = 0;
 
     for (const note of notes) {
-        const cost = await calculateNoteCost(note);
-        totalCost += cost;
+        // 只排除容量调整记录，快捷扣除记录需要计入统计
+        if (note.source === 'capacity-adjustment') {
+            continue;
+        }
+
+        // 处理快捷扣除记录
+        if (note.source === 'quick-decrement' && note.quickDecrementAmount && note.coffeeBeanInfo?.name) {
+            const coffeeAmount = note.quickDecrementAmount;
+            if (!isNaN(coffeeAmount)) {
+                const unitPrice = await getCoffeeBeanUnitPrice(note.coffeeBeanInfo.name);
+                totalCost += coffeeAmount * unitPrice;
+            }
+        } else {
+            // 处理普通冲煮笔记
+            const cost = await calculateNoteCost(note);
+            totalCost += cost;
+        }
     }
 
     return totalCost;
 };
 
 /**
- * 从笔记中提取咖啡豆使用量
+ * 从笔记中提取咖啡豆使用量或容量变化量
  * @param note 笔记对象
- * @returns 咖啡豆使用量(g)，如果无法提取则返回0
+ * @returns 咖啡豆使用量(g)或容量变化量(g)，如果无法提取则返回0
  */
 export const extractCoffeeAmountFromNote = (note: BrewingNote): number => {
     try {
@@ -149,6 +176,15 @@ export const extractCoffeeAmountFromNote = (note: BrewingNote): number => {
 
             if (!isNaN(amount) && amount > 0) {
                 return amount;
+            }
+        }
+
+        // 处理容量调整笔记 - 优先使用changeRecord中的信息，确保数据一致性
+        if (note.source === 'capacity-adjustment' && note.changeRecord?.capacityAdjustment) {
+            const changeAmount = note.changeRecord.capacityAdjustment.changeAmount;
+            if (typeof changeAmount === 'number' && !isNaN(changeAmount)) {
+                // 对于容量调整记录，返回0，因为它不消耗咖啡豆，删除时使用专门的恢复函数
+                return 0;
             }
         }
 

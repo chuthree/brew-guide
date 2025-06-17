@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, useTransition, useRef } from '
 import { BrewingNote } from '@/lib/core/config'
 import { globalCache } from './globalCache'
 import NoteItem from './NoteItem'
-import QuickDecrementNoteItem from './QuickDecrementNoteItem'
+import ChangeRecordNoteItem from './ChangeRecordNoteItem'
 import { sortNotes } from '../utils'
 import { SortOption } from '../types'
 
@@ -62,29 +62,11 @@ const NotesListView: React.FC<NotesListViewProps> = ({
     const [isLoading, setIsLoading] = useState(false)
     const loaderRef = useRef<HTMLDivElement>(null)
     
-    // 判断笔记是否为简单的快捷扣除笔记（未经详细编辑）
-    const isSimpleQuickDecrementNote = useCallback((note: BrewingNote) => {
-        // 如果不是快捷扣除来源，直接返回false
-        if (note.source !== 'quick-decrement') return false;
-
-        // 检查是否有任何自定义/编辑过的内容
-        const hasCustomContent =
-            // 检查是否有详细评分
-            (note.taste && Object.values(note.taste).some(value => value > 0)) ||
-            // 检查是否有评分
-            note.rating > 0 ||
-            // 检查是否设置了冲煮方法和设备（空字符串和undefined都不算设置）
-            (note.method && note.method.trim() !== '') ||
-            (note.equipment && note.equipment.trim() !== '' && note.equipment !== '未指定') ||
-            // 检查是否有图片
-            !!note.image ||
-            // 检查笔记内容是否已编辑（不是默认的快捷扣除文本格式）
-            (note.notes && !(/^快捷扣除\d+g咖啡豆/.test(note.notes)));
 
 
-
-        // 返回是否是简单笔记（没有自定义内容）
-        return !hasCustomContent;
+    // 判断笔记是否为变动记录（快捷扣除或容量调整）
+    const isChangeRecord = useCallback((note: BrewingNote) => {
+        return note.source === 'quick-decrement' || note.source === 'capacity-adjustment';
     }, []);
     
     // 加载笔记数据
@@ -243,8 +225,8 @@ const NotesListView: React.FC<NotesListViewProps> = ({
         );
     }
 
-    const regularNotes = displayedNotes.filter(note => !isSimpleQuickDecrementNote(note));
-    const quickDecrementNotes = displayedNotes.filter(note => isSimpleQuickDecrementNote(note));
+    const regularNotes = displayedNotes.filter(note => !isChangeRecord(note));
+    const changeRecordNotes = displayedNotes.filter(note => isChangeRecord(note));
 
     return (
         <div className="pb-20">
@@ -265,7 +247,7 @@ const NotesListView: React.FC<NotesListViewProps> = ({
             ))}
             </div>
             {/* 变动记录区域 */}
-            {quickDecrementNotes.length > 0 && (
+            {changeRecordNotes.length > 0 && (
                 <div className="mt-2">
                     <div
                         className="relative flex items-center mb-2 cursor-pointer"
@@ -273,7 +255,7 @@ const NotesListView: React.FC<NotesListViewProps> = ({
                     >
                         <div className="grow border-t border-neutral-200 dark:border-neutral-800"></div>
                         <button className="flex items-center justify-center mx-3 px-2 py-0.5 rounded-sm text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400 transition-colors">
-                            {quickDecrementNotes.length}条变动记录
+                            {changeRecordNotes.length}条变动记录
                             <svg
                                 className={`ml-1 w-3 h-3 transition-transform duration-200 ${showQuickDecrementNotes ? 'rotate-180' : ''}`}
                                 viewBox="0 0 24 24"
@@ -289,8 +271,9 @@ const NotesListView: React.FC<NotesListViewProps> = ({
                     {/* 变动记录列表 - 仅在展开时显示 */}
                     {showQuickDecrementNotes && (
                         <div className="opacity-80">
-                            {quickDecrementNotes.map((note) => (
-                                <QuickDecrementNoteItem
+                            {/* 所有变动记录（快捷扣除和容量调整） */}
+                            {changeRecordNotes.map((note) => (
+                                <ChangeRecordNoteItem
                                     key={note.id}
                                     note={note}
                                     onEdit={onNoteClick}

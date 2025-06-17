@@ -61,6 +61,17 @@ export type ExtendedCoffeeBean = CoffeeBean & {
 	blendComponents?: BlendComponent[];
 }
 
+// 变动记录的详细信息接口
+export interface ChangeRecordDetails {
+	// 容量调整相关
+	capacityAdjustment?: {
+		originalAmount: number; // 原始容量
+		newAmount: number; // 新容量
+		changeAmount: number; // 变化量（正数表示增加，负数表示减少）
+		changeType: 'increase' | 'decrease' | 'set'; // 变化类型：增加、减少、直接设置
+	};
+}
+
 // 修改 BrewingNoteData 接口，避免使用 any
 export interface BrewingNoteData {
 	id: string;
@@ -84,8 +95,14 @@ export interface BrewingNoteData {
 	rating: number;
 	taste: TasteRatings;
 	notes: string;
-	source?: string; // 笔记来源，如'quick-decrement'表示快捷扣除自动生成
-	quickDecrementAmount?: number; // 快捷扣除的数量，仅对source为'quick-decrement'的笔记有效
+	source?: string; // 笔记来源，如'quick-decrement'表示快捷扣除自动生成，'capacity-adjustment'表示容量调整
 	beanId?: string; // 关联的咖啡豆ID
+
+	// 变动记录详细信息
+	changeRecord?: ChangeRecordDetails;
+
+	// 向后兼容的字段（保留现有的快捷扣除字段）
+	quickDecrementAmount?: number; // 快捷扣除的数量，仅对source为'quick-decrement'的笔记有效
+
 	[key: string]: unknown; // 使用 unknown 代替 any
 }

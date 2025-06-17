@@ -83,7 +83,52 @@ const calculateTimeRangeConsumption = async (beans: any[], timeRange: TimeRange)
         let filterCost = 0
 
         filteredNotes.forEach(note => {
-            if (note.params?.coffee) {
+            // 只排除容量调整记录，快捷扣除记录需要计入统计
+            if (note.source === 'capacity-adjustment') {
+                return;
+            }
+
+            // 处理快捷扣除记录
+            if (note.source === 'quick-decrement' && note.quickDecrementAmount) {
+                const coffeeAmount = note.quickDecrementAmount;
+                if (!isNaN(coffeeAmount)) {
+                    consumption += coffeeAmount;
+
+                    // 根据咖啡豆类型判断消耗分类
+                    const bean = note.coffeeBeanInfo?.name ?
+                               beans.find(b => b.name === note.coffeeBeanInfo?.name) : null;
+
+                    const isEspresso = bean?.beanType === 'espresso';
+                    const isFilter = bean?.beanType === 'filter';
+
+                    // 分别统计手冲和意式消耗
+                    if (isEspresso) {
+                        espressoConsumption += coffeeAmount;
+                    } else if (isFilter) {
+                        filterConsumption += coffeeAmount;
+                    }
+
+                    // 计算花费
+                    if (note.coffeeBeanInfo?.name) {
+                        const bean = beans.find(b => b.name === note.coffeeBeanInfo?.name)
+                        if (bean && bean.price && bean.capacity) {
+                            const price = parseFloat(bean.price.toString().replace(/[^\d.]/g, ''))
+                            const capacity = parseFloat(bean.capacity.toString().replace(/[^\d.]/g, ''))
+                            if (!isNaN(price) && !isNaN(capacity) && capacity > 0) {
+                                const noteCost = coffeeAmount * price / capacity
+                                cost += noteCost
+
+                                if (isEspresso) {
+                                    espressoCost += noteCost;
+                                } else if (isFilter) {
+                                    filterCost += noteCost;
+                                }
+                            }
+                        }
+                    }
+                }
+            } else if (note.params?.coffee) {
+                // 处理普通冲煮笔记
                 // 提取咖啡量中的数字部分
                 const match = note.params.coffee.match(/(\d+(\.\d+)?)/);
                 if (match) {
@@ -297,8 +342,12 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
                 const beanNames = filteredBeans.map(bean => bean.name)
                 if (beanNames.length === 0) return 1
 
-                // 筛选出相关的笔记记录
+                // 筛选出相关的笔记记录，只排除容量调整记录
                 let relevantNotes = notes.filter(note => {
+                    // 只排除容量调整记录，快捷扣除记录需要计入统计
+                    if (note.source === 'capacity-adjustment') {
+                        return false;
+                    }
                     return note.coffeeBeanInfo?.name && beanNames.includes(note.coffeeBeanInfo.name)
                 })
 
@@ -387,8 +436,12 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
 
                 if (beanNames.length === 0) return 0
 
-                // 筛选出相关的笔记记录
+                // 筛选出相关的笔记记录，只排除容量调整记录
                 let relevantNotes = notes.filter(note => {
+                    // 只排除容量调整记录，快捷扣除记录需要计入统计
+                    if (note.source === 'capacity-adjustment') {
+                        return false;
+                    }
                     return note.coffeeBeanInfo?.name && beanNames.includes(note.coffeeBeanInfo.name)
                 })
 
@@ -421,7 +474,14 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
                 // 计算总消耗量
                 let totalConsumption = 0
                 relevantNotes.forEach(note => {
-                    if (note.params?.coffee) {
+                    // 处理快捷扣除记录
+                    if (note.source === 'quick-decrement' && note.quickDecrementAmount) {
+                        const coffeeAmount = note.quickDecrementAmount;
+                        if (!isNaN(coffeeAmount)) {
+                            totalConsumption += coffeeAmount;
+                        }
+                    } else if (note.params?.coffee) {
+                        // 处理普通冲煮笔记
                         // 提取咖啡量中的数字部分
                         const match = note.params.coffee.match(/(\d+(\.\d+)?)/)
                         if (match) {

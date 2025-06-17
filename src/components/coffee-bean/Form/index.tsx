@@ -120,6 +120,9 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
     // 添加一个状态来跟踪正在编辑的剩余容量输入
     const [editingRemaining, setEditingRemaining] = useState<string | null>(null);
 
+    // 记录初始剩余容量，用于检测容量变动
+    const initialRemainingRef = useRef<string>(initialBean?.remaining || '');
+
     // 添加拼配成分状态
     const [blendComponents, setBlendComponents] = useState<BlendComponent[]>(() => {
         if (initialBean && initialBean.blendComponents && initialBean.blendComponents.length > 0) {
@@ -441,8 +444,72 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
         setBlendComponents(newComponents);
     };
 
+    // 创建容量调整记录的辅助函数
+    const createCapacityAdjustmentRecord = async (originalAmount: number, newAmount: number) => {
+        const changeAmount = newAmount - originalAmount;
+        const timestamp = Date.now();
+        const changeType = changeAmount > 0 ? 'increase' : changeAmount < 0 ? 'decrease' : 'set';
+
+        // 简化备注内容
+        const noteContent = '容量调整(不计入统计)';
+
+        // 创建容量调整记录（简化版本，参考快捷扣除记录）
+        const adjustmentRecord = {
+            id: timestamp.toString(),
+            timestamp,
+            source: 'capacity-adjustment',
+            beanId: initialBean!.id,
+            equipment: '',
+            method: '',
+            coffeeBeanInfo: {
+                name: initialBean!.name || '',
+                roastLevel: initialBean!.roastLevel || '中度烘焙',
+                roastDate: initialBean!.roastDate
+            },
+            notes: noteContent,
+            rating: 0,
+            taste: { acidity: 0, sweetness: 0, bitterness: 0, body: 0 },
+            params: {
+                coffee: `${Math.abs(changeAmount)}g`,
+                water: '',
+                ratio: '',
+                grindSize: '',
+                temp: ''
+            },
+            totalTime: 0,
+            changeRecord: {
+                capacityAdjustment: {
+                    originalAmount,
+                    newAmount,
+                    changeAmount,
+                    changeType
+                }
+            }
+        };
+
+        // 保存记录（参考快捷扣除记录的保存方式）
+        const { Storage } = await import('@/lib/core/storage');
+        const existingNotesStr = await Storage.get('brewingNotes');
+        const existingNotes = existingNotesStr ? JSON.parse(existingNotesStr) : [];
+        const updatedNotes = [adjustmentRecord, ...existingNotes];
+
+        // 更新全局缓存
+        try {
+            const { globalCache } = await import('@/components/notes/List/globalCache');
+            globalCache.notes = updatedNotes;
+
+            const { calculateTotalCoffeeConsumption } = await import('@/components/notes/List/globalCache');
+            globalCache.totalConsumption = calculateTotalCoffeeConsumption(updatedNotes);
+        } catch (error) {
+            console.error('更新全局缓存失败:', error);
+        }
+
+        await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
+        console.log('容量调整记录创建成功:', noteContent);
+    };
+
     // 提交表单
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         validateRemaining();
 
         // 保存自定义的预设值
@@ -462,6 +529,23 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                 addCustomPreset('varieties', component.variety);
             }
         });
+
+        // 如果是编辑模式且容量发生变化，创建容量变动记录
+        if (initialBean && initialBean.id) {
+            try {
+                const originalAmount = parseFloat(initialRemainingRef.current || '0');
+                const newAmount = parseFloat(bean.remaining || '0');
+                const changeAmount = newAmount - originalAmount;
+
+                // 检查是否有有效的变化（避免微小的浮点数差异）
+                if (!isNaN(originalAmount) && !isNaN(newAmount) && Math.abs(changeAmount) >= 0.01) {
+                    await createCapacityAdjustmentRecord(originalAmount, newAmount);
+                }
+            } catch (error) {
+                console.error('创建容量变动记录失败:', error);
+                // 不阻止保存流程，只记录错误
+            }
+        }
 
         // 统一使用成分属性
         onSave({

@@ -60,6 +60,20 @@ export interface CustomEquipment extends Equipment {
 	}>; // 自定义注水动画配置
 }
 
+// 直接定义变动记录相关类型，避免循环导入
+interface ChangeRecordDetails {
+	// 快捷扣除相关
+	quickDecrementAmount?: number; // 快捷扣除的数量
+
+	// 容量调整相关
+	capacityAdjustment?: {
+		originalAmount: number; // 原始容量
+		newAmount: number; // 新容量
+		changeAmount: number; // 变化量（正数表示增加，负数表示减少）
+		changeType: 'increase' | 'decrease' | 'set'; // 变化类型：增加、减少、直接设置
+	};
+}
+
 export interface BrewingNote {
 	id: string;
 	timestamp: number;
@@ -87,9 +101,14 @@ export interface BrewingNote {
 	};
 	notes: string;
 	totalTime: number;
-	source?: string;                // 笔记来源，如'quick-decrement'表示快捷扣除自动生成
-	quickDecrementAmount?: number;  // 快捷扣除的数量，仅对source为'quick-decrement'的笔记有效
+	source?: string;                // 笔记来源，如'quick-decrement'表示快捷扣除自动生成，'capacity-adjustment'表示容量调整
 	beanId?: string;                // 关联的咖啡豆ID
+
+	// 变动记录详细信息
+	changeRecord?: ChangeRecordDetails;
+
+	// 向后兼容的字段（保留现有的快捷扣除字段）
+	quickDecrementAmount?: number;  // 快捷扣除的数量，仅对source为'quick-decrement'的笔记有效
 }
 
 // Grinder Types

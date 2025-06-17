@@ -664,8 +664,8 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
 
-        // 编辑笔记时同步咖啡豆容量
-        if (initialData.id && initialData.beanId) {
+        // 编辑笔记时同步咖啡豆容量（容量调整记录除外）
+        if (initialData.id && initialData.beanId && initialData.source !== 'capacity-adjustment') {
             try {
                 const { CapacitySyncManager, CoffeeBeanManager } = await import('@/lib/managers/coffeeBeanManager');
 
@@ -703,7 +703,17 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
             },
             totalTime: initialData.totalTime,
             // 确保保留beanId，这是与咖啡豆的关联字段
-            beanId: initialData.beanId
+            beanId: initialData.beanId,
+            // 保留容量调整记录的特殊属性
+            ...(initialData.source === 'capacity-adjustment' ? {
+                source: initialData.source,
+                changeRecord: initialData.changeRecord
+            } : {}),
+            // 保留快捷扣除记录的特殊属性
+            ...(initialData.source === 'quick-decrement' ? {
+                source: initialData.source,
+                quickDecrementAmount: initialData.quickDecrementAmount
+            } : {})
         };
 
         try {

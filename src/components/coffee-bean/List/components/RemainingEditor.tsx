@@ -238,9 +238,7 @@ const RemainingEditor: React.FC<RemainingEditorProps> = ({
                     roastLevel: coffeeBean.roastLevel || '中度烘焙',
                     roastDate: coffeeBean.roastDate
                 },
-                notes: actualAmount < requestedAmount
-                    ? `快捷扣除${actualAmount}g咖啡豆（剩余不足，已全部扣除）`
-                    : `快捷扣除${actualAmount}g咖啡豆`,
+                notes: '快捷扣除',
                 rating: 0,
                 taste: { acidity: 0, sweetness: 0, bitterness: 0, body: 0 },
                 params: {

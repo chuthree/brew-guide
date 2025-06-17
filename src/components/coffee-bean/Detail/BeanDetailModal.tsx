@@ -319,7 +319,18 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
             (!note.method || note.method.trim() === '') &&
             (!note.equipment || note.equipment.trim() === '' || note.equipment === '未指定') &&
             !note.image &&
-            note.notes && /^快捷扣除\d+g咖啡豆/.test(note.notes))
+            note.notes === '快捷扣除')
+    }
+
+    // 判断是否为简单的容量调整记录
+    const isSimpleCapacityAdjustmentNote = (note: BrewingNote): boolean => {
+        return !!(note.source === 'capacity-adjustment' &&
+            !(note.taste && Object.values(note.taste).some(value => value > 0)) &&
+            note.rating === 0 &&
+            (!note.method || note.method.trim() === '') &&
+            (!note.equipment || note.equipment.trim() === '' || note.equipment === '未指定') &&
+            !note.image &&
+            note.notes === '容量调整(不计入统计)')
     }
 
     // 获取相关的冲煮记录
@@ -519,25 +530,57 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                             ) : (
                                 <div className="space-y-2">
                                     {relatedNotes.map((note) => {
-                                        const isQuickDecrement = isSimpleQuickDecrementNote(note)
+                                        const isChangeRecord = isSimpleQuickDecrementNote(note) || isSimpleCapacityAdjustmentNote(note)
 
                                         return (
                                             <div key={note.id} className="p-2 bg-neutral-100 dark:bg-neutral-700/50 border border-neutral-200/30 dark:border-neutral-800/30 rounded">
-                                                {isQuickDecrement ? (
-                                                    // 快捷扣除记录
-                                                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                                                {isChangeRecord ? (
+                                                    // 变动记录（快捷扣除和容量调整）
+                                                    <div className="flex items-center gap-3 flex-1 min-w-0">
                                                         {/* 咖啡豆名称 */}
-                                                        <div className="text-xs font-medium truncate text-neutral-800 dark:text-neutral-100">
+                                                        <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100 flex-shrink-0">
                                                             {bean?.name || '咖啡豆'}
                                                         </div>
 
-                                                        {/* 扣除量 */}
-                                                        <div className="text-xs font-medium bg-neutral-100 dark:bg-neutral-800 px-2 py-px rounded-xs text-neutral-600 dark:text-neutral-400 whitespace-nowrap">
-                                                            -{note.quickDecrementAmount || 0}g
-                                                        </div>
+                                                        {/* 变动量标签 */}
+                                                        {(() => {
+                                                            let displayLabel = '0g'
+
+                                                            if (note.source === 'quick-decrement') {
+                                                                // 快捷扣除记录
+                                                                const amount = note.quickDecrementAmount || 0
+                                                                displayLabel = `-${amount}g`
+                                                            } else if (note.source === 'capacity-adjustment') {
+                                                                // 容量调整记录
+                                                                const capacityAdjustment = note.changeRecord?.capacityAdjustment
+                                                                const changeAmount = capacityAdjustment?.changeAmount || 0
+                                                                const changeType = capacityAdjustment?.changeType || 'set'
+
+                                                                if (changeType === 'increase') {
+                                                                    displayLabel = `+${Math.abs(changeAmount)}g`
+                                                                } else if (changeType === 'decrease') {
+                                                                    displayLabel = `-${Math.abs(changeAmount)}g`
+                                                                } else {
+                                                                    displayLabel = `${capacityAdjustment?.newAmount || 0}g`
+                                                                }
+                                                            }
+
+                                                            return (
+                                                                <div className="text-xs font-medium bg-neutral-100 dark:bg-neutral-800 px-2 py-px rounded-xs text-neutral-600 dark:text-neutral-400 whitespace-nowrap">
+                                                                    {displayLabel}
+                                                                </div>
+                                                            )
+                                                        })()}
+
+                                                        {/* 备注 */}
+                                                        {note.notes && (
+                                                            <div className="text-xs text-neutral-500 dark:text-neutral-400 truncate flex-1 min-w-0">
+                                                                {note.notes}
+                                                            </div>
+                                                        )}
 
                                                         {/* 日期 */}
-                                                        <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400 whitespace-nowrap">
+                                                        <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400 whitespace-nowrap flex-shrink-0 ml-auto">
                                                             {formatDate(note.timestamp)}
                                                         </div>
                                                     </div>

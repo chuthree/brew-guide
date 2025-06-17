@@ -5,7 +5,7 @@ import { formatDate } from '../utils'
 import ActionMenu from '@/components/coffee-bean/ui/action-menu'
 import { BrewingNote } from '@/lib/core/config'
 
-interface QuickDecrementNoteItemProps {
+interface ChangeRecordNoteItemProps {
     note: BrewingNote
     onEdit?: (note: BrewingNote) => void
     onDelete?: (noteId: string) => Promise<void>
@@ -14,7 +14,7 @@ interface QuickDecrementNoteItemProps {
     onToggleSelect?: (noteId: string, enterShareMode?: boolean) => void
 }
 
-const QuickDecrementNoteItem: React.FC<QuickDecrementNoteItemProps> = ({
+const ChangeRecordNoteItem: React.FC<ChangeRecordNoteItemProps> = ({
     note,
     onEdit,
     onDelete,
@@ -24,8 +24,31 @@ const QuickDecrementNoteItem: React.FC<QuickDecrementNoteItemProps> = ({
 }) => {
     // 获取笔记的关键信息
     const beanName = note.coffeeBeanInfo?.name || '未知咖啡豆'
-    const amount = note.quickDecrementAmount || 0
     const dateFormatted = note.timestamp ? formatDate(note.timestamp) : ''
+    
+    // 根据记录类型生成显示标签
+    const getDisplayLabel = () => {
+        if (note.source === 'quick-decrement') {
+            // 快捷扣除记录
+            const amount = note.quickDecrementAmount || 0
+            return `-${amount}g`
+        } else if (note.source === 'capacity-adjustment') {
+            // 容量调整记录
+            const capacityAdjustment = note.changeRecord?.capacityAdjustment
+            const changeAmount = capacityAdjustment?.changeAmount || 0
+            const changeType = capacityAdjustment?.changeType || 'set'
+            
+            if (changeType === 'increase') {
+                return `+${Math.abs(changeAmount)}g`
+            } else if (changeType === 'decrease') {
+                return `-${Math.abs(changeAmount)}g`
+            } else {
+                return `${capacityAdjustment?.newAmount || 0}g`
+            }
+        }
+        
+        return '0g'
+    }
     
     // 处理点击事件
     const handleClick = () => {
@@ -44,19 +67,26 @@ const QuickDecrementNoteItem: React.FC<QuickDecrementNoteItemProps> = ({
         >
             <div className="flex items-center justify-between">
                 {/* 左侧信息区域 */}
-                <div className="flex items-center gap-2 flex-1 min-w-0">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
                     {/* 咖啡豆名称 */}
-                    <div className="text-xs font-medium truncate text-neutral-800 dark:text-neutral-100">
+                    <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100 flex-shrink-0">
                         {beanName}
                     </div>
-                    
-                    {/* 扣除量 */}
+
+                    {/* 变动量标签 */}
                     <div className="text-xs font-medium bg-neutral-100 dark:bg-neutral-800 px-2 py-px rounded-xs text-neutral-600 dark:text-neutral-400 whitespace-nowrap">
-                        -{amount}g
+                        {getDisplayLabel()}
                     </div>
-                    
+
+                    {/* 备注 */}
+                    {note.notes && (
+                        <div className="text-xs text-neutral-500 dark:text-neutral-400 truncate flex-1 min-w-0">
+                            {note.notes}
+                        </div>
+                    )}
+
                     {/* 日期 */}
-                    <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400 whitespace-nowrap">
+                    <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400 whitespace-nowrap flex-shrink-0 ml-auto">
                         {dateFormatted}
                     </div>
                 </div>
@@ -106,4 +136,4 @@ const QuickDecrementNoteItem: React.FC<QuickDecrementNoteItemProps> = ({
     )
 }
 
-export default QuickDecrementNoteItem 
+export default ChangeRecordNoteItem

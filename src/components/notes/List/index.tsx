@@ -8,6 +8,7 @@ import FilterTabs from './FilterTabs'
 import AddNoteButton from './AddNoteButton'
 import Toast from '../ui/Toast'
 import { BrewingNoteForm } from '@/components/notes'
+import ChangeRecordEditForm from '../Form/ChangeRecordEditForm'
 import { BrewingNoteData } from '@/types/app'
 import { getEquipmentName, normalizeEquipmentId, sortNotes } from '../utils'
 import { globalCache, saveSelectedEquipmentPreference, saveSelectedBeanPreference, saveFilterModePreference, saveSortOptionPreference, calculateTotalCoffeeConsumption, formatConsumption, initializeGlobalCache } from './globalCache'
@@ -36,6 +37,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     const [selectedEquipment, setSelectedEquipment] = useState<string | null>(globalCache.selectedEquipment)
     const [selectedBean, setSelectedBean] = useState<string | null>(globalCache.selectedBean)
     const [editingNote, setEditingNote] = useState<BrewingNoteData | null>(null)
+    const [editingChangeRecord, setEditingChangeRecord] = useState<BrewingNote | null>(null)
     
     // 分享模式状态
     const [isShareMode, setIsShareMode] = useState(false)
@@ -238,21 +240,57 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                 return;
             }
 
-            // 提取咖啡豆使用量和关联的咖啡豆ID
-            const { extractCoffeeAmountFromNote, getNoteAssociatedBeanId } = await import('../utils');
-            const coffeeAmount = extractCoffeeAmountFromNote(noteToDelete);
-            const beanId = getNoteAssociatedBeanId(noteToDelete);
+            // 恢复咖啡豆容量（根据笔记类型采用不同的恢复策略）
+            try {
+                if (noteToDelete.source === 'capacity-adjustment') {
+                    // 处理容量调整记录的恢复（简化版本）
+                    const beanId = noteToDelete.beanId;
+                    const capacityAdjustment = noteToDelete.changeRecord?.capacityAdjustment;
 
-            // 恢复咖啡豆容量（如果有关联的咖啡豆和使用量）
-            if (beanId && coffeeAmount > 0) {
-                try {
-                    const { CoffeeBeanManager } = await import('@/lib/managers/coffeeBeanManager');
-                    await CoffeeBeanManager.increaseBeanRemaining(beanId, coffeeAmount);
-                    console.log(`删除笔记时恢复咖啡豆容量: ${coffeeAmount}g`);
-                } catch (error) {
-                    console.error('恢复咖啡豆容量失败:', error);
-                    // 容量恢复失败不应阻止笔记删除，但需要记录错误
+                    if (beanId && capacityAdjustment) {
+                        const changeAmount = capacityAdjustment.changeAmount;
+                        if (typeof changeAmount === 'number' && !isNaN(changeAmount) && changeAmount !== 0) {
+                            const { CoffeeBeanManager } = await import('@/lib/managers/coffeeBeanManager');
+
+                            // 获取当前咖啡豆信息
+                            const currentBean = await CoffeeBeanManager.getBeanById(beanId);
+                            if (currentBean) {
+                                const currentRemaining = parseFloat(currentBean.remaining || '0');
+                                const restoredRemaining = currentRemaining - changeAmount; // 反向操作
+                                let finalRemaining = Math.max(0, restoredRemaining);
+
+                                // 确保不超过总容量
+                                if (currentBean.capacity) {
+                                    const totalCapacity = parseFloat(currentBean.capacity);
+                                    if (!isNaN(totalCapacity) && totalCapacity > 0) {
+                                        finalRemaining = Math.min(finalRemaining, totalCapacity);
+                                    }
+                                }
+
+                                const formattedRemaining = CoffeeBeanManager.formatNumber(finalRemaining);
+                                await CoffeeBeanManager.updateBean(beanId, {
+                                    remaining: formattedRemaining
+                                });
+
+                                console.log(`删除容量调整记录时恢复咖啡豆容量: ${changeAmount > 0 ? '-' : '+'}${Math.abs(changeAmount)}g`);
+                            }
+                        }
+                    }
+                } else {
+                    // 处理快捷扣除记录和普通笔记的恢复
+                    const { extractCoffeeAmountFromNote, getNoteAssociatedBeanId } = await import('../utils');
+                    const coffeeAmount = extractCoffeeAmountFromNote(noteToDelete);
+                    const beanId = getNoteAssociatedBeanId(noteToDelete);
+
+                    if (beanId && coffeeAmount > 0) {
+                        const { CoffeeBeanManager } = await import('@/lib/managers/coffeeBeanManager');
+                        await CoffeeBeanManager.increaseBeanRemaining(beanId, coffeeAmount);
+                        console.log(`删除笔记时恢复咖啡豆容量: ${coffeeAmount}g`);
+                    }
                 }
+            } catch (error) {
+                console.error('恢复咖啡豆容量失败:', error);
+                // 容量恢复失败不应阻止笔记删除，但需要记录错误
             }
 
             // 删除笔记
@@ -274,30 +312,38 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         }
     };
     
-    // 处理笔记点击 - 添加导航栏替代头部支持
+    // 处理笔记点击 - 区分变动记录和普通笔记
     const handleNoteClick = (note: BrewingNote) => {
-        // 准备要编辑的笔记数据
-        const noteToEdit = {
-            id: note.id,
-            timestamp: note.timestamp,
-            equipment: note.equipment,
-            method: note.method,
-            params: note.params,
-            coffeeBeanInfo: note.coffeeBeanInfo || {
-                name: '', // 提供默认值
-                roastLevel: ''
-            },
-            image: note.image,
-            rating: note.rating,
-            taste: note.taste,
-            notes: note.notes,
-            totalTime: note.totalTime,
-            // 确保包含beanId字段，这是咖啡豆容量同步的关键
-            beanId: note.beanId
-        };
+        // 检查是否为变动记录
+        const isChangeRecord = note.source === 'quick-decrement' || note.source === 'capacity-adjustment';
 
-        // 设置编辑笔记数据
-        setEditingNote(noteToEdit);
+        if (isChangeRecord) {
+            // 设置编辑变动记录
+            setEditingChangeRecord(note);
+        } else {
+            // 准备要编辑的普通笔记数据
+            const noteToEdit = {
+                id: note.id,
+                timestamp: note.timestamp,
+                equipment: note.equipment,
+                method: note.method,
+                params: note.params,
+                coffeeBeanInfo: note.coffeeBeanInfo || {
+                    name: '', // 提供默认值
+                    roastLevel: ''
+                },
+                image: note.image,
+                rating: note.rating,
+                taste: note.taste,
+                notes: note.notes,
+                totalTime: note.totalTime,
+                // 确保包含beanId字段，这是咖啡豆容量同步的关键
+                beanId: note.beanId
+            };
+
+            // 设置编辑普通笔记数据
+            setEditingNote(noteToEdit);
+        }
 
         // 如果提供了导航栏替代头部功能，则启用
         if (setAlternativeHeaderContent && setShowAlternativeHeader) {
@@ -351,6 +397,113 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
             showToast('更新笔记失败', 'error')
         }
     }
+
+    // 处理变动记录保存
+    const handleSaveChangeRecord = async (updatedRecord: BrewingNote) => {
+        try {
+            // 获取现有笔记
+            const { Storage } = await import('@/lib/core/storage');
+            const savedNotes = await Storage.get('brewingNotes')
+            let parsedNotes: BrewingNote[] = savedNotes ? JSON.parse(savedNotes) : []
+
+            // 找到原始记录以计算容量变化差异
+            const originalRecord = parsedNotes.find(note => note.id === updatedRecord.id);
+
+            // 同步咖啡豆容量变化
+            if (originalRecord && updatedRecord.beanId) {
+                try {
+                    const { CoffeeBeanManager } = await import('@/lib/managers/coffeeBeanManager');
+
+                    // 计算原始变化量和新变化量
+                    let originalChangeAmount = 0;
+                    let newChangeAmount = 0;
+
+                    if (originalRecord.source === 'quick-decrement') {
+                        originalChangeAmount = -(originalRecord.quickDecrementAmount || 0);
+                    } else if (originalRecord.source === 'capacity-adjustment') {
+                        originalChangeAmount = originalRecord.changeRecord?.capacityAdjustment?.changeAmount || 0;
+                    }
+
+                    if (updatedRecord.source === 'quick-decrement') {
+                        newChangeAmount = -(updatedRecord.quickDecrementAmount || 0);
+                    } else if (updatedRecord.source === 'capacity-adjustment') {
+                        newChangeAmount = updatedRecord.changeRecord?.capacityAdjustment?.changeAmount || 0;
+                    }
+
+                    // 计算需要调整的容量差异
+                    const capacityDiff = newChangeAmount - originalChangeAmount;
+
+                    if (Math.abs(capacityDiff) > 0.01) {
+                        // 获取当前咖啡豆信息
+                        const currentBean = await CoffeeBeanManager.getBeanById(updatedRecord.beanId);
+                        if (currentBean) {
+                            const currentRemaining = parseFloat(currentBean.remaining || '0');
+                            const newRemaining = Math.max(0, currentRemaining + capacityDiff);
+
+                            // 确保不超过总容量
+                            let finalRemaining = newRemaining;
+                            if (currentBean.capacity) {
+                                const totalCapacity = parseFloat(currentBean.capacity);
+                                if (!isNaN(totalCapacity) && totalCapacity > 0) {
+                                    finalRemaining = Math.min(finalRemaining, totalCapacity);
+                                }
+                            }
+
+                            const formattedRemaining = CoffeeBeanManager.formatNumber(finalRemaining);
+                            await CoffeeBeanManager.updateBean(updatedRecord.beanId, {
+                                remaining: formattedRemaining
+                            });
+
+                            console.log(`变动记录编辑：容量调整 ${capacityDiff > 0 ? '+' : ''}${capacityDiff}g`);
+                        }
+                    }
+                } catch (error) {
+                    console.error('同步咖啡豆容量失败:', error);
+                    // 不阻止记录保存，但显示警告
+                    showToast('记录已保存，但容量同步失败', 'error');
+                }
+            }
+
+            // 查找并更新指定变动记录
+            parsedNotes = parsedNotes.map(note => {
+                if (note.id === updatedRecord.id) {
+                    return updatedRecord
+                }
+                return note
+            })
+
+            // 立即更新全局缓存
+            globalCache.notes = parsedNotes;
+
+            // 重新计算总消耗量
+            globalCache.totalConsumption = calculateTotalCoffeeConsumption(parsedNotes);
+
+            // 使用统一的数据处理函数
+            updateNotesData();
+
+            // 保存更新后的笔记 - Storage.set() 会自动触发事件
+            await Storage.set('brewingNotes', JSON.stringify(parsedNotes))
+
+            // 关闭编辑
+            setEditingChangeRecord(null)
+
+            // 如果提供了导航栏替代头部功能，则关闭它
+            if (setShowAlternativeHeader) {
+                setShowAlternativeHeader(false);
+            }
+            if (setAlternativeHeaderContent) {
+                setAlternativeHeaderContent(null);
+            }
+
+            // 显示成功提示
+            showToast('变动记录已更新', 'success')
+        } catch (error) {
+            console.error('更新变动记录失败:', error)
+            showToast('更新变动记录失败', 'error')
+        }
+    }
+
+
     
     // 处理添加笔记
     const handleAddNote = () => {
@@ -368,15 +521,18 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         } : null);
     }, []);
 
-    // 监听editingNote变化，更新替代头部
+    // 监听editingNote和editingChangeRecord变化，更新替代头部
     useEffect(() => {
-        if (editingNote && setAlternativeHeaderContent && setShowAlternativeHeader) {
+        const currentEditingItem = editingNote || editingChangeRecord;
+
+        if (currentEditingItem && setAlternativeHeaderContent && setShowAlternativeHeader) {
             const updatedHeaderContent = (
                 <NoteFormHeader
                     isEditMode={true}
                     onBack={() => {
                         // 关闭编辑并恢复正常导航栏
                         setEditingNote(null);
+                        setEditingChangeRecord(null);
                         setShowAlternativeHeader(false);
                         setAlternativeHeaderContent(null);
                     }}
@@ -388,13 +544,13 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                         }
                     }}
                     showSaveButton={true}
-                    timestamp={new Date(editingNote.timestamp)}
+                    timestamp={new Date(currentEditingItem.timestamp)}
                     onTimestampChange={handleFormTimestampChange}
                 />
             );
             setAlternativeHeaderContent(updatedHeaderContent);
         }
-    }, [editingNote?.timestamp, setAlternativeHeaderContent, setShowAlternativeHeader, handleFormTimestampChange]);
+    }, [editingNote?.timestamp, editingChangeRecord?.timestamp, setAlternativeHeaderContent, setShowAlternativeHeader, handleFormTimestampChange]);
 
     // 统一的数据处理函数 - 处理排序和筛选
     const updateNotesData = useCallback(() => {
@@ -673,6 +829,25 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                     }}
                     onSave={handleSaveEdit}
                     initialData={editingNote}
+                    hideHeader={!!setAlternativeHeaderContent && !!setShowAlternativeHeader}
+                    onTimestampChange={handleFormTimestampChange}
+                />
+            ) : editingChangeRecord ? (
+                <ChangeRecordEditForm
+                    id={editingChangeRecord.id}
+                    isOpen={true}
+                    onClose={() => {
+                        setEditingChangeRecord(null);
+                        // 如果使用了替代头部，同时关闭它
+                        if (setShowAlternativeHeader) {
+                            setShowAlternativeHeader(false);
+                        }
+                        if (setAlternativeHeaderContent) {
+                            setAlternativeHeaderContent(null);
+                        }
+                    }}
+                    onSave={handleSaveChangeRecord}
+                    initialData={editingChangeRecord}
                     hideHeader={!!setAlternativeHeaderContent && !!setShowAlternativeHeader}
                     onTimestampChange={handleFormTimestampChange}
                 />
