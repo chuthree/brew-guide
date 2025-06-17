@@ -156,22 +156,29 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
         const items: InfoItem[] = []
         const flavorInfo = getFlavorInfo()
 
-        // 库存信息
+        // 库存信息 - 显示为：总库存(剩余量)
         if (bean?.capacity && bean?.remaining) {
             items.push({
                 key: 'inventory',
                 label: '库存',
-                value: `${formatNumber(bean.remaining)}g`,
+                value: `${formatNumber(bean.capacity)}g(${formatNumber(bean.remaining)}g)`,
                 type: 'normal'
             })
         }
 
-        // 价格信息
-        if (bean?.price) {
+        // 价格信息 - 显示为：总价(克价)
+        if (bean?.price && bean?.capacity) {
+            const totalPrice = bean.price
+            const capacityNum = parseFloat(bean.capacity)
+            const priceNum = parseFloat(totalPrice)
+            const pricePerGram = !isNaN(priceNum) && !isNaN(capacityNum) && capacityNum > 0
+                ? (priceNum / capacityNum).toFixed(2)
+                : '0.00'
+
             items.push({
                 key: 'price',
                 label: '价格',
-                value: `¥${bean.price}`,
+                value: `¥${totalPrice}(¥${pricePerGram}/g)`,
                 type: 'normal'
             })
         }
