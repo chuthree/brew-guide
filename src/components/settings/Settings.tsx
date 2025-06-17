@@ -425,6 +425,8 @@ const handleChange = async <K extends keyof SettingsOptions>(
                         </button>
                     </div>
 
+
+
                     {showQRCodes && (
                         <div className="mt-4 grid grid-cols-2 gap-4">
                             {qrCodeType === 'appreciation' ? (
@@ -438,7 +440,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                                 className="object-cover"
                                             />
                                         </div>
-                                        <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">赞赏码</p>
+                                        <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">赞赏码（开发不易，希望能支持一下，求求了 www～）</p>
                                     </div>
                                     <div className="flex flex-col items-center opacity-0">
                                         <div className="w-full aspect-square relative rounded-lg overflow-hidden invisible">
@@ -1096,6 +1098,25 @@ const handleChange = async <K extends keyof SettingsOptions>(
                         打开数据管理
                     </button>
                 </div>
+
+                {/* 意见反馈组 */}
+                <div className="px-6 py-4">
+                    <h3 className="text-sm uppercase font-medium tracking-wider text-neutral-500 dark:text-neutral-400 mb-3">
+                        意见反馈
+                    </h3>
+                    <button
+                        onClick={() => {
+                            window.open('https://wj.qq.com/s2/19403076/7f02/', '_blank');
+                            if (settings.hapticFeedback) {
+                                hapticsUtils.light();
+                            }
+                        }}
+                        className="w-full py-3 text-sm font-medium text-neutral-800 bg-neutral-100 rounded-lg transition-colors hover:bg-neutral-200 dark:text-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700"
+                    >
+                        提交反馈
+                    </button>
+                </div>
+
 
                 {/* 版本信息 */}
                 <div className="px-6 pt-12 text-xs text-center text-neutral-400 dark:text-neutral-600">
