@@ -123,7 +123,8 @@ pnpm cap:android
 
 欢迎加入微信交流群，讨论使用体验和功能建议：
 
-![微信交流群](https://github.com/user-attachments/assets/3462bde1-3f5d-4fed-9f61-600de73bdc1a)
+![group-code](https://github.com/user-attachments/assets/8981d69c-5e8d-4595-8244-a7be488230df)
+
 
 ### 贡献指南
 
