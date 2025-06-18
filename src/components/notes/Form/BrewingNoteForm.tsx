@@ -984,15 +984,15 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                             />
                             <span className="absolute right-0 bottom-2 text-xs text-neutral-400 dark:text-neutral-500">g</span>
                         </div>
-                        <div className="relative">
+                        <div className="relative overflow-hidden">
                             <div className="flex items-center">
-                                <span className="text-xs text-neutral-400 dark:text-neutral-500 mr-1">1:</span>
+                                <span className="text-xs text-neutral-400 dark:text-neutral-500 mr-1 flex-shrink-0">1:</span>
                                 <input
                                     type="text"
                                     inputMode="decimal"
                                     value={numericValues.ratio}
                                     onChange={(e) => handleRatioChange(e.target.value)}
-                                    className="flex-1 border-b border-neutral-200 bg-transparent py-2 text-xs outline-hidden transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
+                                    className="flex-1 min-w-0 border-b border-neutral-200 bg-transparent py-2 text-xs outline-hidden transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
                                     placeholder="15"
                                 />
                             </div>

@@ -312,9 +312,9 @@ const StageItem: React.FC<StageItemProps> = ({
                                     {/* 主要描述 - 自然语言 */}
                                     <div className="text-xl font-medium text-neutral-600 dark:text-neutral-400 leading-relaxed">
                                         {compactDesc.isWaitingStep ? (
-                                            // 等待步骤的特殊处理
+                                            // 等待步骤的特殊处理 - 显示原始标题而不是硬编码的"等待"
                                             <>
-                                                <span className="opacity-100">等待</span>
+                                                <span className="opacity-100">{compactDesc.title}</span>
                                                 {compactDesc.timeInfo && (
                                                     <>
                                                         <span className="opacity-80">，持续到 </span>
