@@ -124,11 +124,11 @@ const generateCompactDescription = (step: Step & { time?: number; pourTime?: num
         // 处理格式如 "1'30"" 或 "10""
         if (timeStr.includes("'")) {
             // 有分钟的情况：1'30"
-            const [minutes, seconds] = timeStr.replace('"', '').split("'");
+            const [minutes, seconds] = timeStr.replace(/"/g, '').split("'");
             return { minutes, seconds };
         } else {
             // 只有秒的情况：10"
-            const seconds = timeStr.replace('"', '');
+            const seconds = timeStr.replace(/"/g, '');
             return { minutes: '0', seconds };
         }
     };
