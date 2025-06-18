@@ -98,9 +98,12 @@ const AppLoader = ({ onInitialized }: { onInitialized: (params: { hasBeans: bool
 
                     // 确保brewingNotes存在且格式正确
                     const notes = await Storage.get('brewingNotes');
-                    if (notes) {
+                    if (notes && typeof notes === 'string') {
                         try {
-                            JSON.parse(notes);
+                            const parsed = JSON.parse(notes);
+                            if (!Array.isArray(parsed)) {
+                                await Storage.set('brewingNotes', '[]');
+                            }
                         } catch {
                             await Storage.set('brewingNotes', '[]');
                         }
@@ -287,9 +290,13 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 try {
                     const { Storage } = await import('@/lib/core/storage');
                     const beansStr = await Storage.get('coffeeBeans');
-                    if (beansStr) {
-                        const beans = JSON.parse(beansStr);
-                        hasCoffeeBeans = Array.isArray(beans) && beans.length > 0;
+                    if (beansStr && typeof beansStr === 'string') {
+                        try {
+                            const beans = JSON.parse(beansStr);
+                            hasCoffeeBeans = Array.isArray(beans) && beans.length > 0;
+                        } catch {
+                            hasCoffeeBeans = false;
+                        }
                     }
                 } catch (error) {
                     // Log error in development only
@@ -334,13 +341,17 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 try {
                     const { Storage } = await import('@/lib/core/storage');
                     const savedSettings = await Storage.get('brewGuideSettings');
-                    if (savedSettings && isMounted) {
-                        const parsedSettings = JSON.parse(savedSettings) as SettingsOptions;
-                        setSettings(parsedSettings);
+                    if (savedSettings && typeof savedSettings === 'string' && isMounted) {
+                        try {
+                            const parsedSettings = JSON.parse(savedSettings) as SettingsOptions;
+                            setSettings(parsedSettings);
 
-                        // 应用字体缩放级别
-                        if (parsedSettings.textZoomLevel) {
-                            fontZoomUtils.set(parsedSettings.textZoomLevel);
+                            // 应用字体缩放级别
+                            if (parsedSettings.textZoomLevel) {
+                                fontZoomUtils.set(parsedSettings.textZoomLevel);
+                            }
+                        } catch {
+                            // JSON解析失败，使用默认设置
                         }
                     }
                 } catch {

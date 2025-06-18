@@ -8,6 +8,7 @@ export interface LayoutSettings {
   controlsReversed?: boolean; // 是否反转底部控制区布局
   alwaysShowTimerInfo?: boolean; // 是否始终显示计时器信息区域
   showStageDivider?: boolean; // 是否显示阶段分隔线
+  compactMode?: boolean; // 是否启用简洁模式
 }
 
 interface BrewingTimerSettingsProps {
@@ -217,6 +218,27 @@ const BrewingTimerSettings: React.FC<BrewingTimerSettingsProps> = ({
                     checked={localShowFlowRate || false}
                     onChange={(e) => {
                       handleFlowRateSettingChange(e.target.checked);
+                    }}
+                    className="peer sr-only"
+                  />
+                  <div className="peer h-5 w-9 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500" />
+                </label>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-neutral-700 dark:text-neutral-300">
+                  简洁模式
+                </span>
+                <label className="relative inline-flex cursor-pointer items-center">
+                  <input
+                    type="checkbox"
+                    checked={localLayoutSettings?.compactMode || false}
+                    onChange={(e) => {
+                      const newSettings = {
+                        ...localLayoutSettings,
+                        compactMode: e.target.checked,
+                      };
+                      handleLayoutChange(newSettings);
                     }}
                     className="peer sr-only"
                   />

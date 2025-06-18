@@ -131,6 +131,9 @@ const TabContent: React.FC<TabContentProps> = ({
     // 本地流速显示设置
     const [localShowFlowRate, setLocalShowFlowRate] = useState(settings.showFlowRate);
 
+    // 本地布局设置
+    const [localLayoutSettings, setLocalLayoutSettings] = useState(settings.layoutSettings || {});
+
     // 添加高亮豆子ID状态
     const [highlightedBeanId, setHighlightedBeanId] = useState<string | null>(null);
 
@@ -148,6 +151,11 @@ const TabContent: React.FC<TabContentProps> = ({
         setLocalShowFlowRate(settings.showFlowRate);
     }, [settings.showFlowRate]);
 
+    // 监听布局设置变化
+    useEffect(() => {
+        setLocalLayoutSettings(settings.layoutSettings || {});
+    }, [settings.layoutSettings]);
+
     // 监听流速设置变更事件
     useEffect(() => {
         const handleSettingsChange = (e: CustomEvent) => {
@@ -162,6 +170,23 @@ const TabContent: React.FC<TabContentProps> = ({
         // 清理函数
         return () => {
             window.removeEventListener('brewing:settingsChange', handleSettingsChange as EventListener);
+        };
+    }, []);
+
+    // 监听布局设置变更事件
+    useEffect(() => {
+        const handleLayoutChange = (e: CustomEvent) => {
+            if (e.detail && e.detail.layoutSettings) {
+                setLocalLayoutSettings(e.detail.layoutSettings);
+            }
+        };
+
+        // 添加事件监听
+        window.addEventListener('brewing:layoutChange', handleLayoutChange as EventListener);
+
+        // 清理函数
+        return () => {
+            window.removeEventListener('brewing:layoutChange', handleLayoutChange as EventListener);
         };
     }, []);
 
@@ -736,7 +761,8 @@ const TabContent: React.FC<TabContentProps> = ({
                                 step.originalIndex !== undefined &&
                                 content[activeTab]?.steps[index-1]?.originalIndex !== undefined &&
                                 step.originalIndex !== content[activeTab]?.steps[index-1]?.originalIndex &&
-                                (settings?.layoutSettings?.showStageDivider !== false);
+                                (settings?.layoutSettings?.showStageDivider !== false) &&
+                                !localLayoutSettings.compactMode; // 简洁模式下不显示阶段分隔线
 
                         // 简化的编辑处理函数
                         let editHandler;
@@ -807,6 +833,7 @@ const TabContent: React.FC<TabContentProps> = ({
                                         setActionMenuStates={setActionMenuStates}
                                         showFlowRate={localShowFlowRate}
                                         allSteps={content[activeTab]?.steps || []}
+                                        compactMode={localLayoutSettings.compactMode || false}
                                     />
                                 </React.Fragment>
                             );

@@ -29,6 +29,7 @@ interface StageItemProps {
     setActionMenuStates?: React.Dispatch<React.SetStateAction<Record<string, boolean>>>
     showFlowRate?: boolean
     allSteps?: Step[]
+    compactMode?: boolean
 }
 
 // 辅助函数：格式化时间
@@ -108,6 +109,62 @@ const calculateImprovedFlowRate = (step: Step, allSteps: Step[]) => {
     return currentWater / currentTime;
 }
 
+// 辅助函数：生成简洁模式的自然语言描述
+const generateCompactDescription = (step: Step & { time?: number; pourTime?: number; endTime?: number }, showFlowRate: boolean, allSteps: Step[]) => {
+    if (!step.items || step.items.length === 0) return null;
+
+    const title = step.title || '';
+    const waterAmount = step.items[0] || '';
+    const description = step.items[1] || step.description || '';
+    const isWaitingStep = step.type === 'wait';
+
+    // 获取时间信息
+    let timeInfo = null;
+    const parseTimeString = (timeStr: string) => {
+        // 处理格式如 "1'30"" 或 "10""
+        if (timeStr.includes("'")) {
+            // 有分钟的情况：1'30"
+            const [minutes, seconds] = timeStr.replace('"', '').split("'");
+            return { minutes, seconds };
+        } else {
+            // 只有秒的情况：10"
+            const seconds = timeStr.replace('"', '');
+            return { minutes: '0', seconds };
+        }
+    };
+
+    if (step.endTime !== undefined) {
+        const time = formatTime(step.endTime, true);
+        timeInfo = parseTimeString(time);
+    } else if (step.note) {
+        const time = formatTime(parseInt(String(step.note)), true);
+        timeInfo = parseTimeString(time);
+    } else if (step.time !== undefined) {
+        const time = formatTime(step.time, true);
+        timeInfo = parseTimeString(time);
+    }
+
+    // 获取流速信息
+    let flowRateInfo = null;
+    if (showFlowRate && step.type === 'pour' && step.note) {
+        const flowRate = allSteps.length > 0
+            ? calculateImprovedFlowRate(step, allSteps).toFixed(1)
+            : calculateFlowRate(waterAmount, step.note).toFixed(1);
+        if (flowRate !== '0.0') {
+            flowRateInfo = flowRate;
+        }
+    }
+
+    return {
+        title,
+        timeInfo,
+        waterAmount,
+        flowRateInfo,
+        description,
+        isWaitingStep
+    };
+}
+
 // StageItem组件
 const StageItem: React.FC<StageItemProps> = ({
     step,
@@ -123,7 +180,8 @@ const StageItem: React.FC<StageItemProps> = ({
     actionMenuStates: _actionMenuStates,
     setActionMenuStates: _setActionMenuStates,
     showFlowRate = false,
-    allSteps = []
+    allSteps = [],
+    compactMode = false
 }) => {
     // 添加用于管理分隔符折叠状态的 state
     const [isCommonSectionCollapsed, setIsCommonSectionCollapsed] = useState(false);
@@ -233,8 +291,8 @@ const StageItem: React.FC<StageItemProps> = ({
         }
 
         return (
-            <div className={`group relative border-l ${isWaitingStage ? 'border-dashed' : ''} border-neutral-200 pl-6 dark:border-neutral-800 ${textStyle} ${opacityStyle}`}>
-                {isCurrentStage && (
+            <div className={`group relative ${compactMode && activeTab === '注水' ? '' : `border-l ${isWaitingStage ? 'border-dashed' : ''} border-neutral-200 pl-6 dark:border-neutral-800`} ${textStyle} ${opacityStyle}`}>
+                {isCurrentStage && !compactMode && (
                     <motion.div
                         className={`absolute -left-px top-0 h-full w-px ${isWaitingStage ? 'bg-neutral-600 dark:bg-neutral-400' : 'bg-neutral-800 dark:bg-white'}`}
                         initial={{ scaleY: 0, transformOrigin: "top" }}
@@ -243,79 +301,168 @@ const StageItem: React.FC<StageItemProps> = ({
                     />
                 )}
                 <div className={activeTab !== '注水' ? 'cursor-pointer' : ''} onClick={handleClick}>
-                    <div className="flex items-baseline justify-between">
-                        <div className="flex items-baseline gap-3 min-w-0 overflow-hidden">
-                            {step.icon && (
-                                <span className="text-xs mr-1">{step.icon}</span>
-                            )}
-                            <h3 className={`text-xs font-medium tracking-wider truncate ${titleStyle}`}>
-                                {step.title}
-                            </h3>
-                            {/* 注水阶段显示时间和水量 */}
-                            {activeTab === '注水' && selectedMethod && step.originalIndex !== undefined && step.items && (
-                                <div className="flex items-baseline gap-3 text-xs font-medium text-neutral-800 dark:text-neutral-100 shrink-0">
-                                    {/* 显示时间：优先使用endTime，其次是note，再次是time属性 */}
-                                    {(step.endTime !== undefined || step.note || step.time !== undefined) && (
-                                        <>
-                                            <span>
-                                                {step.endTime !== undefined 
-                                                    ? formatTime(step.endTime, true) 
-                                                    : step.note 
-                                                        ? formatTime(parseInt(String(step.note)), true)
-                                                        : step.time !== undefined 
-                                                            ? formatTime(step.time, true)
-                                                            : ""}
-                                            </span>
-                                            <span>·</span>
-                                        </>
-                                    )}
-                                    <span>{step.items[0]}</span>
-                                    {showFlowRate && step.type === 'pour' && step.note && (
-                                        <>
-                                            <span>·</span>
-                                            <span>
-                                                {allSteps.length > 0 
-                                                    ? calculateImprovedFlowRate(step, allSteps).toFixed(1) 
-                                                    : calculateFlowRate(step.items[0], step.note).toFixed(1)}g/s
-                                            </span>
-                                        </>
+                    {compactMode && activeTab === '注水' && selectedMethod && step.originalIndex !== undefined && step.items ? (
+                        // 简洁模式渲染
+                        (() => {
+                            const compactDesc = generateCompactDescription(step, showFlowRate, allSteps);
+                            if (!compactDesc) return null;
+
+                            return (
+                                <div className="space-y-3 py-3">
+                                    {/* 主要描述 - 自然语言 */}
+                                    <div className="text-xl font-medium text-neutral-600 dark:text-neutral-400 leading-relaxed">
+                                        {compactDesc.isWaitingStep ? (
+                                            // 等待步骤的特殊处理
+                                            <>
+                                                <span className="opacity-100">等待</span>
+                                                {compactDesc.timeInfo && (
+                                                    <>
+                                                        <span className="opacity-80">，持续到 </span>
+                                                        {compactDesc.timeInfo.minutes !== '0' && (
+                                                            <>
+                                                                <span className="opacity-100">{compactDesc.timeInfo.minutes}</span>
+                                                                <span className="opacity-80"> 分 </span>
+                                                            </>
+                                                        )}
+                                                        <span className="opacity-100">{compactDesc.timeInfo.seconds}</span>
+                                                        <span className="opacity-80"> 秒</span>
+                                                    </>
+                                                )}
+                                            </>
+                                        ) : (
+                                            // 注水步骤的正常处理
+                                            <>
+                                                {/* 注水方式 */}
+                                                <span className="opacity-100">{compactDesc.title}</span>
+
+                                                {/* 时间信息 */}
+                                                {compactDesc.timeInfo && (
+                                                    <>
+                                                        <span className="opacity-80">，在 </span>
+                                                        {compactDesc.timeInfo.minutes !== '0' && (
+                                                            <>
+                                                                <span className="opacity-100">{compactDesc.timeInfo.minutes}</span>
+                                                                <span className="opacity-80"> 分 </span>
+                                                            </>
+                                                        )}
+                                                        <span className="opacity-100">{compactDesc.timeInfo.seconds}</span>
+                                                        <span className="opacity-80"> 秒时</span>
+                                                    </>
+                                                )}
+
+                                                {/* 水量信息 */}
+                                                {compactDesc.waterAmount && (
+                                                    <>
+                                                        <span className="opacity-80">，注水量达到 </span>
+                                                        <span className="opacity-100">{compactDesc.waterAmount}</span>
+                                                    </>
+                                                )}
+
+                                                {/* 流速信息 */}
+                                                {compactDesc.flowRateInfo && (
+                                                    <>
+                                                        <span className="opacity-80">，流速 </span>
+                                                        <span className="opacity-100">{compactDesc.flowRateInfo}</span>
+                                                        <span className="opacity-100">g/s</span>
+                                                    </>
+                                                )}
+                                            </>
+                                        )}
+                                    </div>
+
+                                    {/* 详细描述 - 简洁模式下不显示 */}
+
+                                    {/* 操作菜单 */}
+                                    {(onEdit || onDelete || onShare) && (
+                                        <div className="flex items-baseline">
+                                            <ActionMenu
+                                                items={actionMenuItems}
+                                                showAnimation={false}
+                                                onStop={(e) => e.stopPropagation()}
+                                            />
+                                        </div>
                                     )}
                                 </div>
-                            )}
-                        </div>
-                        {step.description && (
-                            <p className={`text-xs font-medium truncate ${textStyle}`}>
-                                {step.description}
-                            </p>
-                        )}
-                        {step.detail && (
-                            <p className={`text-xs font-medium truncate ${textStyle}`}>
-                                {step.detail}
-                            </p>
-                        )}
-                        {(onEdit || onDelete || onShare) && (
-                            <div className="flex items-baseline ml-2 shrink-0">
-                                <ActionMenu
-                                    items={actionMenuItems}
-                                    showAnimation={false}
-                                    onStop={(e) => e.stopPropagation()}
-                                />
+                            );
+                        })()
+                    ) : (
+                        // 原有的标准模式渲染
+                        <>
+                            <div className="flex items-baseline justify-between">
+                                <div className="flex items-baseline gap-3 min-w-0 overflow-hidden">
+                                    {step.icon && (
+                                        <span className="text-xs mr-1">{step.icon}</span>
+                                    )}
+                                    <h3 className={`text-xs font-medium tracking-wider truncate ${titleStyle}`}>
+                                        {step.title}
+                                    </h3>
+                                    {/* 注水阶段显示时间和水量 */}
+                                    {activeTab === '注水' && selectedMethod && step.originalIndex !== undefined && step.items && (
+                                        <div className="flex items-baseline gap-3 text-xs font-medium text-neutral-800 dark:text-neutral-100 shrink-0">
+                                            {/* 显示时间：优先使用endTime，其次是note，再次是time属性 */}
+                                            {(step.endTime !== undefined || step.note || step.time !== undefined) && (
+                                                <>
+                                                    <span>
+                                                        {step.endTime !== undefined
+                                                            ? formatTime(step.endTime, true)
+                                                            : step.note
+                                                                ? formatTime(parseInt(String(step.note)), true)
+                                                                : step.time !== undefined
+                                                                    ? formatTime(step.time, true)
+                                                                    : ""}
+                                                    </span>
+                                                    <span>·</span>
+                                                </>
+                                            )}
+                                            <span>{step.items[0]}</span>
+                                            {showFlowRate && step.type === 'pour' && step.note && (
+                                                <>
+                                                    <span>·</span>
+                                                    <span>
+                                                        {allSteps.length > 0
+                                                            ? calculateImprovedFlowRate(step, allSteps).toFixed(1)
+                                                            : calculateFlowRate(step.items[0], step.note).toFixed(1)}g/s
+                                                    </span>
+                                                </>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                                {step.description && (
+                                    <p className={`text-xs font-medium truncate ${textStyle}`}>
+                                        {step.description}
+                                    </p>
+                                )}
+                                {step.detail && (
+                                    <p className={`text-xs font-medium truncate ${textStyle}`}>
+                                        {step.detail}
+                                    </p>
+                                )}
+                                {(onEdit || onDelete || onShare) && (
+                                    <div className="flex items-baseline ml-2 shrink-0">
+                                        <ActionMenu
+                                            items={actionMenuItems}
+                                            showAnimation={false}
+                                            onStop={(e) => e.stopPropagation()}
+                                        />
+                                    </div>
+                                )}
                             </div>
-                        )}
-                    </div>
-                    <div className="mt-2">
-                        {activeTab === '注水' && step.items ? (
-                            <p className="text-xs font-medium text-neutral-600 dark:text-neutral-400">{step.items[1]}</p>
-                        ) : step.items ? (
-                            <ul className="space-y-1">
-                                {step.items.map((item: string, i: number) => (
-                                    <li key={i} className={`text-xs font-medium ${textStyle}`}>
-                                        {item}
-                                    </li>
-                                ))}
-                            </ul>
-                        ) : null}
-                    </div>
+                            <div className="mt-2">
+                                {activeTab === '注水' && step.items ? (
+                                    <p className="text-xs font-medium text-neutral-600 dark:text-neutral-400">{step.items[1]}</p>
+                                ) : step.items ? (
+                                    <ul className="space-y-1">
+                                        {step.items.map((item: string, i: number) => (
+                                            <li key={i} className={`text-xs font-medium ${textStyle}`}>
+                                                {item}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                ) : null}
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
         )

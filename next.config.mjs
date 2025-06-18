@@ -140,6 +140,36 @@ const nextConfig = {
             ]
         });
 
+        // 修复静态导出时的webpack运行时问题
+        if (config.mode === 'production') {
+            config.optimization = {
+                ...config.optimization,
+                splitChunks: {
+                    ...config.optimization.splitChunks,
+                    cacheGroups: {
+                        ...config.optimization.splitChunks?.cacheGroups,
+                        default: false,
+                        vendors: false,
+                        // 创建一个包含所有vendor代码的chunk
+                        vendor: {
+                            name: 'vendor',
+                            chunks: 'all',
+                            test: /node_modules/,
+                            priority: 20
+                        },
+                        // 创建一个包含公共代码的chunk
+                        common: {
+                            name: 'common',
+                            chunks: 'all',
+                            minChunks: 2,
+                            priority: 10,
+                            reuseExistingChunk: true
+                        }
+                    }
+                }
+            };
+        }
+
         return config;
     }
 };
