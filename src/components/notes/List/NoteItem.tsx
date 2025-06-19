@@ -87,7 +87,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
                     {/* 笔记图片 - 只在有图片时显示 */}
                     {note.image && (
                         <div
-                            className="h-14 overflow-hidden shrink-0 relative cursor-pointer border border-neutral-200 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800"
+                            className="w-14 h-14 relative shrink-0 cursor-pointer rounded border border-neutral-200/50 dark:border-neutral-800/50 bg-neutral-100 dark:bg-neutral-800/20 overflow-hidden"
                             onClick={(e) => {
                                 e.stopPropagation();
                                 if (!imageError) setImageViewerOpen(true);
@@ -101,14 +101,14 @@ const NoteItem: React.FC<NoteItemProps> = ({
                                 <Image
                                     src={note.image}
                                     alt={beanName || '笔记图片'}
-                                    height={56}
-                                    width={56}
+                                    height={48}
+                                    width={48}
                                     unoptimized
-                                    style={{ width: 'auto', height: '100%' }}
+                                    style={{ width: '100%', height: '100%' }}
                                     className="object-cover"
-                                    sizes="56px"
-                                    priority={false}
-                                    loading="lazy"
+                                    sizes="48px"
+                                    priority={true}
+                                    loading="eager"
                                     onError={() => setImageError(true)}
                                 />
                             )}
