@@ -30,169 +30,7 @@ export const CALCULATION_MODE_LABELS: Record<CalculationMode, string> = {
     coffee: '按照咖啡日'
 }
 
-// 根据时间区间计算消耗数据
-const calculateTimeRangeConsumption = async (beans: any[], timeRange: TimeRange) => {
-    try {
-        // 获取所有冲煮记录
-        const { Storage } = await import('@/lib/core/storage');
-        const notesStr = await Storage.get('brewingNotes')
-        if (!notesStr) return {
-            consumption: 0,
-            cost: 0,
-            espressoConsumption: 0,
-            espressoCost: 0,
-            filterConsumption: 0,
-            filterCost: 0
-        }
 
-        const notes: BrewingNote[] = JSON.parse(notesStr)
-        if (!Array.isArray(notes)) return {
-            consumption: 0,
-            cost: 0,
-            espressoConsumption: 0,
-            espressoCost: 0,
-            filterConsumption: 0,
-            filterCost: 0
-        }
-
-        // 计算时间范围
-        const now = Date.now()
-        const dayInMs = 24 * 60 * 60 * 1000
-        let cutoffTime = 0
-
-        if (timeRange === 'week') {
-            cutoffTime = now - (7 * dayInMs)
-        } else if (timeRange === 'month') {
-            cutoffTime = now - (30 * dayInMs)
-        } else {
-            // 'all' - 不设置时间限制
-            cutoffTime = 0
-        }
-
-        // 筛选时间范围内的冲煮记录
-        const filteredNotes = timeRange === 'all'
-            ? notes
-            : notes.filter(note => note.timestamp >= cutoffTime)
-
-        // 计算消耗数据
-        let consumption = 0
-        let cost = 0
-        let espressoConsumption = 0
-        let espressoCost = 0
-        let filterConsumption = 0
-        let filterCost = 0
-
-        filteredNotes.forEach(note => {
-            // 只排除容量调整记录，快捷扣除记录需要计入统计
-            if (note.source === 'capacity-adjustment') {
-                return;
-            }
-
-            // 处理快捷扣除记录
-            if (note.source === 'quick-decrement' && note.quickDecrementAmount) {
-                const coffeeAmount = note.quickDecrementAmount;
-                if (!isNaN(coffeeAmount)) {
-                    consumption += coffeeAmount;
-
-                    // 根据咖啡豆类型判断消耗分类
-                    const bean = note.coffeeBeanInfo?.name ?
-                               beans.find(b => b.name === note.coffeeBeanInfo?.name) : null;
-
-                    const isEspresso = bean?.beanType === 'espresso';
-                    const isFilter = bean?.beanType === 'filter';
-
-                    // 分别统计手冲和意式消耗
-                    if (isEspresso) {
-                        espressoConsumption += coffeeAmount;
-                    } else if (isFilter) {
-                        filterConsumption += coffeeAmount;
-                    }
-
-                    // 计算花费
-                    if (note.coffeeBeanInfo?.name) {
-                        const bean = beans.find(b => b.name === note.coffeeBeanInfo?.name)
-                        if (bean && bean.price && bean.capacity) {
-                            const price = parseFloat(bean.price.toString().replace(/[^\d.]/g, ''))
-                            const capacity = parseFloat(bean.capacity.toString().replace(/[^\d.]/g, ''))
-                            if (!isNaN(price) && !isNaN(capacity) && capacity > 0) {
-                                const noteCost = coffeeAmount * price / capacity
-                                cost += noteCost
-
-                                if (isEspresso) {
-                                    espressoCost += noteCost;
-                                } else if (isFilter) {
-                                    filterCost += noteCost;
-                                }
-                            }
-                        }
-                    }
-                }
-            } else if (note.params?.coffee) {
-                // 处理普通冲煮笔记
-                // 提取咖啡量中的数字部分
-                const match = note.params.coffee.match(/(\d+(\.\d+)?)/);
-                if (match) {
-                    const coffeeAmount = parseFloat(match[0]);
-                    if (!isNaN(coffeeAmount)) {
-                        consumption += coffeeAmount;
-
-                        // 根据咖啡豆类型判断消耗分类
-                        const bean = note.coffeeBeanInfo?.name ?
-                                   beans.find(b => b.name === note.coffeeBeanInfo?.name) : null;
-
-                        const isEspresso = bean?.beanType === 'espresso';
-                        const isFilter = bean?.beanType === 'filter';
-
-                        // 分别统计手冲和意式消耗
-                        if (isEspresso) {
-                            espressoConsumption += coffeeAmount;
-                        } else if (isFilter) {
-                            filterConsumption += coffeeAmount;
-                        }
-
-                        // 计算花费
-                        if (note.coffeeBeanInfo?.name) {
-                            const bean = beans.find(b => b.name === note.coffeeBeanInfo?.name)
-                            if (bean && bean.price && bean.capacity) {
-                                const price = parseFloat(bean.price.toString().replace(/[^\d.]/g, ''))
-                                const capacity = parseFloat(bean.capacity.toString().replace(/[^\d.]/g, ''))
-                                if (!isNaN(price) && !isNaN(capacity) && capacity > 0) {
-                                    const noteCost = coffeeAmount * price / capacity
-                                    cost += noteCost
-
-                                    if (isEspresso) {
-                                        espressoCost += noteCost;
-                                    } else if (isFilter) {
-                                        filterCost += noteCost;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        })
-
-        return {
-            consumption,
-            cost,
-            espressoConsumption,
-            espressoCost,
-            filterConsumption,
-            filterCost
-        }
-    } catch (error) {
-        console.error('计算时间区间消耗失败:', error)
-        return {
-            consumption: 0,
-            cost: 0,
-            espressoConsumption: 0,
-            espressoCost: 0,
-            filterConsumption: 0,
-            filterCost: 0
-        }
-    }
-}
 
 const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsShare }) => {
     const statsContainerRef = useRef<HTMLDivElement>(null)
@@ -243,24 +81,7 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
         })
     }, [beans, selectedTimeRange])
 
-    // 根据时间区间获取消耗数据（暂时保留，可能用于未来功能）
-    const [_timeRangeConsumptionData, _setTimeRangeConsumptionData] = useState({
-        consumption: 0,
-        cost: 0,
-        espressoConsumption: 0,
-        espressoCost: 0,
-        filterConsumption: 0,
-        filterCost: 0
-    })
 
-    // 异步计算时间区间消耗数据（暂时保留，可能用于未来功能）
-    useEffect(() => {
-        const loadTimeRangeConsumption = async () => {
-            const data = await calculateTimeRangeConsumption(filteredBeans, selectedTimeRange)
-            _setTimeRangeConsumptionData(data)
-        }
-        loadTimeRangeConsumption()
-    }, [filteredBeans, selectedTimeRange])
 
     // 获取今日消耗数据（保持原有逻辑用于"今日"显示）
     const todayConsumptionData = useConsumption(filteredBeans)
@@ -438,7 +259,6 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
 
                 // 筛选出相关的笔记记录，只排除容量调整记录
                 let relevantNotes = notes.filter(note => {
-                    // 只排除容量调整记录，快捷扣除记录需要计入统计
                     if (note.source === 'capacity-adjustment') {
                         return false;
                     }
@@ -469,20 +289,16 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
                     })
                     totalDays = Math.max(1, uniqueDays.size)
                 }
-                // 自然日模式：使用固定的天数（已在上面设置）
 
                 // 计算总消耗量
                 let totalConsumption = 0
                 relevantNotes.forEach(note => {
-                    // 处理快捷扣除记录
                     if (note.source === 'quick-decrement' && note.quickDecrementAmount) {
                         const coffeeAmount = note.quickDecrementAmount;
                         if (!isNaN(coffeeAmount)) {
                             totalConsumption += coffeeAmount;
                         }
                     } else if (note.params?.coffee) {
-                        // 处理普通冲煮笔记
-                        // 提取咖啡量中的数字部分
                         const match = note.params.coffee.match(/(\d+(\.\d+)?)/)
                         if (match) {
                             const coffeeAmount = parseFloat(match[0])
@@ -789,21 +605,19 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
                             const hasEspresso = stats.espressoStats && stats.espressoStats.totalBeans > 0;
                             const hasFilter = stats.filterStats && stats.filterStats.totalBeans > 0;
 
-                            // 使用新的平均消耗计算结果
-
                             const espressoFinishDate = hasEspresso ? calculateEstimatedFinishDate({
                                 ...stats,
                                 remainingWeight: stats.espressoStats.remainingWeight,
                                 consumedWeight: stats.espressoStats.consumedWeight,
                                 totalWeight: stats.espressoStats.totalWeight
-                            }, stats.espressoStats.todayConsumption > 0 ? stats.espressoStats.todayConsumption : espressoAverageConsumption) : '';
+                            }, espressoAverageConsumption) : '';
 
                             const filterFinishDate = hasFilter ? calculateEstimatedFinishDate({
                                 ...stats,
                                 remainingWeight: stats.filterStats.remainingWeight,
                                 consumedWeight: stats.filterStats.consumedWeight,
                                 totalWeight: stats.filterStats.totalWeight
-                            }, stats.filterStats.todayConsumption > 0 ? stats.filterStats.todayConsumption : filterAverageConsumption) : '';
+                            }, filterAverageConsumption) : '';
 
                             // 如果有两种豆子，显示两个独立的统计块
                             if (hasEspresso && hasFilter) {
@@ -853,8 +667,6 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
                                                     <span className="text-neutral-800 dark:text-white font-mono">{espressoFinishDate}</span>
                                                 </div>
                                             </div>
-
-
                                         </div>
 
                                         {/* 手冲豆统计 */}
@@ -901,8 +713,6 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
                                                     <span className="text-neutral-800 dark:text-white font-mono">{filterFinishDate}</span>
                                                 </div>
                                             </div>
-
-
                                         </div>
                                     </>
                                 );
@@ -954,8 +764,6 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
                                                 <span className="text-neutral-800 dark:text-white font-mono">{espressoFinishDate}</span>
                                             </div>
                                         </div>
-
-
                                     </div>
                                 );
                             }
@@ -1005,8 +813,6 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
                                                 <span className="text-neutral-800 dark:text-white font-mono">{filterFinishDate}</span>
                                             </div>
                                         </div>
-
-
                                     </div>
                                 );
                             }
