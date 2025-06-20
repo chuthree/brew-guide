@@ -42,7 +42,7 @@ export const getEquipmentName = async (equipmentId: string): Promise<string> => 
     }
 };
 
-// 规范化器具ID的辅助函数 - 简化实现
+// 规范化器具ID的辅助函数 - 增强实现，支持自定义器具
 export const normalizeEquipmentId = async (equipmentIdOrName: string): Promise<string> => {
     // 首先检查这是否是标准设备的ID
     const standardEquipmentById = equipmentList.find(e => e.id === equipmentIdOrName);
@@ -52,7 +52,23 @@ export const normalizeEquipmentId = async (equipmentIdOrName: string): Promise<s
     const standardEquipmentByName = equipmentList.find(e => e.name === equipmentIdOrName);
     if (standardEquipmentByName) return standardEquipmentByName.id;
 
-    // 如果不是标准设备，返回原始值
+    // 如果不是标准设备，检查自定义器具
+    try {
+        const customEquipmentsModule = await import('@/lib/managers/customEquipments');
+        const customEquipments = await customEquipmentsModule.loadCustomEquipments();
+
+        // 先按ID查找自定义器具
+        const customEquipmentById = customEquipments.find(e => e.id === equipmentIdOrName);
+        if (customEquipmentById) return customEquipmentById.id;
+
+        // 再按名称查找自定义器具
+        const customEquipmentByName = customEquipments.find(e => e.name === equipmentIdOrName);
+        if (customEquipmentByName) return customEquipmentByName.id;
+    } catch (error) {
+        console.error('加载自定义器具失败:', error);
+    }
+
+    // 如果都没找到，返回原始值
     return equipmentIdOrName;
 };
 

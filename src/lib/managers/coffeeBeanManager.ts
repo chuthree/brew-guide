@@ -198,14 +198,17 @@ export const CoffeeBeanManager = {
 			// 不允许直接修改id，但允许更新timestamp为当前时间以反映修改时间
 			const { id: _id, ...validUpdates } = updates;
 
+			// 获取原始咖啡豆信息
+			const originalBean = beans[index];
+
 			// 创建更新后的咖啡豆对象
 			const updatedBean = {
-				...beans[index],
+				...originalBean,
 				...validUpdates,
 				// 更新timestamp为当前时间，反映最后修改时间
 				timestamp: Date.now()
 			};
-			
+
 			// 更新内存中的数组
 			beans[index] = updatedBean;
 
@@ -215,12 +218,17 @@ export const CoffeeBeanManager = {
 
 			// 更新IndexedDB
 			await db.coffeeBeans.put(updatedBean);
-			
+
 			// 使缓存失效，确保下次获取最新数据
 			this._invalidateCaches();
 
 			// 特别使单个豆子的缓存失效
 			beanCache.delete(`bean_${id}`);
+
+			// 如果名称或烘焙度发生变化，同步更新相关笔记中的咖啡豆信息
+			if (updates.name !== undefined || updates.roastLevel !== undefined) {
+				await this._syncNotesWithBeanInfo(id, originalBean, updatedBean);
+			}
 
 			// 触发咖啡豆更新事件（除非在批量操作中）
 			if (typeof window !== 'undefined' && !isBatchOperation) {
@@ -539,6 +547,66 @@ export const CoffeeBeanManager = {
 		// 触发一次更新事件
 		if (typeof window !== 'undefined') {
 			window.dispatchEvent(new CustomEvent('coffeeBeansUpdated'));
+		}
+	},
+
+	/**
+	 * 同步更新相关笔记中的咖啡豆信息（私有方法）
+	 * @param beanId 咖啡豆ID
+	 * @param originalBean 原始咖啡豆信息
+	 * @param updatedBean 更新后的咖啡豆信息
+	 */
+	async _syncNotesWithBeanInfo(
+		beanId: string,
+		originalBean: CoffeeBean,
+		updatedBean: CoffeeBean
+	): Promise<void> {
+		try {
+			const storage = await getStorage();
+			const notesStr = await storage.get('brewingNotes');
+			if (!notesStr) return;
+
+			const notes = JSON.parse(notesStr);
+			if (!Array.isArray(notes)) return;
+
+			let hasUpdates = false;
+
+			// 更新所有相关笔记中的咖啡豆信息
+			const updatedNotes = notes.map((note: any) => {
+				// 通过 beanId 或者旧的咖啡豆名称匹配
+				const isRelatedNote = note.beanId === beanId ||
+					(note.coffeeBeanInfo?.name === originalBean.name);
+
+				if (isRelatedNote) {
+					hasUpdates = true;
+					return {
+						...note,
+						// 确保 beanId 存在
+						beanId: beanId,
+						// 更新咖啡豆信息
+						coffeeBeanInfo: {
+							...note.coffeeBeanInfo,
+							name: updatedBean.name,
+							roastLevel: updatedBean.roastLevel || note.coffeeBeanInfo?.roastLevel || '',
+							roastDate: updatedBean.roastDate || note.coffeeBeanInfo?.roastDate
+						}
+					};
+				}
+				return note;
+			});
+
+			// 如果有更新，保存到存储
+			if (hasUpdates) {
+				await storage.set('brewingNotes', JSON.stringify(updatedNotes));
+				console.log(`已同步更新 ${beanId} 相关笔记中的咖啡豆信息`);
+
+				// 触发笔记更新事件，让笔记列表重新加载数据
+				if (typeof window !== 'undefined') {
+					window.dispatchEvent(new CustomEvent('brewingNotesUpdated'));
+				}
+			}
+		} catch (error) {
+			console.error('同步笔记中的咖啡豆信息失败:', error);
 		}
 	},
 
