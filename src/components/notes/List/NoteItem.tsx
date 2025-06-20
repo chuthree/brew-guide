@@ -197,8 +197,8 @@ const NoteItem: React.FC<NoteItemProps> = ({
                                                             // 在分享模式下显示磨豆机名称 + 研磨度
                                                             <>{_grinderName} {_formatGrindSize(note.params.grindSize, _settings.grindType)} · {note.params.temp}</>
                                                         ) : (
-                                                            // 普通显示
-                                                            <>{note.params.grindSize} · {note.params.temp}</>
+                                                            // 普通显示 - 也应用转换
+                                                            <>{_formatGrindSize(note.params.grindSize, _settings.grindType)} · {note.params.temp}</>
                                                         )}
                                                     </span>
                                                 ) : (
@@ -208,8 +208,8 @@ const NoteItem: React.FC<NoteItemProps> = ({
                                                                 // 在分享模式下只显示研磨度
                                                                 <>{_grinderName} {_formatGrindSize(note.params.grindSize, _settings.grindType)}</>
                                                             ) : (
-                                                                // 普通显示
-                                                                <>{note.params.grindSize}</>
+                                                                // 普通显示 - 也应用转换
+                                                                <>{_formatGrindSize(note.params.grindSize, _settings.grindType)}</>
                                                             )
                                                         ) : (
                                                             // 只有水温

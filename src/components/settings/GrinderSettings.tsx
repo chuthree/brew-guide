@@ -394,10 +394,9 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({
 
         handleChange('grindType', value);
 
-        // 当选择幻刺时触发彩带特效
-        if (value === 'phanci_pro') {
-            showConfetti();
-            // 选择幻刺时也提供触感反馈
+        // 当选择非通用磨豆机时可以提供反馈（可选）
+        if (value !== 'generic' && value !== 'add_custom') {
+            // 选择特定磨豆机时提供触感反馈
             if (settings.hapticFeedback) {
                 hapticsUtils.medium();
             }

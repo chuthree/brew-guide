@@ -63,7 +63,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     onClose: _onClose,
     onAddNote,
     setAlternativeHeaderContent,
-    setShowAlternativeHeader
+    setShowAlternativeHeader,
+    settings
 }) => {
     // 用于跟踪用户选择
     const [sortOption, setSortOption] = useState<SortOption>(globalCache.sortOption)
@@ -944,6 +945,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                     initialData={editingNote}
                     hideHeader={!!setAlternativeHeaderContent && !!setShowAlternativeHeader}
                     onTimestampChange={handleFormTimestampChange}
+                    settings={settings}
                 />
             ) : editingChangeRecord ? (
                 <ChangeRecordEditForm

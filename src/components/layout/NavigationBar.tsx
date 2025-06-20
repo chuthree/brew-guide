@@ -390,20 +390,16 @@ interface EditableParameterProps {
     unit: string
     className?: string
     prefix?: string
-    isGrindSize?: boolean
-    originalGrindSize?: string
 }
 
 const EditableParameter: React.FC<EditableParameterProps> = ({
-    value, onChange, unit, className = '', prefix = '',
-    isGrindSize = false, originalGrindSize = ''
+    value, onChange, unit, className = '', prefix = ''
 }) => {
     const [isEditing, setIsEditing] = useState(false)
     const inputRef = React.useRef<HTMLInputElement>(null)
 
-    // 计算编辑值 - 使用更简洁的逻辑
-    const editValue = isGrindSize && originalGrindSize ? originalGrindSize : value
-    const [tempValue, setTempValue] = useState(editValue)
+    // 简化逻辑：编辑时也直接使用转换后的值，让用户输入更直观
+    const [tempValue, setTempValue] = useState(value)
 
     // 自动聚焦和选择文本
     useEffect(() => {
@@ -413,21 +409,21 @@ const EditableParameter: React.FC<EditableParameterProps> = ({
         }
     }, [isEditing])
 
-    // 同步编辑值
+    // 同步编辑值 - 始终使用显示值
     useEffect(() => {
-        setTempValue(editValue)
-    }, [editValue])
+        setTempValue(value)
+    }, [value])
 
     // 处理提交和取消的统一逻辑
     const handleSubmit = useCallback(() => {
         setIsEditing(false)
-        if (tempValue !== editValue) onChange(tempValue)
-    }, [tempValue, editValue, onChange])
+        if (tempValue !== value) onChange(tempValue)
+    }, [tempValue, value, onChange])
 
     const handleCancel = useCallback(() => {
-        setTempValue(editValue)
+        setTempValue(value)
         setIsEditing(false)
-    }, [editValue])
+    }, [value])
 
     const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
         if (e.key === 'Enter') handleSubmit()
@@ -570,7 +566,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
     isTimerRunning, showComplete, selectedEquipment, selectedMethod,
     handleParamChange, setShowHistory, setActiveTab, onTitleDoubleClick,
     settings, hasCoffeeBeans, alternativeHeader, showAlternativeHeader = false,
-    currentBeanView, _onBeanViewChange, showViewDropdown, onToggleViewDropdown,
+    currentBeanView, showViewDropdown, onToggleViewDropdown,
     handleExtractionTimeChange, customEquipments = [], onEquipmentSelect,
     onAddEquipment, onEditEquipment, onDeleteEquipment, onShareEquipment, onBackClick,
 }) => {
@@ -927,8 +923,6 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                                                         onChange={(v) => handleParamChange('grindSize', v)}
                                                                         unit=""
                                                                         className=""
-                                                                        isGrindSize={true}
-                                                                        originalGrindSize={editableParams.grindSize}
                                                                     />
                                                                 </>
                                                             )}

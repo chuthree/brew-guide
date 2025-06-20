@@ -33,6 +33,7 @@ export interface BrewingHistoryProps {
     onAddNote?: () => void
     setAlternativeHeaderContent?: (content: React.ReactNode | null) => void
     setShowAlternativeHeader?: (show: boolean) => void
+    settings?: import('@/components/settings/Settings').SettingsOptions // 添加可选的设置参数
 }
 
 // 单个笔记项属性

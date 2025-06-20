@@ -6,6 +6,7 @@ import { MethodSelector, CoffeeBeanSelector } from '@/components/notes/Form'
 import EquipmentCategoryBar from './EquipmentCategoryBar'
 import { useMethodManagement } from '@/components/notes/Form/hooks/useMethodManagement'
 import type { BrewingNoteData, CoffeeBean } from '@/types/app'
+import { SettingsOptions } from '@/components/settings/Settings'
 
 import SteppedFormModal, { Step } from '@/components/common/modals/SteppedFormModal'
 import { type Method, type CustomEquipment } from '@/lib/core/config'
@@ -23,6 +24,7 @@ interface BrewingNoteFormModalProps {
   onSave: (note: BrewingNoteData) => void
   onClose: () => void
   onSaveSuccess?: () => void
+  settings?: SettingsOptions // 添加可选的设置参数
 }
 
 const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
@@ -30,7 +32,8 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
   initialNote,
   onSave,
   onClose,
-  onSaveSuccess
+  onSaveSuccess,
+  settings
 }) => {
   // 咖啡豆状态
   const [selectedCoffeeBean, setSelectedCoffeeBean] = useState<CoffeeBean | null>(initialNote?.coffeeBean || null)
@@ -343,6 +346,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
               commonMethods={availableMethods}
               onMethodSelect={setSelectedMethod}
               onParamsChange={_handleMethodParamsChange}
+              settings={settings}
             />
           )}
         </div>
@@ -362,6 +366,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
           inBrewPage={true}
           showSaveButton={false}
           onSaveSuccess={onSaveSuccess}
+          settings={settings}
         />
       ),
       isValid: true

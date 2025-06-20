@@ -61,10 +61,10 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
             fontZoomUtils.set(value as number)
         }
 
-        // 当选择幻刺时触发彩带特效
-        if (key === 'grindType' && value === 'phanci_pro') {
-            showConfetti()
-        }
+        // 当选择特定磨豆机时可以提供反馈（移除硬编码特定品牌的特殊处理）
+        // if (key === 'grindType' && value !== 'generic') {
+        //     // 可以在这里添加通用的反馈逻辑
+        // }
     }
 
     // 处理完成按钮点击

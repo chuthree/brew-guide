@@ -1994,6 +1994,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                     onAddNote={handleAddNote}
                     setAlternativeHeaderContent={setAlternativeHeaderContent}
                     setShowAlternativeHeader={setShowAlternativeHeader}
+                    settings={settings}
                 />
             )}
             {activeMainTab === '咖啡豆' && (
@@ -2130,6 +2131,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                     setShowNoteFormModal(false);
                     setCurrentEditingNote({});
                 }}
+                settings={settings}
             />
 
             <Settings

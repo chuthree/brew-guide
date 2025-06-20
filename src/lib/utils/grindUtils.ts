@@ -1,5 +1,40 @@
 import { availableGrinders } from '../core/config';
 
+/**
+ * 判断磨豆机是否支持特定刻度（如"格"）
+ * @param grinderId 磨豆机ID
+ * @returns 是否支持特定刻度
+ */
+export function hasSpecificGrindScale(grinderId: string): boolean {
+	if (grinderId === 'generic') return false;
+
+	const grinder = availableGrinders.find(g => g.id === grinderId);
+	return !!(grinder && grinder.grindSizes);
+}
+
+/**
+ * 获取磨豆机的刻度单位（如"格"、"档"等）
+ * @param grinderId 磨豆机ID
+ * @returns 刻度单位，如果没有特定单位则返回空字符串
+ */
+export function getGrindScaleUnit(grinderId: string): string {
+	if (grinderId === 'generic') return '';
+
+	const grinder = availableGrinders.find(g => g.id === grinderId);
+	if (!grinder || !grinder.grindSizes) return '';
+
+	// 从研磨度映射中推断单位
+	const values = Object.values(grinder.grindSizes);
+	if (values.length > 0) {
+		const firstValue = values[0];
+		if (firstValue.includes('格')) return '格';
+		if (firstValue.includes('档')) return '档';
+		if (firstValue.includes('圈')) return '圈';
+	}
+
+	return '';
+}
+
 // 幻刺研磨度转换映射表
 // const phanciGrindSizes: Record<string, string> = { // Removed unused variable
 // 	极细: "1-2格", // 意式咖啡
@@ -38,8 +73,9 @@ export function convertToSpecificGrind(grindSize: string, grinderId: string): st
 
 	const grindSizesMap = grinder.grindSizes;
 
-	// 优先处理特定格式（例如幻刺的"格"）
-	if (grinder.id === 'phanci_pro' && (grindSize.includes("格") || grindSize.match(/^\d+(-\d+)?$/))) {
+	// 优先处理特定格式（如果输入已经是磨豆机的特定格式，直接返回）
+	// 检查是否包含"格"或纯数字格式，这表明用户已经输入了具体的刻度
+	if (grindSize.includes("格") || grindSize.match(/^\d+(-\d+)?$/)) {
 		return grindSize;
 	}
 
@@ -77,9 +113,9 @@ export function convertToSpecificGrind(grindSize: string, grinderId: string): st
 		return specificGrind;
 	}
 
-	// 如果无法转换，返回原始研磨度并附带磨豆机名称
-	const fallbackSuggestion = grinder.id === 'phanci_pro' ? " (幻刺建议:手冲8-9格)" : "";
-	return `${grindSize}${fallbackSuggestion}`;
+	// 如果无法转换，返回原始研磨度
+	// 可以考虑添加通用的建议，但不应该硬编码特定磨豆机
+	return grindSize;
 }
 
 /**

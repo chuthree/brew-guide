@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { formatGrindSize } from '@/lib/utils/grindUtils';
+import { formatGrindSize, hasSpecificGrindScale, getGrindScaleUnit } from '@/lib/utils/grindUtils';
 import { Grinder, availableGrinders, CustomEquipment } from '@/lib/core/config';
 import { SettingsOptions } from '@/components/settings/Settings';
 import { isEspressoMachine } from '@/lib/utils/equipmentUtils';
@@ -57,7 +57,6 @@ const ParamsStep: React.FC<ParamsStepProps> = ({
   // 查找选定的研磨机
   const selectedGrinder = availableGrinders.find((g: Grinder) => g.id === settings.grindType);
   const grinderName = selectedGrinder ? selectedGrinder.name : '通用';
-  const showSpecificGrindInfo = selectedGrinder && selectedGrinder.id !== 'generic' && selectedGrinder.grindSizes;
 
   // 研磨度参考提示渲染函数
   const renderGrindSizeHints = () => {
@@ -212,23 +211,21 @@ const ParamsStep: React.FC<ParamsStepProps> = ({
           </label>
           <input
             type="text"
-            value={params.grindSize || ''}
+            value={formatGrindSize(params.grindSize || '', settings.grindType)}
             onChange={(e) => onGrindSizeChange(e.target.value)}
             onFocus={(e) => e.target.select()}
             placeholder={
-              isEspresso 
-                ? "例如：特细、浓缩咖啡级"
-                : (selectedGrinder?.id === "phanci_pro"
-                  ? "例如：中细、特细 (可自动转为对应格数)"
+              isEspresso
+                ? (hasSpecificGrindScale(settings.grindType)
+                    ? `例如：2-4${getGrindScaleUnit(settings.grindType)}`
+                    : "例如：特细、浓缩咖啡级")
+                : (hasSpecificGrindScale(settings.grindType)
+                  ? `例如：8${getGrindScaleUnit(settings.grindType)} (可直接输入${getGrindScaleUnit(settings.grindType)}数)`
                   : "例如：中细、特细、中粗等")
             }
             className="w-full py-2 bg-transparent outline-hidden border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
           />
-          {params.grindSize && showSpecificGrindInfo && (
-            <p className="text-xs text-neutral-500 dark:text-neutral-400">
-              参考{grinderName}刻度：{formatGrindSize(params.grindSize, settings.grindType)}
-            </p>
-          )}
+          {/* 移除重复的参考刻度显示，因为输入框已经显示转换后的值 */}
 
           {/* 研磨度参考提示 */}
           {renderGrindSizeHints()}

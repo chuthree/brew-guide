@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react'
 import { Method } from '@/lib/core/config'
+import { formatGrindSize, hasSpecificGrindScale, getGrindScaleUnit } from '@/lib/utils/grindUtils'
+import { SettingsOptions } from '@/components/settings/Settings'
 
 interface MethodSelectorProps {
   selectedEquipment: string
@@ -10,6 +12,7 @@ interface MethodSelectorProps {
   commonMethods: Method[]
   onMethodSelect: (methodId: string) => void
   onParamsChange: (method: Method) => void
+  settings?: SettingsOptions // 添加可选的设置参数
 }
 
 const MethodSelector: React.FC<MethodSelectorProps> = ({
@@ -19,6 +22,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
   commonMethods,
   onMethodSelect,
   onParamsChange,
+  settings,
 }) => {
   // 本地状态管理参数
   const [coffeeAmount, setCoffeeAmount] = useState<string>('15')
@@ -115,7 +119,9 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
         setCoffeeAmount(coffee)
         setRatioAmount(ratio)
         setWaterAmount(method.params.water)
-        setGrindSize(method.params.grindSize)
+        // 设置研磨度时应用转换
+        const displayGrindSize = settings ? formatGrindSize(method.params.grindSize, settings.grindType) : method.params.grindSize
+        setGrindSize(displayGrindSize)
         setTempValue(temp)
       }
     }
@@ -191,7 +197,9 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
               </div>
               <div className="flex items-center">
                 <span className="text-xs font-medium w-14">研磨度:</span>
-                <span className="text-xs font-medium">{method.params.grindSize}</span>
+                <span className="text-xs font-medium">
+                  {settings ? formatGrindSize(method.params.grindSize, settings.grindType) : method.params.grindSize}
+                </span>
               </div>
             </div>
           )}
@@ -246,7 +254,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
                       value={grindSize}
                       onChange={(e) => handleGrindSizeChange(e.target.value, method)}
                       className="w-16 py-0.5 px-1 border border-neutral-300 dark:border-neutral-700 rounded-sm bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100 text-right text-xs font-medium  focus:outline-hidden focus:ring-1 focus:ring-neutral-500"
-                      placeholder="中细"
+                      placeholder={settings && hasSpecificGrindScale(settings.grindType) ? `8${getGrindScaleUnit(settings.grindType)}` : '中细'}
                     />
                   </div>
                 </div>

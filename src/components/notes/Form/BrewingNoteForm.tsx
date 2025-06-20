@@ -10,6 +10,8 @@ import { captureImage } from '@/lib/utils/imageCapture'
 import { equipmentList, commonMethods, type Method, type CustomEquipment } from '@/lib/core/config'
 import { loadCustomEquipments } from '@/lib/managers/customEquipments'
 import { loadCustomMethods } from '@/lib/managers/customMethods'
+import { formatGrindSize, hasSpecificGrindScale, getGrindScaleUnit } from '@/lib/utils/grindUtils'
+import { SettingsOptions } from '@/components/settings/Settings'
 
 interface TasteRatings {
     acidity: number;
@@ -42,6 +44,7 @@ interface BrewingNoteFormProps {
     onSaveSuccess?: () => void;
     hideHeader?: boolean;
     onTimestampChange?: (timestamp: Date) => void;
+    settings?: SettingsOptions; // 添加可选的设置参数
 }
 
 // 图片压缩函数，包含Canvas渲染失败检测
@@ -152,6 +155,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     onSaveSuccess,
     hideHeader = false,
     onTimestampChange,
+    settings,
 }) => {
 
     const [formData, setFormData] = useState<FormData>({
@@ -1000,10 +1004,10 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                         <div>
                             <input
                                 type="text"
-                                value={methodParams.grindSize}
+                                value={settings ? formatGrindSize(methodParams.grindSize, settings.grindType) : methodParams.grindSize}
                                 onChange={(e) => setMethodParams({...methodParams, grindSize: e.target.value})}
                                 className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-hidden transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
-                                placeholder="中细"
+                                placeholder={settings && hasSpecificGrindScale(settings.grindType) ? `8${getGrindScaleUnit(settings.grindType)}` : '中细'}
                             />
                         </div>
                         <div className="relative">
