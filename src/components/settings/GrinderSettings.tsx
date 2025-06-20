@@ -6,7 +6,7 @@ import { getCategorizedGrindSizes } from '@/lib/utils/grindUtils'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem, SelectSeparator } from '@/components/coffee-bean/ui/select'
 import { SettingsOptions, CustomGrinder } from './Settings'
 import hapticsUtils from '@/lib/ui/haptics'
-import confetti from 'canvas-confetti'
+// 移除未使用的confetti导入
 
 interface GrinderSettingsProps {
     settings: SettingsOptions;
@@ -329,43 +329,7 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({
         }
     }
 
-    // 触发彩带特效
-    const showConfetti = () => {
-        // Find the selected grinder button element
-        const selectedGrinderButton = document.getElementById(`grinder-button-${settings.grindType}`);
-        if (!selectedGrinderButton) return;
-
-        // 获取按钮元素的位置信息
-        const rect = selectedGrinderButton.getBoundingClientRect();
-        const x = (rect.left + rect.width / 2) / window.innerWidth;
-        const y = (rect.top + rect.height / 2) / window.innerHeight;
-
-        // 创建彩带效果
-        confetti({
-            particleCount: 100,
-            spread: 70,
-            origin: { x, y },
-            colors: ['#FFD700', '#FF6347', '#9370DB', '#3CB371', '#4682B4'],
-            zIndex: 9999,
-            shapes: ['square', 'circle'],
-            scalar: 0.8,
-        });
-
-        // 烟花效果
-        setTimeout(() => {
-            confetti({
-                particleCount: 50,
-                spread: 90,
-                origin: { x, y },
-                colors: ['#FFD700', '#FF6347', '#9370DB'],
-                zIndex: 9999,
-                startVelocity: 30,
-                gravity: 0.8,
-                shapes: ['star'],
-                scalar: 1,
-            });
-        }, 250);
-    }
+    // 移除未使用的彩带特效函数
 
     // 获取当前选中磨豆机的显示名称（使用 useMemo 缓存结果）
     const currentGrinderDisplayName = useMemo(() => {

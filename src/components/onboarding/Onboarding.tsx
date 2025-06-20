@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { SettingsOptions, defaultSettings } from '@/components/settings/Settings'
 import fontZoomUtils from '@/lib/utils/fontZoomUtils'
-import confetti from 'canvas-confetti'
+// 移除未使用的confetti导入
 import { availableGrinders } from '@/lib/core/config'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/coffee-bean/ui/select'
 
@@ -26,28 +26,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
         setIsFontZoomEnabled(fontZoomUtils.isAvailable());
     }, [])
 
-    // 触发彩带特效
-    const showConfetti = () => {
-        // Find the select element wrapper
-        const grinderSelectWrapper = document.getElementById('onboarding-grinder-select-wrapper');
-        if (!grinderSelectWrapper) return;
-        
-        // 获取元素的位置信息
-        const rect = grinderSelectWrapper.getBoundingClientRect();
-        const x = (rect.left + rect.width / 2) / window.innerWidth;
-        const y = (rect.top + rect.height / 2) / window.innerHeight;
-        
-        // 创建彩带效果
-        confetti({
-            particleCount: 100,
-            spread: 70,
-            origin: { x, y },
-            colors: ['#FFD700', '#FF6347', '#9370DB', '#3CB371', '#4682B4'],
-            zIndex: 9999,
-            shapes: ['square', 'circle'],
-            scalar: 0.8,
-        });
-    }
+    // 移除未使用的彩带特效函数
 
     // 处理设置变更
     const handleSettingChange = <K extends keyof SettingsOptions>(key: K, value: SettingsOptions[K]) => {
