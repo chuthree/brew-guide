@@ -72,8 +72,8 @@ const FilterButton: React.FC<FilterButtonProps> = ({ isActive, onClick, children
         onClick={onClick}
         className={`px-2 py-1 text-xs font-medium transition-colors whitespace-nowrap ${
             isActive
-                ? 'bg-neutral-200/50 dark:bg-neutral-700/50 text-neutral-800 dark:text-neutral-100'
-                : 'bg-neutral-100 dark:bg-neutral-800/50 text-neutral-600 dark:text-neutral-400'
+                ? 'bg-neutral-300/30 dark:bg-neutral-600/50 text-neutral-800 dark:text-neutral-200'
+                : 'bg-neutral-200/30 dark:bg-neutral-800/50 text-neutral-400 dark:text-neutral-400'
         } ${className}`}
     >
         {children}
