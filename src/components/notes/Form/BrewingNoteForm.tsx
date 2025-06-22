@@ -717,10 +717,16 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
             <div className="grow space-y-6 pb-20">
                 {/* 笔记图片 */}
                 <div className="space-y-2 w-full">
-                    <label className="block text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
-                        笔记图片
-                    </label>
-                    <div className="flex items-center justify-center relative">
+                    <div className="text-xs font-medium  tracking-widest text-neutral-500 dark:text-neutral-400 mb-3">
+                        {(initialData.coffeeBean || (initialData.id && formData.coffeeBeanInfo.name)) ? (
+                            // 显示选择的咖啡豆信息，直接在标题后面
+                            <>咖啡豆信息 · {formData.coffeeBeanInfo.name || '未知咖啡豆'}</>
+                        ) : (
+                            // 只显示标题
+                            '咖啡豆信息'
+                        )}
+                    </div>
+                    <div className="flex items-start justify-start relative">
                         <div className="w-32 h-32 rounded-lg border-2 border-dashed border-neutral-300 dark:border-neutral-700 flex flex-col items-center justify-center overflow-hidden relative">
                             {formData.image ? (
                                 <div className="relative w-full h-full">
@@ -791,15 +797,6 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
 
                 {/* 咖啡豆信息 */}
                 <div className="space-y-4">
-                    <div className="text-xs font-medium  tracking-widest text-neutral-500 dark:text-neutral-400">
-                        {(initialData.coffeeBean || (initialData.id && formData.coffeeBeanInfo.name)) ? (
-                            // 显示选择的咖啡豆信息，直接在标题后面
-                            <>咖啡豆信息 · {formData.coffeeBeanInfo.name || '未知咖啡豆'}</>
-                        ) : (
-                            // 只显示标题
-                            '咖啡豆信息'
-                        )}
-                    </div>
                     {/* 只有在新建笔记且没有选择咖啡豆时才显示输入框 */}
                     {!initialData.coffeeBean && !initialData.id && (
                         <div className="grid gap-6">

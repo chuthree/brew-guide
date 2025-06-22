@@ -7,8 +7,9 @@ import { BrewingHistoryProps } from '../types'
 import FilterTabs from './FilterTabs'
 import AddNoteButton from './AddNoteButton'
 import Toast from '../ui/Toast'
-import { BrewingNoteForm } from '@/components/notes'
-import ChangeRecordEditForm from '../Form/ChangeRecordEditForm'
+
+import BrewingNoteEditModal from '../Form/BrewingNoteEditModal'
+import ChangeRecordEditModal from '../Form/ChangeRecordEditModal'
 import { BrewingNoteData } from '@/types/app'
 import { getEquipmentName, normalizeEquipmentId, sortNotes } from '../utils'
 import { globalCache, saveSelectedEquipmentPreference, saveSelectedBeanPreference, saveFilterModePreference, saveSortOptionPreference, calculateTotalCoffeeConsumption, formatConsumption, initializeGlobalCache } from './globalCache'
@@ -49,7 +50,7 @@ const filterNotesByBean = async (notes: BrewingNote[], selectedBeanName: string)
 
     return filteredNotes;
 };
-import NoteFormHeader from '@/components/notes/ui/NoteFormHeader'
+
 
 // 为Window对象声明类型扩展
 declare global {
@@ -62,8 +63,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     isOpen,
     onClose: _onClose,
     onAddNote,
-    setAlternativeHeaderContent,
-    setShowAlternativeHeader,
+    setAlternativeHeaderContent, // 不再使用，保留以兼容接口
+    setShowAlternativeHeader, // 不再使用，保留以兼容接口
     settings
 }) => {
     // 用于跟踪用户选择
@@ -73,6 +74,10 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     const [selectedBean, setSelectedBean] = useState<string | null>(globalCache.selectedBean)
     const [editingNote, setEditingNote] = useState<BrewingNoteData | null>(null)
     const [editingChangeRecord, setEditingChangeRecord] = useState<BrewingNote | null>(null)
+
+    // 模态显示状态
+    const [showNoteEditModal, setShowNoteEditModal] = useState(false)
+    const [showChangeRecordEditModal, setShowChangeRecordEditModal] = useState(false)
     
     // 分享模式状态
     const [isShareMode, setIsShareMode] = useState(false)
@@ -453,14 +458,15 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         }
     };
     
-    // 处理笔记点击 - 区分变动记录和普通笔记
+    // 处理笔记点击 - 区分变动记录和普通笔记，使用模态弹窗
     const handleNoteClick = (note: BrewingNote) => {
         // 检查是否为变动记录
         const isChangeRecord = note.source === 'quick-decrement' || note.source === 'capacity-adjustment';
 
         if (isChangeRecord) {
-            // 设置编辑变动记录
+            // 设置编辑变动记录并显示模态
             setEditingChangeRecord(note);
+            setShowChangeRecordEditModal(true);
         } else {
             // 准备要编辑的普通笔记数据
             const noteToEdit = {
@@ -482,13 +488,9 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                 beanId: note.beanId
             };
 
-            // 设置编辑普通笔记数据
+            // 设置编辑普通笔记数据并显示模态
             setEditingNote(noteToEdit);
-        }
-
-        // 如果提供了导航栏替代头部功能，则启用
-        if (setAlternativeHeaderContent && setShowAlternativeHeader) {
-            setShowAlternativeHeader(true);
+            setShowNoteEditModal(true);
         }
     };
     
@@ -520,16 +522,9 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
             // 保存更新后的笔记 - Storage.set() 会自动触发事件
             await Storage.set('brewingNotes', JSON.stringify(parsedNotes))
 
-            // 关闭编辑
+            // 关闭模态和编辑状态
             setEditingNote(null)
-
-            // 如果提供了导航栏替代头部功能，则关闭它
-            if (setShowAlternativeHeader) {
-                setShowAlternativeHeader(false);
-            }
-            if (setAlternativeHeaderContent) {
-                setAlternativeHeaderContent(null);
-            }
+            setShowNoteEditModal(false)
 
             // 显示成功提示
             showToast('笔记已更新', 'success')
@@ -625,16 +620,9 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
             // 保存更新后的笔记 - Storage.set() 会自动触发事件
             await Storage.set('brewingNotes', JSON.stringify(parsedNotes))
 
-            // 关闭编辑
+            // 关闭模态和编辑状态
             setEditingChangeRecord(null)
-
-            // 如果提供了导航栏替代头部功能，则关闭它
-            if (setShowAlternativeHeader) {
-                setShowAlternativeHeader(false);
-            }
-            if (setAlternativeHeaderContent) {
-                setAlternativeHeaderContent(null);
-            }
+            setShowChangeRecordEditModal(false)
 
             // 显示成功提示
             showToast('变动记录已更新', 'success')
@@ -653,45 +641,9 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         }
     };
 
-    // 处理表单内部的时间戳变化 - 使用useCallback避免无限循环
-    const handleFormTimestampChange = useCallback((newTimestamp: Date) => {
-        // 更新编辑中的笔记数据
-        setEditingNote(prev => prev ? {
-            ...prev,
-            timestamp: newTimestamp.getTime()
-        } : null);
-    }, []);
 
-    // 监听editingNote和editingChangeRecord变化，更新替代头部
-    useEffect(() => {
-        const currentEditingItem = editingNote || editingChangeRecord;
 
-        if (currentEditingItem && setAlternativeHeaderContent && setShowAlternativeHeader) {
-            const updatedHeaderContent = (
-                <NoteFormHeader
-                    isEditMode={true}
-                    onBack={() => {
-                        // 关闭编辑并恢复正常导航栏
-                        setEditingNote(null);
-                        setEditingChangeRecord(null);
-                        setShowAlternativeHeader(false);
-                        setAlternativeHeaderContent(null);
-                    }}
-                    onSave={() => {
-                        // 获取表单元素并触发提交
-                        const form = document.querySelector('form');
-                        if (form) {
-                            form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
-                        }
-                    }}
-                    showSaveButton={true}
-                    timestamp={new Date(currentEditingItem.timestamp)}
-                    onTimestampChange={handleFormTimestampChange}
-                />
-            );
-            setAlternativeHeaderContent(updatedHeaderContent);
-        }
-    }, [editingNote?.timestamp, editingChangeRecord?.timestamp, setAlternativeHeaderContent, setShowAlternativeHeader, handleFormTimestampChange]);
+
 
 
 
@@ -927,47 +879,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     
     return (
         <>
-            {editingNote ? (
-                <BrewingNoteForm
-                    id={editingNote.id}
-                    isOpen={true}
-                    onClose={() => {
-                        setEditingNote(null);
-                        // 如果使用了替代头部，同时关闭它
-                        if (setShowAlternativeHeader) {
-                            setShowAlternativeHeader(false);
-                        }
-                        if (setAlternativeHeaderContent) {
-                            setAlternativeHeaderContent(null);
-                        }
-                    }}
-                    onSave={handleSaveEdit}
-                    initialData={editingNote}
-                    hideHeader={!!setAlternativeHeaderContent && !!setShowAlternativeHeader}
-                    onTimestampChange={handleFormTimestampChange}
-                    settings={settings}
-                />
-            ) : editingChangeRecord ? (
-                <ChangeRecordEditForm
-                    id={editingChangeRecord.id}
-                    isOpen={true}
-                    onClose={() => {
-                        setEditingChangeRecord(null);
-                        // 如果使用了替代头部，同时关闭它
-                        if (setShowAlternativeHeader) {
-                            setShowAlternativeHeader(false);
-                        }
-                        if (setAlternativeHeaderContent) {
-                            setAlternativeHeaderContent(null);
-                        }
-                    }}
-                    onSave={handleSaveChangeRecord}
-                    initialData={editingChangeRecord}
-                    hideHeader={!!setAlternativeHeaderContent && !!setShowAlternativeHeader}
-                    onTimestampChange={handleFormTimestampChange}
-                />
-            ) : (
-                <>
+            {/* 主要内容区域 - 始终显示笔记列表 */}
                     <div className="pt-6 space-y-6 sticky top-0 bg-neutral-50 dark:bg-neutral-900 z-20 flex-none">
                         {/* 数量显示 */}
                         <div className="flex justify-between items-center mb-6 px-6">
@@ -1047,7 +959,32 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                     ) : (
                         <AddNoteButton onAddNote={handleAddNote} />
                     )}
-                </>
+
+            {/* 模态组件 */}
+            {editingNote && (
+                <BrewingNoteEditModal
+                    showModal={showNoteEditModal}
+                    initialData={editingNote}
+                    onSave={handleSaveEdit}
+                    onClose={() => {
+                        setEditingNote(null)
+                        setShowNoteEditModal(false)
+                    }}
+                    settings={settings}
+                />
+            )}
+
+            {editingChangeRecord && (
+                <ChangeRecordEditModal
+                    showModal={showChangeRecordEditModal}
+                    initialData={editingChangeRecord}
+                    onSave={handleSaveChangeRecord}
+                    onClose={() => {
+                        setEditingChangeRecord(null)
+                        setShowChangeRecordEditModal(false)
+                    }}
+                    settings={settings}
+                />
             )}
 
             {/* 消息提示 */}
