@@ -10,87 +10,7 @@ import FlavorInfo from './components/FlavorInfo'
 import Complete from './components/Complete'
 import { addCustomPreset, DEFAULT_ORIGINS, DEFAULT_PROCESSES, DEFAULT_VARIETIES } from './constants'
 import { defaultSettings, type SettingsOptions } from '@/components/settings/Settings'
-
-// 二次压缩函数：将base64图片再次压缩，包含Canvas渲染失败检测
-function compressBase64(base64: string, quality = 0.8, maxWidth = 1200): Promise<string> {
-  return new Promise((resolve, reject) => {
-    try {
-      // 计算base64字符串大小（近似值）
-      const approximateSizeInBytes = base64.length * 0.75;
-
-      // 如果图片小于200kb，直接返回原图，不进行压缩
-      if (approximateSizeInBytes <= 200 * 1024) {
-        resolve(base64);
-        return;
-      }
-
-      const img = new Image();
-
-      img.onerror = () => {
-        reject(new Error('图片加载失败'));
-      };
-
-      const imgLoadTimeout = setTimeout(() => {
-        reject(new Error('图片加载超时'));
-      }, 10000);
-
-      img.onload = () => {
-        clearTimeout(imgLoadTimeout);
-
-        try {
-          let width = img.width;
-          let height = img.height;
-
-          // 缩放尺寸
-          if (width > maxWidth) {
-            height = height * (maxWidth / width);
-            width = maxWidth;
-          }
-
-          const canvas = document.createElement('canvas');
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          if (!ctx) {
-            throw new Error('无法获取canvas上下文');
-          }
-
-          ctx.drawImage(img, 0, 0, width, height);
-
-          try {
-            const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
-
-            // 检测Canvas渲染失败的情况
-            const compressionRatio = ((base64.length - compressedBase64.length) / base64.length * 100);
-            const compressedSizeKB = Math.round(compressedBase64.length * 0.75 / 1024);
-
-            // 如果压缩率超过97%且最终文件小于50KB，很可能是Canvas渲染失败
-            if (compressionRatio > 97 && compressedSizeKB < 50) {
-              // 返回原图，避免使用损坏的压缩结果
-              resolve(base64);
-              return;
-            }
-
-            resolve(compressedBase64);
-          } catch (toDataURLError) {
-            reject(toDataURLError);
-          }
-        } catch (canvasError) {
-          reject(canvasError);
-        }
-      };
-
-      img.src = base64;
-
-      if (img.complete) {
-        clearTimeout(imgLoadTimeout);
-        img.onload?.(new Event('load'));
-      }
-    } catch (error) {
-      reject(error);
-    }
-  });
-}
+import { compressImage } from '@/lib/utils/imageCapture'
 
 interface CoffeeBeanFormProps {
     onSave: (bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>) => void
@@ -635,14 +555,32 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
             if (!file.type.startsWith('image/')) {
                 return;
             }
-            
-            // 直接读取文件为base64
-            const reader = new FileReader();
-            
-            // 设置超时处理，防止移动设备上FileReader挂起
-            const readerTimeout = setTimeout(() => {
-                // 尝试使用URL.createObjectURL作为备选方案
+
+            try {
+                // 使用新的统一压缩工具，确保压缩到100KB以内
+                const compressedFile = await compressImage(file, {
+                    maxSizeMB: 0.1, // 100KB
+                    maxWidthOrHeight: 1200,
+                    initialQuality: 0.8,
+                    useWebWorker: true
+                });
+
+                // 转换为base64用于显示
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const base64 = reader.result as string;
+                    setBean(prev => ({
+                        ...prev,
+                        image: base64
+                    }));
+                };
+                reader.readAsDataURL(compressedFile);
+            } catch (compressionError) {
+                // 压缩失败时的降级处理
+                console.error('图片压缩失败:', compressionError);
+
                 try {
+                    // 使用URL.createObjectURL作为备选方案
                     const objectUrl = URL.createObjectURL(file);
                     setBean(prev => ({
                         ...prev,
@@ -651,68 +589,9 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                     // 清理URL对象
                     setTimeout(() => URL.revokeObjectURL(objectUrl), 30000);
                 } catch {
-                    // 备选方案失败，静默处理
+                    // 备选方案也失败，静默处理
                 }
-            }, 5000);
-            
-            reader.onloadend = async () => {
-                clearTimeout(readerTimeout);
-                try {
-                    const originalBase64 = reader.result as string;
-
-                    if (!originalBase64 || typeof originalBase64 !== 'string') {
-                        return;
-                    }
-
-                    try {
-                        // 使用canvas方法进行压缩
-                        const compressedBase64 = await compressBase64(originalBase64, 0.5, 800);
-
-                        // 更新状态
-                        setBean(prev => ({
-                            ...prev,
-                            image: compressedBase64
-                        }));
-                    } catch {
-                        // 如果压缩失败，使用原始图片
-                        setBean(prev => ({
-                            ...prev,
-                            image: originalBase64
-                        }));
-                    }
-                } catch {
-                    // 如果处理失败，尝试使用URL.createObjectURL
-                    try {
-                        const objectUrl = URL.createObjectURL(file);
-                        setBean(prev => ({
-                            ...prev,
-                            image: objectUrl
-                        }));
-                        // 清理URL对象
-                        setTimeout(() => URL.revokeObjectURL(objectUrl), 30000);
-                    } catch {
-                        // URL.createObjectURL失败，静默处理
-                    }
-                }
-            };
-            
-            reader.onerror = () => {
-                clearTimeout(readerTimeout);
-                // 如果读取出错，尝试使用URL.createObjectURL
-                try {
-                    const objectUrl = URL.createObjectURL(file);
-                    setBean(prev => ({
-                        ...prev,
-                        image: objectUrl
-                    }));
-                    // 清理URL对象
-                    setTimeout(() => URL.revokeObjectURL(objectUrl), 30000);
-                } catch {
-                    // URL.createObjectURL失败，静默处理
-                }
-            };
-
-            reader.readAsDataURL(file);
+            }
         } catch {
             // 图片处理失败，静默处理
         }

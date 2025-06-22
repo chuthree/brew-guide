@@ -6,7 +6,7 @@ import ReactCrop, { Crop } from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
 import { recognizeImage, RecognitionError } from '@/services/recognition'
 import { debounce } from 'lodash'
-import { captureImage } from '@/lib/utils/imageCapture'
+import { captureImage, compressImage as compressImageUtil } from '@/lib/utils/imageCapture'
 
 interface BeanImportModalProps {
     showForm: boolean
@@ -65,63 +65,23 @@ const STYLES = {
     }
 } as const;
 
-// 图片压缩工具函数
+// 图片压缩工具函数 - 使用统一的压缩工具
 const compressImage = async (file: File, maxSizeMB: number = IMAGE_COMPRESSION_CONFIG.maxSizeMB): Promise<Blob> => {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = (event) => {
-            const img = new Image();
-            img.src = event.target?.result as string;
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                let { width, height } = img;
+    try {
+        // 使用统一的压缩工具，确保压缩到指定大小
+        const compressedFile = await compressImageUtil(file, {
+            maxSizeMB: Math.min(maxSizeMB, 0.1), // 最大100KB
+            maxWidthOrHeight: IMAGE_COMPRESSION_CONFIG.maxDimension,
+            initialQuality: IMAGE_COMPRESSION_CONFIG.quality,
+            useWebWorker: true
+        });
 
-                // 缩放图片尺寸
-                if (width > IMAGE_COMPRESSION_CONFIG.maxDimension || height > IMAGE_COMPRESSION_CONFIG.maxDimension) {
-                    const scale = IMAGE_COMPRESSION_CONFIG.maxDimension / Math.max(width, height);
-                    width = Math.round(width * scale);
-                    height = Math.round(height * scale);
-                }
-
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext('2d');
-                if (!ctx) {
-                    reject(new Error('无法创建canvas上下文'));
-                    return;
-                }
-
-                ctx.drawImage(img, 0, 0, width, height);
-
-                // 递归压缩
-                let quality = IMAGE_COMPRESSION_CONFIG.quality;
-                const compress = () => {
-                    canvas.toBlob(
-                        (blob) => {
-                            if (!blob) {
-                                reject(new Error('压缩失败'));
-                                return;
-                            }
-
-                            if (blob.size > maxSizeMB * 1024 * 1024 && quality > IMAGE_COMPRESSION_CONFIG.minQuality) {
-                                quality -= 0.1;
-                                compress();
-                            } else {
-                                resolve(blob);
-                            }
-                        },
-                        IMAGE_COMPRESSION_CONFIG.format,
-                        quality
-                    );
-                };
-
-                compress();
-            };
-            img.onerror = () => reject(new Error('图片加载失败'));
-        };
-        reader.onerror = () => reject(new Error('文件读取失败'));
-    });
+        // 转换为Blob
+        return new Blob([compressedFile], { type: compressedFile.type });
+    } catch (error) {
+        console.error('图片压缩失败:', error);
+        throw error;
+    }
 };
 
 // 工具函数：重置图片相关状态
@@ -408,11 +368,22 @@ const TEMPLATE_PROMPT = `提取咖啡豆信息，返回JSON格式。
             setCroppedImage(null);
             setIsCropActive(false); // 将在 useEffect 中自动设置为 true
         } catch (error) {
+            // 处理不同类型的错误
+            const errorMessage = error instanceof Error ? error.message : '图片选择失败';
+
+            // 如果是用户取消操作，不显示错误
+            if (errorMessage.includes('取消') || errorMessage.includes('未选择')) {
+                // 静默处理用户取消
+                return;
+            }
+
+            // 显示其他错误
+            setError(errorMessage);
+
             // Log error in development only
             if (process.env.NODE_ENV === 'development') {
                 console.error('打开相机/相册失败:', error);
             }
-            setError('打开相机/相册失败，请重试');
         }
     }, []);
 
@@ -576,9 +547,10 @@ const TEMPLATE_PROMPT = `提取咖啡豆信息，返回JSON格式。
                             </button>
                             <button
                                 onClick={handleImageRecognition}
-                                className={`${STYLES.button.small} bg-neutral-800 dark:bg-neutral-200 text-neutral-100 dark:text-neutral-800 rounded-sm`}
+                                disabled={isUploading}
+                                className={`${STYLES.button.small} bg-neutral-800 dark:bg-neutral-200 text-neutral-100 dark:text-neutral-800 rounded-sm disabled:opacity-50`}
                             >
-                                确认裁剪并识别
+                                {isUploading ? '识别中...' : '确认裁剪并识别'}
                             </button>
                         </div>
                     </div>
@@ -586,7 +558,6 @@ const TEMPLATE_PROMPT = `提取咖啡豆信息，返回JSON格式。
                     <div className="flex space-x-2">
                         <button
                             onClick={() => handleImageSelect('camera')}
-                            disabled={isUploading}
                             className={STYLES.button.upload}
                         >
                             <span className="flex items-center justify-center space-x-2">
@@ -599,7 +570,6 @@ const TEMPLATE_PROMPT = `提取咖啡豆信息，返回JSON格式。
                         </button>
                         <button
                             onClick={() => handleImageSelect('gallery')}
-                            disabled={isUploading}
                             className={STYLES.button.upload}
                         >
                             <span className="flex items-center justify-center space-x-2">
@@ -612,15 +582,7 @@ const TEMPLATE_PROMPT = `提取咖啡豆信息，返回JSON格式。
                     </div>
                 )}
 
-                {isUploading && (
-                    <div className="flex items-center justify-center space-x-2">
-                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                        </svg>
-                        <span className="text-sm">处理中...</span>
-                    </div>
-                )}
+
             </div>
         </div>
     );

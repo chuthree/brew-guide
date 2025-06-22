@@ -6,7 +6,7 @@ import Image from 'next/image'
 import type { BrewingNoteData, CoffeeBean } from '@/types/app'
 import AutoResizeTextarea from '@/components/common/forms/AutoResizeTextarea'
 import NoteFormHeader from '@/components/notes/ui/NoteFormHeader'
-import { captureImage } from '@/lib/utils/imageCapture'
+import { captureImage, compressBase64Image } from '@/lib/utils/imageCapture'
 import { equipmentList, commonMethods, type Method, type CustomEquipment } from '@/lib/core/config'
 import { loadCustomEquipments } from '@/lib/managers/customEquipments'
 import { loadCustomMethods } from '@/lib/managers/customMethods'
@@ -47,62 +47,7 @@ interface BrewingNoteFormProps {
     settings?: SettingsOptions; // 添加可选的设置参数
 }
 
-// 图片压缩函数，包含Canvas渲染失败检测
-const compressBase64 = (base64: string, quality = 0.8, maxWidth = 1200): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    // 如果图片小于200kb，直接返回原图
-    if (base64.length * 0.75 <= 200 * 1024) {
-      resolve(base64);
-      return;
-    }
 
-    const img = document.createElement('img');
-    const timeout = setTimeout(() => reject(new Error('图片加载超时')), 10000);
-
-    img.onload = () => {
-      clearTimeout(timeout);
-      try {
-        let { width, height } = img;
-        if (width > maxWidth) {
-          height = height * (maxWidth / width);
-          width = maxWidth;
-        }
-
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-
-        if (!ctx) throw new Error('无法获取canvas上下文');
-
-        ctx.drawImage(img, 0, 0, width, height);
-        const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
-
-        // 检测Canvas渲染失败的情况
-        const compressionRatio = ((base64.length - compressedBase64.length) / base64.length * 100);
-        const compressedSizeKB = Math.round(compressedBase64.length * 0.75 / 1024);
-
-        // 如果压缩率超过97%且最终文件小于50KB，很可能是Canvas渲染失败
-        if (compressionRatio > 97 && compressedSizeKB < 50) {
-          // 返回原图，避免使用损坏的压缩结果
-          resolve(base64);
-          return;
-        }
-
-        resolve(compressedBase64);
-      } catch (error) {
-        reject(error);
-      }
-    };
-
-    img.onerror = () => {
-      clearTimeout(timeout);
-      reject(new Error('图片加载失败'));
-    };
-
-    img.src = base64;
-  });
-};
 
 // 标准化烘焙度值
 const normalizeRoastLevel = (roastLevel?: string): string => {
@@ -617,7 +562,11 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                 const base64 = reader.result as string;
                 if (!base64) return;
 
-                const compressedBase64 = await compressBase64(base64, 0.8, 1200);
+                const compressedBase64 = await compressBase64Image(base64, {
+                    maxSizeMB: 0.1, // 100KB
+                    maxWidthOrHeight: 1200,
+                    initialQuality: 0.8
+                });
                 setFormData(prev => ({ ...prev, image: compressedBase64 }));
             } catch (error) {
                 // Log error in development only

@@ -146,6 +146,15 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
             // 然后正常处理添加
             handleFileSelect(file);
         } catch (error) {
+            // 处理不同类型的错误
+            const errorMessage = error instanceof Error ? error.message : '图片选择失败';
+
+            // 如果是用户取消操作，不显示错误
+            if (errorMessage.includes('取消') || errorMessage.includes('未选择')) {
+                // 静默处理用户取消
+                return;
+            }
+
             console.error('打开相机/相册失败:', error);
         }
     };
