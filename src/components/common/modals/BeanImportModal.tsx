@@ -245,7 +245,7 @@ const TEMPLATE_PROMPT = `提取咖啡豆信息，返回JSON格式。
   "roastLevel": "浅度烘焙",
   "capacity": "250",
   "remaining": "250",
-  "price": "88元",
+  "price": "88",
   "roastDate": "2025-06-22",
   "beanType": "filter",
   "flavor": ["花香", "柑橘"],

@@ -457,7 +457,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                         >
                             {/* 标题和操作栏 */}
                             <div className="flex items-center justify-between py-4 border-b border-neutral-200/60 dark:border-neutral-800/40 mb-4">
-                                <h2 className="text-lg font-medium text-neutral-800 dark:text-neutral-100 truncate flex-1">
+                                <h2 className="text-base font-medium text-neutral-800 dark:text-neutral-100 truncate flex-1">
                                     {searchQuery ? (
                                         <HighlightText text={bean?.name || '未命名'} highlight={searchQuery} />
                                     ) : (bean?.name || '未命名')}

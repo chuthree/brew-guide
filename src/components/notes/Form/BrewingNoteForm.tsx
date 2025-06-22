@@ -726,7 +726,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                             '咖啡豆信息'
                         )}
                     </div>
-                    <div className="flex items-start justify-start relative">
+                    <div className="flex items-center justify-center relative">
                         <div className="w-32 h-32 rounded-lg border-2 border-dashed border-neutral-300 dark:border-neutral-700 flex flex-col items-center justify-center overflow-hidden relative">
                             {formData.image ? (
                                 <div className="relative w-full h-full">
