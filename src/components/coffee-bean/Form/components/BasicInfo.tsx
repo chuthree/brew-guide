@@ -262,7 +262,7 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
 
             <div className="space-y-2 w-full">
                 <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                    咖啡豆名称 <span className="text-red-500">*</span>
+                    咖啡豆名称 <span className="text-red-500">*</span> <span className='text-xs text-neutral-400 dark:text-neutral-500 ml-1'>(可用：烘焙商 咖啡豆名称)</span>
                 </label>
                 <AutocompleteInput
                     value={bean.name || ''}

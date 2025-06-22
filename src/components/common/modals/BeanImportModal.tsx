@@ -239,36 +239,32 @@ const TEMPLATE_PROMPT = `提取咖啡豆信息，返回JSON格式。
 单个咖啡豆使用：{...}
 多个咖啡豆使用：[{...},{...}]
 
+格式要求：
+{
+  "name": "咖啡豆名称",
+  "roastLevel": "浅度烘焙",
+  "capacity": "250",
+  "remaining": "250",
+  "price": "88元",
+  "roastDate": "2025-06-22",
+  "beanType": "filter",
+  "flavor": ["花香", "柑橘"],
+  "notes": "备注",
+  "startDay": 7,
+  "endDay": 30,
+  "blendComponents": [{"origin":"埃塞俄比亚","process":"水洗","variety":"瑰夏"}]
+}
+
 字段说明：
-- name: 咖啡豆名称（必填）
-- capacity: 总容量数字
-- remaining: 剩余容量数字
-- price: 价格数字
-- roastLevel: 极浅烘焙/浅度烘焙/中浅烘焙/中度烘焙/中深烘焙/深度烘焙
-- roastDate: YYYY-MM-DD格式
-- flavor: 风味数组
-- notes: 备注信息
-- startDay: 养豆期天数
-- endDay: 赏味期天数
-- blendComponents: 成分数组
+- name: 咖啡豆名称（必填）[如果有烘焙/品牌商，需写在名称最前面用空格隔开]
+- roastLevel: 烘焙度（必填），极浅烘焙/浅度烘焙/中浅烘焙/中度烘焙/中深烘焙/深度烘焙
+- blendComponents: 成分数组（必填），单品豆一个成分，拼配豆多个成分需percentage字段在前面
+- 其他字段均为可选，没有信息时可省略或留空
 
-成分格式：
-单品：[{"origin":"埃塞俄比亚","process":"水洗","variety":"瑰夏"}]
-拼配：[
-  {"percentage":60,"origin":"巴西","process":"日晒","variety":"红波旁"},
-  {"percentage":40,"origin":"埃塞俄比亚","process":"水洗","variety":"铁皮卡"}
-]
-
-成分字段说明：
-- percentage: 比例数字（有比例信息时填写，没有时可省略该字段）
-- origin: 产地
-- process: 处理法
-- variety: 品种
-
-注意：
-- 每个成分的origin/process/variety只能填一个值，不能用逗号连接
-- 不确定的字段留空字符串""或空数组[]
-- 产地、处理法、品种信息请放在blendComponents数组中`;
+要求：
+1. 只提取确实存在的信息，避免编造数据
+2. JSON格式有效，数值字段不含单位
+3. 产地/处理法/品种信息放在blendComponents中`;
 
     // 复制文本到剪贴板
     const copyTextToClipboard = useCallback(async (text: string) => {
