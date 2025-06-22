@@ -20,7 +20,7 @@ const ChangeRecordEditModal: React.FC<ChangeRecordEditModalProps> = ({
     initialData,
     onSave,
     onClose,
-    settings
+    settings: _settings
 }) => {
     // 时间戳状态管理
     const [timestamp, setTimestamp] = useState<Date>(new Date(initialData.timestamp))

@@ -63,8 +63,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     isOpen,
     onClose: _onClose,
     onAddNote,
-    setAlternativeHeaderContent, // 不再使用，保留以兼容接口
-    setShowAlternativeHeader, // 不再使用，保留以兼容接口
+    setAlternativeHeaderContent: _setAlternativeHeaderContent, // 不再使用，保留以兼容接口
+    setShowAlternativeHeader: _setShowAlternativeHeader, // 不再使用，保留以兼容接口
     settings
 }) => {
     // 用于跟踪用户选择
@@ -160,7 +160,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         if (hasChanges) {
             const updatedNotes = notes.map(note => {
                 if (note.equipment && normalizedEquipmentMap[note.equipment] !== note.equipment) {
-                    console.log(`清理重复器具: ${note.equipment} -> ${normalizedEquipmentMap[note.equipment]}`);
                     return {
                         ...note,
                         equipment: normalizedEquipmentMap[note.equipment]
@@ -173,7 +172,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
             try {
                 const { Storage } = await import('@/lib/core/storage');
                 await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
-                console.log('已清理并保存重复器具数据');
             } catch (error) {
                 console.error('保存清理后的笔记失败:', error);
             }
@@ -331,20 +329,17 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         const handleCustomStorageChange = (e: CustomEvent) => {
             if (e.detail?.key === 'brewingNotes') {
                 // 总是重新加载数据以确保UI同步，但避免重复的网络请求
-                console.log('笔记数据变更，重新加载');
                 loadEquipmentsAndBeans();
             }
         };
 
         // 监听咖啡豆更新事件
         const handleCoffeeBeansUpdated = () => {
-            console.log('咖啡豆数据变更，重新加载笔记列表');
             loadEquipmentsAndBeans();
         };
 
         // 监听笔记更新事件（由咖啡豆管理器触发）
         const handleBrewingNotesUpdated = () => {
-            console.log('笔记数据被同步更新，重新加载');
             loadEquipmentsAndBeans();
         };
 
@@ -418,7 +413,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                                     remaining: formattedRemaining
                                 });
 
-                                console.log(`删除容量调整记录时恢复咖啡豆容量: ${changeAmount > 0 ? '-' : '+'}${Math.abs(changeAmount)}g`);
+
                             }
                         }
                     }
@@ -431,7 +426,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                     if (beanId && coffeeAmount > 0) {
                         const { CoffeeBeanManager } = await import('@/lib/managers/coffeeBeanManager');
                         await CoffeeBeanManager.increaseBeanRemaining(beanId, coffeeAmount);
-                        console.log(`删除笔记时恢复咖啡豆容量: ${coffeeAmount}g`);
+
                     }
                 }
             } catch (error) {
@@ -590,7 +585,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                                 remaining: formattedRemaining
                             });
 
-                            console.log(`变动记录编辑：容量调整 ${capacityDiff > 0 ? '+' : ''}${capacityDiff}g`);
+
                         }
                     }
                 } catch (error) {
