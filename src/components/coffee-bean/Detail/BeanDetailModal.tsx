@@ -3,25 +3,19 @@
 import React, { useState, useEffect } from 'react'
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
+import { motion, AnimatePresence } from 'framer-motion'
 import { ExtendedCoffeeBean } from '@/types/app'
 import { BrewingNote } from '@/lib/core/config'
 import { parseDateToTimestamp } from '@/lib/utils/dateUtils'
 import HighlightText from '@/components/common/ui/HighlightText'
 import { getEquipmentName } from '@/components/notes/utils'
 import { formatDate } from '@/components/notes/utils'
+import ActionMenu from '@/components/coffee-bean/ui/action-menu'
 
 // 动态导入 ImageViewer 组件
 const ImageViewer = dynamic(() => import('@/components/common/ui/ImageViewer'), {
     ssr: false
 })
-import {
-    Drawer,
-    DrawerContent,
-    DrawerHeader,
-    DrawerTitle,
-    DrawerDescription,
-} from '@/components/ui/drawer'
-import ActionMenu from '@/components/coffee-bean/ui/action-menu'
 
 
 
@@ -92,6 +86,8 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     const [imageViewerOpen, setImageViewerOpen] = useState(false)
     const [currentImageUrl, setCurrentImageUrl] = useState('')
     const [noteImageErrors, setNoteImageErrors] = useState<Record<string, boolean>>({})
+    // 拟态框关闭状态
+    const [isClosing, setIsClosing] = useState(false)
 
     // 重置图片错误状态
     useEffect(() => {
@@ -403,138 +399,169 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
         loadRelatedNotes()
     }, [bean?.id, bean?.name, isOpen])
 
-    const handleOpenChange = (open: boolean) => {
-        if (!open) {
+    // 处理关闭
+    const handleClose = () => {
+        setIsClosing(true)
+        setTimeout(() => {
+            setIsClosing(false)
             onClose()
-        }
+        }, 265) // 与动画时长一致
     }
 
     return (
         <>
-        <Drawer open={isOpen} onOpenChange={handleOpenChange}>
-            <DrawerContent className="max-h-[85vh]">
-                <DrawerDescription id="drawer-description" className="sr-only">
-                    咖啡豆详情信息，包含基本信息、产地信息、风味描述和相关冲煮记录
-                </DrawerDescription>
-                <DrawerHeader className="border-b border-neutral-200/60 dark:border-neutral-800/40 shrink-0 px-4 py-3">
-                    <div className="relative flex items-center justify-between">
-                        <div className="flex items-center">
-                            <button
-                                onClick={onClose}
-                                className="text-xs font-medium text-neutral-600 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200 transition-colors px-2 py-1"
-                            />
+        <AnimatePresence>
+            {isOpen && !isClosing && (
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.265 }}
+                    className="fixed inset-0 z-50 bg-black/30 backdrop-blur-xs"
+                    onClick={handleClose}
+                >
+                    <motion.div
+                        initial={{ y: '100%' }}
+                        animate={{ y: 0 }}
+                        exit={{ y: '100%' }}
+                        transition={{
+                            type: "tween",
+                            ease: [0.33, 1, 0.68, 1], // cubic-bezier(0.33, 1, 0.68, 1) - easeOutCubic
+                            duration: 0.265
+                        }}
+                        style={{
+                            willChange: "transform"
+                        }}
+                        className="absolute inset-x-0 bottom-0 max-w-[500px] mx-auto max-h-[90vh] overflow-hidden rounded-t-2xl bg-neutral-50 dark:bg-neutral-900 shadow-xl"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* 拖动条 */}
+                        <div className="sticky top-0 z-10 flex justify-center py-2 bg-neutral-50 dark:bg-neutral-900">
+                            <div className="h-1.5 w-12 rounded-full bg-neutral-200 dark:bg-neutral-700" />
                         </div>
 
-                        <DrawerTitle className="absolute left-1/2 transform -translate-x-1/2 text-base font-medium text-neutral-800 dark:text-neutral-100 leading-tight max-w-[50%]">
-                            <div className="truncate text-center">
-                                {searchQuery ? (
-                                    <HighlightText text={bean?.name || '未命名'} highlight={searchQuery} />
-                                ) : (bean?.name || '未命名')}
+                        {/* 内容区域 */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{
+                                type: "tween",
+                                ease: "easeOut",
+                                duration: 0.265,
+                                delay: 0.05
+                            }}
+                            style={{
+                                willChange: "opacity, transform"
+                            }}
+                            className="px-6 pb-safe-bottom overflow-auto max-h-[calc(85vh-40px)]"
+                        >
+                            {/* 标题和操作栏 */}
+                            <div className="flex items-center justify-between py-4 border-b border-neutral-200/60 dark:border-neutral-800/40 mb-4">
+                                <h2 className="text-lg font-medium text-neutral-800 dark:text-neutral-100 truncate flex-1">
+                                    {searchQuery ? (
+                                        <HighlightText text={bean?.name || '未命名'} highlight={searchQuery} />
+                                    ) : (bean?.name || '未命名')}
+                                </h2>
+
+                                {bean && (onEdit || onShare || onDelete) && (
+                                    <ActionMenu
+                                        items={[
+                                            ...(onEdit ? [{ id: 'edit', label: '编辑', onClick: () => { onEdit(bean); handleClose(); }, color: 'default' as const }] : []),
+                                            ...(onShare ? [{ id: 'share', label: '分享', onClick: () => { onShare(bean); handleClose(); }, color: 'default' as const }] : []),
+                                            ...(onDelete ? [{ id: 'delete', label: '删除', onClick: () => { onDelete(bean); handleClose(); }, color: 'danger' as const }] : [])
+                                        ]}
+                                        triggerClassName="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors ml-3"
+                                    />
+                                )}
                             </div>
-                        </DrawerTitle>
 
-                        <div className="flex items-center">
-                            {bean && (onEdit || onShare || onDelete) && (
-                                <ActionMenu
-                                    items={[
-                                        ...(onEdit ? [{ id: 'edit', label: '编辑', onClick: () => { onEdit(bean); onClose(); }, color: 'default' as const }] : []),
-                                        ...(onShare ? [{ id: 'share', label: '分享', onClick: () => { onShare(bean); onClose(); }, color: 'default' as const }] : []),
-                                        ...(onDelete ? [{ id: 'delete', label: '删除', onClick: () => { onDelete(bean); onClose(); }, color: 'danger' as const }] : [])
-                                    ]}
-                                    triggerClassName="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
-                                />
-                            )}
-                        </div>
-                    </div>
-                </DrawerHeader>
+                            {bean ? (
+                                <div className="space-y-4">
+                                    <div className="flex gap-4 pb-3 border-b border-neutral-200/40 dark:border-neutral-800/40">
+                                        {bean.image && (
+                                            <div className="w-16 h-16 relative rounded border border-neutral-200 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800 overflow-hidden flex-shrink-0">
+                                                {imageError ? (
+                                                    <div className="absolute inset-0 flex items-center justify-center text-xs text-neutral-500 dark:text-neutral-400">失败</div>
+                                                ) : (
+                                                    <Image src={bean.image} alt={bean.name || '咖啡豆图片'} fill className="object-cover" onError={() => setImageError(true)} />
+                                                )}
+                                            </div>
+                                        )}
+                                        <div className="flex-1 min-w-0">
+                                            <InfoGrid items={getBasicInfoItems()} />
+                                        </div>
+                                    </div>
 
-                {bean ? (
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-safe-bottom">
-                        <div className="flex gap-4 pb-3 border-b border-neutral-200/40 dark:border-neutral-800/40">
-                            {bean.image && (
-                                <div className="w-16 h-16 relative rounded border border-neutral-200 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800 overflow-hidden flex-shrink-0">
-                                    {imageError ? (
-                                        <div className="absolute inset-0 flex items-center justify-center text-xs text-neutral-500 dark:text-neutral-400">失败</div>
-                                    ) : (
-                                        <Image src={bean.image} alt={bean.name || '咖啡豆图片'} fill className="object-cover" onError={() => setImageError(true)} />
+                                    {getOriginInfoItems().length > 0 && !hasBlendComponents() && (
+                                        <div className="space-y-2">
+                                            <InfoGrid items={getOriginInfoItems()} />
+                                        </div>
                                     )}
-                                </div>
-                            )}
-                            <div className="flex-1 min-w-0">
-                                <InfoGrid items={getBasicInfoItems()} />
-                            </div>
-                        </div>
 
-                        {getOriginInfoItems().length > 0 && !hasBlendComponents() && (
-                            <div className="space-y-2">
-                                <InfoGrid items={getOriginInfoItems()} />
-                            </div>
-                        )}
+                                    {(hasBlendComponents() || (bean.flavor && bean.flavor.length > 0) || bean.notes) && (
+                                        <div className="space-y-3">
+                                            {hasBlendComponents() && (
+                                                <div>
+                                                    <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-1.5">拼配成分</div>
+                                                    <div className="grid gap-3 grid-cols-2">
+                                                        {bean.blendComponents!.map((comp: { origin?: string; variety?: string; process?: string; percentage?: number }, index: number) => {
+                                                            const parts = [comp.origin, comp.variety, comp.process].filter(Boolean)
+                                                            const displayText = parts.length > 0 ? parts.join(' · ') : `组成 ${index + 1}`
 
-                        {(hasBlendComponents() || (bean.flavor && bean.flavor.length > 0) || bean.notes) && (
-                            <div className="space-y-3">
-                                {hasBlendComponents() && (
-                                    <div>
-                                        <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-1.5">拼配成分</div>
-                                        <div className="grid gap-3 grid-cols-2">
-                                            {bean.blendComponents!.map((comp: { origin?: string; variety?: string; process?: string; percentage?: number }, index: number) => {
-                                                const parts = [comp.origin, comp.variety, comp.process].filter(Boolean)
-                                                const displayText = parts.length > 0 ? parts.join(' · ') : `组成 ${index + 1}`
-
-                                                return (
-                                                    <div key={index} className="flex items-center gap-2">
-                                                        <span className="text-xs font-medium text-neutral-800 dark:text-neutral-100">{displayText}</span>
-                                                        {comp.percentage !== undefined && comp.percentage !== null && (
-                                                            <span className="text-xs font-medium text-neutral-600 dark:text-neutral-400">{comp.percentage}%</span>
-                                                        )}
+                                                            return (
+                                                                <div key={index} className="flex items-center gap-2">
+                                                                    <span className="text-xs font-medium text-neutral-800 dark:text-neutral-100">{displayText}</span>
+                                                                    {comp.percentage !== undefined && comp.percentage !== null && (
+                                                                        <span className="text-xs font-medium text-neutral-600 dark:text-neutral-400">{comp.percentage}%</span>
+                                                                    )}
+                                                                </div>
+                                                            )
+                                                        })}
                                                     </div>
-                                                )
-                                            })}
+                                                </div>
+                                            )}
+
+                                            {bean.flavor && bean.flavor.length > 0 && (
+                                                <div>
+                                                    <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-1.5">风味</div>
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {bean.flavor.map((flavor: string, index: number) => (
+                                                            <span key={index} className="px-1.5 py-0.5 bg-neutral-100 dark:bg-neutral-700/50 text-xs text-neutral-700 dark:text-neutral-300">
+                                                                {flavor}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {bean.notes && (
+                                                <div>
+                                                    <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-1.5">备注</div>
+                                                    <div className="text-xs text-neutral-700 dark:text-neutral-300 leading-relaxed whitespace-pre-line">
+                                                        {searchQuery ? (
+                                                            <HighlightText text={bean.notes} highlight={searchQuery} className="text-neutral-700 dark:text-neutral-300" />
+                                                        ) : bean.notes}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
-                                    </div>
-                                )}
+                                    )}
 
-                                {bean.flavor && bean.flavor.length > 0 && (
-                                    <div>
-                                        <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-1.5">风味</div>
-                                        <div className="flex flex-wrap gap-1">
-                                            {bean.flavor.map((flavor: string, index: number) => (
-                                                <span key={index} className="px-1.5 py-0.5 bg-neutral-100 dark:bg-neutral-700/50 text-xs text-neutral-700 dark:text-neutral-300">
-                                                    {flavor}
-                                                </span>
-                                            ))}
+                                    {/* 相关冲煮记录 - 简化布局 */}
+                                    <div className="border-t border-neutral-200/40 dark:border-neutral-800/40 pt-3">
+                                        <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-2">
+                                            冲煮记录 {relatedNotes.length > 0 && `(${relatedNotes.length})`}
                                         </div>
-                                    </div>
-                                )}
 
-                                {bean.notes && (
-                                    <div>
-                                        <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-1.5">备注</div>
-                                        <div className="text-xs text-neutral-700 dark:text-neutral-300 leading-relaxed whitespace-pre-line">
-                                            {searchQuery ? (
-                                                <HighlightText text={bean.notes} highlight={searchQuery} className="text-neutral-700 dark:text-neutral-300" />
-                                            ) : bean.notes}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        {/* 相关冲煮记录 - 简化布局 */}
-                        <div className="border-t border-neutral-200/40 dark:border-neutral-800/40 pt-3">
-                            <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-2">
-                                冲煮记录 {relatedNotes.length > 0 && `(${relatedNotes.length})`}
-                            </div>
-
-                            {isLoadingNotes ? (
-                                <div className="text-xs text-neutral-500 dark:text-neutral-400">
-                                    加载中...
-                                </div>
-                            ) : relatedNotes.length === 0 ? (
-                                <div className="text-xs text-neutral-500 dark:text-neutral-400">
-                                    暂无冲煮记录
-                                </div>
-                            ) : (
+                                        {isLoadingNotes ? (
+                                            <div className="text-xs text-neutral-500 dark:text-neutral-400">
+                                                加载中...
+                                            </div>
+                                        ) : relatedNotes.length === 0 ? (
+                                            <div className="text-xs text-neutral-500 dark:text-neutral-400">
+                                                暂无冲煮记录
+                                            </div>
+                                        ) : (
                                 <div className="space-y-2">
                                     {relatedNotes.map((note) => {
                                         const isChangeRecord = isSimpleQuickDecrementNote(note) || isSimpleCapacityAdjustmentNote(note)
@@ -776,19 +803,22 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                             </div>
                                         )
                                     })}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="flex items-center justify-center p-8">
+                                    <div className="text-sm text-neutral-500 dark:text-neutral-400">
+                                        加载中...
+                                    </div>
                                 </div>
                             )}
-                        </div>
-                    </div>
-                ) : (
-                    <div className="flex-1 flex items-center justify-center p-4">
-                        <div className="text-sm text-muted-foreground">
-                            加载中...
-                        </div>
-                    </div>
-                )}
-            </DrawerContent>
-        </Drawer>
+                        </motion.div>
+                    </motion.div>
+                </motion.div>
+            )}
+        </AnimatePresence>
 
         {/* 图片查看器 */}
         {currentImageUrl && imageViewerOpen && (
@@ -802,7 +832,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                 }}
             />
         )}
-    </>
+        </>
     )
 }
 
