@@ -318,8 +318,11 @@ const StagesStep: React.FC<StagesStepProps> = ({
                                 {!customEquipment.customPourAnimations.some(a => a.pourType === 'circle') && 
                                   <option value="circle">绕圈注水</option>
                                 }
-                                {!customEquipment.customPourAnimations.some(a => a.pourType === 'ice') && 
+                                {!customEquipment.customPourAnimations.some(a => a.pourType === 'ice') &&
                                   <option value="ice">添加冰块</option>
+                                }
+                                {!customEquipment.customPourAnimations.some(a => a.pourType === 'bypass') &&
+                                  <option value="bypass">Bypass</option>
                                 }
                                 <option value="other">其他方式</option>
                               </>
@@ -345,6 +348,7 @@ const StagesStep: React.FC<StagesStepProps> = ({
                                 <option value="center">中心注水</option>
                                 <option value="circle">绕圈注水</option>
                                 <option value="ice">添加冰块</option>
+                                <option value="bypass">Bypass</option>
                                 <option value="other">其他方式</option>
                               </>
                             )}
@@ -395,8 +399,8 @@ const StagesStep: React.FC<StagesStepProps> = ({
                 </div>
               </div>
 
-              {/* 普通器具显示标准字段 */}
-              {!isEspressoMachine(customEquipment) && (
+              {/* 普通器具显示标准字段，但 Bypass 类型不显示时间相关字段 */}
+              {!isEspressoMachine(customEquipment) && stage.pourType !== 'bypass' && (
                 <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
@@ -771,6 +775,53 @@ const StagesStep: React.FC<StagesStepProps> = ({
                             : stage.water 
                               ? (typeof stage.water === 'number' 
                                 ? String(stage.water) 
+                                : String(parseInt((stage.water as string).replace('g', ''))))
+                              : ''
+                        }
+                        onChange={(e) => {
+                          setEditingCumulativeWater({
+                            index,
+                            value: e.target.value
+                          });
+                          if (!e.target.value.trim()) {
+                            onStageChange(index, 'water', '');
+                            return;
+                          }
+                          const water = parseInt(e.target.value) || 0;
+                          onStageChange(index, 'water', `${water}`);
+                        }}
+                        onBlur={() => setEditingCumulativeWater(null)}
+                        onFocus={(e) => e.target.select()}
+                        className="w-full py-2 bg-transparent outline-hidden border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
+                      />
+                      <span className="absolute right-0 bottom-2 text-neutral-500 dark:text-neutral-400">g</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Bypass 类型 - 只显示水量字段 */}
+              {!isEspressoMachine(customEquipment) && stage.pourType === 'bypass' && (
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="space-y-2">
+                    <label className="flex items-center text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                      水量
+                      <span className="ml-2 text-xs text-neutral-400 dark:text-neutral-500">
+                        (冲煮完成后添加)
+                      </span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        min="0"
+                        step="1"
+                        placeholder=""
+                        value={
+                          editingCumulativeWater && editingCumulativeWater.index === index
+                            ? editingCumulativeWater.value
+                            : stage.water
+                              ? (typeof stage.water === 'number'
+                                ? String(stage.water)
                                 : String(parseInt((stage.water as string).replace('g', ''))))
                               : ''
                         }

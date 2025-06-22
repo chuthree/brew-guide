@@ -117,6 +117,7 @@ const generateCompactDescription = (step: Step & { time?: number; pourTime?: num
     const waterAmount = step.items[0] || '';
     const description = step.items[1] || step.description || '';
     const isWaitingStep = step.type === 'wait';
+    const isBypassStep = step.pourType === 'bypass';
 
     // 获取时间信息
     let timeInfo = null;
@@ -161,7 +162,8 @@ const generateCompactDescription = (step: Step & { time?: number; pourTime?: num
         waterAmount,
         flowRateInfo,
         description,
-        isWaitingStep
+        isWaitingStep,
+        isBypassStep
     };
 }
 
@@ -196,6 +198,9 @@ const StageItem: React.FC<StageItemProps> = ({
 
     // 判断是否为等待阶段
     const isWaitingStage = step.type === 'wait';
+
+    // 判断是否为 Bypass 步骤
+    const isBypassStep = step.pourType === 'bypass';
 
     // 判断是否为当前阶段
     const isCurrentStage = activeTab === '注水' && index === currentStage;
@@ -311,7 +316,14 @@ const StageItem: React.FC<StageItemProps> = ({
                                 <div className="space-y-3 py-3">
                                     {/* 主要描述 - 自然语言 */}
                                     <div className="text-xl font-medium text-neutral-600 dark:text-neutral-400 leading-relaxed">
-                                        {compactDesc.isWaitingStep ? (
+                                        {compactDesc.isBypassStep ? (
+                                            // Bypass 步骤的简洁处理
+                                            <>
+                                                <span className="opacity-100">{compactDesc.title}</span>
+                                                <span className="opacity-80">，添加 </span>
+                                                <span className="opacity-100">{compactDesc.waterAmount}</span>
+                                            </>
+                                        ) : compactDesc.isWaitingStep ? (
                                             // 等待步骤的特殊处理 - 显示原始标题而不是硬编码的"等待"
                                             <>
                                                 <span className="opacity-100">{compactDesc.title}</span>
@@ -399,8 +411,8 @@ const StageItem: React.FC<StageItemProps> = ({
                                     {/* 注水阶段显示时间和水量 */}
                                     {activeTab === '注水' && selectedMethod && step.originalIndex !== undefined && step.items && (
                                         <div className="flex items-baseline gap-3 text-xs font-medium text-neutral-800 dark:text-neutral-100 shrink-0">
-                                            {/* 显示时间：优先使用endTime，其次是note，再次是time属性 */}
-                                            {(step.endTime !== undefined || step.note || step.time !== undefined) && (
+                                            {/* Bypass 步骤不显示时间，其他步骤显示时间 */}
+                                            {!isBypassStep && (step.endTime !== undefined || step.note || step.time !== undefined) && (
                                                 <>
                                                     <span>
                                                         {step.endTime !== undefined

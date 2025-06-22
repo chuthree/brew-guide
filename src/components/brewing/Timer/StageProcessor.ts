@@ -73,6 +73,11 @@ export const createExpandedStages = (stages: Stage[] | undefined): ExpandedStage
   } else {
     // 常规方案处理逻辑
     stages.forEach((stage, index) => {
+      // Bypass 类型的步骤不参与主要计时，跳过处理
+      if (stage.pourType === 'bypass') {
+        return;
+      }
+
       const prevStageTime = index > 0 ? (stages[index - 1].time || 0) : 0;
       const stageTime = stage.time || 0;
       const stagePourTime =

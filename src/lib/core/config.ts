@@ -51,7 +51,7 @@ export interface CustomEquipment extends Equipment {
 		name: string;
 		customAnimationSvg: string;
 		isSystemDefault?: boolean;
-		pourType?: 'center' | 'circle' | 'ice';
+		pourType?: 'center' | 'circle' | 'ice' | 'bypass';
 		previewFrames?: number;
 		frames?: Array<{
 			id: string;

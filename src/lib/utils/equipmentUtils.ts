@@ -30,6 +30,8 @@ export const getPourTypeName = (pourType?: string): string => {
       return '绕圈注水';
     case 'ice':
       return '添加冰块';
+    case 'bypass':
+      return 'Bypass';
     default:
       return pourType;
   }

@@ -100,6 +100,14 @@ const DEFAULT_POUR_TYPES = [
         description: '适用于冰滴和冰手冲咖啡',
         isSystemDefault: true,
         previewFrames: 4
+    },
+    {
+        id: 'system-bypass',
+        name: 'Bypass',
+        pourType: 'bypass' as const,
+        description: '冲煮完成后添加到咖啡液中，调节浓度和口感',
+        isSystemDefault: true,
+        previewFrames: 1
     }
 ];
 

@@ -65,7 +65,7 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
         "label": "步骤操作简述（如焖蒸(绕圈注水)、绕圈注水、中心注水）",
         "water": "该步骤水量，如40g",
         "detail": "描述注水方式，如中心向外缓慢画圈注水，均匀萃取咖啡风味",
-        "pourType": "注水方式严格按照center（中心注水）、circle（绕圈注水）、ice（冰水）、other（其他）"
+        "pourType": "注水方式严格按照center（中心注水）、circle（绕圈注水）、ice（冰水）、bypass（Bypass）、other（其他）"
       }
     ]
   }

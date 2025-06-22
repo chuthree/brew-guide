@@ -401,6 +401,22 @@ export function useBrewingContent({
 
 		// 按照BrewingTimer的逻辑扩展阶段
 		stages.forEach((stage, index) => {
+			// Bypass 类型的步骤不参与主要计时，单独处理
+			if (stage.pourType === 'bypass') {
+				expandedStages.push({
+					type: "pour", // 标记为注水类型，但不参与计时
+					label: stage.label,
+					water: stage.water,
+					detail: stage.detail,
+					startTime: -1, // 特殊标记，表示不参与计时
+					endTime: -1,
+					time: 0,
+					pourType: stage.pourType,
+					originalIndex: index,
+				});
+				return;
+			}
+
 			const prevStageTime = index > 0 ? (stages[index - 1]?.time || 0) : 0;
 			const stageTime = stage.time || 0;
 			const stagePourTime =
@@ -481,11 +497,14 @@ export function useBrewingContent({
 				steps: expandedStages.map((stage) => ({
 					title: stage.label,
 					items: [`${stage.water}`, stage.detail],
-					note: stage.endTime - stage.startTime + "秒", // 显示当前阶段的时长
+					note: stage.pourType === 'bypass'
+						? '' // Bypass 步骤不显示时间
+						: stage.endTime - stage.startTime + "秒", // 显示当前阶段的时长
 					type: stage.type, // 添加类型标记
 					originalIndex: stage.originalIndex, // 保留原始索引以便于参考
 					startTime: stage.startTime, // 保存开始时间
 					endTime: stage.endTime, // 保存结束时间
+					pourType: stage.pourType, // 添加注水类型标记
 				})),
 			},
 		}));

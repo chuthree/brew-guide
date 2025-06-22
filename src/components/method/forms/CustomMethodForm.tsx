@@ -258,6 +258,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
       case 'circle': return '绕圈注水';
       case 'center': return '中心注水';
       case 'ice': return '添加冰块';
+      case 'bypass': return 'Bypass';
       case 'other': return '';
       default: return '注水';
     }
@@ -280,6 +281,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
       case 'circle': return '中心向外缓慢画圈注水，均匀萃取咖啡风味';
       case 'center': return '中心定点注水，降低萃取率';
       case 'ice': return '添加冰块，降低温度进行冷萃';
+      case 'bypass': return '冲煮完成后添加到咖啡液中，调节浓度和口感';
       case 'other': return '';
       default: return '注水';
     }
@@ -371,13 +373,16 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     return 0;
   };
 
-  // 计算当前已使用的水量
+  // 计算当前已使用的水量（排除 Bypass 步骤）
   const calculateCurrentWater = () => {
     if (method.params.stages.length === 0) return 0;
 
-    // 找到最后一个有水量的步骤
+    // 找到最后一个有水量的步骤，但排除 Bypass 类型
     for (let i = method.params.stages.length - 1; i >= 0; i--) {
       const stage = method.params.stages[i];
+      // 跳过 Bypass 步骤，因为它们不计入主要冲煮水量
+      if (stage.pourType === 'bypass') continue;
+
       if (stage.water) {
         if (typeof stage.water === 'number') {
           return stage.water;
@@ -689,9 +694,14 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
             ? newTotalWater / oldTotalWater
             : 1
 
-        // 更新所有步骤的水量
+        // 更新所有步骤的水量（排除 Bypass 步骤）
         const newStages = [...method.params.stages].map((stage, index) => {
             const updatedStage = { ...stage }
+
+            // Bypass 步骤不参与自动水量调整
+            if (stage.pourType === 'bypass') {
+                return updatedStage;
+            }
 
             if (isEspressoMachine(customEquipment)) {
                 // 意式机：只更新萃取步骤的液重与总水量相同
@@ -754,9 +764,14 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
             ? newTotalWater / oldTotalWater
             : 1
 
-        // 更新所有步骤的水量
+        // 更新所有步骤的水量（排除 Bypass 步骤）
         const newStages = [...method.params.stages].map((stage, index) => {
             const updatedStage = { ...stage }
+
+            // Bypass 步骤不参与自动水量调整
+            if (stage.pourType === 'bypass') {
+                return updatedStage;
+            }
 
             if (isEspressoMachine(customEquipment)) {
                 // 意式机：只更新萃取步骤的液重与总水量相同
@@ -1230,6 +1245,13 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                             }
 
                             return basicValidation;
+                        }
+
+                        // Bypass 类型特殊验证（不需要时间）
+                        if (stage.pourType === 'bypass') {
+                            return !!stage.label.trim() &&
+                                   !!stage.water.trim() &&
+                                   !!stage.pourType;
                         }
 
                         // 标准器具验证

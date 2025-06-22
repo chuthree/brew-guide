@@ -42,7 +42,7 @@ interface PourVisualizerProps {
         customPourAnimations?: {
             id: string;
             name?: string;
-            pourType?: 'center' | 'circle' | 'ice';
+            pourType?: 'center' | 'circle' | 'ice' | 'bypass';
             customAnimationSvg: string;
             isSystemDefault?: boolean;
             previewFrames?: number;
@@ -174,8 +174,8 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
             // 获取当前阶段的pourType，如果未设置，默认使用center
             const pourType = stages[currentStage]?.pourType || 'center';
             
-            // 检查是否是意式萃取类型，如果是则不显示注水动画
-            if (pourType === 'extraction') {
+            // 检查是否是意式萃取类型或 Bypass 类型，如果是则不显示注水动画
+            if (pourType === 'extraction' || pourType === 'bypass') {
                 return 'none'; // 返回特殊值表示不显示动画
             }
 
@@ -185,7 +185,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
             }
 
             // 检查是否是标准注水类型
-            if (pourType === 'center' || pourType === 'circle' || pourType === 'ice' || pourType === 'other') {
+            if (pourType === 'center' || pourType === 'circle' || pourType === 'ice' || pourType === 'bypass' || pourType === 'other') {
                 return pourType;
             }
 
