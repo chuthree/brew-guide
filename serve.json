@@ -1,7 +1,6 @@
 {
   "trailingSlash": false,
   "rewrites": [
-    { "source": "/download", "destination": "/download.html" },
     { "source": "**", "destination": "/index.html" }
   ],
   "headers": [
@@ -18,4 +17,4 @@
       ]
     }
   ]
-} 
+}
