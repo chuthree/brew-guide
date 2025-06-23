@@ -6,7 +6,7 @@ import ReactCrop, { Crop } from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
 import { recognizeImage, RecognitionError } from '@/services/recognition'
 import { debounce } from 'lodash'
-import { captureImage, compressImage as compressImageUtil } from '@/lib/utils/imageCapture'
+import { compressImage as compressImageUtil } from '@/lib/utils/imageCapture'
 
 interface BeanImportModalProps {
     showForm: boolean
@@ -120,7 +120,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
     const [crop, setCrop] = useState<Crop>(EMPTY_CROP);
     const [croppedImage, setCroppedImage] = useState<string | null>(null);
     const [isCropActive, setIsCropActive] = useState(false);
-    const [manualMode, setManualMode] = useState(false);
+    const [manualMode, setManualMode] = useState(true);
 
     const imgRef = useRef<HTMLImageElement>(null);
 
@@ -356,32 +356,7 @@ const TEMPLATE_PROMPT = `提取咖啡豆信息，返回JSON格式。
         }
     }, [importData, ensureStringFields, onImport, handleClose]);
 
-    // 图片选择处理
-    const handleImageSelect = useCallback(async (source: 'camera' | 'gallery') => {
-        try {
-            const result = await captureImage({ source });
-            setSelectedImage(result.dataUrl);
-            setCroppedImage(null);
-            setIsCropActive(false); // 将在 useEffect 中自动设置为 true
-        } catch (error) {
-            // 处理不同类型的错误
-            const errorMessage = error instanceof Error ? error.message : '图片选择失败';
 
-            // 如果是用户取消操作，不显示错误
-            if (errorMessage.includes('取消') || errorMessage.includes('未选择')) {
-                // 静默处理用户取消
-                return;
-            }
-
-            // 显示其他错误
-            setError(errorMessage);
-
-            // Log error in development only
-            if (process.env.NODE_ENV === 'development') {
-                console.error('打开相机/相册失败:', error);
-            }
-        }
-    }, []);
 
     // 图片识别处理
     const handleImageRecognition = useCallback(async () => {
@@ -439,9 +414,16 @@ const TEMPLATE_PROMPT = `提取咖啡豆信息，返回JSON格式。
             <div className="flex flex-col space-y-3">
                 <div className="flex justify-between items-center">
                     <p className={STYLES.text.muted}>
-                        {manualMode ? '手动填写咖啡豆信息' : '上传咖啡豆包装图片，AI自动识别信息'}
+                        {manualMode ? '手动填写咖啡豆信息' : ''}
                     </p>
                 </div>
+
+                {/* API 费用提示 */}
+                {!manualMode && (
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-3">
+                        识图功能暂时休息中，先试试手动模式吧～ (欠费哩 www )
+                    </p>
+                )}
 
                 {manualMode ? (
                     <div className="space-y-4 py-1">
@@ -550,33 +532,7 @@ const TEMPLATE_PROMPT = `提取咖啡豆信息，返回JSON格式。
                             </button>
                         </div>
                     </div>
-                ) : (
-                    <div className="flex space-x-2">
-                        <button
-                            onClick={() => handleImageSelect('camera')}
-                            className={STYLES.button.upload}
-                        >
-                            <span className="flex items-center justify-center space-x-2">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                                </svg>
-                                <span>拍照</span>
-                            </span>
-                        </button>
-                        <button
-                            onClick={() => handleImageSelect('gallery')}
-                            className={STYLES.button.upload}
-                        >
-                            <span className="flex items-center justify-center space-x-2">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                                <span>相册</span>
-                            </span>
-                        </button>
-                    </div>
-                )}
+                ) : null}
 
 
             </div>
