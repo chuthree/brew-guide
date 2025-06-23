@@ -6,7 +6,7 @@ import ReactCrop, { Crop } from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
 import { recognizeImage, RecognitionError } from '@/services/recognition'
 import { debounce } from 'lodash'
-import { compressImage as compressImageUtil } from '@/lib/utils/imageCapture'
+import { compressBase64Image } from '@/lib/utils/imageCapture'
 
 interface BeanImportModalProps {
     showForm: boolean
@@ -66,22 +66,43 @@ const STYLES = {
 } as const;
 
 // 图片压缩工具函数 - 使用统一的压缩工具
-const compressImage = async (file: File, maxSizeMB: number = IMAGE_COMPRESSION_CONFIG.maxSizeMB): Promise<Blob> => {
-    try {
-        // 使用统一的压缩工具，确保压缩到指定大小
-        const compressedFile = await compressImageUtil(file, {
-            maxSizeMB: Math.min(maxSizeMB, 0.1), // 最大100KB
-            maxWidthOrHeight: IMAGE_COMPRESSION_CONFIG.maxDimension,
-            initialQuality: IMAGE_COMPRESSION_CONFIG.quality,
-            useWebWorker: true
-        });
+const compressImageForRecognition = async (file: File): Promise<string> => {
+    const reader = new FileReader();
 
-        // 转换为Blob
-        return new Blob([compressedFile], { type: compressedFile.type });
-    } catch (error) {
-        console.error('图片压缩失败:', error);
-        throw error;
-    }
+    return new Promise((resolve, reject) => {
+        reader.onload = async () => {
+            try {
+                const base64 = reader.result as string;
+                if (!base64) {
+                    reject(new Error('文件读取失败'));
+                    return;
+                }
+
+                const compressedBase64 = await compressBase64Image(base64, {
+                    maxSizeMB: 0.1, // 100KB
+                    maxWidthOrHeight: IMAGE_COMPRESSION_CONFIG.maxDimension,
+                    initialQuality: IMAGE_COMPRESSION_CONFIG.quality
+                });
+                resolve(compressedBase64);
+            } catch (error) {
+                // Log error in development only
+                if (process.env.NODE_ENV === 'development') {
+                    console.error('图片处理失败:', error);
+                }
+                reject(error);
+            }
+        };
+
+        reader.onerror = () => {
+            // Log error in development only
+            if (process.env.NODE_ENV === 'development') {
+                console.error('文件读取失败');
+            }
+            reject(new Error('文件读取失败'));
+        };
+
+        reader.readAsDataURL(file);
+    });
 };
 
 // 工具函数：重置图片相关状态
@@ -368,12 +389,16 @@ const TEMPLATE_PROMPT = `提取咖啡豆信息，返回JSON格式。
         try {
             const imageToUse = (isCropActive && croppedImage) ? croppedImage : selectedImage;
 
-            // 转换为 Blob 并压缩
+            // 转换为 File 并压缩
             const response = await fetch(imageToUse);
             const originalBlob = await response.blob();
-            const compressedBlob = await compressImage(
+            const compressedBase64 = await compressImageForRecognition(
                 new File([originalBlob], 'coffee-bean.jpg', { type: 'image/jpeg' })
             );
+
+            // 将压缩后的 base64 转换为 Blob
+            const compressedResponse = await fetch(compressedBase64);
+            const compressedBlob = await compressedResponse.blob();
 
             const formData = new FormData();
             formData.append('file', compressedBlob, 'coffee-bean.jpg');

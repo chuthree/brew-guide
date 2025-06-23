@@ -573,10 +573,6 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                 if (process.env.NODE_ENV === 'development') {
                     console.error('图片处理失败:', error);
                 }
-                // 降级使用原始文件
-                const objectUrl = URL.createObjectURL(file);
-                setFormData(prev => ({ ...prev, image: objectUrl }));
-                setTimeout(() => URL.revokeObjectURL(objectUrl), 30000);
             }
         };
 
@@ -585,9 +581,6 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
             if (process.env.NODE_ENV === 'development') {
                 console.error('文件读取失败');
             }
-            const objectUrl = URL.createObjectURL(file);
-            setFormData(prev => ({ ...prev, image: objectUrl }));
-            setTimeout(() => URL.revokeObjectURL(objectUrl), 30000);
         };
 
         reader.readAsDataURL(file);

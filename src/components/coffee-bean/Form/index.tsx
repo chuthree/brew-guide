@@ -10,7 +10,7 @@ import FlavorInfo from './components/FlavorInfo'
 import Complete from './components/Complete'
 import { addCustomPreset, DEFAULT_ORIGINS, DEFAULT_PROCESSES, DEFAULT_VARIETIES } from './constants'
 import { defaultSettings, type SettingsOptions } from '@/components/settings/Settings'
-import { compressImage } from '@/lib/utils/imageCapture'
+import { compressBase64Image } from '@/lib/utils/imageCapture'
 
 interface CoffeeBeanFormProps {
     onSave: (bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>) => void
@@ -550,51 +550,37 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
 
     // 处理图片上传
     const handleImageUpload = async (file: File) => {
-        try {
-            // 检查文件类型
-            if (!file.type.startsWith('image/')) {
-                return;
-            }
+        if (!file.type.startsWith('image/')) return;
 
+        const reader = new FileReader();
+
+        reader.onload = async () => {
             try {
-                // 使用新的统一压缩工具，确保压缩到100KB以内
-                const compressedFile = await compressImage(file, {
+                const base64 = reader.result as string;
+                if (!base64) return;
+
+                const compressedBase64 = await compressBase64Image(base64, {
                     maxSizeMB: 0.1, // 100KB
                     maxWidthOrHeight: 1200,
-                    initialQuality: 0.8,
-                    useWebWorker: true
+                    initialQuality: 0.8
                 });
-
-                // 转换为base64用于显示
-                const reader = new FileReader();
-                reader.onload = () => {
-                    const base64 = reader.result as string;
-                    setBean(prev => ({
-                        ...prev,
-                        image: base64
-                    }));
-                };
-                reader.readAsDataURL(compressedFile);
-            } catch (compressionError) {
-                // 压缩失败时的降级处理
-                console.error('图片压缩失败:', compressionError);
-
-                try {
-                    // 使用URL.createObjectURL作为备选方案
-                    const objectUrl = URL.createObjectURL(file);
-                    setBean(prev => ({
-                        ...prev,
-                        image: objectUrl
-                    }));
-                    // 清理URL对象
-                    setTimeout(() => URL.revokeObjectURL(objectUrl), 30000);
-                } catch {
-                    // 备选方案也失败，静默处理
+                setBean(prev => ({ ...prev, image: compressedBase64 }));
+            } catch (error) {
+                // Log error in development only
+                if (process.env.NODE_ENV === 'development') {
+                    console.error('图片处理失败:', error);
                 }
             }
-        } catch {
-            // 图片处理失败，静默处理
-        }
+        };
+
+        reader.onerror = () => {
+            // Log error in development only
+            if (process.env.NODE_ENV === 'development') {
+                console.error('文件读取失败');
+            }
+        };
+
+        reader.readAsDataURL(file);
     };
 
     // 验证当前步骤是否可以进行下一步

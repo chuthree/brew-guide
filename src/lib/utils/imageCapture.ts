@@ -257,39 +257,33 @@ export interface ImageCompressionOptions {
   maxWidthOrHeight?: number;
   /** 图片质量，0-1之间，默认 0.8 */
   initialQuality?: number;
-  /** 是否使用 Web Worker，默认 true */
-  useWebWorker?: boolean;
-  /** 是否保持 EXIF 信息，默认 false */
-  preserveExif?: boolean;
   /** 输出格式，默认 'image/jpeg' */
   fileType?: string;
 }
 
 /**
- * 统一的图片压缩工具函数
- * 使用业界最佳实践的 browser-image-compression 库
+ * 内部图片压缩工具函数
+ * 使用 Canvas 进行高质量图片压缩
  * 确保所有图片压缩到指定大小以内，避免黑屏/白屏问题
+ * 注意：此函数仅供内部使用，外部应使用 compressBase64Image
  */
-export async function compressImage(
+async function compressImage(
   file: File,
   options: ImageCompressionOptions = {}
 ): Promise<File> {
   try {
-    // 直接使用Canvas压缩方案
-    return await fallbackCanvasCompression(file, options);
+    return await canvasCompression(file, options);
   } catch (error) {
     console.error('图片压缩失败:', error);
-
-    // 压缩失败时的降级处理：使用原生Canvas方法
-    return await fallbackCanvasCompression(file, options);
+    throw error;
   }
 }
 
 /**
- * 降级的Canvas压缩方法
- * 当 browser-image-compression 失败时使用
+ * Canvas 图片压缩方法
+ * 使用高质量 Canvas 渲染进行图片压缩
  */
-async function fallbackCanvasCompression(
+async function canvasCompression(
   file: File,
   options: ImageCompressionOptions
 ): Promise<File> {
