@@ -1,9 +1,7 @@
 'use client'
 
-import { Capacitor } from '@capacitor/core'
-import { Share } from '@capacitor/share'
-import { Filesystem, Directory } from '@capacitor/filesystem'
 import { toPng } from 'html-to-image'
+import { TempFileManager } from '@/lib/utils/tempFileManager'
 
 interface NotesExporterProps {
   selectedNotes: string[]
@@ -189,44 +187,17 @@ export async function exportSelectedNotes({
     
     // 删除临时容器
     document.body.removeChild(tempContainer);
-    
-    // 在移动设备上使用Capacitor分享
-    if (Capacitor.isNativePlatform()) {
-      // 保存到文件
-      const timestamp = new Date().getTime();
-      const fileName = `brew-notes-${timestamp}.png`;
-      
-      // 确保正确处理base64数据
-      const base64Data = imageData.split(',')[1];
-      
-      // 写入文件
-      await Filesystem.writeFile({
-        path: fileName,
-        data: base64Data,
-        directory: Directory.Cache,
-        recursive: true
-      });
-      
-      // 获取文件URI
-      const uriResult = await Filesystem.getUri({
-        path: fileName,
-        directory: Directory.Cache
-      });
-      
-      // 分享文件 - 确保使用files参数
-      await Share.share({
+
+    // 使用统一的临时文件管理器分享图片
+    await TempFileManager.shareImageFile(
+      imageData,
+      'brew-notes',
+      {
         title: '我的咖啡冲煮笔记',
         text: '我的咖啡冲煮笔记',
-        files: [uriResult.uri],
         dialogTitle: '分享我的咖啡冲煮笔记'
-      });
-    } else {
-      // 在网页上下载图片
-      const link = document.createElement('a');
-      link.download = `brew-notes-${new Date().getTime()}.png`;
-      link.href = imageData;
-      link.click();
-    }
+      }
+    );
     
     onSuccess('笔记已保存为图片');
   } catch (error) {

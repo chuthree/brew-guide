@@ -45,12 +45,10 @@ import { FlavorPeriodStatus } from '@/lib/utils/beanVarietyUtils'
 import ViewSwitcher from './components/ViewSwitcher'
 import InventoryView from './components/InventoryView'
 import StatsView from './components/StatsView'
-import { Share } from '@capacitor/share'
-import { Filesystem, Directory } from '@capacitor/filesystem'
-import { Capacitor } from '@capacitor/core'
 import { toPng } from 'html-to-image'
 import { useToast } from '@/components/common/feedback/GlobalToast'
 import { exportStatsView } from './components/StatsView/StatsExporter'
+import { TempFileManager } from '@/lib/utils/tempFileManager'
 
 // 重命名导入组件以避免混淆
 const CoffeeBeanRanking = _CoffeeBeanRanking;
@@ -941,43 +939,16 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
             // 删除临时容器
             document.body.removeChild(tempContainer);
 
-            // 在移动设备上使用Capacitor分享
-            if (Capacitor.isNativePlatform()) {
-                // 保存到文件
-                const timestamp = new Date().getTime();
-                const fileName = `coffee-ranking-${timestamp}.png`;
-
-                // 确保正确处理base64数据
-                const base64Data = imageData.split(',')[1];
-
-                // 写入文件
-                await Filesystem.writeFile({
-                    path: fileName,
-                    data: base64Data,
-                    directory: Directory.Cache,
-                    recursive: true
-                });
-
-                // 获取文件URI
-                const uriResult = await Filesystem.getUri({
-                    path: fileName,
-                    directory: Directory.Cache
-                });
-
-                // 分享文件
-                await Share.share({
+            // 使用统一的临时文件管理器分享图片
+            await TempFileManager.shareImageFile(
+                imageData,
+                'coffee-ranking',
+                {
                     title: '我的咖啡豆个人榜单',
                     text: '我的咖啡豆个人榜单',
-                    files: [uriResult.uri],
                     dialogTitle: '分享我的咖啡豆个人榜单'
-                });
-            } else {
-                // 在网页上下载图片
-                const link = document.createElement('a');
-                link.download = `coffee-ranking-${new Date().getTime()}.png`;
-                link.href = imageData;
-                link.click();
-            }
+                }
+            );
 
             toast.showToast({
                 type: 'success',
