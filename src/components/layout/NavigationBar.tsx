@@ -390,10 +390,11 @@ interface EditableParameterProps {
     unit: string
     className?: string
     prefix?: string
+    disabled?: boolean
 }
 
 const EditableParameter: React.FC<EditableParameterProps> = ({
-    value, onChange, unit, className = '', prefix = ''
+    value, onChange, unit, className = '', prefix = '', disabled = false
 }) => {
     const [isEditing, setIsEditing] = useState(false)
     const inputRef = React.useRef<HTMLInputElement>(null)
@@ -432,8 +433,8 @@ const EditableParameter: React.FC<EditableParameterProps> = ({
 
     return (
         <span
-            className={`group relative inline-flex items-center ${className} cursor-pointer min-w-0 border-b border-dashed border-neutral-300 dark:border-neutral-600 pb-0.5`}
-            onClick={() => setIsEditing(true)}
+            className={`group relative inline-flex items-center ${className} ${disabled ? 'cursor-default' : 'cursor-pointer'} min-w-0 ${disabled ? '' : 'border-b border-dashed border-neutral-300 dark:border-neutral-600 pb-0.5'}`}
+            onClick={() => !disabled && setIsEditing(true)}
         >
             {prefix && <span className="shrink-0">{prefix}</span>}
             {isEditing ? (
@@ -657,6 +658,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
 
     const shouldShowContent = activeMainTab === '冲煮' && (!isTimerRunning || showComplete || activeBrewingStep === 'notes')
     const shouldShowParams = parameterInfo.method
+    const isParamsDisabled = activeBrewingStep === 'notes'
 
     const handleTimeChange = (value: string) => {
         if (handleExtractionTimeChange && selectedMethod) {
@@ -900,6 +902,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                                                 onChange={(v) => handleParamChange('coffee', v)}
                                                                 unit="g"
                                                                 className=""
+                                                                disabled={isParamsDisabled}
                                                             />
 
                                                             {!espressoUtils.isEspresso(selectedMethod) && (
@@ -911,6 +914,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                                                         unit=""
                                                                         prefix="1:"
                                                                         className=""
+                                                                        disabled={isParamsDisabled}
                                                                     />
                                                                 </>
                                                             )}
@@ -923,6 +927,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                                                         onChange={(v) => handleParamChange('grindSize', v)}
                                                                         unit=""
                                                                         className=""
+                                                                        disabled={isParamsDisabled}
                                                                     />
                                                                 </>
                                                             )}
@@ -935,6 +940,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                                                         onChange={(v) => handleTimeChange(v)}
                                                                         unit="秒"
                                                                         className=""
+                                                                        disabled={isParamsDisabled}
                                                                     />
                                                                     <span className="shrink-0">·</span>
                                                                     <EditableParameter
@@ -942,6 +948,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                                                         onChange={(v) => handleParamChange('water', v)}
                                                                         unit="g"
                                                                         className=""
+                                                                        disabled={isParamsDisabled}
                                                                     />
                                                                 </>
                                                             ) : (
@@ -953,6 +960,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                                                             onChange={(v) => handleParamChange('temp', v)}
                                                                             unit="°C"
                                                                             className=""
+                                                                            disabled={isParamsDisabled}
                                                                         />
                                                                     </>
                                                                 )
