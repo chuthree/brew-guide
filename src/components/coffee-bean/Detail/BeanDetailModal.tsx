@@ -150,12 +150,12 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
         const items: InfoItem[] = []
         const flavorInfo = getFlavorInfo()
 
-        // 库存信息 - 显示为：总库存(剩余量)
+        // 容量信息 - 显示为：剩余量/总容量
         if (bean?.capacity && bean?.remaining) {
             items.push({
                 key: 'inventory',
-                label: '库存',
-                value: `${formatNumber(bean.capacity)}g(${formatNumber(bean.remaining)}g)`,
+                label: '容量',
+                value: `${formatNumber(bean.remaining)}/${formatNumber(bean.capacity)}克`,
                 type: 'normal'
             })
         }
@@ -172,7 +172,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
             items.push({
                 key: 'price',
                 label: '价格',
-                value: `¥${totalPrice}(¥${pricePerGram}/g)`,
+                value: `${totalPrice}元(${pricePerGram}元/克)`,
                 type: 'normal'
             })
         }
@@ -644,12 +644,12 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
 
                                                         {/* 变动量标签 */}
                                                         {(() => {
-                                                            let displayLabel = '0g'
+                                                            let displayLabel = '0克'
 
                                                             if (note.source === 'quick-decrement') {
                                                                 // 快捷扣除记录
                                                                 const amount = note.quickDecrementAmount || 0
-                                                                displayLabel = `-${amount}g`
+                                                                displayLabel = `-${amount}克`
                                                             } else if (note.source === 'capacity-adjustment') {
                                                                 // 容量调整记录
                                                                 const capacityAdjustment = note.changeRecord?.capacityAdjustment
@@ -657,11 +657,11 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                                                 const changeType = capacityAdjustment?.changeType || 'set'
 
                                                                 if (changeType === 'increase') {
-                                                                    displayLabel = `+${Math.abs(changeAmount)}g`
+                                                                    displayLabel = `+${Math.abs(changeAmount)}克`
                                                                 } else if (changeType === 'decrease') {
-                                                                    displayLabel = `-${Math.abs(changeAmount)}g`
+                                                                    displayLabel = `-${Math.abs(changeAmount)}克`
                                                                 } else {
-                                                                    displayLabel = `${capacityAdjustment?.newAmount || 0}g`
+                                                                    displayLabel = `${capacityAdjustment?.newAmount || 0}克`
                                                                 }
                                                             }
 
