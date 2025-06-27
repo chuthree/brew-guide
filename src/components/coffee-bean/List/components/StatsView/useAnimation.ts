@@ -4,7 +4,10 @@ import { AnimationStyles } from './types'
 export const useAnimation = (): { imagesLoaded: boolean; textLoaded: boolean; styles: AnimationStyles } => {
     const [imagesLoaded, setImagesLoaded] = useState(false)
     const [textLoaded, setTextLoaded] = useState(false)
-
+    
+    // 存储已计算的统计类别索引，用于自动分配动画顺序
+    const [categoryIndices] = useState<Map<number, number>>(new Map())
+    
     // 组件挂载后立即触发所有动画
     useEffect(() => {
         // 设置一个短暂延迟，让组件先完全渲染
@@ -41,13 +44,34 @@ export const useAnimation = (): { imagesLoaded: boolean; textLoaded: boolean; st
         transitionDelay: '350ms'
     }
     
-    const statsAnimStyle = (index: number) => ({
-        opacity: textLoaded ? 1 : 0,
-        filter: textLoaded ? 'blur(0)' : 'blur(5px)',
-        transform: textLoaded ? 'translateY(0)' : 'translateY(15px)',
-        transition: 'opacity 0.7s ease, filter 0.7s ease, transform 0.7s ease',
-        transitionDelay: `${450 + index * 100}ms` // 增加基础延迟和间隔，使各部分动画更自然
-    })
+    // 优化统计视图动画顺序的计算
+    // 根据组的索引自动分配动画顺序，确保相似的内容组在相近的时间显示
+    const statsAnimStyle = (groupIndex: number) => {
+        // 检查该组索引是否已分配过动画顺序
+        if (!categoryIndices.has(groupIndex)) {
+            // 获取当前已分配的最大顺序值
+            const maxIndex = categoryIndices.size > 0 
+                ? Math.max(...Array.from(categoryIndices.values())) 
+                : -1;
+                
+            // 为新的组分配下一个顺序值
+            categoryIndices.set(groupIndex, maxIndex + 1);
+        }
+        
+        // 获取该组对应的动画顺序
+        const animationOrder = categoryIndices.get(groupIndex) || 0;
+        
+        // 基础延迟为450ms，每个组间隔100ms
+        const delayTime = 450 + animationOrder * 100;
+        
+        return {
+            opacity: textLoaded ? 1 : 0,
+            filter: textLoaded ? 'blur(0)' : 'blur(5px)',
+            transform: textLoaded ? 'translateY(0)' : 'translateY(15px)',
+            transition: 'opacity 0.7s ease, filter 0.7s ease, transform 0.7s ease',
+            transitionDelay: `${delayTime}ms` // 使用计算出的延迟时间
+        };
+    };
 
     return {
         imagesLoaded,

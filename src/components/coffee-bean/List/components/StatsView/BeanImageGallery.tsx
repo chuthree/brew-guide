@@ -1,57 +1,73 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import Image from 'next/image'
 import { BeanImageGalleryProps } from './types'
 
 const BeanImageGallery: React.FC<BeanImageGalleryProps> = ({ beansWithImages, imagesLoaded }) => {
+    // 使用useMemo计算所有豆子的位置和动画信息，避免重复计算
+    const beanLayoutData = useMemo(() => {
+        const totalBeans = beansWithImages.length;
+        if (totalBeans === 0) return [];
+        
+        // 修改角度计算，使圆弧的角度范围更小（从-60°到60°，共120°范围）
+        const angleRange = Math.PI / 2.5; // 约54度
+        // 增大角度间隔系数，使卡片分布更分散
+        const spacingFactor = 1; // 间距系数
+        const radius = 180; // 半径大小
+        const horizontalStretchFactor = 1.5; // 横向缩放因子
+        
+        // 计算每个豆子的位置数据
+        const positionData = beansWithImages
+            .map((bean, index) => {
+                if (!bean.image) return null;
+                
+                // 从中间开始计算角度，使卡片从中间向两边扩散
+                const centerOffset = (index - (totalBeans - 1) / 2);
+                // 计算角度：以0为中心，向两边扩散
+                const angle = spacingFactor * ((2 * angleRange) / (totalBeans + 1)) * centerOffset;
+                
+                // 计算x和y位置
+                const x = Math.sin(angle) * radius * horizontalStretchFactor;
+                const y = -Math.cos(angle) * radius; // y轴向下为正，顶部为负
+                
+                // 计算旋转角度 - 使卡片垂直于半径向外
+                const rotate = (angle * (100 / Math.PI)); // 调整旋转角度，使其指向外侧
+                
+                return {
+                    bean,
+                    position: { x, y, angle, rotate },
+                    index
+                };
+            })
+            .filter((item): item is NonNullable<typeof item> => item !== null); // 过滤掉没有图片的豆子，并确保类型安全
+        
+        // 按照从左到右的顺序排序（基于x坐标）
+        const sortedPositions = [...positionData].sort((a, b) => a.position.x - b.position.x);
+        
+        // 为每个豆子分配动画延迟，基于它们的排序位置
+        const baseDelay = 60; // 基础延迟，每个豆子间隔
+        return sortedPositions.map((item, sortedIndex) => ({
+            ...item,
+            animationDelay: sortedIndex * baseDelay
+        }));
+    }, [beansWithImages]);
+    
     return (
         <div className="relative w-full flex justify-center mt-18 pb-2">
             <div className="flex justify-center items-center relative w-full h-28">
-                {beansWithImages.map((bean, index) => {
-                    // 如果没有图片，跳过渲染
-                    if (!bean.image) return null
-
-                    // 计算半圆形的位置
-                    const totalBeans = beansWithImages.length
-                    // 修改角度计算，使圆弧的角度范围更小（从-60°到60°，共120°范围）
-                    const angleRange = Math.PI / 2.5 // 约54度
-                    // 增大角度间隔系数，使卡片分布更分散
-                    const spacingFactor = 1 // 增加间距的系数
+                {beanLayoutData.map((beanData) => {
+                    const { bean, position, animationDelay, index } = beanData;
                     
-                    // 从中间开始计算角度，使卡片从中间向两边扩散
-                    // 计算相对于中心的偏移量（偶数个时中点在最中间两个之间，奇数个时中点在正中间）
-                    const centerOffset = (index - (totalBeans - 1) / 2)
-                    // 计算角度：以0为中心，向两边扩散
-                    const angle = spacingFactor * ((2 * angleRange) / (totalBeans + 1)) * centerOffset
-                    
-                    const radius = 180 // 半径大小
-                    
-                    // 计算x和y位置 (使用 sin/cos 相对顶部顺时针角度计算)
-                    // 添加横向缩放因子1.5，增加图片之间的横向距离
-                    const horizontalStretchFactor = 1.5
-                    const x = Math.sin(angle) * radius * horizontalStretchFactor
-                    const y = -Math.cos(angle) * radius // y轴向下为正，顶部为负
-                    
-                    // 计算旋转角度 - 使卡片垂直于半径向外
-                    const rotate = (angle * (100 / Math.PI)) // 调整旋转角度，使其指向外侧
-
-                    // 计算动画延迟 - 按照从左到右的顺序，但大幅减少延迟时间
-                    // 先获取所有豆子的x坐标，按照从左到右排序后获取当前豆子的序号
-                    const allXPositions = beansWithImages.map((_, i) => {
-                        const offset = (i - (totalBeans - 1) / 2)
-                        return Math.sin(spacingFactor * ((2 * angleRange) / (totalBeans + 1)) * offset) * radius * horizontalStretchFactor
-                    })
-                    const sortedIndices = [...allXPositions].map((x, i) => ({x, i})).sort((a, b) => a.x - b.x).map(item => item.i)
-                    const orderIndex = sortedIndices.indexOf(index)
-                    const animationDelay = orderIndex * 60 // 将每个豆子延迟减少到60ms
+                    // 确保 bean.image 存在，这在前面的过滤操作中应该已经保证了
+                    if (!bean.image) return null;
                     
                     return (
                         <div 
                             key={`bean-card-${bean.id}`}
                             className="absolute w-14 h-20 transform -translate-x-1/2 -translate-y-1/2 shadow-xs rounded-sm border border-white/90 dark:border-neutral-700/90 overflow-hidden transition-all duration-500"
                             style={{
-                                left: `calc(50% + ${x}px + 28px)`,
-                                top: `calc(100% + ${y}px - -80px)`, // y 在顶部时为负，因此整体下移
-                                transform: `translate(-50%, 0%) rotate(${rotate}deg)`, // 使用新的旋转角度
+                                left: `calc(50% + ${position.x}px + 28px)`,
+                                top: `calc(100% + ${position.y}px - -80px)`, // y 在顶部时为负，因此整体下移
+                                transform: `translate(-50%, 0%) rotate(${position.rotate}deg)`, // 使用新的旋转角度
                                 zIndex: index + 1,
                                 backgroundColor: '#fff',
                                 opacity: imagesLoaded ? 1 : 0,

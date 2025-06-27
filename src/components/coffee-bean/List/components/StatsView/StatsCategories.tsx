@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useRef } from 'react'
 import { isBeanEmpty } from '../../globalCache'
 import { StatsData, AnimationStyles } from './types'
 import { formatNumber } from './utils'
@@ -19,13 +19,24 @@ const StatsCategories: React.FC<StatsCategoriesProps> = ({
     todayCost, 
     styles 
 }) => {
+    // 使用useRef创建一个计数器，用于跟踪统计类别的序号
+    const categoryCounter = useRef(0);
+    
+    // 重置计数器
+    categoryCounter.current = 0;
+    
+    // 获取下一个序号的函数
+    const getNextNumber = () => {
+        categoryCounter.current += 1;
+        return categoryCounter.current;
+    };
 
     return (
         <div className="flex flex-col gap-8">
             <div className="grid grid-cols-1 gap-8">
                 {/* 编号01 - 基本数据 */}
                 <StatCategory 
-                    number={1} 
+                    number={getNextNumber()} 
                     title="基本数据" 
                     animStyle={styles.statsAnimStyle(0)}
                 >
@@ -36,7 +47,7 @@ const StatsCategories: React.FC<StatsCategoriesProps> = ({
 
                 {/* 编号02 - 库存信息 */}
                 <StatCategory 
-                    number={2} 
+                    number={getNextNumber()} 
                     title="库存" 
                     animStyle={styles.statsAnimStyle(0)}
                 >
@@ -49,7 +60,7 @@ const StatsCategories: React.FC<StatsCategoriesProps> = ({
                 
                 {/* 编号03 - 费用数据 */}
                 <StatCategory 
-                    number={3} 
+                    number={getNextNumber()} 
                     title="费用数据" 
                     animStyle={styles.statsAnimStyle(0)}
                 >
@@ -63,7 +74,7 @@ const StatsCategories: React.FC<StatsCategoriesProps> = ({
                 
                 {/* 编号04 - 豆子分类 */}
                 <StatCategory
-                    number={4}
+                    number={getNextNumber()}
                     title="分类"
                     animStyle={styles.statsAnimStyle(1)}
                 >
@@ -123,7 +134,7 @@ const StatsCategories: React.FC<StatsCategoriesProps> = ({
                 {/* 编号05 - 赏味期状态 */}
                 {(stats.flavorPeriodStatus.inPeriod + stats.flavorPeriodStatus.beforePeriod + stats.flavorPeriodStatus.afterPeriod) > 0 && (
                     <StatCategory
-                        number={5}
+                        number={getNextNumber()}
                         title="赏味期"
                         animStyle={styles.statsAnimStyle(1)}
                     >
@@ -142,7 +153,7 @@ const StatsCategories: React.FC<StatsCategoriesProps> = ({
                 {/* 编号06 - 烘焙度分布 */}
                 {Object.keys(stats.roastLevelCount).length > 0 && (
                     <StatCategory
-                        number={6}
+                        number={getNextNumber()}
                         title="烘焙度"
                         animStyle={styles.statsAnimStyle(2)}
                     >
@@ -153,7 +164,7 @@ const StatsCategories: React.FC<StatsCategoriesProps> = ({
                 {/* 编号07 - 产地分布 */}
                 {Object.keys(stats.originCount).length > 0 && (
                     <StatCategory
-                        number={7}
+                        number={getNextNumber()}
                         title="产地"
                         animStyle={styles.statsAnimStyle(2)}
                     >
@@ -164,7 +175,7 @@ const StatsCategories: React.FC<StatsCategoriesProps> = ({
                 {/* 编号08 - 处理法分布 */}
                 {Object.keys(stats.processCount).length > 0 && (
                     <StatCategory
-                        number={8}
+                        number={getNextNumber()}
                         title="处理法"
                         animStyle={styles.statsAnimStyle(3)}
                     >
@@ -175,7 +186,7 @@ const StatsCategories: React.FC<StatsCategoriesProps> = ({
                 {/* 编号09 - 品种分布 */}
                 {Object.keys(stats.varietyCount).length > 0 && (
                     <StatCategory
-                        number={9}
+                        number={getNextNumber()}
                         title="品种"
                         animStyle={styles.statsAnimStyle(3)}
                     >
@@ -186,7 +197,7 @@ const StatsCategories: React.FC<StatsCategoriesProps> = ({
                 {/* 编号10 - 风味标签分布 */}
                 {stats.topFlavors.length > 0 && (
                     <StatCategory
-                        number={10}
+                        number={getNextNumber()}
                         title="风味"
                         animStyle={styles.statsAnimStyle(3)}
                     >
@@ -197,7 +208,7 @@ const StatsCategories: React.FC<StatsCategoriesProps> = ({
                 {/* 编号11 - 意式咖啡统计 */}
                 {stats.espressoStats.totalBeans > 0 && (
                     <StatCategory
-                        number={11}
+                        number={getNextNumber()}
                         title="意式咖啡"
                         animStyle={styles.statsAnimStyle(4)}
                     >
@@ -217,7 +228,7 @@ const StatsCategories: React.FC<StatsCategoriesProps> = ({
                 {/* 编号12 - 手冲咖啡统计 */}
                 {stats.filterStats.totalBeans > 0 && (
                     <StatCategory
-                        number={12}
+                        number={getNextNumber()}
                         title="手冲咖啡"
                         animStyle={styles.statsAnimStyle(4)}
                     >
