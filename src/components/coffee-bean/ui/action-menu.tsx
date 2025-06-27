@@ -3,6 +3,7 @@
 import React, { useRef, useEffect, useState, ReactNode } from "react"
 import { cn } from "@/lib/utils/classNameUtils"
 import { AnimatePresence, motion } from "framer-motion"
+import { MoreHorizontal } from "lucide-react"
 
 export interface ActionMenuItem {
   id: string
@@ -17,6 +18,7 @@ interface ActionMenuProps {
   onClose?: () => void
   className?: string
   triggerClassName?: string
+  triggerChildren?: ReactNode
   menuClassName?: string
   showAnimation?: boolean
   isOpen?: boolean
@@ -29,6 +31,7 @@ const ActionMenu: React.FC<ActionMenuProps> = ({
   onClose,
   className,
   triggerClassName,
+  triggerChildren,
   menuClassName,
   showAnimation = false,
   isOpen,
@@ -112,6 +115,11 @@ const ActionMenu: React.FC<ActionMenuProps> = ({
     return colorMap[color || "default"]
   }
 
+  // 渲染触发器内容
+  const renderTriggerContent = () => {
+    return triggerChildren || <MoreHorizontal className="h-4 w-4 text-neutral-600 dark:text-neutral-400" />
+  }
+
   // 渲染菜单内容
   const menuContent = (
     <div className="py-1">
@@ -148,7 +156,7 @@ const ActionMenu: React.FC<ActionMenuProps> = ({
               triggerClassName
             )}
           >
-            ···
+            {renderTriggerContent()}
           </motion.button>
           
           {/* 菜单 */}
@@ -181,7 +189,7 @@ const ActionMenu: React.FC<ActionMenuProps> = ({
               triggerClassName
             )}
           >
-            ···
+            {renderTriggerContent()}
           </button>
           
           {/* 无动画菜单 */}

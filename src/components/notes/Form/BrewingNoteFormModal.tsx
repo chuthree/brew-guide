@@ -81,10 +81,51 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
         .then(({ CoffeeBeanManager }) => CoffeeBeanManager.getAllBeans())
         .then(beans => {
           setCoffeeBeans(beans)
+          
+          // 如果有initialNote中有coffeeBean或者beanId，尝试找到匹配的咖啡豆
+          if (initialNote) {
+            // 当有初始coffeeBean对象时
+            if (initialNote.coffeeBean) {
+              setSelectedCoffeeBean(initialNote.coffeeBean)
+              
+              // 如果有咖啡豆，自动跳到下一步
+              if (!initialNote.id) { // 只在创建新笔记时自动跳步
+                setCurrentStep(1)
+              }
+              return
+            }
+            
+            // 当有beanId时，尝试从Bean列表中找到对应的豆子
+            if (initialNote.beanId) {
+              const foundBean = beans.find(bean => bean.id === initialNote.beanId)
+              if (foundBean) {
+                setSelectedCoffeeBean(foundBean)
+                // 如果有咖啡豆，自动跳到下一步
+                if (!initialNote.id) { // 只在创建新笔记时自动跳步
+                  setCurrentStep(1)
+                }
+                return
+              }
+            }
+            
+            // 当有咖啡豆信息但没有完整对象时，通过名称匹配
+            if (initialNote.coffeeBeanInfo?.name) {
+              const foundBean = beans.find(bean => 
+                bean.name === initialNote.coffeeBeanInfo?.name
+              )
+              if (foundBean) {
+                setSelectedCoffeeBean(foundBean)
+                // 如果有咖啡豆，自动跳到下一步
+                if (!initialNote.id) { // 只在创建新笔记时自动跳步
+                  setCurrentStep(1)
+                }
+              }
+            }
+          }
         })
         .catch(error => console.error('加载咖啡豆失败:', error))
     }
-  }, [showForm])
+  }, [showForm, initialNote])
 
   // 加载自定义器具列表
   useEffect(() => {

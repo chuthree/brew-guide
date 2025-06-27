@@ -1684,6 +1684,84 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         };
     }, [setCustomMethods]);
 
+    // 添加监听创建新笔记事件
+    useEffect(() => {
+        const handleAddNewBrewingNote = async () => {
+            try {
+                // 检查是否存在临时存储的咖啡豆
+                const tempBeanJson = localStorage.getItem('temp:selectedBean');
+                if (tempBeanJson) {
+                    const tempBeanInfo = JSON.parse(tempBeanJson);
+                    
+                    // 移除临时存储
+                    localStorage.removeItem('temp:selectedBean');
+                    
+                    // 如果有ID，尝试获取完整的咖啡豆信息
+                    if (tempBeanInfo.id) {
+                        const { CoffeeBeanManager } = await import('@/lib/managers/coffeeBeanManager');
+                        const fullBean = await CoffeeBeanManager.getBeanById(tempBeanInfo.id);
+                        
+                        if (fullBean) {
+                            // 创建笔记并预选该咖啡豆
+                            setCurrentEditingNote({
+                                coffeeBean: fullBean,
+                                beanId: tempBeanInfo.id, // 明确设置beanId，确保表单可以找到对应的咖啡豆
+                                coffeeBeanInfo: {
+                                    name: fullBean.name,
+                                    roastLevel: fullBean.roastLevel || '中度烘焙',
+                                    roastDate: fullBean.roastDate || ''
+                                },
+                                taste: {
+                                    acidity: 0,
+                                    sweetness: 0,
+                                    bitterness: 0,
+                                    body: 0
+                                },
+                                rating: 3,
+                                notes: ''
+                            });
+                            setShowNoteFormModal(true);
+                            return;
+                        }
+                    }
+                    
+                    // 如果没有找到完整咖啡豆信息，使用临时信息
+                    setCurrentEditingNote({
+                        beanId: tempBeanInfo.id, // 如果有id也设置，尽管可能为undefined
+                        coffeeBeanInfo: {
+                            name: tempBeanInfo.name || '',
+                            roastLevel: tempBeanInfo.roastLevel || '中度烘焙',
+                            roastDate: tempBeanInfo.roastDate || ''
+                        },
+                        taste: {
+                            acidity: 0,
+                            sweetness: 0,
+                            bitterness: 0,
+                            body: 0
+                        },
+                        rating: 3,
+                        notes: ''
+                    });
+                    setShowNoteFormModal(true);
+                    return;
+                }
+                
+                // 如果没有临时咖啡豆信息，调用默认的添加笔记函数
+                handleAddNote();
+            } catch (error) {
+                console.error('处理新建笔记事件失败:', error);
+                // 出错时调用默认的添加笔记函数
+                handleAddNote();
+            }
+        };
+        
+        window.addEventListener('addNewBrewingNote', handleAddNewBrewingNote);
+        
+        return () => {
+            window.removeEventListener('addNewBrewingNote', handleAddNewBrewingNote);
+        };
+    }, []);
+
     // 添加导航栏替代头部相关状态
     const [alternativeHeaderContent, setAlternativeHeaderContent] = useState<ReactNode | null>(null);
     const [showAlternativeHeader, setShowAlternativeHeader] = useState(false);

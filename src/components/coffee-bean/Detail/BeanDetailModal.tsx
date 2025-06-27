@@ -11,13 +11,13 @@ import HighlightText from '@/components/common/ui/HighlightText'
 import { getEquipmentName } from '@/components/notes/utils'
 import { formatDate } from '@/components/notes/utils'
 import ActionMenu from '@/components/coffee-bean/ui/action-menu'
+import { ArrowRight } from 'lucide-react'
+import { BREWING_EVENTS } from '@/lib/brewing/constants'
 
 // 动态导入 ImageViewer 组件
 const ImageViewer = dynamic(() => import('@/components/common/ui/ImageViewer'), {
     ssr: false
 })
-
-
 
 // 信息项类型定义
 interface InfoItem {
@@ -56,8 +56,6 @@ const InfoGrid: React.FC<{
         </div>
     )
 }
-
-
 
 interface BeanDetailModalProps {
     isOpen: boolean
@@ -312,8 +310,6 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
         return items
     }
 
-
-
     // 判断是否为简单的快捷扣除记录
     const isSimpleQuickDecrementNote = (note: BrewingNote): boolean => {
         return !!(note.source === 'quick-decrement' &&
@@ -408,6 +404,61 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
         }, 265) // 与动画时长一致
     }
 
+    // 处理去冲煮功能
+    const handleGoToBrewing = () => {
+        handleClose()
+        // 等待模态框关闭后再进行导航
+        setTimeout(() => {
+            // 先切换到冲煮标签页
+            document.dispatchEvent(new CustomEvent(BREWING_EVENTS.NAVIGATE_TO_MAIN_TAB, {
+                detail: { tab: '冲煮' }
+            }))
+
+            // 再切换到咖啡豆步骤
+            setTimeout(() => {
+                document.dispatchEvent(new CustomEvent(BREWING_EVENTS.NAVIGATE_TO_STEP, {
+                    detail: { step: 'coffeeBean' }
+                }))
+
+                // 然后选择当前豆子
+                if (bean) {
+                    setTimeout(() => {
+                        document.dispatchEvent(new CustomEvent(BREWING_EVENTS.SELECT_COFFEE_BEAN, {
+                            detail: { beanName: bean.name }
+                        }))
+                    }, 100)
+                }
+            }, 100)
+        }, 300)
+    }
+
+    // 处理去记录功能
+    const handleGoToNotes = () => {
+        handleClose()
+        // 保存当前咖啡豆信息，以便笔记页面使用
+        if (bean) {
+            localStorage.setItem('temp:selectedBean', JSON.stringify({
+                id: bean.id,
+                name: bean.name,
+                roastLevel: bean.roastLevel || '',
+                roastDate: bean.roastDate || ''
+            }))
+        }
+
+        // 等待模态框关闭后再进行导航
+        setTimeout(() => {
+            // 先切换到笔记标签页
+            document.dispatchEvent(new CustomEvent(BREWING_EVENTS.NAVIGATE_TO_MAIN_TAB, {
+                detail: { tab: '笔记' }
+            }))
+
+            // 延迟一段时间后触发创建新笔记事件
+            setTimeout(() => {
+                window.dispatchEvent(new CustomEvent('addNewBrewingNote'))
+            }, 300)
+        }, 300)
+    }
+
     return (
         <>
         <AnimatePresence>
@@ -463,16 +514,31 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                     ) : (bean?.name || '未命名')}
                                 </h2>
 
-                                {bean && (onEdit || onShare || onDelete) && (
-                                    <ActionMenu
-                                        items={[
-                                            ...(onEdit ? [{ id: 'edit', label: '编辑', onClick: () => { onEdit(bean); handleClose(); }, color: 'default' as const }] : []),
-                                            ...(onShare ? [{ id: 'share', label: '分享', onClick: () => { onShare(bean); handleClose(); }, color: 'default' as const }] : []),
-                                            ...(onDelete ? [{ id: 'delete', label: '删除', onClick: () => { onDelete(bean); handleClose(); }, color: 'danger' as const }] : [])
-                                        ]}
-                                        triggerClassName="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors ml-3"
-                                    />
-                                )}
+                                <div className="flex items-center">
+                                    {/* 前往按钮 */}
+                                    {bean && (
+                                        <ActionMenu
+                                            items={[
+                                                { id: 'brewing', label: '去冲煮', onClick: handleGoToBrewing, color: 'default' as const },
+                                                { id: 'notes', label: '去记录', onClick: handleGoToNotes, color: 'default' as const }
+                                            ]}
+                                            triggerClassName="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors mr-3"
+                                            triggerChildren={<ArrowRight className="h-4 w-4 text-neutral-600 dark:text-neutral-400" />}
+                                        />
+                                    )}
+                                    
+                                    {/* 原有的操作按钮 */}
+                                    {bean && (onEdit || onShare || onDelete) && (
+                                        <ActionMenu
+                                            items={[
+                                                ...(onEdit ? [{ id: 'edit', label: '编辑', onClick: () => { onEdit(bean); handleClose(); }, color: 'default' as const }] : []),
+                                                ...(onShare ? [{ id: 'share', label: '分享', onClick: () => { onShare(bean); handleClose(); }, color: 'default' as const }] : []),
+                                                ...(onDelete ? [{ id: 'delete', label: '删除', onClick: () => { onDelete(bean); handleClose(); }, color: 'danger' as const }] : [])
+                                            ]}
+                                            triggerClassName="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+                                        />
+                                    )}
+                                </div>
                             </div>
 
                             {bean ? (
@@ -526,7 +592,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                                     <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-1.5">风味</div>
                                                     <div className="flex flex-wrap gap-1">
                                                         {bean.flavor.map((flavor: string, index: number) => (
-                                                            <span key={index} className="px-1.5 py-0.5 bg-neutral-100 dark:bg-neutral-700/50 text-xs text-neutral-700 dark:text-neutral-300">
+                                                            <span key={index} className="px-1.5 py-0.5 bg-neutral-100 dark:bg-neutral-800 text-xs text-neutral-700 dark:text-neutral-300">
                                                                 {flavor}
                                                             </span>
                                                         ))}
@@ -567,7 +633,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                         const isChangeRecord = isSimpleQuickDecrementNote(note) || isSimpleCapacityAdjustmentNote(note)
 
                                         return (
-                                            <div key={note.id} className="p-2 bg-neutral-100 dark:bg-neutral-700/50 border border-neutral-200/30 dark:border-neutral-800/30 rounded">
+                                            <div key={note.id} className="p-2 bg-neutral-100 dark:bg-neutral-800 rounded">
                                                 {isChangeRecord ? (
                                                     // 变动记录（快捷扣除和容量调整）
                                                     <div className="flex items-center gap-3 flex-1 min-w-0">
