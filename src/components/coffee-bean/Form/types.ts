@@ -1,45 +1,11 @@
-// 拼配成分接口定义
-export interface BlendComponent {
-    percentage?: number;  // 百分比 (1-100)，可选
-    origin?: string;     // 产地
-    process?: string;    // 处理法
-    variety?: string;    // 品种
-}
+// 类型定义已统一到 @/types/app，从那里导入
+import type { CoffeeBean, BlendComponent } from '@/types/app';
 
-// 咖啡豆基础接口
-export interface CoffeeBean {
-    id: string;
-    timestamp: number;
-    name: string;
-    beanType?: 'espresso' | 'filter';  // 新增：用于区分手冲(filter)或意式(espresso)
-    image?: string;
-    capacity?: string;
-    remaining?: string;
-    price?: string;
-    roastLevel?: string;
-    roastDate?: string;
-    origin?: string;
-    process?: string;
-    variety?: string;
-    acidity?: number;
-    sweetness?: number;
-    body?: number;
-    aftertaste?: number;
-    flavor?: string[];
-    aroma?: number;
-    balance?: number;
-    clean?: number;
-    notes?: string;
-    startDay?: number;
-    endDay?: number;
-    isFrozen?: boolean;  // 新增：是否冰冻状态
-    isInTransit?: boolean; // 新增：是否在途状态
-}
+// 重新导出类型
+export type { CoffeeBean, BlendComponent };
 
-// 扩展CoffeeBean类型以支持拼配成分
-export type ExtendedCoffeeBean = CoffeeBean & {
-    blendComponents?: BlendComponent[];
-}
+// ExtendedCoffeeBean 已移除，直接使用 CoffeeBean
+export type ExtendedCoffeeBean = CoffeeBean;
 
 // 表单属性接口
 export interface CoffeeBeanFormProps {

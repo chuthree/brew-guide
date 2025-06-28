@@ -104,7 +104,7 @@ export const useEnhancedBeanFiltering = ({
             remaining: bean.remaining,
             timestamp: bean.timestamp,
             overallRating: bean.overallRating,
-            variety: bean.variety,
+            // variety 现在在 blendComponents 中
             price: bean.price
         }))
 

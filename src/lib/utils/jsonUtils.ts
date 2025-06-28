@@ -1,4 +1,5 @@
 import { type Method, type CustomEquipment } from "@/lib/core/config";
+import { type CoffeeBean, type BlendComponent } from "@/types/app";
 
 // 定义Stage类型的接口，用于解析JSON
 interface StageData {
@@ -11,29 +12,7 @@ interface StageData {
 	valveStatus?: string;
 }
 
-interface CoffeeBean {
-	id?: string;
-	name: string;
-	origin?: string;
-	roaster?: string;
-	roastLevel: string;
-	roastDate?: string;
-	processingMethod?: string;
-	process?: string;
-	variety?: string;
-	flavor?: string[];
-	notes?: string;
-	favorite?: boolean;
-	timestamp?: number;
-	capacity?: string;
-	remaining?: string;
-	price?: string;
-
-	blendComponents?: BlendComponent[] | undefined;
-	startDay?: number;
-	endDay?: number;
-	beanType?: string;
-}
+// CoffeeBean 类型现在从 @/types/app 导入，移除本地定义
 
 interface BrewingNote {
 	id: string;
@@ -66,13 +45,7 @@ interface BrewingNote {
 	timestamp: number;
 }
 
-// 定义BlendComponent接口
-interface BlendComponent {
-	percentage?: number | string;
-	origin?: string;
-	process?: string;
-	variety?: string;
-}
+// BlendComponent 类型现在从 @/types/app 导入，移除本地定义
 
 // 定义ParsedStage接口
 interface ParsedStage {
@@ -150,7 +123,7 @@ export function cleanJsonString(jsonString: string): string {
 export function extractJsonFromText(
 	text: string,
 	customEquipment?: CustomEquipment
-): Method | CoffeeBean | BrewingNote | CustomEquipment | CoffeeBean[] | null {
+): Method | CoffeeBean | Partial<CoffeeBean> | BrewingNote | CustomEquipment | CoffeeBean[] | null {
 	try {
 		// 首先检查是否为自然语言格式的文本
 		const originalText = text.trim();
@@ -811,8 +784,8 @@ export function brewingNoteToReadableText(note: BrewingNote): string {
  * @param text 咖啡豆的文本描述
  * @returns 结构化的咖啡豆数据
  */
-function parseCoffeeBeanText(text: string): CoffeeBean | null {
-	const bean: CoffeeBean = {
+function parseCoffeeBeanText(text: string): Partial<CoffeeBean> | null {
+	const bean: Partial<CoffeeBean> = {
 		name: "",
 		capacity: "",
 		remaining: "",

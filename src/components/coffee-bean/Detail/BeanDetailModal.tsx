@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ExtendedCoffeeBean } from '@/types/app'
+import { CoffeeBean } from '@/types/app'
 import { BrewingNote } from '@/lib/core/config'
 import { parseDateToTimestamp } from '@/lib/utils/dateUtils'
 import HighlightText from '@/components/common/ui/HighlightText'
@@ -59,12 +59,12 @@ const InfoGrid: React.FC<{
 
 interface BeanDetailModalProps {
     isOpen: boolean
-    bean: ExtendedCoffeeBean | null
+    bean: CoffeeBean | null
     onClose: () => void
     searchQuery?: string
-    onEdit?: (bean: ExtendedCoffeeBean) => void
-    onDelete?: (bean: ExtendedCoffeeBean) => void
-    onShare?: (bean: ExtendedCoffeeBean) => void
+    onEdit?: (bean: CoffeeBean) => void
+    onDelete?: (bean: CoffeeBean) => void
+    onShare?: (bean: CoffeeBean) => void
 }
 
 const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
@@ -227,9 +227,9 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
 
         return Array.from(new Set(
             bean.blendComponents
-                .map(comp => comp[field])
+                .map((comp) => comp[field as keyof typeof comp])
                 .filter((value): value is string =>
-                    value !== undefined && value !== null && value.trim() !== ''
+                    typeof value === 'string' && value !== undefined && value !== null && value.trim() !== ''
                 )
         ))
     }
@@ -286,16 +286,19 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     const getOriginInfoItems = (): InfoItem[] => {
         const items: InfoItem[] = []
 
-        // 产地信息
-        const originItem = createInfoItem('origin', '产地', 'origin', bean?.origin, true)
+        // 产地信息（从 blendComponents 获取）
+        const origins = bean?.blendComponents?.map(c => c.origin).filter(Boolean).join(', ') || ''
+        const originItem = createInfoItem('origin', '产地', 'origin', origins, true)
         if (originItem) items.push(originItem)
 
-        // 处理法信息
-        const processItem = createInfoItem('process', '处理法', 'process', bean?.process)
+        // 处理法信息（从 blendComponents 获取）
+        const processes = bean?.blendComponents?.map(c => c.process).filter(Boolean).join(', ') || ''
+        const processItem = createInfoItem('process', '处理法', 'process', processes)
         if (processItem) items.push(processItem)
 
-        // 品种信息
-        const varietyItem = createInfoItem('variety', '品种', 'variety', bean?.variety)
+        // 品种信息（从 blendComponents 获取）
+        const varieties = bean?.blendComponents?.map(c => c.variety).filter(Boolean).join(', ') || ''
+        const varietyItem = createInfoItem('variety', '品种', 'variety', varieties)
         if (varietyItem) items.push(varietyItem)
 
         // 烘焙度

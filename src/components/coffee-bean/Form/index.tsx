@@ -49,14 +49,8 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
             return initialBean.blendComponents;
         }
         
-        // 如果是单品且有传统的产地/处理法/品种属性，则使用这些属性创建一个成分
-        if (initialBean && (initialBean.origin || initialBean.process || initialBean.variety)) {
-            return [{
-                origin: initialBean.origin || '',
-                process: initialBean.process || '',
-                variety: initialBean.variety || ''
-            }];
-        }
+        // 如果没有拼配成分，创建一个空的成分用于单品豆
+        // （移除了旧的 origin/process/variety 字段兼容性代码）
         
         // 默认创建一个空成分
         return [{
@@ -68,8 +62,7 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
 
     const [bean, setBean] = useState<Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>>(() => {
         if (initialBean) {
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const { id, timestamp, ...beanData } = initialBean;
+            const { id: _id, timestamp: _timestamp, ...beanData } = initialBean;
 
             if (!beanData.roastLevel) {
                 beanData.roastLevel = '浅度烘焙';
@@ -229,7 +222,7 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
     const handleRemoveFlavor = (flavor: string) => {
         setBean({
             ...bean,
-            flavor: bean.flavor?.filter(f => f !== flavor) || []
+            flavor: bean.flavor?.filter((f: string) => f !== flavor) || []
         });
     };
 

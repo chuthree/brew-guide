@@ -10,9 +10,7 @@ const isMobileApp = typeof window !== 'undefined' &&
      
     !!(window as Window & { Capacitor?: { isNative?: boolean } }).Capacitor?.isNative;
 
-// 检测是否是移动浏览器 (暂未使用，但保留以备将来使用)
-const _isMobileBrowser = typeof window !== 'undefined' && 
-    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+// 移动浏览器检测已移除（未使用）
 
 // 处理链接打开的工具函数
 const openLink = async (url: string) => {
@@ -415,7 +413,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                                             // 处理法和烘焙度 - 博主榜单2025手冲豆特殊处理
                                             if (viewMode === 'blogger' && (bean as BloggerBean).year === 2025 && bean.beanType === 'filter') {
                                                 // 2025手冲豆：处理法 · 烘焙度
-                                                const processInfo = bean.process && bean.process !== '/' ? bean.process : '';
+                                                const processInfo = (bean as BloggerBean).process && (bean as BloggerBean).process !== '/' ? (bean as BloggerBean).process : '';
                                                 const roastInfo = bean.roastLevel && bean.roastLevel !== '未知' && bean.roastLevel !== '/' ? bean.roastLevel : '';
 
                                                 if (processInfo && roastInfo) {

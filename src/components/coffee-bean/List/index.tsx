@@ -372,7 +372,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
                     remaining: bean.remaining,
                     timestamp: bean.timestamp,
                     overallRating: bean.overallRating,
-                    variety: bean.variety,
+                    // variety 现在在 blendComponents 中
                     price: bean.price
                 }));
 
@@ -469,7 +469,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
                 remaining: bean.remaining,
                 timestamp: bean.timestamp,
                 overallRating: bean.overallRating,
-                variety: bean.variety,
+                // variety 现在在 blendComponents 中
                 price: bean.price
             }));
 
@@ -724,8 +724,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         const beansWithScores = filteredBeans.map(bean => {
             // 基本信息搜索
             const name = bean.name?.toLowerCase() || '';
-            const origin = bean.origin?.toLowerCase() || '';
-            const process = bean.process?.toLowerCase() || '';
+            // 从 blendComponents 获取产地和处理法信息（用于向后兼容搜索）
+            const origin = bean.blendComponents?.map(c => c.origin).filter(Boolean).join(' ').toLowerCase() || '';
+            const process = bean.blendComponents?.map(c => c.process).filter(Boolean).join(' ').toLowerCase() || '';
             const notes = bean.notes?.toLowerCase() || '';
 
             // 额外信息搜索

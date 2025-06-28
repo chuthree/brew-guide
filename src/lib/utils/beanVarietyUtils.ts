@@ -41,24 +41,20 @@ export interface ExtendedCoffeeBean extends CoffeeBean {
 
 /**
  * 获取咖啡豆的所有品种信息
- * 优先从blendComponents获取，兼容旧格式的variety字段
+ * 从blendComponents获取品种信息
  * @param bean 咖啡豆对象
  * @returns 品种数组，如果没有品种信息则返回空数组
  */
-export const getBeanVarieties = (bean: ExtendedCoffeeBean): string[] => {
+export const getBeanVarieties = (bean: CoffeeBean): string[] => {
     const varieties: string[] = []
 
-    // 优先从blendComponents获取品种信息
+    // 从blendComponents获取品种信息
     if (bean.blendComponents && Array.isArray(bean.blendComponents)) {
         bean.blendComponents.forEach(component => {
             if (isValidText(component.variety)) {
                 varieties.push(component.variety!.trim())
             }
         })
-    }
-    // 如果没有blendComponents，检查旧格式的variety字段（兼容性）
-    else if (isValidText(bean.variety)) {
-        varieties.push(bean.variety!.trim())
     }
 
     // 去重并返回
@@ -134,7 +130,7 @@ export const extractUniqueVarieties = (beans: ExtendedCoffeeBean[]): string[] =>
  * @param beans 咖啡豆数组
  * @returns 按数量排序的唯一产地数组（数量多的在前）
  */
-export const extractUniqueOrigins = (beans: ExtendedCoffeeBean[]): string[] => {
+export const extractUniqueOrigins = (beans: CoffeeBean[]): string[] => {
     const originCount = new Map<string, number>()
 
     // 统计每个产地的咖啡豆数量
@@ -166,7 +162,7 @@ export const extractUniqueOrigins = (beans: ExtendedCoffeeBean[]): string[] => {
  * @param beans 咖啡豆数组
  * @returns 排序后的唯一处理法数组
  */
-export const extractUniqueProcesses = (beans: ExtendedCoffeeBean[]): string[] => {
+export const extractUniqueProcesses = (beans: CoffeeBean[]): string[] => {
     const processesSet = new Set<string>()
 
     beans.forEach(bean => {
@@ -183,7 +179,7 @@ export const extractUniqueProcesses = (beans: ExtendedCoffeeBean[]): string[] =>
  * @param origin 要检查的产地名称
  * @returns 是否包含该产地
  */
-export const beanHasOrigin = (bean: ExtendedCoffeeBean, origin: string): boolean => {
+export const beanHasOrigin = (bean: CoffeeBean, origin: string): boolean => {
     const origins = getBeanOrigins(bean)
     return origins.includes(origin)
 }
@@ -210,24 +206,20 @@ export const beanHasVarietyInfo = (bean: ExtendedCoffeeBean): boolean => {
 
 /**
  * 获取咖啡豆的产地信息
- * 优先从blendComponents获取，兼容旧格式
+ * 从blendComponents获取产地信息
  * @param bean 咖啡豆对象
  * @returns 产地数组
  */
-export const getBeanOrigins = (bean: ExtendedCoffeeBean): string[] => {
+export const getBeanOrigins = (bean: CoffeeBean): string[] => {
     const origins: string[] = []
 
-    // 优先从blendComponents获取产地信息
+    // 从blendComponents获取产地信息
     if (bean.blendComponents && Array.isArray(bean.blendComponents)) {
         bean.blendComponents.forEach(component => {
             if (isValidText(component.origin)) {
                 origins.push(component.origin!.trim())
             }
         })
-    }
-    // 如果没有blendComponents，检查旧格式的origin字段（兼容性）
-    else if (isValidText(bean.origin)) {
-        origins.push(bean.origin!.trim())
     }
 
     // 去重并返回
@@ -236,14 +228,14 @@ export const getBeanOrigins = (bean: ExtendedCoffeeBean): string[] => {
 
 /**
  * 获取咖啡豆的处理法信息
- * 优先从blendComponents获取，兼容旧格式
+ * 从blendComponents获取处理法信息
  * @param bean 咖啡豆对象
  * @returns 处理法数组
  */
-export const getBeanProcesses = (bean: ExtendedCoffeeBean): string[] => {
+export const getBeanProcesses = (bean: CoffeeBean): string[] => {
     const processes: string[] = []
 
-    // 优先从blendComponents获取处理法信息
+    // 从blendComponents获取处理法信息
     if (bean.blendComponents && Array.isArray(bean.blendComponents)) {
         bean.blendComponents.forEach(component => {
             if (isValidText(component.process)) {
@@ -251,53 +243,12 @@ export const getBeanProcesses = (bean: ExtendedCoffeeBean): string[] => {
             }
         })
     }
-    // 如果没有blendComponents，检查旧格式的process字段（兼容性）
-    else if (isValidText(bean.process)) {
-        processes.push(bean.process!.trim())
-    }
 
     // 去重并返回
     return Array.from(new Set(processes))
 }
 
-/**
- * 检查咖啡豆数据是否为旧格式
- * @param bean 咖啡豆对象
- * @returns 是否为旧格式
- */
-export const isLegacyBeanFormat = (bean: ExtendedCoffeeBean): boolean => {
-    // 检查是否存在旧格式字段（无论是否有blendComponents）
-    const hasLegacyFields = bean.origin || bean.process || bean.variety
-
-    return !!hasLegacyFields
-}
-
-/**
- * 将旧格式咖啡豆转换为新格式
- * @param bean 旧格式咖啡豆对象
- * @returns 新格式咖啡豆对象
- */
-export const convertLegacyBeanToNewFormat = (bean: ExtendedCoffeeBean): ExtendedCoffeeBean => {
-    if (!isLegacyBeanFormat(bean)) {
-        return bean // 已经是新格式，直接返回
-    }
-
-    const newBean = { ...bean }
-
-    // 创建blendComponents
-    newBean.blendComponents = [{
-        origin: bean.origin || '',
-        process: bean.process || '',
-        variety: bean.variety || ''
-    }]
-
-    // 删除旧字段
-    delete newBean.origin
-    delete newBean.process
-    delete newBean.variety
-
-    return newBean
-}
+// 旧格式转换函数已移除，因为已经统一使用 blendComponents 结构
 
 /**
  * 赏味期状态枚举 - 与现有系统保持一致

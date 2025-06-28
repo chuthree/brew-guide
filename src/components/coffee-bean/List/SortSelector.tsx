@@ -1,5 +1,5 @@
 import React from 'react';
-import { ExtendedCoffeeBean } from '@/types/app';
+import { CoffeeBean } from '@/types/app';
 import { cn } from '@/lib/utils/classNameUtils';
 import { parseDateToTimestamp } from '@/lib/utils/dateUtils';
 import {
@@ -60,7 +60,7 @@ const getPhaseValue = (phase: string): number => {
 };
 
 // 获取咖啡豆的赏味期信息
-const getFlavorInfo = (bean: ExtendedCoffeeBean): { phase: string, remainingDays: number } => {
+const getFlavorInfo = (bean: CoffeeBean): { phase: string, remainingDays: number } => {
     if (!bean.roastDate) {
         return { phase: '衰退期', remainingDays: 0 };
     }
@@ -109,7 +109,7 @@ const getFlavorInfo = (bean: ExtendedCoffeeBean): { phase: string, remainingDays
 };
 
 // 计算咖啡豆的每克价格
-const calculatePricePerGram = (bean: ExtendedCoffeeBean): number => {
+const calculatePricePerGram = (bean: CoffeeBean): number => {
     if (!bean.price || !bean.capacity) return 0;
     
     // 提取数字
@@ -123,7 +123,7 @@ const calculatePricePerGram = (bean: ExtendedCoffeeBean): number => {
 };
 
 // 排序咖啡豆的函数
-export const sortBeans = (beansToSort: ExtendedCoffeeBean[], option: SortOption): ExtendedCoffeeBean[] => {
+export const sortBeans = (beansToSort: CoffeeBean[], option: SortOption): CoffeeBean[] => {
     const sorted = [...beansToSort];
     switch (option) {
         case SORT_OPTIONS.LAST_MODIFIED_DESC:

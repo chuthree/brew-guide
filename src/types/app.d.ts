@@ -21,45 +21,42 @@ export interface CoffeeBean {
 	id: string;           // 唯一标识
 	timestamp: number;    // 时间戳
 	name: string;         // 咖啡豆名称
-	
+
 	// 基本信息
 	image?: string;       // 图片
 	capacity?: string;    // 容量
 	remaining?: string;   // 剩余量
 	price?: string;       // 价格
-	
+
 	// 产品特性
 	roastLevel?: string;  // 烘焙度
 	roastDate?: string;   // 烘焙日期
-	origin?: string;      // 产地
-	process?: string;     // 处理法
-	variety?: string;     // 品种
 	flavor?: string[];    // 风味描述
 	notes?: string;       // 备注
-	
+
 	// 时间管理
 	startDay?: number;    // 开始使用天数
 	endDay?: number;      // 结束使用天数
 	isFrozen?: boolean;   // 是否冰冻状态
 	isInTransit?: boolean; // 是否在途状态
-	
+
 	// 分类标签
 	beanType?: "espresso" | "filter"; // 豆子类型：意式/手冲
-	
+
 	// 评分相关字段 (榜单功能使用)
 	overallRating?: number;       // 总体评分/喜好星值 (1-5)
 	ratingNotes?: string;         // 评价备注
-	
+
 	// 博主榜单专用字段
 	ratingEspresso?: number;      // 美式评分 (博主榜单 - 意式豆)
 	ratingMilkBased?: number;     // 奶咖评分 (博主榜单 - 意式豆)
 	purchaseChannel?: string;     // 购买渠道 (博主榜单)
-}
 
-// 扩展CoffeeBean类型以支持拼配成分
-export type ExtendedCoffeeBean = CoffeeBean & {
+	// 拼配成分
 	blendComponents?: BlendComponent[];
 }
+
+// ExtendedCoffeeBean 已移除，直接使用 CoffeeBean（已包含 blendComponents）
 
 // 变动记录的详细信息接口
 export interface ChangeRecordDetails {

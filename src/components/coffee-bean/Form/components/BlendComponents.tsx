@@ -1,6 +1,6 @@
 import React from 'react';
 import AutocompleteInput from '@/components/common/forms/AutocompleteInput';
-import { BlendComponent } from '../types';
+import { BlendComponent } from '@/types/app';
 import { 
     isCustomPreset, 
     removeCustomPreset,

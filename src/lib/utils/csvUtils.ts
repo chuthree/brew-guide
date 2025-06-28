@@ -56,6 +56,8 @@ export interface BloggerBean extends CoffeeBean {
     videoEpisode?: string; // 视频期数
     year?: number; // Add year identifier
     originalIndex?: number; // Add original index for sorting
+    // 临时保留 process 字段用于 CSV 数据兼容
+    process?: string;
 }
 
 // Parsing function for 2025 CSV data

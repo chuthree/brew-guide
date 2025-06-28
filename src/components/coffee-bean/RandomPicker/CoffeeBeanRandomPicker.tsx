@@ -180,9 +180,9 @@ const ScratchCard: React.FC<{
             <h3 className="text-lg font-medium text-center text-neutral-800 dark:text-neutral-100">
               {bean.name}
             </h3>
-            {bean.origin && (
+            {bean.blendComponents?.[0]?.origin && (
               <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-1">
-                {bean.origin}
+                {bean.blendComponents[0].origin}
               </p>
             )}
           </div>

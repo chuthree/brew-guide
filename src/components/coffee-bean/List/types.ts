@@ -1,21 +1,8 @@
 import { CoffeeBean } from '@/types/app'
 import { getBeanOrigins, getBeanProcesses, getBeanVarieties } from '@/lib/utils/beanVarietyUtils'
 
-// 添加BlendComponent类型
-export interface BlendComponent {
-    percentage?: number;  // 百分比 (1-100)，改为可选
-    origin?: string;     // 产地
-    process?: string;    // 处理法
-    variety?: string;    // 品种
-}
-
-// 确保 ExtendedCoffeeBean 包含 isFrozen 字段
-// 扩展CoffeeBean类型
-export interface ExtendedCoffeeBean extends CoffeeBean {
-    blendComponents?: BlendComponent[];
-    isFrozen?: boolean;  // 显式添加冰冻状态字段，确保类型定义完整
-    isInTransit?: boolean; // 显式添加在途状态字段，确保类型定义完整
-}
+// ExtendedCoffeeBean 已移除，直接使用 CoffeeBean
+export type ExtendedCoffeeBean = CoffeeBean;
 
 // 视图模式定义
 export const VIEW_OPTIONS = {

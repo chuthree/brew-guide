@@ -61,22 +61,23 @@ const Complete: React.FC<CompleteProps> = ({
                     <span className="text-sm text-neutral-500 dark:text-neutral-400 shrink-0">烘焙度</span>
                     <span className="text-sm font-medium truncate ml-4 max-w-[60%] text-right">{bean.roastLevel}</span>
                 </div>
-                {blendComponents.length <= 1 && bean.origin && (
+                {/* 单品豆信息从 blendComponents 获取 */}
+                {blendComponents.length === 1 && blendComponents[0].origin && (
                     <div className="flex justify-between py-2 border-b border-neutral-200 dark:border-neutral-700">
                         <span className="text-sm text-neutral-500 dark:text-neutral-400 shrink-0">产地</span>
-                        <span className="text-sm font-medium truncate ml-4 max-w-[60%] text-right">{bean.origin}</span>
+                        <span className="text-sm font-medium truncate ml-4 max-w-[60%] text-right">{blendComponents[0].origin}</span>
                     </div>
                 )}
-                {blendComponents.length <= 1 && bean.process && (
+                {blendComponents.length === 1 && blendComponents[0].process && (
                     <div className="flex justify-between py-2 border-b border-neutral-200 dark:border-neutral-700">
                         <span className="text-sm text-neutral-500 dark:text-neutral-400 shrink-0">处理法</span>
-                        <span className="text-sm font-medium truncate ml-4 max-w-[60%] text-right">{bean.process}</span>
+                        <span className="text-sm font-medium truncate ml-4 max-w-[60%] text-right">{blendComponents[0].process}</span>
                     </div>
                 )}
-                {blendComponents.length <= 1 && bean.variety && (
+                {blendComponents.length === 1 && blendComponents[0].variety && (
                     <div className="flex justify-between py-2 border-b border-neutral-200 dark:border-neutral-700">
                         <span className="text-sm text-neutral-500 dark:text-neutral-400 shrink-0">品种</span>
-                        <span className="text-sm font-medium truncate ml-4 max-w-[60%] text-right">{bean.variety}</span>
+                        <span className="text-sm font-medium truncate ml-4 max-w-[60%] text-right">{blendComponents[0].variety}</span>
                     </div>
                 )}
                 {bean.flavor && bean.flavor.length > 0 && (

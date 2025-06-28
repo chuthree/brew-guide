@@ -202,9 +202,8 @@ export const useBeanOperations = () => {
                 roastLevel: bean.roastLevel,
                 roastDate: bean.roastDate,
                 flavor: bean.flavor,
-                origin: bean.origin,
-                process: bean.process,
-                variety: bean.variety,
+                // origin, process, variety 现在在 blendComponents 中
+                blendComponents: bean.blendComponents,
                 price: bean.price,
 
                 beanType: bean.beanType, // 添加beanType信息

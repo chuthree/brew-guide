@@ -35,7 +35,7 @@ const FlavorInfo: React.FC<FlavorInfoProps> = ({
                 </label>
                 <div className="flex flex-wrap gap-2 pb-2">
                     {bean.flavor && bean.flavor.length > 0 ? (
-                        bean.flavor.map((flavor, index) => (
+                        bean.flavor.map((flavor: string, index: number) => (
                             <div
                                 key={index}
                                 className="flex items-center bg-neutral-200 dark:bg-neutral-800 rounded-full px-3 py-1"
