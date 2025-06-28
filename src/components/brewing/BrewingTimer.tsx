@@ -16,6 +16,7 @@ import {
   calculateTargetFlowRate,
   // 音频模块
   createInitialAudioState,
+  initAudioSystem,
   // 阶段处理器
   createExpandedStages,
   getCurrentStageIndex,
@@ -208,16 +209,20 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     [isHapticsSupported, settings.hapticFeedback]
   );
 
-  // 音频系统初始化 - 使用全局音频管理器
+  // 音频系统初始化 - 同时初始化全局和本地音频管理器
   useEffect(() => {
-    // 初始化全局音频管理器
+    // 初始化音频系统
     const setup = async () => {
+      // 初始化全局音频管理器
       await globalAudioManager.initialize();
+
+      // 同时初始化本地音频状态（用于计时器阶段切换提示音）
+      audioState.current = await initAudioSystem(audioState.current);
     };
 
     setup();
 
-    // 添加用户交互事件监听器（仍然需要用于本地音频状态）
+    // 添加用户交互事件监听器（用于恢复音频上下文）
     const handleUserInteraction = () => {
       if (audioState.current.audioContext?.state === "suspended") {
         audioState.current.audioContext.resume();
