@@ -220,6 +220,16 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
     // 滚动容器引用
     const scrollContainerRef = useRef<HTMLDivElement>(null);
 
+    // 处理滚动阴影效果
+    const [showLeftShadow, setShowLeftShadow] = useState(false);
+    
+    // 监听滚动事件以控制阴影显示
+    const handleScroll = () => {
+        if (scrollContainerRef.current) {
+            setShowLeftShadow(scrollContainerRef.current.scrollLeft > 2);
+        }
+    };
+
     // 滚动到选中项的函数
     const scrollToSelected = () => {
         if (!scrollContainerRef.current) return
@@ -255,6 +265,20 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
         const timer = setTimeout(scrollToSelected, 100)
         return () => clearTimeout(timer)
     }, [selectedEquipment, selectedBean, filterMode])
+
+    // 添加滚动事件监听
+    useEffect(() => {
+        const scrollContainer = scrollContainerRef.current;
+        if (scrollContainer) {
+            // 初始检测滚动位置
+            handleScroll();
+            
+            scrollContainer.addEventListener('scroll', handleScroll);
+            return () => {
+                scrollContainer.removeEventListener('scroll', handleScroll);
+            };
+        }
+    }, []);
 
     // 处理搜索图标点击
     const handleSearchClick = () => {
@@ -298,71 +322,82 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
             <div className="border-b border-neutral-200 dark:border-neutral-800">
                 <div className="px-6 relative">
                     {!isSearching ? (
-                        <div
-                            ref={scrollContainerRef}
-                            className="flex pr-20 overflow-x-auto"
-                            style={{
-                                scrollbarWidth: 'none',
-                                msOverflowStyle: 'none',
-                                WebkitOverflowScrolling: 'touch'
-                            }}
-                        >
-                            <style jsx>{`
-                                div::-webkit-scrollbar {
-                                    display: none;
-                                }
-                            `}</style>
+                        <div className="flex relative">
+                            {/* 固定在左侧的"全部"和筛选按钮 */}
+                            <div className="flex items-center bg-neutral-50 dark:bg-neutral-900 z-10 pr-1 relative flex-shrink-0">
+                                <TabButton
+                                    isActive={(filterMode === 'equipment' && selectedEquipment === null) || (filterMode === 'bean' && selectedBean === null)}
+                                    onClick={() => {
+                                        if (filterMode === 'equipment') {
+                                            onEquipmentClick(null);
+                                        } else {
+                                            onBeanClick(null);
+                                        }
+                                    }}
+                                    className="mr-1"
+                                    dataTab="all"
+                                >
+                                    全部
+                                </TabButton>
 
-                            {/* 全部按钮 - 带筛选图标 */}
-                            <TabButton
-                                isActive={(filterMode === 'equipment' && selectedEquipment === null) || (filterMode === 'bean' && selectedBean === null)}
-                                onClick={() => {
-                                    if (filterMode === 'equipment') {
-                                        onEquipmentClick(null);
-                                    } else {
-                                        onBeanClick(null);
-                                    }
+                                {/* 筛选图标按钮 */}
+                                <button
+                                    onClick={handleFilterToggle}
+                                    className="pb-1.5 mr-1 text-xs font-medium text-neutral-400 dark:text-neutral-600 flex items-center"
+                                >
+                                    <AlignLeft size={12} color="currentColor" />
+                                </button>
+                                
+                                {/* 左侧阴影 - 使用与右侧相同的伪元素实现 */}
+                                {showLeftShadow && (
+                                    <div className="absolute right-[-20px] top-0 bottom-0 w-5 pointer-events-none bg-linear-to-r from-neutral-50 to-transparent dark:from-neutral-900"></div>
+                                )}
+                            </div>
+
+                            {/* 可滚动的标签区域 - 添加左边距 */}
+                            <div
+                                ref={scrollContainerRef}
+                                className="flex overflow-x-auto ml-0 flex-1 pr-16"
+                                style={{
+                                    scrollbarWidth: 'none',
+                                    msOverflowStyle: 'none',
+                                    WebkitOverflowScrolling: 'touch'
                                 }}
-                                className="mr-1"
-                                dataTab="all"
+                                onScroll={handleScroll}
                             >
-                                全部
-                            </TabButton>
+                                <style jsx>{`
+                                    div::-webkit-scrollbar {
+                                        display: none;
+                                    }
+                                `}</style>
 
-                            {/* 筛选图标按钮 */}
-                            <button
-                                onClick={handleFilterToggle}
-                                className="pb-1.5 mr-3 text-xs font-medium text-neutral-400 dark:text-neutral-600 flex items-center"
-                            >
-                                <AlignLeft size={12} color="currentColor" />
-                            </button>
-
-                            {/* 动态筛选按钮 */}
-                            {filterMode === 'equipment' ? (
-                                availableEquipments.map(equipment => (
-                                    <TabButton
-                                        key={equipment}
-                                        isActive={selectedEquipment === equipment}
-                                        onClick={() => selectedEquipment !== equipment && onEquipmentClick(equipment)}
-                                        className="mr-3"
-                                        dataTab={equipment}
-                                    >
-                                        {equipmentNames[equipment] || equipment}
-                                    </TabButton>
-                                ))
-                            ) : (
-                                availableBeans.map(bean => (
-                                    <TabButton
-                                        key={bean}
-                                        isActive={selectedBean === bean}
-                                        onClick={() => selectedBean !== bean && onBeanClick(bean)}
-                                        className="mr-3"
-                                        dataTab={bean}
-                                    >
-                                        {bean}
-                                    </TabButton>
-                                ))
-                            )}
+                                {/* 动态筛选按钮 */}
+                                {filterMode === 'equipment' ? (
+                                    availableEquipments.map(equipment => (
+                                        <TabButton
+                                            key={equipment}
+                                            isActive={selectedEquipment === equipment}
+                                            onClick={() => selectedEquipment !== equipment && onEquipmentClick(equipment)}
+                                            className="mr-3"
+                                            dataTab={equipment}
+                                        >
+                                            {equipmentNames[equipment] || equipment}
+                                        </TabButton>
+                                    ))
+                                ) : (
+                                    availableBeans.map(bean => (
+                                        <TabButton
+                                            key={bean}
+                                            isActive={selectedBean === bean}
+                                            onClick={() => selectedBean !== bean && onBeanClick(bean)}
+                                            className="mr-3"
+                                            dataTab={bean}
+                                        >
+                                            {bean}
+                                        </TabButton>
+                                    ))
+                                )}
+                            </div>
                         </div>
                     ) : (
                         <div className="flex items-center pb-1.5 min-h-[22px]">

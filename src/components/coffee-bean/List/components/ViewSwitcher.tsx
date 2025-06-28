@@ -324,6 +324,52 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
     // 滚动容器引用
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const rankingScrollContainerRef = useRef<HTMLDivElement>(null);
+    
+    // 处理滚动阴影效果
+    const [showLeftShadow, setShowLeftShadow] = useState(false);
+    const [showRankingLeftShadow, setShowRankingLeftShadow] = useState(false);
+    
+    // 监听滚动事件以控制阴影显示
+    const handleScroll = () => {
+        if (scrollContainerRef.current) {
+            setShowLeftShadow(scrollContainerRef.current.scrollLeft > 2);
+        }
+    };
+    
+    // 监听榜单滚动事件
+    const handleRankingScroll = () => {
+        if (rankingScrollContainerRef.current) {
+            setShowRankingLeftShadow(rankingScrollContainerRef.current.scrollLeft > 2);
+        }
+    };
+    
+    // 添加滚动事件监听
+    useEffect(() => {
+        const scrollContainer = scrollContainerRef.current;
+        if (scrollContainer) {
+            // 初始检测滚动位置
+            handleScroll();
+            
+            scrollContainer.addEventListener('scroll', handleScroll);
+            return () => {
+                scrollContainer.removeEventListener('scroll', handleScroll);
+            };
+        }
+    }, []);
+    
+    // 添加榜单滚动事件监听
+    useEffect(() => {
+        const rankingScrollContainer = rankingScrollContainerRef.current;
+        if (rankingScrollContainer) {
+            // 初始检测滚动位置
+            handleRankingScroll();
+            
+            rankingScrollContainer.addEventListener('scroll', handleRankingScroll);
+            return () => {
+                rankingScrollContainer.removeEventListener('scroll', handleRankingScroll);
+            };
+        }
+    }, []);
 
     // 滚动到选中项的函数 - 用于品种筛选
     const scrollToSelected = () => {
@@ -517,21 +563,9 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                     <div className="border-b border-neutral-200 dark:border-neutral-800">
                         {/* 豆子筛选选项卡 */}
                         <div className="flex justify-between px-6">
-                            <div className="flex items-center">
-                                <div
-                                    ref={rankingScrollContainerRef}
-                                    className="relative flex items-center overflow-x-auto"
-                                    style={{
-                                        scrollbarWidth: 'none',
-                                        msOverflowStyle: 'none',
-                                        WebkitOverflowScrolling: 'touch'
-                                    }}
-                                >
-                                    <style jsx>{`
-                                        div::-webkit-scrollbar {
-                                            display: none;
-                                        }
-                                    `}</style>
+                            <div className="flex items-center relative flex-1">
+                                {/* 固定在左侧的"全部"和筛选按钮 */}
+                                <div className="flex items-center bg-neutral-50 dark:bg-neutral-900 z-10 pr-1 relative flex-shrink-0">
                                     <TabButton
                                         isActive={rankingBeanType === 'all'}
                                         onClick={() => onRankingBeanTypeChange?.('all')}
@@ -544,11 +578,33 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                                     {/* 筛选图标按钮 */}
                                     <button
                                         onClick={handleFilterToggle}
-                                        className="pb-1.5 mr-3 text-xs font-medium text-neutral-400 dark:text-neutral-600 flex items-center"
+                                        className="pb-1.5 mr-1 text-xs font-medium text-neutral-400 dark:text-neutral-600 flex items-center"
                                     >
                                         <AlignLeft size={12} color="currentColor" />
                                     </button>
+                                    
+                                    {/* 左侧阴影 - 使用与右侧相同的伪元素实现 */}
+                                    {showRankingLeftShadow && (
+                                        <div className="absolute right-[-20px] top-0 bottom-0 w-5 pointer-events-none bg-linear-to-r from-neutral-50 to-transparent dark:from-neutral-900"></div>
+                                    )}
+                                </div>
 
+                                <div
+                                    ref={rankingScrollContainerRef}
+                                    className="relative flex items-center overflow-x-auto flex-1 pr-16"
+                                    style={{
+                                        scrollbarWidth: 'none',
+                                        msOverflowStyle: 'none',
+                                        WebkitOverflowScrolling: 'touch'
+                                    }}
+                                    onScroll={handleRankingScroll}
+                                >
+                                    <style jsx>{`
+                                        div::-webkit-scrollbar {
+                                            display: none;
+                                        }
+                                    `}</style>
+                                    
                                     <TabButton
                                         isActive={rankingBeanType === 'espresso'}
                                         onClick={() => onRankingBeanTypeChange?.('espresso')}
@@ -652,107 +708,117 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                     <div className="border-b border-neutral-200 dark:border-neutral-800">
                         <div className="px-6 relative">
                             {!isSearching ? (
-                                <div
-                                    ref={scrollContainerRef}
-                                    className="flex pr-20 overflow-x-auto"
-                                    style={{
-                                        scrollbarWidth: 'none',
-                                        msOverflowStyle: 'none',
-                                        WebkitOverflowScrolling: 'touch'
-                                    }}
-                                >
-                                    <style jsx>{`
-                                        div::-webkit-scrollbar {
-                                            display: none;
-                                        }
-                                    `}</style>
-
-                                    {/* 全部按钮 - 带筛选图标 */}
-                                    <TabButton
-                                        isActive={
-                                            (filterMode === 'variety' && selectedVariety === null) ||
-                                            (filterMode === 'origin' && selectedOrigin === null) ||
-                                            (filterMode === 'flavorPeriod' && selectedFlavorPeriod === null) ||
-                                            (filterMode === 'roaster' && selectedRoaster === null)
-                                        }
-                                        onClick={() => {
-                                            if (filterMode === 'variety' && selectedVariety !== null) {
-                                                onVarietyClick?.(null)
-                                            } else if (filterMode === 'origin' && selectedOrigin !== null) {
-                                                onOriginClick?.(null)
-                                            } else if (filterMode === 'flavorPeriod' && selectedFlavorPeriod !== null) {
-                                                onFlavorPeriodClick?.(null)
-                                            } else if (filterMode === 'roaster' && selectedRoaster !== null) {
-                                                onRoasterClick?.(null)
+                                <div className="flex relative">
+                                    {/* 固定在左侧的"全部"和筛选按钮 */}
+                                    <div className="flex items-center bg-neutral-50 dark:bg-neutral-900 z-10 pr-1 relative flex-shrink-0">
+                                        <TabButton
+                                            isActive={
+                                                (filterMode === 'variety' && selectedVariety === null) ||
+                                                (filterMode === 'origin' && selectedOrigin === null) ||
+                                                (filterMode === 'flavorPeriod' && selectedFlavorPeriod === null) ||
+                                                (filterMode === 'roaster' && selectedRoaster === null)
                                             }
+                                            onClick={() => {
+                                                if (filterMode === 'variety' && selectedVariety !== null) {
+                                                    onVarietyClick?.(null)
+                                                } else if (filterMode === 'origin' && selectedOrigin !== null) {
+                                                    onOriginClick?.(null)
+                                                } else if (filterMode === 'flavorPeriod' && selectedFlavorPeriod !== null) {
+                                                    onFlavorPeriodClick?.(null)
+                                                } else if (filterMode === 'roaster' && selectedRoaster !== null) {
+                                                    onRoasterClick?.(null)
+                                                }
+                                            }}
+                                            className="mr-1"
+                                            dataTab="all"
+                                        >
+                                            <span onDoubleClick={() => onToggleImageFlowMode?.()}>
+                                                全部
+                                                {isImageFlowMode && (
+                                                    <span> · 图片流</span>
+                                                )}
+                                            </span>
+                                        </TabButton>
+
+                                        {/* 筛选图标按钮 */}
+                                        <button
+                                            onClick={handleFilterToggle}
+                                            className="pb-1.5 mr-1 text-xs font-medium text-neutral-400 dark:text-neutral-600 flex items-center"
+                                        >
+                                            <AlignLeft size={12} color="currentColor" />
+                                        </button>
+                                        
+                                        {/* 左侧阴影 - 使用与右侧相同的伪元素实现 */}
+                                        {showLeftShadow && (
+                                            <div className="absolute right-[-20px] top-0 bottom-0 w-5 pointer-events-none bg-linear-to-r from-neutral-50 to-transparent dark:from-neutral-900"></div>
+                                        )}
+                                    </div>
+
+                                    <div
+                                        ref={scrollContainerRef}
+                                        className="flex overflow-x-auto ml-0 flex-1 pr-16"
+                                        style={{
+                                            scrollbarWidth: 'none',
+                                            msOverflowStyle: 'none',
+                                            WebkitOverflowScrolling: 'touch'
                                         }}
-                                        className="mr-1"
-                                        dataTab="all"
+                                        onScroll={handleScroll}
                                     >
-                                        <span onDoubleClick={() => onToggleImageFlowMode?.()}>
-                                            全部
-                                            {isImageFlowMode && (
-                                                <span> · 图片流</span>
-                                            )}
-                                        </span>
-                                    </TabButton>
+                                        <style jsx>{`
+                                            div::-webkit-scrollbar {
+                                                display: none;
+                                            }
+                                        `}</style>
 
-                                    {/* 筛选图标按钮 */}
-                                    <button
-                                        onClick={handleFilterToggle}
-                                        className="pb-1.5 mr-3 text-xs font-medium text-neutral-400 dark:text-neutral-600 flex items-center"
-                                    >
-                                        <AlignLeft size={12} color="currentColor" />
-                                    </button>
+                                        {/* 根据分类模式显示不同的筛选按钮 */}
+                                        {filterMode === 'variety' && availableVarieties?.map((variety: string) => (
+                                            <TabButton
+                                                key={variety}
+                                                isActive={selectedVariety === variety}
+                                                onClick={() => selectedVariety !== variety && onVarietyClick?.(variety)}
+                                                className="mr-3"
+                                                dataTab={variety}
+                                            >
+                                                {variety}
+                                            </TabButton>
+                                        ))}
 
-                                    {/* 根据分类模式显示不同的筛选按钮 */}
-                                    {filterMode === 'variety' && availableVarieties?.map((variety: string) => (
-                                        <TabButton
-                                            key={variety}
-                                            isActive={selectedVariety === variety}
-                                            onClick={() => selectedVariety !== variety && onVarietyClick?.(variety)}
-                                            className="mr-3"
-                                            dataTab={variety}
-                                        >
-                                            {variety}
-                                        </TabButton>
-                                    ))}
+                                        {filterMode === 'origin' && availableOrigins?.map((origin: string) => (
+                                            <TabButton
+                                                key={origin}
+                                                isActive={selectedOrigin === origin}
+                                                onClick={() => selectedOrigin !== origin && onOriginClick?.(origin)}
+                                                className="mr-3"
+                                                dataTab={origin}
+                                            >
+                                                {origin}
+                                            </TabButton>
+                                        ))}
 
-                                    {filterMode === 'origin' && availableOrigins?.map((origin: string) => (
-                                        <TabButton
-                                            key={origin}
-                                            isActive={selectedOrigin === origin}
-                                            onClick={() => selectedOrigin !== origin && onOriginClick?.(origin)}
-                                            className="mr-3"
-                                            dataTab={origin}
-                                        >
-                                            {origin}
-                                        </TabButton>
-                                    ))}
+                                        {filterMode === 'flavorPeriod' && availableFlavorPeriods?.map((status: FlavorPeriodStatus) => (
+                                            <TabButton
+                                                key={status}
+                                                isActive={selectedFlavorPeriod === status}
+                                                onClick={() => selectedFlavorPeriod !== status && onFlavorPeriodClick?.(status)}
+                                                className="mr-3"
+                                                dataTab={status}
+                                            >
+                                                {FLAVOR_PERIOD_LABELS[status]}
+                                            </TabButton>
+                                        ))}
 
-                                    {filterMode === 'flavorPeriod' && availableFlavorPeriods?.map((status: FlavorPeriodStatus) => (
-                                        <TabButton
-                                            key={status}
-                                            isActive={selectedFlavorPeriod === status}
-                                            onClick={() => selectedFlavorPeriod !== status && onFlavorPeriodClick?.(status)}
-                                            className="mr-3"
-                                            dataTab={status}
-                                        >
-                                            {FLAVOR_PERIOD_LABELS[status]}
-                                        </TabButton>
-                                    ))}
-
-                                    {filterMode === 'roaster' && availableRoasters?.map((roaster: string) => (
-                                        <TabButton
-                                            key={roaster}
-                                            isActive={selectedRoaster === roaster}
-                                            onClick={() => selectedRoaster !== roaster && onRoasterClick?.(roaster)}
-                                            className="mr-3"
-                                            dataTab={roaster}
-                                        >
-                                            {roaster}
-                                        </TabButton>
-                                    ))}
+                                        {filterMode === 'roaster' && availableRoasters?.map((roaster: string) => (
+                                            <TabButton
+                                                key={roaster}
+                                                isActive={selectedRoaster === roaster}
+                                                onClick={() => selectedRoaster !== roaster && onRoasterClick?.(roaster)}
+                                                className="mr-3"
+                                                dataTab={roaster}
+                                            >
+                                                {roaster}
+                                            </TabButton>
+                                        ))}
+                                    </div>
                                 </div>
                             ) : (
                                 <div className="flex items-center pb-1.5 min-h-[22px]">
