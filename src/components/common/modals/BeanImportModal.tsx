@@ -146,8 +146,8 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
     const imgRef = useRef<HTMLImageElement>(null);
 
     // 裁剪处理逻辑
-    const handleCropComplete = useCallback(
-        debounce(async (crop: Crop) => {
+    const handleCropComplete = useCallback((crop: Crop) => {
+        const debouncedHandler = debounce(async () => {
             if (!selectedImage || !imgRef.current || !isCropActive || !crop.width || !crop.height) {
                 setCroppedImage(null);
                 return;
@@ -199,9 +199,10 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
             );
 
             setCroppedImage(canvas.toDataURL('image/jpeg', 0.8));
-        }, 150),
-        [selectedImage, isCropActive]
-    );
+        }, 150);
+
+        debouncedHandler();
+    }, [selectedImage, isCropActive]);
 
     const handleCropStart = () => setIsCropActive(true);
     const handleCropChange = (newCrop: Crop) => {
@@ -220,7 +221,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
         setImportData('');
         resetImageStates(setSelectedImage, setCroppedImage, setIsCropActive, setCrop);
         clearMessages();
-    }, []);
+    }, [clearMessages]);
 
     // 自动触发裁剪完成
     useEffect(() => {

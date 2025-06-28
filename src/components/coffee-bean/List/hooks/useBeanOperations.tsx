@@ -196,7 +196,7 @@ export const useBeanOperations = () => {
     const handleShare = async (bean: ExtendedCoffeeBean, copyFunction: (text: string) => void) => {
         try {
             // 创建一个可分享的咖啡豆对象
-            const shareableBean: any = {
+            const shareableBean: Partial<ExtendedCoffeeBean> = {
                 name: bean.name,
                 capacity: bean.capacity,
                 roastLevel: bean.roastLevel,
@@ -222,7 +222,7 @@ export const useBeanOperations = () => {
             try {
                 const { beanToReadableText } = await import('@/lib/utils/jsonUtils');
                 // 我们知道这个对象结构与函数期望的类型兼容
-                const readableText = beanToReadableText(shareableBean);
+                const readableText = beanToReadableText(shareableBean as Parameters<typeof beanToReadableText>[0]);
                 copyFunction(readableText);
                 return { success: true };
             } catch (_) {

@@ -411,7 +411,7 @@ export const CoffeeBeanManager = {
 			});
 
 			if (result) {
-				console.log(`咖啡豆容量恢复成功: ${bean.name} +${restoreAmount}g (${currentRemaining}g -> ${formattedNewRemaining}g)`);
+				console.warn(`咖啡豆容量恢复成功: ${bean.name} +${restoreAmount}g (${currentRemaining}g -> ${formattedNewRemaining}g)`);
 			} else {
 				console.error('increaseBeanRemaining: 更新咖啡豆失败');
 			}
@@ -572,7 +572,7 @@ export const CoffeeBeanManager = {
 			let hasUpdates = false;
 
 			// 更新所有相关笔记中的咖啡豆信息
-			const updatedNotes = notes.map((note: any) => {
+			const updatedNotes = notes.map((note: { beanId?: string; coffeeBeanInfo?: { name?: string; roastLevel?: string; roastDate?: string }; [key: string]: unknown }) => {
 				// 通过 beanId 或者旧的咖啡豆名称匹配
 				const isRelatedNote = note.beanId === beanId ||
 					(note.coffeeBeanInfo?.name === originalBean.name);
@@ -598,7 +598,7 @@ export const CoffeeBeanManager = {
 			// 如果有更新，保存到存储
 			if (hasUpdates) {
 				await storage.set('brewingNotes', JSON.stringify(updatedNotes));
-				console.log(`已同步更新 ${beanId} 相关笔记中的咖啡豆信息`);
+				console.warn(`已同步更新 ${beanId} 相关笔记中的咖啡豆信息`);
 
 				// 触发笔记更新事件，让笔记列表重新加载数据
 				if (typeof window !== 'undefined') {

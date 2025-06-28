@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { equipmentList } from '@/lib/core/config'
+import { equipmentList, type CustomEquipment } from '@/lib/core/config'
 import hapticsUtils from '@/lib/ui/haptics'
 import { SettingsOptions } from '@/components/settings/Settings'
 import { formatGrindSize } from '@/lib/utils/grindUtils'
@@ -85,12 +85,12 @@ const useEditMode = () => {
 // 器具指示器组件接口
 interface EquipmentIndicatorProps {
     selectedEquipment: string | null
-    customEquipments: any[]
+    customEquipments: CustomEquipment[]
     onEquipmentSelect: (equipmentId: string) => void
     onAddEquipment: () => void
-    onEditEquipment: (equipment: any) => void
-    onDeleteEquipment: (equipment: any) => void
-    onShareEquipment: (equipment: any) => void
+    onEditEquipment: (equipment: CustomEquipment) => void
+    onDeleteEquipment: (equipment: CustomEquipment) => void
+    onShareEquipment: (equipment: CustomEquipment) => void
     settings: { hapticFeedback?: boolean }
 }
 
@@ -106,12 +106,12 @@ const EquipmentIndicator: React.FC<EquipmentIndicatorProps> = ({
 
     // 合并所有器具数据
     const allEquipments = [
-        ...equipmentList.map((eq: any) => ({ ...eq, isCustom: false })),
+        ...equipmentList.map((eq) => ({ ...eq, isCustom: false })),
         ...customEquipments
     ]
 
     // 创建处理函数的工厂
-    const createHandler = (action: (...args: any[]) => void) => async (...args: any[]) => {
+    const createHandler = <T extends unknown[]>(action: (...args: T) => void) => async (...args: T) => {
         await triggerHaptic()
         action(...args)
     }
@@ -130,9 +130,9 @@ const EquipmentIndicator: React.FC<EquipmentIndicatorProps> = ({
             }
         }),
         add: createHandler(() => onAddEquipment()),
-        edit: createHandler((equipment: any) => onEditEquipment(equipment)),
-        delete: createHandler((equipment: any) => onDeleteEquipment(equipment)),
-        share: createHandler((equipment: any) => onShareEquipment(equipment)),
+        edit: createHandler((equipment: CustomEquipment) => onEditEquipment(equipment)),
+        delete: createHandler((equipment: CustomEquipment) => onDeleteEquipment(equipment)),
+        share: createHandler((equipment: CustomEquipment) => onShareEquipment(equipment)),
         exitEdit: createHandler(() => {
             exitEditMode()
             // 退出编辑模式后滚动到选中的器具
@@ -289,19 +289,19 @@ const EquipmentIndicator: React.FC<EquipmentIndicatorProps> = ({
                                         </span>
                                         <span className="text-[12px] tracking-widest text-neutral-400 dark:text-neutral-500 pb-3">｜</span>
                                         <button
-                                            onClick={() => handlers.edit(equipment)}
+                                            onClick={() => equipment.isCustom && handlers.edit(equipment as CustomEquipment)}
                                             className="text-xs font-medium tracking-widest cursor-pointer text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-100 pb-3 transition-colors duration-150"
                                         >
                                             编辑
                                         </button>
                                         <button
-                                            onClick={() => handlers.delete(equipment)}
+                                            onClick={() => equipment.isCustom && handlers.delete(equipment as CustomEquipment)}
                                             className="text-xs font-medium tracking-widest cursor-pointer text-neutral-500 dark:text-neutral-400 hover:text-red-600 dark:hover:text-red-400 pb-3 transition-colors duration-150"
                                         >
                                             删除
                                         </button>
                                         <button
-                                            onClick={() => handlers.share(equipment)}
+                                            onClick={() => equipment.isCustom && handlers.share(equipment as CustomEquipment)}
                                             className="text-xs font-medium tracking-widest cursor-pointer text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-100 pb-3 transition-colors duration-150"
                                         >
                                             分享
@@ -512,24 +512,24 @@ interface NavigationBarProps {
     // 添加萃取时间变更处理函数
     handleExtractionTimeChange?: (time: number) => void;
     // 添加器具相关props
-    customEquipments?: any[];
+    customEquipments?: CustomEquipment[];
     onEquipmentSelect?: (equipmentId: string) => void;
     onAddEquipment?: () => void;
-    onEditEquipment?: (equipment: any) => void;
-    onDeleteEquipment?: (equipment: any) => void;
-    onShareEquipment?: (equipment: any) => void;
+    onEditEquipment?: (equipment: CustomEquipment) => void;
+    onDeleteEquipment?: (equipment: CustomEquipment) => void;
+    onShareEquipment?: (equipment: CustomEquipment) => void;
     // 添加返回按钮相关props
     onBackClick?: () => void;
 }
 
 // 意式咖啡相关工具函数 - 优化为更简洁的实现
 const espressoUtils = {
-    isEspresso: (method: any) =>
-        method?.params?.stages?.some((stage: any) =>
-            ['extraction', 'beverage'].includes(stage.pourType)) || false,
+    isEspresso: (method: { params?: { stages?: Array<{ pourType?: string; [key: string]: unknown }> } } | null) =>
+        method?.params?.stages?.some((stage) =>
+            ['extraction', 'beverage'].includes(stage.pourType || '')) || false,
 
-    getExtractionTime: (method: any) =>
-        method?.params?.stages?.find((stage: any) => stage.pourType === 'extraction')?.time || 0,
+    getExtractionTime: (method: { params?: { stages?: Array<{ pourType?: string; time?: number; [key: string]: unknown }> } } | null) =>
+        method?.params?.stages?.find((stage) => stage.pourType === 'extraction')?.time || 0,
 
     formatTime: (seconds: number) => `${seconds}`
 }
@@ -747,7 +747,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                             ref={(el) => {
                                                 // 将按钮引用传递给父组件
                                                 if (el && typeof window !== 'undefined') {
-                                                    (window as any).beanButtonRef = el;
+                                                    (window as Window & { beanButtonRef?: HTMLDivElement }).beanButtonRef = el;
                                                 }
                                             }}
                                             onClick={handleBeanTabClick}

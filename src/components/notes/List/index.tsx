@@ -291,7 +291,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         } catch (error) {
             console.error("加载设备和咖啡豆数据失败:", error);
         }
-    }, [isOpen, sortOption, filterMode, selectedEquipment, selectedBean, triggerRerender, updateNotesData, cleanupDuplicateEquipments]);
+    }, [isOpen, updateNotesData, cleanupDuplicateEquipments]);
     
     // 初始化 - 确保在组件挂载时正确初始化数据
     useEffect(() => {
@@ -852,7 +852,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         
         // 返回排序后的笔记列表
         return matchingNotes.map(item => item.note);
-    }, [isSearching, searchQuery, globalCache.filteredNotes]);
+    }, [isSearching, searchQuery]);
     
     // 计算当前筛选或搜索结果的消耗量
     const currentConsumption = useMemo(() => {
@@ -868,7 +868,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         
         // 无筛选时，返回所有笔记的总消耗量
         return globalCache.totalConsumption || totalCoffeeConsumption.current;
-    }, [isSearching, searchQuery, searchFilteredNotes, selectedEquipment, selectedBean, globalCache.filteredNotes, globalCache.totalConsumption, totalCoffeeConsumption]);
+    }, [isSearching, searchQuery, searchFilteredNotes, selectedEquipment, selectedBean, totalCoffeeConsumption]);
     
     if (!isOpen) return null;
     

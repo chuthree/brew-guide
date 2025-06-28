@@ -250,7 +250,7 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
                 return new Date(b.roastDate).getTime() - new Date(a.roastDate).getTime();
             }
         });
-    }, [beans]);
+    }, [beans, getFlavorInfo]);
 
     // 搜索过滤
     const filteredBeans = useMemo(() => {
@@ -315,7 +315,8 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
 
     // 设置IntersectionObserver来监听加载更多的元素
     useEffect(() => {
-        if (!loaderRef.current) return;
+        const currentLoader = loaderRef.current;
+        if (!currentLoader) return;
 
         const observer = new IntersectionObserver(
             (entries) => {
@@ -326,14 +327,12 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
             { threshold: 0.1 } // 降低阈值，提高加载触发敏感度
         );
 
-        observer.observe(loaderRef.current);
+        observer.observe(currentLoader);
 
         return () => {
-            if (loaderRef.current) {
-                observer.unobserve(loaderRef.current);
-            }
+            observer.unobserve(currentLoader);
         };
-    }, [hasMore, loadMoreBeans]);
+    }, [hasMore, loadMoreBeans, isLoading]);
 
     // 设置ref的回调函数
     const setItemRef = useCallback((id: string) => (node: HTMLDivElement | null) => {

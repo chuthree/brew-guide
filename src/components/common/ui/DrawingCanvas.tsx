@@ -169,7 +169,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
     if (!svgToUse || !svgToUse.trim()) {
       // Log in development only
       if (process.env.NODE_ENV === 'development') {
-        console.log('[SVG加载] 没有SVG数据');
+        console.warn('[SVG加载] 没有SVG数据');
       }
       return () => {
         mounted = false;
@@ -179,7 +179,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
     try {
       // Log in development only
       if (process.env.NODE_ENV === 'development') {
-        console.log('[SVG加载] 开始处理SVG数据，长度:', svgToUse.length);
+        console.warn('[SVG加载] 开始处理SVG数据，长度:', svgToUse.length);
       }
       
       // 处理SVG颜色 - 根据当前主题模式设置颜色
@@ -206,7 +206,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
         if (mounted) {
           // Log in development only
           if (process.env.NODE_ENV === 'development') {
-            console.log('[SVG加载] 图像加载完成');
+            console.warn('[SVG加载] 图像加载完成');
           }
           referenceImageRef.current = img;
           setReferenceLoaded(true);
@@ -251,7 +251,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
     if (_customReferenceSvg) {
       // Log in development only
       if (process.env.NODE_ENV === 'development') {
-        console.log('[杯型加载] 使用自定义杯型');
+        console.warn('[杯型加载] 使用自定义杯型');
       }
       setUrlReferenceLoaded(false);
       urlReferenceImageRef.current = null;
@@ -270,7 +270,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
     
     // Log in development only
     if (process.env.NODE_ENV === 'development') {
-      console.log('[杯型加载] 开始加载默认杯型图像:', referenceSvgUrl);
+      console.warn('[杯型加载] 开始加载默认杯型图像:', referenceSvgUrl);
     }
 
     const img = new Image();
@@ -280,7 +280,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
       if (mounted) {
         // Log in development only
         if (process.env.NODE_ENV === 'development') {
-          console.log('[杯型加载] 默认杯型图像加载完成');
+          console.warn('[杯型加载] 默认杯型图像加载完成');
         }
         urlReferenceImageRef.current = img;
         setUrlReferenceLoaded(true);
@@ -317,7 +317,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
     try {
       // Log in development only
       if (process.env.NODE_ENV === 'development') {
-        console.log('[自定义杯型] 开始处理SVG数据，长度:', _customReferenceSvg.length);
+        console.warn('[自定义杯型] 开始处理SVG数据，长度:', _customReferenceSvg.length);
       }
       
       // 处理SVG颜色 - 根据当前主题模式设置颜色
@@ -344,7 +344,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
         if (mounted) {
           // Log in development only
           if (process.env.NODE_ENV === 'development') {
-            console.log('[自定义杯型] 图像加载完成');
+            console.warn('[自定义杯型] 图像加载完成');
           }
           urlReferenceImageRef.current = img;
           setUrlReferenceLoaded(true);

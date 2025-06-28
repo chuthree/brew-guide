@@ -211,7 +211,7 @@ function parseCSVContent2024(records: unknown[], beanType: 'espresso' | 'filter'
                 
                 // Debug log for the specific bean
                 if (String(品牌 ?? '').trim() === '皮爷咖啡' && String(豆子 ?? '').trim() === '多明戈大街') {
-                    console.log('Checking simplified filter for 皮爷咖啡 多明戈大街:', { brandExists, nameExists, episodeExists, row });
+                    console.warn('Checking simplified filter for 皮爷咖啡 多明戈大街:', { brandExists, nameExists, episodeExists, row });
                 }
 
                 return brandExists && nameExists && episodeExists; // Return based on simplified check

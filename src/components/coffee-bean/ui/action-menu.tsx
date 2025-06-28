@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useRef, useEffect, useState, ReactNode } from "react"
+import React, { useRef, useEffect, useState, ReactNode, useCallback } from "react"
 import { cn } from "@/lib/utils/classNameUtils"
 import { AnimatePresence, motion } from "framer-motion"
 import { MoreHorizontal } from "lucide-react"
@@ -54,16 +54,16 @@ const ActionMenu: React.FC<ActionMenuProps> = ({
   }, [])
 
   // 安全的状态更新
-  const setOpen = (value: boolean) => {
+  const setOpen = useCallback((value: boolean) => {
     if (!isMounted.current) return
-    
+
     setInternalOpen(value)
     onOpenChange?.(value)
-    
+
     if (!value) {
       onClose?.()
     }
-  }
+  }, [onOpenChange, onClose])
 
   // 点击外部关闭
   useEffect(() => {
@@ -84,7 +84,7 @@ const ActionMenu: React.FC<ActionMenuProps> = ({
     return () => {
       document.removeEventListener("mousedown", handleClickOutside, true)
     }
-  }, [open, onClose])
+  }, [open, onClose, setOpen])
 
   // 事件处理
   const handleStop = (e: React.MouseEvent) => {

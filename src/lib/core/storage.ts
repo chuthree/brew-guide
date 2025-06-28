@@ -131,7 +131,7 @@ export const Storage = {
 	async initialize(): Promise<void> {
 		try {
 			await StorageUtils.initialize();
-			console.log('存储系统初始化完成');
+			console.warn('存储系统初始化完成');
 		} catch (error) {
 			console.error('存储系统初始化失败:', error);
 		}

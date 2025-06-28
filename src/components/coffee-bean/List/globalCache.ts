@@ -277,7 +277,7 @@ if (typeof window !== 'undefined') {
         globalCache.bloggerYear = 2025;
         globalCache.initialized = false;
 
-        console.log('咖啡豆全局缓存已重置');
+        console.warn('咖啡豆全局缓存已重置');
     });
 }
 

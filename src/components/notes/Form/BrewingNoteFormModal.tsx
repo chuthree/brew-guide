@@ -199,7 +199,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
       });
       document.dispatchEvent(event);
     }, 0);
-  }, [])
+  }, [setSelectedMethod])
 
 
 

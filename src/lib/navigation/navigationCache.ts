@@ -57,6 +57,6 @@ export const clearNavigationCache = (): void => {
 if (typeof window !== 'undefined') {
     window.addEventListener('globalCacheReset', () => {
         clearNavigationCache();
-        console.log('导航缓存已重置');
+        console.warn('导航缓存已重置');
     });
 }

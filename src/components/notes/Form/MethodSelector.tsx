@@ -125,7 +125,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
         setTempValue(temp)
       }
     }
-  }, [selectedMethod, customMethods, commonMethods])
+  }, [selectedMethod, customMethods, commonMethods, settings])
 
   // 辅助函数：提取数字部分
   function extractNumber(str: string): string {

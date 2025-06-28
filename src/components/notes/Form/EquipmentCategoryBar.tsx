@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useRef, useEffect } from 'react'
+import React, { useRef, useEffect, useCallback } from 'react'
 import { equipmentList, type CustomEquipment } from '@/lib/core/config'
 
 interface EquipmentCategoryBarProps {
@@ -67,7 +67,7 @@ const EquipmentCategoryBar: React.FC<EquipmentCategoryBarProps> = ({
   }))
 
   // 滚动到选中项的函数
-  const scrollToSelected = () => {
+  const scrollToSelected = useCallback(() => {
     if (!scrollContainerRef.current || !selectedEquipment) return
 
     const selectedElement = scrollContainerRef.current.querySelector(`[data-tab="${selectedEquipment}"]`)
@@ -90,14 +90,14 @@ const EquipmentCategoryBar: React.FC<EquipmentCategoryBarProps> = ({
       left: Math.max(0, targetScrollLeft),
       behavior: 'smooth'
     })
-  }
+  }, [selectedEquipment])
 
   // 当选中项变化时滚动到选中项
   useEffect(() => {
     // 延迟执行以确保DOM已更新
     const timer = setTimeout(scrollToSelected, 100)
     return () => clearTimeout(timer)
-  }, [selectedEquipment])
+  }, [selectedEquipment, scrollToSelected])
 
   return (
     <div className="relative w-full overflow-hidden mb-3">

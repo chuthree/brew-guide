@@ -323,7 +323,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
             audioRef.current.play().catch(err => {
                 // Log error in development only
                 if (process.env.NODE_ENV === 'development') {
-                    console.log('音频播放失败:', err)
+                    console.warn('音频播放失败:', err)
                 }
             })
         }

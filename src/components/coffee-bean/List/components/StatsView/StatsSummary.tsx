@@ -1,6 +1,7 @@
 import React from 'react'
 import { formatNumber2Digits } from './utils'
 import { StatsSummaryProps } from './types'
+import { ExtendedCoffeeBean } from '../../types'
 
 // 计算预计消耗完的时间 - 兼容版本（保持向后兼容）
 export const calculateEstimatedFinishDate = (
@@ -10,7 +11,7 @@ export const calculateEstimatedFinishDate = (
         considerSeasonality?: boolean;
         separateByType?: boolean;
         includeConfidenceLevel?: boolean;
-        beans?: any[];
+        beans?: ExtendedCoffeeBean[];
     }
 ): string => {
     const result = calculateEstimatedFinishDateAdvanced(stats, dailyConsumption, options);
@@ -25,7 +26,7 @@ export const calculateEstimatedFinishDateAdvanced = (
         considerSeasonality?: boolean;
         separateByType?: boolean;
         includeConfidenceLevel?: boolean;
-        beans?: any[];
+        beans?: ExtendedCoffeeBean[];
     } = {}
 ) => {
     const {
@@ -123,7 +124,7 @@ const StatsSummary: React.FC<StatsSummaryProps> = ({
                     ref={(el) => {
                         // 将按钮引用传递给全局
                         if (el && typeof window !== 'undefined') {
-                            (window as any).timeRangeButtonRef = el;
+                            (window as Window & { timeRangeButtonRef?: HTMLButtonElement }).timeRangeButtonRef = el;
                         }
                     }}
                     onClick={onToggleTimeRangeDropdown}

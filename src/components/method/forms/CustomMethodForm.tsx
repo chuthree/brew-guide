@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { ArrowRight } from 'lucide-react'
 import { CustomEquipment } from '@/lib/core/config'
 import { isEspressoMachine, getDefaultPourType, getPourTypeName } from '@/lib/utils/equipmentUtils'
@@ -117,7 +117,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
   // ===== 工具函数 =====
 
   // 初始化新方法
-  const initializeNewMethod = (): MethodWithStages => {
+  const initializeNewMethod = useCallback((): MethodWithStages => {
     const isCustomPreset = customEquipment.animationType === 'custom';
     const isEspresso = isEspressoMachine(customEquipment);
 
@@ -185,7 +185,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         stages: [initialStage],
       },
     };
-  };
+  }, [customEquipment]);
 
   // 初始化方法状态
   const [method, setMethod] = useState<MethodWithStages>(() => {
@@ -328,7 +328,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     if (!initialMethod) {
       setMethod(initializeNewMethod());
     }
-  }, [customEquipment.animationType, customEquipment.hasValve, customEquipment.customPourAnimations]); // 从依赖项中移除initialMethod
+  }, [customEquipment.animationType, customEquipment.hasValve, customEquipment.customPourAnimations, initialMethod, initializeNewMethod]); // 添加缺失的依赖
 
   // 监听initialMethod变化
   useEffect(() => {

@@ -362,7 +362,7 @@ const TabContent: React.FC<TabContentProps> = ({
             if (selectedEquipment) {
                 getEquipmentNameForNote(selectedEquipment).then(setEquipmentName);
             }
-        }, [selectedEquipment]);
+        }, []);
 
         return (
             <BrewingNoteForm

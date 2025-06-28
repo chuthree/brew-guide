@@ -4,6 +4,7 @@
  */
 
 import { db } from '@/lib/core/db'
+import { CoffeeBean } from '@/types/app'
 
 // 动态导入 Storage 的辅助函数
 const getStorage = async () => {
@@ -40,29 +41,29 @@ const isValidText = (text: string | undefined | null): boolean => {
  * @param bean 咖啡豆对象
  * @returns 清理后的咖啡豆对象和是否有修改
  */
-const cleanBeanData = (bean: any): { cleanedBean: any; hasChanges: boolean } => {
+const cleanBeanData = (bean: Record<string, unknown>): { cleanedBean: Record<string, unknown>; hasChanges: boolean } => {
     const cleanedBean = { ...bean }
     let hasChanges = false
 
     // 清理 blendComponents 中的占位符
     if (cleanedBean.blendComponents && Array.isArray(cleanedBean.blendComponents)) {
-        cleanedBean.blendComponents = cleanedBean.blendComponents.map((component: any) => {
+        cleanedBean.blendComponents = (cleanedBean.blendComponents as Record<string, unknown>[]).map((component: Record<string, unknown>) => {
             const cleanedComponent = { ...component }
             
             // 清理产地
-            if (!isValidText(cleanedComponent.origin)) {
+            if (!isValidText(cleanedComponent.origin as string)) {
                 cleanedComponent.origin = ''
                 hasChanges = true
             }
-            
+
             // 清理处理法
-            if (!isValidText(cleanedComponent.process)) {
+            if (!isValidText(cleanedComponent.process as string)) {
                 cleanedComponent.process = ''
                 hasChanges = true
             }
-            
+
             // 清理品种
-            if (!isValidText(cleanedComponent.variety)) {
+            if (!isValidText(cleanedComponent.variety as string)) {
                 cleanedComponent.variety = ''
                 hasChanges = true
             }
@@ -72,17 +73,17 @@ const cleanBeanData = (bean: any): { cleanedBean: any; hasChanges: boolean } => 
     }
 
     // 清理顶层的旧格式字段（如果还存在）
-    if (!isValidText(cleanedBean.origin)) {
+    if (!isValidText(cleanedBean.origin as string)) {
         delete cleanedBean.origin
         hasChanges = true
     }
-    
-    if (!isValidText(cleanedBean.process)) {
+
+    if (!isValidText(cleanedBean.process as string)) {
         delete cleanedBean.process
         hasChanges = true
     }
-    
-    if (!isValidText(cleanedBean.variety)) {
+
+    if (!isValidText(cleanedBean.variety as string)) {
         delete cleanedBean.variety
         hasChanges = true
     }
@@ -127,27 +128,27 @@ export const analyzePlaceholderData = async () => {
 
             // 检查 blendComponents
             if (bean.blendComponents && Array.isArray(bean.blendComponents)) {
-                bean.blendComponents.forEach((component: any, compIndex: number) => {
-                    if (!isValidText(component.origin) && component.origin) {
+                (bean.blendComponents as Record<string, unknown>[]).forEach((component: Record<string, unknown>, compIndex: number) => {
+                    if (!isValidText(component.origin as string) && component.origin) {
                         issues.push(`blendComponents[${compIndex}].origin: "${component.origin}"`)
                     }
-                    if (!isValidText(component.process) && component.process) {
+                    if (!isValidText(component.process as string) && component.process) {
                         issues.push(`blendComponents[${compIndex}].process: "${component.process}"`)
                     }
-                    if (!isValidText(component.variety) && component.variety) {
+                    if (!isValidText(component.variety as string) && component.variety) {
                         issues.push(`blendComponents[${compIndex}].variety: "${component.variety}"`)
                     }
                 })
             }
 
             // 检查顶层字段
-            if (!isValidText(bean.origin) && bean.origin) {
+            if (!isValidText(bean.origin as string) && bean.origin) {
                 issues.push(`origin: "${bean.origin}"`)
             }
-            if (!isValidText(bean.process) && bean.process) {
+            if (!isValidText(bean.process as string) && bean.process) {
                 issues.push(`process: "${bean.process}"`)
             }
-            if (!isValidText(bean.variety) && bean.variety) {
+            if (!isValidText(bean.variety as string) && bean.variety) {
                 issues.push(`variety: "${bean.variety}"`)
             }
 
@@ -223,7 +224,7 @@ export const cleanAllPlaceholderData = async () => {
             // 同时更新IndexedDB
             try {
                 await db.coffeeBeans.clear()
-                await db.coffeeBeans.bulkPut(cleanedBeansArray)
+                await db.coffeeBeans.bulkPut(cleanedBeansArray as unknown as CoffeeBean[])
             } catch (dbError) {
                 // Log error in development only
                 if (process.env.NODE_ENV === 'development') {

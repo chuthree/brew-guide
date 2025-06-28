@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
@@ -41,13 +41,14 @@ const SwipeBackGesture: React.FC<SwipeBackGestureProps> = ({
   const THRESHOLD_PERCENTAGE = 0.3;
   // 边缘宽度：屏幕左侧20dp内视为边缘开始
   const EDGE_ZONE_WIDTH = 20;
+
   // 以下步骤支持返回导航
-  const NAVIGABLE_STEPS: Record<BrewingStep, BrewingStep | null> = {
+  const NAVIGABLE_STEPS = useMemo(() => ({
     'brewing': 'method', // 从注水步骤返回到方案步骤
     'method': 'coffeeBean', // 从方案步骤返回到咖啡豆步骤
     'coffeeBean': null, // 咖啡豆步骤是第一步，没有返回步骤
     'notes': 'brewing' // 从记录步骤返回到注水步骤
-  };
+  } as Record<BrewingStep, BrewingStep | null>), []);
 
   // 确定当前步骤是否可以返回，以及应返回到哪个步骤
   const getBackStep = useCallback((): BrewingStep | null => {

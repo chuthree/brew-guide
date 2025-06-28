@@ -274,7 +274,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     useEffect(() => {
         const handleCoffeeBeanDataChanged = async (event: CustomEvent) => {
             const { action, beanId } = event.detail;
-            console.log('咖啡豆数据变更事件:', { action, beanId });
+            console.warn('咖啡豆数据变更事件:', { action, beanId });
 
             // 清除CoffeeBeanManager的缓存，确保获取最新数据
             CoffeeBeanManager.clearCache();
@@ -340,7 +340,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
             window.removeEventListener('coffeeBeansUpdated', handleBeansUpdated);
             window.removeEventListener('coffeeBeanListChanged', handleBeansUpdated);
         };
-    }, []); // 空依赖数组，只在挂载时执行一次
+    }, [updateFilteredBeansAndCategories]); // 添加缺失的依赖
 
     // 清理unmountTimeout
     useEffect(() => {

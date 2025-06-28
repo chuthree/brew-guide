@@ -337,7 +337,7 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
         })
         setCardDimensionsReady(true)
 
-        console.log('Card dimensions updated:', {
+        console.warn('Card dimensions updated:', {
           width: rect.width,
           margin: actualMargin,
           totalWidth: rect.width + actualMargin
@@ -371,7 +371,7 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
       window.removeEventListener('fontZoomChange', handleFontZoomChange)
       window.removeEventListener('resize', updateCardDimensions)
     }
-  }, [isOpen])
+  }, [isOpen, animationState, isSingleBean, resetState])
 
   // 当isOpen变化时重置状态
   useEffect(() => {
@@ -400,7 +400,7 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
       // 让动画滚动足够多的卡片来营造旋转效果，最终停在选中的卡片
       const totalScrollDistance = (validBeans.length * 3 + randomIndex) * cardDimensions.totalWidth
 
-      console.log('Animation calculation:', {
+      console.warn('Animation calculation:', {
         containerWidth,
         cardWidth: cardDimensions.width,
         cardMargin: cardDimensions.margin,
@@ -434,7 +434,7 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
       setAnimationState('initial')
     }
 
-  }, [validBeans, controls, cardDimensions.width, cardDimensions.totalWidth])
+  }, [validBeans, controls, cardDimensions.width, cardDimensions.totalWidth, cardDimensions.margin])
 
   // 重新选择
   const handleReshuffle = useCallback(() => {

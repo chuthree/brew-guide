@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState, useCallback } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { defaultSettings, SettingsOptions } from '@/components/settings/Settings'
 import { cn } from '@/lib/utils/classNameUtils'
@@ -61,16 +61,16 @@ const RemainingEditor: React.FC<RemainingEditorProps> = ({
     }, [targetElement])
     
     // 更新开关状态
-    const setOpen = (value: boolean) => {
+    const setOpen = useCallback((value: boolean) => {
         if (!isMounted.current) return
-        
+
         setInternalOpen(value)
         onOpenChange?.(value)
-        
+
         if (!value) {
             onCancel()
         }
-    }
+    }, [onOpenChange, onCancel])
     
     // 加载减量预设值
     useEffect(() => {
@@ -119,14 +119,14 @@ const RemainingEditor: React.FC<RemainingEditorProps> = ({
         return () => {
             document.removeEventListener('keydown', handleKeyDown)
         }
-    }, [open])
+    }, [open, setOpen])
 
     // 计算和更新位置
-    const updatePosition = () => {
+    const updatePosition = useCallback(() => {
         if (!isMounted.current) return;
-        
+
         if (position) {
-            setPositionStyle({ 
+            setPositionStyle({
                 left: `${position.x}px`,
                 top: `${position.y}px`,
             });
@@ -134,28 +134,28 @@ const RemainingEditor: React.FC<RemainingEditorProps> = ({
         }
 
         const safeTarget = safeTargetRef.current;
-        
+
         if (safeTarget && document.body.contains(safeTarget)) {
             try {
                 const rect = safeTarget.getBoundingClientRect();
-                
+
                 const DROPDOWN_WIDTH = 120;
                 const DROPDOWN_HEIGHT = 40;
                 const WINDOW_WIDTH = window.innerWidth;
                 const WINDOW_HEIGHT = window.innerHeight;
                 const SAFE_PADDING = 10;
-                
+
                 let top = rect.bottom + 8;
                 let left = rect.left;
-                
+
                 if (left + DROPDOWN_WIDTH > WINDOW_WIDTH - SAFE_PADDING) {
                     left = Math.max(SAFE_PADDING, WINDOW_WIDTH - DROPDOWN_WIDTH - SAFE_PADDING);
                 }
-                
+
                 if (top + DROPDOWN_HEIGHT > WINDOW_HEIGHT - SAFE_PADDING) {
                     top = rect.top - DROPDOWN_HEIGHT - 8;
                 }
-                
+
                 if (isMounted.current) {
                     setPositionStyle({
                         left: `${left}px`,
@@ -173,7 +173,7 @@ const RemainingEditor: React.FC<RemainingEditorProps> = ({
                 }
             }
         }
-    };
+    }, [position]);
 
     // 实时更新位置
     useEffect(() => {
@@ -188,7 +188,7 @@ const RemainingEditor: React.FC<RemainingEditorProps> = ({
             window.removeEventListener('scroll', updatePosition, true)
             window.removeEventListener('resize', updatePosition)
         }
-    }, [open, targetElement, position])
+    }, [open, targetElement, position, updatePosition])
 
     // 添加点击外部关闭功能
     useEffect(() => {
@@ -210,7 +210,7 @@ const RemainingEditor: React.FC<RemainingEditorProps> = ({
         return () => {
             document.removeEventListener('mousedown', handleClickOutside, true)
         }
-    }, [open])
+    }, [open, setOpen])
 
     // 阻止事件冒泡
     const handleStop = (e: React.MouseEvent) => {
@@ -276,7 +276,7 @@ const RemainingEditor: React.FC<RemainingEditorProps> = ({
             await Storage.set('brewingNotes', JSON.stringify(updatedNotes))
 
             if (isMounted.current) {
-                console.log('快捷扣除自动创建笔记成功')
+                console.warn('快捷扣除自动创建笔记成功')
             }
         } catch (error) {
             console.error('创建快捷扣除笔记失败:', error)

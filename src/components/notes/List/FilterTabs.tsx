@@ -1,6 +1,6 @@
 'use client'
 
-import React, { memo, useRef, useState, useEffect } from 'react'
+import React, { memo, useRef, useState, useEffect, useCallback } from 'react'
 import { FilterTabsProps, SORT_OPTIONS, SortOption } from '../types'
 import { X, AlignLeft } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -231,7 +231,7 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
     };
 
     // 滚动到选中项的函数
-    const scrollToSelected = () => {
+    const scrollToSelected = useCallback(() => {
         if (!scrollContainerRef.current) return
 
         const selectedId = filterMode === 'equipment' ? selectedEquipment : selectedBean
@@ -257,14 +257,14 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
             left: Math.max(0, targetScrollLeft),
             behavior: 'smooth'
         })
-    }
+    }, [filterMode, selectedEquipment, selectedBean])
 
     // 当选中项变化时滚动到选中项
     useEffect(() => {
         // 延迟执行以确保DOM已更新
         const timer = setTimeout(scrollToSelected, 100)
         return () => clearTimeout(timer)
-    }, [selectedEquipment, selectedBean, filterMode])
+    }, [selectedEquipment, selectedBean, filterMode, scrollToSelected])
 
     // 添加滚动事件监听
     useEffect(() => {

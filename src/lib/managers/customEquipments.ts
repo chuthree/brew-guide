@@ -168,7 +168,7 @@ export async function saveCustomEquipment(
 			try {
 				const methodsForEquipment = await loadCustomMethodsForEquipment(equipment.id);
 				if (methodsForEquipment.length > 0) {
-					console.log(`[saveCustomEquipment] 器具 "${oldEquipmentName}" 重命名为 "${equipment.name}"，检测到 ${methodsForEquipment.length} 个方案，确保方案关联更新`);
+					console.warn(`[saveCustomEquipment] 器具 "${oldEquipmentName}" 重命名为 "${equipment.name}"，检测到 ${methodsForEquipment.length} 个方案，确保方案关联更新`);
 					
 					// 重新保存这些方案，确保它们与更新后的器具正确关联
 					for (const method of methodsForEquipment) {
@@ -182,11 +182,11 @@ export async function saveCustomEquipment(
 
 		// 如果提供了新方案，则保存方案
 		if (methods && methods.length > 0 && equipment.id) {
-			console.log(`[saveCustomEquipment] 准备保存器具(${equipment.id})的${methods.length}个方案:`, methods.map(m => m.name));
-			
+			console.warn(`[saveCustomEquipment] 准备保存器具(${equipment.id})的${methods.length}个方案:`, methods.map(m => m.name));
+
 			// 先检查现有方案，确保不会重复保存
 			const existingMethods = await loadCustomMethodsForEquipment(equipment.id);
-			console.log(`[saveCustomEquipment] 器具(${equipment.id})已有${existingMethods.length}个方案`);
+			console.warn(`[saveCustomEquipment] 器具(${equipment.id})已有${existingMethods.length}个方案`);
 			
 			// 过滤出需要保存的新方案（不在现有方案中的）
 			const methodsToSave = methods.filter(method => {
@@ -197,15 +197,15 @@ export async function saveCustomEquipment(
 				return !existingMethod;
 			});
 			
-			console.log(`[saveCustomEquipment] 需要保存${methodsToSave.length}个新方案`);
-			
+			console.warn(`[saveCustomEquipment] 需要保存${methodsToSave.length}个新方案`);
+
 			// 保存新方案
 			for (const method of methodsToSave) {
-				console.log(`[saveCustomEquipment] 保存方案: ${method.name} 到器具 ${equipment.id}`);
+				console.warn(`[saveCustomEquipment] 保存方案: ${method.name} 到器具 ${equipment.id}`);
 				await saveCustomMethod(equipment.id, method);
 			}
-			
-			console.log(`[saveCustomEquipment] 器具${equipment.id}的方案保存完成`);
+
+			console.warn(`[saveCustomEquipment] 器具${equipment.id}的方案保存完成`);
 		}
 	} catch (error) {
 		console.error('[saveCustomEquipment] 保存器具失败:', error);
@@ -242,12 +242,12 @@ export async function updateCustomEquipment(
 
 		// 更新IndexedDB
 		await db.customEquipments.put(updatedEquipment);
-		console.log(`[updateCustomEquipment] 更新了IndexedDB中的器具: ${id}`);
-		
+		console.warn(`[updateCustomEquipment] 更新了IndexedDB中的器具: ${id}`);
+
 		// 同时更新localStorage作为备份
 		const storage = await getStorage();
 		await storage.set(STORAGE_KEY, JSON.stringify(equipments));
-		console.log(`[updateCustomEquipment] 同时更新了localStorage作为备份`);
+		console.warn(`[updateCustomEquipment] 同时更新了localStorage作为备份`);
 		
 		// 使缓存失效
 		invalidateEquipmentsCache();
@@ -279,12 +279,12 @@ export async function deleteCustomEquipment(id: string): Promise<void> {
 		
 		// 从IndexedDB删除
 		await db.customEquipments.delete(id);
-		console.log(`[deleteCustomEquipment] 从IndexedDB删除了器具: ${id}`);
-		
+		console.warn(`[deleteCustomEquipment] 从IndexedDB删除了器具: ${id}`);
+
 		// 同时更新localStorage作为备份
 		const storage = await getStorage();
 		await storage.set(STORAGE_KEY, JSON.stringify(filteredEquipments));
-		console.log(`[deleteCustomEquipment] 同时更新了localStorage作为备份`);
+		console.warn(`[deleteCustomEquipment] 同时更新了localStorage作为备份`);
 
 		// 使缓存失效
 		invalidateEquipmentsCache();
@@ -294,11 +294,11 @@ export async function deleteCustomEquipment(id: string): Promise<void> {
 			// 检查是否有对应的方案数据
 			const methodsKey = `customMethods_${id}`;
 			await storage.remove(methodsKey);
-			console.log(`[deleteCustomEquipment] 尝试清理相关方案数据: ${methodsKey}`);
-			
+			console.warn(`[deleteCustomEquipment] 尝试清理相关方案数据: ${methodsKey}`);
+
 			// 从IndexedDB中删除方案
 			await db.customMethods.delete(id);
-			console.log(`[deleteCustomEquipment] 从IndexedDB删除了器具相关方案: ${id}`);
+			console.warn(`[deleteCustomEquipment] 从IndexedDB删除了器具相关方案: ${id}`);
 		} catch (methodError) {
 			console.warn(`[deleteCustomEquipment] 清理器具相关方案失败:`, methodError);
 			// 不阻止器具删除流程

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   getStringState,
   saveStringState,
@@ -34,7 +34,7 @@ export function usePersistedState<T>(
   });
 
   // 辅助函数，根据类型加载状态
-  const loadState = (): T => {
+  const loadState = useCallback((): T => {
     const type = typeof initialValue;
     if (type === 'string') {
       return getStringState(moduleName, key, initialValue as string) as unknown as T;
@@ -45,10 +45,10 @@ export function usePersistedState<T>(
     } else {
       return getObjectState(moduleName, key, initialValue);
     }
-  };
+  }, [moduleName, key, initialValue]);
 
   // 保存状态的函数
-  const saveState = (newValue: T) => {
+  const saveState = useCallback((newValue: T) => {
     const type = typeof newValue;
     if (type === 'string') {
       saveStringState(moduleName, key, newValue as string);
@@ -59,7 +59,7 @@ export function usePersistedState<T>(
     } else {
       saveObjectState(moduleName, key, newValue);
     }
-  };
+  }, [moduleName, key]);
 
   // 更新函数，处理值和函数更新器两种情况
   const setAndPersistValue = (newValueOrUpdater: T | ((prevValue: T) => T)) => {
@@ -89,7 +89,7 @@ export function usePersistedState<T>(
       }
     }
      
-  }, []);
+  }, [loadState, saveState, value]);
 
   return [value, setAndPersistValue];
 } 

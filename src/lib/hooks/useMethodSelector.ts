@@ -92,7 +92,6 @@ export function useMethodSelector({
 		updateBrewingSteps,
 		setActiveTab,
 		setActiveBrewingStep,
-		equipmentList,
 	]
 );
 
@@ -128,7 +127,7 @@ export function useMethodSelector({
 
 				if (customEquipment && 'animationType' in customEquipment) {
 					// 这是自定义器具，需要找到基础器具ID
-					const animationType = (customEquipment as any).animationType?.toLowerCase();
+					const animationType = (customEquipment as { animationType?: string }).animationType?.toLowerCase();
 					switch (animationType) {
 						case 'v60': targetEquipmentId = 'V60'; break;
 						case 'clever': targetEquipmentId = 'CleverDripper'; break;
@@ -169,7 +168,7 @@ export function useMethodSelector({
 					const methodCopy = { ...method, params: { ...method.params } };
 					Object.entries(step.customParams).forEach(([key, value]) => {
 						if (key !== 'stages' && key in methodCopy.params) {
-							(methodCopy.params as any)[key] = String(value);
+							(methodCopy.params as Record<string, unknown>)[key] = String(value);
 						}
 					});
 					method = methodCopy;
@@ -180,7 +179,7 @@ export function useMethodSelector({
 
 			return method;
 		},
-		[customMethods, commonMethods, processSelectedMethod]
+		[customMethods, processSelectedMethod]
 	);
 
 	return {

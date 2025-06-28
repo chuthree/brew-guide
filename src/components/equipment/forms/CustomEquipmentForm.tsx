@@ -351,7 +351,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
         }, 800); // 每800ms更新一次
 
         return () => clearInterval(previewTimer);
-    }, []); // 保持空依赖数组
+    }, [customPourAnimations]); // 添加缺失的依赖
 
     const [showPourAnimationCanvas, setShowPourAnimationCanvas] = useState(false);
     const [currentEditingAnimation, setCurrentEditingAnimation] = useState<CustomPourAnimation | null>(null);
@@ -431,7 +431,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                         if (animation.frames && animation.frames.length > 1) {
                             // 多帧动画处理逻辑
                             if (process.env.NODE_ENV === 'development') {
-                                console.log(`处理多帧动画: ${animation.name}, 帧数: ${animation.frames.length}`);
+                                console.warn(`处理多帧动画: ${animation.name}, 帧数: ${animation.frames.length}`);
                             }
                         }
                         return animation;
@@ -447,22 +447,22 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
 
                 // 检查杯型SVG数据是否存在
                 if (equipmentToSave.customShapeSvg && process.env.NODE_ENV === 'development') {
-                    console.log('保存自定义杯型SVG数据');
+                    console.warn('保存自定义杯型SVG数据');
                 }
 
                 // 检查自定义阀门SVG数据是否存在
                 if (equipmentToSave.customValveSvg && process.env.NODE_ENV === 'development') {
-                    console.log('保存自定义阀门SVG数据');
+                    console.warn('保存自定义阀门SVG数据');
                 }
 
                 // 检查自定义阀门开启状态SVG数据是否存在
                 if (equipmentToSave.customValveOpenSvg && process.env.NODE_ENV === 'development') {
-                    console.log('保存自定义阀门开启状态SVG数据');
+                    console.warn('保存自定义阀门开启状态SVG数据');
                 }
 
                 // 检查最终传递的自定义注水动画数据
                 if (equipmentToSave.customPourAnimations && process.env.NODE_ENV === 'development') {
-                    console.log(`保存${equipmentToSave.customPourAnimations.length}个自定义注水动画`);
+                    console.warn(`保存${equipmentToSave.customPourAnimations.length}个自定义注水动画`);
                 }
 
                 onSave(equipmentToSave);
@@ -656,7 +656,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
     };
 
     // 处理保存动画编辑
-    const handleSavePourAnimation = () => {
+    const handleSavePourAnimation = useCallback(() => {
         hapticsUtils.medium();
 
         if (animationEditorRef.current && currentEditingAnimation) {
@@ -704,17 +704,17 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                 }
             }
         }
-    };
+    }, [currentEditingAnimation, setCustomPourAnimations, setPreviewFrameIndexes, setShowPourAnimationCanvas, setCurrentEditingAnimation]);
 
     // 处理注水动画名称变更
-    const handlePourAnimationNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handlePourAnimationNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         if (currentEditingAnimation) {
             setCurrentEditingAnimation(prev => ({
                 ...prev!,
                 name: e.target.value // 直接使用输入值，不做trim，让用户可以输入空格
             }));
         }
-    };
+    }, [currentEditingAnimation, setCurrentEditingAnimation]);
 
     // 添加播放状态切换函数 - 使用useCallback以便可以用于依赖数组
     const handleTogglePlayback = useCallback(() => {
@@ -735,15 +735,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
         }
     }, []);
 
-    // 添加创建新帧函数 - 使用useCallback
-    const handleAddNewFrame = useCallback((e: React.MouseEvent) => {
-        // 阻止事件冒泡，确保不会关闭模态框
-        e.stopPropagation();
-        e.preventDefault();
-        if (animationEditorRef.current) {
-            animationEditorRef.current.addFrame();
-        }
-    }, []);
+
 
     // 退出编辑器时重置播放状态
     useEffect(() => {
@@ -759,7 +751,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                 // 确保设备引用是最新的
             }
         }
-    }, [showPourAnimationCanvas, currentEditingAnimation?.id]);
+    }, [showPourAnimationCanvas, currentEditingAnimation?.id, currentEditingAnimation]);
 
     // 获取参考图像
     const referenceImageUrls = useMemo(() =>
@@ -780,7 +772,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
         if (!currentEditingAnimation) return [{ id: 'frame-1', svgData: '' }];
 
         if (process.env.NODE_ENV === 'development') {
-            console.log('开发模式：初始化帧数据', currentEditingAnimation);
+            console.warn('开发模式：初始化帧数据', currentEditingAnimation);
         }
 
         if (currentEditingAnimation.frames && currentEditingAnimation.frames.length > 0) {
@@ -975,7 +967,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                 </div>
             </>
         );
-    }, [strokeWidth, handleTogglePlayback, handleDeleteCurrentFrame, handleAddNewFrame, currentEditingAnimation, canvasSize, customShapeSvg, showPourAnimationCanvas]);
+    }, [strokeWidth, handleTogglePlayback, handleDeleteCurrentFrame, currentEditingAnimation, canvasSize, customShapeSvg, editorKey, handlePourAnimationNameChange, handleSavePourAnimation, initialFrames, isPlaying, referenceImageUrls]);
 
     // 渲染绘图界面
     const renderDrawingCanvas = () => (

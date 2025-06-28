@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useRef, useState, useEffect } from 'react'
+import React, { useRef, useState, useEffect, useCallback } from 'react'
 import { ViewOption, VIEW_OPTIONS, BeanType, BloggerBeansYear, BeanFilterMode } from '../types'
 import {
     SortOption,
@@ -372,7 +372,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
     }, []);
 
     // 滚动到选中项的函数 - 用于品种筛选
-    const scrollToSelected = () => {
+    const scrollToSelected = useCallback(() => {
         if (!scrollContainerRef.current || !selectedVariety) return
 
         const selectedElement = scrollContainerRef.current.querySelector(`[data-tab="${selectedVariety}"]`)
@@ -395,10 +395,10 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
             left: Math.max(0, targetScrollLeft),
             behavior: 'smooth'
         })
-    }
+    }, [selectedVariety])
 
     // 滚动到选中项的函数 - 用于榜单豆子类型筛选
-    const scrollToRankingSelected = () => {
+    const scrollToRankingSelected = useCallback(() => {
         if (!rankingScrollContainerRef.current || !rankingBeanType) return
 
         const selectedElement = rankingScrollContainerRef.current.querySelector(`[data-tab="${rankingBeanType}"]`)
@@ -421,21 +421,21 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
             left: Math.max(0, targetScrollLeft),
             behavior: 'smooth'
         })
-    }
+    }, [rankingBeanType])
 
     // 当选中项变化时滚动到选中项
     useEffect(() => {
         // 延迟执行以确保DOM已更新
         const timer = setTimeout(scrollToSelected, 100)
         return () => clearTimeout(timer)
-    }, [selectedVariety])
+    }, [selectedVariety, scrollToSelected])
 
     // 当榜单豆子类型变化时滚动到选中项
     useEffect(() => {
         // 延迟执行以确保DOM已更新
         const timer = setTimeout(scrollToRankingSelected, 100)
         return () => clearTimeout(timer)
-    }, [rankingBeanType])
+    }, [rankingBeanType, scrollToRankingSelected])
 
     // 获取全局设置
     useEffect(() => {

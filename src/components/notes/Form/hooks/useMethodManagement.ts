@@ -65,7 +65,7 @@ export function useMethodManagement({
     }
 
     return []
-  }, [selectedEquipment, methodType, customEquipments, customMethods, brewingMethods])
+  }, [selectedEquipment, methodType, customEquipments, customMethods])
 
   // 加载自定义方案
   useEffect(() => {
@@ -175,7 +175,7 @@ export function useMethodManagement({
         }
       }
     }
-  }, [selectedEquipment, customEquipments])
+  }, [selectedEquipment, customEquipments, methodType])
 
   // 切换方案类型
   const handleMethodTypeChange = (type: 'common' | 'custom') => {

@@ -152,7 +152,7 @@ if (typeof window !== 'undefined') {
         globalCache.totalConsumption = 0;
         globalCache.isLoading = false;
 
-        console.log('笔记全局缓存已重置');
+        console.warn('笔记全局缓存已重置');
     });
 }
 

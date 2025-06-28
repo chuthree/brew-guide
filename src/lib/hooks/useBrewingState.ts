@@ -379,12 +379,13 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 				if (!selectedEquipment) throw new Error("未选择设备");
 
 				// 检查是否是从通用方案创建的新方案
-				const isFromCommonMethod = (method as any)._isFromCommonMethod;
+				const methodWithFlags = method as Method & { _isFromCommonMethod?: boolean; _originalCommonMethod?: Method };
+				const isFromCommonMethod = methodWithFlags._isFromCommonMethod;
 
 				// 清理临时标记
 				const cleanMethod = { ...method };
-				delete (cleanMethod as any)._isFromCommonMethod;
-				delete (cleanMethod as any)._originalCommonMethod;
+				delete (cleanMethod as Method & { _isFromCommonMethod?: boolean; _originalCommonMethod?: Method })._isFromCommonMethod;
+				delete (cleanMethod as Method & { _isFromCommonMethod?: boolean; _originalCommonMethod?: Method })._originalCommonMethod;
 
 				// 如果是从通用方案创建的，不传递 editingMethod（作为新方案保存）
 				// 如果是编辑现有自定义方案，传递 editingMethod
@@ -488,7 +489,7 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 			注水: { steps: getStages() },
 			记录: { steps: [] },
 		});
-	}, [selectedEquipment, methodType, commonMethods, customMethods, currentBrewingMethod]);
+	}, [selectedEquipment, methodType, customMethods, currentBrewingMethod]);
 
 	return {
 		// 主要状态

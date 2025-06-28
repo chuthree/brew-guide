@@ -469,10 +469,10 @@ export const DataManager = {
 	 * @param bean 咖啡豆对象
 	 * @returns 是否有有效的旧格式字段
 	 */
-	hasValidLegacyFields(bean: any): boolean {
-		return this.isValidText(bean.origin) ||
-			   this.isValidText(bean.process) ||
-			   this.isValidText(bean.variety);
+	hasValidLegacyFields(bean: Record<string, unknown>): boolean {
+		return this.isValidText(bean.origin as string) ||
+			   this.isValidText(bean.process as string) ||
+			   this.isValidText(bean.variety as string);
 	},
 
 	/**
@@ -632,7 +632,7 @@ export const DataManager = {
 			const fixedBeans = beans.map((bean) => {
 				// 删除已废弃的type字段
 				if ('type' in bean) {
-					delete (bean as any).type;
+					delete (bean as Record<string, unknown>).type;
 					fixedCount++;
 				}
 

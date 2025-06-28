@@ -8,7 +8,7 @@ import { getBloggerBeans, BloggerBean, getVideoUrlFromEpisode } from '@/lib/util
 const isMobileApp = typeof window !== 'undefined' && 
     window.hasOwnProperty('Capacitor') && 
      
-    !!(window as any).Capacitor?.isNative;
+    !!(window as Window & { Capacitor?: { isNative?: boolean } }).Capacitor?.isNative;
 
 // 检测是否是移动浏览器 (暂未使用，但保留以备将来使用)
 const _isMobileBrowser = typeof window !== 'undefined' && 
@@ -24,11 +24,30 @@ const openLink = async (url: string) => {
             try {
                 // 动态导入 Capacitor InAppBrowser 插件
                  
-                const { InAppBrowser } = await import('@capacitor/inappbrowser' as any);
+                const { InAppBrowser } = await import('@capacitor/inappbrowser');
                 
                 // 使用系统浏览器打开链接（iOS上是SFSafariViewController，Android上是Custom Tabs）
+                // 创建选项对象，避免类型检查问题
+                const browserOptions = {
+                    android: {
+                        showTitle: false,
+                        hideToolbarOnScroll: false,
+                        viewStyle: 'FULLSCREEN',
+                        startAnimation: 'SLIDE_IN_RIGHT',
+                        exitAnimation: 'SLIDE_OUT_LEFT'
+                    },
+                    iOS: {
+                        closeButtonText: 'Done',
+                        viewStyle: 'FULLSCREEN',
+                        animationEffect: 'FLIP_HORIZONTAL',
+                        enableBarsCollapsing: false,
+                        enableReadersMode: false
+                    }
+                };
+
                 await InAppBrowser.openInSystemBrowser({
-                    url: url
+                    url,
+                    options: browserOptions as unknown as Parameters<typeof InAppBrowser.openInSystemBrowser>[0]['options']
                 });
                 return; // 成功打开链接后退出函数
             } catch (capacitorError) {
@@ -140,56 +159,8 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
         }
     }, [externalYear]);
 
-    // 加载咖啡豆数据的函数
-    const loadBeans = useCallback(async () => {
-        if (!isOpen) return;
-
-        try {
-            let ratedBeansData: (CoffeeBean | BloggerBean)[] = [];
-            let unratedBeansData: CoffeeBean[] = [];
-
-            if (viewMode === 'blogger') {
-                // Use CSV utility function with the current year state
-                ratedBeansData = await getBloggerBeans(beanType, year);
-                unratedBeansData = []; // Blogger view doesn't show unrated
-            } else {
-                // Load personal rated beans
-                const { CoffeeBeanManager } = await import('@/lib/managers/coffeeBeanManager');
-                if (beanType === 'all') {
-                    ratedBeansData = await CoffeeBeanManager.getRatedBeans();
-                } else {
-                    ratedBeansData = await CoffeeBeanManager.getRatedBeansByType(beanType);
-                }
-
-                // Load all beans, filter out unrated
-                const allBeans = await CoffeeBeanManager.getAllBeans();
-                const ratedIds = new Set(ratedBeansData.map(bean => bean.id));
-
-                unratedBeansData = allBeans.filter(bean => {
-                    const isUnrated = !ratedIds.has(bean.id) && (!bean.overallRating || bean.overallRating === 0);
-                    if (beanType === 'all') return isUnrated;
-                    if (beanType === 'espresso') return isUnrated && bean.beanType === 'espresso';
-                    if (beanType === 'filter') return isUnrated && bean.beanType === 'filter';
-                    return isUnrated;
-                });
-            }
-
-            setRatedBeans(sortBeans(ratedBeansData, sortOption));
-            setUnratedBeans(unratedBeansData.sort((a, b) => b.timestamp - a.timestamp));
-        } catch (error) {
-            console.error("加载咖啡豆数据失败:", error);
-            setRatedBeans([]);
-            setUnratedBeans([]);
-        }
-    }, [isOpen, beanType, sortOption, viewMode, year]);
-
-    // 在组件挂载、isOpen变化、beanType变化、sortOption变化或refreshTrigger变化时重新加载数据
-    useEffect(() => {
-        loadBeans();
-    }, [loadBeans, refreshTrigger]);
-
     // 排序咖啡豆的函数
-    const sortBeans = (beansToSort: CoffeeBean[], option: RankingSortOption): CoffeeBean[] => {
+    const sortBeans = useCallback((beansToSort: CoffeeBean[], option: RankingSortOption): CoffeeBean[] => {
         const sorted = [...beansToSort];
 
         // 博主榜单模式下，对于ORIGINAL选项使用特殊处理，保留从CSV导入的原始顺序
@@ -204,11 +175,11 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                     // 检查是否有序号属性（可能在 id 中包含）
                     const aId = a.id || '';
                     const bId = b.id || '';
-                    
+
                     // 从 id 中提取序号（假设格式为 blogger-type-序号-name-随机字符）
                     const aMatch = aId.match(/blogger-\w+-(\d+)-/);
                     const bMatch = bId.match(/blogger-\w+-(\d+)-/);
-                    
+
                     if (aMatch && bMatch) {
                         // 如果两者都有序号，按序号排序
                         return parseInt(aMatch[1]) - parseInt(bMatch[1]);
@@ -254,7 +225,57 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
             default:
                 return sorted;
         }
-    };
+    }, [viewMode]);
+
+    // 加载咖啡豆数据的函数
+    const loadBeans = useCallback(async () => {
+        if (!isOpen) return;
+
+        try {
+            let ratedBeansData: (CoffeeBean | BloggerBean)[] = [];
+            let unratedBeansData: CoffeeBean[] = [];
+
+            if (viewMode === 'blogger') {
+                // Use CSV utility function with the current year state
+                ratedBeansData = await getBloggerBeans(beanType, year);
+                unratedBeansData = []; // Blogger view doesn't show unrated
+            } else {
+                // Load personal rated beans
+                const { CoffeeBeanManager } = await import('@/lib/managers/coffeeBeanManager');
+                if (beanType === 'all') {
+                    ratedBeansData = await CoffeeBeanManager.getRatedBeans();
+                } else {
+                    ratedBeansData = await CoffeeBeanManager.getRatedBeansByType(beanType);
+                }
+
+                // Load all beans, filter out unrated
+                const allBeans = await CoffeeBeanManager.getAllBeans();
+                const ratedIds = new Set(ratedBeansData.map(bean => bean.id));
+
+                unratedBeansData = allBeans.filter(bean => {
+                    const isUnrated = !ratedIds.has(bean.id) && (!bean.overallRating || bean.overallRating === 0);
+                    if (beanType === 'all') return isUnrated;
+                    if (beanType === 'espresso') return isUnrated && bean.beanType === 'espresso';
+                    if (beanType === 'filter') return isUnrated && bean.beanType === 'filter';
+                    return isUnrated;
+                });
+            }
+
+            setRatedBeans(sortBeans(ratedBeansData, sortOption));
+            setUnratedBeans(unratedBeansData.sort((a, b) => b.timestamp - a.timestamp));
+        } catch (error) {
+            console.error("加载咖啡豆数据失败:", error);
+            setRatedBeans([]);
+            setUnratedBeans([]);
+        }
+    }, [isOpen, beanType, sortOption, viewMode, year, sortBeans]);
+
+    // 在组件挂载、isOpen变化、beanType变化、sortOption变化或refreshTrigger变化时重新加载数据
+    useEffect(() => {
+        loadBeans();
+    }, [loadBeans, refreshTrigger]);
+
+
 
     // 计算每克价格
     const calculatePricePerGram = (bean: CoffeeBean) => {

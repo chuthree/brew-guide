@@ -425,7 +425,7 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
         }
 
         await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
-        console.log('容量调整记录创建成功:', noteContent);
+        console.warn('容量调整记录创建成功:', noteContent);
     };
 
     // 提交表单

@@ -102,7 +102,7 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
 
     // 时间区间切换处理函数
     const updateTimeRangeButtonPosition = () => {
-        const buttonElement = (window as any).timeRangeButtonRef
+        const buttonElement = (window as Window & { timeRangeButtonRef?: HTMLButtonElement }).timeRangeButtonRef
         if (buttonElement) {
             const rect = buttonElement.getBoundingClientRect()
             setTimeRangeButtonPosition({

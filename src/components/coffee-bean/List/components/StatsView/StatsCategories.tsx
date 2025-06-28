@@ -3,10 +3,11 @@ import { isBeanEmpty } from '../../globalCache'
 import { StatsData, AnimationStyles } from './types'
 import { formatNumber } from './utils'
 import { StatCategory, StatItem, renderStatsRows } from './StatComponents'
+import { ExtendedCoffeeBean } from '../../types'
 
 interface StatsCategoriesProps {
     stats: StatsData
-    beans: any[]
+    beans: ExtendedCoffeeBean[]
     todayConsumption: number
     todayCost: number
     styles: AnimationStyles

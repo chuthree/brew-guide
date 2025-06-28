@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useCallback } from 'react';
 
 // 自适应文本区域组件
 interface AutoResizeTextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
@@ -28,7 +28,7 @@ const AutoResizeTextarea: React.FC<AutoResizeTextareaProps> = ({
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     // 自动调整高度的函数
-    const adjustHeight = () => {
+    const adjustHeight = useCallback(() => {
         const textarea = textareaRef.current;
         if (!textarea) return;
 
@@ -56,12 +56,12 @@ const AutoResizeTextarea: React.FC<AutoResizeTextareaProps> = ({
         } else {
             textarea.style.overflowY = 'hidden';
         }
-    };
+    }, [minRows, maxRows]);
 
     // 当value变化时调整高度
     useEffect(() => {
         adjustHeight();
-    }, [value, minRows, maxRows]);
+    }, [value, minRows, maxRows, adjustHeight]);
 
     // 处理输入变化
     const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {

@@ -135,15 +135,9 @@ const ImageFlowView: React.FC<ImageFlowViewProps> = ({
         }
 
         loadImageSizes()
-    }, [imageUrls]) // 使用稳定的 imageUrls 作为依赖
+    }, [imageUrls, beansWithImages]) // 使用稳定的 imageUrls 作为依赖
 
-    // 创建一个稳定的尺寸标识符，避免 Map 对象引用变化导致的重新计算
-    const imageSizesKey = useMemo(() => {
-        return Array.from(imageSizes.entries())
-            .sort(([a], [b]) => a.localeCompare(b))
-            .map(([id, size]) => `${id}:${size.width}x${size.height}`)
-            .join('|')
-    }, [imageSizes])
+
 
     // 智能瀑布流分配算法
     const { leftColumn, rightColumn } = useMemo(() => {
@@ -200,7 +194,7 @@ const ImageFlowView: React.FC<ImageFlowViewProps> = ({
         })
 
         return { leftColumn: left, rightColumn: right }
-    }, [beansWithImages, imageSizesKey, isLoading])
+    }, [beansWithImages, isLoading, imageSizes])
 
     if (beansWithImages.length === 0) {
         return (

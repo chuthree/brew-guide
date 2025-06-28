@@ -55,7 +55,7 @@ export const dbUtils = {
   async initialize(): Promise<void> {
     try {
       await db.open();
-      console.log('数据库初始化成功');
+      console.warn('数据库初始化成功');
       
       // 验证迁移状态与数据一致性
       const migrated = await db.settings.get('migrated');
@@ -98,7 +98,7 @@ export const dbUtils = {
         // 如果数据库为空但localStorage有数据，重置迁移标志强制重新迁移
         if ((beansCount === 0 || notesCount === 0) && 
             (localStorage.getItem('coffeeBeans') || localStorage.getItem('brewingNotes'))) {
-          console.log('虽然标记为已迁移，但数据似乎丢失，重新执行迁移...');
+          console.warn('虽然标记为已迁移，但数据似乎丢失，重新执行迁移...');
           // 重置迁移标志
           await db.settings.delete('migrated');
         } else {
@@ -119,7 +119,7 @@ export const dbUtils = {
             // 验证迁移是否成功
             const migratedCount = await db.brewingNotes.count();
             if (migratedCount === brewingNotes.length) {
-              console.log(`已迁移 ${brewingNotes.length} 条冲煮笔记`);
+              console.warn(`已迁移 ${brewingNotes.length} 条冲煮笔记`);
             } else {
               console.error(`迁移失败：应有 ${brewingNotes.length} 条笔记，但只迁移了 ${migratedCount} 条`);
               migrationSuccessful = false;
@@ -142,7 +142,7 @@ export const dbUtils = {
             // 验证迁移是否成功
             const migratedCount = await db.coffeeBeans.count();
             if (migratedCount === coffeeBeans.length) {
-              console.log(`已迁移 ${coffeeBeans.length} 条咖啡豆数据`);
+              console.warn(`已迁移 ${coffeeBeans.length} 条咖啡豆数据`);
             } else {
               console.error(`迁移失败：应有 ${coffeeBeans.length} 条咖啡豆数据，但只迁移了 ${migratedCount} 条`);
               migrationSuccessful = false;
@@ -177,7 +177,7 @@ export const dbUtils = {
       await db.brewingNotes.clear();
       await db.coffeeBeans.clear();
       await db.settings.clear();
-      console.log('数据库已清空');
+      console.warn('数据库已清空');
     } catch (error) {
       console.error('清空数据库失败:', error);
       throw error;
@@ -205,10 +205,10 @@ export const dbUtils = {
       const beansSizeInKB = Math.round(beansSizeInBytes / 1024);
       const beansSizeInMB = (beansSizeInKB / 1024).toFixed(2);
       
-      console.log(`IndexedDB 存储信息:`);
-      console.log(`- 笔记数量: ${noteCount}, 大小: ${notesSizeInBytes} 字节 (${notesSizeInKB} KB, ${notesSizeInMB} MB)`);
-      console.log(`- 咖啡豆数量: ${beanCount}, 大小: ${beansSizeInBytes} 字节 (${beansSizeInKB} KB, ${beansSizeInMB} MB)`);
-      console.log(`- 总大小: ${notesSizeInBytes + beansSizeInBytes} 字节 (${notesSizeInKB + beansSizeInKB} KB, ${(notesSizeInKB + beansSizeInKB) / 1024} MB)`);
+      console.warn(`IndexedDB 存储信息:`);
+      console.warn(`- 笔记数量: ${noteCount}, 大小: ${notesSizeInBytes} 字节 (${notesSizeInKB} KB, ${notesSizeInMB} MB)`);
+      console.warn(`- 咖啡豆数量: ${beanCount}, 大小: ${beansSizeInBytes} 字节 (${beansSizeInKB} KB, ${beansSizeInMB} MB)`);
+      console.warn(`- 总大小: ${notesSizeInBytes + beansSizeInBytes} 字节 (${notesSizeInKB + beansSizeInKB} KB, ${(notesSizeInKB + beansSizeInKB) / 1024} MB)`);
       
       // localStorage大小估计
       try {
@@ -223,8 +223,8 @@ export const dbUtils = {
         const lsSizeInKB = Math.round(totalSize / 1024);
         const lsSizeInMB = (lsSizeInKB / 1024).toFixed(2);
         
-        console.log(`localStorage 存储信息:`);
-        console.log(`- 估计大小: ${totalSize} 字节 (${lsSizeInKB} KB, ${lsSizeInMB} MB)`);
+        console.warn(`localStorage 存储信息:`);
+        console.warn(`- 估计大小: ${totalSize} 字节 (${lsSizeInKB} KB, ${lsSizeInMB} MB)`);
       } catch (e) {
         console.error('计算localStorage大小失败:', e);
       }

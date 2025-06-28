@@ -36,14 +36,15 @@ export const SafeAreaManager = {
         this.watchNativeSafeAreaChanges()
       } else {
         // 网页版也需要监听设置变化
-        window.addEventListener('storageChange', (event: any) => {
-          if (event.detail?.key === 'brewGuideSettings') {
+        window.addEventListener('storageChange', (event: Event) => {
+          const customEvent = event as CustomEvent<{ key?: string }>;
+          if (customEvent.detail?.key === 'brewGuideSettings') {
             this.loadAndApplySettings()
           }
         })
       }
 
-      console.log('SafeArea initialized successfully')
+      console.warn('SafeArea initialized successfully')
     } catch (error) {
       console.error('Failed to initialize SafeArea:', error)
     }
@@ -91,8 +92,9 @@ export const SafeAreaManager = {
     })
 
     // 监听设置变化
-    window.addEventListener('storageChange', (event: any) => {
-      if (event.detail?.key === 'brewGuideSettings') {
+    window.addEventListener('storageChange', (event: Event) => {
+      const customEvent = event as CustomEvent<{ key?: string }>;
+      if (customEvent.detail?.key === 'brewGuideSettings') {
         this.loadAndApplySettings()
       }
     })

@@ -162,12 +162,15 @@ export const useEnhancedBeanFiltering = ({
     }, [baseFilteredBeans])
 
     // 防抖的筛选更新函数
-    const debouncedUpdateFilters = useCallback(
-        debounce((filters: Partial<UseEnhancedBeanFilteringProps>) => {
+    const debouncedUpdateFilters = useCallback((filters: Partial<UseEnhancedBeanFilteringProps>) => {
+        const debouncedHandler = debounce(() => {
             // 这个函数主要用于外部调用时的防抖处理
             // 实际的筛选逻辑已经通过useMemo优化
-            console.log('Enhanced filters updated:', filters)
-        }, 300),
+            console.warn('Enhanced filters updated:', filters)
+        }, 300);
+
+        debouncedHandler();
+    },
         []
     )
 

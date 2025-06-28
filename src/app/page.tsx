@@ -577,7 +577,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         prevMainTabRef.current = activeMainTab;
     }, [activeMainTab, resetBrewingState, prevMainTabRef, setShowHistory, navigateToStep, hasCoffeeBeans]);
 
-    const handleMethodTypeChange = (type: 'common' | 'custom') => {
+    const handleMethodTypeChange = useCallback((type: 'common' | 'custom') => {
         const customEquipment = customEquipments.find(
             e => e.id === selectedEquipment || e.name === selectedEquipment
         );
@@ -588,7 +588,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         }
 
         setMethodType(type);
-    };
+    }, [customEquipments, selectedEquipment, setMethodType]);
 
     const [isCoffeeBrewed, setIsCoffeeBrewed] = useState(showComplete);
 
@@ -824,7 +824,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 preserveMethod: activeBrewingStep === 'notes'
             });
         }
-    }, [activeBrewingStep, hasCoffeeBeans, navigateToStep]);
+    }, [activeBrewingStep, hasCoffeeBeans, navigateToStep, setShowComplete, setIsCoffeeBrewed, setHasAutoNavigatedToNotes]);
 
     const handleMethodSelectWrapper = useCallback(async (index: number, step?: Step) => {
         // 检查是否在冲煮完成状态选择了新的方案
@@ -840,7 +840,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             const { getSelectedEquipmentPreference } = await import('@/lib/hooks/useBrewingState');
             const cachedEquipment = getSelectedEquipmentPreference();
             if (cachedEquipment) {
-                console.log("从缓存恢复设备选择:", cachedEquipment);
+                console.warn("从缓存恢复设备选择:", cachedEquipment);
                 // 直接使用handleEquipmentSelect来恢复状态
                 handleEquipmentSelect(cachedEquipment);
                 // 延迟执行方法选择，等待设备状态更新
@@ -875,7 +875,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 setHasAutoNavigatedToNotes(true);
             }, 0);
         }
-    }, [showComplete, activeMainTab, activeBrewingStep, navigateToStep, hasAutoNavigatedToNotes]);
+    }, [showComplete, activeMainTab, activeBrewingStep, navigateToStep, hasAutoNavigatedToNotes, setShowComplete]);
 
     const handleMainTabClick = (tab: MainTabType) => {
         if (tab === activeMainTab) {
@@ -1462,7 +1462,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         handleMethodSelectWrapper,
         setActiveMainTab,
         setActiveTab,
-        handleMethodTypeChange
+        handleMethodTypeChange,
+        setParameterInfo
     ]);
 
     // 处理从历史记录直接跳转到注水步骤的情况
@@ -1478,7 +1479,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             localStorage.removeItem('directToBrewing');
             localStorage.removeItem('lastNavigatedMethod');
 
-            console.log("检测到从历史记录跳转的标记", {
+            console.warn("检测到从历史记录跳转的标记", {
                 activeMainTab,
                 activeBrewingStep,
                 selectedEquipment,
@@ -1497,7 +1498,11 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         handleMethodSelectWrapper,
         setActiveMainTab,
         setActiveTab,
-        handleMethodTypeChange
+        handleMethodTypeChange,
+        activeBrewingStep,
+        activeMainTab,
+        currentBrewingMethod,
+        selectedMethod
     ]);
 
     const [showNoteFormModal, setShowNoteFormModal] = useState(false)

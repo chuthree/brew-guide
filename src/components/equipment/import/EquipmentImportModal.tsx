@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { type CustomEquipment, type Method } from '@/lib/core/config'
 import { Capacitor } from '@capacitor/core'
@@ -28,6 +28,116 @@ const EquipmentImportModal: React.FC<EquipmentImportModalProps> = ({
     const dropZoneRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const isNative = Capacitor.isNativePlatform();
+
+    // 关闭并清除输入
+    const handleClose = useCallback(() => {
+        setImportData('');
+        setError(null);
+        onClose();
+    }, [onClose, setImportData, setError]);
+
+    // 处理导入数据
+    const processImportData = useCallback((jsonText: string) => {
+        try {
+            setIsImporting(true);
+            // 尝试从文本中提取数据
+            import('@/lib/utils/jsonUtils').then(async ({ extractJsonFromText }) => {
+                setError(null);
+                try {
+                    // 解析导入数据
+                    const data = extractJsonFromText(jsonText);
+
+                    // 检查数据是否有效
+                    if (!data) {
+                        setError('无效的导入数据格式');
+                        setIsImporting(false);
+                        return;
+                    }
+
+                    // 检查是否是有效的器具导出文件
+                    const exportData = data as { equipment?: CustomEquipment; methods?: Method[] };
+                    if (!exportData.equipment) {
+                        setError('无效的器具导出文件格式，缺少equipment字段');
+                        setIsImporting(false);
+                        return;
+                    }
+
+                    const equipment = exportData.equipment;
+
+                    // 检查是否已存在同名器具
+                    const existingEquipment = existingEquipments.find(e => e.name === equipment.name);
+                    if (existingEquipment) {
+                        setError(`已存在同名器具"${equipment.name}"，请修改后再导入`);
+                        setIsImporting(false);
+                        return;
+                    }
+
+                    // 确保equipment对象完全符合CustomEquipment接口
+                    const validEquipment: CustomEquipment = {
+                        // 优先使用原始ID，如果没有则生成新ID
+                        id: equipment.id || `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+                        name: equipment.name,
+                        isCustom: true,
+                        animationType: equipment.animationType,
+                        hasValve: equipment.hasValve || false,
+                        customShapeSvg: equipment.customShapeSvg,
+                        customValveSvg: equipment.customValveSvg,
+                        customValveOpenSvg: equipment.customValveOpenSvg,
+                        customPourAnimations: equipment.customPourAnimations || [],
+                    };
+
+                    // 提取方案（如果有）
+                    const methods = exportData.methods && Array.isArray(exportData.methods)
+                        ? exportData.methods.map(method => ({
+                            ...method,
+                            // 确保每个方案有ID，优先使用原有ID
+                            id: method.id || `method-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+                        }))
+                        : undefined;
+
+                    // 导入器具和方案
+                    onImport(validEquipment, methods);
+
+                    // 显示成功消息
+                    showToast({
+                        type: 'success',
+                        title: '器具导入成功',
+                        duration: 2000
+                    });
+
+                    // 关闭模态框
+                    handleClose();
+                } catch (error) {
+                    setError((error as Error).message || '处理导入数据失败');
+                    setIsImporting(false);
+                }
+            });
+        } catch (error) {
+            setError((error as Error).message || '导入失败');
+            setIsImporting(false);
+        }
+    }, [existingEquipments, onImport, handleClose, setError, setIsImporting]);
+
+
+
+    // 处理文件
+    const handleFile = useCallback((file: File) => {
+        if (!file.name.endsWith('.json') && file.type !== 'application/json') {
+            setError('请选择JSON文件');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const text = event.target?.result as string;
+            processImportData(text);
+        };
+        reader.onerror = () => {
+            setError('读取文件失败，请重试');
+            setIsImporting(false);
+        };
+        reader.readAsText(file);
+    }, [processImportData, setError, setIsImporting]);
 
     // 监听showForm变化，当表单关闭时清除输入框内容
     useEffect(() => {
@@ -94,14 +204,9 @@ const EquipmentImportModal: React.FC<EquipmentImportModalProps> = ({
             dropZone.removeEventListener('dragleave', handleDragLeave);
             dropZone.removeEventListener('drop', handleDrop);
         };
-    }, [isNative, showForm]);
+    }, [isNative, showForm, handleFile]);
 
-    // 关闭并清除输入
-    const handleClose = () => {
-        setImportData('');
-        setError(null);
-        onClose();
-    };
+
 
     // 处理文件选择按钮点击
     const handleFileButtonClick = () => {
@@ -153,108 +258,11 @@ const EquipmentImportModal: React.FC<EquipmentImportModalProps> = ({
         handleFile(file);
     };
 
-    // 处理文件
-    const handleFile = (file: File) => {
-        if (!file.name.endsWith('.json') && file.type !== 'application/json') {
-            setError('请选择JSON文件');
-            return;
-        }
-
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const text = event.target?.result as string;
-            processImportData(text);
-        };
-        reader.onerror = () => {
-            setError('读取文件失败，请重试');
-            setIsImporting(false);
-        };
-        reader.readAsText(file);
-    };
-
-    // 处理导入数据
-    const processImportData = (jsonText: string) => {
-        try {
-            setIsImporting(true);
-            // 尝试从文本中提取数据
-            import('@/lib/utils/jsonUtils').then(async ({ extractJsonFromText }) => {
-                setError(null);
-                try {
-                    // 解析导入数据
-                    const data = extractJsonFromText(jsonText);
-
-                    // 检查数据是否有效
-                    if (!data) {
-                        setError('无效的导入数据格式');
-                        setIsImporting(false);
-                        return;
-                    }
-
-                    // 检查是否是有效的器具导出文件
-                    const exportData = data as { equipment?: CustomEquipment; methods?: Method[] };
-                    if (!exportData.equipment) {
-                        setError('无效的器具导出文件格式，缺少equipment字段');
-                        setIsImporting(false);
-                        return;
-                    }
-
-                    const equipment = exportData.equipment;
-
-                    // 检查是否已存在同名器具
-                    const existingEquipment = existingEquipments.find(e => e.name === equipment.name);
-                    if (existingEquipment) {
-                        setError(`已存在同名器具"${equipment.name}"，请修改后再导入`);
-                        setIsImporting(false);
-                        return;
-                    }
 
 
 
-                    // 确保equipment对象完全符合CustomEquipment接口
-                    const validEquipment: CustomEquipment = {
-                        // 优先使用原始ID，如果没有则生成新ID
-                        id: equipment.id || `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-                        name: equipment.name,
-                        isCustom: true,
-                        animationType: equipment.animationType,
-                        hasValve: equipment.hasValve || false,
-                        customShapeSvg: equipment.customShapeSvg,
-                        customValveSvg: equipment.customValveSvg,
-                        customValveOpenSvg: equipment.customValveOpenSvg,
-                        customPourAnimations: equipment.customPourAnimations || [],
-                    };
 
-                    // 提取方案（如果有）
-                    const methods = exportData.methods && Array.isArray(exportData.methods)
-                        ? exportData.methods.map(method => ({
-                            ...method,
-                            // 确保每个方案有ID，优先使用原有ID
-                            id: method.id || `method-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
-                        }))
-                        : undefined;
 
-                    // 导入器具和方案
-                    onImport(validEquipment, methods);
-
-                    // 显示成功消息
-                    showToast({
-                        type: 'success',
-                        title: '器具导入成功',
-                        duration: 2000
-                    });
-
-                    // 关闭模态框
-                    handleClose();
-                } catch (error) {
-                    setError((error as Error).message || '处理导入数据失败');
-                    setIsImporting(false);
-                }
-            });
-        } catch (error) {
-            setError((error as Error).message || '导入失败');
-            setIsImporting(false);
-        }
-    };
 
     return (
         <AnimatePresence>

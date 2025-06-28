@@ -85,7 +85,7 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({
                 setPendingGrinderId(null)
             }
         }
-    }, [settings.customGrinders, pendingGrinderId])
+    }, [settings.customGrinders, pendingGrinderId, handleChange])
 
     // 获取所有磨豆机（包括自定义的和添加选项）- 使用 useMemo 缓存
     const allGrinders = useMemo(() => {
