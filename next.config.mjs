@@ -142,25 +142,12 @@ const nextConfig = {
 
         // 修复静态导出时的webpack运行时问题
         if (config.mode === 'production') {
-            // 简化splitChunks配置以避免运行时错误
+            // 禁用代码分割以避免运行时错误
             config.optimization = {
                 ...config.optimization,
-                splitChunks: {
-                    chunks: 'all',
-                    cacheGroups: {
-                        default: {
-                            minChunks: 2,
-                            priority: -20,
-                            reuseExistingChunk: true
-                        },
-                        vendor: {
-                            test: /[\\/]node_modules[\\/]/,
-                            name: 'vendors',
-                            priority: -10,
-                            chunks: 'all'
-                        }
-                    }
-                }
+                splitChunks: false,
+                // 确保运行时代码内联
+                runtimeChunk: false
             };
         }
 
