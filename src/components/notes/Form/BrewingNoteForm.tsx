@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import Image from 'next/image'
 
 import type { BrewingNoteData, CoffeeBean } from '@/types/app'
@@ -13,6 +13,30 @@ import { loadCustomMethods } from '@/lib/managers/customMethods'
 import { formatGrindSize, hasSpecificGrindScale, getGrindScaleUnit } from '@/lib/utils/grindUtils'
 import { SettingsOptions } from '@/components/settings/Settings'
 
+// 常量定义
+const ROAST_LEVELS = [
+    '极浅烘焙', '浅度烘焙', '中浅烘焙',
+    '中度烘焙', '中深烘焙', '深度烘焙'
+] as const
+
+const TASTE_LABELS = {
+    acidity: '酸度',
+    sweetness: '甜度',
+    bitterness: '苦度',
+    body: '口感'
+} as const
+
+const SLIDER_STYLES = `relative h-px w-full appearance-none bg-neutral-300 dark:bg-neutral-600 cursor-pointer touch-none
+[&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none
+[&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-solid
+[&::-webkit-slider-thumb]:border-neutral-300 [&::-webkit-slider-thumb]:bg-neutral-50
+dark:[&::-webkit-slider-thumb]:border-neutral-600 dark:[&::-webkit-slider-thumb]:bg-neutral-900
+[&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:appearance-none
+[&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border [&::-moz-range-thumb]:border-solid
+[&::-moz-range-thumb]:border-neutral-300 [&::-moz-range-thumb]:bg-neutral-50
+dark:[&::-moz-range-thumb]:border-neutral-600 dark:[&::-moz-range-thumb]:bg-neutral-900`
+
+// 类型定义
 interface TasteRatings {
     acidity: number;
     sweetness: number;
@@ -44,32 +68,26 @@ interface BrewingNoteFormProps {
     onSaveSuccess?: () => void;
     hideHeader?: boolean;
     onTimestampChange?: (timestamp: Date) => void;
-    settings?: SettingsOptions; // 添加可选的设置参数
+    settings?: SettingsOptions;
 }
 
 
 
-// 标准化烘焙度值
+// 工具函数
 const normalizeRoastLevel = (roastLevel?: string): string => {
     if (!roastLevel) return '中度烘焙';
     if (roastLevel.endsWith('烘焙')) return roastLevel;
 
     const roastMap: Record<string, string> = {
-        '极浅': '极浅烘焙',
-        '浅度': '浅度烘焙',
-        '中浅': '中浅烘焙',
-        '中度': '中度烘焙',
-        '中深': '中深烘焙',
-        '深度': '深度烘焙'
+        '极浅': '极浅烘焙', '浅度': '浅度烘焙', '中浅': '中浅烘焙',
+        '中度': '中度烘焙', '中深': '中深烘焙', '深度': '深度烘焙'
     };
 
-    // 直接匹配或包含匹配
     return roastMap[roastLevel] ||
            Object.entries(roastMap).find(([key]) => roastLevel.includes(key))?.[1] ||
            '中度烘焙';
 };
 
-// 获取初始咖啡豆信息
 const getInitialCoffeeBeanInfo = (initialData: BrewingNoteFormProps['initialData']) => {
     const beanInfo = initialData.coffeeBean || initialData.coffeeBeanInfo;
     return {
@@ -78,16 +96,16 @@ const getInitialCoffeeBeanInfo = (initialData: BrewingNoteFormProps['initialData
     };
 };
 
-// 通用滑块样式
-const SLIDER_STYLES = `relative h-px w-full appearance-none bg-neutral-300 dark:bg-neutral-600 cursor-pointer touch-none
-[&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none
-[&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-solid
-[&::-webkit-slider-thumb]:border-neutral-300 [&::-webkit-slider-thumb]:bg-neutral-50
-dark:[&::-webkit-slider-thumb]:border-neutral-600 dark:[&::-webkit-slider-thumb]:bg-neutral-900
-[&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:appearance-none
-[&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border [&::-moz-range-thumb]:border-solid
-[&::-moz-range-thumb]:border-neutral-300 [&::-moz-range-thumb]:bg-neutral-50
-dark:[&::-moz-range-thumb]:border-neutral-600 dark:[&::-moz-range-thumb]:bg-neutral-900`;
+const extractNumericValue = (param: string): string => {
+    const match = param.match(/(\d+(\.\d+)?)/);
+    return match ? match[0] : '';
+};
+
+const validateNumericInput = (value: string): boolean => {
+    return /^$|^[0-9]*\.?[0-9]*$/.test(value);
+};
+
+
 
 const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     id,
@@ -143,12 +161,6 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         temp: initialData?.params?.temp || '92°C',
     });
 
-    // 提取纯数字值的辅助函数
-    const extractNumericValue = (param: string): string => {
-        const match = param.match(/(\d+(\.\d+)?)/);
-        return match ? match[0] : '';
-    };
-
     // 分离的数值状态（用于输入框显示）
     const [numericValues, setNumericValues] = useState(() => ({
         coffee: extractNumericValue(initialData?.params?.coffee || '15g'),
@@ -169,7 +181,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     const [currentSliderValue, setCurrentSliderValue] = useState<number | null>(null);
 
     // 通用滑块触摸处理
-    const createSliderHandlers = (
+    const createSliderHandlers = useCallback((
         updateFn: (value: number) => void,
         min: number = 0,
         max: number = 5,
@@ -182,20 +194,18 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         },
         onTouchMove: (e: React.TouchEvent) => {
             if (currentSliderValue === null) return;
-
             const touch = e.touches[0];
             const target = e.currentTarget as HTMLInputElement;
             const rect = target.getBoundingClientRect();
             const percentage = Math.max(0, Math.min(1, (touch.clientX - rect.left) / rect.width));
             const newValue = min + Math.round(percentage * (max - min) / step) * step;
-
             if (newValue !== currentSliderValue) {
                 updateFn(newValue);
                 setCurrentSliderValue(newValue);
             }
         },
         onTouchEnd: () => setCurrentSliderValue(null)
-    });
+    }), [currentSliderValue]);
     
     // 加载器具和方案数据
     useEffect(() => {
@@ -268,92 +278,72 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         };
     }, []);
 
-    // 使用useRef保存上一次的initialData，用于比较变化
-    const prevInitialDataRef = useRef<typeof initialData>(initialData);
-    
-    // Update form data when initialData changes
-    useEffect(() => {
-        // 检查咖啡豆信息变化
-        const prevCoffeeBean = prevInitialDataRef.current.coffeeBean;
-        const currentCoffeeBean = initialData.coffeeBean;
-        
-        const hasCoffeeBeanChanged = 
-            (prevCoffeeBean?.id !== currentCoffeeBean?.id) || 
-            (prevCoffeeBean?.name !== currentCoffeeBean?.name) ||
-            (!prevCoffeeBean && currentCoffeeBean) ||
-            (prevCoffeeBean && !currentCoffeeBean);
-            
-        const prevCoffeeBeanInfo = prevInitialDataRef.current.coffeeBeanInfo;
-        const currentCoffeeBeanInfo = initialData.coffeeBeanInfo;
-        
-        const hasCoffeeBeanInfoChanged = 
-            (prevCoffeeBeanInfo?.name !== currentCoffeeBeanInfo?.name) ||
-            (prevCoffeeBeanInfo?.roastLevel !== currentCoffeeBeanInfo?.roastLevel) ||
-            (!prevCoffeeBeanInfo && currentCoffeeBeanInfo) ||
-            (prevCoffeeBeanInfo && !currentCoffeeBeanInfo);
-            
-        // 只有当咖啡豆信息真的变化时，才更新表单数据
-        if (hasCoffeeBeanChanged || hasCoffeeBeanInfoChanged) {
-            const updatedCoffeeBeanInfo = currentCoffeeBean
-                ? {
-                    name: currentCoffeeBean.name || '',
-                    roastLevel: normalizeRoastLevel(currentCoffeeBean.roastLevel || '中度烘焙'),
-                }
-                : currentCoffeeBeanInfo
-                    ? {
-                        name: currentCoffeeBeanInfo.name || '',
-                        roastLevel: normalizeRoastLevel(currentCoffeeBeanInfo.roastLevel || '中度烘焙'),
-                    }
-                    : {
-                        name: '',
-                        roastLevel: '中度烘焙'
-                    };
-            
-            setFormData(prev => ({
-                ...prev,
-                coffeeBeanInfo: updatedCoffeeBeanInfo
-            }));
-        }
-        
-        // 检查其他字段变化
-        const hasOtherDataChanged = 
-            (prevInitialDataRef.current.rating !== initialData.rating) ||
-            (prevInitialDataRef.current.notes !== initialData.notes) ||
-            (prevInitialDataRef.current.image !== initialData.image) ||
-            JSON.stringify(prevInitialDataRef.current.taste) !== JSON.stringify(initialData.taste);
-            
-        if (hasOtherDataChanged) {
-            setFormData(prev => ({
-                ...prev,
-                image: typeof initialData.image === 'string' ? initialData.image : prev.image,
-                rating: initialData.rating || prev.rating,
-                taste: {
-                    acidity: initialData.taste?.acidity ?? prev.taste.acidity,
-                    sweetness: initialData.taste?.sweetness ?? prev.taste.sweetness,
-                    bitterness: initialData.taste?.bitterness ?? prev.taste.bitterness,
-                    body: initialData.taste?.body ?? prev.taste.body
-                },
-                notes: initialData.notes || prev.notes
-            }));
-        }
-        
-        // 检查方法参数变化
-        const hasParamsChanged = JSON.stringify(prevInitialDataRef.current.params) !== JSON.stringify(initialData.params);
+    // 更新方案参数的通用函数
+    const updateMethodParams = useCallback((params: Method['params']) => {
+        setMethodParams(params);
+        setNumericValues({
+            coffee: extractNumericValue(params.coffee || '15g'),
+            water: extractNumericValue(params.water || '225g'),
+            temp: extractNumericValue(params.temp || '92°C'),
+            ratio: extractNumericValue(params.ratio?.split(':')[1] || '15')
+        });
+    }, []);
 
-        if (hasParamsChanged && initialData.params) {
-            setMethodParams(initialData.params);
-            // 同步更新数值状态
-            const updateNumericValues = (params: typeof initialData.params) => ({
-                coffee: extractNumericValue(params?.coffee || '15g'),
-                water: extractNumericValue(params?.water || '225g'),
-                temp: extractNumericValue(params?.temp || '92°C'),
-                ratio: extractNumericValue(params?.ratio?.split(':')[1] || '15')
-            });
-            setNumericValues(updateNumericValues(initialData.params));
+    // 简化的数据更新逻辑
+    const prevInitialDataRef = useRef<typeof initialData>(initialData);
+
+    useEffect(() => {
+        const prev = prevInitialDataRef.current;
+        const current = initialData;
+
+        // 检查咖啡豆信息变化
+        const beanChanged = prev.coffeeBean?.id !== current.coffeeBean?.id ||
+                           prev.coffeeBeanInfo?.name !== current.coffeeBeanInfo?.name;
+
+        if (beanChanged) {
+            const beanInfo = current.coffeeBean || current.coffeeBeanInfo;
+            setFormData(prev => ({
+                ...prev,
+                coffeeBeanInfo: {
+                    name: beanInfo?.name || '',
+                    roastLevel: normalizeRoastLevel(beanInfo?.roastLevel)
+                }
+            }));
         }
-        
-        // 更新引用
-        prevInitialDataRef.current = initialData;
+
+        // 检查其他数据变化
+        const dataChanged = prev.rating !== current.rating ||
+                           prev.notes !== current.notes ||
+                           prev.image !== current.image ||
+                           JSON.stringify(prev.taste) !== JSON.stringify(current.taste);
+
+        if (dataChanged) {
+            setFormData(prev => ({
+                ...prev,
+                image: typeof current.image === 'string' ? current.image : prev.image,
+                rating: current.rating || prev.rating,
+                taste: {
+                    acidity: current.taste?.acidity ?? prev.taste.acidity,
+                    sweetness: current.taste?.sweetness ?? prev.taste.sweetness,
+                    bitterness: current.taste?.bitterness ?? prev.taste.bitterness,
+                    body: current.taste?.body ?? prev.taste.body
+                },
+                notes: current.notes || prev.notes
+            }));
+        }
+
+        // 检查参数变化
+        if (JSON.stringify(prev.params) !== JSON.stringify(current.params) && current.params) {
+            setMethodParams(current.params);
+            setNumericValues({
+                coffee: extractNumericValue(current.params.coffee || '15g'),
+                water: extractNumericValue(current.params.water || '225g'),
+                temp: extractNumericValue(current.params.temp || '92°C'),
+                ratio: extractNumericValue(current.params.ratio?.split(':')[1] || '15')
+            });
+        }
+
+        prevInitialDataRef.current = current;
     }, [initialData]);
 
     // 创建评分更新函数
@@ -374,153 +364,94 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         createSliderHandlers(updateTasteRating(key), 0, 5, 1);
 
     // 计算水量
-    const calculateWater = (coffee: string, ratio: string): string => {
+    const calculateWater = useCallback((coffee: string, ratio: string): string => {
         const coffeeValue = parseFloat(coffee.match(/(\d+(\.\d+)?)/)?.[0] || '0');
         const ratioValue = parseFloat(ratio.match(/1:(\d+(\.\d+)?)/)?.[1] || '0');
+        return (coffeeValue > 0 && ratioValue > 0) ? `${Math.round(coffeeValue * ratioValue)}g` : methodParams.water;
+    }, [methodParams.water]);
 
-        if (coffeeValue > 0 && ratioValue > 0) {
-            return `${Math.round(coffeeValue * ratioValue)}g`;
-        }
-        return methodParams.water;
-    };
-
-    // 数值输入验证
-    const validateNumericInput = (value: string): boolean => {
-        return /^$|^[0-9]*\.?[0-9]*$/.test(value);
-    };
-
-    // 处理咖啡粉量变化
-    const handleCoffeeChange = (value: string) => {
+    // 通用数值输入处理
+    const createNumericHandler = useCallback((
+        field: 'coffee' | 'ratio' | 'temp',
+        formatter: (value: string) => string
+    ) => (value: string) => {
         if (!validateNumericInput(value)) return;
 
-        setNumericValues(prev => ({ ...prev, coffee: value }));
+        setNumericValues(prev => ({ ...prev, [field]: value }));
 
-        const coffeeWithUnit = value ? `${value}g` : '';
-        setMethodParams(prev => ({
-            ...prev,
-            coffee: coffeeWithUnit,
-            water: calculateWater(coffeeWithUnit, prev.ratio)
-        }));
-    };
+        const formattedValue = formatter(value);
+        setMethodParams(prev => {
+            const newParams = { ...prev, [field]: formattedValue };
+            if (field === 'coffee' || field === 'ratio') {
+                newParams.water = calculateWater(
+                    field === 'coffee' ? formattedValue : prev.coffee,
+                    field === 'ratio' ? formattedValue : prev.ratio
+                );
+            }
+            return newParams;
+        });
+    }, [calculateWater]);
 
-    // 处理水粉比变化
-    const handleRatioChange = (value: string) => {
-        if (!validateNumericInput(value)) return;
-
-        setNumericValues(prev => ({ ...prev, ratio: value }));
-
-        const ratioWithFormat = value ? `1:${value}` : '1:15';
-        setMethodParams(prev => ({
-            ...prev,
-            ratio: ratioWithFormat,
-            water: calculateWater(prev.coffee, ratioWithFormat)
-        }));
-    };
-
-    // 处理温度变化
-    const handleTempChange = (value: string) => {
-        if (!validateNumericInput(value)) return;
-
-        setNumericValues(prev => ({ ...prev, temp: value }));
-
-        const tempWithUnit = value ? `${value}°C` : '';
-        setMethodParams(prev => ({
-            ...prev,
-            temp: tempWithUnit
-        }));
-    };
+    const handleCoffeeChange = createNumericHandler('coffee', (value) => value ? `${value}g` : '');
+    const handleRatioChange = createNumericHandler('ratio', (value) => value ? `1:${value}` : '1:15');
+    const handleTempChange = createNumericHandler('temp', (value) => value ? `${value}°C` : '');
 
     // 处理器具选择
-    const handleEquipmentSelect = async (equipmentId: string) => {
+    const handleEquipmentSelect = useCallback(async (equipmentId: string) => {
         try {
-            // 更新选中的器具
             setSelectedEquipment(equipmentId);
-
-            // 加载该器具的方案
             const equipmentMethods = customMethods[equipmentId] || [];
             const commonEquipmentMethods = commonMethods[equipmentId] || [];
             const allMethods = [...equipmentMethods, ...commonEquipmentMethods];
             setAvailableMethods(allMethods);
 
-            // 如果有方案，默认选择第一个并更新参数
             if (allMethods.length > 0) {
                 const firstMethod = allMethods[0];
-                // 优先使用方案名称，只有在名称不存在时才使用ID
                 const methodIdentifier = firstMethod.name || firstMethod.id || '';
                 setSelectedMethod(methodIdentifier);
-                setMethodParams({
-                    coffee: firstMethod.params.coffee,
-                    water: firstMethod.params.water,
-                    ratio: firstMethod.params.ratio,
-                    grindSize: firstMethod.params.grindSize,
-                    temp: firstMethod.params.temp,
-                });
+                updateMethodParams(firstMethod.params);
             } else {
                 setSelectedMethod('');
             }
-
             setShowEquipmentMethodSelector(false);
         } catch (error) {
-            // Log error in development only
             if (process.env.NODE_ENV === 'development') {
                 console.error('选择器具失败:', error);
             }
         }
-    };
+    }, [customMethods, updateMethodParams]);
 
     // 处理方案选择
-    const handleMethodSelect = (methodIdentifier: string) => {
+    const handleMethodSelect = useCallback((methodIdentifier: string) => {
         try {
-            // 优先通过名称查找，然后通过ID查找
             const selectedMethodObj = availableMethods.find(m =>
                 m.name === methodIdentifier || m.id === methodIdentifier
             );
             if (selectedMethodObj) {
-                // 更新选中的方案，优先使用名称
                 const methodToStore = selectedMethodObj.name || selectedMethodObj.id || '';
                 setSelectedMethod(methodToStore);
-
-                // 只更新方案参数，不保存
-                setMethodParams({
-                    coffee: selectedMethodObj.params.coffee,
-                    water: selectedMethodObj.params.water,
-                    ratio: selectedMethodObj.params.ratio,
-                    grindSize: selectedMethodObj.params.grindSize,
-                    temp: selectedMethodObj.params.temp,
-                });
-
-                // 同步更新数值状态
-                const updateNumericValues = (params: typeof selectedMethodObj.params) => ({
-                    coffee: extractNumericValue(params.coffee || '15g'),
-                    water: extractNumericValue(params.water || '225g'),
-                    temp: extractNumericValue(params.temp || '92°C'),
-                    ratio: extractNumericValue(params.ratio?.split(':')[1] || '15')
-                });
-                setNumericValues(updateNumericValues(selectedMethodObj.params));
+                updateMethodParams(selectedMethodObj.params);
             }
             setShowEquipmentMethodSelector(false);
         } catch (error) {
-            // Log error in development only
             if (process.env.NODE_ENV === 'development') {
                 console.error('选择方案失败:', error);
             }
         }
-    };
+    }, [availableMethods, updateMethodParams]);
 
-    // 获取当前器具名称
-    const getCurrentEquipmentName = () => {
+    // 获取当前器具和方案名称
+    const getCurrentEquipmentName = useCallback(() => {
         const equipment = availableEquipments.find(eq => eq.id === selectedEquipment);
         return equipment?.name || selectedEquipment || '未知器具';
-    };
+    }, [availableEquipments, selectedEquipment]);
 
-    // 获取当前方案名称
-    const getCurrentMethodName = () => {
-        // 优先通过名称查找，然后通过ID查找
+    const getCurrentMethodName = useCallback(() => {
         const method = availableMethods.find(m =>
             m.name === selectedMethod || m.id === selectedMethod
         );
         return method?.name || selectedMethod || '未知方案';
-    };
+    }, [availableMethods, selectedMethod]);
 
     // Inside the component, add a new state for showing/hiding flavor ratings
     const [showFlavorRatings, setShowFlavorRatings] = useState(() => {
@@ -551,60 +482,48 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         }
     }, [formData.taste, showFlavorRatings]);
 
-    // 处理图片上传
-    const handleImageUpload = async (file: File) => {
+    // 处理图片上传和选择
+    const handleImageUpload = useCallback(async (file: File) => {
         if (!file.type.startsWith('image/')) return;
 
         const reader = new FileReader();
-
         reader.onload = async () => {
             try {
                 const base64 = reader.result as string;
                 if (!base64) return;
-
                 const compressedBase64 = await compressBase64Image(base64, {
-                    maxSizeMB: 0.1, // 100KB
+                    maxSizeMB: 0.1,
                     maxWidthOrHeight: 1200,
                     initialQuality: 0.8
                 });
                 setFormData(prev => ({ ...prev, image: compressedBase64 }));
             } catch (error) {
-                // Log error in development only
                 if (process.env.NODE_ENV === 'development') {
                     console.error('图片处理失败:', error);
                 }
             }
         };
-
         reader.onerror = () => {
-            // Log error in development only
             if (process.env.NODE_ENV === 'development') {
                 console.error('文件读取失败');
             }
         };
-
         reader.readAsDataURL(file);
-    };
-    
-    // 处理图片选择
-    const handleImageSelect = async (source: 'camera' | 'gallery') => {
+    }, []);
+
+    const handleImageSelect = useCallback(async (source: 'camera' | 'gallery') => {
         try {
             const result = await captureImage({ source });
-
-            // 将 dataUrl 转换为 File 对象
             const response = await fetch(result.dataUrl);
             const blob = await response.blob();
             const file = new File([blob], `image.${result.format}`, { type: `image/${result.format}` });
-
-            // 处理图片上传
             handleImageUpload(file);
         } catch (error) {
-            // Log error in development only
             if (process.env.NODE_ENV === 'development') {
                 console.error('打开相机/相册失败:', error);
             }
         }
-    };
+    }, [handleImageUpload]);
 
     // 保存笔记的处理函数
     const handleSubmit = async (e: React.FormEvent) => {
@@ -825,12 +744,9 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                                         }
                                         className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-hidden transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 text-neutral-800 dark:text-neutral-300"
                                     >
-                                        <option value="极浅烘焙">极浅烘焙</option>
-                                        <option value="浅度烘焙">浅度烘焙</option>
-                                        <option value="中浅烘焙">中浅烘焙</option>
-                                        <option value="中度烘焙">中度烘焙</option>
-                                        <option value="中深烘焙">中深烘焙</option>
-                                        <option value="深度烘焙">深度烘焙</option>
+                                        {ROAST_LEVELS.map(level => (
+                                            <option key={level} value={level}>{level}</option>
+                                        ))}
                                     </select>
                                 </div>
                             </div>
@@ -984,15 +900,8 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                             {Object.entries(formData.taste).map(([key, value]) => (
                                 <div key={key} className="space-y-2">
                                     <div className="flex items-center justify-between">
-                                        <div className="text-xs font-medium  tracking-widest text-neutral-500 dark:text-neutral-400">
-                                            {
-                                                {
-                                                    acidity: '酸度',
-                                                    sweetness: '甜度',
-                                                    bitterness: '苦度',
-                                                    body: '口感',
-                                                }[key]
-                                            }
+                                        <div className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
+                                            {TASTE_LABELS[key as keyof typeof TASTE_LABELS]}
                                         </div>
                                         <div className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
                                             [ {value || 0} ]
