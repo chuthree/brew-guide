@@ -12,6 +12,7 @@ import { loadCustomEquipments } from '@/lib/managers/customEquipments'
 import { loadCustomMethods } from '@/lib/managers/customMethods'
 import { formatGrindSize, hasSpecificGrindScale, getGrindScaleUnit } from '@/lib/utils/grindUtils'
 import { SettingsOptions } from '@/components/settings/Settings'
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/coffee-bean/ui/select'
 
 // 常量定义
 const ROAST_LEVELS = [
@@ -30,10 +31,12 @@ const SLIDER_STYLES = `relative h-px w-full appearance-none bg-neutral-300 dark:
 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none
 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-solid
 [&::-webkit-slider-thumb]:border-neutral-300 [&::-webkit-slider-thumb]:bg-neutral-50
+[&::-webkit-slider-thumb]:shadow-none [&::-webkit-slider-thumb]:outline-none
 dark:[&::-webkit-slider-thumb]:border-neutral-600 dark:[&::-webkit-slider-thumb]:bg-neutral-900
 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:appearance-none
 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border [&::-moz-range-thumb]:border-solid
 [&::-moz-range-thumb]:border-neutral-300 [&::-moz-range-thumb]:bg-neutral-50
+[&::-moz-range-thumb]:shadow-none [&::-moz-range-thumb]:outline-none
 dark:[&::-moz-range-thumb]:border-neutral-600 dark:[&::-moz-range-thumb]:bg-neutral-900`
 
 // 类型定义
@@ -731,23 +734,31 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                                     />
                                 </div>
                                 <div>
-                                    <select
+                                    <Select
                                         value={formData.coffeeBeanInfo.roastLevel}
-                                        onChange={(e) =>
+                                        onValueChange={(value) =>
                                             setFormData({
                                                 ...formData,
                                                 coffeeBeanInfo: {
                                                     ...formData.coffeeBeanInfo,
-                                                    roastLevel: e.target.value,
+                                                    roastLevel: value,
                                                 },
                                             })
                                         }
-                                        className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-hidden transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 text-neutral-800 dark:text-neutral-300"
                                     >
-                                        {ROAST_LEVELS.map(level => (
-                                            <option key={level} value={level}>{level}</option>
-                                        ))}
-                                    </select>
+                                        <SelectTrigger
+                                            className="w-full py-2 bg-transparent border-0 border-b border-neutral-200 dark:border-neutral-800 focus-within:border-neutral-400 dark:focus-within:border-neutral-600 shadow-none rounded-none h-auto px-0 text-xs"
+                                        >
+                                            <SelectValue placeholder="选择烘焙度" />
+                                        </SelectTrigger>
+                                        <SelectContent
+                                            className="max-h-[40vh] overflow-y-auto border-neutral-200/70 dark:border-neutral-800/70 shadow-lg backdrop-blur-xs bg-white/95 dark:bg-neutral-900/95 rounded-lg"
+                                        >
+                                            {ROAST_LEVELS.map(level => (
+                                                <SelectItem key={level} value={level}>{level}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                             </div>
                         </div>
