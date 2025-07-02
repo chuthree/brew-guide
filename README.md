@@ -119,13 +119,6 @@ pnpm cap:android
 
 ## 社区与贡献
 
-### 交流群
-
-欢迎加入微信交流群，讨论使用体验和功能建议：
-
-![group-code](https://github.com/user-attachments/assets/8981d69c-5e8d-4595-8244-a7be488230df)
-
-
 ### 贡献指南
 
 欢迎提交问题和功能请求！如果您想贡献代码，请先开一个 issue 讨论您想要更改的内容。
