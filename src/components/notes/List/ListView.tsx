@@ -5,15 +5,12 @@ import { BrewingNote } from '@/lib/core/config'
 import { globalCache } from './globalCache'
 import NoteItem from './NoteItem'
 import ChangeRecordNoteItem from './ChangeRecordNoteItem'
-import { sortNotes } from '../utils'
-import { SortOption } from '../types'
 
 // 分页配置
 const PAGE_SIZE = 5
 
 // 定义组件属性接口
 interface NotesListViewProps {
-    sortOption: SortOption;
     selectedEquipment: string | null;
     selectedBean: string | null;
     filterMode: 'equipment' | 'bean';
@@ -28,7 +25,6 @@ interface NotesListViewProps {
 }
 
 const NotesListView: React.FC<NotesListViewProps> = ({
-    sortOption,
     selectedEquipment,
     selectedBean,
     filterMode,
@@ -45,7 +41,6 @@ const NotesListView: React.FC<NotesListViewProps> = ({
     const [notes, setNotes] = useState<BrewingNote[]>(globalCache.filteredNotes)
     const [unitPriceCache] = useState<Record<string, number>>(globalCache.beanPrices)
     const [showQuickDecrementNotes, setShowQuickDecrementNotes] = useState(false)
-    const isLoadingRef = useRef<boolean>(false)
 
     // 分页状态
     const [displayedNotes, setDisplayedNotes] = useState<BrewingNote[]>(() =>
@@ -69,11 +64,10 @@ const NotesListView: React.FC<NotesListViewProps> = ({
         return note.source === 'quick-decrement' || note.source === 'capacity-adjustment';
     }, []);
     
-    // 加载笔记数据
-    const loadNotes = useCallback(async () => {
-        if (isLoadingRef.current) return;
-
+    // 简化的数据加载逻辑 - 主要数据处理已移至 useEnhancedNotesFiltering Hook
+    const loadNotes = useCallback(() => {
         try {
+            // 优先使用预筛选的笔记（搜索结果）
             if (preFilteredNotes) {
                 startTransition(() => {
                     setNotes(preFilteredNotes);
@@ -84,7 +78,8 @@ const NotesListView: React.FC<NotesListViewProps> = ({
                 return;
             }
 
-            if (globalCache.initialized && globalCache.notes.length >= 0) {
+            // 使用全局缓存中的筛选结果
+            if (globalCache.initialized) {
                 const filteredNotes = globalCache.filteredNotes;
                 startTransition(() => {
                     setNotes(filteredNotes);
@@ -94,58 +89,12 @@ const NotesListView: React.FC<NotesListViewProps> = ({
                 });
                 return;
             }
-
-            isLoadingRef.current = true;
-
-            const { Storage } = await import('@/lib/core/storage');
-            const savedNotes = await Storage.get('brewingNotes');
-            let parsedNotes: BrewingNote[] = savedNotes ? JSON.parse(savedNotes) : [];
-
-            // 修复快捷扣除记录
-            let needsUpdate = false;
-            parsedNotes = parsedNotes.map(note => {
-                if (note.source === 'quick-decrement') {
-                    const updatedNote = { ...note };
-                    if (updatedNote.equipment === undefined) { updatedNote.equipment = ''; needsUpdate = true; }
-                    if (updatedNote.method === undefined) { updatedNote.method = ''; needsUpdate = true; }
-                    if (updatedNote.totalTime === undefined) { updatedNote.totalTime = 0; needsUpdate = true; }
-                    return updatedNote;
-                }
-                return note;
-            });
-
-            if (needsUpdate) {
-                await Storage.set('brewingNotes', JSON.stringify(parsedNotes));
-            }
-
-            const sortedNotes = sortNotes(parsedNotes, sortOption);
-
-            let filteredNotes = sortedNotes;
-            if (filterMode === 'equipment' && selectedEquipment) {
-                filteredNotes = sortedNotes.filter(note => note.equipment === selectedEquipment);
-            } else if (filterMode === 'bean' && selectedBean) {
-                filteredNotes = sortedNotes.filter(note => note.coffeeBeanInfo?.name === selectedBean);
-            }
-
-            globalCache.notes = sortedNotes;
-            globalCache.filteredNotes = filteredNotes;
-            globalCache.initialized = true;
-
-            startTransition(() => {
-                setNotes(filteredNotes);
-                isLoadingRef.current = false;
-                setCurrentPage(1);
-                setDisplayedNotes(filteredNotes.slice(0, PAGE_SIZE));
-                setHasMore(filteredNotes.length > PAGE_SIZE);
-            });
         } catch (error) {
-            // Log error in development only
             if (process.env.NODE_ENV === 'development') {
                 console.error("加载笔记数据失败:", error);
             }
-            isLoadingRef.current = false;
         }
-    }, [sortOption, selectedEquipment, selectedBean, filterMode, preFilteredNotes]);
+    }, [preFilteredNotes]);
 
     useEffect(() => {
         loadNotes();

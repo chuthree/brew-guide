@@ -11,45 +11,14 @@ import Toast from '../ui/Toast'
 import BrewingNoteEditModal from '../Form/BrewingNoteEditModal'
 import ChangeRecordEditModal from '../Form/ChangeRecordEditModal'
 import { BrewingNoteData } from '@/types/app'
-import { getEquipmentName, normalizeEquipmentId, sortNotes } from '../utils'
+import { getEquipmentName, normalizeEquipmentId } from '../utils'
 import { globalCache, saveSelectedEquipmentPreference, saveSelectedBeanPreference, saveFilterModePreference, saveSortOptionPreference, calculateTotalCoffeeConsumption, formatConsumption, initializeGlobalCache } from './globalCache'
 import ListView from './ListView'
 import { SortOption } from '../types'
 import { exportSelectedNotes } from '../Share/NotesExporter'
+import { useEnhancedNotesFiltering } from './hooks/useEnhancedNotesFiltering'
 
-// 增强的咖啡豆筛选函数
-const filterNotesByBean = async (notes: BrewingNote[], selectedBeanName: string): Promise<BrewingNote[]> => {
-    const { CoffeeBeanManager } = await import('@/lib/managers/coffeeBeanManager');
 
-    const filteredNotes: BrewingNote[] = [];
-
-    for (const note of notes) {
-        let matches = false;
-
-        // 方法1: 通过 beanId 获取最新咖啡豆名称进行匹配
-        if (note.beanId) {
-            try {
-                const bean = await CoffeeBeanManager.getBeanById(note.beanId);
-                if (bean?.name === selectedBeanName) {
-                    matches = true;
-                }
-            } catch (error) {
-                console.warn('获取咖啡豆信息失败:', error);
-            }
-        }
-
-        // 方法2: 如果通过 beanId 没有匹配，使用笔记中存储的名称
-        if (!matches && note.coffeeBeanInfo?.name === selectedBeanName) {
-            matches = true;
-        }
-
-        if (matches) {
-            filteredNotes.push(note);
-        }
-    }
-
-    return filteredNotes;
-};
 
 
 // 为Window对象声明类型扩展
@@ -98,6 +67,126 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         type: 'info' as 'success' | 'error' | 'info'
     })
     
+    // 搜索过滤逻辑 - 需要在Hook之前定义
+    const searchFilteredNotes = useMemo(() => {
+        if (!isSearching || !searchQuery.trim()) return globalCache.filteredNotes;
+
+        const query = searchQuery.toLowerCase().trim();
+
+        // 将查询拆分为多个关键词，移除空字符串
+        const queryTerms = query.split(/\s+/).filter(term => term.length > 0);
+
+        // 给每个笔记计算匹配分数
+        const notesWithScores = globalCache.filteredNotes.map(note => {
+            // 预处理各个字段，转化为小写并确保有值
+            const equipment = note.equipment?.toLowerCase() || '';
+            const method = note.method?.toLowerCase() || '';
+            const beanName = note.coffeeBeanInfo?.name?.toLowerCase() || '';
+            const roastLevel = note.coffeeBeanInfo?.roastLevel?.toLowerCase() || '';
+            const notes = note.notes?.toLowerCase() || '';
+
+            // 处理参数信息
+            const coffee = note.params?.coffee?.toLowerCase() || '';
+            const water = note.params?.water?.toLowerCase() || '';
+            const ratio = note.params?.ratio?.toLowerCase() || '';
+            const grindSize = note.params?.grindSize?.toLowerCase() || '';
+            const temp = note.params?.temp?.toLowerCase() || '';
+
+            // 处理口味评分信息
+            const tasteInfo = `酸度${note.taste?.acidity || 0} 甜度${note.taste?.sweetness || 0} 苦度${note.taste?.bitterness || 0} 醇厚度${note.taste?.body || 0}`.toLowerCase();
+
+            // 处理时间信息
+            const dateInfo = note.timestamp ? new Date(note.timestamp).toLocaleDateString() : '';
+            const totalTime = note.totalTime ? `${note.totalTime}秒` : '';
+
+            // 将评分转换为可搜索文本，如"评分4"、"4分"、"4星"
+            const ratingText = note.rating ? `评分${note.rating} ${note.rating}分 ${note.rating}星`.toLowerCase() : '';
+
+            // 组合所有可搜索文本到一个数组，为不同字段分配权重
+            const searchableTexts = [
+                { text: beanName, weight: 3 },          // 豆子名称权重最高
+                { text: equipment, weight: 2 },         // 设备名称权重较高
+                { text: method, weight: 2 },            // 冲煮方法权重较高
+                { text: notes, weight: 2 },             // 笔记内容权重较高
+                { text: roastLevel, weight: 1 },        // 烘焙度权重一般
+                { text: coffee, weight: 1 },            // 咖啡粉量权重一般
+                { text: water, weight: 1 },             // 水量权重一般
+                { text: ratio, weight: 1 },             // 比例权重一般
+                { text: grindSize, weight: 1 },         // 研磨度权重一般
+                { text: temp, weight: 1 },              // 水温权重一般
+                { text: tasteInfo, weight: 1 },         // 口味信息权重一般
+                { text: dateInfo, weight: 1 },          // 日期信息权重一般
+                { text: totalTime, weight: 1 },         // 总时间权重一般
+                { text: ratingText, weight: 1 }         // 评分文本权重一般
+            ];
+
+            // 计算匹配分数 - 所有匹配关键词的权重总和
+            let score = 0;
+            let allTermsMatch = true;
+
+            for (const term of queryTerms) {
+                // 检查当前关键词是否至少匹配一个字段
+                const termMatches = searchableTexts.some(({ text }) => text.includes(term));
+
+                if (!termMatches) {
+                    allTermsMatch = false;
+                    break;
+                }
+
+                // 累加匹配到的权重
+                for (const { text, weight } of searchableTexts) {
+                    if (text.includes(term)) {
+                        score += weight;
+
+                        // 精确匹配整个字段给予额外加分
+                        if (text === term) {
+                            score += weight * 2;
+                        }
+
+                        // 匹配字段开头给予额外加分
+                        if (text.startsWith(term)) {
+                            score += weight;
+                        }
+                    }
+                }
+            }
+
+            return {
+                note,
+                score,
+                matches: allTermsMatch
+            };
+        });
+
+        // 过滤掉不匹配所有关键词的笔记
+        const matchingNotes = notesWithScores.filter(item => item.matches);
+
+        // 根据分数排序，分数高的在前面
+        matchingNotes.sort((a, b) => b.score - a.score);
+
+        // 返回排序后的笔记列表
+        return matchingNotes.map(item => item.note);
+    }, [isSearching, searchQuery]);
+
+    // 使用增强的笔记筛选Hook
+    const {
+        filteredNotes,
+        totalCount,
+        totalConsumption,
+        availableEquipments,
+        availableBeans,
+        debouncedUpdateFilters
+    } = useEnhancedNotesFiltering({
+        notes: globalCache.notes,
+        sortOption,
+        filterMode,
+        selectedEquipment,
+        selectedBean,
+        searchQuery,
+        isSearching,
+        preFilteredNotes: isSearching && searchQuery.trim() ? searchFilteredNotes : undefined
+    })
+
     // 计算总咖啡消耗量
     const totalCoffeeConsumption = useRef(globalCache.totalConsumption || 0)
     const [, _forceUpdate] = useReducer(x => x + 1, 0)
@@ -107,33 +196,23 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         _forceUpdate()
     }, [])
 
-    // 统一的数据处理函数 - 处理排序和筛选
-    const updateNotesData = useCallback(async () => {
-        // 获取原始笔记数据
-        const rawNotes = globalCache.notes;
-        if (!rawNotes || rawNotes.length === 0) return;
+    // 更新全局缓存的函数
+    const updateGlobalCache = useCallback(() => {
+        globalCache.filteredNotes = filteredNotes
+        globalCache.totalConsumption = totalConsumption
+        totalCoffeeConsumption.current = totalConsumption
 
-        // 1. 先排序
-        const sortedNotes = sortNotes(rawNotes, sortOption);
-
-        // 2. 再筛选
-        let filteredNotes = sortedNotes;
-        if (filterMode === 'equipment' && selectedEquipment) {
-            filteredNotes = sortedNotes.filter(note => note.equipment === selectedEquipment);
-        } else if (filterMode === 'bean' && selectedBean) {
-            // 使用增强的咖啡豆匹配逻辑
-            filteredNotes = await filterNotesByBean(sortedNotes, selectedBean);
-        }
-
-        // 3. 更新全局缓存
-        globalCache.filteredNotes = filteredNotes;
-
-        // 4. 触发重新渲染
+        // 触发重新渲染
         if (typeof window !== 'undefined' && window.refreshBrewingNotes) {
-            window.refreshBrewingNotes();
+            window.refreshBrewingNotes()
         }
-        triggerRerender();
-    }, [sortOption, filterMode, selectedEquipment, selectedBean, triggerRerender]);
+        triggerRerender()
+    }, [filteredNotes, totalConsumption, triggerRerender])
+
+    // 当筛选结果变化时更新全局缓存
+    useEffect(() => {
+        updateGlobalCache()
+    }, [updateGlobalCache])
 
     // 清理重复器具的工具函数
     const cleanupDuplicateEquipments = useCallback(async (notes: BrewingNote[]): Promise<BrewingNote[]> => {
@@ -277,21 +356,20 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
             
             // 计算总消耗量并更新全局缓存
             const totalConsumption = calculateTotalCoffeeConsumption(parsedNotes);
-            globalCache.totalConsumption = totalConsumption; // 更新全局缓存中的消耗量
+            globalCache.totalConsumption = totalConsumption;
             totalCoffeeConsumption.current = totalConsumption;
-            
+
             // 更新全局缓存的原始数据
             globalCache.notes = parsedNotes;
-            
+
             // 确保globalCache.initialized设置为true
             globalCache.initialized = true;
 
-            // 处理排序和筛选 - 使用统一的数据处理函数
-            await updateNotesData();
+            // 数据处理现在由 useEnhancedNotesFiltering Hook 自动处理
         } catch (error) {
             console.error("加载设备和咖啡豆数据失败:", error);
         }
-    }, [isOpen, updateNotesData, cleanupDuplicateEquipments]);
+    }, [isOpen, cleanupDuplicateEquipments]);
     
     // 初始化 - 确保在组件挂载时正确初始化数据
     useEffect(() => {
@@ -511,8 +589,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
             // 重新计算总消耗量
             globalCache.totalConsumption = calculateTotalCoffeeConsumption(parsedNotes);
 
-            // 使用统一的数据处理函数
-            await updateNotesData();
+            // 数据处理现在由 useEnhancedNotesFiltering Hook 自动处理
 
             // 保存更新后的笔记 - Storage.set() 会自动触发事件
             await Storage.set('brewingNotes', JSON.stringify(parsedNotes))
@@ -609,8 +686,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
             // 重新计算总消耗量
             globalCache.totalConsumption = calculateTotalCoffeeConsumption(parsedNotes);
 
-            // 使用统一的数据处理函数
-            await updateNotesData();
+            // 数据处理现在由 useEnhancedNotesFiltering Hook 自动处理
 
             // 保存更新后的笔记 - Storage.set() 会自动触发事件
             await Storage.set('brewingNotes', JSON.stringify(parsedNotes))
@@ -647,7 +723,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         setSortOption(option);
         saveSortOptionPreference(option);
         globalCache.sortOption = option;
-        updateNotesData().catch(console.error);
+        // 数据筛选由 useEnhancedNotesFiltering Hook 自动处理
+        debouncedUpdateFilters({ sortOption: option });
     };
 
     // 处理过滤模式变化
@@ -662,7 +739,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         saveSelectedBeanPreference(null);
         globalCache.selectedEquipment = null;
         globalCache.selectedBean = null;
-        updateNotesData().catch(console.error);
+        // 数据筛选由 useEnhancedNotesFiltering Hook 自动处理
+        debouncedUpdateFilters({ filterMode: mode, selectedEquipment: null, selectedBean: null });
     };
 
     // 处理设备选择变化
@@ -670,7 +748,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         setSelectedEquipment(equipment);
         saveSelectedEquipmentPreference(equipment);
         globalCache.selectedEquipment = equipment;
-        updateNotesData().catch(console.error);
+        // 数据筛选由 useEnhancedNotesFiltering Hook 自动处理
+        debouncedUpdateFilters({ selectedEquipment: equipment });
     };
 
     // 处理咖啡豆选择变化
@@ -678,7 +757,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         setSelectedBean(bean);
         saveSelectedBeanPreference(bean);
         globalCache.selectedBean = bean;
-        updateNotesData().catch(console.error);
+        // 数据筛选由 useEnhancedNotesFiltering Hook 自动处理
+        debouncedUpdateFilters({ selectedBean: bean });
     };
     
     // 处理笔记选择/取消选择
@@ -753,122 +833,16 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         }
     };
     
-    // 搜索过滤逻辑 - 从ListView组件移到这里，确保记录数量显示和列表内容一致
-    const searchFilteredNotes = useMemo(() => {
-        if (!isSearching || !searchQuery.trim()) return globalCache.filteredNotes;
-        
-        const query = searchQuery.toLowerCase().trim();
-        
-        // 将查询拆分为多个关键词，移除空字符串
-        const queryTerms = query.split(/\s+/).filter(term => term.length > 0);
-        
-        // 给每个笔记计算匹配分数
-        const notesWithScores = globalCache.filteredNotes.map(note => {
-            // 预处理各个字段，转化为小写并确保有值
-            const equipment = note.equipment?.toLowerCase() || '';
-            const method = note.method?.toLowerCase() || '';
-            const beanName = note.coffeeBeanInfo?.name?.toLowerCase() || '';
-            const roastLevel = note.coffeeBeanInfo?.roastLevel?.toLowerCase() || '';
-            const notes = note.notes?.toLowerCase() || '';
-            
-            // 处理参数信息
-            const coffee = note.params?.coffee?.toLowerCase() || '';
-            const water = note.params?.water?.toLowerCase() || '';
-            const ratio = note.params?.ratio?.toLowerCase() || '';
-            const grindSize = note.params?.grindSize?.toLowerCase() || '';
-            const temp = note.params?.temp?.toLowerCase() || '';
-            
-            // 处理口味评分信息
-            const tasteInfo = `酸度${note.taste?.acidity || 0} 甜度${note.taste?.sweetness || 0} 苦度${note.taste?.bitterness || 0} 醇厚度${note.taste?.body || 0}`.toLowerCase();
-            
-            // 处理时间信息
-            const dateInfo = note.timestamp ? new Date(note.timestamp).toLocaleDateString() : '';
-            const totalTime = note.totalTime ? `${note.totalTime}秒` : '';
-            
-            // 将评分转换为可搜索文本，如"评分4"、"4分"、"4星"
-            const ratingText = note.rating ? `评分${note.rating} ${note.rating}分 ${note.rating}星`.toLowerCase() : '';
-            
-            // 组合所有可搜索文本到一个数组，为不同字段分配权重
-            const searchableTexts = [
-                { text: beanName, weight: 3 },          // 豆子名称权重最高
-                { text: equipment, weight: 2 },         // 设备名称权重较高
-                { text: method, weight: 2 },            // 冲煮方法权重较高
-                { text: notes, weight: 2 },             // 笔记内容权重较高
-                { text: roastLevel, weight: 1 },        // 烘焙度权重一般
-                { text: coffee, weight: 1 },            // 咖啡粉量权重一般
-                { text: water, weight: 1 },             // 水量权重一般
-                { text: ratio, weight: 1 },             // 比例权重一般
-                { text: grindSize, weight: 1 },         // 研磨度权重一般
-                { text: temp, weight: 1 },              // 水温权重一般
-                { text: tasteInfo, weight: 1 },         // 口味信息权重一般
-                { text: dateInfo, weight: 1 },          // 日期信息权重一般
-                { text: totalTime, weight: 1 },         // 总时间权重一般
-                { text: ratingText, weight: 1 }         // 评分文本权重一般
-            ];
-            
-            // 计算匹配分数 - 所有匹配关键词的权重总和
-            let score = 0;
-            let allTermsMatch = true;
-            
-            for (const term of queryTerms) {
-                // 检查当前关键词是否至少匹配一个字段
-                const termMatches = searchableTexts.some(({ text }) => text.includes(term));
-                
-                if (!termMatches) {
-                    allTermsMatch = false;
-                    break;
-                }
-                
-                // 累加匹配到的权重
-                for (const { text, weight } of searchableTexts) {
-                    if (text.includes(term)) {
-                        score += weight;
-                        
-                        // 精确匹配整个字段给予额外加分
-                        if (text === term) {
-                            score += weight * 2;
-                        }
-                        
-                        // 匹配字段开头给予额外加分
-                        if (text.startsWith(term)) {
-                            score += weight;
-                        }
-                    }
-                }
-            }
-            
-            return {
-                note,
-                score,
-                matches: allTermsMatch
-            };
-        });
-        
-        // 过滤掉不匹配所有关键词的笔记
-        const matchingNotes = notesWithScores.filter(item => item.matches);
-        
-        // 根据分数排序，分数高的在前面
-        matchingNotes.sort((a, b) => b.score - a.score);
-        
-        // 返回排序后的笔记列表
-        return matchingNotes.map(item => item.note);
-    }, [isSearching, searchQuery]);
-    
-    // 计算当前筛选或搜索结果的消耗量
+    // 计算当前显示的消耗量 - 使用Hook提供的数据
     const currentConsumption = useMemo(() => {
         // 搜索状态下，计算搜索结果的消耗量
         if (isSearching && searchQuery.trim()) {
             return calculateTotalCoffeeConsumption(searchFilteredNotes);
         }
-        
-        // 筛选状态下，使用已筛选的笔记计算消耗量
-        if (selectedEquipment || selectedBean) {
-            return calculateTotalCoffeeConsumption(globalCache.filteredNotes);
-        }
-        
-        // 无筛选时，返回所有笔记的总消耗量
-        return globalCache.totalConsumption || totalCoffeeConsumption.current;
-    }, [isSearching, searchQuery, searchFilteredNotes, selectedEquipment, selectedBean, totalCoffeeConsumption]);
+
+        // 其他情况使用Hook计算的总消耗量
+        return totalConsumption;
+    }, [isSearching, searchQuery, searchFilteredNotes, totalConsumption]);
     
     if (!isOpen) return null;
     
@@ -881,9 +855,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                             <div className="text-xs font-medium tracking-wide text-neutral-800 dark:text-neutral-100 break-words">
                                 {(isSearching && searchQuery.trim())
                                     ? `${searchFilteredNotes.length} 条记录，已消耗 ${formatConsumption(currentConsumption)}`
-                                    : `${selectedEquipment || selectedBean
-                                        ? globalCache.filteredNotes.length
-                                        : globalCache.notes.length} 条记录，已消耗 ${formatConsumption(currentConsumption)}`}
+                                    : `${totalCount} 条记录，已消耗 ${formatConsumption(currentConsumption)}`}
                             </div>
                         </div>
 
@@ -892,8 +864,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                             filterMode={filterMode}
                             selectedEquipment={selectedEquipment}
                             selectedBean={selectedBean}
-                            availableEquipments={globalCache.availableEquipments}
-                            availableBeans={globalCache.availableBeans}
+                            availableEquipments={availableEquipments}
+                            availableBeans={availableBeans}
                             equipmentNames={globalCache.equipmentNames}
                             onFilterModeChange={handleFilterModeChange}
                             onEquipmentClick={handleEquipmentClick}
@@ -911,7 +883,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                     <div className="w-full h-full overflow-y-auto scroll-with-bottom-bar" ref={notesContainerRef}>
                         {/* 笔记列表视图 - 直接传递已过滤的搜索结果 */}
                         <ListView
-                            sortOption={sortOption}
                             selectedEquipment={selectedEquipment}
                             selectedBean={selectedBean}
                             filterMode={filterMode}
