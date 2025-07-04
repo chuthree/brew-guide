@@ -48,7 +48,7 @@ const InfoGrid: React.FC<{
                         item.type === 'status' && item.color ?
                         item.color :
                         'text-neutral-800 dark:text-neutral-100'
-                    }`}>
+                    } ${item.key === 'roastDate' ? 'whitespace-pre-line' : ''}`}>
                         {item.value}
                     </div>
                 </div>
@@ -103,7 +103,20 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
         try {
             const timestamp = parseDateToTimestamp(dateStr)
             const date = new Date(timestamp)
-            return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`
+            const formattedDate = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`
+
+            // 计算已过天数
+            const today = new Date()
+            const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+            const roastDateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+            const daysSinceRoast = Math.ceil((todayDate.getTime() - roastDateOnly.getTime()) / (1000 * 60 * 60 * 24))
+
+            // 如果是今天或未来日期，不显示天数
+            if (daysSinceRoast <= 0) {
+                return formattedDate
+            }
+
+            return `${formattedDate}\n(已过 ${daysSinceRoast} 天)`
         } catch {
             return dateStr
         }
