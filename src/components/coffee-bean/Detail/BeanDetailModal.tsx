@@ -585,7 +585,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                             {hasBlendComponents() && (
                                                 <div>
                                                     <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-1.5">拼配成分</div>
-                                                    <div className="grid gap-3 grid-cols-2">
+                                                    <div className="space-y-2">
                                                         {bean.blendComponents!.map((comp: { origin?: string; variety?: string; process?: string; percentage?: number }, index: number) => {
                                                             const parts = [comp.origin, comp.variety, comp.process].filter(Boolean)
                                                             const displayText = parts.length > 0 ? parts.join(' · ') : `组成 ${index + 1}`
@@ -608,7 +608,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                                     <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-1.5">风味</div>
                                                     <div className="flex flex-wrap gap-1">
                                                         {bean.flavor.map((flavor: string, index: number) => (
-                                                            <span key={index} className="px-1.5 py-0.5 bg-neutral-100 dark:bg-neutral-800 text-xs text-neutral-700 dark:text-neutral-300">
+                                                            <span key={index} className="px-1.5 py-0.5 bg-neutral-100 dark:bg-neutral-800 text-xs font-medium text-neutral-700 dark:text-neutral-300">
                                                                 {flavor}
                                                             </span>
                                                         ))}
