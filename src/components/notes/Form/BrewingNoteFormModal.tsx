@@ -8,7 +8,7 @@ import { useMethodManagement } from '@/components/notes/Form/hooks/useMethodMana
 import type { BrewingNoteData, CoffeeBean } from '@/types/app'
 import { SettingsOptions } from '@/components/settings/Settings'
 
-import SteppedFormModal, { Step } from '@/components/common/modals/SteppedFormModal'
+import NoteSteppedFormModal, { Step } from './NoteSteppedFormModal'
 import { type Method, type CustomEquipment } from '@/lib/core/config'
 import { loadCustomEquipments } from '@/lib/managers/customEquipments'
 import { getSelectedEquipmentPreference, saveSelectedEquipmentPreference } from '@/lib/hooks/useBrewingState'
@@ -409,7 +409,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
 
   return (
     <>
-      <SteppedFormModal
+      <NoteSteppedFormModal
         showForm={showForm}
         onClose={handleClose}
         onComplete={handleStepComplete}
