@@ -116,7 +116,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                 return formattedDate
             }
 
-            return `${formattedDate}\n(已过 ${daysSinceRoast} 天)`
+            return `${formattedDate}\n(已养豆 ${daysSinceRoast} 天)`
         } catch {
             return dateStr
         }
