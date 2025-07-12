@@ -228,6 +228,7 @@ interface ViewSwitcherProps {
     beansCount: number
     totalBeans?: number
     totalWeight?: string
+    originalTotalWeight?: string
     rankingBeanType?: BeanType
     onRankingBeanTypeChange?: (type: BeanType) => void
     bloggerYear?: BloggerBeansYear
@@ -275,6 +276,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
     beansCount,
     totalBeans,
     totalWeight,
+    originalTotalWeight,
     rankingBeanType = 'all',
     onRankingBeanTypeChange,
     bloggerYear = 2025,
@@ -545,7 +547,9 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                 <div className="flex items-center space-x-3">
                     <div className="text-xs font-medium tracking-wide text-neutral-800 dark:text-neutral-100 break-words">
                         {viewMode === VIEW_OPTIONS.INVENTORY
-                            ? `${beansCount} 款咖啡豆${!hideTotalWeight && totalWeight ? `，共 ${totalWeight}` : ''}`
+                            ? showEmptyBeans
+                                ? `${beansCount} 款咖啡豆，总共 ${originalTotalWeight}${!hideTotalWeight && totalWeight ? `，剩余 ${totalWeight}` : ''}`
+                                : `${beansCount} 款咖啡豆${!hideTotalWeight && totalWeight ? `，剩余 ${totalWeight}` : ''}`
                             : viewMode === VIEW_OPTIONS.BLOGGER
                                 ? `${bloggerBeansCount || 0} 款 (${bloggerYear}) 咖啡豆`
                                 : `${rankingBeansCount || 0} 款已评分咖啡豆`

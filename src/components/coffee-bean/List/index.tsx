@@ -598,6 +598,21 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         }
     };
 
+    // 计算原始总重量（包括已用完的豆子）
+    const calculateOriginalTotalWeight = () => {
+        const totalWeight = beans
+            .reduce((sum, bean) => {
+                const capacity = bean.capacity ? parseFloat(bean.capacity) : 0;
+                return sum + (isNaN(capacity) ? 0 : capacity);
+            }, 0);
+
+        if (totalWeight < 1000) {
+            return `${Math.round(totalWeight)} g`;
+        } else {
+            return `${(totalWeight / 1000).toFixed(2)} kg`;
+        }
+    };
+
     // 切换显示空豆子状态 - 简化版本，优化的Hook会自动处理筛选
     const toggleShowEmptyBeans = useCallback(() => {
         const newShowEmptyBeans = !showEmptyBeans;
@@ -1138,6 +1153,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
                 availableOrigins={availableOrigins}
                 availableFlavorPeriods={availableFlavorPeriods}
                 availableRoasters={availableRoasters}
+                originalTotalWeight={calculateOriginalTotalWeight()}
             />
 
             {/* 根据视图模式显示不同内容 */}
