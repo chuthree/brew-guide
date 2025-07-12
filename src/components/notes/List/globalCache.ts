@@ -94,7 +94,7 @@ export const initializeGlobalCache = async (): Promise<void> => {
         globalCache.filterMode = getFilterModePreference();
         globalCache.sortOption = getSortOptionPreference();
         
-        // 加载笔记数据
+        // 从存储加载数据
         const { Storage } = await import('@/lib/core/storage');
         const savedNotes = await Storage.get('brewingNotes');
         const parsedNotes: BrewingNote[] = savedNotes ? JSON.parse(savedNotes) : [];
@@ -103,6 +103,51 @@ export const initializeGlobalCache = async (): Promise<void> => {
         // 计算总消耗量
         const totalConsumption = calculateConsumption(parsedNotes);
         globalCache.totalConsumption = totalConsumption;
+        
+        // 并行加载设备数据和收集ID
+        const [namesMap, equipmentIds, beanNames] = await Promise.all([
+            // 获取设备名称映射
+            (async () => {
+                const map: Record<string, string> = {};
+                const { equipmentList } = await import('@/lib/core/config');
+                const { loadCustomEquipments } = await import('@/lib/managers/customEquipments');
+                const customEquipments = await loadCustomEquipments();
+                
+                // 处理标准设备和自定义设备
+                equipmentList.forEach(equipment => {
+                    map[equipment.id] = equipment.name;
+                });
+                
+                customEquipments.forEach(equipment => {
+                    map[equipment.id] = equipment.name;
+                });
+                
+                return map;
+            })(),
+            
+            // 收集设备ID
+            (async () => {
+                return Array.from(new Set(
+                    parsedNotes
+                        .map(note => note.equipment)
+                        .filter(Boolean) as string[]
+                ));
+            })(),
+            
+            // 收集咖啡豆名称
+            (async () => {
+                return Array.from(new Set(
+                    parsedNotes
+                        .map(note => note.coffeeBeanInfo?.name)
+                        .filter(Boolean) as string[]
+                ));
+            })()
+        ]);
+        
+        // 更新全局缓存
+        globalCache.equipmentNames = namesMap;
+        globalCache.availableEquipments = equipmentIds;
+        globalCache.availableBeans = beanNames;
         
         // 应用过滤器设置过滤后的笔记
         let filteredNotes = parsedNotes;

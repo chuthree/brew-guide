@@ -299,68 +299,83 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                 Object.values(normalizedEquipmentMap)
             ));
 
-            // 获取设备名称
-            const namesMap: Record<string, string> = {};
-            const equipmentPromises: Promise<void>[] = [];
-
-            for (const id of uniqueEquipmentIds) {
-                equipmentPromises.push(
-                    getEquipmentName(id).then(name => {
-                        namesMap[id] = name;
-                    })
-                );
-            }
-
-            if (equipmentPromises.length > 0) {
-                await Promise.all(equipmentPromises);
-            }
+            // 获取设备名称 - 优化版本
+            const { equipmentList } = await import('@/lib/core/config');
+            const { loadCustomEquipments } = await import('@/lib/managers/customEquipments');
             
-            // 收集所有不重复的咖啡豆名称 - 优先使用最新的咖啡豆名称
-            const beanNamesSet = new Set<string>();
+            // 并行加载自定义设备和处理咖啡豆数据，提高性能
+            const [customEquipments, beanNames] = await Promise.all([
+                loadCustomEquipments(),
+                (async () => {
+                    // 收集所有不重复的咖啡豆名称 - 优先使用最新的咖啡豆名称
+                    const beanNamesSet = new Set<string>();
+                    const { CoffeeBeanManager } = await import('@/lib/managers/coffeeBeanManager');
 
-            // 动态导入咖啡豆管理器
-            const { CoffeeBeanManager } = await import('@/lib/managers/coffeeBeanManager');
+                    for (const note of parsedNotes) {
+                        let beanName = '';
 
-            for (const note of parsedNotes) {
-                let beanName = '';
-
-                // 优先通过 beanId 获取最新的咖啡豆名称
-                if (note.beanId) {
-                    try {
-                        const bean = await CoffeeBeanManager.getBeanById(note.beanId);
-                        if (bean?.name) {
-                            beanName = bean.name;
+                        // 优先通过 beanId 获取最新的咖啡豆名称
+                        if (note.beanId) {
+                            try {
+                                const bean = await CoffeeBeanManager.getBeanById(note.beanId);
+                                if (bean?.name) {
+                                    beanName = bean.name;
+                                }
+                            } catch (error) {
+                                console.warn('获取咖啡豆信息失败:', error);
+                            }
                         }
+
+                        // 如果通过 beanId 没有找到，使用笔记中存储的名称
+                        if (!beanName && note.coffeeBeanInfo?.name) {
+                            beanName = note.coffeeBeanInfo.name;
+                        }
+
+                        if (beanName) {
+                            beanNamesSet.add(beanName);
+                        }
+                    }
+
+                    return Array.from(beanNamesSet);
+                })()
+            ]);
+            
+            // 构建设备名称映射 - 一次性完成，避免多次循环
+            const namesMap: Record<string, string> = {};
+            
+            // 处理标准设备和自定义设备
+            equipmentList.forEach(equipment => {
+                namesMap[equipment.id] = equipment.name;
+            });
+            
+            customEquipments.forEach(equipment => {
+                namesMap[equipment.id] = equipment.name;
+            });
+            
+            // 处理可能的遗漏ID - 只处理未映射的ID
+            const missingIds = uniqueEquipmentIds.filter(id => !namesMap[id]);
+            if (missingIds.length > 0) {
+                for (const id of missingIds) {
+                    try {
+                        const name = await getEquipmentName(id);
+                        namesMap[id] = name || id;
                     } catch (error) {
-                        console.warn('获取咖啡豆信息失败:', error);
+                        console.error(`获取设备名称失败: ${id}`, error);
+                        namesMap[id] = id;
                     }
                 }
-
-                // 如果通过 beanId 没有找到，使用笔记中存储的名称
-                if (!beanName && note.coffeeBeanInfo?.name) {
-                    beanName = note.coffeeBeanInfo.name;
-                }
-
-                if (beanName) {
-                    beanNamesSet.add(beanName);
-                }
             }
-
-            const beanNames = Array.from(beanNamesSet);
             
             // 更新全局缓存
             globalCache.equipmentNames = namesMap;
             globalCache.availableEquipments = uniqueEquipmentIds;
             globalCache.availableBeans = beanNames;
-            globalCache.notes = parsedNotes; // 确保全局缓存中有最新的笔记数据
+            globalCache.notes = parsedNotes;
             
             // 计算总消耗量并更新全局缓存
             const totalConsumption = calculateTotalCoffeeConsumption(parsedNotes);
             globalCache.totalConsumption = totalConsumption;
             totalCoffeeConsumption.current = totalConsumption;
-
-            // 更新全局缓存的原始数据
-            globalCache.notes = parsedNotes;
 
             // 确保globalCache.initialized设置为true
             globalCache.initialized = true;

@@ -114,6 +114,19 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
                         if (onDataChange) {
                             onDataChange()
                         }
+                        
+                        // 触发笔记全局缓存的重新初始化
+                        try {
+                            // 触发全局缓存重置事件
+                            window.dispatchEvent(new CustomEvent('globalCacheReset'));
+                            
+                            // 异步重新初始化全局缓存，不阻塞UI
+                            import('@/components/notes/List/globalCache')
+                                .then(({ initializeGlobalCache }) => initializeGlobalCache())
+                                .catch(err => console.error('重新初始化笔记缓存失败:', err));
+                        } catch (cacheError) {
+                            console.error('重置笔记缓存事件失败:', cacheError);
+                        }
                     } else {
                         setStatus({ type: 'error', message: result.message })
                     }
@@ -146,6 +159,9 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
                 if (onDataChange) {
                     onDataChange()
                 }
+                
+                // 重置时只需触发事件，页面刷新会重新初始化
+                window.dispatchEvent(new CustomEvent('globalCacheReset'));
 
                 // 设置一个短暂延迟后刷新页面
                 setTimeout(() => {
