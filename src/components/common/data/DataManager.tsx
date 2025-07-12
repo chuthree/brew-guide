@@ -229,12 +229,12 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
                                 onClick={handleExport}
                                 className="w-full rounded text-sm py-2 font-medium bg-neutral-100 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-500"
                             >
-                                <span className="text-neutral-800 dark:text-neutral-200">导出</span>所有数据
+                                <span className="text-neutral-800 dark:text-neutral-200">导出</span>数据
                             </button>
                             <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
                                 {isNative
-                                    ? '将所有数据导出到文档目录'
-                                    : '将所有数据下载为 JSON 文件'}
+                                    ? '将数据导出到文档目录'
+                                    : '将数据下载为 JSON 文件'}
                             </p>
                         </div>
 
@@ -263,7 +263,7 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
                                     onClick={() => setShowConfirmReset(true)}
                                     className="w-full rounded-md bg-red-100 px-4 py-2 text-sm font-medium text-red-800 transition-colors hover:bg-red-200 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30"
                                 >
-                                    重置所有数据
+                                    重置数据
                                 </button>
                             ) : (
                                 <div className="mt-4">
@@ -282,15 +282,15 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
                                                 />
                                             </svg>
                                             <h3 className="text-sm font-medium text-red-800 dark:text-red-300">
-                                                确认重置所有数据
+                                                确认重置数据
                                             </h3>
                                         </div>
                                         <p className="text-xs text-red-600 dark:text-red-400 mb-4">
-                                            此操作无法撤销，所有数据将被删除。建议在重置前先导出备份。
+                                            此操作无法撤销，数据将被删除。建议在重置前先导出备份。
                                         </p>
                                         
                                         <p className="text-xs text-red-600 dark:text-red-400 mb-4">
-                                            将彻底重置所有数据，包括自定义器具、应用设置和导航状态。
+                                            将彻底重置数据，包括自定义器具、应用设置和导航状态。
                                         </p>
                                         
                                         <div className="flex space-x-2 justify-end">
@@ -313,7 +313,7 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
                                 </div>
                             )}
                             <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-                                完全删除所有数据并恢复到初始状态，包括设置和缓存
+                                完全删除数据并恢复到初始状态，包括设置和缓存
                             </p>
                         </div>
                     </div>

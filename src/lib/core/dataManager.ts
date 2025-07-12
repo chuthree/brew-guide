@@ -76,8 +76,8 @@ const CUSTOM_PRESETS_KEYS = [
  */
 export const DataManager = {
 	/**
-	 * 导出所有数据
-	 * @returns 包含所有数据的JSON字符串
+	 * 导出数据
+	 * @returns 包含数据的JSON字符串
 	 */
 	async exportAllData(): Promise<string> {
 		try {
@@ -87,7 +87,7 @@ export const DataManager = {
 				data: {},
 			};
 
-			// 获取所有数据
+			// 获取数据
 			const storage = await getStorage();
 			for (const key of APP_DATA_KEYS) {
 				const value = await storage.get(key);
@@ -206,8 +206,8 @@ export const DataManager = {
 	},
 
 	/**
-	 * 导入所有数据
-	 * @param jsonString 包含所有数据的JSON字符串
+	 * 导入数据
+	 * @param jsonString 包含数据的JSON字符串
 	 * @returns 导入结果
 	 */
 	async importAllData(
@@ -224,7 +224,7 @@ export const DataManager = {
 				};
 			}
 
-			// 导入所有数据
+			// 导入数据
 			const storage = await getStorage();
 			for (const key of APP_DATA_KEYS) {
 				if (importData.data[key] !== undefined) {
@@ -332,7 +332,7 @@ export const DataManager = {
 	},
 
 	/**
-	 * 重置所有数据
+	 * 重置数据
 	 * @param completeReset 是否完全重置（包括所有设置和缓存）
 	 * @returns 重置结果
 	 */
@@ -430,7 +430,7 @@ export const DataManager = {
 			return {
 				success: true,
 				message: completeReset
-					? "已完全重置所有数据和设置"
+					? "已完全重置数据和设置"
 					: "已重置主要数据",
 			};
 		} catch (_error) {

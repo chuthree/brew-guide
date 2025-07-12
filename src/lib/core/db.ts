@@ -154,7 +154,7 @@ export const dbUtils = {
         }
       }
 
-      // 只有在所有数据成功迁移后才标记为已完成
+      // 只有在数据成功迁移后才标记为已完成
       if (migrationSuccessful) {
         // or db.settings.put({ key: 'migrated', value: 'true' });
         await db.settings.put({ key: 'migrated', value: 'true' });
@@ -170,7 +170,7 @@ export const dbUtils = {
   },
 
   /**
-   * 清除数据库所有数据
+   * 清除数据库数据
    */
   async clearAllData(): Promise<void> {
     try {

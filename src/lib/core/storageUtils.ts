@@ -191,7 +191,7 @@ export const StorageUtils = {
         }
       }
       
-      // 只有在所有数据成功迁移后才标记为已完成
+      // 只有在数据成功迁移后才标记为已完成
       if (migrationSuccessful) {
         await db.settings.put({ key: 'migrated', value: 'true' });
         await db.settings.put({ key: 'migratedAt', value: new Date().toISOString() });
@@ -350,7 +350,7 @@ export const StorageUtils = {
         }
       }
       
-      // 只有在所有数据成功迁移后才标记为已完成
+      // 只有在数据成功迁移后才标记为已完成
       if (migrationSuccessful) {
         await db.settings.put({ key: 'migrated', value: 'true' });
         await db.settings.put({ key: 'migratedAt', value: new Date().toISOString() });

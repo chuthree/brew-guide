@@ -56,10 +56,10 @@ export const Storage = {
 	 */
 	async clear(): Promise<void> {
 		try {
-			// 使用新的StorageUtils清除所有数据
+			// 使用新的StorageUtils清除数据
 			await StorageUtils.clearAllData();
 		} catch (_error) {
-			console.error('清除所有数据失败:', _error);
+			console.error('清除数据失败:', _error);
 			// 错误处理
 		}
 	},
