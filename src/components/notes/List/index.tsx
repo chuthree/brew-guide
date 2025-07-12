@@ -474,6 +474,20 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                 return;
             }
 
+            // 添加确认对话框
+            let noteName = '此笔记';
+            if (noteToDelete.source === 'quick-decrement') {
+                noteName = `${noteToDelete.coffeeBeanInfo?.name || '未知咖啡豆'}的快捷扣除记录`;
+            } else if (noteToDelete.source === 'capacity-adjustment') {
+                noteName = `${noteToDelete.coffeeBeanInfo?.name || '未知咖啡豆'}的容量调整记录`;
+            } else {
+                noteName = noteToDelete.method || '此笔记';
+            }
+            
+            if (!window.confirm(`确认要删除"${noteName}"吗？`)) {
+                return;
+            }
+
             // 恢复咖啡豆容量（根据笔记类型采用不同的恢复策略）
             try {
                 if (noteToDelete.source === 'capacity-adjustment') {
