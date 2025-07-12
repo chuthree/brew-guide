@@ -53,17 +53,6 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
     // 实际天数状态
     const [actualDays, setActualDays] = useState<number>(1)
 
-    // 如果没有咖啡豆数据，显示友好提示
-    if (beans.length === 0) {
-        return (
-            <div className="bg-neutral-50 dark:bg-neutral-900 overflow-x-hidden coffee-bean-stats-container">
-                <div className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
-                    [ 有咖啡豆数据后，再来查看吧～ ]
-                </div>
-            </div>
-        );
-    }
-
     // 根据时间区间过滤咖啡豆数据
     const filteredBeans = useMemo(() => {
         if (selectedTimeRange === 'all') {
@@ -89,8 +78,6 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
             return bean.timestamp >= cutoffTime
         })
     }, [beans, selectedTimeRange])
-
-
 
     // 获取今日消耗数据（保持原有逻辑用于"今日"显示）
     const todayConsumptionData = useConsumption(filteredBeans)
@@ -215,21 +202,6 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
         }
     }, [filteredBeans, selectedTimeRange, calculationMode])
 
-    // 点击外部关闭时间区间下拉菜单
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (showTimeRangeDropdown) {
-                const target = event.target as Element
-                if (!target.closest('[data-time-range-selector]')) {
-                    setShowTimeRangeDropdown(false)
-                }
-            }
-        }
-
-        document.addEventListener('mousedown', handleClickOutside)
-        return () => document.removeEventListener('mousedown', handleClickOutside)
-    }, [showTimeRangeDropdown])
-
     // 平均消耗计算函数 - 基于时间区间和冲煮记录
     const calculateAverageConsumption = useMemo(() => {
         return async (beanType: 'espresso' | 'filter'): Promise<number> => {
@@ -326,9 +298,7 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
             }
         }
     }, [filteredBeans, selectedTimeRange, calculationMode])
-    
 
-    
     // 动画控制
     const { imagesLoaded, textLoaded: _textLoaded, styles } = useAnimation()
 
@@ -338,7 +308,7 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
             .filter(bean => bean.image && bean.image.length > 0)
             .slice(0, 7) // 最多取7个豆子的图片用于展示
     }, [beans])
-    
+
     // 获取用户名
     useEffect(() => {
         const fetchUsername = async () => {
@@ -386,6 +356,32 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
 
         updateActualDays();
     }, [calculateActualDays]);
+
+    // 点击外部关闭时间区间下拉菜单
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (showTimeRangeDropdown) {
+                const target = event.target as Element
+                if (!target.closest('[data-time-range-selector]')) {
+                    setShowTimeRangeDropdown(false)
+                }
+            }
+        }
+
+        document.addEventListener('mousedown', handleClickOutside)
+        return () => document.removeEventListener('mousedown', handleClickOutside)
+    }, [showTimeRangeDropdown]);
+
+    // 如果没有咖啡豆数据，显示友好提示
+    if (beans.length === 0) {
+        return (
+            <div className="bg-neutral-50 dark:bg-neutral-900 overflow-x-hidden coffee-bean-stats-container">
+                <div className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
+                    [ 有咖啡豆数据后，再来查看吧～ ]
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="bg-neutral-50 dark:bg-neutral-900 overflow-x-hidden coffee-bean-stats-container">
