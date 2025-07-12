@@ -868,9 +868,11 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                         {/* 数量显示 */}
                         <div className="flex justify-between items-center mb-6 px-6">
                             <div className="text-xs font-medium tracking-wide text-neutral-800 dark:text-neutral-100 break-words">
-                                {(isSearching && searchQuery.trim())
-                                    ? `${searchFilteredNotes.length} 条记录，已消耗 ${formatConsumption(currentConsumption)}`
-                                    : `${totalCount} 条记录，已消耗 ${formatConsumption(currentConsumption)}`}
+                                {totalCount === 0 
+                                    ? "" // 当没有笔记记录时不显示统计信息
+                                    : (isSearching && searchQuery.trim())
+                                        ? `${searchFilteredNotes.length} 条记录，已消耗 ${formatConsumption(currentConsumption)}`
+                                        : `${totalCount} 条记录，已消耗 ${formatConsumption(currentConsumption)}`}
                             </div>
                         </div>
 

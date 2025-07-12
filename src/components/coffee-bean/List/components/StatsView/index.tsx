@@ -53,7 +53,16 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, onStatsSha
     // 实际天数状态
     const [actualDays, setActualDays] = useState<number>(1)
 
-
+    // 如果没有咖啡豆数据，显示友好提示
+    if (beans.length === 0) {
+        return (
+            <div className="bg-neutral-50 dark:bg-neutral-900 overflow-x-hidden coffee-bean-stats-container">
+                <div className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
+                    [ 有咖啡豆数据后，再来查看吧～ ]
+                </div>
+            </div>
+        );
+    }
 
     // 根据时间区间过滤咖啡豆数据
     const filteredBeans = useMemo(() => {
