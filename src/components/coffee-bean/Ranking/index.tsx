@@ -377,7 +377,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
             {/* 已评分咖啡豆区域 */}
             {ratedBeans.length === 0 ? (
                 <div className="flex h-28 items-center justify-center text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
-                    暂无咖啡豆评分数据
+                    [ 有咖啡豆数据后，再来查看吧～ ]
                 </div>
             ) : (
                 <div>

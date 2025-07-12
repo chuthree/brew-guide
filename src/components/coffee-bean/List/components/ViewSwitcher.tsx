@@ -554,7 +554,9 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                                     : `${beansCount} 款咖啡豆${!hideTotalWeight && totalWeight ? `，剩余 ${totalWeight}` : ''}`
                             : viewMode === VIEW_OPTIONS.BLOGGER
                                 ? `${bloggerBeansCount || 0} 款 (${bloggerYear}) 咖啡豆`
-                                : `${rankingBeansCount || 0} 款已评分咖啡豆`
+                                : (rankingBeansCount === 0)
+                                    ? ""  // 当没有评分咖啡豆时不显示任何统计信息
+                                    : `${rankingBeansCount} 款已评分咖啡豆`
                         }
                     </div>
                 </div>
@@ -562,8 +564,9 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                 {/* 视图切换功能已移至导航栏 */}
             </div>
 
-            {/* 榜单标签筛选 - 在榜单和博主榜单视图中显示 */}
-            {(viewMode === VIEW_OPTIONS.RANKING || viewMode === VIEW_OPTIONS.BLOGGER) && (
+            {/* 榜单标签筛选 - 在榜单和博主榜单视图中显示，且有数据时 */}
+            {((viewMode === VIEW_OPTIONS.RANKING && rankingBeansCount && rankingBeansCount > 0) || 
+              (viewMode === VIEW_OPTIONS.BLOGGER && bloggerBeansCount && bloggerBeansCount > 0)) && (
                 <div className="mb-1" ref={filterExpandRef}>
                     {/* 整个分类栏容器 - 下边框在这里 */}
                     <div className="border-b border-neutral-200 dark:border-neutral-800">
@@ -651,8 +654,8 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                                     </div>
                                 )}
 
-                                {/* 编辑按钮 - 仅在个人榜单视图中显示 */}
-                                {viewMode === VIEW_OPTIONS.RANKING && onRankingEditModeChange && (
+                                {/* 编辑按钮 - 仅在个人榜单视图中显示且有评分咖啡豆数据时 */}
+                                {viewMode === VIEW_OPTIONS.RANKING && onRankingEditModeChange && rankingBeansCount && rankingBeansCount > 0 && (
                                     <TabButton
                                         isActive={rankingEditMode}
                                         onClick={() => onRankingEditModeChange(!rankingEditMode)}
@@ -662,8 +665,8 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                                     </TabButton>
                                 )}
 
-                                {/* 分享按钮 - 仅在个人榜单视图中显示 */}
-                                {viewMode === VIEW_OPTIONS.RANKING && onRankingShare && (
+                                {/* 分享按钮 - 仅在个人榜单视图中显示且有评分咖啡豆数据时 */}
+                                {viewMode === VIEW_OPTIONS.RANKING && onRankingShare && rankingBeansCount && rankingBeansCount > 0 && (
                                     <button
                                         onClick={onRankingShare}
                                         className="pb-1.5 text-xs font-medium relative text-neutral-600 dark:text-neutral-400"
