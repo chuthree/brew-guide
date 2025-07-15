@@ -128,7 +128,7 @@ const ActionMenu: React.FC<ActionMenuProps> = ({
           key={item.id}
           onClick={(e) => handleItemClick(e, item.onClick)}
           className={cn(
-            "w-full px-3 py-1.5 text-left text-xs relative",
+            "w-full px-3 py-1.5 text-left text-xs font-medium relative",
             getColorClassName(item.color)
           )}
         >

@@ -619,7 +619,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                             {bean.notes && (
                                                 <div>
                                                     <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-1.5">备注</div>
-                                                    <div className="text-xs text-neutral-700 dark:text-neutral-300 leading-relaxed whitespace-pre-line">
+                                                    <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100 leading-relaxed whitespace-pre-line">
                                                         {searchQuery ? (
                                                             <HighlightText text={bean.notes} highlight={searchQuery} className="text-neutral-700 dark:text-neutral-300" />
                                                         ) : bean.notes}
@@ -652,20 +652,20 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                             <div key={note.id} className="p-2 bg-neutral-100 dark:bg-neutral-800 rounded">
                                                 {isChangeRecord ? (
                                                     // 变动记录（快捷扣除和容量调整）
-                                                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                                                        {/* 咖啡豆名称 */}
-                                                        <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100 flex-shrink-0">
+                                                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                                                        {/* 咖啡豆名称 - 固定宽度 */}
+                                                        <div className="w-20 text-xs font-medium text-neutral-800 dark:text-neutral-100 truncate" title={bean?.name || '咖啡豆'}>
                                                             {bean?.name || '咖啡豆'}
                                                         </div>
 
-                                                        {/* 变动量标签 */}
+                                                        {/* 变动量标签 - 固定宽度 */}
                                                         {(() => {
-                                                            let displayLabel = '0克'
+                                                            let displayLabel = '0g'
 
                                                             if (note.source === 'quick-decrement') {
                                                                 // 快捷扣除记录
                                                                 const amount = note.quickDecrementAmount || 0
-                                                                displayLabel = `-${amount}克`
+                                                                displayLabel = `-${amount}g`
                                                             } else if (note.source === 'capacity-adjustment') {
                                                                 // 容量调整记录
                                                                 const capacityAdjustment = note.changeRecord?.capacityAdjustment
@@ -673,30 +673,30 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                                                 const changeType = capacityAdjustment?.changeType || 'set'
 
                                                                 if (changeType === 'increase') {
-                                                                    displayLabel = `+${Math.abs(changeAmount)}克`
+                                                                    displayLabel = `+${Math.abs(changeAmount)}g`
                                                                 } else if (changeType === 'decrease') {
-                                                                    displayLabel = `-${Math.abs(changeAmount)}克`
+                                                                    displayLabel = `-${Math.abs(changeAmount)}g`
                                                                 } else {
-                                                                    displayLabel = `${capacityAdjustment?.newAmount || 0}克`
+                                                                    displayLabel = `${capacityAdjustment?.newAmount || 0}g`
                                                                 }
                                                             }
 
                                                             return (
-                                                                <div className="text-xs font-medium bg-neutral-100 dark:bg-neutral-800 px-2 py-px rounded-xs text-neutral-600 dark:text-neutral-400 whitespace-nowrap">
+                                                                <div className="w-12 text-xs font-medium bg-neutral-100 dark:bg-neutral-800 px-1 py-px rounded-xs text-neutral-600 dark:text-neutral-400 text-center whitespace-nowrap overflow-hidden">
                                                                     {displayLabel}
                                                                 </div>
                                                             )
                                                         })()}
 
-                                                        {/* 备注 */}
+                                                        {/* 备注 - 弹性宽度，占用剩余空间 */}
                                                         {note.notes && (
-                                                            <div className="text-xs text-neutral-500 dark:text-neutral-400 truncate flex-1 min-w-0">
+                                                            <div className="flex-1 min-w-0 text-xs text-neutral-500 dark:text-neutral-400 truncate" title={note.notes}>
                                                                 {note.notes}
                                                             </div>
                                                         )}
 
-                                                        {/* 日期 */}
-                                                        <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400 whitespace-nowrap flex-shrink-0 ml-auto">
+                                                        {/* 日期 - 固定宽度 */}
+                                                        <div className="w-20 text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400 text-right whitespace-nowrap overflow-hidden" title={formatDate(note.timestamp)}>
                                                             {formatDate(note.timestamp)}
                                                         </div>
                                                     </div>
