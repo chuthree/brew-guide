@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import Image from 'next/image'
 
 import type { BrewingNoteData, CoffeeBean } from '@/types/app'
@@ -26,6 +26,52 @@ const TASTE_LABELS = {
     bitterness: '苦度',
     body: '口感'
 } as const
+
+// 动画类型到器具ID的映射
+const ANIMATION_TYPE_MAPPING: Record<string, string> = {
+    'v60': 'V60',
+    'clever': 'CleverDripper',
+    'espresso': 'Espresso',
+    'kalita': 'Kalita',
+    'origami': 'Origami'
+}
+
+// 默认方案参数
+const DEFAULT_METHOD_PARAMS = {
+    coffee: '15g',
+    water: '225g',
+    ratio: '1:15',
+    grindSize: '中细',
+    temp: '92°C'
+} as const
+
+// 工具函数：获取器具对应的通用方案
+const getCommonMethodsForEquipment = (
+    equipmentId: string,
+    availableEquipments: (typeof equipmentList[0] | CustomEquipment)[]
+): Method[] => {
+    // 先检查是否是预定义器具
+    if (commonMethods[equipmentId]) {
+        return commonMethods[equipmentId];
+    }
+
+    // 检查是否是自定义器具
+    const customEquipment = availableEquipments.find(
+        eq => eq.id === equipmentId && 'isCustom' in eq && eq.isCustom
+    ) as CustomEquipment | undefined;
+
+    if (customEquipment?.animationType) {
+        const baseEquipmentId = ANIMATION_TYPE_MAPPING[customEquipment.animationType.toLowerCase()] || 'V60';
+        return commonMethods[baseEquipmentId] || [];
+    }
+
+    return [];
+}
+
+// 工具函数：获取参数的默认值
+const getParamValue = (param: string | undefined, defaultKey: keyof typeof DEFAULT_METHOD_PARAMS): string => {
+    return param || DEFAULT_METHOD_PARAMS[defaultKey];
+}
 
 const SLIDER_STYLES = `relative h-px w-full appearance-none bg-neutral-300 dark:bg-neutral-600 cursor-pointer touch-none
 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none
@@ -157,19 +203,19 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     
     // 添加方案参数状态 - 分离数值和单位
     const [methodParams, setMethodParams] = useState({
-        coffee: initialData?.params?.coffee || '15g',
-        water: initialData?.params?.water || '225g',
-        ratio: initialData?.params?.ratio || '1:15',
-        grindSize: initialData?.params?.grindSize || '中细',
-        temp: initialData?.params?.temp || '92°C',
+        coffee: getParamValue(initialData?.params?.coffee, 'coffee'),
+        water: getParamValue(initialData?.params?.water, 'water'),
+        ratio: getParamValue(initialData?.params?.ratio, 'ratio'),
+        grindSize: getParamValue(initialData?.params?.grindSize, 'grindSize'),
+        temp: getParamValue(initialData?.params?.temp, 'temp'),
     });
 
     // 分离的数值状态（用于输入框显示）
     const [numericValues, setNumericValues] = useState(() => ({
-        coffee: extractNumericValue(initialData?.params?.coffee || '15g'),
-        water: extractNumericValue(initialData?.params?.water || '225g'),
-        temp: extractNumericValue(initialData?.params?.temp || '92°C'),
-        ratio: extractNumericValue(initialData?.params?.ratio?.split(':')[1] || '15')
+        coffee: extractNumericValue(getParamValue(initialData?.params?.coffee, 'coffee')),
+        water: extractNumericValue(getParamValue(initialData?.params?.water, 'water')),
+        temp: extractNumericValue(getParamValue(initialData?.params?.temp, 'temp')),
+        ratio: extractNumericValue(getParamValue(initialData?.params?.ratio, 'ratio').split(':')[1])
     }));
 
     // 添加器具和方案选择相关状态
@@ -210,6 +256,8 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         onTouchEnd: () => setCurrentSliderValue(null)
     }), [currentSliderValue]);
     
+
+
     // 加载器具和方案数据
     useEffect(() => {
         const loadEquipmentsAndMethods = async () => {
@@ -231,7 +279,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                 // 如果有选中的器具，加载对应的方案
                 if (initialData.equipment) {
                     const equipmentMethods = customMethods[initialData.equipment] || [];
-                    const commonEquipmentMethods = commonMethods[initialData.equipment] || [];
+                    const commonEquipmentMethods = getCommonMethodsForEquipment(initialData.equipment, allEquipments);
                     setAvailableMethods([...equipmentMethods, ...commonEquipmentMethods]);
                 }
             } catch (error) {
@@ -285,10 +333,10 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     const updateMethodParams = useCallback((params: Method['params']) => {
         setMethodParams(params);
         setNumericValues({
-            coffee: extractNumericValue(params.coffee || '15g'),
-            water: extractNumericValue(params.water || '225g'),
-            temp: extractNumericValue(params.temp || '92°C'),
-            ratio: extractNumericValue(params.ratio?.split(':')[1] || '15')
+            coffee: extractNumericValue(getParamValue(params.coffee, 'coffee')),
+            water: extractNumericValue(getParamValue(params.water, 'water')),
+            temp: extractNumericValue(getParamValue(params.temp, 'temp')),
+            ratio: extractNumericValue(getParamValue(params.ratio, 'ratio').split(':')[1])
         });
     }, []);
 
@@ -339,10 +387,10 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         if (JSON.stringify(prev.params) !== JSON.stringify(current.params) && current.params) {
             setMethodParams(current.params);
             setNumericValues({
-                coffee: extractNumericValue(current.params.coffee || '15g'),
-                water: extractNumericValue(current.params.water || '225g'),
-                temp: extractNumericValue(current.params.temp || '92°C'),
-                ratio: extractNumericValue(current.params.ratio?.split(':')[1] || '15')
+                coffee: extractNumericValue(getParamValue(current.params.coffee, 'coffee')),
+                water: extractNumericValue(getParamValue(current.params.water, 'water')),
+                temp: extractNumericValue(getParamValue(current.params.temp, 'temp')),
+                ratio: extractNumericValue(getParamValue(current.params.ratio, 'ratio').split(':')[1])
             });
         }
 
@@ -396,7 +444,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     }, [calculateWater]);
 
     const handleCoffeeChange = createNumericHandler('coffee', (value) => value ? `${value}g` : '');
-    const handleRatioChange = createNumericHandler('ratio', (value) => value ? `1:${value}` : '1:15');
+    const handleRatioChange = createNumericHandler('ratio', (value) => value ? `1:${value}` : DEFAULT_METHOD_PARAMS.ratio);
     const handleTempChange = createNumericHandler('temp', (value) => value ? `${value}°C` : '');
 
     // 处理器具选择
@@ -404,7 +452,8 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         try {
             setSelectedEquipment(equipmentId);
             const equipmentMethods = customMethods[equipmentId] || [];
-            const commonEquipmentMethods = commonMethods[equipmentId] || [];
+            // 使用新的辅助函数获取通用方案
+            const commonEquipmentMethods = getCommonMethodsForEquipment(equipmentId, availableEquipments);
             const allMethods = [...equipmentMethods, ...commonEquipmentMethods];
             setAvailableMethods(allMethods);
 
@@ -422,7 +471,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                 console.error('选择器具失败:', error);
             }
         }
-    }, [customMethods, updateMethodParams]);
+    }, [customMethods, updateMethodParams, availableEquipments]);
 
     // 处理方案选择
     const handleMethodSelect = useCallback((methodIdentifier: string) => {
@@ -443,13 +492,13 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         }
     }, [availableMethods, updateMethodParams]);
 
-    // 获取当前器具和方案名称
-    const getCurrentEquipmentName = useCallback(() => {
+    // 获取当前器具和方案名称 - 使用useMemo优化
+    const currentEquipmentName = useMemo(() => {
         const equipment = availableEquipments.find(eq => eq.id === selectedEquipment);
         return equipment?.name || selectedEquipment || '未知器具';
     }, [availableEquipments, selectedEquipment]);
 
-    const getCurrentMethodName = useCallback(() => {
+    const currentMethodName = useMemo(() => {
         const method = availableMethods.find(m =>
             m.name === selectedMethod || m.id === selectedMethod
         );
@@ -771,7 +820,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                     <div className="flex items-center justify-between" data-equipment-method-selector>
                         <div className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400 flex-1 min-w-0 mr-3">
                             <span className="truncate block">
-                                方案参数 · {getCurrentEquipmentName()}_{getCurrentMethodName()}
+                                方案参数 · {currentEquipmentName}_{currentMethodName}
                             </span>
                         </div>
                         <button
