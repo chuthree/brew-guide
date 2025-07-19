@@ -423,7 +423,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         }
 
         prevInitialDataRef.current = current;
-    }, [initialData]);
+    }, [initialData, selectedCoffeeBean?.id]);
 
     // 创建评分更新函数
     const updateRating = (value: number) => {
