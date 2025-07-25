@@ -1,7 +1,7 @@
 {
-  "name": "手冲咖啡冲煮指南",
+  "name": "Brew Guide",
   "short_name": "Brew Guide",
-  "description": "专业的手冲咖啡冲煮指南，包含手冲咖啡的详细步骤、参数配置和计时器",
+  "description": "一站式咖啡小工具，支持冲煮记录、豆仓管理与品鉴笔记功能。",
   "start_url": "/",
   "display": "fullscreen",
   "orientation": "portrait",
