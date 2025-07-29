@@ -14,21 +14,27 @@ export default function DownloadPage(): React.ReactNode {
     const scrollRef = useRef<HTMLDivElement>(null)
     
     const images = [
-        '/images/content/brewing.png',
-        '/images/content/inventory.png',
-        '/images/content/notes.png',
-        '/images/content/toplist.png',
-        '/images/content/count.png',
-        '/images/content/randomly.png',
+        '/images/content/辅助冲煮可视化截图.PNG',
+        '/images/content/豆仓截图.PNG',
+        '/images/content/笔记列表截图.PNG',
+        '/images/content/个人榜单截图.PNG',
+        '/images/content/数据统计截图.PNG',
+        '/images/content/随机选豆截图.PNG',
+        '/images/content/方案列表截图.PNG',
+        '/images/content/冲煮方案步骤截图.PNG',
+        '/images/content/博主榜单截图.PNG',
     ]
     
     const descriptions = [
-        "可视化辅助冲煮。",
-        "管理咖啡豆。",
-        "记录冲煮笔记。",
-        "咖啡豆榜单。",
-        "数据统计。",
-        "今天喝什么豆子。",
+        "可视化辅助冲煮，让每一次冲煮都更精准。",
+        "管理你的咖啡豆库存，记录每一颗豆子。",
+        "记录每次冲煮的详细笔记和感受。",
+        "个人咖啡豆评分榜单，发现最爱。",
+        "详细的冲煮数据统计和分析。",
+        "今天喝什么豆子？让随机选择帮你决定。",
+        "丰富的冲煮方案库，探索不同的冲煮方法。",
+        "详细的冲煮步骤指导，新手也能轻松上手。",
+        "发现优质咖啡豆，探索博主推荐。",
     ]
 
     // 内容切换处理函数
