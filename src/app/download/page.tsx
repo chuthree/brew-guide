@@ -205,12 +205,12 @@ export default function DownloadPage(): React.ReactNode {
                                     <p className="font-medium">v1.3.8（最新版本）</p>
                                     <p className="text-xs text-neutral-500 mt-1">2025-06-28</p>
                                     <ul className="mt-2 text-xs text-neutral-500 list-disc pl-4 space-y-1">
-                                        <li>(添加): 冲煮步骤界面"极简显示模式"，更适合专注操作</li>
-                                        <li>(添加): 咖啡豆详情页"去冲煮"和"记录"快捷按钮</li>
-                                        <li>(添加): 分类栏中的"全部"选项固定在左侧，切换更方便</li>
-                                        <li>(添加): 支持添加"烘焙商"信息，记录更完整</li>
+                                        <li>(添加): 冲煮步骤界面&quot;极简显示模式&quot;，更适合专注操作</li>
+                                        <li>(添加): 咖啡豆详情页&quot;去冲煮&quot;和&quot;记录&quot;快捷按钮</li>
+                                        <li>(添加): 分类栏中的&quot;全部&quot;选项固定在左侧，切换更方便</li>
+                                        <li>(添加): 支持添加&quot;烘焙商&quot;信息，记录更完整</li>
                                         <li>(添加): 自动清理临时文件，节省空间</li>
-                                        <li>(添加): "Bypass"注水步骤，适配更多冲煮法</li>
+                                        <li>(添加): &quot;Bypass&quot;注水步骤，适配更多冲煮法</li>
                                         <li>(优化): 冲煮完成后参数栏不可修改，避免误操作</li>
                                         <li>(优化): 咖啡豆数据结构统一，为后续功能打基础</li>
                                         <li>(修复): 冲煮计时器提示音在阶段切换时失效问题</li>
@@ -225,14 +225,14 @@ export default function DownloadPage(): React.ReactNode {
                                     <ul className="mt-2 text-xs text-neutral-500 list-disc pl-4 space-y-1">
                                         <li>(添加): 全平台适配字体缩放</li>
                                         <li>(添加): 笔记支持修改冲煮方案</li>
-                                        <li>(添加): 设置中可开启"显示风味信息"</li>
+                                        <li>(添加): 设置中可开启&quot;显示风味信息&quot;</li>
                                         <li>(添加): 咖啡豆支持按豆种、产地、赏味期、烘焙商分类</li>
                                         <li>(添加): 咖啡豆续购功能（仅编辑时显示）</li>
                                         <li>(添加): 修改笔记中的咖啡豆容量后将自动同步</li>
-                                        <li>(添加): 更多"温水细粉慢冲"方案</li>
+                                        <li>(添加): 更多&quot;温水细粉慢冲&quot;方案</li>
                                         <li>(修复): 页面布局错乱问题</li>
                                         <li>(修复): 图片添加后变黑的问题</li>
-                                        <li>(修复): 使用"拍照"时误调用相册的问题</li>
+                                        <li>(修复): 使用&quot;拍照&quot;时误调用相册的问题</li>
                                     </ul>
                                 </div>
                                 
@@ -269,8 +269,8 @@ export default function DownloadPage(): React.ReactNode {
                                     <p className="text-xs text-neutral-500 mt-1">2025-05-26</p>
                                     <ul className="mt-2 text-xs text-neutral-500 list-disc pl-4 space-y-1">
                                         <li>(添加): 支持双击器具分类栏中的自定义器具直接进入编辑模式</li>
-                                        <li>(添加): "跳过方案选择"功能，操作更快捷</li>
-                                        <li>(添加): 咖啡豆仓库支持双击"全部豆种"切换为图片流展示</li>
+                                        <li>(添加): &quot;跳过方案选择&quot;功能，操作更快捷</li>
+                                        <li>(添加): 咖啡豆仓库支持双击&quot;全部豆种&quot;切换为图片流展示</li>
                                         <li>(添加): 导航栏增加选择缓存功能，切换页面更便捷</li>
                                         <li>(添加): 自定义磨豆机功能</li>
                                         <li>(优化): 器具分类栏添加渐变阴影与过渡动画</li>
@@ -283,7 +283,7 @@ export default function DownloadPage(): React.ReactNode {
                                     <p className="text-xs text-neutral-500 mt-1">2025-05-21</p>
                                     <ul className="mt-2 text-xs text-neutral-500 list-disc pl-4 space-y-1">
                                         <li>(优化): 重置数据后页面将自动刷新，无需手动操作</li>
-                                        <li>(修复): 计时器中"显示流速"设置不立即生效的问题</li>
+                                        <li>(修复): 计时器中&quot;显示流速&quot;设置不立即生效的问题</li>
                                         <li>(修复): 编辑方案时名称为空导致保存异常的问题</li>
                                         <li>(修复): 手动添加笔记时选择自定义方案后保存内容显示异常的问题</li>
                                     </ul>
@@ -322,11 +322,11 @@ export default function DownloadPage(): React.ReactNode {
                                     <p className="font-medium">v1.2.4.6</p>
                                     <p className="text-xs text-neutral-500 mt-1">2025-05-13</p>
                                     <ul className="mt-2 text-xs text-neutral-500 list-disc pl-4 space-y-1">
-                                        <li>(添加): 咖啡豆新增"冰冻"保存状态</li>
+                                        <li>(添加): 咖啡豆新增&quot;冰冻&quot;保存状态</li>
                                         <li>(添加): 统计视图新增平均消耗与预计完成日期显示</li>
                                         <li>(优化): 笔记编辑流程更加顺畅，操作体验升级</li>
                                         <li>(优化): 调整安全区域的填充和位置，以改善界面适应性</li>
-                                        <li>(优化): 将冰手冲咖啡研磨大小从"细"调整为"中细"</li>
+                                        <li>(优化): 将冰手冲咖啡研磨大小从&quot;细&quot;调整为&quot;中细&quot;</li>
                                         <li>(修复): 自定义器具无法被导入问题</li>
                                         <li>(修复): 自定义器具不显示通用方案问题</li>
                                         <li>(修复): 笔记搜索功能失效问题</li>
@@ -337,7 +337,7 @@ export default function DownloadPage(): React.ReactNode {
                                     <p className="font-medium">v1.2.4.5</p>
                                     <p className="text-xs text-neutral-500 mt-1">2025-05-12</p>
                                     <ul className="mt-2 text-xs text-neutral-500 list-disc pl-4 space-y-1">
-                                        <li>(添加): 随机选择咖啡豆功能 "今天喝什么豆子"</li>
+                                        <li>(添加): 随机选择咖啡豆功能 &quot;今天喝什么豆子&quot;</li>
                                         <li>(添加): 图片上传时自动压缩（小于200KB保留原图）</li>
                                         <li>(添加): 快捷扣除库存也会自动创建冲煮笔记</li>
                                         <li>(优化): 自定义冲煮方案数据持久化，刷新页面不丢失</li>
