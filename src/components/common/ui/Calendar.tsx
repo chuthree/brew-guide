@@ -116,6 +116,7 @@ export function Calendar({
           onClick={goToPrevMonth}
           className="p-2 hover:opacity-80 flex items-center justify-center"
           aria-label="上个月"
+          type="button"
         >
           <ChevronLeft className="icon-xs icon-secondary" />
         </button>
@@ -126,6 +127,7 @@ export function Calendar({
           onClick={goToNextMonth}
           className="p-2 hover:opacity-80 flex items-center justify-center"
           aria-label="下个月"
+          type="button"
         >
           <ChevronRight className="icon-xs icon-secondary" />
         </button>
