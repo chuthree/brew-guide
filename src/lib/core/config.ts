@@ -1388,4 +1388,5 @@ export const sponsorsList = [
 	"fanghan",
 	"Collins",
 	"Litlw",
+	"面包狗",
 ];
