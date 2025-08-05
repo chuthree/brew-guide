@@ -56,6 +56,91 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     // 搜索相关状态
     const [isSearching, setIsSearching] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
+
+    // 显示模式状态（持久化记忆）
+    const [viewMode, setViewMode] = useState<'list' | 'gallery'>(() => {
+        if (typeof window !== 'undefined') {
+            return (localStorage.getItem('notes-view-mode') as 'list' | 'gallery') || 'list'
+        }
+        return 'list'
+    })
+
+    // 图片流模式状态（持久化记忆）
+    const [isImageFlowMode, setIsImageFlowMode] = useState<boolean>(() => {
+        if (typeof window !== 'undefined') {
+            return localStorage.getItem('notes-is-image-flow-mode') === 'true'
+        }
+        return false
+    })
+
+    // 带日期图片流模式状态（持久化记忆）
+    const [isDateImageFlowMode, setIsDateImageFlowMode] = useState<boolean>(() => {
+        if (typeof window !== 'undefined') {
+            return localStorage.getItem('notes-is-date-image-flow-mode') === 'true'
+        }
+        return false
+    })
+
+    // 记住用户上次使用的图片流模式类型（持久化存储）
+    const [lastImageFlowType, setLastImageFlowType] = useState<'normal' | 'date'>(() => {
+        if (typeof window !== 'undefined') {
+            return (localStorage.getItem('notes-last-image-flow-type') as 'normal' | 'date') || 'normal'
+        }
+        return 'normal'
+    })
+
+    // 优雅的图片流模式记忆管理
+    const updateImageFlowMemory = useCallback((type: 'normal' | 'date') => {
+        setLastImageFlowType(type)
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('notes-last-image-flow-type', type)
+        }
+    }, [])
+
+    // 优雅的显示模式持久化管理
+    const updateViewMode = useCallback((mode: 'list' | 'gallery') => {
+        setViewMode(mode)
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('notes-view-mode', mode)
+        }
+    }, [])
+
+    const updateImageFlowState = useCallback((normal: boolean, date: boolean) => {
+        setIsImageFlowMode(normal)
+        setIsDateImageFlowMode(date)
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('notes-is-image-flow-mode', normal.toString())
+            localStorage.setItem('notes-is-date-image-flow-mode', date.toString())
+        }
+    }, [])
+
+    // 优雅的图片流模式状态管理
+    const setImageFlowMode = useCallback((normal: boolean, date: boolean, rememberChoice: boolean = true) => {
+        updateImageFlowState(normal, date)
+
+        // 如果需要记住选择，更新记忆
+        if (rememberChoice && (normal || date)) {
+            updateImageFlowMemory(date ? 'date' : 'normal')
+        }
+
+        // 如果开启了任何图片流模式，切换到gallery视图
+        if (normal || date) {
+            updateViewMode('gallery')
+        }
+    }, [updateImageFlowMemory, updateViewMode, updateImageFlowState])
+
+    // 页面加载时恢复显示模式状态的一致性检查
+    useEffect(() => {
+        // 确保状态一致性：如果是gallery模式但两个图片流模式都是false，恢复到用户偏好
+        if (viewMode === 'gallery' && !isImageFlowMode && !isDateImageFlowMode) {
+            const useDate = lastImageFlowType === 'date';
+            updateImageFlowState(!useDate, useDate);
+        }
+        // 如果是list模式但有图片流模式开启，关闭图片流模式
+        else if (viewMode === 'list' && (isImageFlowMode || isDateImageFlowMode)) {
+            updateImageFlowState(false, false);
+        }
+    }, [isDateImageFlowMode, isImageFlowMode, lastImageFlowType, updateImageFlowState, viewMode]) // 添加所有依赖项
     
     // 预览容器引用
     const notesContainerRef = useRef<HTMLDivElement>(null)
@@ -756,6 +841,51 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         debouncedUpdateFilters({ sortOption: option });
     };
 
+    // 处理显示模式变化
+    const handleViewModeChange = useCallback((mode: 'list' | 'gallery') => {
+        updateViewMode(mode);
+    }, [updateViewMode]);
+
+    // 优雅的图片流模式切换处理
+    const handleToggleImageFlowMode = useCallback(() => {
+        const newMode = !isImageFlowMode;
+        if (newMode) {
+            // 开启普通图片流：关闭带日期模式，记住选择
+            setImageFlowMode(true, false, true);
+        } else {
+            // 关闭图片流：回到列表模式
+            setImageFlowMode(false, false, false);
+            updateViewMode('list');
+        }
+    }, [isImageFlowMode, setImageFlowMode, updateViewMode]);
+
+    const handleToggleDateImageFlowMode = useCallback(() => {
+        const newMode = !isDateImageFlowMode;
+        if (newMode) {
+            // 开启带日期图片流：关闭普通模式，记住选择
+            setImageFlowMode(false, true, true);
+        } else {
+            // 关闭图片流：回到列表模式
+            setImageFlowMode(false, false, false);
+            updateViewMode('list');
+        }
+    }, [isDateImageFlowMode, setImageFlowMode, updateViewMode]);
+
+    // 智能切换图片流模式（用于双击"全部"）
+    const handleSmartToggleImageFlow = useCallback(() => {
+        const isInImageFlowMode = viewMode === 'gallery' && (isImageFlowMode || isDateImageFlowMode);
+
+        if (isInImageFlowMode) {
+            // 当前在图片流模式，切换到列表模式
+            setImageFlowMode(false, false, false);
+            updateViewMode('list');
+        } else {
+            // 当前在列表模式，根据记忆恢复到用户偏好的图片流模式
+            const useDate = lastImageFlowType === 'date';
+            setImageFlowMode(!useDate, useDate, false); // 不更新记忆，因为这是恢复操作
+        }
+    }, [viewMode, isImageFlowMode, isDateImageFlowMode, lastImageFlowType, setImageFlowMode, updateViewMode]);
+
     // 处理过滤模式变化
     const handleFilterModeChange = (mode: 'equipment' | 'bean') => {
         setFilterMode(mode);
@@ -773,22 +903,22 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     };
 
     // 处理设备选择变化
-    const handleEquipmentClick = (equipment: string | null) => {
+    const handleEquipmentClick = useCallback((equipment: string | null) => {
         setSelectedEquipment(equipment);
         saveSelectedEquipmentPreference(equipment);
         globalCache.selectedEquipment = equipment;
         // 数据筛选由 useEnhancedNotesFiltering Hook 自动处理
         debouncedUpdateFilters({ selectedEquipment: equipment });
-    };
+    }, [debouncedUpdateFilters]);
 
     // 处理咖啡豆选择变化
-    const handleBeanClick = (bean: string | null) => {
+    const handleBeanClick = useCallback((bean: string | null) => {
         setSelectedBean(bean);
         saveSelectedBeanPreference(bean);
         globalCache.selectedBean = bean;
         // 数据筛选由 useEnhancedNotesFiltering Hook 自动处理
         debouncedUpdateFilters({ selectedBean: bean });
-    };
+    }, [debouncedUpdateFilters]);
     
     // 处理笔记选择/取消选择
     const handleToggleSelect = (noteId: string, enterShareMode = false) => {
@@ -872,6 +1002,86 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         // 其他情况使用Hook计算的总消耗量
         return totalConsumption;
     }, [isSearching, searchQuery, searchFilteredNotes, totalConsumption]);
+
+    // 计算图片流模式下的统计信息
+    const imageFlowStats = useMemo(() => {
+        if (!isImageFlowMode && !isDateImageFlowMode) {
+            return null;
+        }
+
+        // 获取当前显示的笔记（搜索模式下使用搜索结果，否则使用筛选结果）
+        const currentNotes = (isSearching && searchQuery.trim()) ? searchFilteredNotes : filteredNotes;
+
+        // 过滤出有图片的笔记
+        const notesWithImages = currentNotes.filter(note => note.image && note.image.trim() !== '');
+
+        // 计算有图片笔记的消耗量
+        const imageNotesConsumption = calculateTotalCoffeeConsumption(notesWithImages);
+
+        return {
+            count: notesWithImages.length,
+            consumption: imageNotesConsumption,
+            notes: notesWithImages
+        };
+    }, [isImageFlowMode, isDateImageFlowMode, isSearching, searchQuery, searchFilteredNotes, filteredNotes]);
+
+    // 计算图片流模式下的可用设备和豆子列表
+    const imageFlowAvailableOptions = useMemo(() => {
+        if (!isImageFlowMode && !isDateImageFlowMode) {
+            return {
+                equipments: availableEquipments,
+                beans: availableBeans
+            };
+        }
+
+        // 基于原始的所有笔记数据来计算有图片的分类选项
+        // 这样确保即使选择了某个分类，其他分类选项仍然可见
+        const allOriginalNotes = globalCache.notes; // 使用原始的、未经筛选的笔记数据
+
+        // 如果是搜索模式，基于搜索结果；否则基于所有原始笔记
+        const baseNotes = (isSearching && searchQuery.trim()) ? searchFilteredNotes : allOriginalNotes;
+
+        // 过滤出有图片的记录
+        const allNotesWithImages = baseNotes.filter(note => note.image && note.image.trim() !== '');
+
+        // 获取有图片记录的设备列表
+        const equipmentSet = new Set<string>();
+        allNotesWithImages.forEach(note => {
+            if (note.equipment) {
+                equipmentSet.add(note.equipment);
+            }
+        });
+
+        // 获取有图片记录的豆子列表
+        const beanSet = new Set<string>();
+        allNotesWithImages.forEach(note => {
+            if (note.coffeeBeanInfo?.name) {
+                beanSet.add(note.coffeeBeanInfo.name);
+            }
+        });
+
+        return {
+            equipments: Array.from(equipmentSet).sort(),
+            beans: Array.from(beanSet).sort()
+        };
+    }, [isImageFlowMode, isDateImageFlowMode, isSearching, searchQuery, searchFilteredNotes, availableEquipments, availableBeans]);
+
+    // 在图片流模式下，如果当前选中的设备或豆子没有图片记录，自动切换到"全部"
+    useEffect(() => {
+        if (!imageFlowStats) return;
+
+        const { equipments, beans } = imageFlowAvailableOptions;
+
+        // 检查当前选中的设备是否在有图片的设备列表中
+        if (filterMode === 'equipment' && selectedEquipment && !equipments.includes(selectedEquipment)) {
+            handleEquipmentClick(null);
+        }
+
+        // 检查当前选中的豆子是否在有图片的豆子列表中
+        if (filterMode === 'bean' && selectedBean && !beans.includes(selectedBean)) {
+            handleBeanClick(null);
+        }
+    }, [imageFlowStats, imageFlowAvailableOptions, filterMode, selectedEquipment, selectedBean, handleEquipmentClick, handleBeanClick]);
     
     if (!isOpen) return null;
     
@@ -882,11 +1092,21 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                         {/* 数量显示 */}
                         <div className="flex justify-between items-center mb-6 px-6">
                             <div className="text-xs font-medium tracking-wide text-neutral-800 dark:text-neutral-100 break-words">
-                                {totalCount === 0 
-                                    ? "" // 当没有笔记记录时不显示统计信息
-                                    : (isSearching && searchQuery.trim())
-                                        ? `${searchFilteredNotes.length} 条记录，已消耗 ${formatConsumption(currentConsumption)}`
-                                        : `${totalCount} 条记录，已消耗 ${formatConsumption(currentConsumption)}`}
+                                {(() => {
+                                    // 图片流模式下显示有图片的记录统计
+                                    if (imageFlowStats) {
+                                        return imageFlowStats.count === 0
+                                            ? ""
+                                            : `${imageFlowStats.count} 条图片记录，已消耗 ${formatConsumption(imageFlowStats.consumption)}`;
+                                    }
+
+                                    // 普通模式下显示总记录统计
+                                    return totalCount === 0
+                                        ? "" // 当没有笔记记录时不显示统计信息
+                                        : (isSearching && searchQuery.trim())
+                                            ? `${searchFilteredNotes.length} 条记录，已消耗 ${formatConsumption(currentConsumption)}`
+                                            : `${totalCount} 条记录，已消耗 ${formatConsumption(currentConsumption)}`;
+                                })()}
                             </div>
                         </div>
 
@@ -895,8 +1115,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                             filterMode={filterMode}
                             selectedEquipment={selectedEquipment}
                             selectedBean={selectedBean}
-                            availableEquipments={availableEquipments}
-                            availableBeans={availableBeans}
+                            availableEquipments={imageFlowAvailableOptions.equipments}
+                            availableBeans={imageFlowAvailableOptions.beans}
                             equipmentNames={globalCache.equipmentNames}
                             onFilterModeChange={handleFilterModeChange}
                             onEquipmentClick={handleEquipmentClick}
@@ -908,6 +1128,13 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                             onSearchKeyDown={handleSearchKeyDown}
                             sortOption={sortOption}
                             onSortChange={handleSortChange}
+                            viewMode={viewMode}
+                            onViewModeChange={handleViewModeChange}
+                            isImageFlowMode={isImageFlowMode}
+                            onToggleImageFlowMode={handleToggleImageFlowMode}
+                            isDateImageFlowMode={isDateImageFlowMode}
+                            onToggleDateImageFlowMode={handleToggleDateImageFlowMode}
+                            onSmartToggleImageFlow={handleSmartToggleImageFlow}
                         />
                     </div>
 
@@ -925,10 +1152,12 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                             searchQuery={searchQuery}
                             isSearching={isSearching}
                             preFilteredNotes={isSearching && searchQuery.trim() ? searchFilteredNotes : undefined}
+                            viewMode={viewMode}
+                            isDateImageFlowMode={isDateImageFlowMode}
                         />
                     </div>
 
-                    {/* 底部操作栏 - 分享模式下显示保存和取消按钮 */}
+                    {/* 底部操作栏 - 分享模式下显示保存和取消按钮，图片流模式下隐藏添加按钮 */}
                     {isShareMode ? (
                         <div className="bottom-action-bar">
                             <div className="absolute bottom-full left-0 right-0 h-12 bg-linear-to-t from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none"></div>
@@ -953,7 +1182,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                                 <div className="grow border-t border-neutral-200 dark:border-neutral-800"></div>
                             </div>
                         </div>
-                    ) : (
+                    ) : !isImageFlowMode && !isDateImageFlowMode && (
                         <AddNoteButton onAddNote={handleAddNote} />
                     )}
 

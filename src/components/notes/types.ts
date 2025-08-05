@@ -69,6 +69,17 @@ export interface FilterTabsProps {
     // 新增排序相关props
     sortOption?: SortOption
     onSortChange?: (option: SortOption) => void
+    // 新增显示模式相关props
+    viewMode?: 'list' | 'gallery'
+    onViewModeChange?: (mode: 'list' | 'gallery') => void
+    // 新增图片流模式相关props
+    isImageFlowMode?: boolean
+    onToggleImageFlowMode?: () => void
+    // 新增带日期图片流模式相关props
+    isDateImageFlowMode?: boolean
+    onToggleDateImageFlowMode?: () => void
+    // 智能切换图片流模式（用于双击"全部"）
+    onSmartToggleImageFlow?: () => void
 }
 
 // 添加笔记按钮属性

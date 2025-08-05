@@ -5,6 +5,8 @@ import { BrewingNote } from '@/lib/core/config'
 import { globalCache } from './globalCache'
 import NoteItem from './NoteItem'
 import ChangeRecordNoteItem from './ChangeRecordNoteItem'
+import GalleryView from './GalleryView'
+import DateImageFlowView from './DateImageFlowView'
 
 // 分页配置
 const PAGE_SIZE = 5
@@ -22,6 +24,8 @@ interface NotesListViewProps {
     searchQuery?: string;
     isSearching?: boolean;
     preFilteredNotes?: BrewingNote[];
+    viewMode?: 'list' | 'gallery';
+    isDateImageFlowMode?: boolean;
 }
 
 const NotesListView: React.FC<NotesListViewProps> = ({
@@ -35,7 +39,9 @@ const NotesListView: React.FC<NotesListViewProps> = ({
     onToggleSelect,
     searchQuery = '',
     isSearching = false,
-    preFilteredNotes
+    preFilteredNotes,
+    viewMode = 'list',
+    isDateImageFlowMode = false
 }) => {
     const [_isPending, startTransition] = useTransition()
     const [notes, setNotes] = useState<BrewingNote[]>(globalCache.filteredNotes)
@@ -177,6 +183,37 @@ const NotesListView: React.FC<NotesListViewProps> = ({
     const regularNotes = displayedNotes.filter(note => !isChangeRecord(note));
     const changeRecordNotes = displayedNotes.filter(note => isChangeRecord(note));
 
+    // 图片流模式 - 使用完整的笔记数据，不受分页限制
+    if (viewMode === 'gallery') {
+        // 使用完整的笔记数据（优先使用预筛选的笔记，否则使用全部笔记）
+        const allNotes = preFilteredNotes || notes;
+        const allRegularNotes = allNotes.filter(note => !isChangeRecord(note));
+
+        // 根据是否是带日期图片流模式选择不同的组件
+        if (isDateImageFlowMode) {
+            return (
+                <DateImageFlowView
+                    notes={allRegularNotes}
+                    onNoteClick={onNoteClick}
+                    isShareMode={isShareMode}
+                    selectedNotes={selectedNotes}
+                    onToggleSelect={handleToggleSelect}
+                />
+            )
+        } else {
+            return (
+                <GalleryView
+                    notes={allRegularNotes}
+                    onNoteClick={onNoteClick}
+                    isShareMode={isShareMode}
+                    selectedNotes={selectedNotes}
+                    onToggleSelect={handleToggleSelect}
+                />
+            )
+        }
+    }
+
+    // 列表模式
     return (
         <div className="pb-20">
             {/* 普通笔记列表 */}

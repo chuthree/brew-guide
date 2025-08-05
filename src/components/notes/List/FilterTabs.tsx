@@ -136,6 +136,70 @@ const FilterModeSection: React.FC<FilterModeSectionProps> = ({ filterMode, onFil
     );
 };
 
+// 显示模式选择组件
+interface ViewModeSectionProps {
+    viewMode: 'list' | 'gallery'
+    onViewModeChange: (mode: 'list' | 'gallery') => void
+    isImageFlowMode?: boolean
+    onToggleImageFlowMode?: () => void
+    isDateImageFlowMode?: boolean
+    onToggleDateImageFlowMode?: () => void
+}
+
+const ViewModeSection: React.FC<ViewModeSectionProps> = ({
+    viewMode,
+    onViewModeChange,
+    isImageFlowMode = false,
+    onToggleImageFlowMode,
+    isDateImageFlowMode = false,
+    onToggleDateImageFlowMode
+}) => {
+    return (
+        <div>
+            <div className="text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-2">显示模式</div>
+            <div className="flex items-center flex-wrap gap-2">
+                <FilterButton
+                    isActive={viewMode === 'list'}
+                    onClick={() => {
+                        onViewModeChange('list')
+                        // 关闭所有图片流模式
+                        if (isImageFlowMode && onToggleImageFlowMode) {
+                            onToggleImageFlowMode()
+                        }
+                        if (isDateImageFlowMode && onToggleDateImageFlowMode) {
+                            onToggleDateImageFlowMode()
+                        }
+                    }}
+                >
+                    列表
+                </FilterButton>
+                <FilterButton
+                    isActive={viewMode === 'gallery' && isImageFlowMode && !isDateImageFlowMode}
+                    onClick={() => {
+                        // 如果当前不是普通图片流模式，则激活它
+                        if (!isImageFlowMode || isDateImageFlowMode) {
+                            onToggleImageFlowMode?.()
+                        }
+                    }}
+                >
+                    图片流
+                </FilterButton>
+                <FilterButton
+                    isActive={viewMode === 'gallery' && isDateImageFlowMode && !isImageFlowMode}
+                    onClick={() => {
+                        // 如果当前不是带日期图片流模式，则激活它
+                        if (!isDateImageFlowMode || isImageFlowMode) {
+                            onToggleDateImageFlowMode?.()
+                        }
+                    }}
+                >
+                    带日期图片流
+                </FilterButton>
+            </div>
+        </div>
+    );
+};
+
 // 排序区域组件 - 使用筛选按钮样式
 interface SortSectionProps {
     sortOption: SortOption
@@ -208,7 +272,14 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
     onSearchChange,
     onSearchKeyDown,
     sortOption,
-    onSortChange
+    onSortChange,
+    viewMode = 'list',
+    onViewModeChange,
+    isImageFlowMode = false,
+    onToggleImageFlowMode,
+    isDateImageFlowMode = false,
+    onToggleDateImageFlowMode,
+    onSmartToggleImageFlow
 }) {
     // 搜索输入框引用 - 移到条件语句前面
     const searchInputRef = useRef<HTMLInputElement>(null);
@@ -337,7 +408,15 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                                     className="mr-1"
                                     dataTab="all"
                                 >
-                                    全部
+                                    <span onDoubleClick={() => onSmartToggleImageFlow?.()}>
+                                        全部
+                                        {isImageFlowMode && (
+                                            <span> · 图片流</span>
+                                        )}
+                                        {isDateImageFlowMode && (
+                                            <span> · 带日期图片流</span>
+                                        )}
+                                    </span>
                                 </TabButton>
 
                                 {/* 筛选图标按钮 */}
@@ -458,6 +537,17 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                                             filterMode={filterMode}
                                             onFilterModeChange={onFilterModeChange}
                                         />
+
+                                        {onViewModeChange && (
+                                            <ViewModeSection
+                                                viewMode={viewMode}
+                                                onViewModeChange={onViewModeChange}
+                                                isImageFlowMode={isImageFlowMode}
+                                                onToggleImageFlowMode={onToggleImageFlowMode}
+                                                isDateImageFlowMode={isDateImageFlowMode}
+                                                onToggleDateImageFlowMode={onToggleDateImageFlowMode}
+                                            />
+                                        )}
 
                                         <SortSection
                                             sortOption={sortOption}

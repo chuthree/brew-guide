@@ -571,7 +571,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
-    }, [isFilterExpanded]);
+    }, [isFilterExpanded, showYearDropdown]);
 
     // 统计视图时不显示任何筛选栏
     if (viewMode === VIEW_OPTIONS.STATS) {
