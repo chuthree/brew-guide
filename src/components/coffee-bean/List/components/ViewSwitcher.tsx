@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useRef, useState, useEffect, useCallback } from 'react'
-import { ViewOption, VIEW_OPTIONS, BeanType, BloggerBeansYear, BeanFilterMode } from '../types'
+import { ViewOption, VIEW_OPTIONS, BeanType, BloggerBeansYear, BeanFilterMode, BloggerType, BLOGGER_LABELS } from '../types'
 import {
     SortOption,
     SORT_ORDERS,
@@ -51,9 +51,10 @@ interface TabButtonProps {
     children: React.ReactNode
     className?: string
     dataTab?: string
+    title?: string
 }
 
-const TabButton: React.FC<TabButtonProps> = ({ isActive, onClick, children, className = '', dataTab }) => (
+const TabButton: React.FC<TabButtonProps> = ({ isActive, onClick, children, className = '', dataTab, title }) => (
     <button
         onClick={onClick}
         className={`pb-1.5 text-xs font-medium relative whitespace-nowrap ${
@@ -62,6 +63,7 @@ const TabButton: React.FC<TabButtonProps> = ({ isActive, onClick, children, clas
                 : 'text-neutral-600 dark:text-neutral-400 hover:opacity-80'
         } ${className}`}
         data-tab={dataTab}
+        title={title}
     >
         <span className="relative">{children}</span>
         {isActive && (
@@ -233,6 +235,8 @@ interface ViewSwitcherProps {
     onRankingBeanTypeChange?: (type: BeanType) => void
     bloggerYear?: BloggerBeansYear
     onBloggerYearChange?: (year: BloggerBeansYear) => void
+    bloggerType?: BloggerType
+    onBloggerTypeChange?: (type: BloggerType) => void
     rankingEditMode?: boolean
     onRankingEditModeChange?: (edit: boolean) => void
     onRankingShare?: () => void
@@ -281,6 +285,8 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
     onRankingBeanTypeChange,
     bloggerYear = 2025,
     onBloggerYearChange,
+    bloggerType = 'peter',
+    onBloggerTypeChange,
     rankingEditMode = false,
     onRankingEditModeChange,
     onRankingShare,
@@ -322,6 +328,32 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
     const [isFilterExpanded, setIsFilterExpanded] = useState(false);
     const filterExpandRef = useRef<HTMLDivElement>(null);
     const [hideTotalWeight, setHideTotalWeight] = useState(false);
+
+    // 年份下拉菜单状态
+    const [showYearDropdown, setShowYearDropdown] = useState(false);
+    const [yearButtonPosition, setYearButtonPosition] = useState<{ top: number; left: number; width: number } | null>(null);
+    const yearButtonRef = useRef<HTMLSpanElement>(null);
+
+    // 年份点击处理
+    const handleYearClick = () => {
+        if (yearButtonRef.current) {
+            const rect = yearButtonRef.current.getBoundingClientRect();
+            setYearButtonPosition({
+                top: rect.top,
+                left: rect.left,
+                width: rect.width
+            });
+            setShowYearDropdown(true);
+        }
+    };
+
+    // 年份变更处理
+    const handleYearChange = (year: BloggerBeansYear) => {
+        onBloggerYearChange?.(year);
+        setShowYearDropdown(false);
+    };
+
+
 
     // 滚动容器引用
     const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -518,11 +550,17 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
         setIsFilterExpanded(!isFilterExpanded);
     };
 
-    // 点击外部关闭筛选展开栏
+    // 点击外部关闭筛选展开栏和年份下拉菜单
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (filterExpandRef.current && !filterExpandRef.current.contains(event.target as Node)) {
                 setIsFilterExpanded(false);
+            }
+
+            // 检查是否点击了年份下拉菜单外部
+            const target = event.target as Element;
+            if (showYearDropdown && !target.closest('[data-year-selector]')) {
+                setShowYearDropdown(false);
             }
         };
 
@@ -553,7 +591,34 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                                     ? `${beansCount} 款咖啡豆，总共 ${originalTotalWeight}${!hideTotalWeight && totalWeight ? `，剩余 ${totalWeight}` : ''}`
                                     : `${beansCount} 款咖啡豆${!hideTotalWeight && totalWeight ? `，剩余 ${totalWeight}` : ''}`
                             : viewMode === VIEW_OPTIONS.BLOGGER
-                                ? `${bloggerBeansCount || 0} 款 (${bloggerYear}) 咖啡豆`
+                                ? (
+                                    <span className="flex items-baseline">
+                                        <span
+                                            className="cursor-pointer underline decoration-dashed decoration-neutral-400 dark:decoration-neutral-500 hover:decoration-neutral-600 dark:hover:decoration-neutral-300 underline-offset-2 transition-colors"
+                                            onClick={() => {
+                                                // 切换博主
+                                                const newBlogger = bloggerType === 'peter' ? 'fenix' : 'peter';
+                                                onBloggerTypeChange?.(newBlogger);
+                                            }}
+                                            title="点击切换博主"
+                                        >
+                                            {BLOGGER_LABELS[bloggerType || 'peter']}
+                                        </span>
+                                        <span className="ml-1">
+                                            豆单，{bloggerBeansCount || 0} 款 (&nbsp;
+                                            <span
+                                                ref={yearButtonRef}
+                                                className="cursor-pointer underline decoration-dashed decoration-neutral-400 dark:decoration-neutral-500 hover:decoration-neutral-600 dark:hover:decoration-neutral-300 underline-offset-2 transition-colors"
+                                                onClick={handleYearClick}
+                                                data-year-selector
+                                                title="点击切换年份"
+                                            >
+                                                {bloggerYear}
+                                            </span>
+                                            &nbsp;) 咖啡豆
+                                        </span>
+                                    </span>
+                                )
                                 : (rankingBeansCount === 0)
                                     ? ""  // 当没有评分咖啡豆时不显示任何统计信息
                                     : `${rankingBeansCount} 款已评分咖啡豆`
@@ -564,119 +629,158 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                 {/* 视图切换功能已移至导航栏 */}
             </div>
 
-            {/* 榜单标签筛选 - 在榜单和博主榜单视图中显示，且有数据时 */}
-            {((viewMode === VIEW_OPTIONS.RANKING && rankingBeansCount && rankingBeansCount > 0) || 
-              (viewMode === VIEW_OPTIONS.BLOGGER && bloggerBeansCount && bloggerBeansCount > 0)) && (
+            {/* 榜单标签筛选 - 在榜单和博主榜单视图中显示 */}
+            {((viewMode === VIEW_OPTIONS.RANKING && rankingBeansCount && rankingBeansCount > 0) ||
+              (viewMode === VIEW_OPTIONS.BLOGGER)) && (
                 <div className="mb-1" ref={filterExpandRef}>
                     {/* 整个分类栏容器 - 下边框在这里 */}
                     <div className="border-b border-neutral-200 dark:border-neutral-800">
                         {/* 豆子筛选选项卡 */}
-                        <div className="flex justify-between px-6">
-                            <div className="flex items-center relative flex-1">
-                                {/* 固定在左侧的"全部"和筛选按钮 */}
-                                <div className="flex items-center bg-neutral-50 dark:bg-neutral-900 z-10 pr-1 relative flex-shrink-0">
-                                    <TabButton
-                                        isActive={rankingBeanType === 'all'}
-                                        onClick={() => onRankingBeanTypeChange?.('all')}
-                                        className="mr-1"
-                                        dataTab="all"
-                                    >
-                                        全部
-                                    </TabButton>
+                        <div className="px-6 relative">
+                            {!isSearching ? (
+                                <div className="flex justify-between">
+                                    <div className="flex items-center relative flex-1">
+                                        {/* 固定在左侧的"全部"和筛选按钮 */}
+                                        <div className="flex items-center bg-neutral-50 dark:bg-neutral-900 z-10 pr-1 relative flex-shrink-0">
+                                            <TabButton
+                                                isActive={rankingBeanType === 'all'}
+                                                onClick={() => onRankingBeanTypeChange?.('all')}
+                                                className="mr-1"
+                                                dataTab="all"
+                                            >
+                                                全部
+                                            </TabButton>
 
-                                    {/* 筛选图标按钮 */}
-                                    <button
-                                        onClick={handleFilterToggle}
-                                        className="pb-1.5 mr-1 text-xs font-medium text-neutral-400 dark:text-neutral-600 flex items-center"
-                                    >
-                                        <AlignLeft size={12} color="currentColor" />
-                                    </button>
-                                    
-                                    {/* 左侧阴影 - 使用与右侧相同的伪元素实现 */}
-                                    {showRankingLeftShadow && (
-                                        <div className="absolute right-[-20px] top-0 bottom-0 w-5 pointer-events-none bg-linear-to-r from-neutral-50 to-transparent dark:from-neutral-900"></div>
-                                    )}
-                                </div>
+                                            {/* 筛选图标按钮 */}
+                                            <button
+                                                onClick={handleFilterToggle}
+                                                className="pb-1.5 mr-1 text-xs font-medium text-neutral-400 dark:text-neutral-600 flex items-center"
+                                            >
+                                                <AlignLeft size={12} color="currentColor" />
+                                            </button>
 
-                                <div
-                                    ref={rankingScrollContainerRef}
-                                    className="relative flex items-center overflow-x-auto flex-1 pr-16"
-                                    style={{
-                                        scrollbarWidth: 'none',
-                                        msOverflowStyle: 'none',
-                                        WebkitOverflowScrolling: 'touch'
-                                    }}
-                                    onScroll={handleRankingScroll}
-                                >
-                                    <style jsx>{`
-                                        div::-webkit-scrollbar {
-                                            display: none;
-                                        }
-                                    `}</style>
-                                    
-                                    <TabButton
-                                        isActive={rankingBeanType === 'espresso'}
-                                        onClick={() => onRankingBeanTypeChange?.('espresso')}
-                                        className="mr-3"
-                                        dataTab="espresso"
-                                    >
-                                        意式豆
-                                    </TabButton>
-                                    <TabButton
-                                        isActive={rankingBeanType === 'filter'}
-                                        onClick={() => onRankingBeanTypeChange?.('filter')}
-                                        className="mr-3"
-                                        dataTab="filter"
-                                    >
-                                        手冲豆
-                                    </TabButton>
-                                </div>
-                            </div>
+                                            {/* 左侧阴影 - 使用与右侧相同的伪元素实现 */}
+                                            {showRankingLeftShadow && (
+                                                <div className="absolute right-[-20px] top-0 bottom-0 w-5 pointer-events-none bg-linear-to-r from-neutral-50 to-transparent dark:from-neutral-900"></div>
+                                            )}
+                                        </div>
 
-                            <div className="flex items-center">
-                                {/* 年份选择器 - 仅在博主榜单视图中显示 */}
-                                {viewMode === VIEW_OPTIONS.BLOGGER && onBloggerYearChange && (
-                                    <div className="flex items-center ml-3">
-                                        <TabButton
-                                            isActive={bloggerYear === 2025}
-                                            onClick={() => onBloggerYearChange(2025)}
-                                            className="ml-3"
+                                        <div
+                                            ref={rankingScrollContainerRef}
+                                            className="relative flex items-center overflow-x-auto flex-1 pr-16"
+                                            style={{
+                                                scrollbarWidth: 'none',
+                                                msOverflowStyle: 'none',
+                                                WebkitOverflowScrolling: 'touch'
+                                            }}
+                                            onScroll={handleRankingScroll}
                                         >
-                                            2025
-                                        </TabButton>
-                                        <TabButton
-                                            isActive={bloggerYear === 2024}
-                                            onClick={() => onBloggerYearChange(2024)}
-                                            className="ml-3"
-                                        >
-                                            2024
-                                        </TabButton>
+                                            <style jsx>{`
+                                                div::-webkit-scrollbar {
+                                                    display: none;
+                                                }
+                                            `}</style>
+
+                                            <TabButton
+                                                isActive={rankingBeanType === 'espresso'}
+                                                onClick={() => onRankingBeanTypeChange?.('espresso')}
+                                                className="mr-3"
+                                                dataTab="espresso"
+                                            >
+                                                意式豆
+                                            </TabButton>
+                                            <TabButton
+                                                isActive={rankingBeanType === 'filter'}
+                                                onClick={() => {
+                                                    // 如果是矮人博主，不允许切换到手冲豆
+                                                    if (viewMode === VIEW_OPTIONS.BLOGGER && bloggerType === 'fenix') {
+                                                        return;
+                                                    }
+                                                    onRankingBeanTypeChange?.('filter');
+                                                }}
+                                                className={`mr-3 ${
+                                                    viewMode === VIEW_OPTIONS.BLOGGER && bloggerType === 'fenix'
+                                                        ? 'opacity-50 cursor-not-allowed'
+                                                        : ''
+                                                }`}
+                                                dataTab="filter"
+                                                title={
+                                                    viewMode === VIEW_OPTIONS.BLOGGER && bloggerType === 'fenix'
+                                                        ? '矮人博主暂无手冲豆数据'
+                                                        : undefined
+                                                }
+                                            >
+                                                手冲豆
+                                            </TabButton>
+                                        </div>
                                     </div>
-                                )}
 
-                                {/* 编辑按钮 - 仅在个人榜单视图中显示且有评分咖啡豆数据时 */}
-                                {viewMode === VIEW_OPTIONS.RANKING && onRankingEditModeChange && rankingBeansCount && rankingBeansCount > 0 && (
-                                    <TabButton
-                                        isActive={rankingEditMode}
-                                        onClick={() => onRankingEditModeChange(!rankingEditMode)}
-                                        className="mr-3"
-                                    >
-                                        {rankingEditMode ? '完成' : '编辑'}
-                                    </TabButton>
-                                )}
+                                    <div className="flex items-center">
+                                        {/* 年份选择器已移至标题中 */}
 
-                                {/* 分享按钮 - 仅在个人榜单视图中显示且有评分咖啡豆数据时 */}
-                                {viewMode === VIEW_OPTIONS.RANKING && onRankingShare && rankingBeansCount && rankingBeansCount > 0 && (
+                                        {/* 编辑按钮 - 仅在个人榜单视图中显示且有评分咖啡豆数据时 */}
+                                        {viewMode === VIEW_OPTIONS.RANKING && onRankingEditModeChange && rankingBeansCount && rankingBeansCount > 0 && (
+                                            <TabButton
+                                                isActive={rankingEditMode}
+                                                onClick={() => onRankingEditModeChange(!rankingEditMode)}
+                                                className="mr-3"
+                                            >
+                                                {rankingEditMode ? '完成' : '编辑'}
+                                            </TabButton>
+                                        )}
+
+                                        {/* 分享按钮 - 仅在个人榜单视图中显示且有评分咖啡豆数据时 */}
+                                        {viewMode === VIEW_OPTIONS.RANKING && onRankingShare && rankingBeansCount && rankingBeansCount > 0 && (
+                                            <button
+                                                onClick={onRankingShare}
+                                                className="pb-1.5 text-xs font-medium relative text-neutral-600 dark:text-neutral-400"
+                                            >
+                                                <span className="relative underline underline-offset-2 decoration-sky-500">分享</span>
+                                                <ArrowUpRight className="inline-block ml-1 w-3 h-3" color="currentColor" />
+                                            </button>
+                                        )}
+
+                                        {/* 搜索按钮 - 仅在博主榜单视图中显示且有咖啡豆数据时 */}
+                                        {viewMode === VIEW_OPTIONS.BLOGGER && bloggerBeansCount && bloggerBeansCount > 0 && (
+                                            <>
+                                                {/* 竖直分割线 */}
+                                                <div className="w-px h-3 bg-neutral-200 dark:bg-neutral-800 mb-1.5 mr-3"></div>
+                                                <button
+                                                    onClick={handleSearchClick}
+                                                    className="pb-1.5 text-xs font-medium text-neutral-600 dark:text-neutral-400 flex items-center whitespace-nowrap"
+                                                >
+                                                    <span className="relative">搜索</span>
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+                            ) : (
+                                /* 搜索框 - 替换整个分类栏 */
+                                <div className="flex items-center pb-1.5 min-h-[22px]">
+                                    <div className="flex-1 relative flex items-center">
+                                        <input
+                                            ref={searchInputRef}
+                                            type="text"
+                                            value={searchQuery}
+                                            onChange={handleSearchChange}
+                                            onKeyDown={handleSearchKeyDown}
+                                            placeholder="输入咖啡豆名称..."
+                                            className="w-full pr-2 text-xs font-medium bg-transparent border-none outline-hidden text-neutral-800 dark:text-neutral-100 placeholder-neutral-400 dark:placeholder-neutral-500"
+                                            autoComplete="off"
+                                        />
+                                    </div>
                                     <button
-                                        onClick={onRankingShare}
-                                        className="pb-1.5 text-xs font-medium relative text-neutral-600 dark:text-neutral-400"
+                                        onClick={handleCloseSearch}
+                                        className="ml-1 text-neutral-500 dark:text-neutral-400 flex items-center "
                                     >
-                                        <span className="relative underline underline-offset-2 decoration-sky-500">分享</span>
-                                        <ArrowUpRight className="inline-block ml-1 w-3 h-3" color="currentColor" />
+                                        <X size={14} color="currentColor" />
                                     </button>
-                                )}
-                            </div>
+                                </div>
+                            )}
                         </div>
+
+
 
                         {/* 展开式筛选栏 - 在同一个容器内 */}
                         <AnimatePresence>
@@ -935,6 +1039,174 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                     </div>
                 </div>
             ) : null}
+
+            {/* 年份下拉选择菜单 - 参考StatsView风格 */}
+            <AnimatePresence>
+                {showYearDropdown && (
+                    <>
+                        {/* 背景模糊层 */}
+                        <motion.div
+                            initial={{
+                                opacity: 0,
+                                backdropFilter: 'blur(0px)'
+                            }}
+                            animate={{
+                                opacity: 1,
+                                backdropFilter: 'blur(20px)',
+                                transition: {
+                                    opacity: {
+                                        duration: 0.2,
+                                        ease: [0.25, 0.46, 0.45, 0.94]
+                                    },
+                                    backdropFilter: {
+                                        duration: 0.3,
+                                        ease: [0.25, 0.46, 0.45, 0.94]
+                                    }
+                                }
+                            }}
+                            exit={{
+                                opacity: 0,
+                                backdropFilter: 'blur(0px)',
+                                transition: {
+                                    opacity: {
+                                        duration: 0.15,
+                                        ease: [0.4, 0.0, 1, 1]
+                                    },
+                                    backdropFilter: {
+                                        duration: 0.2,
+                                        ease: [0.4, 0.0, 1, 1]
+                                    }
+                                }
+                            }}
+                            className="fixed z-[60]"
+                            style={{
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                width: '100vw',
+                                height: '100vh',
+                                backgroundColor: 'color-mix(in srgb, var(--background) 40%, transparent)',
+                                WebkitBackdropFilter: 'blur(4px)'
+                            }}
+                            onClick={() => setShowYearDropdown(false)}
+                        />
+
+                        {/* 当前选中的年份选项 */}
+                        {yearButtonPosition && (
+                            <motion.div
+                                initial={{ opacity: 1, scale: 1 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{
+                                    opacity: 0,
+                                    scale: 0.98,
+                                    transition: {
+                                        duration: 0.12,
+                                        ease: [0.4, 0.0, 1, 1]
+                                    }
+                                }}
+                                className="fixed z-[80]"
+                                style={{
+                                    top: `${yearButtonPosition.top}px`,
+                                    left: `${yearButtonPosition.left}px`,
+                                    minWidth: `${yearButtonPosition.width}px`
+                                }}
+                                data-year-selector
+                            >
+                                <motion.button
+                                    initial={{ opacity: 1 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 1 }}
+                                    onClick={() => setShowYearDropdown(false)}
+                                    className="text-xs font-medium tracking-wide text-neutral-800 dark:text-neutral-100 break-words whitespace-nowrap transition-colors text-left flex items-center cursor-pointer"
+                                >
+                                    <span className="relative inline-block">
+                                        {bloggerYear}
+                                    </span>
+                                </motion.button>
+                            </motion.div>
+                        )}
+
+                        {/* 其他年份选项 */}
+                        {yearButtonPosition && (
+                            <motion.div
+                                initial={{
+                                    opacity: 0,
+                                    y: -8,
+                                    scale: 0.96
+                                }}
+                                animate={{
+                                    opacity: 1,
+                                    y: 0,
+                                    scale: 1,
+                                    transition: {
+                                        duration: 0.25,
+                                        ease: [0.25, 0.46, 0.45, 0.94]
+                                    }
+                                }}
+                                exit={{
+                                    opacity: 0,
+                                    y: -6,
+                                    scale: 0.98,
+                                    transition: {
+                                        duration: 0.15,
+                                        ease: [0.4, 0.0, 1, 1]
+                                    }
+                                }}
+                                className="fixed z-[80]"
+                                style={{
+                                    top: `${yearButtonPosition.top + 30}px`,
+                                    left: `${yearButtonPosition.left}px`,
+                                    minWidth: `${yearButtonPosition.width}px`
+                                }}
+                                data-year-selector
+                            >
+                                <div className="flex flex-col">
+                                    {(bloggerType === 'peter' ? [2025, 2024] : [2025, 2024, 2023])
+                                        .filter(year => year !== bloggerYear)
+                                        .map((year, index) => (
+                                            <motion.button
+                                                key={year}
+                                                initial={{
+                                                    opacity: 0,
+                                                    y: -6,
+                                                    scale: 0.98
+                                                }}
+                                                animate={{
+                                                    opacity: 1,
+                                                    y: 0,
+                                                    scale: 1,
+                                                    transition: {
+                                                        delay: index * 0.04,
+                                                        duration: 0.2,
+                                                        ease: [0.25, 0.46, 0.45, 0.94]
+                                                    }
+                                                }}
+                                                exit={{
+                                                    opacity: 0,
+                                                    y: -4,
+                                                    scale: 0.98,
+                                                    transition: {
+                                                        delay: (1 - index) * 0.02,
+                                                        duration: 0.12,
+                                                        ease: [0.4, 0.0, 1, 1]
+                                                    }
+                                                }}
+                                                onClick={() => handleYearChange(year as BloggerBeansYear)}
+                                                className="text-xs font-medium tracking-wide break-words whitespace-nowrap transition-colors text-left pb-3 flex items-center text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300"
+                                                style={{ paddingBottom: '12px' }}
+                                            >
+                                                <span className="relative inline-block">
+                                                    {year}
+                                                </span>
+                                            </motion.button>
+                                        ))}
+                                </div>
+                            </motion.div>
+                        )}
+                    </>
+                )}
+            </AnimatePresence>
         </div>
     )
 }

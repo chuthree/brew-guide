@@ -1,4 +1,4 @@
-import { ExtendedCoffeeBean, BeanType, ViewOption, BloggerBeansYear, BeanFilterMode } from './types';
+import { ExtendedCoffeeBean, BeanType, ViewOption, BloggerBeansYear, BeanFilterMode, BloggerType } from './types';
 import { getBooleanState, saveBooleanState, getStringState, saveStringState, getNumberState, saveNumberState } from '@/lib/core/statePersistence';
 import { SortOption } from './SortSelector';
 import { FlavorPeriodStatus } from '@/lib/utils/beanVarietyUtils';
@@ -11,7 +11,8 @@ export const globalCache: {
     beans: ExtendedCoffeeBean[];
     ratedBeans: ExtendedCoffeeBean[];
     filteredBeans: ExtendedCoffeeBean[];
-    bloggerBeans: { 
+    bloggerBeans: {
+        2023: ExtendedCoffeeBean[];
         2024: ExtendedCoffeeBean[];
         2025: ExtendedCoffeeBean[];
     };
@@ -35,13 +36,19 @@ export const globalCache: {
     bloggerSortOption: SortOption;
     rankingBeanType: BeanType;
     rankingEditMode: boolean;
-    bloggerYear: BloggerBeansYear;
+    bloggerYear: BloggerBeansYear; // 保留用于向后兼容
+    bloggerType: BloggerType;
+    // 每个博主的年份记忆
+    bloggerYears: {
+        peter: BloggerBeansYear;
+        fenix: BloggerBeansYear;
+    };
     initialized: boolean;
 } = {
     beans: [],
     ratedBeans: [],
     filteredBeans: [],
-    bloggerBeans: { 2024: [], 2025: [] }, // 初始化两年的博主榜单
+    bloggerBeans: { 2023: [], 2024: [], 2025: [] }, // 初始化三年的博主榜单
     varieties: [],
     selectedVariety: null,
     selectedBeanType: 'all',
@@ -62,7 +69,13 @@ export const globalCache: {
     bloggerSortOption: 'original',
     rankingBeanType: 'all',
     rankingEditMode: false,
-    bloggerYear: 2025,
+    bloggerYear: 2025, // 保留用于向后兼容
+    bloggerType: 'peter',
+    // 每个博主的默认年份
+    bloggerYears: {
+        peter: 2025,
+        fenix: 2024, // 矮人博主默认2024年（数据最多的年份）
+    },
     initialized: false
 };
 
@@ -185,6 +198,57 @@ export const saveBloggerYearPreference = (value: BloggerBeansYear): void => {
     saveNumberState(MODULE_NAME, 'bloggerYear', value);
 };
 
+// 从localStorage读取博主类型
+export const getBloggerTypePreference = (): BloggerType => {
+    const value = getStringState(MODULE_NAME, 'bloggerType', 'peter');
+    return value as BloggerType;
+};
+
+// 保存博主类型到localStorage
+export const saveBloggerTypePreference = (value: BloggerType): void => {
+    saveStringState(MODULE_NAME, 'bloggerType', value);
+};
+
+// 从localStorage读取博主年份记忆
+export const getBloggerYearMemory = (blogger: BloggerType): BloggerBeansYear => {
+    const key = `bloggerYear_${blogger}`;
+    const defaultYear = blogger === 'peter' ? 2025 : 2024;
+    const value = getNumberState(MODULE_NAME, key, defaultYear);
+
+    // 验证年份是否有效
+    const validYears = blogger === 'peter' ? [2024, 2025] : [2023, 2024, 2025];
+    if (validYears.includes(value)) {
+        return value as BloggerBeansYear;
+    }
+
+    // 如果无效，返回默认年份
+    return defaultYear as BloggerBeansYear;
+};
+
+// 保存博主年份记忆到localStorage
+export const saveBloggerYearMemory = (blogger: BloggerType, year: BloggerBeansYear): void => {
+    // 验证年份是否有效
+    const validYears = blogger === 'peter' ? [2024, 2025] : [2023, 2024, 2025];
+    if (!validYears.includes(year)) {
+        console.warn(`Invalid year ${year} for blogger ${blogger}, not saving`);
+        return;
+    }
+
+    const key = `bloggerYear_${blogger}`;
+    saveNumberState(MODULE_NAME, key, year);
+};
+
+// 初始化globalCache中的博主相关设置
+export const initializeBloggerPreferences = (): void => {
+    // 从localStorage加载博主类型
+    const savedBloggerType = getBloggerTypePreference();
+    globalCache.bloggerType = savedBloggerType;
+
+    // 从localStorage加载各博主的年份记忆
+    globalCache.bloggerYears.peter = getBloggerYearMemory('peter');
+    globalCache.bloggerYears.fenix = getBloggerYearMemory('fenix');
+};
+
 // 从localStorage读取分类模式
 export const getFilterModePreference = (): BeanFilterMode => {
     const value = getStringState(MODULE_NAME, 'filterMode', 'variety');
@@ -254,7 +318,7 @@ if (typeof window !== 'undefined') {
         globalCache.beans = [];
         globalCache.ratedBeans = [];
         globalCache.filteredBeans = [];
-        globalCache.bloggerBeans = { 2024: [], 2025: [] };
+        globalCache.bloggerBeans = { 2023: [], 2024: [], 2025: [] };
         globalCache.varieties = [];
         globalCache.selectedVariety = null;
         globalCache.selectedBeanType = 'all';

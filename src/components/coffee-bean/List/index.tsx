@@ -5,7 +5,7 @@ import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager'
 import CoffeeBeanFormModal from '@/components/coffee-bean/Form/Modal'
 import CoffeeBeanRatingModal from '../Rating/Modal'
 import _CoffeeBeanRanking from '../Ranking'
-import { getBloggerBeans } from '@/lib/utils/csvUtils'
+import { getBloggerBeans, BloggerType } from '@/lib/utils/csvUtils'
 import BottomActionBar from '@/components/layout/BottomActionBar'
 import { useCopy } from "@/lib/hooks/useCopy"
 import CopyFailureModal from "../ui/copy-failure-modal"
@@ -33,7 +33,10 @@ import {
     saveBloggerSortOptionPreference,
     saveRankingBeanTypePreference,
     saveRankingEditModePreference,
-    saveBloggerYearPreference,
+    saveBloggerTypePreference,
+    getBloggerYearMemory,
+    saveBloggerYearMemory,
+    initializeBloggerPreferences,
     saveFilterModePreference,
     saveSelectedOriginPreference,
     saveSelectedFlavorPeriodPreference,
@@ -105,7 +108,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     // 榜单视图状态
     const [rankingBeanType, setRankingBeanType] = useState<BeanType>(globalCache.rankingBeanType)
     const [rankingEditMode, setRankingEditMode] = useState<boolean>(globalCache.rankingEditMode)
-    const [bloggerYear, setBloggerYear] = useState<BloggerBeansYear>(globalCache.bloggerYear)
+    const [bloggerType, setBloggerType] = useState<BloggerType>(globalCache.bloggerType)
+    const [bloggerYear, setBloggerYear] = useState<BloggerBeansYear>(globalCache.bloggerYears[globalCache.bloggerType])
 
     // 辅助引用和状态
     const [_isFirstLoad, setIsFirstLoad] = useState<boolean>(!globalCache.initialized)
@@ -237,8 +241,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         if (viewMode !== VIEW_OPTIONS.BLOGGER) return;
 
         try {
-            // 直接调用csvUtils中的函数，传入选定的年份
-            const bloggerBeansData = await getBloggerBeans(rankingBeanType, bloggerYear);
+            // 直接调用csvUtils中的函数，传入选定的年份和博主类型
+            const bloggerBeansData = await getBloggerBeans(rankingBeanType, bloggerYear, bloggerType);
 
             // 更新博主榜单豆子数量
             setBloggerBeansCount(bloggerBeansData.length);
@@ -246,9 +250,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
             // 更新全局缓存中指定年份的数据
             globalCache.bloggerBeans[bloggerYear] = bloggerBeansData;
         } catch (error) {
-            console.error(`加载博主榜单咖啡豆 (${bloggerYear}) 失败:`, error);
+            console.error(`加载博主榜单咖啡豆 (${bloggerType} ${bloggerYear}) 失败:`, error);
         }
-    }, [viewMode, rankingBeanType, bloggerYear]);
+    }, [viewMode, rankingBeanType, bloggerYear, bloggerType]);
 
     // 优化的数据加载逻辑 - 减少依赖项，避免重复触发
     useEffect(() => {
@@ -258,6 +262,13 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
                 clearTimeout(unmountTimeoutRef.current);
                 unmountTimeoutRef.current = null;
             }
+
+            // 初始化博主偏好设置
+            initializeBloggerPreferences();
+
+            // 更新组件状态以反映从localStorage加载的值
+            setBloggerType(globalCache.bloggerType);
+            setBloggerYear(globalCache.bloggerYears[globalCache.bloggerType]);
 
             loadBeans();
             loadRatedBeans();
@@ -688,12 +699,12 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         }
     }, [rankingBeanType, loadRatedBeans, loadBloggerBeans, viewMode]);
 
-    // 当博主榜单年份变更时更新数据
+    // 当博主榜单年份或博主类型变更时更新数据
     useEffect(() => {
         if (globalCache.initialized && viewMode === VIEW_OPTIONS.BLOGGER) {
             loadBloggerBeans();
         }
-    }, [bloggerYear, loadBloggerBeans, viewMode]);
+    }, [bloggerYear, bloggerType, loadBloggerBeans, viewMode]);
 
     // 组件加载后初始化各视图的排序选项
     useEffect(() => {
@@ -1114,9 +1125,28 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
                 bloggerYear={bloggerYear}
                 onBloggerYearChange={(newYear) => {
                     setBloggerYear(newYear);
+                    // 保存到全局缓存和本地存储
+                    globalCache.bloggerYears[bloggerType] = newYear;
+                    saveBloggerYearMemory(bloggerType, newYear);
+                }}
+                bloggerType={bloggerType}
+                onBloggerTypeChange={(newType) => {
+                    setBloggerType(newType);
                     // 保存到本地存储
-                    globalCache.bloggerYear = newYear;
-                    saveBloggerYearPreference(newYear);
+                    globalCache.bloggerType = newType;
+                    saveBloggerTypePreference(newType);
+
+                    // 加载该博主的记忆年份
+                    const rememberedYear = getBloggerYearMemory(newType);
+                    setBloggerYear(rememberedYear);
+                    globalCache.bloggerYears[newType] = rememberedYear;
+
+                    // 如果切换到矮人博主且当前选择的是手冲豆，自动切换到意式豆
+                    if (newType === 'fenix' && rankingBeanType === 'filter') {
+                        setRankingBeanType('espresso');
+                        globalCache.rankingBeanType = 'espresso';
+                        saveRankingBeanTypePreference('espresso');
+                    }
                 }}
                 rankingEditMode={rankingEditMode}
                 onRankingEditModeChange={(newMode) => {
@@ -1197,6 +1227,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
                         editMode={rankingEditMode}
                         viewMode={viewMode === VIEW_OPTIONS.BLOGGER ? 'blogger' : 'personal'}
                         year={viewMode === VIEW_OPTIONS.BLOGGER ? bloggerYear : undefined}
+                        blogger={viewMode === VIEW_OPTIONS.BLOGGER ? bloggerType : undefined}
+                        isSearching={isSearching}
+                        searchQuery={searchQuery}
                     />
                 </div>
             )}

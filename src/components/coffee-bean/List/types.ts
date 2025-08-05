@@ -149,5 +149,12 @@ export const generateBeanTitle = (bean: ExtendedCoffeeBean, showOnlyName: boolea
         : bean.name;
 };
 
-export type BloggerBeansYear = 2024 | 2025;
-export type BeanType = 'all' | 'espresso' | 'filter'; 
+export type BloggerBeansYear = 2023 | 2024 | 2025;
+export type BeanType = 'all' | 'espresso' | 'filter';
+export type BloggerType = 'peter' | 'fenix';
+
+// 博主显示名称
+export const BLOGGER_LABELS: Record<BloggerType, string> = {
+    peter: 'Peter',
+    fenix: '矮人',
+};

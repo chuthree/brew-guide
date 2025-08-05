@@ -1,20 +1,25 @@
 import { CoffeeBean } from '@/types/app';
 
+// 博主类型定义
+export type BloggerType = 'peter' | 'fenix';
+
 // 动态导入CSV数据以避免构建时问题
 let filterBeans2025CSV: Record<string, string>[] = [];
 let espressoBeans2025CSV: Record<string, string>[] = [];
 let filterBeans2024CSV: Record<string, string>[] = [];
 let espressoBeans2024CSV: Record<string, string>[] = [];
+let fenixEspressoBeansCSV: Record<string, string>[] = [];
 
 // 异步加载CSV数据
 const loadCSVData = async () => {
     try {
         // 使用fetch来加载CSV数据
-        const [filter2025, espresso2025, filter2024, espresso2024] = await Promise.all([
+        const [filter2025, espresso2025, filter2024, espresso2024, fenixEspresso] = await Promise.all([
             fetch('/data/filter-beans.csv').then(r => r.text()),
             fetch('/data/espresso-beans.csv').then(r => r.text()),
             fetch('/data/filter-beans-2024.csv').then(r => r.text()),
-            fetch('/data/espresso-beans-2024.csv').then(r => r.text())
+            fetch('/data/espresso-beans-2024.csv').then(r => r.text()),
+            fetch('/data/fenix-espresso-beans.csv').then(r => r.text())
         ]);
 
         // 简单的CSV解析函数
@@ -45,6 +50,7 @@ const loadCSVData = async () => {
         espressoBeans2025CSV = parseCSV(espresso2025) as unknown as Record<string, string>[];
         filterBeans2024CSV = parseCSV(filter2024) as unknown as Record<string, string>[];
         espressoBeans2024CSV = parseCSV(espresso2024) as unknown as Record<string, string>[];
+        fenixEspressoBeansCSV = parseCSV(fenixEspresso) as unknown as Record<string, string>[];
     } catch (error) {
         console.error('加载CSV数据失败:', error);
     }
@@ -58,6 +64,16 @@ export interface BloggerBean extends CoffeeBean {
     originalIndex?: number; // Add original index for sorting
     // 临时保留 process 字段用于 CSV 数据兼容
     process?: string;
+    // 新增博主类型字段
+    blogger?: BloggerType;
+    // Fenix博主特有字段
+    origin?: string; // 产区
+    flavorDescription?: string; // 风味描述
+    advantages?: string; // 优点
+    disadvantages?: string; // 缺点
+    extractionSuggestion?: string; // 萃取建议
+    firstTestDate?: string; // 首测日期
+    originalRating?: string; // 原始评分格式（保留+/-）
 }
 
 // Parsing function for 2025 CSV data
@@ -270,27 +286,148 @@ function parseCSVContent2024(records: unknown[], beanType: 'espresso' | 'filter'
         });
 }
 
+// Helper function to parse date and extract year
+function parseYearFromDate(dateStr: string): number | null {
+    if (!dateStr || dateStr.trim() === '') return null;
 
-export async function getBloggerBeans(type: 'all' | 'espresso' | 'filter' = 'all', year: 2024 | 2025 = 2025): Promise<BloggerBean[]> {
+    // Handle different date formats: 2023/5/6, 2024/10/30, etc.
+    const match = dateStr.match(/(\d{4})/);
+    if (match) {
+        return parseInt(match[1], 10);
+    }
+    return null;
+}
+
+// Helper function to get the latest year from multiple dates
+function getLatestYear(首测日期: string, 复测日期1: string, 复测日期2: string): number {
+    const dates = [首测日期, 复测日期1, 复测日期2].filter(date => date && date.trim() !== '');
+    const years = dates.map(parseYearFromDate).filter(year => year !== null) as number[];
+
+    if (years.length === 0) {
+        return 2025; // Default year if no valid dates found
+    }
+
+    return Math.max(...years);
+}
+
+// Parsing function for Fenix blogger CSV data
+function parseFenixCSVContent(records: unknown[], filterYear?: number): BloggerBean[] {
+    // Skip header row
+    const dataRows = records.slice(1);
+
+    return dataRows
+        .filter(row => {
+            if (!Array.isArray(row) || row.length < 10) return false;
+            const [_编号, 品牌, _产区, 豆子名称, _风味描述, _参考价格, 每百克价格, _优点, _缺点, 最新评分] = row;
+            return 品牌 && 豆子名称 && 每百克价格 !== undefined && 最新评分 !== undefined;
+        })
+        .map((row, index) => {
+            const [编号, 品牌, 产区, 豆子名称, 风味描述, _参考价格, 每百克价格, 优点, 缺点, 最新评分, 萃取建议, 首测日期, 复测日期1, 复测日期2] = row as string[];
+
+            // 确定年份 - 以最新的日期为准
+            const beanYear = getLatestYear(String(首测日期 || ''), String(复测日期1 || ''), String(复测日期2 || ''));
+
+            // 解析评分 - 保留原始格式并正确处理正负数
+            let rating = 0;
+            const ratingStr = String(最新评分 || '').trim();
+            const originalRating = ratingStr; // 保留原始评分格式
+            if (ratingStr) {
+                // 检查是否以"-"结尾（负数）
+                const isNegative = ratingStr.endsWith('-');
+
+                // 提取数字部分
+                const cleanRating = ratingStr.replace(/[-+]$/, '');
+                const parsed = parseFloat(cleanRating);
+                if (!isNaN(parsed)) {
+                    // 根据符号决定正负
+                    rating = isNegative ? -parsed : parsed;
+                }
+            }
+
+            // 解析价格
+            let price = 0;
+            const priceStr = String(每百克价格 || '').trim();
+            if (priceStr) {
+                const parsed = parseFloat(priceStr);
+                if (!isNaN(parsed)) {
+                    price = parsed;
+                }
+            }
+
+            // 生成唯一ID
+            const uniqueId = `fenix-${编号 || index + 1}-${Date.now()}`;
+
+            // 构建咖啡豆名称
+            const name = `${品牌} ${豆子名称}`.trim();
+
+            return {
+                id: uniqueId,
+                name,
+                beanType: 'espresso' as const,
+                blogger: 'fenix' as const,
+                year: beanYear, // 根据日期确定的年份
+                originalIndex: index,
+                roastLevel: '未知', // Fenix数据中没有烘焙度信息
+                price: `${price.toFixed(2)}`, // 已经是每100g价格，无需转换
+                capacity: '250', // 默认容量
+                remaining: '250',
+                overallRating: rating,
+                ratingNotes: '',
+                purchaseChannel: '',
+                videoEpisode: '',
+                timestamp: Date.now(),
+                isBloggerRecommended: true,
+                dataSource: '数据来自于 矮人(Fenix) 咖啡豆评测榜单',
+                // Fenix特有字段
+                origin: String(产区 || ''),
+                flavorDescription: String(风味描述 || ''),
+                advantages: String(优点 || ''),
+                disadvantages: String(缺点 || ''),
+                extractionSuggestion: String(萃取建议 || ''),
+                firstTestDate: String(首测日期 || ''),
+                originalRating: originalRating,
+            } as BloggerBean;
+        })
+        .filter(bean => {
+            // 如果指定了年份筛选，则只返回对应年份的数据
+            if (filterYear !== undefined) {
+                return bean.year === filterYear;
+            }
+            return true;
+        });
+}
+
+
+export async function getBloggerBeans(type: 'all' | 'espresso' | 'filter' = 'all', year: 2023 | 2024 | 2025 = 2025, blogger: BloggerType = 'peter'): Promise<BloggerBean[]> {
     // 确保CSV数据已加载
     if (filterBeans2025CSV.length === 0) {
         await loadCSVData();
     }
 
     let beans: BloggerBean[] = [];
-    const parseFn = year === 2024 ? parseCSVContent2024 : parseCSVContent2025;
-    const filterCSV = year === 2024 ? filterBeans2024CSV : filterBeans2025CSV;
-    const espressoCSV = year === 2024 ? espressoBeans2024CSV : espressoBeans2025CSV;
 
     try {
-        if (type === 'all' || type === 'filter') {
-            const filterBeans = parseFn(filterCSV, 'filter');
-            beans = [...beans, ...filterBeans];
-        }
+        if (blogger === 'fenix') {
+            // Fenix博主只有意式豆数据
+            if (type === 'all' || type === 'espresso') {
+                const fenixBeans = parseFenixCSVContent(fenixEspressoBeansCSV, year);
+                beans = [...beans, ...fenixBeans];
+            }
+        } else {
+            // Peter博主的数据
+            const parseFn = year === 2024 ? parseCSVContent2024 : parseCSVContent2025;
+            const filterCSV = year === 2024 ? filterBeans2024CSV : filterBeans2025CSV;
+            const espressoCSV = year === 2024 ? espressoBeans2024CSV : espressoBeans2025CSV;
 
-        if (type === 'all' || type === 'espresso') {
-            const espressoBeans = parseFn(espressoCSV, 'espresso');
-            beans = [...beans, ...espressoBeans];
+            if (type === 'all' || type === 'filter') {
+                const filterBeans = parseFn(filterCSV, 'filter');
+                beans = [...beans, ...filterBeans];
+            }
+
+            if (type === 'all' || type === 'espresso') {
+                const espressoBeans = parseFn(espressoCSV, 'espresso');
+                beans = [...beans, ...espressoBeans];
+            }
         }
 
         // Sort based on the original index from the CSV file
@@ -302,13 +439,13 @@ export async function getBloggerBeans(type: 'all' | 'espresso' | 'filter' = 'all
         });
 
     } catch (error) {
-        console.error(`解析 ${year} 博主榜单咖啡豆数据失败:`, error);
+        console.error(`解析 ${blogger} ${year} 博主榜单咖啡豆数据失败:`, error);
         return [];
     }
 }
 
 // 为了向后兼容，提供一个同步版本（返回空数组，但会触发异步加载）
-export function getBloggerBeansSync(type: 'all' | 'espresso' | 'filter' = 'all', year: 2024 | 2025 = 2025): BloggerBean[] {
+export function getBloggerBeansSync(type: 'all' | 'espresso' | 'filter' = 'all', year: 2023 | 2024 | 2025 = 2025, blogger: BloggerType = 'peter'): BloggerBean[] {
     // 如果数据还没加载，触发加载但返回空数组
     if (filterBeans2025CSV.length === 0) {
         loadCSVData();
@@ -316,19 +453,29 @@ export function getBloggerBeansSync(type: 'all' | 'espresso' | 'filter' = 'all',
     }
 
     let beans: BloggerBean[] = [];
-    const parseFn = year === 2024 ? parseCSVContent2024 : parseCSVContent2025;
-    const filterCSV = year === 2024 ? filterBeans2024CSV : filterBeans2025CSV;
-    const espressoCSV = year === 2024 ? espressoBeans2024CSV : espressoBeans2025CSV;
 
     try {
-        if (type === 'all' || type === 'filter') {
-            const filterBeans = parseFn(filterCSV, 'filter');
-            beans = [...beans, ...filterBeans];
-        }
+        if (blogger === 'fenix') {
+            // Fenix博主只有意式豆数据
+            if (type === 'all' || type === 'espresso') {
+                const fenixBeans = parseFenixCSVContent(fenixEspressoBeansCSV, year);
+                beans = [...beans, ...fenixBeans];
+            }
+        } else {
+            // Peter博主的数据
+            const parseFn = year === 2024 ? parseCSVContent2024 : parseCSVContent2025;
+            const filterCSV = year === 2024 ? filterBeans2024CSV : filterBeans2025CSV;
+            const espressoCSV = year === 2024 ? espressoBeans2024CSV : espressoBeans2025CSV;
 
-        if (type === 'all' || type === 'espresso') {
-            const espressoBeans = parseFn(espressoCSV, 'espresso');
-            beans = [...beans, ...espressoBeans];
+            if (type === 'all' || type === 'filter') {
+                const filterBeans = parseFn(filterCSV, 'filter');
+                beans = [...beans, ...filterBeans];
+            }
+
+            if (type === 'all' || type === 'espresso') {
+                const espressoBeans = parseFn(espressoCSV, 'espresso');
+                beans = [...beans, ...espressoBeans];
+            }
         }
 
         // Sort based on the original index from the CSV file
@@ -340,7 +487,7 @@ export function getBloggerBeansSync(type: 'all' | 'espresso' | 'filter' = 'all',
         });
 
     } catch (error) {
-        console.error(`解析 ${year} 博主榜单咖啡豆数据失败:`, error);
+        console.error(`解析 ${blogger} ${year} 博主榜单咖啡豆数据失败:`, error);
         return [];
     }
 }
