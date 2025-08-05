@@ -74,7 +74,7 @@ export const globalCache: {
     // 每个博主的默认年份
     bloggerYears: {
         peter: 2025,
-        fenix: 2024, // 矮人博主默认2024年（数据最多的年份）
+        fenix: 2025, // 矮人博主默认2025年
     },
     initialized: false
 };
@@ -212,7 +212,7 @@ export const saveBloggerTypePreference = (value: BloggerType): void => {
 // 从localStorage读取博主年份记忆
 export const getBloggerYearMemory = (blogger: BloggerType): BloggerBeansYear => {
     const key = `bloggerYear_${blogger}`;
-    const defaultYear = blogger === 'peter' ? 2025 : 2024;
+    const defaultYear = blogger === 'peter' ? 2025 : 2025; // fenix也默认为2025
     const value = getNumberState(MODULE_NAME, key, defaultYear);
 
     // 验证年份是否有效

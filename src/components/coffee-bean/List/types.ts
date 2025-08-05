@@ -40,6 +40,10 @@ export interface CoffeeBeansProps {
     // 添加外部视图控制相关props
     externalViewMode?: ViewOption
     onExternalViewChange?: (view: ViewOption) => void
+    // 添加初始化参数支持
+    initialViewMode?: ViewOption
+    initialBloggerType?: BloggerType
+    onBloggerTypeChange?: (type: BloggerType) => void
     // 添加设置参数
     settings?: {
         showFlavorPeriod?: boolean

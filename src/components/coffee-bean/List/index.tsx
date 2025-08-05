@@ -67,6 +67,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     onShowImport,
     externalViewMode,
     onExternalViewChange,
+    initialViewMode,
+    initialBloggerType,
+    onBloggerTypeChange,
     settings
 }) => {
     const { copyText, showFailureModal, failureContent, closeFailureModal } = useCopy()
@@ -81,8 +84,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     const [inventorySortOption, setInventorySortOption] = useState<SortOption>(globalCache.inventorySortOption)
     const [rankingSortOption, setRankingSortOption] = useState<SortOption>(globalCache.rankingSortOption)
     const [bloggerSortOption, setBloggerSortOption] = useState<SortOption>(globalCache.bloggerSortOption)
-    // 使用外部传递的视图状态，如果没有则使用内部状态作为后备
-    const viewMode = externalViewMode || globalCache.viewMode;
+    // 使用外部传递的视图状态，如果没有则使用初始化参数或内部状态作为后备
+    const viewMode = externalViewMode || initialViewMode || globalCache.viewMode;
     const setViewMode = onExternalViewChange || ((view: ViewOption) => {
         globalCache.viewMode = view;
         saveViewModePreference(view);
@@ -108,13 +111,53 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     // 榜单视图状态
     const [rankingBeanType, setRankingBeanType] = useState<BeanType>(globalCache.rankingBeanType)
     const [rankingEditMode, setRankingEditMode] = useState<boolean>(globalCache.rankingEditMode)
-    const [bloggerType, setBloggerType] = useState<BloggerType>(globalCache.bloggerType)
-    const [bloggerYear, setBloggerYear] = useState<BloggerBeansYear>(globalCache.bloggerYears[globalCache.bloggerType])
+    const [bloggerType, setBloggerType] = useState<BloggerType>(initialBloggerType || globalCache.bloggerType)
+    const [bloggerYear, setBloggerYear] = useState<BloggerBeansYear>(globalCache.bloggerYears[initialBloggerType || globalCache.bloggerType])
 
     // 辅助引用和状态
     const [_isFirstLoad, setIsFirstLoad] = useState<boolean>(!globalCache.initialized)
     const unmountTimeoutRef = useRef<NodeJS.Timeout | null>(null)
     const isLoadingRef = useRef<boolean>(false)
+
+    // 处理初始化参数 - 只在组件首次挂载时执行
+    useEffect(() => {
+        let hasChanges = false;
+
+        if (initialViewMode && initialViewMode !== viewMode) {
+            // 如果传入了初始视图模式且与当前不同，更新视图模式
+            setViewMode(initialViewMode);
+            hasChanges = true;
+        }
+
+        if (initialBloggerType && initialBloggerType !== bloggerType) {
+            // 如果传入了初始博主类型且与当前不同，更新博主类型
+            setBloggerType(initialBloggerType);
+            // 同时更新年份
+            const rememberedYear = getBloggerYearMemory(initialBloggerType);
+            setBloggerYear(rememberedYear);
+            hasChanges = true;
+
+            // 如果是矮人博主且当前选择的是手冲豆，自动切换到意式豆
+            if (initialBloggerType === 'fenix' && rankingBeanType === 'filter') {
+                setRankingBeanType('espresso');
+            }
+        }
+
+        // 如果是博主榜单视图且是矮人博主，确保不选择手冲豆
+        if (initialViewMode === VIEW_OPTIONS.BLOGGER && initialBloggerType === 'fenix' && rankingBeanType === 'filter') {
+            setRankingBeanType('espresso');
+            hasChanges = true;
+        }
+
+        // 只有在有变化时才触发数据加载
+        if (hasChanges && initialViewMode === VIEW_OPTIONS.BLOGGER && globalCache.initialized) {
+            // 使用setTimeout避免在同一个渲染周期内多次setState
+            setTimeout(() => {
+                loadBloggerBeans();
+            }, 0);
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // 空依赖数组，只在组件挂载时执行一次
 
     // 使用自定义钩子处理咖啡豆操作
     const {
@@ -254,6 +297,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         }
     }, [viewMode, rankingBeanType, bloggerYear, bloggerType]);
 
+
+
     // 优化的数据加载逻辑 - 减少依赖项，避免重复触发
     useEffect(() => {
         if (isOpen) {
@@ -266,9 +311,11 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
             // 初始化博主偏好设置
             initializeBloggerPreferences();
 
-            // 更新组件状态以反映从localStorage加载的值
-            setBloggerType(globalCache.bloggerType);
-            setBloggerYear(globalCache.bloggerYears[globalCache.bloggerType]);
+            // 更新组件状态以反映从localStorage加载的值，但不覆盖初始化参数
+            if (!initialBloggerType) {
+                setBloggerType(globalCache.bloggerType);
+                setBloggerYear(globalCache.bloggerYears[globalCache.bloggerType]);
+            }
 
             loadBeans();
             loadRatedBeans();
@@ -279,7 +326,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
                 // 不执行任何操作，状态保持不变
             }, 5000);
         }
-    }, [isOpen, forceRefreshKey, loadBeans, loadRatedBeans, loadBloggerBeans]);
+    }, [isOpen, forceRefreshKey, loadBeans, loadRatedBeans, loadBloggerBeans, initialBloggerType]);
 
     // 监听统一的咖啡豆数据更新事件
     useEffect(() => {
@@ -1077,7 +1124,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     };
 
     return (
-        <>
+        <div className="h-full flex flex-col overflow-hidden">
             {/* 咖啡豆表单弹出框 */}
             <CoffeeBeanFormModal
                 showForm={showAddForm || editingBean !== null}
@@ -1108,6 +1155,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
                 }}
             />
 
+            {/* ViewSwitcher - 固定在顶部 */}
             <ViewSwitcher
                 viewMode={viewMode}
                 sortOption={sortOption}
@@ -1147,6 +1195,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
                         globalCache.rankingBeanType = 'espresso';
                         saveRankingBeanTypePreference('espresso');
                     }
+
+                    // 调用外部传入的博主类型变更回调
+                    onBloggerTypeChange?.(newType);
                 }}
                 rankingEditMode={rankingEditMode}
                 onRankingEditModeChange={(newMode) => {
@@ -1186,8 +1237,10 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
                 originalTotalWeight={calculateOriginalTotalWeight()}
             />
 
-            {/* 根据视图模式显示不同内容 */}
-            {viewMode === VIEW_OPTIONS.INVENTORY && (
+            {/* 内容区域 - 可滚动 */}
+            <div className="flex-1 overflow-hidden">
+                {/* 根据视图模式显示不同内容 */}
+                {viewMode === VIEW_OPTIONS.INVENTORY && (
                 <InventoryView
                     filteredBeans={isSearching ? searchFilteredBeans : filteredBeans}
                     selectedVariety={selectedVariety}
@@ -1233,6 +1286,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
                     />
                 </div>
             )}
+            </div>
 
             {/* 添加和导入按钮 - 仅在仓库视图显示 */}
             {viewMode === VIEW_OPTIONS.INVENTORY && (
@@ -1266,7 +1320,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
                 onClose={closeFailureModal}
                 content={failureContent || ""}
             />
-        </>
+        </div>
     );
 };
 
