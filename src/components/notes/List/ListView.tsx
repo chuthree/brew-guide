@@ -117,6 +117,19 @@ const NotesListView: React.FC<NotesListViewProps> = ({
         }
     }, [preFilteredNotes]);
 
+    // 监听视图模式变化，重置分页状态
+    useEffect(() => {
+        if (viewMode === 'list') {
+            // 当切换回列表模式时，重置分页状态
+            const currentNotes = preFilteredNotes || notes;
+            startTransition(() => {
+                setCurrentPage(1);
+                setDisplayedNotes(currentNotes.slice(0, PAGE_SIZE));
+                setHasMore(currentNotes.length > PAGE_SIZE);
+            });
+        }
+    }, [viewMode, preFilteredNotes, notes]);
+
     const loadMoreNotes = useCallback(() => {
         if (!hasMore || isLoading) return;
 
