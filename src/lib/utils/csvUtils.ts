@@ -327,20 +327,19 @@ function parseFenixCSVContent(records: unknown[], filterYear?: number): BloggerB
             // 确定年份 - 以最新的日期为准
             const beanYear = getLatestYear(String(首测日期 || ''), String(复测日期1 || ''), String(复测日期2 || ''));
 
-            // 解析评分 - 保留原始格式并正确处理正负数
+            // 解析评分 - 保留原始格式，不转换为正负数
             let rating = 0;
             const ratingStr = String(最新评分 || '').trim();
             const originalRating = ratingStr; // 保留原始评分格式
             if (ratingStr) {
-                // 检查是否以"-"结尾（负数）
-                const isNegative = ratingStr.endsWith('-');
-
-                // 提取数字部分
+                // 提取数字部分，但保持原始的+/-后缀含义
+                // 5+ > 5 > 5- > 4+ > 4 > 4- 等等
                 const cleanRating = ratingStr.replace(/[-+]$/, '');
                 const parsed = parseFloat(cleanRating);
                 if (!isNaN(parsed)) {
-                    // 根据符号决定正负
-                    rating = isNegative ? -parsed : parsed;
+                    // 不再转换为正负数，而是保持原始数值
+                    // 排序逻辑应该在其他地方处理 +/- 的优先级
+                    rating = parsed;
                 }
             }
 

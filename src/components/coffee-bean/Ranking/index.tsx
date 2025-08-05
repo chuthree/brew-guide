@@ -173,6 +173,32 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
         }
     }, [externalBlogger]);
 
+    // Fenix博主评分比较函数
+    const compareFenixRating = useCallback((ratingA: string, ratingB: string): number => {
+        // 解析评分：5+ -> {base: 5, modifier: 1}, 5 -> {base: 5, modifier: 0}, 5- -> {base: 5, modifier: -1}
+        const parseRating = (rating: string) => {
+            const trimmed = rating.trim();
+            if (trimmed.endsWith('+')) {
+                return { base: parseFloat(trimmed.slice(0, -1)), modifier: 1 };
+            } else if (trimmed.endsWith('-')) {
+                return { base: parseFloat(trimmed.slice(0, -1)), modifier: -1 };
+            } else {
+                return { base: parseFloat(trimmed), modifier: 0 };
+            }
+        };
+
+        const a = parseRating(ratingA);
+        const b = parseRating(ratingB);
+
+        // 首先比较基础分数
+        if (a.base !== b.base) {
+            return b.base - a.base; // 降序：高分在前
+        }
+
+        // 基础分数相同时，比较修饰符：+ > 无修饰 > -
+        return b.modifier - a.modifier;
+    }, []);
+
     // 排序咖啡豆的函数
     const sortBeans = useCallback((beansToSort: CoffeeBean[], option: RankingSortOption): CoffeeBean[] => {
         const sorted = [...beansToSort];
@@ -209,10 +235,28 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                 });
 
             case SORT_OPTIONS.RATING_DESC:
-                return sorted.sort((a, b) => (b.overallRating || 0) - (a.overallRating || 0));
+                return sorted.sort((a, b) => {
+                    // Fenix博主使用特殊的评分比较逻辑
+                    if (viewMode === 'blogger' && blogger === 'fenix') {
+                        const aRating = (a as BloggerBean).originalRating || '0';
+                        const bRating = (b as BloggerBean).originalRating || '0';
+                        return compareFenixRating(aRating, bRating);
+                    }
+                    // 其他情况使用普通数值比较
+                    return (b.overallRating || 0) - (a.overallRating || 0);
+                });
 
             case SORT_OPTIONS.RATING_ASC:
-                return sorted.sort((a, b) => (a.overallRating || 0) - (b.overallRating || 0));
+                return sorted.sort((a, b) => {
+                    // Fenix博主使用特殊的评分比较逻辑（反向）
+                    if (viewMode === 'blogger' && blogger === 'fenix') {
+                        const aRating = (a as BloggerBean).originalRating || '0';
+                        const bRating = (b as BloggerBean).originalRating || '0';
+                        return compareFenixRating(bRating, aRating); // 注意这里参数顺序相反
+                    }
+                    // 其他情况使用普通数值比较
+                    return (a.overallRating || 0) - (b.overallRating || 0);
+                });
 
             case SORT_OPTIONS.NAME_ASC:
                 return sorted.sort((a, b) => a.name.localeCompare(b.name));
@@ -239,7 +283,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
             default:
                 return sorted;
         }
-    }, [viewMode]);
+    }, [viewMode, blogger, compareFenixRating]);
 
     // 加载咖啡豆数据的函数
     const loadBeans = useCallback(async () => {
@@ -498,17 +542,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                                         <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100 truncate">{bean.name}</div>
                                         <div className="ml-2 text-xs font-medium text-neutral-800 dark:text-neutral-100 shrink-0">
                                             {viewMode === 'blogger' && blogger === 'fenix' && (bean as BloggerBean).originalRating
-                                                ? (() => {
-                                                    const rating = (bean as BloggerBean).originalRating!;
-                                                    // 转换评分格式：4- -> -4, 4+ -> +4, 3.5 -> +3.5
-                                                    if (rating.endsWith('-')) {
-                                                        return `-${rating.slice(0, -1)}`;
-                                                    } else if (rating.endsWith('+')) {
-                                                        return `+${rating.slice(0, -1)}`;
-                                                    } else {
-                                                        return `+${rating}`;
-                                                    }
-                                                })()
+                                                ? (bean as BloggerBean).originalRating // 直接显示原始评分格式，如 5+, 5, 5-
                                                 : `+${bean.overallRating !== undefined ? bean.overallRating : 0}`
                                             }
                                         </div>
