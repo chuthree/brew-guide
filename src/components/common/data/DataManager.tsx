@@ -3,6 +3,7 @@
 import React, { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { DataManager as DataManagerUtil } from '@/lib/core/dataManager'
+import { compressBase64Image } from '@/lib/utils/imageCapture'
 import { APP_VERSION } from '@/lib/core/config'
 import { Capacitor } from '@capacitor/core'
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem'
@@ -22,9 +23,97 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
 
 
     const [showConfirmReset, setShowConfirmReset] = useState(false)
+    const [isCompressing, setIsCompressing] = useState(false)
+    const [compressionProgress, setCompressionProgress] = useState({ current: 0, total: 0 })
     const fileInputRef = useRef<HTMLInputElement>(null)
 
     const isNative = Capacitor.isNativePlatform()
+
+    // 检测图片大小（字节）
+    const getBase64ImageSize = (base64: string): number => {
+        if (!base64 || !base64.includes(',')) return 0
+        const base64Data = base64.split(',')[1]
+        return Math.floor(base64Data.length * 0.75) // base64 to bytes conversion
+    }
+
+    // 压缩咖啡豆图片
+    const handleCompressImages = async () => {
+        try {
+            setIsCompressing(true)
+            setStatus({ type: 'info', message: '正在检测需要压缩的图片...' })
+
+            // 动态导入Storage
+            const { Storage } = await import('@/lib/core/storage')
+
+            // 获取所有咖啡豆数据
+            const coffeeBeansData = await Storage.get('coffeeBeans')
+            if (!coffeeBeansData) {
+                setStatus({ type: 'info', message: '没有找到咖啡豆数据' })
+                return
+            }
+
+            const coffeeBeans = JSON.parse(coffeeBeansData)
+            if (!Array.isArray(coffeeBeans)) {
+                setStatus({ type: 'error', message: '咖啡豆数据格式错误' })
+                return
+            }
+
+            // 找出需要压缩的图片（大于200KB）
+            const beansNeedCompression = coffeeBeans.filter((bean: { id: string; name: string; image?: string }) => {
+                if (!bean.image) return false
+                const imageSize = getBase64ImageSize(bean.image)
+                return imageSize > 200 * 1024 // 200KB
+            })
+
+            if (beansNeedCompression.length === 0) {
+                setStatus({ type: 'success', message: '所有图片都已经是压缩状态，无需处理' })
+                return
+            }
+
+            setCompressionProgress({ current: 0, total: beansNeedCompression.length })
+            setStatus({ type: 'info', message: `发现 ${beansNeedCompression.length} 张图片需要压缩，正在处理...` })
+
+            // 逐个压缩图片
+            for (let i = 0; i < beansNeedCompression.length; i++) {
+                const bean = beansNeedCompression[i]
+                setCompressionProgress({ current: i + 1, total: beansNeedCompression.length })
+                setStatus({ type: 'info', message: `正在压缩第 ${i + 1}/${beansNeedCompression.length} 张图片: ${bean.name}` })
+
+                try {
+                    // 压缩图片
+                    const compressedImage = await compressBase64Image(bean.image!)
+
+                    // 更新咖啡豆数组中的图片
+                    const beanIndex = coffeeBeans.findIndex((b: { id: string }) => b.id === bean.id)
+                    if (beanIndex !== -1) {
+                        coffeeBeans[beanIndex].image = compressedImage
+                    }
+
+                    // 短暂延迟，避免UI阻塞
+                    await new Promise(resolve => setTimeout(resolve, 100))
+                } catch (error) {
+                    console.error(`压缩图片失败: ${bean.name}`, error)
+                    // 继续处理下一张图片
+                }
+            }
+
+            // 保存更新后的咖啡豆数据
+            await Storage.set('coffeeBeans', JSON.stringify(coffeeBeans))
+
+            setStatus({ type: 'success', message: `图片压缩完成！已处理 ${beansNeedCompression.length} 张图片` })
+
+            // 通知父组件数据已更改
+            if (onDataChange) {
+                onDataChange()
+            }
+        } catch (error) {
+            console.error('图片压缩失败:', error)
+            setStatus({ type: 'error', message: `图片压缩失败: ${(error as Error).message}` })
+        } finally {
+            setIsCompressing(false)
+            setCompressionProgress({ current: 0, total: 0 })
+        }
+    }
 
     const handleExport = async () => {
         try {
@@ -193,7 +282,7 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.9 }}
                     transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-                    className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-neutral-800"
+                    className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-neutral-800 mx-6"
                     onClick={(e) => e.stopPropagation()}
                 >
                     <div className="mb-4 flex items-center justify-between">
@@ -331,6 +420,49 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
                             <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
                                 完全删除数据并恢复到初始状态，包括设置和缓存
                             </p>
+                        </div>
+
+                        {/* 分割线 */}
+                        <div className="my-6 border-t border-neutral-200 dark:border-neutral-700"></div>
+
+                        {/* 图片压缩功能 */}
+                        <div className="space-y-4">
+                            <div>
+                                <button
+                                    onClick={handleCompressImages}
+                                    disabled={isCompressing}
+                                    className="w-full rounded text-sm py-2 font-medium bg-neutral-100 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isCompressing ? (
+                                        <span className="flex items-center justify-center">
+                                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                            压缩中...
+                                        </span>
+                                    ) : (
+                                        <span className="text-neutral-800 dark:text-neutral-200">补压图片</span>
+                                    )}
+                                </button>
+                                <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                                    压缩大于 200KB 的图片，降低存储占用。适用于之前未自动压缩的图片。（仅咖啡豆图片）
+                                </p>
+                                {isCompressing && compressionProgress.total > 0 && (
+                                    <div className="mt-2">
+                                        <div className="flex justify-between text-xs text-neutral-500 dark:text-neutral-400 mb-1">
+                                            <span>进度</span>
+                                            <span>{compressionProgress.current}/{compressionProgress.total}</span>
+                                        </div>
+                                        <div className="w-full bg-neutral-200 dark:bg-neutral-700 rounded-full h-1.5">
+                                            <div
+                                                className="bg-orange-600 h-1.5 rounded-full transition-all duration-300"
+                                                style={{ width: `${(compressionProgress.current / compressionProgress.total) * 100}%` }}
+                                            ></div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </motion.div>
