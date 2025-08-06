@@ -1385,8 +1385,9 @@ export const sponsorsList = [
 	"古神",
 	"Arbalest",
 	"林書晨",
-	"fanghan",
+	"Fanghan",
 	"Collins",
 	"Litlw",
 	"面包狗",
+	"Jiao",
 ];
