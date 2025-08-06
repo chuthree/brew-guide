@@ -202,7 +202,35 @@ export default function DownloadPage(): React.ReactNode {
                                 <h2 className="text-lg font-medium mb-6">更新记录</h2>
                                 
                                 <div>
-                                    <p className="font-medium">v1.3.8（最新版本）</p>
+                                    <p className="font-medium">v1.3.9（最新版本）</p>
+                                    <p className="text-xs text-neutral-500 mt-1">2025-08-06</p>
+                                    <ul className="mt-2 text-xs text-neutral-500 list-disc pl-4 space-y-1">
+                                        <li>(添加): 笔记支持图片查看（可选带日期），记录更直观</li>
+                                        <li>(添加): 烘焙后天数显示，方便查看豆子新鲜度</li>
+                                        <li>(添加): 删除笔记时增加确认提示，避免误删</li>
+                                        <li>(添加): 博主榜单支持搜索功能，并新增矮人评测豆单</li>
+                                        <li>(添加): 将榜单页面扩展映射到更多路径，便于访问</li>
+                                        <li>(添加): 图片补压功能，解决之前未自动压缩的问题</li>
+                                        <li>(添加): 编辑记录时支持修改咖啡豆</li>
+                                        <li>(优化): 下载页面重构，提升内容切换与图片展示体验</li>
+                                        <li>(优化): 长文本输入体验更流畅</li>
+                                        <li>(优化): 咖啡豆详情界面微调，更清晰</li>
+                                        <li>(优化): 添加笔记界面改为全屏，更方便操作</li>
+                                        <li>(优化): 无咖啡豆时不再显示榜单和统计，避免空内容</li>
+                                        <li>(优化): 拼配成分一行一个，信息更清晰</li>
+                                        <li>(优化): 多处文案优化，让界面信息更准确</li>
+                                        <li>(优化): 笔记列表和数据管理的显示逻辑更合理</li>
+                                        <li>(修复): 切换笔记列表视图后分页加载异常的问题</li>
+                                        <li>(修复): 笔记器具名称显示错误</li>
+                                        <li>(修复): 冲煮咖啡豆和笔记列表加载问题</li>
+                                        <li>(修复): 新建笔记时点击日期意外触发保存的问题</li>
+                                        <li>(修复): 编辑记录时方案显示不完整</li>
+                                        <li>(修复): 多次构建报错和安全漏洞问题，提升系统稳定性</li>
+                                    </ul>
+                                </div>
+
+                                <div>
+                                    <p className="font-medium">v1.3.8</p>
                                     <p className="text-xs text-neutral-500 mt-1">2025-06-28</p>
                                     <ul className="mt-2 text-xs text-neutral-500 list-disc pl-4 space-y-1">
                                         <li>(添加): 冲煮步骤界面&quot;极简显示模式&quot;，更适合专注操作</li>
