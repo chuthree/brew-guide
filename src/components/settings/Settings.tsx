@@ -800,7 +800,8 @@ const handleChange = async <K extends keyof SettingsOptions>(
 
                         <div className="flex h-9">
                             <input
-                                type="tel"
+                                type="text"
+                                inputMode="decimal"
                                 value={decrementValue}
                                 onChange={(e) => {
                                     // 限制只能输入数字和小数点
