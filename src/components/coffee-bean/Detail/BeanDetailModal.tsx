@@ -9,7 +9,7 @@ import { BrewingNote } from '@/lib/core/config'
 import { parseDateToTimestamp } from '@/lib/utils/dateUtils'
 import HighlightText from '@/components/common/ui/HighlightText'
 import { getEquipmentName } from '@/components/notes/utils'
-import { formatDate } from '@/components/notes/utils'
+import { formatDate, formatRating } from '@/components/notes/utils'
 import ActionMenu from '@/components/coffee-bean/ui/action-menu'
 import { ArrowRight } from 'lucide-react'
 import { BREWING_EVENTS } from '@/lib/brewing/constants'
@@ -801,7 +801,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                                                 </div>
 
                                                                 {/* 风味评分 - 只有当存在有效评分(大于0)时才显示 */}
-                                                                {Object.values(note.taste).some(value => value > 0) ? (
+                                                                {Object.values(note.taste).some(value => value > 0) && (
                                                                     <div className="grid grid-cols-2 gap-4">
                                                                         {Object.entries(note.taste)
                                                                             .map(([key, value], _i) => (
@@ -836,24 +836,6 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                                                                 </div>
                                                                             ))}
                                                                     </div>
-                                                                ) : (
-                                                                    // 没有风味评分时显示总体评分
-                                                                    <div className="space-y-1">
-                                                                        <div className="flex items-center justify-between">
-                                                                            <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
-                                                                                总体评分
-                                                                            </div>
-                                                                            <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
-                                                                                {note.rating}
-                                                                            </div>
-                                                                        </div>
-                                                                        <div className="h-px w-full overflow-hidden bg-neutral-200/50 dark:bg-neutral-800">
-                                                                            <div
-                                                                                style={{ width: `${note.rating === 0 ? 0 : (note.rating / 5) * 100}%` }}
-                                                                                className="h-full bg-neutral-600 dark:bg-neutral-400"
-                                                                            />
-                                                                        </div>
-                                                                    </div>
                                                                 )}
 
                                                                 {/* 时间和评分 */}
@@ -863,18 +845,20 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                                                             {formatDate(note.timestamp)}
                                                                         </div>
                                                                         <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
-                                                                            {note.rating}/5
+                                                                            {formatRating(note.rating)}
                                                                         </div>
                                                                     </div>
                                                                 ) : (
-                                                                    <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
-                                                                        {formatDate(note.timestamp)}
+                                                                    <div className="flex items-center text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
+                                                                        <span>{formatDate(note.timestamp)}</span>
+                                                                        <div className="flex-1 mx-2 border-b border-dashed border-neutral-300 dark:border-neutral-600"></div>
+                                                                        <span>[{note.rating}/5]</span>
                                                                     </div>
                                                                 )}
 
                                                                 {/* 备注信息 */}
                                                                 {note.notes && note.notes.trim() && (
-                                                                    <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400 whitespace-pre-line leading-tight break-words overflow-wrap-anywhere">
+                                                                    <div className="text-xs font-medium bg-neutral-200/30 dark:bg-neutral-800/40 p-1.5 rounded tracking-widest text-neutral-800/70 dark:text-neutral-400/85 whitespace-pre-line leading-tight">
                                                                         {note.notes}
                                                                     </div>
                                                                 )}
