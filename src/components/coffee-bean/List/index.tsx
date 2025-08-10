@@ -94,7 +94,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     // 评分相关状态
     const [showRatingModal, setShowRatingModal] = useState(false)
     const [selectedBeanForRating, setSelectedBeanForRating] = useState<ExtendedCoffeeBean | null>(null)
-    const [lastRatedBeanId, setLastRatedBeanId] = useState<string | null>(null)
     const [ratingSavedCallback, setRatingSavedCallback] = useState<(() => void) | null>(null)
 
     // 过滤和显示控制状态
@@ -623,16 +622,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         try {
             const result = await handleSaveRating(id, ratings);
             if (result.success) {
-                // 记录最近评分的咖啡豆ID
-                setLastRatedBeanId(id);
-
                 // 自动切换到榜单视图
                 setViewMode(VIEW_OPTIONS.RANKING);
-
-                // 清除标记
-                setTimeout(() => {
-                    setLastRatedBeanId(null);
-                }, 2000);
 
                 return result.bean;
             }
