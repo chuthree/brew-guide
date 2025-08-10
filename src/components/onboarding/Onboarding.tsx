@@ -105,9 +105,9 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
                                             <label className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
                                                 字体大小
                                             </label>
-                                            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                                            {/* <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
                                                 缩放级别: {settings.textZoomLevel.toFixed(1)}×
-                                            </p>
+                                            </p> */}
                                         </div>
                                         <div className="flex items-center space-x-2">
                                             <button
@@ -119,12 +119,9 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
                                             </button>
                                             <button
                                                 onClick={() => handleSettingChange('textZoomLevel', 1.0)}
-                                                className={`px-2 py-1 text-xs rounded-md transition-colors ${Math.abs(settings.textZoomLevel - 1.0) < 0.05
-                                                    ? 'bg-neutral-800 dark:bg-neutral-50 text-neutral-100 dark:text-neutral-900'
-                                                    : 'bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300'
-                                                    }`}
+                                                className="px-3 h-7 text-xs font-medium rounded-full transition-colors bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300"
                                             >
-                                                标准
+                                                {settings.textZoomLevel.toFixed(1)}×
                                             </button>
                                             <button
                                                 onClick={() => handleSettingChange('textZoomLevel', Math.min(1.4, settings.textZoomLevel + 0.1))}

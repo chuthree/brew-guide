@@ -634,12 +634,6 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                     />
                                     <div className="flex justify-between mt-1 text-xs text-neutral-500">
                                         <span>小</span>
-                                        <span
-                                            className={`px-2 py-0.5 rounded-sm cursor-pointer transition-colors ${Math.abs(zoomLevel - 1.0) < 0.05 ? 'bg-neutral-800 text-neutral-100 dark:bg-neutral-200 dark:text-neutral-900' : 'hover:bg-neutral-100 dark:hover:bg-neutral-800'}`}
-                                            onClick={() => handleFontZoomChange(1.0)}
-                                        >
-                                            标准
-                                        </span>
                                         <span>大</span>
                                     </div>
                                 </div>
