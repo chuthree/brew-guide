@@ -310,36 +310,20 @@ const NoteItem: React.FC<NoteItemProps> = ({
                             {formatDate(note.timestamp)}
                         </div>
                         <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
-                            {formatRating(note.rating)}
+                            {isShareMode ? `总体评分 ${formatRating(note.rating)}` : formatRating(note.rating)}
                         </div>
                     </div>
                 ) : (
-                    <div className="space-y-4">
-                        <div className="space-y-1">
-                            <div className="flex items-center justify-between">
-                                <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
-                                    总体评分
-                                </div>
-                                <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
-                                    {note.rating}
-                                </div>
-                            </div>
-                            <div className="h-px w-full overflow-hidden bg-neutral-200/50 dark:bg-neutral-800">
-                                <div
-                                    style={{ width: `${note.rating === 0 ? 0 : (note.rating / 5) * 100}%` }}
-                                    className="h-full bg-neutral-600 dark:bg-neutral-400"
-                                />
-                            </div>
-                        </div>
-                        <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
-                            {formatDate(note.timestamp)}
-                        </div>
+                    <div className="flex items-center text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
+                        <span>{formatDate(note.timestamp)}</span>
+                        <div className="flex-1 mx-2 border-b border-dashed border-neutral-300 dark:border-neutral-600"></div>
+                        <span>{isShareMode ? `总体评分 [${note.rating}/5]` : `[${note.rating}/5]`}</span>
                     </div>
                 )}
 
                 {/* 备注信息 */}
                 {hasNotes && (
-                    <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400 whitespace-pre-line leading-tight break-words overflow-wrap-anywhere">
+                    <div className="text-xs font-medium bg-neutral-200/30 dark:bg-neutral-800/40 p-1.5 rounded tracking-widest text-neutral-800/70 dark:text-neutral-400/85 whitespace-pre-line leading-tight">
                         {note.notes}
                     </div>
                 )}

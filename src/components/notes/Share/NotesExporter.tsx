@@ -88,17 +88,7 @@ export async function exportSelectedNotes({
         (actionMenu as HTMLElement).style.display = 'none';
       }
       
-      // 处理评分显示 - 在评分前添加"总体评分"字样
-      const hasTasteRatings = clone.querySelector('.grid.grid-cols-2');
-      if (hasTasteRatings) {
-        // 有风味评分的情况，评分显示在右下角
-        const ratingElement = clone.querySelector('.flex.items-baseline.justify-between div:last-child');
-        if (ratingElement && ratingElement.textContent && ratingElement.textContent.includes('[') && ratingElement.textContent.includes('/5')) {
-          ratingElement.textContent = `总体评分 ${ratingElement.textContent}`;
-        }
-      } else {
-        // 没有风味评分的情况，总体评分已经有标签，不需要处理
-      }
+      // 评分显示已经在界面上处理，不需要额外添加"总体评分"字样
       
       // 如果是最后一条笔记，移除下边框
       if (index === selectedNoteElements.length - 1) {
