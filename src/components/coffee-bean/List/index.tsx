@@ -1274,7 +1274,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
                         isOpen={viewMode === VIEW_OPTIONS.RANKING || viewMode === VIEW_OPTIONS.BLOGGER}
                         onShowRatingForm={handleShowRatingForm}
                         sortOption={convertToRankingSortOption(sortOption, viewMode)}
-                        updatedBeanId={lastRatedBeanId}
                         hideFilters={true}
                         beanType={rankingBeanType}
                         editMode={rankingEditMode}
