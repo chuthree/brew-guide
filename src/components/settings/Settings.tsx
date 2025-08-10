@@ -66,7 +66,7 @@ export const defaultSettings: SettingsOptions = {
     showFlavorPeriod: false, // 默认显示烘焙日期而不是赏味期
     showFlavorInfo: false, // 默认不显示风味信息
     limitNotesLines: true, // 默认限制备注显示行数
-    notesMaxLines: 3, // 默认最大显示3行
+    notesMaxLines: 1, // 默认最大显示1行
     customGrinders: [], // 默认无自定义磨豆机
     simpleBeanFormMode: false, // 默认使用完整表单模式
     safeAreaMargins: {
