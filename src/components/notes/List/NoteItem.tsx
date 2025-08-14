@@ -304,14 +304,14 @@ const NoteItem: React.FC<NoteItemProps> = ({
                 ) : null}
 
                 {/* 时间和评分 */}
-                {/* <div className="flex items-baseline justify-between">
+                <div className="flex items-baseline justify-between">
                     <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
                         {formatDate(note.timestamp)}
                     </div>
                     <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
                         {isShareMode ? `总体评分 ${formatRating(note.rating)}` : formatRating(note.rating)}
                     </div>
-                </div> */}
+                </div>
 
                 {/* 备注信息 */}
                 {hasNotes && (

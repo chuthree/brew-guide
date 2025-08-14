@@ -115,17 +115,17 @@ export async function exportSelectedNotes({
     });
     
     // 获取用户名
-    const { Storage } = await import('@/lib/core/storage');
-    const settingsStr = await Storage.get('brewGuideSettings');
-    let username = '';
-    if (settingsStr) {
-      try {
-        const settings = JSON.parse(settingsStr);
-        username = settings.username?.trim() || '';
-      } catch (e) {
-        console.error('解析用户设置失败', e);
-      }
-    }
+    // const { Storage } = await import('@/lib/core/storage');
+    // const settingsStr = await Storage.get('brewGuideSettings');
+    // let username = '';
+    // if (settingsStr) {
+    //   try {
+    //     const settings = JSON.parse(settingsStr);
+    //     username = settings.username?.trim() || '';
+    //   } catch (e) {
+    //     console.error('解析用户设置失败', e);
+    //   }
+    // }
     
     // 添加底部标记
     // const footer = document.createElement('p');
