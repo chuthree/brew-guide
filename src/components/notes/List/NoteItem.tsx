@@ -304,22 +304,14 @@ const NoteItem: React.FC<NoteItemProps> = ({
                 ) : null}
 
                 {/* 时间和评分 */}
-                {hasTasteRatings ? (
-                    <div className="flex items-baseline justify-between">
-                        <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
-                            {formatDate(note.timestamp)}
-                        </div>
-                        <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
-                            {isShareMode ? `总体评分 ${formatRating(note.rating)}` : formatRating(note.rating)}
-                        </div>
+                <div className="flex items-baseline justify-between">
+                    <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
+                        {formatDate(note.timestamp)}
                     </div>
-                ) : (
-                    <div className="flex items-center text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
-                        <span>{formatDate(note.timestamp)}</span>
-                        <div className="flex-1 mx-2 border-b border-dashed border-neutral-300 dark:border-neutral-600"></div>
-                        <span>{isShareMode ? `总体评分 [${note.rating}/5]` : `[${note.rating}/5]`}</span>
+                    <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
+                        {isShareMode ? `总体评分 ${formatRating(note.rating)}` : formatRating(note.rating)}
                     </div>
-                )}
+                </div>
 
                 {/* 备注信息 */}
                 {hasNotes && (
