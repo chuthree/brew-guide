@@ -839,26 +839,18 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                                                 )}
 
                                                                 {/* 时间和评分 */}
-                                                                {Object.values(note.taste).some(value => value > 0) ? (
-                                                                    <div className="flex items-baseline justify-between">
-                                                                        <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
-                                                                            {formatDate(note.timestamp)}
-                                                                        </div>
-                                                                        <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
-                                                                            {formatRating(note.rating)}
-                                                                        </div>
+                                                                <div className="flex items-baseline justify-between">
+                                                                    <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
+                                                                        {formatDate(note.timestamp)}
                                                                     </div>
-                                                                ) : (
-                                                                    <div className="flex items-center text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
-                                                                        <span>{formatDate(note.timestamp)}</span>
-                                                                        <div className="flex-1 mx-2 border-b border-dashed border-neutral-300 dark:border-neutral-600"></div>
-                                                                        <span>[{note.rating}/5]</span>
+                                                                    <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
+                                                                        {formatRating(note.rating)}
                                                                     </div>
-                                                                )}
+                                                                </div>
 
                                                                 {/* 备注信息 */}
                                                                 {note.notes && note.notes.trim() && (
-                                                                    <div className="text-xs font-medium bg-neutral-200/30 dark:bg-neutral-800/40 p-1.5 rounded tracking-widest text-neutral-800/70 dark:text-neutral-400/85 whitespace-pre-line leading-tight">
+                                                                    <div className="text-xs font-medium bg-neutral-200/30 dark:bg-neutral-700/30 p-1.5 rounded tracking-widest text-neutral-800/70 dark:text-neutral-400/85 whitespace-pre-line leading-tight">
                                                                         {note.notes}
                                                                     </div>
                                                                 )}
