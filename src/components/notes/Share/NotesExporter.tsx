@@ -50,17 +50,6 @@ export async function exportSelectedNotes({
       tempContainer.classList.add('dark');
     }
     
-    // 添加标题
-    const title = document.createElement('h2');
-    title.innerText = selectedNotes.length === 1 ? '咖啡冲煮笔记' : `${selectedNotes.length}条咖啡冲煮笔记`;
-    title.style.textAlign = 'left';
-    title.style.marginBottom = '8px';
-    title.style.fontSize = '12px';
-    title.style.color = isDarkMode ? '#f5f5f5' : '#262626';
-    title.style.padding = '24px 24px 0 24px';
-    
-    tempContainer.appendChild(title);
-    
     // 复制选中的笔记到临时容器
     const selectedNoteElements: HTMLElement[] = [];
     
@@ -139,31 +128,31 @@ export async function exportSelectedNotes({
     }
     
     // 添加底部标记
-    const footer = document.createElement('p');
-    footer.style.textAlign = 'left';
-    footer.style.marginTop = '16px';
-    footer.style.fontSize = '12px';
-    footer.style.color = isDarkMode ? '#a3a3a3' : '#525252';
-    footer.style.display = 'flex';
-    footer.style.justifyContent = 'space-between';
-    footer.style.padding = '0 24px 24px 24px';
+    // const footer = document.createElement('p');
+    // footer.style.textAlign = 'left';
+    // footer.style.marginTop = '16px';
+    // footer.style.fontSize = '12px';
+    // footer.style.color = isDarkMode ? '#a3a3a3' : '#525252';
+    // footer.style.display = 'flex';
+    // footer.style.justifyContent = 'center';
+    // footer.style.padding = '0 24px 24px 24px';
     
-    if (username) {
-      // 如果有用户名，将用户名放在左边，Brew Guide放在右边
-      const usernameSpan = document.createElement('span');
-      usernameSpan.innerText = `@${username}`;
+    // if (username) {
+    //   // 如果有用户名，将用户名放在左边，Brew Guide放在右边
+    //   const usernameSpan = document.createElement('span');
+    //   usernameSpan.innerText = `@${username} `;
       
-      const appNameSpan = document.createElement('span');
-      appNameSpan.innerText = '—— Brew Guide';
+    //   const appNameSpan = document.createElement('span');
+    //   appNameSpan.innerText = ' —— Brew Guide';
       
-      footer.appendChild(usernameSpan);
-      footer.appendChild(appNameSpan);
-    } else {
-      // 如果没有用户名，保持原样
-      footer.innerText = '—— Brew Guide';
-    }
+    //   footer.appendChild(usernameSpan);
+    //   footer.appendChild(appNameSpan);
+    // } else {
+    //   // 如果没有用户名，保持原样
+    //   footer.innerText = '—— Brew Guide';
+    // }
     
-    tempContainer.appendChild(footer);
+    // tempContainer.appendChild(footer);
     
     // 添加到文档以便能够导出
     document.body.appendChild(tempContainer);
