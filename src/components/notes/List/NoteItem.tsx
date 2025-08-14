@@ -136,14 +136,14 @@ const NoteItem: React.FC<NoteItemProps> = ({
                                         beanName ? (
                                             <>
                                                 {beanName}
-                                                <span className="text-neutral-600 dark:text-neutral-400 mx-1">·</span>
-                                                <span className="text-neutral-600 dark:text-neutral-400">{note.method}</span>
+                                                <span className="mx-1">·</span>
+                                                <span>{note.method}</span>
                                             </>
                                         ) : (
                                             <>
                                                 {equipmentName}
-                                                <span className="text-neutral-600 dark:text-neutral-400 mx-1">·</span>
-                                                <span className="text-neutral-600 dark:text-neutral-400">{note.method}</span>
+                                                <span className="mx-1">·</span>
+                                                <span>{note.method}</span>
                                             </>
                                         )
                                     ) : (
@@ -156,8 +156,8 @@ const NoteItem: React.FC<NoteItemProps> = ({
                                                 // 显示咖啡豆和器具，用分割符连接
                                                 <>
                                                     {beanName}
-                                                    <span className="text-neutral-600 dark:text-neutral-400 mx-1">·</span>
-                                                    <span className="text-neutral-600 dark:text-neutral-400">{equipmentName}</span>
+                                                    <span className="mx-1">·</span>
+                                                    <span>{equipmentName}</span>
                                                 </>
                                             )
                                         ) : (
@@ -169,7 +169,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
 
                                 {/* 方案信息 - 只在有方案时显示 */}
                                 {note.params && note.method && note.method.trim() !== '' && (
-                                    <div className="text-xs font-medium mt-1 tracking-wide text-neutral-600 dark:text-neutral-400 space-x-1 leading-relaxed">
+                                    <div className="text-xs font-medium mt-1.5 tracking-wide text-neutral-600 dark:text-neutral-400 space-x-1 leading-relaxed">
                                         {beanName && (
                                             <>
                                                 <span>{equipmentName}</span>
@@ -304,14 +304,14 @@ const NoteItem: React.FC<NoteItemProps> = ({
                 ) : null}
 
                 {/* 时间和评分 */}
-                <div className="flex items-baseline justify-between">
+                {/* <div className="flex items-baseline justify-between">
                     <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
                         {formatDate(note.timestamp)}
                     </div>
                     <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
                         {isShareMode ? `总体评分 ${formatRating(note.rating)}` : formatRating(note.rating)}
                     </div>
-                </div>
+                </div> */}
 
                 {/* 备注信息 */}
                 {hasNotes && (
