@@ -15,8 +15,8 @@ interface NoteFormHeaderProps {
 const NoteFormHeader: React.FC<NoteFormHeaderProps> = ({
     isEditMode,
     onBack,
-    onSave,
-    showSaveButton = true,
+    onSave: _onSave,
+    showSaveButton: _showSaveButton = true,
     timestamp = new Date(),
     onTimestampChange,
 }) => {
