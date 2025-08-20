@@ -15,6 +15,7 @@ import KeyboardManager from '@/components/layout/KeyboardManager'
 import { Suspense } from 'react'
 import CapacitorInit from '@/providers/CapacitorProvider'
 import StorageInit from '@/providers/StorageProvider'
+import '@/lib/chunk-error-handler'
 
 import { BaiduAnalytics } from '@/components/common/BaiduAnalytics'
 

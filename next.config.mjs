@@ -8,6 +8,8 @@ const pwaConfig = {
     register: true,
     skipWaiting: true,
     disable: isDev,
+    // 强制清理过期缓存
+    cleanupOutdatedCaches: true,
     buildExcludes: [
         /app-build-manifest\.json$/,
         /_buildManifest\.js$/,
@@ -16,21 +18,7 @@ const pwaConfig = {
         /middleware-runtime\.js$/
     ],
     runtimeCaching: [
-        {
-            urlPattern: /^https?.*/,
-            handler: 'NetworkFirst',
-            options: {
-                cacheName: 'offline-cache',
-                networkTimeoutSeconds: 10,
-                expiration: {
-                    maxEntries: 200,
-                    maxAgeSeconds: 24 * 60 * 60 // 24 hours
-                },
-                cacheableResponse: {
-                    statuses: [0, 200]
-                }
-            }
-        },
+        // 移除过于宽泛的缓存规则，避免缓存不必要的资源
         {
             urlPattern: /\/$/,
             handler: 'NetworkFirst',
@@ -46,8 +34,24 @@ const pwaConfig = {
                 }
             }
         },
+        // 关键修改：JavaScript chunks 使用 StaleWhileRevalidate 策略
         {
-            urlPattern: /\/_next\/static\/.*/i,
+            urlPattern: /\/_next\/static\/chunks\/.+\.js$/i,
+            handler: 'StaleWhileRevalidate',
+            options: {
+                cacheName: 'js-chunks',
+                expiration: {
+                    maxEntries: 100,
+                    maxAgeSeconds: 24 * 60 * 60 // 24 hours
+                },
+                cacheableResponse: {
+                    statuses: [0, 200]
+                }
+            }
+        },
+        // 其他静态资源仍使用 CacheFirst
+        {
+            urlPattern: /\/_next\/static\/(?!chunks\/).*/i,
             handler: 'CacheFirst',
             options: {
                 cacheName: 'static-resources',

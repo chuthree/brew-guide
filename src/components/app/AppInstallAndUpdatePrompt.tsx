@@ -89,6 +89,7 @@ export default function AppInstallAndUpdatePrompt() {
             // 使用一个标志来跟踪是否已经显示过更新提示
             let hasShownUpdatePrompt = false;
 
+            // 监听 Service Worker 更新
             navigator.serviceWorker.addEventListener('controllerchange', () => {
                 // 只有在页面刷新前未显示过更新提示时才显示
                 // 并且不是首次加载（新会话）
@@ -101,6 +102,31 @@ export default function AppInstallAndUpdatePrompt() {
                     }, 1000); // 延迟一秒，避免与初始加载混淆
                 }
             });
+
+            // 定期检查 Service Worker 更新
+            const checkForUpdates = async () => {
+                try {
+                    const registration = await navigator.serviceWorker.ready;
+                    await registration.update();
+                } catch (error) {
+                    console.warn('检查 Service Worker 更新失败:', error);
+                }
+            };
+
+            // 页面可见时检查更新
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden) {
+                    checkForUpdates();
+                }
+            });
+
+            // 定期检查更新（每30分钟）
+            const updateInterval = setInterval(checkForUpdates, 30 * 60 * 1000);
+
+            // 清理定时器
+            return () => {
+                clearInterval(updateInterval);
+            };
         }
 
         return () => {
@@ -131,13 +157,39 @@ export default function AppInstallAndUpdatePrompt() {
         }
     }
 
-    const handleUpdate = () => {
+    const handleUpdate = async () => {
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.ready.then((registration) => {
-                registration.update().then(() => {
-                    window.location.reload()
-                })
-            })
+            try {
+                // 清除相关缓存
+                if ('caches' in window) {
+                    const cacheNames = await caches.keys();
+                    const chunkCacheNames = cacheNames.filter(name =>
+                        name.includes('js-chunks') ||
+                        name.includes('static-resources') ||
+                        name.includes('next-static') ||
+                        name.includes('pages') ||
+                        name.includes('pages-rsc')
+                    );
+
+                    await Promise.all(
+                        chunkCacheNames.map(cacheName => {
+                            console.log('清除缓存:', cacheName);
+                            return caches.delete(cacheName);
+                        })
+                    );
+                }
+
+                // 更新 Service Worker
+                const registration = await navigator.serviceWorker.ready;
+                await registration.update();
+
+                // 强制刷新页面
+                window.location.reload();
+            } catch (error) {
+                console.error('更新 Service Worker 失败:', error);
+                // 即使出错也要刷新页面
+                window.location.reload();
+            }
         }
     }
 
