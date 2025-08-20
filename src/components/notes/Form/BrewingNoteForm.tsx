@@ -1175,6 +1175,18 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                     />
                 </div>
             </div>
+
+            {/* 底部保存按钮 - 悬浮固定，仅在显示保存按钮且不隐藏头部时显示 */}
+            {showSaveButton && !hideHeader && (
+                <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-10 pb-safe-bottom">
+                    <button
+                        type="submit"
+                        className="rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100 px-6 py-3 flex items-center justify-center"
+                    >
+                        <span className="font-medium">保存笔记</span>
+                    </button>
+                </div>
+            )}
         </form>
     )
 }

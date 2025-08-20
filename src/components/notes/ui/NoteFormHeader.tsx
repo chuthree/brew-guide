@@ -97,15 +97,7 @@ const NoteFormHeader: React.FC<NoteFormHeaderProps> = ({
                         返回
                     </button>
                 )}
-                {showSaveButton && onSave && (
-                    <button
-                        type="button" 
-                        onClick={onSave}
-                        className="text-xs font-medium tracking-widest text-emerald-600 dark:text-emerald-500 hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors"
-                    >
-                        保存
-                    </button>
-                )}
+                {/* 保存按钮已移至底部统一样式 */}
             </div>
         </div>
     )

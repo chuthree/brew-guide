@@ -203,18 +203,12 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
                                         </div>
                                     </div>
 
-                                    {/* 保存按钮 */}
-                                    <button
-                                        type="button"
-                                        onClick={handleSaveClick}
-                                        className="text-xs font-medium tracking-widest text-emerald-600 dark:text-emerald-500 hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors px-2 py-1"
-                                    >
-                                        保存
-                                    </button>
+                                    {/* 占位元素，保持布局平衡 */}
+                                    <div className="w-12"></div>
                                 </div>
 
                                 {/* 表单内容容器 */}
-                                <div className="flex-1">
+                                <div className="flex-1 pb-20">
                                     <BrewingNoteForm
                                         id={initialData.id}
                                         isOpen={true}
@@ -228,6 +222,17 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
                                         settings={settings}
                                     />
                                 </div>
+                            </div>
+
+                            {/* 底部保存按钮 - 悬浮固定 */}
+                            <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-10 pb-safe-bottom">
+                                <button
+                                    type="button"
+                                    onClick={handleSaveClick}
+                                    className="rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100 px-6 py-3 flex items-center justify-center"
+                                >
+                                    <span className="font-medium">保存笔记</span>
+                                </button>
                             </div>
                         </motion.div>
                     </motion.div>
