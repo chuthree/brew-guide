@@ -313,7 +313,7 @@ const NoteSteppedFormModal: React.FC<NoteSteppedFormModalProps> = ({
     return (
         <div
             ref={modalRef}
-            className={`fixed px-6 pt-safe-top pb-safe-bottom overflow-auto inset-0 z-50 bg-neutral-50 dark:bg-neutral-900 transition-opacity duration-200 ${showForm ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+            className={`fixed px-6 pt-safe-top pb-safe-bottom overflow-auto max-w-[500px] mx-auto inset-0 z-50 bg-neutral-50 dark:bg-neutral-900 transition-opacity duration-200 ${showForm ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
         >
             {/* 顶部导航栏 */}
             <div className="flex items-center justify-between mb-6">
