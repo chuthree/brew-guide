@@ -23,11 +23,12 @@ interface InventoryViewProps {
     searchQuery?: string
     isImageFlowMode?: boolean
     settings?: {
-        showFlavorPeriod?: boolean
+        dateDisplayMode?: 'date' | 'flavorPeriod' | 'agingDays'
         showOnlyBeanName?: boolean
         showFlavorInfo?: boolean
         limitNotesLines?: boolean
         notesMaxLines?: number
+        showTotalPrice?: boolean
     }
 }
 

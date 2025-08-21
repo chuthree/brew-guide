@@ -46,11 +46,12 @@ export interface CoffeeBeansProps {
     onBloggerTypeChange?: (type: BloggerType) => void
     // 添加设置参数
     settings?: {
-        showFlavorPeriod?: boolean
+        dateDisplayMode?: 'date' | 'flavorPeriod' | 'agingDays'
         showOnlyBeanName?: boolean
         showFlavorInfo?: boolean
         limitNotesLines?: boolean
         notesMaxLines?: number
+        showTotalPrice?: boolean
     }
 }
 

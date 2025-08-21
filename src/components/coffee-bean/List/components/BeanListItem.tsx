@@ -22,11 +22,12 @@ interface BeanListItemProps {
     onDetailClick?: (bean: ExtendedCoffeeBean) => void
     searchQuery?: string
     settings?: {
-        showFlavorPeriod?: boolean
+        dateDisplayMode?: 'date' | 'flavorPeriod' | 'agingDays'
         showOnlyBeanName?: boolean
         showFlavorInfo?: boolean
         limitNotesLines?: boolean
         notesMaxLines?: number
+        showTotalPrice?: boolean
     }
 }
 
@@ -45,10 +46,11 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
 
     // 设置默认值
     const showOnlyBeanName = settings?.showOnlyBeanName ?? true;
-    const showFlavorPeriod = settings?.showFlavorPeriod ?? false;
+    const dateDisplayMode = settings?.dateDisplayMode ?? 'date';
     const showFlavorInfo = settings?.showFlavorInfo ?? false;
     const limitNotesLines = settings?.limitNotesLines ?? true;
     const notesMaxLines = settings?.notesMaxLines ?? 3;
+    const showTotalPrice = settings?.showTotalPrice ?? false;
 
 
 
@@ -125,11 +127,32 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
         }
     };
 
-    const formatPricePerGram = (price: string, capacity: string): string => {
+    const getAgingDaysText = (dateStr: string): string => {
+        try {
+            const timestamp = parseDateToTimestamp(dateStr);
+            const roastDate = new Date(timestamp);
+            const today = new Date();
+            const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+            const roastDateOnly = new Date(roastDate.getFullYear(), roastDate.getMonth(), roastDate.getDate());
+            const daysSinceRoast = Math.ceil((todayDate.getTime() - roastDateOnly.getTime()) / (1000 * 60 * 60 * 24));
+            return `养豆${daysSinceRoast}天`;
+        } catch {
+            return '养豆0天';
+        }
+    };
+
+    const formatPrice = (price: string, capacity: string): string => {
         const priceNum = parseFloat(price);
         const capacityNum = parseFloat(capacity.replace('g', ''));
         if (isNaN(priceNum) || isNaN(capacityNum) || capacityNum === 0) return '';
-        return `${(priceNum / capacityNum).toFixed(2)}元/克`;
+
+        const pricePerGram = (priceNum / capacityNum).toFixed(2);
+
+        if (showTotalPrice) {
+            return `${priceNum}元(${pricePerGram}元/克)`;
+        } else {
+            return `${pricePerGram}元/克`;
+        }
     };
 
     const getStatusDotColor = (phase: string): string => {
@@ -235,7 +258,12 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                             {bean.roastDate && !bean.isInTransit && (
                                 <>
                                     <span className="shrink-0">
-                                        {showFlavorPeriod ? flavorInfo.status : formatDateShort(bean.roastDate)}
+                                        {dateDisplayMode === 'flavorPeriod'
+                                            ? flavorInfo.status
+                                            : dateDisplayMode === 'agingDays'
+                                            ? getAgingDaysText(bean.roastDate)
+                                            : formatDateShort(bean.roastDate)
+                                        }
                                     </span>
                                     {((bean.capacity && bean.remaining) || (bean.price && bean.capacity)) && (
                                         <span className="mx-2 text-neutral-400 dark:text-neutral-600">·</span>
@@ -258,7 +286,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                             )}
 
                             {bean.price && bean.capacity && (
-                                <span className="shrink-0">{formatPricePerGram(bean.price, bean.capacity)}</span>
+                                <span className="shrink-0">{formatPrice(bean.price, bean.capacity)}</span>
                             )}
                         </div>
                     </div>

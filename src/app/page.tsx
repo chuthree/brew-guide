@@ -343,8 +343,22 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                     const savedSettings = await Storage.get('brewGuideSettings');
                     if (savedSettings && typeof savedSettings === 'string' && isMounted) {
                         try {
-                            const parsedSettings = JSON.parse(savedSettings) as SettingsOptions;
-                            setSettings(parsedSettings);
+                            const parsedSettings = JSON.parse(savedSettings) as any;
+
+                            // 迁移旧的showFlavorPeriod设置到新的dateDisplayMode
+                            if (parsedSettings.showFlavorPeriod !== undefined && parsedSettings.dateDisplayMode === undefined) {
+                                parsedSettings.dateDisplayMode = parsedSettings.showFlavorPeriod ? 'flavorPeriod' : 'date';
+                                delete parsedSettings.showFlavorPeriod;
+
+                                // 保存迁移后的设置
+                                try {
+                                    await Storage.set('brewGuideSettings', JSON.stringify(parsedSettings));
+                                } catch {
+                                    // 静默处理保存错误
+                                }
+                            }
+
+                            setSettings(parsedSettings as SettingsOptions);
 
                             // 应用字体缩放级别
                             if (parsedSettings.textZoomLevel) {
@@ -2089,11 +2103,12 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                     externalViewMode={currentBeanView}
                     onExternalViewChange={handleBeanViewChange}
                     settings={{
-                        showFlavorPeriod: settings.showFlavorPeriod,
+                        dateDisplayMode: settings.dateDisplayMode,
                         showOnlyBeanName: settings.showOnlyBeanName,
                         showFlavorInfo: settings.showFlavorInfo,
                         limitNotesLines: settings.limitNotesLines,
-                        notesMaxLines: settings.notesMaxLines
+                        notesMaxLines: settings.notesMaxLines,
+                        showTotalPrice: settings.showTotalPrice
                     }}
                 />
             )}

@@ -14,6 +14,34 @@ import { motion, AnimatePresence } from 'framer-motion'
 // 导入Lottie动画JSON文件
 import chuchuAnimation from '../../../public/animations/chuchu-animation.json'
 
+// 按钮组组件
+interface ButtonGroupProps<T extends string> {
+    value: T
+    options: { value: T; label: string }[]
+    onChange: (value: T) => void
+    className?: string
+}
+
+function ButtonGroup<T extends string>({ value, options, onChange, className = '' }: ButtonGroupProps<T>) {
+    return (
+        <div className={`inline-flex rounded bg-neutral-100/60 p-0.5 dark:bg-neutral-800/60 ${className}`}>
+            {options.map((option) => (
+                <button
+                    key={option.value}
+                    className={`px-2.5 py-1 text-xs font-medium rounded transition-all  ${
+                        value === option.value
+                            ? 'bg-white dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100'
+                            : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'
+                    }`}
+                    onClick={() => onChange(option.value)}
+                >
+                    {option.label}
+                </button>
+            ))}
+        </div>
+    )
+}
+
 // 自定义磨豆机接口
 export interface CustomGrinder {
     id: string
@@ -33,10 +61,11 @@ export interface SettingsOptions {
     username: string // 添加用户名
     decrementPresets: number[] // 添加咖啡豆库存快捷扣除量预设值
     showOnlyBeanName: boolean // 是否只显示咖啡豆名称
-    showFlavorPeriod: boolean // 是否显示赏味期信息而不是烘焙日期
+    dateDisplayMode: 'date' | 'flavorPeriod' | 'agingDays' // 日期显示模式：日期/赏味期/养豆天数
     showFlavorInfo: boolean // 是否在备注中显示风味信息
     limitNotesLines: boolean // 是否限制备注显示行数
     notesMaxLines: number // 备注最大显示行数
+    showTotalPrice: boolean // 是否显示总价格而不是单价
     customGrinders?: CustomGrinder[] // 添加自定义磨豆机列表
     simpleBeanFormMode: boolean // 咖啡豆表单简单模式
     safeAreaMargins?: {
@@ -63,10 +92,11 @@ export const defaultSettings: SettingsOptions = {
     username: '', // 默认用户名为空
     decrementPresets: [15, 16, 18], // 默认的库存扣除量预设值
     showOnlyBeanName: true, // 默认简化咖啡豆名称
-    showFlavorPeriod: false, // 默认显示烘焙日期而不是赏味期
+    dateDisplayMode: 'date', // 默认显示烘焙日期
     showFlavorInfo: false, // 默认不显示风味信息
     limitNotesLines: true, // 默认限制备注显示行数
     notesMaxLines: 1, // 默认最大显示1行
+    showTotalPrice: false, // 默认显示单价
     customGrinders: [], // 默认无自定义磨豆机
     simpleBeanFormMode: false, // 默认使用完整表单模式
     safeAreaMargins: {
@@ -560,55 +590,20 @@ const handleChange = async <K extends keyof SettingsOptions>(
                             <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
                                 外观模式
                             </div>
-                            <div className="text-sm text-neutral-400 dark:text-neutral-500">
-                                <div className="inline-flex rounded-lg bg-neutral-100 p-1 dark:bg-neutral-800">
-                                    <button
-                                        className={`px-2 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                                            theme === 'light'
-                                                ? 'bg-white dark:bg-neutral-600 text-neutral-900 dark:text-neutral-100 shadow-xs'
-                                                : 'text-neutral-600 dark:text-neutral-400'
-                                        }`}
-                                        onClick={() => {
-                                            setTheme('light')
-                                            if (settings.hapticFeedback) {
-                                                hapticsUtils.light();
-                                            }
-                                        }}
-                                    >
-                                        浅色
-                                    </button>
-                                    <button
-                                        className={`px-2 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                                            theme === 'dark'
-                                                ? 'bg-white dark:bg-neutral-600 text-neutral-900 dark:text-neutral-100 shadow-xs'
-                                                : 'text-neutral-600 dark:text-neutral-400'
-                                        }`}
-                                        onClick={() => {
-                                            setTheme('dark')
-                                            if (settings.hapticFeedback) {
-                                                hapticsUtils.light();
-                                            }
-                                        }}
-                                    >
-                                        深色
-                                    </button>
-                                    <button
-                                        className={`px-2 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                                            theme === 'system'
-                                                ? 'bg-white dark:bg-neutral-600 text-neutral-900 dark:text-neutral-100 shadow-xs'
-                                                : 'text-neutral-600 dark:text-neutral-400'
-                                        }`}
-                                        onClick={() => {
-                                            setTheme('system')
-                                            if (settings.hapticFeedback) {
-                                                hapticsUtils.light();
-                                            }
-                                        }}
-                                    >
-                                        系统
-                                    </button>
-                                </div>
-                            </div>
+                            <ButtonGroup
+                                value={theme || 'system'}
+                                options={[
+                                    { value: 'light', label: '浅色' },
+                                    { value: 'dark', label: '深色' },
+                                    { value: 'system', label: '系统' }
+                                ]}
+                                onChange={(value) => {
+                                    setTheme(value)
+                                    if (settings.hapticFeedback) {
+                                        hapticsUtils.light();
+                                    }
+                                }}
+                            />
                         </div>
 
                         {/* 字体缩放设置 - 统一的字体缩放功能 */}
@@ -858,16 +853,32 @@ const handleChange = async <K extends keyof SettingsOptions>(
                             </label>
                         </div>
 
-                        {/* 显示赏味期信息 */}
+                        {/* 日期显示模式 */}
                         <div className="flex items-center justify-between">
                             <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                                显示赏味期信息
+                                日期显示模式
+                            </div>
+                            <ButtonGroup
+                                value={settings.dateDisplayMode || 'date'}
+                                options={[
+                                    { value: 'date', label: '日期' },
+                                    { value: 'flavorPeriod', label: '赏味期' },
+                                    { value: 'agingDays', label: '养豆天数' }
+                                ]}
+                                onChange={(value) => handleChange('dateDisplayMode', value as 'date' | 'flavorPeriod' | 'agingDays')}
+                            />
+                        </div>
+
+                        {/* 显示总价格 */}
+                        <div className="flex items-center justify-between">
+                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                                显示总价格
                             </div>
                             <label className="relative inline-flex cursor-pointer items-center">
                                 <input
                                     type="checkbox"
-                                    checked={settings.showFlavorPeriod || false}
-                                    onChange={(e) => handleChange('showFlavorPeriod', e.target.checked)}
+                                    checked={settings.showTotalPrice || false}
+                                    onChange={(e) => handleChange('showTotalPrice', e.target.checked)}
                                     className="peer sr-only"
                                 />
                                 <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
@@ -934,6 +945,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                 </div>
                             </div>
                         )}
+
                     </div>
                 </div>
 
