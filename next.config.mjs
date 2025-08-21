@@ -10,39 +10,76 @@ const pwaConfig = {
     disable: isDev,
     // 强制清理过期缓存
     cleanupOutdatedCaches: true,
+    // 添加更多构建排除项以避免缓存问题
     buildExcludes: [
         /app-build-manifest\.json$/,
         /_buildManifest\.js$/,
         /_ssgManifest\.js$/,
         /middleware-manifest\.json$/,
-        /middleware-runtime\.js$/
+        /middleware-runtime\.js$/,
+        /chunk-map\.json$/,
+        /server-reference-manifest\.json$/,
+        /next-font-manifest\.json$/
     ],
     runtimeCaching: [
-        // 移除过于宽泛的缓存规则，避免缓存不必要的资源
+        // HTML 页面使用 NetworkFirst 策略，确保获取最新内容
         {
-            urlPattern: /\/$/,
+            urlPattern: /^https?:\/\/.*\/(.*\.html)?$/,
             handler: 'NetworkFirst',
             options: {
                 cacheName: 'html-cache',
-                networkTimeoutSeconds: 10,
+                networkTimeoutSeconds: 5,
                 expiration: {
-                    maxEntries: 10,
-                    maxAgeSeconds: 24 * 60 * 60 // 24 hours
+                    maxEntries: 50,
+                    maxAgeSeconds: 12 * 60 * 60 // 12 hours
                 },
                 cacheableResponse: {
                     statuses: [0, 200]
                 }
             }
         },
-        // 关键修改：JavaScript chunks 使用 StaleWhileRevalidate 策略
+        // 根路径特殊处理
+        {
+            urlPattern: /^https?:\/\/[^\/]+\/?$/,
+            handler: 'NetworkFirst',
+            options: {
+                cacheName: 'root-cache',
+                networkTimeoutSeconds: 3,
+                expiration: {
+                    maxEntries: 5,
+                    maxAgeSeconds: 6 * 60 * 60 // 6 hours
+                },
+                cacheableResponse: {
+                    statuses: [0, 200]
+                }
+            }
+        },
+        // JavaScript chunks 使用 NetworkFirst 策略确保最新代码
         {
             urlPattern: /\/_next\/static\/chunks\/.+\.js$/i,
-            handler: 'StaleWhileRevalidate',
+            handler: 'NetworkFirst',
             options: {
                 cacheName: 'js-chunks',
+                networkTimeoutSeconds: 8,
                 expiration: {
-                    maxEntries: 100,
-                    maxAgeSeconds: 24 * 60 * 60 // 24 hours
+                    maxEntries: 150,
+                    maxAgeSeconds: 12 * 60 * 60 // 12 hours
+                },
+                cacheableResponse: {
+                    statuses: [0, 200]
+                }
+            }
+        },
+        // 运行时文件特殊处理
+        {
+            urlPattern: /\/_next\/static\/chunks\/runtime\..*\.js$/i,
+            handler: 'NetworkFirst',
+            options: {
+                cacheName: 'runtime-chunks',
+                networkTimeoutSeconds: 3,
+                expiration: {
+                    maxEntries: 10,
+                    maxAgeSeconds: 6 * 60 * 60 // 6 hours
                 },
                 cacheableResponse: {
                     statuses: [0, 200]
@@ -146,12 +183,29 @@ const nextConfig = {
 
         // 修复静态导出时的webpack运行时问题
         if (config.mode === 'production') {
-            // 禁用代码分割以避免运行时错误
+            // 优化代码分割配置，而不是完全禁用
             config.optimization = {
                 ...config.optimization,
-                splitChunks: false,
-                // 确保运行时代码内联
-                runtimeChunk: false
+                splitChunks: {
+                    chunks: 'all',
+                    cacheGroups: {
+                        default: {
+                            minChunks: 2,
+                            priority: -20,
+                            reuseExistingChunk: true
+                        },
+                        vendor: {
+                            test: /[\\/]node_modules[\\/]/,
+                            name: 'vendors',
+                            priority: -10,
+                            chunks: 'all'
+                        }
+                    }
+                },
+                // 使用单独的运行时chunk，但确保正确加载
+                runtimeChunk: {
+                    name: 'runtime'
+                }
             };
         }
 
