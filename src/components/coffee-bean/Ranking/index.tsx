@@ -789,22 +789,27 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
 
             {/* 数据来源 - 仅在博主榜单模式下显示 */}
             {viewMode === 'blogger' && ratedBeans.length > 0 && (
-                <div className="mt-4 text-center text-[10px] text-neutral-500 dark:text-neutral-400">
-                    {blogger === 'fenix' ? (
-                        <span
-                            className="cursor-pointer underline"
-                            onClick={() => openLink('https://docs.qq.com/sheet/DTXBmUEd3R25NaGNX')}
-                        >
-                            数据来自于 矮人(Fenix) 咖啡豆评测榜单
-                        </span>
-                    ) : (
-                        <span
-                            className="cursor-pointer underline"
-                            onClick={() => openLink(year === 2024 ? 'https://www.kdocs.cn/l/cmx9enIek2Hm' : 'https://kdocs.cn/l/cr1urhFNvrgK')}
-                        >
-                            数据来自于 Peter 咖啡豆评测榜单
-                        </span>
-                    )}
+                <div className="mt-4 text-center text-[10px] text-neutral-500 dark:text-neutral-400 space-y-1">
+                    <div>
+                        {blogger === 'fenix' ? (
+                            <span
+                                className="cursor-pointer underline"
+                                onClick={() => openLink('https://docs.qq.com/sheet/DTXBmUEd3R25NaGNX')}
+                            >
+                                数据来自于 矮人(Fenix) 咖啡豆评测榜单 ( 同步时间：2025 / 8 / 21 )
+                            </span>
+                        ) : (
+                            <span
+                                className="cursor-pointer underline"
+                                onClick={() => openLink(year === 2024 ? 'https://www.kdocs.cn/l/cmx9enIek2Hm' : 'https://kdocs.cn/l/cr1urhFNvrgK')}
+                            >
+                                数据来自于 Peter 咖啡豆评测榜单 ( 同步时间：2025 / 8 / 21 )
+                            </span>
+                        )}
+                    </div>
+                    <div className="text-[9px] opacity-70 mt-3">
+                        
+                    </div>
                 </div>
             )}
         </div>
