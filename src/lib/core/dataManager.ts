@@ -1,4 +1,4 @@
-import { Method as _Method, CustomEquipment } from "@/lib/core/config";
+import { Method as _Method, CustomEquipment, BrewingNote as _BrewingNote } from "@/lib/core/config";
 import { CoffeeBean as _CoffeeBean, BlendComponent } from "@/types/app";
 import { APP_VERSION } from "@/lib/core/config";
 import { SettingsOptions as _SettingsOptions } from "@/components/settings/Settings";
@@ -28,21 +28,7 @@ interface ImportData {
 	data?: Record<string, unknown>;
 }
 
-// 定义冲煮记录的接口
-interface BrewingNote {
-	id: string;
-	timestamp: number;
-	equipment?: string;
-	method?: string;
-	params?: {
-		coffee: string;
-		water: string;
-		ratio: string;
-		grindSize: string;
-		temp: string;
-	};
-	[key: string]: unknown;
-}
+// 使用从 config.ts 导入的 BrewingNote 类型
 
 /**
  * 应用数据键名列表
@@ -98,7 +84,7 @@ export const DataManager = {
 
 						// 如果是冲煮笔记数据，清理冗余的咖啡豆信息
 						if (key === "brewingNotes" && Array.isArray(exportData.data[key])) {
-							exportData.data[key] = this.cleanBrewingNotesForExport(exportData.data[key] as BrewingNote[]);
+							exportData.data[key] = this.cleanBrewingNotesForExport(exportData.data[key] as _BrewingNote[]);
 						}
 					} catch {
 						// 如果不是JSON，直接存储字符串
@@ -158,10 +144,7 @@ export const DataManager = {
 							}
 						}
 						
-						// 检查自定义器具数据
-						if (exportData.data.customEquipments && Array.isArray(exportData.data._customEquipments)) {
-							const _customEquipments = exportData.data.customEquipments as CustomEquipment[];
-						}
+						// 检查自定义器具数据已包含在导出数据中
 					}
 				} catch (dbError) {
 					console.error("从IndexedDB导出自定义方案失败:", dbError);
@@ -245,6 +228,28 @@ export const DataManager = {
 							await db.customEquipments.bulkPut(rawEquipments as CustomEquipment[]);
 						}
 					}
+
+					// 对于咖啡豆数据，同时更新IndexedDB（重要：个人榜单功能依赖IndexedDB中的评分数据）
+					if (key === 'coffeeBeans' && typeof importData.data[key] === 'object') {
+						const rawBeans = importData.data[key] as unknown[];
+						if (Array.isArray(rawBeans)) {
+							// 首先清除现有数据
+							await db.coffeeBeans.clear();
+							// 然后导入新数据，确保个人榜单的评分数据能正确显示
+							await db.coffeeBeans.bulkPut(rawBeans as _CoffeeBean[]);
+						}
+					}
+
+					// 对于冲煮笔记数据，同时更新IndexedDB
+					if (key === 'brewingNotes' && typeof importData.data[key] === 'object') {
+						const rawNotes = importData.data[key] as unknown[];
+						if (Array.isArray(rawNotes)) {
+							// 首先清除现有数据
+							await db.brewingNotes.clear();
+							// 然后导入新数据
+							await db.brewingNotes.bulkPut(rawNotes as _BrewingNote[]);
+						}
+					}
 				}
 			}
 			
@@ -255,12 +260,6 @@ export const DataManager = {
 				
 				// 遍历所有器具的方案
 				const customMethodsByEquipment = importData.data.customMethodsByEquipment as Record<string, unknown>;
-				
-				// 导入的自定义器具ID列表
-				let _customEquipmentIds: string[] = [];
-				if (importData.data.customEquipments && Array.isArray(importData.data._customEquipments)) {
-					_customEquipmentIds = (importData.data.customEquipments as CustomEquipment[]).map(e => e.id);
-				}
 				
 				for (const equipmentId of Object.keys(customMethodsByEquipment)) {
 					const methods = customMethodsByEquipment[equipmentId];
@@ -294,23 +293,37 @@ export const DataManager = {
 				}
 			}
 			
+			// 清理缓存，确保导入的数据能立即生效
+			try {
+				const { CoffeeBeanManager } = await import('@/lib/managers/coffeeBeanManager');
+				CoffeeBeanManager.clearCache();
+			} catch (error) {
+				console.error('清理咖啡豆管理器缓存失败:', error);
+			}
+
 			// 触发数据变更事件，通知应用中的组件重新加载数据
 			if (isBrowser) {
+				// 触发咖啡豆数据更新事件（重要：确保个人榜单能及时刷新）
+				const coffeeBeansEvent = new CustomEvent('coffeeBeansUpdated', {
+					detail: { source: 'importAllData' }
+				});
+				window.dispatchEvent(coffeeBeansEvent);
+
 				// 触发自定义器具更新事件
 				const equipmentEvent = new CustomEvent('customEquipmentUpdate', {
 					detail: { source: 'importAllData' }
 				});
 				window.dispatchEvent(equipmentEvent);
-				
+
 				// 触发自定义方案更新事件
 				const methodEvent = new CustomEvent('customMethodUpdate', {
 					detail: { source: 'importAllData' }
 				});
 				window.dispatchEvent(methodEvent);
-				
+
 				// 触发一个通用的数据更改事件
-				const dataChangeEvent = new CustomEvent('storage:changed', { 
-					detail: { key: 'allData', action: 'import' } 
+				const dataChangeEvent = new CustomEvent('storage:changed', {
+					detail: { key: 'allData', action: 'import' }
 				});
 				window.dispatchEvent(dataChangeEvent);
 			}
@@ -700,7 +713,7 @@ export const DataManager = {
 	 * @param notes 冲煮笔记数组
 	 * @returns 清理后的冲煮笔记数组
 	 */
-	cleanBrewingNotesForExport(notes: BrewingNote[]): BrewingNote[] {
+	cleanBrewingNotesForExport(notes: _BrewingNote[]): _BrewingNote[] {
 		return notes.map(note => {
 			// 创建笔记的浅拷贝
 			const cleanedNote = { ...note };
