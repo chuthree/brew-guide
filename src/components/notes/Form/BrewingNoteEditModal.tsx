@@ -224,8 +224,8 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
                                 </div>
                             </div>
 
-                            {/* 底部保存按钮 - 悬浮固定 */}
-                            <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-10 pb-safe-bottom">
+                            {/* 底部保存按钮 - 使用sticky定位相对于容器固定 */}
+                            <div className="modal-bottom-button flex items-center justify-center">
                                 <button
                                     type="button"
                                     onClick={handleSaveClick}
