@@ -58,6 +58,11 @@ const CUSTOM_PRESETS_KEYS = [
 ];
 
 /**
+ * 需要同步到IndexedDB的数据键
+ */
+const INDEXED_DB_SYNC_KEYS = ['customEquipments', 'coffeeBeans', 'brewingNotes'] as const;
+
+/**
  * 数据管理工具类
  */
 export const DataManager = {
@@ -93,65 +98,39 @@ export const DataManager = {
 				}
 			}
 
-			// 获取所有自定义方案
+			// 导出自定义方案数据（优先从IndexedDB获取，确保数据完整性）
 			try {
-				// 获取所有存储键
-				const allKeys = await storage.keys();
+				exportData.data.customMethodsByEquipment = {};
 
-				// 过滤出自定义方案键
-				const methodKeys = allKeys.filter((key: string) => key.startsWith("customMethods_"));
+				// 优先从IndexedDB加载自定义方案数据
+				const methodsFromDB = await db.customMethods.toArray();
+				if (methodsFromDB && methodsFromDB.length > 0) {
+					for (const item of methodsFromDB) {
+						const { equipmentId, methods } = item;
+						if (Array.isArray(methods) && methods.length > 0) {
+							(exportData.data.customMethodsByEquipment as Record<string, unknown>)[equipmentId] = methods;
+						}
+					}
+				} else {
+					// 如果IndexedDB中没有数据，从Storage加载
+					const allKeys = await storage.keys();
+					const methodKeys = allKeys.filter((key: string) => key.startsWith("customMethods_"));
 
-				// 如果有自定义方案，将它们添加到导出数据中
-				if (methodKeys.length > 0) {
-					// 初始化自定义方案存储结构
-					exportData.data.customMethodsByEquipment = {};
-
-					// 处理每个器具的自定义方案
 					for (const key of methodKeys) {
-						// 提取器具ID
 						const equipmentId = key.replace("customMethods_", "");
-
-						// 加载该器具的方案
 						const methodsJson = await storage.get(key);
 						if (methodsJson) {
 							try {
 								const methods = JSON.parse(methodsJson);
-								// 将当前器具的所有方案添加到导出数据中
 								(exportData.data.customMethodsByEquipment as Record<string, unknown>)[equipmentId] = methods;
 							} catch {
-								// 如果JSON解析失败，跳过
 								console.error(`解析自定义方案数据失败: ${key}`);
 							}
 						}
 					}
 				}
-				
-				// 尝试从IndexedDB加载更完整的自定义方案数据
-				try {
-					const methodsFromDB = await db.customMethods.toArray();
-					if (methodsFromDB && methodsFromDB.length > 0) {
-						// 确保customMethodsByEquipment已初始化
-						if (!exportData.data.customMethodsByEquipment) {
-							exportData.data.customMethodsByEquipment = {};
-						}
-						
-						// 添加或更新来自IndexedDB的方案数据
-						for (const item of methodsFromDB) {
-							const { equipmentId, methods } = item;
-							if (Array.isArray(methods) && methods.length > 0) {
-								// 将当前器具的所有方案添加到导出数据中
-								(exportData.data.customMethodsByEquipment as Record<string, unknown>)[equipmentId] = methods;
-							}
-						}
-						
-						// 检查自定义器具数据已包含在导出数据中
-					}
-				} catch (dbError) {
-					console.error("从IndexedDB导出自定义方案失败:", dbError);
-				}
 			} catch (error) {
 				console.error("导出自定义方案失败:", error);
-				// 错误处理：即使自定义方案导出失败，也继续导出其他数据
 			}
 
 			// 导出自定义预设数据
@@ -209,45 +188,39 @@ export const DataManager = {
 
 			// 导入数据
 			const storage = await getStorage();
+
+			// 辅助函数：同步数据到IndexedDB
+			const syncToIndexedDB = async (key: string, data: unknown[]) => {
+				switch (key) {
+					case 'customEquipments':
+						await db.customEquipments.clear();
+						await db.customEquipments.bulkPut(data as CustomEquipment[]);
+						break;
+					case 'coffeeBeans':
+						await db.coffeeBeans.clear();
+						await db.coffeeBeans.bulkPut(data as _CoffeeBean[]);
+						break;
+					case 'brewingNotes':
+						await db.brewingNotes.clear();
+						await db.brewingNotes.bulkPut(data as _BrewingNote[]);
+						break;
+				}
+			};
+
 			for (const key of APP_DATA_KEYS) {
 				if (importData.data[key] !== undefined) {
-					// 如果是对象或数组，转换为JSON字符串
-					const value =
-						typeof importData.data[key] === "object"
-							? JSON.stringify(importData.data[key])
-							: String(importData.data[key]);
+					// 保存到Storage
+					const value = typeof importData.data[key] === "object"
+						? JSON.stringify(importData.data[key])
+						: String(importData.data[key]);
 					await storage.set(key, value);
 
-					// 对于自定义器具，同时更新IndexedDB
-					if (key === 'customEquipments' && typeof importData.data[key] === 'object') {
-						const rawEquipments = importData.data[key] as unknown[];
-						if (Array.isArray(rawEquipments)) {
-							// 首先清除现有数据
-							await db.customEquipments.clear();
-							// 然后导入新数据
-							await db.customEquipments.bulkPut(rawEquipments as CustomEquipment[]);
-						}
-					}
-
-					// 对于咖啡豆数据，同时更新IndexedDB（重要：个人榜单功能依赖IndexedDB中的评分数据）
-					if (key === 'coffeeBeans' && typeof importData.data[key] === 'object') {
-						const rawBeans = importData.data[key] as unknown[];
-						if (Array.isArray(rawBeans)) {
-							// 首先清除现有数据
-							await db.coffeeBeans.clear();
-							// 然后导入新数据，确保个人榜单的评分数据能正确显示
-							await db.coffeeBeans.bulkPut(rawBeans as _CoffeeBean[]);
-						}
-					}
-
-					// 对于冲煮笔记数据，同时更新IndexedDB
-					if (key === 'brewingNotes' && typeof importData.data[key] === 'object') {
-						const rawNotes = importData.data[key] as unknown[];
-						if (Array.isArray(rawNotes)) {
-							// 首先清除现有数据
-							await db.brewingNotes.clear();
-							// 然后导入新数据
-							await db.brewingNotes.bulkPut(rawNotes as _BrewingNote[]);
+					// 同步到IndexedDB（如果需要）
+					if (INDEXED_DB_SYNC_KEYS.includes(key as any) &&
+						typeof importData.data[key] === 'object') {
+						const rawData = importData.data[key] as unknown[];
+						if (Array.isArray(rawData)) {
+							await syncToIndexedDB(key, rawData);
 						}
 					}
 				}
@@ -303,29 +276,22 @@ export const DataManager = {
 
 			// 触发数据变更事件，通知应用中的组件重新加载数据
 			if (isBrowser) {
-				// 触发咖啡豆数据更新事件（重要：确保个人榜单能及时刷新）
-				const coffeeBeansEvent = new CustomEvent('coffeeBeansUpdated', {
-					detail: { source: 'importAllData' }
-				});
-				window.dispatchEvent(coffeeBeansEvent);
+				const eventDetail = { source: 'importAllData' };
+				const events = [
+					'coffeeBeansUpdated',      // 确保个人榜单能及时刷新
+					'customEquipmentUpdate',   // 自定义器具更新
+					'customMethodUpdate',      // 自定义方案更新
+				];
 
-				// 触发自定义器具更新事件
-				const equipmentEvent = new CustomEvent('customEquipmentUpdate', {
-					detail: { source: 'importAllData' }
+				// 批量触发事件
+				events.forEach(eventName => {
+					window.dispatchEvent(new CustomEvent(eventName, { detail: eventDetail }));
 				});
-				window.dispatchEvent(equipmentEvent);
 
-				// 触发自定义方案更新事件
-				const methodEvent = new CustomEvent('customMethodUpdate', {
-					detail: { source: 'importAllData' }
-				});
-				window.dispatchEvent(methodEvent);
-
-				// 触发一个通用的数据更改事件
-				const dataChangeEvent = new CustomEvent('storage:changed', {
+				// 触发通用数据更改事件
+				window.dispatchEvent(new CustomEvent('storage:changed', {
 					detail: { key: 'allData', action: 'import' }
-				});
-				window.dispatchEvent(dataChangeEvent);
+				}));
 			}
 			
 			return {
@@ -355,14 +321,20 @@ export const DataManager = {
 		try {
 			// 清除列表中的数据
 			const storage = await getStorage();
+
+			// 清理Storage和IndexedDB数据
+			const indexedDBCleanupMap = {
+				'brewingNotes': () => db.brewingNotes.clear(),
+				'coffeeBeans': () => db.coffeeBeans.clear(),
+				'customEquipments': () => db.customEquipments.clear()
+			} as const;
+
 			for (const key of APP_DATA_KEYS) {
 				await storage.remove(key);
 
-				// 确保IndexedDB中的主要表也被清理
-				if (key === 'brewingNotes') {
-					await db.brewingNotes.clear();
-				} else if (key === 'coffeeBeans') {
-					await db.coffeeBeans.clear();
+				// 清理对应的IndexedDB表
+				if (key in indexedDBCleanupMap) {
+					await indexedDBCleanupMap[key as keyof typeof indexedDBCleanupMap]();
 				}
 			}
 
