@@ -68,6 +68,10 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
             return { phase: '冰冻', status: '冰冻', remainingDays: 0, progressPercent: 0, preFlavorPercent: 0, flavorPercent: 100, daysSinceRoast: 0, endDay: 0, isFrozen: true, isInTransit: false };
         }
 
+        // 使用统一的赏味期计算工具
+        const { calculateFlavorInfo } = require('@/lib/utils/flavorPeriodUtils');
+        const flavorInfo = calculateFlavorInfo(bean);
+
         const today = new Date();
         const roastTimestamp = parseDateToTimestamp(bean.roastDate);
         const roastDate = new Date(roastTimestamp);
@@ -75,39 +79,42 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
         const roastDateOnly = new Date(roastDate.getFullYear(), roastDate.getMonth(), roastDate.getDate());
         const daysSinceRoast = Math.ceil((todayDate.getTime() - roastDateOnly.getTime()) / (1000 * 60 * 60 * 24));
 
+        // 获取赏味期参数用于进度条计算
         let startDay = bean.startDay || 0;
         let endDay = bean.endDay || 0;
 
+        // 如果没有自定义值，从flavorInfo中获取默认值
         if (startDay === 0 && endDay === 0) {
-            if (bean.roastLevel?.includes('浅')) {
-                startDay = 7; endDay = 30;
-            } else if (bean.roastLevel?.includes('深')) {
-                startDay = 14; endDay = 60;
-            } else {
-                startDay = 10; endDay = 30;
-            }
+            const { getDefaultFlavorPeriodByRoastLevelSync } = require('@/lib/utils/flavorPeriodUtils');
+            const defaultPeriod = getDefaultFlavorPeriodByRoastLevelSync(bean.roastLevel || '');
+            startDay = defaultPeriod.startDay;
+            endDay = defaultPeriod.endDay;
         }
 
         const progressPercent = Math.min((daysSinceRoast / endDay) * 100, 100);
         const preFlavorPercent = (startDay / endDay) * 100;
         const flavorPercent = ((endDay - startDay) / endDay) * 100;
 
-        let phase, status, remainingDays;
-        if (daysSinceRoast < startDay) {
-            phase = '养豆期';
-            remainingDays = startDay - daysSinceRoast;
+        // 使用flavorInfo的结果
+        const phase = flavorInfo.phase;
+        const remainingDays = flavorInfo.remainingDays;
+        let status = '';
+
+        if (phase === '养豆期') {
             status = `养豆 ${remainingDays}天`;
-        } else if (daysSinceRoast <= endDay) {
-            phase = '赏味期';
-            remainingDays = endDay - daysSinceRoast;
+        } else if (phase === '赏味期') {
             status = `赏味 ${remainingDays}天`;
-        } else {
-            phase = '衰退期';
-            remainingDays = 0;
+        } else if (phase === '衰退期') {
             status = '已衰退';
+        } else if (phase === '在途') {
+            status = '在途';
+        } else if (phase === '冰冻') {
+            status = '冰冻';
+        } else {
+            status = '未知';
         }
 
-        return { phase, remainingDays, progressPercent, preFlavorPercent, flavorPercent, status, daysSinceRoast, endDay, isFrozen: false, isInTransit: false };
+        return { phase, remainingDays, progressPercent, preFlavorPercent, flavorPercent, status, daysSinceRoast, endDay, isFrozen: bean.isFrozen || false, isInTransit: bean.isInTransit || false };
     }, [bean.roastDate, bean.startDay, bean.endDay, bean.roastLevel, bean.isFrozen, bean.isInTransit]);
 
     const isEmpty = isBeanEmpty(bean);

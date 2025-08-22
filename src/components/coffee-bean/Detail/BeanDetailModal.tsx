@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { CoffeeBean } from '@/types/app'
 import { BrewingNote } from '@/lib/core/config'
 import { parseDateToTimestamp } from '@/lib/utils/dateUtils'
+import { calculateFlavorInfo } from '@/lib/utils/flavorPeriodUtils'
 import HighlightText from '@/components/common/ui/HighlightText'
 import { getEquipmentName } from '@/components/notes/utils'
 import { formatDate, formatRating } from '@/components/notes/utils'
@@ -125,37 +126,12 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     // 工具函数：计算赏味期信息
     const getFlavorInfo = () => {
         if (!bean) return { phase: '未知', status: '加载中...' }
-        if (bean.isInTransit) return { phase: '在途', status: '在途中' }
-        if (bean.isFrozen) return { phase: '冰冻', status: '冰冻保存' }
-        if (!bean.roastDate) return { phase: '未知', status: '未设置烘焙日期' }
 
-        const today = new Date()
-        const roastTimestamp = parseDateToTimestamp(bean.roastDate)
-        const roastDate = new Date(roastTimestamp)
-        const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate())
-        const roastDateOnly = new Date(roastDate.getFullYear(), roastDate.getMonth(), roastDate.getDate())
-        const daysSinceRoast = Math.ceil((todayDate.getTime() - roastDateOnly.getTime()) / (1000 * 60 * 60 * 24))
-
-        let startDay = bean.startDay || 0
-        let endDay = bean.endDay || 0
-
-        if (startDay === 0 && endDay === 0) {
-            if (bean.roastLevel?.includes('浅')) {
-                startDay = 7; endDay = 30
-            } else if (bean.roastLevel?.includes('深')) {
-                startDay = 14; endDay = 60
-            } else {
-                startDay = 10; endDay = 30
-            }
-        }
-
-        if (daysSinceRoast < startDay) {
-            return { phase: '养豆期', status: `还需养豆 ${startDay - daysSinceRoast} 天` }
-        } else if (daysSinceRoast <= endDay) {
-            return { phase: '赏味期', status: `剩余 ${endDay - daysSinceRoast} 天` }
-        } else {
-            return { phase: '衰退期', status: '已过赏味期' }
-        }
+        const flavorInfo = calculateFlavorInfo(bean);
+        return {
+            phase: flavorInfo.phase,
+            status: flavorInfo.status || '未知状态'
+        };
     }
 
     // 工具函数：生成基础信息项

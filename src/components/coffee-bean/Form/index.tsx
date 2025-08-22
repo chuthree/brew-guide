@@ -76,6 +76,7 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
             const needFlavorPeriodInit = !beanData.startDay && !beanData.endDay;
 
             if (needFlavorPeriodInit && beanData.roastLevel) {
+                // 这里先设置默认值，后续会在useEffect中用自定义设置覆盖
                 let startDay = 0;
                 let endDay = 0;
 
@@ -84,7 +85,7 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                     endDay = 30;
                 } else if (beanData.roastLevel.includes('深')) {
                     startDay = 14;
-                    endDay = 30;
+                    endDay = 60;
                 } else {
                     startDay = 10;
                     endDay = 30;
@@ -116,25 +117,50 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
     // 定义额外的状态来跟踪风味标签输入
     const [flavorInput, setFlavorInput] = useState('');
 
-    // 从设置中加载简单模式状态
+    // 从设置中加载简单模式状态和自定义赏味期设置
     useEffect(() => {
-        const loadSimpleModeFromSettings = async () => {
+        const loadSettingsAndInitializeBean = async () => {
             try {
                 const { Storage } = await import('@/lib/core/storage');
                 const settingsStr = await Storage.get('brewGuideSettings')
+                let settings: SettingsOptions = defaultSettings;
+
                 if (settingsStr) {
-                    const settings: SettingsOptions = JSON.parse(settingsStr)
-                    setIsSimpleMode(settings.simpleBeanFormMode ?? defaultSettings.simpleBeanFormMode)
-                } else {
-                    setIsSimpleMode(defaultSettings.simpleBeanFormMode)
+                    settings = JSON.parse(settingsStr)
+                }
+
+                setIsSimpleMode(settings.simpleBeanFormMode ?? defaultSettings.simpleBeanFormMode)
+
+                // 如果是新建咖啡豆且没有设置赏味期，使用自定义设置初始化
+                if (!initialBean && bean.startDay === 0 && bean.endDay === 0 && bean.roastLevel) {
+                    const customFlavorPeriod = settings.customFlavorPeriod || defaultSettings.customFlavorPeriod;
+                    let startDay = 0;
+                    let endDay = 0;
+
+                    if (bean.roastLevel.includes('浅')) {
+                        startDay = customFlavorPeriod!.light.startDay;
+                        endDay = customFlavorPeriod!.light.endDay;
+                    } else if (bean.roastLevel.includes('深')) {
+                        startDay = customFlavorPeriod!.dark.startDay;
+                        endDay = customFlavorPeriod!.dark.endDay;
+                    } else {
+                        startDay = customFlavorPeriod!.medium.startDay;
+                        endDay = customFlavorPeriod!.medium.endDay;
+                    }
+
+                    setBean(prev => ({
+                        ...prev,
+                        startDay,
+                        endDay
+                    }));
                 }
             } catch (error) {
-                console.error('加载简单模式设置失败:', error)
+                console.error('加载设置失败:', error)
                 setIsSimpleMode(defaultSettings.simpleBeanFormMode)
             }
         }
 
-        loadSimpleModeFromSettings()
+        loadSettingsAndInitializeBean()
     }, [])
 
     // 自动聚焦输入框
@@ -468,19 +494,46 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
     };
 
     // 根据烘焙度自动设置赏味期参数
-    const autoSetFlavorPeriod = () => {
+    const autoSetFlavorPeriod = async () => {
         let startDay = 0;
         let endDay = 0;
 
-        if (bean.roastLevel?.includes('浅')) {
-            startDay = 7;
-            endDay = 30;
-        } else if (bean.roastLevel?.includes('深')) {
-            startDay = 14;
-            endDay = 60;
-        } else {
-            startDay = 10;
-            endDay = 30;
+        try {
+            // 从设置中获取自定义赏味期配置
+            const { Storage } = await import('@/lib/core/storage');
+            const settingsStr = await Storage.get('brewGuideSettings');
+            let customFlavorPeriod = defaultSettings.customFlavorPeriod;
+
+            if (settingsStr) {
+                const settings: SettingsOptions = JSON.parse(settingsStr);
+                customFlavorPeriod = settings.customFlavorPeriod || defaultSettings.customFlavorPeriod;
+            }
+
+            // 根据烘焙度选择对应的赏味期设置
+            if (bean.roastLevel?.includes('浅')) {
+                startDay = customFlavorPeriod!.light.startDay;
+                endDay = customFlavorPeriod!.light.endDay;
+            } else if (bean.roastLevel?.includes('深')) {
+                startDay = customFlavorPeriod!.dark.startDay;
+                endDay = customFlavorPeriod!.dark.endDay;
+            } else {
+                // 默认为中烘焙
+                startDay = customFlavorPeriod!.medium.startDay;
+                endDay = customFlavorPeriod!.medium.endDay;
+            }
+        } catch (error) {
+            console.error('获取自定义赏味期设置失败，使用默认值:', error);
+            // 使用默认值
+            if (bean.roastLevel?.includes('浅')) {
+                startDay = 7;
+                endDay = 30;
+            } else if (bean.roastLevel?.includes('深')) {
+                startDay = 14;
+                endDay = 60;
+            } else {
+                startDay = 10;
+                endDay = 30;
+            }
         }
 
         setBean(prev => ({

@@ -3,6 +3,7 @@
 import React, { useMemo, useRef, useEffect } from 'react'
 import Image from 'next/image'
 import type { CoffeeBean } from '@/types/app'
+import { calculateFlavorInfo } from '@/lib/utils/flavorPeriodUtils'
 
 interface CoffeeBeanSelectorProps {
   coffeeBeans: CoffeeBean[]
@@ -14,53 +15,11 @@ interface CoffeeBeanSelectorProps {
 
 // 计算咖啡豆的赏味期阶段和剩余天数
 const getFlavorInfo = (bean: CoffeeBean) => {
-  // 处理在途状态
-  if (bean.isInTransit) {
-    return { phase: '在途', remainingDays: 0 };
-  }
-
-  // 处理冰冻状态
-  if (bean.isFrozen) {
-    return { phase: '冰冻', remainingDays: 0 };
-  }
-
-  if (!bean.roastDate) return { phase: '未知', remainingDays: 0 };
-
-  const today = new Date();
-  const roastDate = new Date(bean.roastDate);
-  const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const roastDateOnly = new Date(roastDate.getFullYear(), roastDate.getMonth(), roastDate.getDate());
-  const daysSinceRoast = Math.ceil((todayDate.getTime() - roastDateOnly.getTime()) / (1000 * 60 * 60 * 24));
-
-  // 优先使用自定义赏味期参数，如果没有则根据烘焙度计算
-  let startDay = bean.startDay || 0;
-  let endDay = bean.endDay || 0;
-
-  // 如果没有自定义值，则根据烘焙度设置默认值
-  if (startDay === 0 && endDay === 0) {
-    if (bean.roastLevel?.includes('浅')) {
-      startDay = 7;
-      endDay = 30;
-    } else if (bean.roastLevel?.includes('深')) {
-      startDay = 14;
-      endDay = 60;
-    } else {
-      // 默认为中烘焙
-      startDay = 10;
-      endDay = 30;
-    }
-  }
-
-  if (daysSinceRoast < startDay) {
-    // 养豆期
-    return { phase: '养豆期', remainingDays: startDay - daysSinceRoast };
-  } else if (daysSinceRoast <= endDay) {
-    // 赏味期
-    return { phase: '赏味期', remainingDays: endDay - daysSinceRoast };
-  } else {
-    // 衰退期
-    return { phase: '衰退期', remainingDays: 0 };
-  }
+  const flavorInfo = calculateFlavorInfo(bean);
+  return {
+    phase: flavorInfo.phase,
+    remainingDays: flavorInfo.remainingDays
+  };
 }
 
 // 获取阶段数值用于排序

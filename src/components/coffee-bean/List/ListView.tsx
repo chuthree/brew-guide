@@ -154,29 +154,10 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
             return { phase: '衰退期', remainingDays: 0 };
         }
 
-        const today = new Date();
-        const roastDate = new Date(bean.roastDate);
-        const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-        const roastDateOnly = new Date(roastDate.getFullYear(), roastDate.getMonth(), roastDate.getDate());
-        const daysSinceRoast = Math.ceil((todayDate.getTime() - roastDateOnly.getTime()) / (1000 * 60 * 60 * 24));
-
-        let startDay = bean.startDay || 0;
-        let endDay = bean.endDay || 0;
-
-        // 如果没有自定义值，则根据烘焙度设置默认值
-        if (startDay === 0 && endDay === 0) {
-            if (bean.roastLevel?.includes('浅')) {
-                startDay = 7;
-                endDay = 30;
-            } else if (bean.roastLevel?.includes('深')) {
-                startDay = 14;
-                endDay = 60;
-            } else {
-                // 默认为中烘焙
-                startDay = 10;
-                endDay = 30;
-            }
-        }
+        // 使用统一的赏味期计算工具
+        const { calculateFlavorInfo } = require('@/lib/utils/flavorPeriodUtils');
+        const flavorInfo = calculateFlavorInfo(bean);
+        const daysSinceRoast = Math.ceil((new Date().getTime() - new Date(bean.roastDate).getTime()) / (1000 * 60 * 60 * 24));
 
         if (daysSinceRoast < startDay) {
             // 养豆期

@@ -280,55 +280,24 @@ export const FLAVOR_PERIOD_LABELS: Record<FlavorPeriodStatus, string> = {
  * @returns 赏味期状态
  */
 export const getBeanFlavorPeriodStatus = (bean: ExtendedCoffeeBean): FlavorPeriodStatus => {
-    // 处理在途状态
-    if (bean.isInTransit) {
-        return FlavorPeriodStatus.IN_TRANSIT
-    }
+    // 使用统一的赏味期计算工具
+    const { calculateFlavorInfo } = require('./flavorPeriodUtils');
+    const flavorInfo = calculateFlavorInfo(bean);
 
-    // 处理冰冻状态
-    if (bean.isFrozen) {
-        return FlavorPeriodStatus.FROZEN
-    }
-
-    if (!bean.roastDate) {
-        return FlavorPeriodStatus.UNKNOWN
-    }
-
-    try {
-        const today = new Date()
-        const roastDate = new Date(bean.roastDate)
-        const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate())
-        const roastDateOnly = new Date(roastDate.getFullYear(), roastDate.getMonth(), roastDate.getDate())
-        const daysSinceRoast = Math.ceil((todayDate.getTime() - roastDateOnly.getTime()) / (1000 * 60 * 60 * 24))
-
-        // 优先使用自定义赏味期参数，如果没有则根据烘焙度计算
-        let startDay = bean.startDay || 0
-        let endDay = bean.endDay || 0
-
-        // 如果没有自定义值，则根据烘焙度设置默认值
-        if (startDay === 0 && endDay === 0) {
-            if (bean.roastLevel?.includes('浅')) {
-                startDay = 7
-                endDay = 30
-            } else if (bean.roastLevel?.includes('深')) {
-                startDay = 14
-                endDay = 60
-            } else {
-                // 默认为中烘焙
-                startDay = 10
-                endDay = 30
-            }
-        }
-
-        if (daysSinceRoast < startDay) {
-            return FlavorPeriodStatus.AGING  // 养豆期
-        } else if (daysSinceRoast <= endDay) {
-            return FlavorPeriodStatus.OPTIMAL  // 赏味期
-        } else {
-            return FlavorPeriodStatus.DECLINE  // 衰退期
-        }
-    } catch (_error) {
-        return FlavorPeriodStatus.UNKNOWN
+    // 将阶段名称映射到枚举值
+    switch (flavorInfo.phase) {
+        case '在途':
+            return FlavorPeriodStatus.IN_TRANSIT;
+        case '冰冻':
+            return FlavorPeriodStatus.FROZEN;
+        case '养豆期':
+            return FlavorPeriodStatus.AGING;
+        case '赏味期':
+            return FlavorPeriodStatus.OPTIMAL;
+        case '衰退期':
+            return FlavorPeriodStatus.DECLINE;
+        default:
+            return FlavorPeriodStatus.UNKNOWN;
     }
 }
 

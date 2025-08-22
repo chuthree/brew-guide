@@ -367,56 +367,14 @@ export const isBeanEmpty = (bean: ExtendedCoffeeBean): boolean => {
     return !isNaN(remainingValue) && remainingValue < 0.001;
 };
 
+import { calculateFlavorInfo } from '@/lib/utils/flavorPeriodUtils';
+
 // 获取咖啡豆的赏味期信息
 export const getFlavorInfo = (bean: ExtendedCoffeeBean): { phase: string, remainingDays: number } => {
-    // 处理在途状态
-    if (bean.isInTransit) {
-        return { phase: '在途', remainingDays: 0 };
-    }
+    const flavorInfo = calculateFlavorInfo(bean);
+    return {
+        phase: flavorInfo.phase,
+        remainingDays: flavorInfo.remainingDays
+    };
+};
 
-    if (!bean.roastDate) {
-        return { phase: '衰退期', remainingDays: 0 };
-    }
-
-    // 计算天数差
-    const today = new Date();
-    const roastDate = new Date(bean.roastDate);
-    const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const roastDateOnly = new Date(roastDate.getFullYear(), roastDate.getMonth(), roastDate.getDate());
-    const daysSinceRoast = Math.ceil((todayDate.getTime() - roastDateOnly.getTime()) / (1000 * 60 * 60 * 24));
-
-    // 优先使用自定义赏味期参数，如果没有则根据烘焙度计算
-    let startDay = bean.startDay || 0;
-    let endDay = bean.endDay || 0;
-
-    // 如果没有自定义值，则根据烘焙度设置默认值
-    if (startDay === 0 && endDay === 0) {
-        if (bean.roastLevel?.includes('浅')) {
-            startDay = 7;
-            endDay = 30;
-        } else if (bean.roastLevel?.includes('深')) {
-            startDay = 14;
-            endDay = 60;
-        } else {
-            // 默认为中烘焙
-            startDay = 10;
-            endDay = 30;
-        }
-    }
-
-    let phase = '';
-    let remainingDays = 0;
-    
-    if (daysSinceRoast < startDay) {
-        phase = '养豆期';
-        remainingDays = startDay - daysSinceRoast;
-    } else if (daysSinceRoast <= endDay) {
-        phase = '赏味期';
-        remainingDays = endDay - daysSinceRoast;
-    } else {
-        phase = '衰退期';
-        remainingDays = 0;
-    }
-
-    return { phase, remainingDays };
-}; 

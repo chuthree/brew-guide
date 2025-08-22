@@ -72,6 +72,12 @@ export interface SettingsOptions {
         top: number // 顶部边距
         bottom: number // 底部边距
     }
+    // 自定义赏味期设置
+    customFlavorPeriod?: {
+        light: { startDay: number; endDay: number } // 浅烘焙
+        medium: { startDay: number; endDay: number } // 中烘焙
+        dark: { startDay: number; endDay: number } // 深烘焙
+    }
 }
 
 // 默认设置
@@ -102,6 +108,12 @@ export const defaultSettings: SettingsOptions = {
     safeAreaMargins: {
         top: 38, // 默认顶部边距 42px
         bottom: 38 // 默认底部边距 42px
+    },
+    // 默认自定义赏味期设置 - 初始为空，使用预设值
+    customFlavorPeriod: {
+        light: { startDay: 0, endDay: 0 }, // 0表示使用预设值：养豆7天，赏味期30天
+        medium: { startDay: 0, endDay: 0 }, // 0表示使用预设值：养豆10天，赏味期30天
+        dark: { startDay: 0, endDay: 0 } // 0表示使用预设值：养豆14天，赏味期60天
     }
 }
 
@@ -120,6 +132,27 @@ const Settings: React.FC<SettingsProps> = ({
     setSettings,
     onDataChange,
 }) => {
+    // 辅助函数：更新自定义赏味期设置
+    const updateCustomFlavorPeriod = (
+        roastType: 'light' | 'medium' | 'dark',
+        field: 'startDay' | 'endDay',
+        value: number
+    ) => {
+        const current = settings.customFlavorPeriod || {
+            light: { startDay: 0, endDay: 0 },
+            medium: { startDay: 0, endDay: 0 },
+            dark: { startDay: 0, endDay: 0 }
+        };
+
+        const newCustomFlavorPeriod = {
+            ...current,
+            [roastType]: {
+                ...current[roastType],
+                [field]: value
+            }
+        };
+        handleChange('customFlavorPeriod', newCustomFlavorPeriod);
+    };
     // 添加数据管理状态
     const [isDataManagerOpen, setIsDataManagerOpen] = useState(false)
 
@@ -471,7 +504,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                                 className="object-cover"
                                             />
                                         </div>
-                                        <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">赞赏码（开发不易，希望能支持一下，求求了 www～）</p>
+                                        <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">赞赏码（开发不易，希望能支持一下，求求了 www～）</p>
                                     </div>
                                     <div className="flex flex-col items-center opacity-0">
                                         <div className="w-full aspect-square relative rounded-lg overflow-hidden invisible">
@@ -497,7 +530,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                                 className="object-cover"
                                             />
                                         </div>
-                                        <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">交流群</p>
+                                        <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">交流群</p>
                                     </div>
                                 </>
                             ) : null}
@@ -521,7 +554,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                 placeholder="请输入您的用户名"
                                 className="w-full py-2 px-3 text-sm font-medium rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 appearance-none focus:outline-hidden focus:ring-2 focus:ring-neutral-500"
                             />
-                            <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
+                            <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
                                 用于在分享时显示签名
                             </p>
                         </div>
@@ -632,7 +665,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                         <span>大</span>
                                     </div>
                                 </div>
-                                <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
+                                <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
                                     调整应用的字体大小，设置会自动保存
                                 </p>
                             </div>
@@ -661,7 +694,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                             还原默认
                         </button>
                     </div>
-                    <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-4">
+                    <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-4">
                         调整应用界面的上下边距，影响导航栏和内容区域的间距
                     </p>
 
@@ -947,6 +980,140 @@ const handleChange = async <K extends keyof SettingsOptions>(
                         )}
 
                     </div>
+                </div>
+
+                {/* 自定义赏味期设置组 */}
+                <div className="px-6 py-4">
+                    <h3 className="text-sm uppercase font-medium tracking-wider text-neutral-500 dark:text-neutral-400 mb-3">
+                        自定义赏味期预设
+                    </h3>
+                    <div className="space-y-3">
+                        {/* 浅烘焙设置 */}
+                        <div className="flex items-center justify-between">
+                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200 w-12">
+                                浅烘
+                            </div>
+                            <div className="flex items-center space-x-3">
+                                <div className="flex items-center space-x-1">
+                                    <span className="text-sm text-neutral-500 dark:text-neutral-400">养豆</span>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        max="30"
+                                        value={settings.customFlavorPeriod?.light?.startDay === 0 ? '' : settings.customFlavorPeriod?.light?.startDay || ''}
+                                        placeholder="7"
+                                        onChange={(e) => {
+                                            const value = e.target.value === '' ? 0 : parseInt(e.target.value) || 0;
+                                            updateCustomFlavorPeriod('light', 'startDay', value);
+                                        }}
+                                        className="w-12 py-1 px-2 text-xs text-center bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded focus:outline-hidden focus:ring-1 focus:ring-neutral-500"
+                                    />
+                                    <span className="text-sm text-neutral-500 dark:text-neutral-400">天</span>
+                                </div>
+                                <div className="flex items-center space-x-1">
+                                    <span className="text-sm text-neutral-500 dark:text-neutral-400">赏味</span>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        max="90"
+                                        value={settings.customFlavorPeriod?.light?.endDay === 0 ? '' : settings.customFlavorPeriod?.light?.endDay || ''}
+                                        placeholder="30"
+                                        onChange={(e) => {
+                                            const value = e.target.value === '' ? 0 : parseInt(e.target.value) || 0;
+                                            updateCustomFlavorPeriod('light', 'endDay', value);
+                                        }}
+                                        className="w-12 py-1 px-2 text-xs text-center bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded focus:outline-hidden focus:ring-1 focus:ring-neutral-500"
+                                    />
+                                    <span className="text-sm text-neutral-500 dark:text-neutral-400">天</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 中烘焙设置 */}
+                        <div className="flex items-center justify-between">
+                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200 w-12">
+                                中烘
+                            </div>
+                            <div className="flex items-center space-x-3">
+                                <div className="flex items-center space-x-1">
+                                    <span className="text-sm text-neutral-500 dark:text-neutral-400">养豆</span>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        max="30"
+                                        value={settings.customFlavorPeriod?.medium?.startDay === 0 ? '' : settings.customFlavorPeriod?.medium?.startDay || ''}
+                                        placeholder="10"
+                                        onChange={(e) => {
+                                            const value = e.target.value === '' ? 0 : parseInt(e.target.value) || 0;
+                                            updateCustomFlavorPeriod('medium', 'startDay', value);
+                                        }}
+                                        className="w-12 py-1 px-2 text-xs text-center bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded focus:outline-hidden focus:ring-1 focus:ring-neutral-500"
+                                    />
+                                    <span className="text-sm text-neutral-500 dark:text-neutral-400">天</span>
+                                </div>
+                                <div className="flex items-center space-x-1">
+                                    <span className="text-sm text-neutral-500 dark:text-neutral-400">赏味</span>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        max="90"
+                                        value={settings.customFlavorPeriod?.medium?.endDay === 0 ? '' : settings.customFlavorPeriod?.medium?.endDay || ''}
+                                        placeholder="30"
+                                        onChange={(e) => {
+                                            const value = e.target.value === '' ? 0 : parseInt(e.target.value) || 0;
+                                            updateCustomFlavorPeriod('medium', 'endDay', value);
+                                        }}
+                                        className="w-12 py-1 px-2 text-xs text-center bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded focus:outline-hidden focus:ring-1 focus:ring-neutral-500"
+                                    />
+                                    <span className="text-sm text-neutral-500 dark:text-neutral-400">天</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 深烘焙设置 */}
+                        <div className="flex items-center justify-between">
+                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200 w-12">
+                                深烘
+                            </div>
+                            <div className="flex items-center space-x-3">
+                                <div className="flex items-center space-x-1">
+                                    <span className="text-sm text-neutral-500 dark:text-neutral-400">养豆</span>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        max="30"
+                                        value={settings.customFlavorPeriod?.dark?.startDay === 0 ? '' : settings.customFlavorPeriod?.dark?.startDay || ''}
+                                        placeholder="14"
+                                        onChange={(e) => {
+                                            const value = e.target.value === '' ? 0 : parseInt(e.target.value) || 0;
+                                            updateCustomFlavorPeriod('dark', 'startDay', value);
+                                        }}
+                                        className="w-12 py-1 px-2 text-xs text-center bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded focus:outline-hidden focus:ring-1 focus:ring-neutral-500"
+                                    />
+                                    <span className="text-sm text-neutral-500 dark:text-neutral-400">天</span>
+                                </div>
+                                <div className="flex items-center space-x-1">
+                                    <span className="text-sm text-neutral-500 dark:text-neutral-400">赏味</span>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        max="90"
+                                        value={settings.customFlavorPeriod?.dark?.endDay === 0 ? '' : settings.customFlavorPeriod?.dark?.endDay || ''}
+                                        placeholder="60"
+                                        onChange={(e) => {
+                                            const value = e.target.value === '' ? 0 : parseInt(e.target.value) || 0;
+                                            updateCustomFlavorPeriod('dark', 'endDay', value);
+                                        }}
+                                        className="w-12 py-1 px-2 text-xs text-center bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded focus:outline-hidden focus:ring-1 focus:ring-neutral-500"
+                                    />
+                                    <span className="text-sm text-neutral-500 dark:text-neutral-400">天</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                     <h3 className="text-sm text-neutral-500 dark:text-neutral-400 mt-3">
+                        添加咖啡豆时，会根据烘焙度自动设定赏味期。
+                    </h3>
                 </div>
 
                 {/* 计时器布局设置组 */}
