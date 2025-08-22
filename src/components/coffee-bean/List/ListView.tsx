@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { CoffeeBean } from '@/types/app'
 import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager'
 import { globalCache } from './globalCache'
+import { calculateFlavorInfo } from '@/lib/utils/flavorPeriodUtils'
 
 // 每页加载的咖啡豆数量 - 增加到20个，减少分页频率
 const PAGE_SIZE = 8;
@@ -155,20 +156,12 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
         }
 
         // 使用统一的赏味期计算工具
-        const { calculateFlavorInfo } = require('@/lib/utils/flavorPeriodUtils');
         const flavorInfo = calculateFlavorInfo(bean);
-        const daysSinceRoast = Math.ceil((new Date().getTime() - new Date(bean.roastDate).getTime()) / (1000 * 60 * 60 * 24));
-
-        if (daysSinceRoast < startDay) {
-            // 养豆期
-            return { phase: '养豆期', remainingDays: startDay - daysSinceRoast };
-        } else if (daysSinceRoast <= endDay) {
-            // 赏味期
-            return { phase: '赏味期', remainingDays: endDay - daysSinceRoast };
-        } else {
-            // 衰退期
-            return { phase: '衰退期', remainingDays: 0 };
-        }
+        
+        return {
+            phase: flavorInfo.phase,
+            remainingDays: flavorInfo.remainingDays
+        };
     }, []);
 
     // 获取阶段数值用于排序

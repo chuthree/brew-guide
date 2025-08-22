@@ -1,9 +1,10 @@
 /**
- * 咖啡豆品种相关的工具函数
+ * 咨啡豆品种相关的工具函数
  * 统一处理新旧数据格式的品种信息获取
  */
 
 import type { CoffeeBean } from '@/types/app'
+import { calculateFlavorInfo } from './flavorPeriodUtils'
 
 // 占位符文本列表 - 这些不应该被当作真实数据
 const PLACEHOLDER_TEXTS = [
@@ -281,7 +282,6 @@ export const FLAVOR_PERIOD_LABELS: Record<FlavorPeriodStatus, string> = {
  */
 export const getBeanFlavorPeriodStatus = (bean: ExtendedCoffeeBean): FlavorPeriodStatus => {
     // 使用统一的赏味期计算工具
-    const { calculateFlavorInfo } = require('./flavorPeriodUtils');
     const flavorInfo = calculateFlavorInfo(bean);
 
     // 将阶段名称映射到枚举值

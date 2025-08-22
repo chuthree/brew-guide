@@ -8,6 +8,7 @@ import { ExtendedCoffeeBean, generateBeanTitle } from '../types'
 import { isBeanEmpty } from '../globalCache'
 import { parseDateToTimestamp } from '@/lib/utils/dateUtils'
 import HighlightText from '@/components/common/ui/HighlightText'
+import { calculateFlavorInfo, getDefaultFlavorPeriodByRoastLevelSync } from '@/lib/utils/flavorPeriodUtils'
 
 // 动态导入 ImageViewer 组件 - 移除加载占位符
 const ImageViewer = dynamic(() => import('@/components/common/ui/ImageViewer'), {
@@ -69,7 +70,6 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
         }
 
         // 使用统一的赏味期计算工具
-        const { calculateFlavorInfo } = require('@/lib/utils/flavorPeriodUtils');
         const flavorInfo = calculateFlavorInfo(bean);
 
         const today = new Date();
@@ -85,7 +85,6 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
 
         // 如果没有自定义值，从flavorInfo中获取默认值
         if (startDay === 0 && endDay === 0) {
-            const { getDefaultFlavorPeriodByRoastLevelSync } = require('@/lib/utils/flavorPeriodUtils');
             const defaultPeriod = getDefaultFlavorPeriodByRoastLevelSync(bean.roastLevel || '');
             startDay = defaultPeriod.startDay;
             endDay = defaultPeriod.endDay;
