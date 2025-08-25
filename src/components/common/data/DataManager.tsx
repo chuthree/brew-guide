@@ -3,6 +3,7 @@
 import React, { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { DataManager as DataManagerUtil } from '@/lib/core/dataManager'
+import { BackupReminderUtils } from '@/lib/utils/backupReminderUtils'
 import { compressBase64Image } from '@/lib/utils/imageCapture'
 import { APP_VERSION } from '@/lib/core/config'
 import { Capacitor } from '@capacitor/core'
@@ -155,6 +156,13 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
                         type: 'success',
                         message: '数据已成功导出'
                     })
+
+                // 标记备份完成
+                try {
+                    await BackupReminderUtils.markBackupCompleted()
+                } catch (error) {
+                    console.error('标记备份完成失败:', error)
+                }
                 } catch (error) {
                     throw new Error(`保存文件失败: ${(error as Error).message}`)
                 }
@@ -175,6 +183,13 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose, onDataChange
                 }, 100)
 
                 setStatus({ type: 'success', message: '数据导出成功，文件已下载' })
+
+                // 标记备份完成
+                try {
+                    await BackupReminderUtils.markBackupCompleted()
+                } catch (error) {
+                    console.error('标记备份完成失败:', error)
+                }
             }
         } catch (_error) {
             setStatus({ type: 'error', message: `导出失败: ${(_error as Error).message}` })

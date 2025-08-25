@@ -7,6 +7,12 @@ import hapticsUtils from '@/lib/ui/haptics'
 import fontZoomUtils from '@/lib/utils/fontZoomUtils'
 import { useTheme } from 'next-themes'
 import { LayoutSettings } from '../brewing/Timer/Settings'
+import {
+  BackupReminderSettings,
+  BackupReminderUtils,
+  BACKUP_REMINDER_INTERVALS,
+  BackupReminderInterval
+} from '@/lib/utils/backupReminderUtils'
 
 import Image from 'next/image'
 import GrinderSettings from './GrinderSettings'
@@ -78,6 +84,8 @@ export interface SettingsOptions {
         medium: { startDay: number; endDay: number } // 中烘焙
         dark: { startDay: number; endDay: number } // 深烘焙
     }
+    // 备份提醒设置
+    backupReminder?: BackupReminderSettings
 }
 
 // 默认设置
@@ -114,7 +122,9 @@ export const defaultSettings: SettingsOptions = {
         light: { startDay: 0, endDay: 0 }, // 0表示使用预设值：养豆7天，赏味期30天
         medium: { startDay: 0, endDay: 0 }, // 0表示使用预设值：养豆10天，赏味期30天
         dark: { startDay: 0, endDay: 0 } // 0表示使用预设值：养豆14天，赏味期60天
-    }
+    },
+    // 备份提醒设置默认为undefined，将在运行时从BackupReminderUtils加载
+    backupReminder: undefined
 }
 
 interface SettingsProps {
@@ -182,6 +192,10 @@ const Settings: React.FC<SettingsProps> = ({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [LottieComponent, setLottieComponent] = useState<any>(null)
 
+    // 备份提醒相关状态
+    const [backupReminderSettings, setBackupReminderSettings] = useState<BackupReminderSettings | null>(null)
+    const [nextReminderText, setNextReminderText] = useState('')
+
     // 创建音效播放引用
     const audioRef = useRef<HTMLAudioElement | null>(null)
 
@@ -204,6 +218,23 @@ const Settings: React.FC<SettingsProps> = ({
             setDecrementPresets(settings.decrementPresets);
         }
     }, [settings.decrementPresets]);
+
+    // 加载备份提醒设置
+    useEffect(() => {
+        const loadBackupReminderSettings = async () => {
+            try {
+                const reminderSettings = await BackupReminderUtils.getSettings()
+                setBackupReminderSettings(reminderSettings)
+
+                const nextText = await BackupReminderUtils.getNextReminderText()
+                setNextReminderText(nextText)
+            } catch (error) {
+                console.error('加载备份提醒设置失败:', error)
+            }
+        }
+
+        loadBackupReminderSettings()
+    }, []);
 
     // 添加主题颜色更新的 Effect
     useEffect(() => {
@@ -306,6 +337,46 @@ const handleChange = async <K extends keyof SettingsOptions>(
 
 
 }
+
+    // 处理备份提醒设置变更
+    const handleBackupReminderChange = async (enabled: boolean) => {
+        try {
+            await BackupReminderUtils.setEnabled(enabled)
+            const updatedSettings = await BackupReminderUtils.getSettings()
+            setBackupReminderSettings(updatedSettings)
+
+            const nextText = await BackupReminderUtils.getNextReminderText()
+            setNextReminderText(nextText)
+
+            // 触发震动反馈
+            if (settings.hapticFeedback) {
+                hapticsUtils.light();
+            }
+        } catch (error) {
+            console.error('更新备份提醒设置失败:', error)
+        }
+    }
+
+    // 处理备份提醒间隔变更
+    const handleBackupIntervalChange = async (interval: BackupReminderInterval) => {
+        try {
+            await BackupReminderUtils.updateInterval(interval)
+            const updatedSettings = await BackupReminderUtils.getSettings()
+            setBackupReminderSettings(updatedSettings)
+
+            const nextText = await BackupReminderUtils.getNextReminderText()
+            setNextReminderText(nextText)
+
+            // 触发震动反馈
+            if (settings.hapticFeedback) {
+                hapticsUtils.light();
+            }
+        } catch (error) {
+            console.error('更新备份提醒间隔失败:', error)
+        }
+    }
+
+
 
     // 处理字体缩放变更
     const handleFontZoomChange = async (newValue: number) => {
@@ -1266,12 +1337,63 @@ const handleChange = async <K extends keyof SettingsOptions>(
                     <h3 className="text-sm uppercase font-medium tracking-wider text-neutral-500 dark:text-neutral-400 mb-3">
                         数据管理
                     </h3>
-                    <button
-                        onClick={() => setIsDataManagerOpen(true)}
-                        className="w-full py-3 text-sm font-medium text-neutral-800 bg-neutral-100 rounded-lg transition-colors hover:bg-neutral-200 dark:text-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700"
-                    >
-                        打开数据管理
-                    </button>
+
+                    {/* 备份提醒设置 */}
+                    {backupReminderSettings && (
+                        <>
+                            {/* 备份提醒开关 */}
+                            <div className="flex items-center justify-between">
+                                <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                                    备份提醒
+                                </div>
+                                <label className="relative inline-flex cursor-pointer items-center">
+                                    <input
+                                        type="checkbox"
+                                        checked={backupReminderSettings.enabled}
+                                        onChange={(e) => handleBackupReminderChange(e.target.checked)}
+                                        className="peer sr-only"
+                                    />
+                                    <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
+                                </label>
+                            </div>
+
+                            {/* 提醒间隔设置 */}
+                            {backupReminderSettings.enabled && (
+                                <div className="mt-4">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                                            提醒频率
+                                        </div>
+                                        {nextReminderText && (
+                                            <div className="text-xs text-neutral-400 dark:text-neutral-500">
+                                                下次：{nextReminderText}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <ButtonGroup
+                                        value={backupReminderSettings.interval.toString()}
+                                        options={[
+                                            { value: BACKUP_REMINDER_INTERVALS.WEEKLY.toString(), label: '每周' },
+                                            { value: BACKUP_REMINDER_INTERVALS.BIWEEKLY.toString(), label: '每两周' },
+                                            { value: BACKUP_REMINDER_INTERVALS.MONTHLY.toString(), label: '每月' }
+                                        ]}
+                                        onChange={(value) => handleBackupIntervalChange(parseInt(value) as BackupReminderInterval)}
+                                        className="w-full"
+                                    />
+                                </div>
+                            )}
+                        </>
+                    )}
+
+                    {/* 数据管理按钮 */}
+                    <div className={backupReminderSettings ? "mt-6" : ""}>
+                        <button
+                            onClick={() => setIsDataManagerOpen(true)}
+                            className="w-full py-3 text-sm font-medium text-neutral-800 bg-neutral-100 rounded-lg transition-colors hover:bg-neutral-200 dark:text-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700"
+                        >
+                            数据管理
+                        </button>
+                    </div>
                 </div>
 
                 {/* 意见反馈组 */}

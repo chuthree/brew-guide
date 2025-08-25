@@ -38,6 +38,8 @@ import CustomEquipmentFormModal from '@/components/equipment/forms/CustomEquipme
 import EquipmentImportModal from '@/components/equipment/import/EquipmentImportModal'
 import DataMigrationModal from '@/components/common/modals/DataMigrationModal'
 import { showToast } from '@/components/common/feedback/GlobalToast'
+import BackupReminderModal from '@/components/common/modals/BackupReminderModal'
+import { BackupReminderUtils, BackupReminderType } from '@/lib/utils/backupReminderUtils'
 
 // 为Window对象声明类型扩展
 declare global {
@@ -214,6 +216,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         totalCount: number;
     } | null>(null);
 
+    // 备份提醒状态
+    const [showBackupReminder, setShowBackupReminder] = useState(false);
+    const [reminderType, setReminderType] = useState<BackupReminderType | null>(null);
+
     // 加载自定义器具
     useEffect(() => {
         const loadEquipments = async () => {
@@ -388,6 +394,13 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
                 // 4. 初始化 Capacitor
                 initCapacitor();
+
+                // 5. 初始化备份提醒
+                try {
+                    await BackupReminderUtils.initializeFirstUse();
+                } catch {
+                    // 静默处理错误
+                }
             } catch {
                 // 静默处理错误
             }
@@ -401,6 +414,26 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             isMounted = false;
         };
     }, [initialHasBeans]);
+
+    // 检查备份提醒
+    useEffect(() => {
+        const checkBackupReminder = async () => {
+            try {
+                const shouldShow = await BackupReminderUtils.shouldShowReminder();
+                if (shouldShow) {
+                    const currentReminderType = await BackupReminderUtils.getReminderType();
+                    setReminderType(currentReminderType);
+                    setShowBackupReminder(true);
+                }
+            } catch (error) {
+                console.error('检查备份提醒失败:', error);
+            }
+        };
+
+        // 延迟检查，确保应用完全加载
+        const timer = setTimeout(checkBackupReminder, 3000);
+        return () => clearTimeout(timer);
+    }, []);
 
     const [hasCoffeeBeans, setHasCoffeeBeans] = useState(initialHasBeans);
 
@@ -2273,6 +2306,12 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                         onComplete={handleOnboardingComplete}
                     />
             )}
+
+            <BackupReminderModal
+                isOpen={showBackupReminder}
+                onClose={() => setShowBackupReminder(false)}
+                reminderType={reminderType}
+            />
         </div>
     )
 }
