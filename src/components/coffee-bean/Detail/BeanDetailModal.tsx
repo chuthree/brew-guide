@@ -85,8 +85,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     const [imageViewerOpen, setImageViewerOpen] = useState(false)
     const [currentImageUrl, setCurrentImageUrl] = useState('')
     const [noteImageErrors, setNoteImageErrors] = useState<Record<string, boolean>>({})
-    // 拟态框关闭状态
-    const [isClosing, setIsClosing] = useState(false)
+
 
     // 重置图片错误状态
     useEffect(() => {
@@ -125,7 +124,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
 
     // 工具函数：计算赏味期信息
     const getFlavorInfo = () => {
-        if (!bean) return { phase: '未知', status: '加载中...' }
+        if (!bean) return { phase: '未知', status: '未知状态' }
 
         const flavorInfo = calculateFlavorInfo(bean);
         return {
@@ -205,89 +204,50 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
         return items
     }
 
-    // 工具函数：检查是否有拼配组件
-    const hasBlendComponents = (): boolean => {
-        return !!(bean?.blendComponents && Array.isArray(bean.blendComponents) && bean.blendComponents.length > 1)
-    }
 
-    // 工具函数：从拼配组件中提取并去重字段值
-    const extractFromBlendComponents = (field: 'origin' | 'process' | 'variety'): string[] => {
-        if (!hasBlendComponents() || !bean?.blendComponents) return []
-
-        return Array.from(new Set(
-            bean.blendComponents
-                .map((comp) => comp[field as keyof typeof comp])
-                .filter((value): value is string =>
-                    typeof value === 'string' && value !== undefined && value !== null && value.trim() !== ''
-                )
-        ))
-    }
 
     // 工具函数：创建信息项
     const createInfoItem = (
         key: string,
         label: string,
         blendField: 'origin' | 'process' | 'variety',
-        fallbackValue?: string,
         enableHighlight = false
     ): InfoItem | null => {
-        // 如果是真正的拼配豆（多个组件），从拼配组件中提取信息
-        if (hasBlendComponents()) {
-            const values = extractFromBlendComponents(blendField)
-            if (values.length === 0) return null
+        if (!bean?.blendComponents) return null
 
-            const text = values.join(', ')
-            return {
-                key,
-                label,
-                value: enableHighlight && searchQuery ? (
-                    <HighlightText text={text} highlight={searchQuery} />
-                ) : text
-            }
-        } else {
-            // 对于非拼配豆，优先从blendComponents[0]获取信息，然后才是fallbackValue
-            let value: string | undefined
+        // 从所有组件中提取并去重字段值
+        const values = Array.from(new Set(
+            bean.blendComponents
+                .map((comp) => comp[blendField])
+                .filter((value): value is string =>
+                    typeof value === 'string' && value.trim() !== ''
+                )
+        ))
 
-            if (bean?.blendComponents && bean.blendComponents.length === 1) {
-                // 单一组件的情况，从blendComponents[0]获取信息
-                value = bean.blendComponents[0][blendField]
-            }
+        if (values.length === 0) return null
 
-            // 如果blendComponents中没有信息，使用fallbackValue
-            if (!value || value.trim() === '') {
-                value = fallbackValue
-            }
-
-            if (value && value.trim() !== '') {
-                return {
-                    key,
-                    label,
-                    value: enableHighlight && searchQuery ? (
-                        <HighlightText text={value} highlight={searchQuery} />
-                    ) : value
-                }
-            }
+        const text = values.join(', ')
+        return {
+            key,
+            label,
+            value: enableHighlight && searchQuery ? (
+                <HighlightText text={text} highlight={searchQuery} />
+            ) : text
         }
-        return null
     }
 
     // 工具函数：生成产地信息项
     const getOriginInfoItems = (): InfoItem[] => {
         const items: InfoItem[] = []
 
-        // 产地信息（从 blendComponents 获取）
-        const origins = bean?.blendComponents?.map(c => c.origin).filter(Boolean).join(', ') || ''
-        const originItem = createInfoItem('origin', '产地', 'origin', origins, true)
+        // 使用 createInfoItem 函数，避免重复逻辑
+        const originItem = createInfoItem('origin', '产地', 'origin', true)
         if (originItem) items.push(originItem)
 
-        // 处理法信息（从 blendComponents 获取）
-        const processes = bean?.blendComponents?.map(c => c.process).filter(Boolean).join(', ') || ''
-        const processItem = createInfoItem('process', '处理法', 'process', processes)
+        const processItem = createInfoItem('process', '处理法', 'process')
         if (processItem) items.push(processItem)
 
-        // 品种信息（从 blendComponents 获取）
-        const varieties = bean?.blendComponents?.map(c => c.variety).filter(Boolean).join(', ') || ''
-        const varietyItem = createInfoItem('variety', '品种', 'variety', varieties)
+        const varietyItem = createInfoItem('variety', '品种', 'variety')
         if (varietyItem) items.push(varietyItem)
 
         // 烘焙度
@@ -302,26 +262,18 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
         return items
     }
 
-    // 判断是否为简单的快捷扣除记录
-    const isSimpleQuickDecrementNote = (note: BrewingNote): boolean => {
-        return !!(note.source === 'quick-decrement' &&
-            !(note.taste && Object.values(note.taste).some(value => value > 0)) &&
+    // 判断是否为简单的变动记录（快捷扣除或容量调整）
+    const isSimpleChangeRecord = (note: BrewingNote): boolean => {
+        const isBasicChangeRecord = !(note.taste && Object.values(note.taste).some(value => value > 0)) &&
             note.rating === 0 &&
             (!note.method || note.method.trim() === '') &&
             (!note.equipment || note.equipment.trim() === '' || note.equipment === '未指定') &&
-            !note.image &&
-            note.notes === '快捷扣除')
-    }
+            !note.image
 
-    // 判断是否为简单的容量调整记录
-    const isSimpleCapacityAdjustmentNote = (note: BrewingNote): boolean => {
-        return !!(note.source === 'capacity-adjustment' &&
-            !(note.taste && Object.values(note.taste).some(value => value > 0)) &&
-            note.rating === 0 &&
-            (!note.method || note.method.trim() === '') &&
-            (!note.equipment || note.equipment.trim() === '' || note.equipment === '未指定') &&
-            !note.image &&
-            note.notes === '容量调整(不计入统计)')
+        return !!(
+            (note.source === 'quick-decrement' && note.notes === '快捷扣除' && isBasicChangeRecord) ||
+            (note.source === 'capacity-adjustment' && note.notes === '容量调整(不计入统计)' && isBasicChangeRecord)
+        )
     }
 
     // 获取相关的冲煮记录
@@ -329,6 +281,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
         const loadRelatedNotes = async () => {
             if (!bean?.id || !isOpen) {
                 setRelatedNotes([])
+                setIsLoadingNotes(false)
                 return
             }
 
@@ -338,6 +291,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                 const notesStr = await Storage.get('brewingNotes')
                 if (!notesStr) {
                     setRelatedNotes([])
+                    setIsLoadingNotes(false)
                     return
                 }
 
@@ -389,11 +343,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
 
     // 处理关闭
     const handleClose = () => {
-        setIsClosing(true)
-        setTimeout(() => {
-            setIsClosing(false)
-            onClose()
-        }, 265) // 与动画时长一致
+        onClose()
     }
 
     // 处理去冲煮功能
@@ -454,7 +404,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     return (
         <>
         <AnimatePresence>
-            {isOpen && !isClosing && (
+            {isOpen && (
                 <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -550,15 +500,22 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                         </div>
                                     </div>
 
-                                    {getOriginInfoItems().length > 0 && !hasBlendComponents() && (
-                                        <div className="space-y-2">
-                                            <InfoGrid items={getOriginInfoItems()} />
-                                        </div>
-                                    )}
+                                    {(() => {
+                                        const originItems = getOriginInfoItems()
+                                        const isMultipleBlend = bean?.blendComponents && bean.blendComponents.length > 1
+                                        return originItems.length > 0 && !isMultipleBlend && (
+                                            <div className="space-y-2">
+                                                <InfoGrid items={originItems} />
+                                            </div>
+                                        )
+                                    })()}
 
-                                    {(hasBlendComponents() || (bean.flavor && bean.flavor.length > 0) || bean.notes) && (
-                                        <div className="space-y-3">
-                                            {hasBlendComponents() && (
+                                    {(() => {
+                                        const isMultipleBlend = bean?.blendComponents && bean.blendComponents.length > 1
+                                        const hasContent = isMultipleBlend || (bean?.flavor && bean.flavor.length > 0) || bean?.notes
+                                        return hasContent && (
+                                            <div className="space-y-3">
+                                                {isMultipleBlend && (
                                                 <div>
                                                     <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-1.5">拼配成分</div>
                                                     <div className="space-y-2">
@@ -603,7 +560,8 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                                 </div>
                                             )}
                                         </div>
-                                    )}
+                                        )
+                                    })()}
 
                                     {/* 相关冲煮记录 - 简化布局 */}
                                     <div className="border-t border-neutral-200/40 dark:border-neutral-800/40 pt-3">
@@ -622,7 +580,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                         ) : (
                                 <div className="space-y-2">
                                     {relatedNotes.map((note) => {
-                                        const isChangeRecord = isSimpleQuickDecrementNote(note) || isSimpleCapacityAdjustmentNote(note)
+                                        const isChangeRecord = isSimpleChangeRecord(note)
 
                                         return (
                                             <div key={note.id} className="p-2 bg-neutral-100 dark:bg-neutral-800 rounded">
@@ -841,13 +799,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                         )}
                                     </div>
                                 </div>
-                            ) : (
-                                <div className="flex items-center justify-center p-8">
-                                    <div className="text-sm text-neutral-500 dark:text-neutral-400">
-                                        加载中...
-                                    </div>
-                                </div>
-                            )}
+                            ) : null}
                         </motion.div>
                     </motion.div>
                 </motion.div>

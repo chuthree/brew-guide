@@ -55,18 +55,15 @@ const InventoryView: React.FC<InventoryViewProps> = ({
         bean: ExtendedCoffeeBean
     } | null>(null);
 
-    // 详情弹窗状态
+    // 详情弹窗状态 - 简化为单一状态
     const [detailBean, setDetailBean] = useState<ExtendedCoffeeBean | null>(null);
-    const [showDetailModal, setShowDetailModal] = useState(false);
 
     const handleDetailClick = (bean: ExtendedCoffeeBean) => {
         setDetailBean(bean);
-        setShowDetailModal(true);
     };
 
     const handleDetailClose = () => {
-        setShowDetailModal(false);
-        setTimeout(() => setDetailBean(null), 300);
+        setDetailBean(null);
     };
 
     const handleRemainingClick = (bean: ExtendedCoffeeBean, event: React.MouseEvent) => {
@@ -219,7 +216,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
 
             {/* 详情弹窗 */}
             <BeanDetailModal
-                isOpen={showDetailModal}
+                isOpen={!!detailBean}
                 bean={detailBean}
                 onClose={handleDetailClose}
                 searchQuery={isSearching ? searchQuery : ''}

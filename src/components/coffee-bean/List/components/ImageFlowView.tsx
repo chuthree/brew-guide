@@ -44,25 +44,19 @@ const ImageFlowView: React.FC<ImageFlowViewProps> = ({
     onDelete,
     onShare
 }) => {
-    // 添加详情弹窗状态
+    // 详情弹窗状态 - 简化为单一状态
     const [detailBean, setDetailBean] = useState<ExtendedCoffeeBean | null>(null);
-    const [showDetailModal, setShowDetailModal] = useState(false);
     const [imageSizes, setImageSizes] = useState<Map<string, { width: number; height: number }>>(new Map())
     const [isLoading, setIsLoading] = useState(true)
 
     // 处理详情点击
     const handleDetailClick = (bean: ExtendedCoffeeBean) => {
         setDetailBean(bean);
-        setShowDetailModal(true);
     };
 
     // 处理详情弹窗关闭
     const handleDetailClose = () => {
-        setShowDetailModal(false);
-        // 延迟清除 bean 数据，让 Drawer 有时间播放关闭动画
-        setTimeout(() => {
-            setDetailBean(null);
-        }, 300); // 300ms 应该足够 Drawer 的关闭动画
+        setDetailBean(null);
     };
 
     // 过滤出有图片的咖啡豆 - 使用 useMemo 避免每次渲染都创建新数组
@@ -256,7 +250,7 @@ const ImageFlowView: React.FC<ImageFlowViewProps> = ({
 
             {/* 详情弹窗 */}
             <BeanDetailModal
-                isOpen={showDetailModal}
+                isOpen={!!detailBean}
                 bean={detailBean}
                 onClose={handleDetailClose}
                 onEdit={onEdit}
