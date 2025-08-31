@@ -1392,4 +1392,6 @@ export const sponsorsList = [
 	"Jiao",
 	"阿大",
 	"Liang桑",
+	"Operatong",
+	"阿姆斯壮 Pro Max",
 ];
