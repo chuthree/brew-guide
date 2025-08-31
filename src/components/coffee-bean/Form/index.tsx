@@ -161,7 +161,7 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
         }
 
         loadSettingsAndInitializeBean()
-    }, [])
+    }, [bean.endDay, bean.roastLevel, bean.startDay, initialBean])
 
     // 自动聚焦输入框
     useEffect(() => {

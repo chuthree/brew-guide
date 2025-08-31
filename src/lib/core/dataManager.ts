@@ -216,7 +216,7 @@ export const DataManager = {
 					await storage.set(key, value);
 
 					// 同步到IndexedDB（如果需要）
-					if (INDEXED_DB_SYNC_KEYS.includes(key as any) &&
+					if (INDEXED_DB_SYNC_KEYS.includes(key as (typeof INDEXED_DB_SYNC_KEYS)[number]) &&
 						typeof importData.data[key] === 'object') {
 						const rawData = importData.data[key] as unknown[];
 						if (Array.isArray(rawData)) {

@@ -3,7 +3,21 @@
  * 主要用于解决 PWA 部署后 chunk 缓存问题
  */
 
+// 类型定义
+interface WindowWithNext extends Window {
+    next?: {
+        router?: {
+            events?: {
+                on: (event: string, handler: (err: Error, url: string) => void) => void;
+            };
+        };
+    };
+}
 
+interface ErrorLike {
+    message?: string;
+    toString?: () => string;
+}
 
 class ChunkErrorManager {
     private static instance: ChunkErrorManager;
@@ -32,13 +46,13 @@ class ChunkErrorManager {
 
             // 监听 Next.js 路由错误
             if (typeof window !== 'undefined' && 'next' in window) {
-                const router = (window as any).next?.router;
+                const router = (window as WindowWithNext).next?.router;
                 if (router && typeof router.events?.on === 'function') {
                     router.events.on('routeChangeError', this.handleRouteError.bind(this));
                 }
             }
 
-            console.log('Chunk 错误处理器已初始化');
+            console.warn('Chunk 错误处理器已初始化');
         } catch (error) {
             console.error('初始化 chunk 错误处理器失败:', error);
         }
@@ -83,7 +97,7 @@ class ChunkErrorManager {
     /**
      * 判断是否是 chunk 加载错误
      */
-    private isChunkError(error: any, message: string): boolean {
+    private isChunkError(error: Error | unknown, message: string): boolean {
         if (!error && !message) return false;
 
         const chunkErrorPatterns = [
@@ -97,7 +111,7 @@ class ChunkErrorManager {
             /_next\/static\/chunks/i
         ];
 
-        const errorString = (error?.message || message || error?.toString() || '').toLowerCase();
+        const errorString = ((error as ErrorLike)?.message || message || (error as ErrorLike)?.toString?.() || '').toLowerCase();
 
         // 更严格的检查，避免误判
         const isChunkRelated = chunkErrorPatterns.some(pattern => pattern.test(errorString));
@@ -122,7 +136,7 @@ class ChunkErrorManager {
         this.isHandling = true;
         this.retryCount++;
 
-        console.log(`处理 chunk 错误，重试次数: ${this.retryCount}/${this.maxRetries}`);
+        console.warn(`处理 chunk 错误，重试次数: ${this.retryCount}/${this.maxRetries}`);
 
         try {
             // 添加防抖机制，避免频繁重试
@@ -162,12 +176,12 @@ class ChunkErrorManager {
                 );
 
                 if (chunkCacheNames.length > 0) {
-                    console.log('清除相关缓存:', chunkCacheNames);
+                    console.warn('清除相关缓存:', chunkCacheNames);
                     await Promise.all(
                         chunkCacheNames.map(cacheName => caches.delete(cacheName))
                     );
                 } else {
-                    console.log('未找到需要清除的缓存');
+                    console.warn('未找到需要清除的缓存');
                 }
             }
 
@@ -186,7 +200,7 @@ class ChunkErrorManager {
      * 强制重新加载页面
      */
     private async forceReload() {
-        console.log('强制重新加载页面');
+        console.warn('强制重新加载页面');
         
         // 尝试更新 Service Worker
         if ('serviceWorker' in navigator) {

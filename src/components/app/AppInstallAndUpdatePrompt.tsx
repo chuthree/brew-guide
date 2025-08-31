@@ -173,7 +173,7 @@ export default function AppInstallAndUpdatePrompt() {
 
                     await Promise.all(
                         chunkCacheNames.map(cacheName => {
-                            console.log('清除缓存:', cacheName);
+                            console.warn('清除缓存:', cacheName);
                             return caches.delete(cacheName);
                         })
                     );

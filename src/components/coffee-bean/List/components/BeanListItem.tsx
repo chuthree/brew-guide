@@ -114,7 +114,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
         }
 
         return { phase, remainingDays, progressPercent, preFlavorPercent, flavorPercent, status, daysSinceRoast, endDay, isFrozen: bean.isFrozen || false, isInTransit: bean.isInTransit || false };
-    }, [bean.roastDate, bean.startDay, bean.endDay, bean.roastLevel, bean.isFrozen, bean.isInTransit]);
+    }, [bean]);
 
     const isEmpty = isBeanEmpty(bean);
     const displayTitle = title || generateBeanTitle(bean, showOnlyBeanName);

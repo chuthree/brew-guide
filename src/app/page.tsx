@@ -349,7 +349,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                     const savedSettings = await Storage.get('brewGuideSettings');
                     if (savedSettings && typeof savedSettings === 'string' && isMounted) {
                         try {
-                            const parsedSettings = JSON.parse(savedSettings) as any;
+                            const parsedSettings = JSON.parse(savedSettings) as Record<string, unknown>;
 
                             // 迁移旧的showFlavorPeriod设置到新的dateDisplayMode
                             if (parsedSettings.showFlavorPeriod !== undefined && parsedSettings.dateDisplayMode === undefined) {
@@ -364,10 +364,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                                 }
                             }
 
-                            setSettings(parsedSettings as SettingsOptions);
+                            setSettings(parsedSettings as unknown as SettingsOptions);
 
                             // 应用字体缩放级别
-                            if (parsedSettings.textZoomLevel) {
+                            if (parsedSettings.textZoomLevel && typeof parsedSettings.textZoomLevel === 'number') {
                                 fontZoomUtils.set(parsedSettings.textZoomLevel);
                             }
                         } catch {
