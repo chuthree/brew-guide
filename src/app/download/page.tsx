@@ -189,7 +189,6 @@ export default function DownloadPage(): React.ReactNode {
                         transition={{ duration: 0.3 }}
                     >
                         <div className="absolute top-0 left-0 w-full h-[120px] bg-gradient-to-b from-neutral-50 dark:from-neutral-900 to-transparent z-[1] pointer-events-none" />
-                        
                         <div className="w-full h-full overflow-y-auto scrollbar-none relative" 
                              style={{ scrollbarWidth: 'none' }}>
                             <style jsx>{`
@@ -197,10 +196,33 @@ export default function DownloadPage(): React.ReactNode {
                                     display: none;
                                 }
                             `}</style>
-                            
                             <div className="flex flex-col gap-6 text-sm pb-20 pt-20">
                                 <h2 className="text-lg font-medium mb-6">更新记录</h2>
-                                
+                                <div>
+                                    <p className="font-medium">(待发布)</p>
+                                    <p className="text-xs text-neutral-500 mt-1">2025-08-31</p>
+                                    <ul className="mt-2 text-xs text-neutral-500 list-disc pl-4 space-y-1">
+                                        <li>(添加): 变动记录编辑中增加转普通笔记按钮</li> 
+                                        <li>(添加): 数据备份提醒</li>
+                                        <li>(添加): 支持自定义赏味期预设</li> 
+                                        <li>(添加): 咖啡豆列表可选择显示总价格以及养豆时间</li>
+                                        <li>(优化): 数据管理代码质量</li> 
+                                        <li>(优化): 统一笔记的保存按钮样式</li>
+                                        <li>(优化): 限制添加笔记界面的宽度</li> 
+                                        <li>(优化): 同步咖啡豆详情中冲煮笔记样式</li> 
+                                        <li>(优化): 笔记列表样式</li>
+                                        <li>(优化): 咖啡豆详情中冲煮记录样式同步</li> 
+                                        <li>(优化): 咖啡豆备注行数默认最大显示1行</li> 
+                                        <li>(优化): 字体大小修改控件样式</li>
+                                        <li>(优化): 个人榜单排版</li> 
+                                        <li>(优化): 笔记列表排版</li> 
+                                        <li>(优化): 快捷扣除值允许设小数点后一位</li> 
+                                        <li>(修复): 快速点开咖啡豆详情时出现"加载中..."的问题</li>
+                                        <li>(修复): 笔记编辑模态框保存按钮跟随滚动问题</li> 
+                                        <li>(修复): 导入数据后个人榜单显示为空的问题</li>
+                                        <li>(修复): 导致 PWA 应用部署后出现空白页面的关键问题</li> 
+                                    </ul>
+                                </div>
                                 <div>
                                     <p className="font-medium">v1.3.9（最新版本）</p>
                                     <p className="text-xs text-neutral-500 mt-1">2025-08-06</p>
@@ -228,7 +250,6 @@ export default function DownloadPage(): React.ReactNode {
                                         <li>(修复): 多次构建报错和安全漏洞问题，提升系统稳定性</li>
                                     </ul>
                                 </div>
-
                                 <div>
                                     <p className="font-medium">v1.3.8</p>
                                     <p className="text-xs text-neutral-500 mt-1">2025-06-28</p>
@@ -246,7 +267,6 @@ export default function DownloadPage(): React.ReactNode {
                                         <li>(修复): 统计视图序号与动画顺序问题</li>
                                     </ul>
                                 </div>
-                                
                                 <div>
                                     <p className="font-medium">v1.3.7</p>
                                     <p className="text-xs text-neutral-500 mt-1">2025-06-17</p>
@@ -263,7 +283,6 @@ export default function DownloadPage(): React.ReactNode {
                                         <li>(修复): 使用&quot;拍照&quot;时误调用相册的问题</li>
                                     </ul>
                                 </div>
-                                
                                 <div>
                                     <p className="font-medium">v1.3.6</p>
                                     <p className="text-xs text-neutral-500 mt-1">2025-06-11</p>
@@ -277,7 +296,6 @@ export default function DownloadPage(): React.ReactNode {
                                         <li>(修复): 自定义器具无法选择及方案显示异常的问题</li>
                                     </ul>
                                 </div>
-                                
                                 <div>
                                     <p className="font-medium">v1.3.5</p>
                                     <p className="text-xs text-neutral-500 mt-1">2025-06-08</p>
@@ -291,7 +309,6 @@ export default function DownloadPage(): React.ReactNode {
                                         <li>(修复): 笔记编辑时日期无法更新的问题</li>
                                     </ul>
                                 </div>
-                                
                                 <div>
                                     <p className="font-medium">v1.3.0</p>
                                     <p className="text-xs text-neutral-500 mt-1">2025-05-26</p>
@@ -305,7 +322,6 @@ export default function DownloadPage(): React.ReactNode {
                                         <li>(修复): 自定义器具的预设方案选项无法使用的问题</li>
                                     </ul>
                                 </div>
-                                
                                 <div>
                                     <p className="font-medium">v1.2.5</p>
                                     <p className="text-xs text-neutral-500 mt-1">2025-05-21</p>
@@ -316,7 +332,6 @@ export default function DownloadPage(): React.ReactNode {
                                         <li>(修复): 手动添加笔记时选择自定义方案后保存内容显示异常的问题</li>
                                     </ul>
                                 </div>
-                                
                                 <div>
                                     <p className="font-medium">v1.2.4.8</p>
                                     <p className="text-xs text-neutral-500 mt-1">2025-05-20</p>
@@ -330,7 +345,6 @@ export default function DownloadPage(): React.ReactNode {
                                         <li>(修复): 方案咖啡粉量参数显示问题</li>
                                     </ul>
                                 </div>
-                                
                                 <div>
                                     <p className="font-medium">v1.2.4.7</p>
                                     <p className="text-xs text-neutral-500 mt-1">2025-05-20</p>
@@ -345,7 +359,6 @@ export default function DownloadPage(): React.ReactNode {
                                         <li>(优化): 导入咖啡豆识别准确度提升（换回OCR+LLM）</li>
                                     </ul>
                                 </div>
-                                
                                 <div>
                                     <p className="font-medium">v1.2.4.6</p>
                                     <p className="text-xs text-neutral-500 mt-1">2025-05-13</p>
@@ -360,7 +373,6 @@ export default function DownloadPage(): React.ReactNode {
                                         <li>(修复): 笔记搜索功能失效问题</li>
                                     </ul>
                                 </div>
-                                
                                 <div>
                                     <p className="font-medium">v1.2.4.5</p>
                                     <p className="text-xs text-neutral-500 mt-1">2025-05-12</p>
@@ -376,7 +388,6 @@ export default function DownloadPage(): React.ReactNode {
                                         <li>(修复): 删除咖啡豆后统计信息残留问题</li>
                                     </ul>
                                 </div>
-                                
                                 <div>
                                     <p className="font-medium">v1.2.4.4</p>
                                     <p className="text-xs text-neutral-500 mt-1">2025-05-08</p>
@@ -389,7 +400,6 @@ export default function DownloadPage(): React.ReactNode {
                                         <li>咖啡豆列表不同信息下的排版优化</li>
                                     </ul>
                                 </div>
-                                
                                 <div>
                                     <p className="font-medium">v1.2.3-fix</p>
                                     <p className="text-xs text-neutral-500 mt-1">2025-04-23</p>
@@ -400,7 +410,6 @@ export default function DownloadPage(): React.ReactNode {
                                         <li>添加小彩蛋（双击注水时的器具图像，会有动画）</li>
                                     </ul>
                                 </div>
-                                
                                 <div>
                                     <p className="font-medium">v1.2.0</p>
                                     <p className="text-xs text-neutral-500 mt-1">2025-04-12</p>
@@ -414,7 +423,6 @@ export default function DownloadPage(): React.ReactNode {
                                         <li>修复自定义方案水量计算问题等</li>
                                     </ul>
                                 </div>
-                                
                                 <div className="pb-10">
                                     <a 
                                         href="https://github.com/chu3/brew-guide/releases" 
@@ -427,7 +435,6 @@ export default function DownloadPage(): React.ReactNode {
                                 </div>
                             </div>
                         </div>
-                        
                         <div className="absolute bottom-0 left-0 w-full h-[120px] bg-gradient-to-t from-neutral-50 dark:from-neutral-900 to-transparent z-[1] pointer-events-none" />
                     </motion.div>
                 );
