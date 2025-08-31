@@ -12,6 +12,7 @@ interface ChangeRecordEditModalProps {
     initialData: BrewingNote
     onSave: (data: BrewingNote) => void
     onClose: () => void
+    onConvertToNormalNote?: (data: BrewingNote) => void // 新增：转换为普通笔记的回调
     settings?: SettingsOptions
 }
 
@@ -20,6 +21,7 @@ const ChangeRecordEditModal: React.FC<ChangeRecordEditModalProps> = ({
     initialData,
     onSave,
     onClose,
+    onConvertToNormalNote,
     settings: _settings
 }) => {
     // 时间戳状态管理
@@ -221,15 +223,61 @@ const ChangeRecordEditModal: React.FC<ChangeRecordEditModalProps> = ({
                                 </div>
                             </div>
 
-                            {/* 底部保存按钮 - 悬浮固定 */}
+                            {/* 底部按钮区域 - 悬浮固定 */}
                             <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-10 pb-safe-bottom">
-                                <button
-                                    type="button"
-                                    onClick={handleSaveClick}
-                                    className="rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100 px-6 py-3 flex items-center justify-center"
-                                >
-                                    <span className="font-medium">保存笔记</span>
-                                </button>
+                                <div className="flex items-center gap-3">
+                                    {/* 转为普通笔记按钮 - 只显示图标，保持与保存按钮一致的大小 */}
+                                    {onConvertToNormalNote && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                // 直接调用转换函数
+                                                const convertedNote = {
+                                                    ...initialData,
+                                                    timestamp: timestamp.getTime(),
+                                                    // 移除变动记录特有的字段
+                                                    source: undefined,
+                                                    quickDecrementAmount: undefined,
+                                                    changeRecord: undefined,
+                                                    // 设置默认的普通笔记字段
+                                                    equipment: initialData.equipment || '',
+                                                    method: initialData.method || '',
+                                                    params: {
+                                                        coffee: initialData.params?.coffee || '',
+                                                        water: '',
+                                                        ratio: '',
+                                                        grindSize: '',
+                                                        temp: ''
+                                                    },
+                                                    rating: initialData.rating || 3,
+                                                    taste: initialData.taste || {
+                                                        acidity: 0,
+                                                        sweetness: 0,
+                                                        bitterness: 0,
+                                                        body: 0
+                                                    },
+                                                    totalTime: initialData.totalTime || 0
+                                                };
+                                                onConvertToNormalNote(convertedNote);
+                                            }}
+                                            className="rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100 w-12 h-12 flex items-center justify-center"
+                                            title="转为普通笔记"
+                                        >
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                                            </svg>
+                                        </button>
+                                    )}
+
+                                    {/* 保存按钮 */}
+                                    <button
+                                        type="button"
+                                        onClick={handleSaveClick}
+                                        className="rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100 px-6 py-3 flex items-center justify-center"
+                                    >
+                                        <span className="font-medium">保存笔记</span>
+                                    </button>
+                                </div>
                             </div>
                         </motion.div>
                     </motion.div>

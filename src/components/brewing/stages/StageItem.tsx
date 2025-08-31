@@ -455,7 +455,7 @@ const StageItem: React.FC<StageItemProps> = ({
                                         <ActionMenu
                                             items={actionMenuItems}
                                             showAnimation={false}
-                                            onStop={(e) => e.stopPropagation()}
+                                            onStop={(e) => e.stopProkupagation()}
                                         />
                                     </div>
                                 )}

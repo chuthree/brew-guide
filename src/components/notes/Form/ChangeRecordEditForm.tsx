@@ -76,7 +76,7 @@ const ChangeRecordEditForm: React.FC<ChangeRecordEditFormProps> = ({
     // 处理表单提交
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         // 构建更新后的变动记录数据
         const updatedRecord: BrewingNote = {
             ...initialData,
@@ -100,7 +100,7 @@ const ChangeRecordEditForm: React.FC<ChangeRecordEditFormProps> = ({
                     capacityAdjustment: {
                         ...originalAdjustment,
                         changeAmount: formData.changeAmount,
-                        changeType: formData.changeAmount > 0 ? 'increase' : 
+                        changeType: formData.changeAmount > 0 ? 'increase' :
                                    formData.changeAmount < 0 ? 'decrease' : 'set',
                         newAmount: originalAdjustment.originalAmount + formData.changeAmount,
                     }

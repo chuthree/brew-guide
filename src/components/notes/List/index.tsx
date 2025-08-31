@@ -720,6 +720,47 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         }
     }
 
+    // 处理变动记录转换为普通笔记
+    const handleConvertToNormalNote = (convertedNote: BrewingNote) => {
+        // 关闭变动记录编辑模态
+        setEditingChangeRecord(null)
+        setShowChangeRecordEditModal(false)
+
+        // 准备普通笔记数据
+        const noteToEdit = {
+            id: convertedNote.id,
+            timestamp: convertedNote.timestamp,
+            equipment: convertedNote.equipment || '',
+            method: convertedNote.method || '',
+            params: convertedNote.params || {
+                coffee: '',
+                water: '',
+                ratio: '',
+                grindSize: '',
+                temp: ''
+            },
+            coffeeBeanInfo: convertedNote.coffeeBeanInfo || {
+                name: '',
+                roastLevel: ''
+            },
+            image: convertedNote.image,
+            rating: convertedNote.rating || 3,
+            taste: convertedNote.taste || {
+                acidity: 0,
+                sweetness: 0,
+                bitterness: 0,
+                body: 0
+            },
+            notes: convertedNote.notes || '',
+            totalTime: convertedNote.totalTime || 0,
+            beanId: convertedNote.beanId
+        };
+
+        // 打开普通笔记编辑模态
+        setEditingNote(noteToEdit);
+        setShowNoteEditModal(true);
+    };
+
     // 处理变动记录保存
     const handleSaveChangeRecord = async (updatedRecord: BrewingNote) => {
         try {
@@ -1205,6 +1246,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                     showModal={showChangeRecordEditModal}
                     initialData={editingChangeRecord}
                     onSave={handleSaveChangeRecord}
+                    onConvertToNormalNote={handleConvertToNormalNote}
                     onClose={() => {
                         setEditingChangeRecord(null)
                         setShowChangeRecordEditModal(false)
