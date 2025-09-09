@@ -1382,7 +1382,6 @@ export const sponsorsList = [
 	"Azkabaner",
 	"薄荷蘑菇汤",
 	"▲",
-	"古神",
 	"Arbalest",
 	"林書晨",
 	"Fanghan",
@@ -1394,4 +1393,5 @@ export const sponsorsList = [
 	"Liang桑",
 	"Operatong",
 	"阿姆斯壮 Pro Max",
+	"有無咖屿所",
 ];
