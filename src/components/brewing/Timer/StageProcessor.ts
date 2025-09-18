@@ -102,19 +102,24 @@ export const createExpandedStages = (stages: Stage[] | undefined): ExpandedStage
           originalIndex: index,
         });
 
-        // 添加等待阶段
-        expandedStages.push({
-          type: "wait",
-          label: stage.label || `阶段 ${index + 1}`,
-          startTime: prevStageTime + stagePourTime,
-          endTime: stageTime,
-          time: stageTime - (prevStageTime + stagePourTime),
-          water: stage.water || "",
-          detail: stage.detail || "",
-          pourType: stage.pourType,
-          valveStatus: stage.valveStatus,
-          originalIndex: index,
-        });
+        // 计算等待时间
+        const waitTime = stageTime - (prevStageTime + stagePourTime);
+        
+        // 只有当等待时间大于0时才添加等待阶段
+        if (waitTime > 0) {
+          expandedStages.push({
+            type: "wait",
+            label: stage.label || `阶段 ${index + 1}`,
+            startTime: prevStageTime + stagePourTime,
+            endTime: stageTime,
+            time: waitTime,
+            water: stage.water || "",
+            detail: stage.detail || "",
+            pourType: stage.pourType,
+            valveStatus: stage.valveStatus,
+            originalIndex: index,
+          });
+        }
       } else {
         // 如果没有注水阶段，则整个阶段都是等待
         expandedStages.push({
@@ -225,4 +230,4 @@ export const calculateCurrentWater = (
   }
 
   return currentTargetWater;
-}; 
+};
