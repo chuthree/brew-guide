@@ -803,7 +803,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                                 className="cursor-pointer underline"
                                 onClick={() => openLink(year === 2024 ? 'https://www.kdocs.cn/l/cmx9enIek2Hm' : 'https://kdocs.cn/l/cr1urhFNvrgK')}
                             >
-                                数据来自于 Peter 咖啡豆评测榜单 ( 同步时间：2025 / 8 / 21 )
+                                数据来自于 Peter 咖啡豆评测榜单 ( 同步时间：2025 / 9 / 19 )
                             </span>
                         )}
                     </div>

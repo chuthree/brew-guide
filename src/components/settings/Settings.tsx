@@ -601,7 +601,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                                 className="object-cover"
                                             />
                                         </div>
-                                        <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">交流群（9 月 7 日前有效）</p>
+                                        <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">交流群（9 月 26 日前有效）</p>
                                     </div>
                                 </>
                             ) : null}
