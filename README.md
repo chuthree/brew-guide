@@ -7,6 +7,9 @@
 
 咖啡冲煮指南是一款现代化的咖啡冲煮助手应用，帮助咖啡爱好者记录、追踪和优化他们的冲煮过程。本应用作为一个全面的解决方案，支持多种冲煮器具、方法，并提供详细的冲煮记录功能。
 
+<img width="6495" height="3000" alt="IMG_1953" src="https://github.com/user-attachments/assets/f1c6d047-3682-4d90-8748-16995456f092" />
+
+
 ### 应用访问
 
 - 🔗 **国内访问**：[https://coffee.chu3.top/](http://coffee.chu3.top/)
