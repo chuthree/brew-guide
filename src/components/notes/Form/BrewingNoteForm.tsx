@@ -161,7 +161,7 @@ const validateNumericInput = (value: string): boolean => {
 const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     id,
     isOpen,
-    onClose,
+    onClose: _onClose,
     onSave,
     initialData,
     inBrewPage = false,
@@ -744,8 +744,6 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
             {!hideHeader && (
                 <div className="shrink-0 mb-4">
                     <NoteFormHeader
-                        isEditMode={!!initialData?.id}
-                        onBack={onClose}
                         onSave={() => formRef.current?.requestSubmit()}
                         showSaveButton={showSaveButton}
                         timestamp={timestamp}
@@ -1170,8 +1168,8 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                         }
                         className="text-xs font-medium border-b border-neutral-200 focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 pb-4"
                         placeholder="记录一下这次冲煮的感受、改进点等..."
-                        minRows={3}
-                        maxRows={10}
+                        minRows={7}
+                        maxRows={12}
                     />
                 </div>
             </div>

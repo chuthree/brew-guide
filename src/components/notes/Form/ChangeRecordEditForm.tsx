@@ -28,7 +28,7 @@ interface ChangeRecordEditFormProps {
 const ChangeRecordEditForm: React.FC<ChangeRecordEditFormProps> = ({
     id,
     isOpen,
-    onClose,
+    onClose: _onClose,
     onSave,
     initialData,
     hideHeader = false,
@@ -134,8 +134,6 @@ const ChangeRecordEditForm: React.FC<ChangeRecordEditFormProps> = ({
             {!hideHeader && (
                 <div className="shrink-0 mb-4">
                     <NoteFormHeader
-                        isEditMode={true}
-                        onBack={onClose}
                         onSave={() => formRef.current?.requestSubmit()}
                         showSaveButton={true}
                         timestamp={timestamp}

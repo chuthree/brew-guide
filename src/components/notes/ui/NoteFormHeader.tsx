@@ -4,8 +4,6 @@ import React, { useState, useRef, useEffect } from 'react'
 import { Calendar } from '@/components/common/ui/Calendar'
 
 interface NoteFormHeaderProps {
-    isEditMode: boolean; // 是否是编辑模式（否则为新建模式）
-    onBack?: () => void; // 返回按钮的回调
     onSave?: () => void; // 保存按钮的回调
     showSaveButton?: boolean; // 是否显示保存按钮
     timestamp?: Date; // 可选时间戳，默认为当前时间
@@ -13,8 +11,6 @@ interface NoteFormHeaderProps {
 }
 
 const NoteFormHeader: React.FC<NoteFormHeaderProps> = ({
-    isEditMode,
-    onBack,
     onSave: _onSave,
     showSaveButton: _showSaveButton = true,
     timestamp = new Date(),
@@ -55,9 +51,7 @@ const NoteFormHeader: React.FC<NoteFormHeaderProps> = ({
     return (
         <div className="flex items-center justify-between w-full">
             <div className="flex items-baseline">
-                <span className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
-                    {`${isEditMode ? '编辑记录' : '新建记录'} · `}
-                </span>
+                <span className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">新建记录 ·</span>
 
                 {/* 可点击的日期部分 */}
                 <div className="relative ml-1" ref={datePickerRef}>
@@ -86,18 +80,6 @@ const NoteFormHeader: React.FC<NoteFormHeaderProps> = ({
                         </div>
                     )}
                 </div>
-            </div>
-            <div className="flex items-center space-x-6">
-                {isEditMode && onBack && (
-                    <button
-                        type="button"
-                        onClick={onBack}
-                        className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300 transition-colors"
-                    >
-                        返回
-                    </button>
-                )}
-                {/* 保存按钮已移至底部统一样式 */}
             </div>
         </div>
     )
