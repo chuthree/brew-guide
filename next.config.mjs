@@ -164,6 +164,7 @@ const nextConfig = {
     },
     // 增加静态页面生成超时时间
     staticPageGenerationTimeout: 180,
+
     // 配置 webpack 以支持 CSV 文件
     webpack: (config) => {
         // CSV 文件支持
