@@ -1521,7 +1521,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                         <p className="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
                             <strong>WebDAV 云同步</strong>：将您的冲煮数据、咖啡豆信息等同步到支持WebDAV的云盘服务（如坚果云、NextCloud等）。
                             <br />
-                            💡 <strong>开发环境自动代理</strong>：localhost下自动使用Next.js代理，生产环境直接连接！
+                            💡 <strong>！暂时无法使用，因为写一半发现没实力开发 www，有没有大佬帮帮忙吧</strong>
                         </p>
                     </div>
 
@@ -1530,7 +1530,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                         {/* WebDAV主开关 */}
                         <div className="flex items-center justify-between">
                             <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                                WebDAV 云同步
+                                WebDAV 云同步（没实现www）
                             </div>
                             <div className="flex items-center space-x-2">
                                 {/* 连接状态指示器 */}
