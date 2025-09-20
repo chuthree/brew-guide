@@ -1394,4 +1394,6 @@ export const sponsorsList = [
 	"Operatong",
 	"阿姆斯壮 Pro Max",
 	"有無咖屿所",
+	"skyyoung",
+	"Lokki",
 ];
