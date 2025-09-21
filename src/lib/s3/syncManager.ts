@@ -98,12 +98,12 @@ export class S3SyncManager {
 
             // 1. 获取本地数据
             console.warn('开始同步：获取本地数据...')
-            const localData = await this.getLocalData()
-            console.warn('本地数据获取完成，包含项目:', Object.keys(localData))
-            const localFileManifest = this.getDataFileManifest(localData)
+            const { dataForHashing, fullExportData } = await this.getLocalData()
+            console.warn('本地数据获取完成，包含项目:', Object.keys(fullExportData))
+            const localFileManifest = this.getDataFileManifest(fullExportData)
 
-            // 2. 计算当前本地数据哈希
-            const currentLocalDataHash = await this.generateDataHash(localData)
+            // 2. 计算当前本地数据哈希（仅基于核心数据）
+            const currentLocalDataHash = await this.generateDataHash(dataForHashing)
             console.warn('本地数据哈希:', currentLocalDataHash.substring(0, 8))
 
             // 3. 获取远程元数据
@@ -114,39 +114,39 @@ export class S3SyncManager {
             const localMetadata = await this.getLocalMetadata()
             console.warn('本地元数据:', localMetadata ? '存在' : '不存在')
 
-            // 4. 决定同步方向（传入当前数据哈希）
-            const shouldUpload = preferredDirection === 'upload'
-                ? true
-                : preferredDirection === 'download'
-                    ? false
-                    : this.shouldUploadData(localMetadata, remoteMetadata, currentLocalDataHash)
-
-            if (preferredDirection !== 'auto') {
-                console.warn('同步方向由调用方指定:', preferredDirection)
-            }
+            // 4. 决定同步方向
+            const direction = this.determineSyncDirection(localMetadata, remoteMetadata, currentLocalDataHash, preferredDirection)
 
             let manifestToPersist = localFileManifest
+            let finalDataHash = currentLocalDataHash
 
-            if (shouldUpload) {
-                // 上传本地数据到S3
-                console.warn('执行上传操作...')
-                await this.uploadData(localData, result)
-            } else {
-                // 从S3下载数据
-                console.warn('执行下载操作...')
-                const downloadedFiles = await this.downloadData(result, remoteMetadata)
-                if (downloadedFiles.length > 0) {
-                    manifestToPersist = downloadedFiles
-                } else if (remoteMetadata?.files?.length) {
-                    manifestToPersist = this.sanitizeManifestFiles(remoteMetadata.files)
-                }
+            switch (direction) {
+                case 'upload':
+                    console.warn('执行上传操作...')
+                    await this.uploadData(fullExportData, result)
+                    // 上传后，元数据使用当前本地数据哈希
+                    finalDataHash = currentLocalDataHash
+                    await this.updateSyncMetadata(manifestToPersist, finalDataHash)
+                    break
+                case 'download':
+                    console.warn('执行下载操作...')
+                    const downloadedFiles = await this.downloadData(result, remoteMetadata)
+                    if (downloadedFiles.length > 0) {
+                        manifestToPersist = downloadedFiles
+                    } else if (remoteMetadata?.files?.length) {
+                        manifestToPersist = this.sanitizeManifestFiles(remoteMetadata.files)
+                    }
+                    // 下载后，需要重新计算哈希值
+                    finalDataHash = await this.generateDataHash(await this.getLocalData())
+                    await this.updateSyncMetadata(manifestToPersist, finalDataHash)
+                    break
+                case 'none':
+                    console.warn('数据已是最新，无需同步')
+                    result.message = '数据已是最新'
+                    // 即使没有同步操作，也更新本地元数据的时间戳和哈希，以保持一致
+                    await this.updateSyncMetadata(localFileManifest, currentLocalDataHash, true)
+                    break
             }
-
-            // 4. 更新同步元数据（传入实际同步的数据哈希）
-            console.warn('更新同步元数据...')
-            // 如果上传了，使用当前本地数据哈希；如果下载了，重新计算下载后的数据哈希
-            const finalDataHash = shouldUpload ? currentLocalDataHash : await this.generateDataHash(await this.getLocalData())
-            await this.updateSyncMetadata(manifestToPersist, finalDataHash)
 
             result.success = result.errors.length === 0
             result.message = result.success
@@ -180,23 +180,35 @@ export class S3SyncManager {
     /**
      * 获取本地存储的所有数据
      */
-    private async getLocalData(): Promise<Record<string, unknown>> {
-        const data: Record<string, unknown> = {}
+    private async getLocalData(): Promise<{
+        dataForHashing: Record<string, unknown>
+        fullExportData: Record<string, unknown>
+    }> {
+        const fullExportData: Record<string, unknown> = {}
+        let dataForHashing: Record<string, unknown> = {}
 
         try {
             // 使用DataManager导出完整的应用数据
             const { DataManager } = await import('@/lib/core/dataManager')
-            const fullExportData = await DataManager.exportAllData()
-            const exportDataObj = JSON.parse(fullExportData)
+            const fullExportString = await DataManager.exportAllData()
+            const exportDataObj = JSON.parse(fullExportString)
 
-            // 保存完整的导出数据作为单个文件
-            data['brew-guide-data'] = exportDataObj
+            // 完整的导出数据用于上传
+            fullExportData['brew-guide-data'] = exportDataObj
+
+            // 仅使用 `data` 字段进行哈希计算
+            if (exportDataObj.data) {
+                dataForHashing = { 'brew-guide-data': exportDataObj.data }
+            } else {
+                // 如果没有 `data` 字段，则使用整个对象进行哈希计算（兼容旧格式）
+                dataForHashing = fullExportData
+            }
 
             console.warn('获取到完整应用数据:', {
                 exportDate: exportDataObj.exportDate,
                 appVersion: exportDataObj.appVersion,
                 dataKeys: Object.keys(exportDataObj.data),
-                totalSize: (fullExportData.length / 1024).toFixed(2) + 'KB'
+                totalSize: (fullExportString.length / 1024).toFixed(2) + 'KB'
             })
 
         } catch (error) {
@@ -207,9 +219,12 @@ export class S3SyncManager {
                 const value = await Storage.get('brewGuideSettings')
                 if (value !== null) {
                     try {
-                        data['brewGuideSettings'] = JSON.parse(value)
+                        const settings = JSON.parse(value)
+                        fullExportData['brewGuideSettings'] = settings
+                        dataForHashing['brewGuideSettings'] = settings
                     } catch {
-                        data['brewGuideSettings'] = value
+                        fullExportData['brewGuideSettings'] = value
+                        dataForHashing['brewGuideSettings'] = value
                     }
                 }
             } catch (fallbackError) {
@@ -217,7 +232,7 @@ export class S3SyncManager {
             }
         }
 
-        return data
+        return { dataForHashing, fullExportData }
     }
 
     private getDataFileManifest(localData: Record<string, unknown>): string[] {
@@ -448,56 +463,64 @@ export class S3SyncManager {
     }
 
     /**
-     * 判断是否应该上传数据（本地数据较新）
+     * 决定同步方向
      */
-    private shouldUploadData(localMetadata: SyncMetadata | null, remoteMetadata: SyncMetadata | null, currentDataHash: string): boolean {
-        // 如果没有远程数据，说明是首次同步，上传本地数据
+    private determineSyncDirection(
+        localMetadata: SyncMetadata | null,
+        remoteMetadata: SyncMetadata | null,
+        currentDataHash: string,
+        preferredDirection: 'auto' | 'upload' | 'download'
+    ): 'upload' | 'download' | 'none' {
+        if (preferredDirection === 'upload' || preferredDirection === 'download') {
+            console.warn('同步方向由调用方指定:', preferredDirection)
+            return preferredDirection
+        }
+
+        // 1. 没有远程元数据，必须上传
         if (!remoteMetadata) {
             console.warn('首次同步：上传本地数据到S3')
-            return true
+            return 'upload'
         }
 
-        // 如果没有本地元数据，下载远程数据
+        // 2. 没有本地元数据，必须下载
         if (!localMetadata) {
             console.warn('本地无元数据：从S3下载数据')
-            return false
+            return 'download'
         }
 
-        // 核心逻辑：检测本地数据是否发生变化
+        // 3. 核心逻辑：基于哈希值比较
         const localDataChanged = localMetadata.dataHash !== currentDataHash
+        const remoteDataIsDifferent = remoteMetadata.dataHash !== currentDataHash
+
         console.warn('数据变化检测:', {
             localStoredHash: localMetadata.dataHash?.substring(0, 8) || 'N/A',
             currentDataHash: currentDataHash.substring(0, 8),
             localChanged: localDataChanged,
-            remoteHash: remoteMetadata.dataHash?.substring(0, 8) || 'N/A'
+            remoteHash: remoteMetadata.dataHash?.substring(0, 8) || 'N/A',
+            remoteIsDifferent: remoteDataIsDifferent
         })
 
-        // 如果本地数据发生了变化，优先上传本地数据
+        // 如果本地数据已更改，则上传
         if (localDataChanged) {
             console.warn('本地数据已变化：上传到S3')
-            return true
+            return 'upload'
         }
 
-        // 如果本地数据没有变化，比较远程数据是否更新
-        if (remoteMetadata.dataHash && remoteMetadata.dataHash !== currentDataHash) {
+        // 如果本地数据未更改，但远程数据不同，则下载
+        if (remoteDataIsDifferent) {
             console.warn('远程数据更新且本地无变化：从S3下载')
-            return false
+            return 'download'
         }
 
-        // 如果双方数据都没有变化，检查时间戳作为兜底
-        const timeDiff = remoteMetadata.lastSyncTime - localMetadata.lastSyncTime
-        const shouldUpload = timeDiff <= 0
-        console.warn(`数据无变化，基于时间戳：${shouldUpload ? '上传到S3' : '从S3下载'}`, {
-            timeDiff: `${Math.round(timeDiff / 1000)}秒`
-        })
-
-        return shouldUpload
+        // 如果哈希值都相同，则数据已同步
+        console.warn('数据哈希值一致，无需同步')
+        return 'none'
     }
 
     /**
      * 更新同步元数据
      */
-    private async updateSyncMetadata(files: string[], dataHash: string): Promise<void> {
+    private async updateSyncMetadata(files: string[], dataHash: string, localOnly = false): Promise<void> {
         const uniqueFiles = Array.from(new Set(files.filter(Boolean))).sort()
 
         const metadata: SyncMetadata = {
@@ -512,7 +535,7 @@ export class S3SyncManager {
         await Storage.set('s3-sync-metadata', JSON.stringify(metadata))
 
         // 上传到S3
-        if (this.client) {
+        if (this.client && !localOnly) {
             try {
                 await this.client.uploadFile('sync-metadata.json', JSON.stringify(metadata, null, 2))
             } catch (error) {
@@ -522,12 +545,35 @@ export class S3SyncManager {
     }
 
     /**
+     * 递归地对对象的键进行排序
+     */
+    private deepSortObject(obj: any): any {
+        if (typeof obj !== 'object' || obj === null) {
+            return obj
+        }
+
+        if (Array.isArray(obj)) {
+            return obj.map(item => this.deepSortObject(item))
+        }
+
+        const sortedObj: Record<string, unknown> = {}
+        const sortedKeys = Object.keys(obj).sort()
+
+        for (const key of sortedKeys) {
+            sortedObj[key] = this.deepSortObject(obj[key])
+        }
+
+        return sortedObj
+    }
+
+    /**
      * 生成数据内容哈希
      */
     private async generateDataHash(data: Record<string, unknown>): Promise<string> {
         try {
-            // 将数据转换为稳定的字符串表示（排序键值）
-            const sortedDataString = JSON.stringify(data, Object.keys(data).sort())
+            // 深度排序对象以确保稳定的字符串表示
+            const sortedData = this.deepSortObject(data)
+            const sortedDataString = JSON.stringify(sortedData)
 
             // 使用Web Crypto API生成SHA-256哈希
             const encoder = new TextEncoder()

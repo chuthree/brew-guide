@@ -469,7 +469,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
         setS3Error('')
 
         try {
-            const result: SyncResult = await syncManager.sync('upload')
+            const result: SyncResult = await syncManager.sync('auto')
 
             if (result.success) {
                 const lastSync = await syncManager.getLastSyncTime()
