@@ -60,32 +60,17 @@ export class S3Client {
      */
     private async testQiniuConnection(): Promise<boolean> {
         try {
-            // 对于七牛云，先尝试简单的根路径GET请求
-            const baseUrl = this.buildUrl('/')
-            const requestUrl = await this.createPresignedUrl('GET', baseUrl)
-
-            // 带认证头进行请求
-            const response = await fetch(requestUrl, {
-                method: 'GET'
-            })
-
-            const success = response.status === 200 || response.status === 403 || response.status === 404
+            // 七牛云常用对象检测方式：尝试获取同步元数据文件
+            const exists = await this.fileExists('sync-metadata.json')
 
             this.logSummary('test-connection', {
                 service: 'qiniu',
-                url: requestUrl,
-                status: response.status,
-                ok: success,
-                presigned: true
+                ok: exists,
+                method: 'head-object',
+                metadataExists: exists
             })
 
-            if (!success) {
-                // 如果状态码不是预期的，记录片段帮助排查
-                const responseText = await response.text()
-                console.error('七牛云连接测试失败，响应片段:', responseText.substring(0, 200))
-            }
-
-            return success
+            return exists
         } catch (error) {
             console.error('七牛云连接测试失败:', error)
             this.logSummary('test-connection', {
@@ -249,6 +234,10 @@ export class S3Client {
             })
 
             if (!response.ok) {
+                if (response.status === 403) {
+                    console.warn('列出对象时收到403，返回空列表以避免中断同步流程')
+                    return []
+                }
                 throw new Error(`列出对象失败: ${response.status} ${response.statusText}`)
             }
 
@@ -344,8 +333,15 @@ export class S3Client {
      * 构建完整的对象键名
      */
     private getFullKey(key: string): string {
-        const prefix = this.config.prefix.endsWith('/') ? this.config.prefix : this.config.prefix + '/'
-        return prefix + key
+        const normalizedKey = key.replace(/^\/+/, '')
+
+        const rawPrefix = (this.config.prefix || '').replace(/^\/+/, '')
+        if (!rawPrefix) {
+            return normalizedKey
+        }
+
+        const normalizedPrefix = rawPrefix.endsWith('/') ? rawPrefix : `${rawPrefix}/`
+        return normalizedPrefix + normalizedKey
     }
 
     /**
@@ -398,21 +394,25 @@ export class S3Client {
         additionalHeaders: Record<string, string> = {},
         payload: string | ArrayBuffer | null = null
     ): Promise<{ requestUrl: string; headers: Record<string, string> }> {
-        let requestUrl = url
-        let headers = additionalHeaders
+        if (this.isQiniu()) {
+            const normalizedHeaders = this.getQiniuSignedHeaders(additionalHeaders)
+            const { requestUrl: presignedUrl, signedHeaders } = await this.createPresignedUrl(
+                method,
+                url,
+                60,
+                normalizedHeaders
+            )
 
-        if (this.isQiniu() && (method === 'GET' || method === 'HEAD')) {
-            requestUrl = await this.createPresignedUrl(method, url)
-            headers = {
-                'Authorization': `Basic ${btoa(`${this.config.accessKeyId}:${this.config.secretAccessKey}`)}`,
-                ...additionalHeaders
+            return {
+                requestUrl: presignedUrl,
+                headers: this.filterHeadersBySignedList(additionalHeaders, signedHeaders)
             }
-        } else {
-            headers = await this.createAuthHeaders(method, url, additionalHeaders, payload)
         }
 
+        const headers = await this.createAuthHeaders(method, url, additionalHeaders, payload)
+
         return {
-            requestUrl,
+            requestUrl: url,
             headers
         }
     }
@@ -511,7 +511,43 @@ export class S3Client {
         }
     }
 
-    private async createPresignedUrl(method: string, url: string, expiresInSeconds = 60): Promise<string> {
+    private getQiniuSignedHeaders(headers: Record<string, string>): Record<string, string> {
+        const signedHeaders: Record<string, string> = {}
+
+        Object.entries(headers).forEach(([key, value]) => {
+            const lowerKey = key.toLowerCase()
+
+            // 只签名浏览器安全允许的简单头，避免触发额外的CORS预检
+            if (lowerKey === 'content-type') {
+                signedHeaders[lowerKey] = value.trim()
+            }
+        })
+
+        return signedHeaders
+    }
+
+    private filterHeadersBySignedList(
+        headers: Record<string, string>,
+        signedHeaders: string[]
+    ): Record<string, string> {
+        const normalizedSigned = new Set(signedHeaders.map(header => header.toLowerCase()))
+        const filtered: Record<string, string> = {}
+
+        Object.entries(headers).forEach(([key, value]) => {
+            if (normalizedSigned.has(key.toLowerCase())) {
+                filtered[key] = value
+            }
+        })
+
+        return filtered
+    }
+
+    private async createPresignedUrl(
+        method: string,
+        url: string,
+        expiresInSeconds = 60,
+        headersToSign: Record<string, string> = {}
+    ): Promise<{ requestUrl: string; signedHeaders: string[] }> {
         const requestUrl = new URL(url)
 
         const now = new Date()
@@ -523,15 +559,28 @@ export class S3Client {
         requestUrl.searchParams.set('X-Amz-Credential', `${this.config.accessKeyId}/${credentialScope}`)
         requestUrl.searchParams.set('X-Amz-Date', amzDate)
         requestUrl.searchParams.set('X-Amz-Expires', expiresInSeconds.toString())
-        requestUrl.searchParams.set('X-Amz-SignedHeaders', 'host')
         requestUrl.searchParams.set('X-Amz-Content-Sha256', 'UNSIGNED-PAYLOAD')
+
+        const canonicalHeadersMap = new Map<string, string>()
+        canonicalHeadersMap.set('host', requestUrl.host)
+
+        Object.entries(headersToSign).forEach(([key, value]) => {
+            canonicalHeadersMap.set(key.toLowerCase(), value.trim())
+        })
+
+        const sortedHeaderKeys = Array.from(canonicalHeadersMap.keys()).sort()
+        const canonicalHeaders = sortedHeaderKeys
+            .map(key => `${key}:${canonicalHeadersMap.get(key)}`)
+            .join('\n') + '\n'
+
+        requestUrl.searchParams.set('X-Amz-SignedHeaders', sortedHeaderKeys.join(';'))
 
         const canonicalRequest = [
             method.toUpperCase(),
             this.getCanonicalUri(requestUrl.pathname),
             this.getCanonicalQueryString(requestUrl.searchParams),
-            `host:${requestUrl.host}\n`,
-            'host',
+            canonicalHeaders,
+            sortedHeaderKeys.join(';'),
             'UNSIGNED-PAYLOAD'
         ].join('\n')
 
@@ -547,12 +596,15 @@ export class S3Client {
 
         requestUrl.searchParams.set('X-Amz-Signature', signature)
 
-        return requestUrl.toString()
+        return {
+            requestUrl: requestUrl.toString(),
+            signedHeaders: sortedHeaderKeys
+        }
     }
 
     private logSummary(event: string, detail: Record<string, unknown>): void {
-        if (typeof console !== 'undefined' && typeof console.info === 'function') {
-            console.info(`[S3:${event}]`, detail)
+        if (typeof console !== 'undefined' && typeof console.warn === 'function') {
+            console.warn(`[S3:${event}]`, detail)
         }
     }
 

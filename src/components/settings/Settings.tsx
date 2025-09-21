@@ -96,8 +96,7 @@ export interface SettingsOptions {
         bucketName: string
         prefix: string
         endpoint?: string // 自定义端点，用于七牛云等S3兼容服务
-        autoSync: boolean
-        syncInterval: number // 分钟
+        syncMode: 'manual'
     }
 }
 
@@ -147,8 +146,7 @@ export const defaultSettings: SettingsOptions = {
         bucketName: '',
         prefix: 'brew-guide-data/',
         endpoint: '', // 自定义端点
-        autoSync: false,
-        syncInterval: 30 // 30分钟
+        syncMode: 'manual'
     }
 }
 
@@ -158,6 +156,31 @@ interface SettingsProps {
     settings: SettingsOptions
     setSettings: (settings: SettingsOptions) => void
     onDataChange?: () => void
+}
+
+type S3SyncSettings = NonNullable<SettingsOptions['s3Sync']>
+
+const normalizeS3Settings = (incoming?: SettingsOptions['s3Sync'] | null): S3SyncSettings => {
+    const defaults = defaultSettings.s3Sync!
+
+    if (!incoming) {
+        return { ...defaults }
+    }
+
+    const sanitizedRecord = { ...(incoming || {}) } as Record<string, unknown>
+    delete sanitizedRecord.autoSync
+    delete sanitizedRecord.syncInterval
+
+    const withDefaults: S3SyncSettings = {
+        ...defaults,
+        ...(sanitizedRecord as Partial<S3SyncSettings>),
+        syncMode: 'manual'
+    }
+
+    return {
+        ...withDefaults,
+        endpoint: withDefaults.endpoint || ''
+    }
 }
 
 const Settings: React.FC<SettingsProps> = ({
@@ -222,7 +245,7 @@ const Settings: React.FC<SettingsProps> = ({
     const [nextReminderText, setNextReminderText] = useState('')
 
     // S3同步相关状态
-    const [s3Settings, setS3Settings] = useState(settings.s3Sync || defaultSettings.s3Sync!)
+    const [s3Settings, setS3Settings] = useState<S3SyncSettings>(() => normalizeS3Settings(settings.s3Sync))
     const [s3Status, setS3Status] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected')
     const [s3Error, setS3Error] = useState<string>('')
     const [showS3SecretKey, setShowS3SecretKey] = useState(false)
@@ -230,7 +253,6 @@ const Settings: React.FC<SettingsProps> = ({
     const [syncManager, setSyncManager] = useState<S3SyncManager | null>(null)
     const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null)
     const [isSyncing, setIsSyncing] = useState(false)
-    const syncIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
     // 创建音效播放引用
     const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -258,8 +280,9 @@ const Settings: React.FC<SettingsProps> = ({
     // 当settings.s3Sync发生变化时更新s3Settings状态
     useEffect(() => {
         if (settings.s3Sync) {
-            setS3Settings(settings.s3Sync);
-            console.warn('🔄 S3设置已从localStorage加载:', settings.s3Sync);
+            const normalized = normalizeS3Settings(settings.s3Sync)
+            setS3Settings(normalized)
+            console.warn('🔄 S3设置已从localStorage加载:', normalized)
         }
     }, [settings.s3Sync]);
 
@@ -421,30 +444,17 @@ const handleChange = async <K extends keyof SettingsOptions>(
     }
 
     // 处理S3设置变更
-    const handleS3SettingChange = <K extends keyof typeof s3Settings>(
+    const handleS3SettingChange = <K extends keyof S3SyncSettings>(
         key: K,
-        value: typeof s3Settings[K]
+        value: S3SyncSettings[K]
     ) => {
-        const newS3Settings = { ...s3Settings, [key]: value }
+        const newS3Settings = normalizeS3Settings({ ...s3Settings, [key]: value } as S3SyncSettings)
         setS3Settings(newS3Settings)
         handleChange('s3Sync', newS3Settings)
-
-        // 如果禁用了S3或自动同步，清除定时器
-        if (key === 'enabled' && !value) {
-            stopAutoSync()
-        } else if (key === 'autoSync' && !value) {
-            stopAutoSync()
-        } else if (key === 'autoSync' && value && s3Status === 'connected') {
-            // 如果启用自动同步且已连接，启动定时器
-            startAutoSync(newS3Settings.syncInterval)
-        } else if (key === 'syncInterval' && newS3Settings.autoSync && s3Status === 'connected') {
-            // 如果更改了同步间隔，重新启动定时器
-            startAutoSync(value as number)
-        }
     }
 
-    // 手动同步数据
-    const manualSync = useCallback(async () => {
+    // 执行同步（仅手动）
+    const performSync = useCallback(async () => {
         if (!syncManager) {
             setS3Error('请先测试连接')
             return
@@ -459,71 +469,27 @@ const handleChange = async <K extends keyof SettingsOptions>(
         setS3Error('')
 
         try {
-            const result: SyncResult = await syncManager.sync()
+            const result: SyncResult = await syncManager.sync('upload')
 
             if (result.success) {
-                // 更新最后同步时间
                 const lastSync = await syncManager.getLastSyncTime()
                 setLastSyncTime(lastSync)
 
-                // 触发震动反馈
                 if (settings.hapticFeedback) {
                     hapticsUtils.medium()
                 }
 
-                // 触发页面刷新以更新数据
-                if (onDataChange) {
-                    onDataChange()
-                }
+                onDataChange?.()
             } else {
                 setS3Error(result.message || '同步失败')
             }
         } catch (error) {
+            console.error('同步失败:', error)
             setS3Error(`同步失败: ${error instanceof Error ? error.message : '未知错误'}`)
         } finally {
             setIsSyncing(false)
         }
     }, [syncManager, isSyncing, settings.hapticFeedback, onDataChange])
-
-    // 启动自动同步
-    const startAutoSync = useCallback((intervalMinutes: number) => {
-        stopAutoSync() // 先清除现有定时器
-
-        const intervalMs = intervalMinutes * 60 * 1000
-        syncIntervalRef.current = setInterval(async () => {
-            if (syncManager && s3Status === 'connected' && !isSyncing) {
-                try {
-                    await manualSync()
-                } catch (error) {
-                    console.error('自动同步失败:', error)
-                }
-            }
-        }, intervalMs)
-    }, [syncManager, s3Status, isSyncing, manualSync])
-
-    // 停止自动同步
-    const stopAutoSync = () => {
-        if (syncIntervalRef.current) {
-            clearInterval(syncIntervalRef.current)
-            syncIntervalRef.current = null
-        }
-    }
-
-    // 组件卸载时清理定时器
-    useEffect(() => {
-        return () => {
-            stopAutoSync()
-        }
-    }, [])
-
-    // 监听S3连接状态和自动同步设置变化
-    useEffect(() => {
-        if (s3Status === 'connected' && s3Settings.autoSync && syncManager) {
-            startAutoSync(s3Settings.syncInterval)
-        } else {
-            stopAutoSync()
-        }
-    }, [s3Status, s3Settings.autoSync, s3Settings.syncInterval, syncManager, startAutoSync])
 
     // 测试S3连接
     const testS3Connection = async () => {
@@ -1703,59 +1669,30 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                             </div>
                                         )}
 
-                                        {/* 自动同步设置 */}
+                                        {/* 同步模式说明 */}
                                         {s3Status === 'connected' && (
                                             <div className="space-y-3 pt-3 border-t border-neutral-200 dark:border-neutral-700">
-                                                {/* 自动同步开关 */}
-                                                <div className="flex items-center justify-between">
+                                                <div className="flex items-center justify-between gap-2">
                                                     <div className="text-xs font-medium text-neutral-600 dark:text-neutral-400">
-                                                        自动同步
+                                                        同步模式
                                                     </div>
-                                                    <label className="relative inline-flex cursor-pointer items-center">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={s3Settings.autoSync}
-                                                            onChange={(e) => handleS3SettingChange('autoSync', e.target.checked)}
-                                                            className="peer sr-only"
-                                                        />
-                                                        <div className="peer h-5 w-9 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-                                                    </label>
+                                                    <span className="text-xs text-neutral-500 dark:text-neutral-400">
+                                                        完全手动
+                                                    </span>
                                                 </div>
 
-                                                {/* 同步间隔 */}
-                                                {s3Settings.autoSync && (
-                                                    <div>
-                                                        <div className="flex items-center justify-between mb-1">
-                                                            <div className="text-xs font-medium text-neutral-600 dark:text-neutral-400">
-                                                                同步间隔
-                                                            </div>
-                                                            <div className="text-xs text-neutral-400 dark:text-neutral-500">
-                                                                {s3Settings.syncInterval}分钟
-                                                            </div>
-                                                        </div>
-                                                        <ButtonGroup
-                                                            value={s3Settings.syncInterval.toString()}
-                                                            options={[
-                                                                { value: '15', label: '15分钟' },
-                                                                { value: '30', label: '30分钟' },
-                                                                { value: '60', label: '1小时' }
-                                                            ]}
-                                                            onChange={(value) => handleS3SettingChange('syncInterval', parseInt(value))}
-                                                            className="w-full text-xs"
-                                                        />
-                                                    </div>
-                                                )}
+                                                <div className="text-xs text-neutral-500 dark:text-neutral-400 bg-neutral-100/60 dark:bg-neutral-800/60 p-2 rounded leading-relaxed">
+                                                    不会自动同步，请在需要时手动点击下方按钮触发同步。
+                                                </div>
 
-                                                {/* 手动同步按钮 */}
                                                 <button
-                                                    onClick={manualSync}
+                                                    onClick={performSync}
                                                     disabled={isSyncing}
                                                     className="w-full py-2 px-3 text-xs font-medium text-neutral-700 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors"
                                                 >
                                                     {isSyncing ? '同步中...' : '立即同步'}
                                                 </button>
 
-                                                {/* 最后同步时间 */}
                                                 {lastSyncTime && (
                                                     <div className="text-xs text-neutral-400 dark:text-neutral-500">
                                                         最后同步：{lastSyncTime.toLocaleString('zh-CN', {
@@ -1774,9 +1711,11 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                 {/* 简化的状态说明 */}
                                 {!s3Expanded && (
                                     <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                                        {s3Status === 'connected' ? '已连接 - 数据将自动同步到S3' :
-                                         s3Status === 'error' ? '连接失败 - 点击配置查看详情' :
-                                         '未配置 - 点击配置设置S3信息'}
+                                        {s3Status === 'connected'
+                                            ? '已连接 - 需手动触发同步'
+                                            : s3Status === 'error'
+                                                ? '连接失败 - 点击配置查看详情'
+                                                : '未配置 - 点击配置设置S3信息'}
                                     </p>
                                 )}
                             </div>

@@ -18,6 +18,8 @@ export interface SyncMetadata {
     lastSyncTime: number
     version: string
     deviceId: string
+    files?: string[]
+    dataHash?: string
 }
 
 export class S3SyncManager {
@@ -49,7 +51,7 @@ export class S3SyncManager {
     /**
      * 执行数据同步
      */
-    async sync(): Promise<SyncResult> {
+    async sync(preferredDirection: 'auto' | 'upload' | 'download' = 'auto'): Promise<SyncResult> {
         if (this.syncInProgress) {
             return {
                 success: false,
@@ -98,8 +100,13 @@ export class S3SyncManager {
             console.warn('开始同步：获取本地数据...')
             const localData = await this.getLocalData()
             console.warn('本地数据获取完成，包含项目:', Object.keys(localData))
+            const localFileManifest = this.getDataFileManifest(localData)
 
-            // 2. 获取远程元数据
+            // 2. 计算当前本地数据哈希
+            const currentLocalDataHash = await this.generateDataHash(localData)
+            console.warn('本地数据哈希:', currentLocalDataHash.substring(0, 8))
+
+            // 3. 获取远程元数据
             console.warn('获取远程元数据...')
             const remoteMetadata = await this.getRemoteMetadata()
             console.warn('远程元数据:', remoteMetadata ? '存在' : '不存在')
@@ -107,8 +114,18 @@ export class S3SyncManager {
             const localMetadata = await this.getLocalMetadata()
             console.warn('本地元数据:', localMetadata ? '存在' : '不存在')
 
-            // 3. 决定同步方向
-            const shouldUpload = this.shouldUploadData(localMetadata, remoteMetadata)
+            // 4. 决定同步方向（传入当前数据哈希）
+            const shouldUpload = preferredDirection === 'upload'
+                ? true
+                : preferredDirection === 'download'
+                    ? false
+                    : this.shouldUploadData(localMetadata, remoteMetadata, currentLocalDataHash)
+
+            if (preferredDirection !== 'auto') {
+                console.warn('同步方向由调用方指定:', preferredDirection)
+            }
+
+            let manifestToPersist = localFileManifest
 
             if (shouldUpload) {
                 // 上传本地数据到S3
@@ -117,12 +134,19 @@ export class S3SyncManager {
             } else {
                 // 从S3下载数据
                 console.warn('执行下载操作...')
-                await this.downloadData(result)
+                const downloadedFiles = await this.downloadData(result, remoteMetadata)
+                if (downloadedFiles.length > 0) {
+                    manifestToPersist = downloadedFiles
+                } else if (remoteMetadata?.files?.length) {
+                    manifestToPersist = this.sanitizeManifestFiles(remoteMetadata.files)
+                }
             }
 
-            // 4. 更新同步元数据
+            // 4. 更新同步元数据（传入实际同步的数据哈希）
             console.warn('更新同步元数据...')
-            await this.updateSyncMetadata()
+            // 如果上传了，使用当前本地数据哈希；如果下载了，重新计算下载后的数据哈希
+            const finalDataHash = shouldUpload ? currentLocalDataHash : await this.generateDataHash(await this.getLocalData())
+            await this.updateSyncMetadata(manifestToPersist, finalDataHash)
 
             result.success = result.errors.length === 0
             result.message = result.success
@@ -196,6 +220,29 @@ export class S3SyncManager {
         return data
     }
 
+    private getDataFileManifest(localData: Record<string, unknown>): string[] {
+        return Array.from(new Set(Object.keys(localData)))
+            .filter(key => key)
+            .map(key => `${key}.json`)
+    }
+
+    private sanitizeManifestFiles(files: string[]): string[] {
+        const sanitized = new Set<string>()
+
+        files.forEach(file => {
+            if (!file) return
+
+            const normalizedFileName = file.endsWith('.json') ? file : `${file}.json`
+            const normalized = this.normalizeRemoteObjectKey(normalizedFileName)
+
+            if (normalized) {
+                sanitized.add(normalized)
+            }
+        })
+
+        return Array.from(sanitized)
+    }
+
     /**
      * 上传数据到S3
      */
@@ -237,27 +284,57 @@ export class S3SyncManager {
     /**
      * 从S3下载数据
      */
-    private async downloadData(result: SyncResult): Promise<void> {
-        if (!this.client) return
+    private async downloadData(result: SyncResult, remoteMetadata?: SyncMetadata | null): Promise<string[]> {
+        if (!this.client) return []
+
+        const filesToDownload = new Set<string>()
+        const remoteManifestFiles = remoteMetadata?.files?.length
+            ? this.sanitizeManifestFiles(remoteMetadata.files)
+            : []
+
+        remoteManifestFiles.forEach(file => filesToDownload.add(file))
 
         try {
-            // 列出远程文件
-            const files = await this.client.listObjects()
-            const dataFiles = files.filter(file =>
-                file.key.endsWith('.json') &&
-                !file.key.endsWith('sync-metadata.json') &&
-                !file.key.endsWith('device-info.json')
-            )
+            if (filesToDownload.size === 0) {
+                // 列出远程文件（作为兜底方案）
+                const files = await this.client.listObjects()
+                files.forEach(file => {
+                    if (
+                        file.key.endsWith('.json') &&
+                        !file.key.endsWith('sync-metadata.json') &&
+                        !file.key.endsWith('device-info.json')
+                    ) {
+                        const normalizedKey = this.normalizeRemoteObjectKey(file.key)
+                        if (normalizedKey) {
+                            filesToDownload.add(normalizedKey)
+                        }
+                    }
+                })
+            }
+
+            if (filesToDownload.size === 0) {
+                filesToDownload.add('brew-guide-data.json')
+            }
+
+            const downloadedFiles: string[] = []
 
             // 下载每个数据文件
-            for (const file of dataFiles) {
+            for (const fileName of Array.from(filesToDownload)) {
                 try {
-                    console.warn(`下载文件: ${file.key}`)
-                    // 直接使用file.key中去掉prefix的部分作为下载的key
-                    const downloadKey = file.key.replace(this.config!.prefix, '')
+                    console.warn(`下载文件: ${fileName}`)
+                    const downloadKey = this.normalizeRemoteObjectKey(fileName)
+                    if (!downloadKey) {
+                        console.warn('远程对象键名无法规范化，跳过当前文件')
+                        continue
+                    }
+
                     const content = await this.client.downloadFile(downloadKey)
                     if (content) {
-                        const key = downloadKey.replace('.json', '')
+                        const key = downloadKey.replace(/\.json$/i, '')
+                        if (!key) {
+                            console.warn('下载到的文件缺少有效键名，跳过本地写入')
+                            continue
+                        }
                         console.warn(`成功下载文件 ${key}，内容长度: ${content.length}`)
 
                         try {
@@ -273,22 +350,24 @@ export class S3SyncManager {
 
                                 console.warn('完整应用数据导入成功')
                                 result.downloadedFiles++
+                                downloadedFiles.push('brew-guide-data.json')
                             } else {
                                 // 兼容旧格式：直接保存到存储
                                 await Storage.set(key, JSON.stringify(data))
                                 console.warn(`成功保存 ${key} 到本地存储`)
                                 result.downloadedFiles++
+                                downloadedFiles.push(`${key}.json`)
                             }
                         } catch (parseError) {
                             console.error(`解析 ${key} 的JSON内容失败:`, parseError)
                             console.warn(`内容片段: ${content.substring(0, 200)}`)
-                            result.errors.push(`解析 ${file.key} 的JSON内容失败`)
+                            result.errors.push(`解析 ${fileName} 的JSON内容失败`)
                         }
                     } else {
-                        result.errors.push(`下载 ${file.key} 失败`)
+                        result.errors.push(`下载 ${fileName} 失败`)
                     }
                 } catch (error) {
-                    result.errors.push(`处理 ${file.key} 时出错: ${error instanceof Error ? error.message : '未知错误'}`)
+                    result.errors.push(`处理 ${fileName} 时出错: ${error instanceof Error ? error.message : '未知错误'}`)
                 }
             }
 
@@ -299,9 +378,32 @@ export class S3SyncManager {
                 }))
             }
 
+            return Array.from(new Set(downloadedFiles))
         } catch (error) {
             result.errors.push(`下载数据失败: ${error instanceof Error ? error.message : '未知错误'}`)
+            return []
         }
+    }
+
+    private normalizeRemoteObjectKey(objectKey: string): string {
+        if (!this.config) {
+            return objectKey
+        }
+
+        const rawPrefix = this.config.prefix
+        const hasPrefix = rawPrefix.length > 0
+        const normalizedPrefix = hasPrefix
+            ? (rawPrefix.endsWith('/') ? rawPrefix : `${rawPrefix}/`)
+            : ''
+
+        let result = objectKey
+        if (normalizedPrefix && result.startsWith(normalizedPrefix)) {
+            result = result.slice(normalizedPrefix.length)
+        } else if (hasPrefix && result.startsWith(rawPrefix)) {
+            result = result.slice(rawPrefix.length)
+        }
+
+        return result.replace(/^\/+/, '')
     }
 
     /**
@@ -315,7 +417,11 @@ export class S3SyncManager {
 
             if (content) {
                 try {
-                    return JSON.parse(content) as SyncMetadata
+                    const metadata = JSON.parse(content) as SyncMetadata
+                    if (metadata.files && !Array.isArray(metadata.files)) {
+                        metadata.files = []
+                    }
+                    return metadata
                 } catch (parseError) {
                     console.warn('解析远程元数据失败，内容可能不是有效的JSON:', parseError)
                     console.warn('返回的内容片段:', content.substring(0, 200))
@@ -344,7 +450,7 @@ export class S3SyncManager {
     /**
      * 判断是否应该上传数据（本地数据较新）
      */
-    private shouldUploadData(localMetadata: SyncMetadata | null, remoteMetadata: SyncMetadata | null): boolean {
+    private shouldUploadData(localMetadata: SyncMetadata | null, remoteMetadata: SyncMetadata | null, currentDataHash: string): boolean {
         // 如果没有远程数据，说明是首次同步，上传本地数据
         if (!remoteMetadata) {
             console.warn('首次同步：上传本地数据到S3')
@@ -357,23 +463,49 @@ export class S3SyncManager {
             return false
         }
 
-        // 比较时间戳，选择较新的数据
-        const shouldUpload = localMetadata.lastSyncTime > remoteMetadata.lastSyncTime
-        console.warn(`同步方向：${shouldUpload ? '上传到S3' : '从S3下载'}`, {
-            local: new Date(localMetadata.lastSyncTime).toLocaleString(),
-            remote: new Date(remoteMetadata.lastSyncTime).toLocaleString()
+        // 核心逻辑：检测本地数据是否发生变化
+        const localDataChanged = localMetadata.dataHash !== currentDataHash
+        console.warn('数据变化检测:', {
+            localStoredHash: localMetadata.dataHash?.substring(0, 8) || 'N/A',
+            currentDataHash: currentDataHash.substring(0, 8),
+            localChanged: localDataChanged,
+            remoteHash: remoteMetadata.dataHash?.substring(0, 8) || 'N/A'
         })
+
+        // 如果本地数据发生了变化，优先上传本地数据
+        if (localDataChanged) {
+            console.warn('本地数据已变化：上传到S3')
+            return true
+        }
+
+        // 如果本地数据没有变化，比较远程数据是否更新
+        if (remoteMetadata.dataHash && remoteMetadata.dataHash !== currentDataHash) {
+            console.warn('远程数据更新且本地无变化：从S3下载')
+            return false
+        }
+
+        // 如果双方数据都没有变化，检查时间戳作为兜底
+        const timeDiff = remoteMetadata.lastSyncTime - localMetadata.lastSyncTime
+        const shouldUpload = timeDiff <= 0
+        console.warn(`数据无变化，基于时间戳：${shouldUpload ? '上传到S3' : '从S3下载'}`, {
+            timeDiff: `${Math.round(timeDiff / 1000)}秒`
+        })
+
         return shouldUpload
     }
 
     /**
      * 更新同步元数据
      */
-    private async updateSyncMetadata(): Promise<void> {
+    private async updateSyncMetadata(files: string[], dataHash: string): Promise<void> {
+        const uniqueFiles = Array.from(new Set(files.filter(Boolean))).sort()
+
         const metadata: SyncMetadata = {
             lastSyncTime: Date.now(),
             version: '1.0.0',
-            deviceId: await this.getDeviceId()
+            deviceId: await this.getDeviceId(),
+            files: uniqueFiles,
+            dataHash: dataHash
         }
 
         // 保存到本地
@@ -386,6 +518,31 @@ export class S3SyncManager {
             } catch (error) {
                 console.warn('上传同步元数据失败:', error)
             }
+        }
+    }
+
+    /**
+     * 生成数据内容哈希
+     */
+    private async generateDataHash(data: Record<string, unknown>): Promise<string> {
+        try {
+            // 将数据转换为稳定的字符串表示（排序键值）
+            const sortedDataString = JSON.stringify(data, Object.keys(data).sort())
+
+            // 使用Web Crypto API生成SHA-256哈希
+            const encoder = new TextEncoder()
+            const dataBuffer = encoder.encode(sortedDataString)
+            const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer)
+
+            // 转换为十六进制字符串
+            const hashArray = Array.from(new Uint8Array(hashBuffer))
+            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+
+            return hashHex
+        } catch (error) {
+            console.warn('生成数据哈希失败:', error)
+            // 如果哈希生成失败，返回基于时间戳的简单标识
+            return `fallback-${Date.now()}`
         }
     }
 
