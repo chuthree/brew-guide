@@ -18,6 +18,7 @@ const getStorage = async () => {
 interface ExportData {
 	exportDate: string;
 	appVersion: string;
+	timeZone: string; // 新增时区字段
 	data: Record<string, unknown>;
 }
 
@@ -25,6 +26,7 @@ interface ExportData {
 interface ImportData {
 	exportDate?: string;
 	appVersion?: string;
+	timeZone?: string;
 	data?: Record<string, unknown>;
 }
 
@@ -67,14 +69,32 @@ const INDEXED_DB_SYNC_KEYS = ['customEquipments', 'coffeeBeans', 'brewingNotes']
  */
 export const DataManager = {
 	/**
+	/**
+	 * 格式化日期以包含时区偏移
+	 * @param date 日期对象
+	 * @returns 格式化的日期字符串
+	 */
+	formatDateWithTimezone(date: Date): string {
+		const pad = (num: number) => num.toString().padStart(2, '0');
+		const offset = -date.getTimezoneOffset();
+		const sign = offset >= 0 ? '+' : '-';
+		const offsetHours = pad(Math.floor(Math.abs(offset) / 60));
+		const offsetMinutes = pad(Math.abs(offset) % 60);
+
+		return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}.${date.getMilliseconds().toString().padStart(3, '0')}${sign}${offsetHours}:${offsetMinutes}`;
+	},
+
+	/**
 	 * 导出数据
 	 * @returns 包含数据的JSON字符串
 	 */
 	async exportAllData(): Promise<string> {
 		try {
+			const now = new Date();
 			const exportData: ExportData = {
-				exportDate: new Date().toISOString(),
+				exportDate: this.formatDateWithTimezone(now),
 				appVersion: APP_VERSION,
+				timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
 				data: {},
 			};
 
@@ -294,13 +314,19 @@ export const DataManager = {
 				}));
 			}
 			
+			const displayDate = importData.exportDate
+				? new Date(importData.exportDate).toLocaleString(undefined, {
+						year: 'numeric', month: 'numeric', day: 'numeric',
+						hour: 'numeric', minute: 'numeric', second: 'numeric',
+						timeZoneName: 'short'
+				  })
+				: "未知";
+
+			const timeZoneInfo = importData.timeZone ? ` (时区: ${importData.timeZone})` : '';
+
 			return {
 				success: true,
-				message: `数据导入成功，导出日期: ${
-					importData.exportDate
-						? new Date(importData.exportDate).toLocaleString()
-						: "未知"
-				}`,
+				message: `数据导入成功，导出日期: ${displayDate}${timeZoneInfo}`,
 			};
 		} catch (_error) {
 			return {

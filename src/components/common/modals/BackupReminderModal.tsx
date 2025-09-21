@@ -37,8 +37,15 @@ const BackupReminderModal: React.FC<BackupReminderModalProps> = ({
     setExportMessage('正在导出数据...')
 
     try {
+      const getLocalDateString = (date: Date) => {
+          const year = date.getFullYear();
+          const month = (date.getMonth() + 1).toString().padStart(2, '0');
+          const day = date.getDate().toString().padStart(2, '0');
+          return `${year}-${month}-${day}`;
+      };
+
       const jsonData = await DataManagerUtil.exportAllData()
-      const fileName = `brew-guide-data-${new Date().toISOString().slice(0, 10)}.json`
+      const fileName = `brew-guide-data-${getLocalDateString(new Date())}.json`
       const isNative = Capacitor.isNativePlatform()
 
       if (isNative) {
