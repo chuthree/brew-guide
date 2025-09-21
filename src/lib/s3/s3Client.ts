@@ -39,9 +39,18 @@ export class S3Client {
 
             // 尝试列出bucket中的对象来测试连接
             await this.listObjects('', 1)
+            this.logSummary('test-connection', {
+                service: 'generic',
+                ok: true
+            })
             return true
         } catch (error) {
             console.error('S3连接测试失败:', error)
+            this.logSummary('test-connection', {
+                service: 'generic',
+                ok: false,
+                error: error instanceof Error ? error.message : String(error)
+            })
             return false
         }
     }
@@ -52,35 +61,45 @@ export class S3Client {
     private async testQiniuConnection(): Promise<boolean> {
         try {
             // 对于七牛云，先尝试简单的根路径GET请求
-            const url = this.buildUrl('/')
-            console.warn('测试七牛云连接，URL:', url)
+            const baseUrl = this.buildUrl('/')
+            const usingPresign = this.isQiniu()
+            const requestUrl = usingPresign ? await this.createPresignedUrl('GET', baseUrl) : baseUrl
 
-            const headers = await this.createAuthHeaders('GET', url)
-
-            console.warn('请求头:', headers)
+            const headers = usingPresign
+                ? {}
+                : await this.createAuthHeaders('GET', requestUrl)
 
             // 带认证头进行请求
-            const response = await fetch(url, {
+            const response = await fetch(requestUrl, {
                 method: 'GET',
                 mode: 'cors',
                 headers
             })
 
-            console.warn('七牛云连接测试结果:', response.status, response.statusText)
+            const success = response.status === 200 || response.status === 403 || response.status === 404
 
-            // 对于七牛云，200表示成功，403可能是权限问题但服务可达，404表示bucket不存在但连接正常
-            if (response.status === 200 || response.status === 403 || response.status === 404) {
-                console.warn('✅ 七牛云服务可达，CORS配置正常')
-                return true
+            this.logSummary('test-connection', {
+                service: 'qiniu',
+                url: requestUrl,
+                status: response.status,
+                ok: success,
+                presigned: usingPresign
+            })
+
+            if (!success) {
+                // 如果状态码不是预期的，记录片段帮助排查
+                const responseText = await response.text()
+                console.error('七牛云连接测试失败，响应片段:', responseText.substring(0, 200))
             }
 
-            // 如果状态码不是预期的，尝试获取更多信息
-            const responseText = await response.text()
-            console.warn('响应内容片段:', responseText.substring(0, 200))
-
-            return false
+            return success
         } catch (error) {
             console.error('七牛云连接测试失败:', error)
+            this.logSummary('test-connection', {
+                service: 'qiniu',
+                ok: false,
+                error: error instanceof Error ? error.message : String(error)
+            })
             return false
         }
     }
@@ -95,10 +114,7 @@ export class S3Client {
             // 统一使用buildUrl方法构建URL
             const url = this.buildUrl(`/${fullKey}`)
 
-            console.warn(`📤 准备上传文件: ${key} -> ${fullKey}`)
-            console.warn(`📤 上传URL: ${url}`)
-
-            const headers = await this.createAuthHeaders(
+            const { requestUrl, headers } = await this.prepareRequest(
                 'PUT',
                 url,
                 {
@@ -107,26 +123,34 @@ export class S3Client {
                 content
             )
 
-            console.warn('📤 上传请求头:', headers)
-
-            const response = await fetch(url, {
+            const response = await fetch(requestUrl, {
                 method: 'PUT',
                 headers,
                 body: content
             })
 
-            console.warn(`📤 上传响应: ${response.status} ${response.statusText}`)
+            this.logSummary('upload', {
+                key,
+                fullKey,
+                url: requestUrl,
+                status: response.status,
+                ok: response.ok,
+                contentType: headers['Content-Type']
+            })
 
             if (!response.ok) {
                 const responseText = await response.text()
-                console.error(`❌ 上传失败，响应内容:`, responseText.substring(0, 500))
-            } else {
-                console.warn(`✅ 文件上传成功: ${fullKey}`)
+                console.error('❌ 上传失败，响应内容:', responseText.substring(0, 500))
             }
 
             return response.ok
         } catch (error) {
             console.error('❌ 上传文件失败:', error)
+            this.logSummary('upload', {
+                key,
+                ok: false,
+                error: error instanceof Error ? error.message : String(error)
+            })
             return false
         }
     }
@@ -141,50 +165,47 @@ export class S3Client {
             // 统一使用buildUrl方法构建URL
             const url = this.buildUrl(`/${fullKey}`)
 
-            console.warn(`📥 准备下载文件: ${key} -> ${fullKey}`)
-            console.warn(`📥 下载URL: ${url}`)
+            const { requestUrl, headers } = await this.prepareRequest('GET', url)
 
-            // 对于七牛云，使用Basic认证
-            let headers: Record<string, string>
-            if (this.config.endpoint && this.config.endpoint.includes('qiniu')) {
-                const auth = btoa(`${this.config.accessKeyId}:${this.config.secretAccessKey}`)
-                headers = {
-                    'Authorization': `Basic ${auth}`
-                }
-            } else {
-                headers = await this.createAuthHeaders('GET', `/${this.config.bucketName}/${fullKey}`)
-            }
-
-            const response = await fetch(url, {
+            const response = await fetch(requestUrl, {
                 method: 'GET',
                 headers
             })
 
-            console.warn(`📥 下载响应: ${response.status} ${response.statusText}`)
+            this.logSummary('download', {
+                key,
+                fullKey,
+                url: requestUrl,
+                status: response.status,
+                ok: response.ok,
+                presigned: requestUrl !== url
+            })
 
             if (response.ok) {
                 const content = await response.text()
 
                 // 检查是否返回了HTML内容（通常是错误页面）
                 if (content.trim().startsWith('<!DOCTYPE') || content.trim().startsWith('<html')) {
-                    console.warn(`❌ 文件 ${key} 返回了HTML内容，可能是错误页面`)
+                    console.error(`❌ 文件 ${key} 返回了HTML内容，可能是错误页面`)
                     return null
                 }
 
-                console.warn(`✅ 文件下载成功: ${fullKey}, 大小: ${content.length} 字符`)
                 return content
             }
 
             // 对于404等错误，直接返回null
             if (response.status === 404) {
-                console.warn(`📁 文件 ${key} 不存在`)
                 return null
             }
 
-            console.warn(`❌ 下载文件 ${key} 失败，状态码: ${response.status}`)
             return null
         } catch (error) {
             console.error('❌ 下载文件失败:', error)
+            this.logSummary('download', {
+                key,
+                ok: false,
+                error: error instanceof Error ? error.message : String(error)
+            })
             return null
         }
     }
@@ -204,11 +225,20 @@ export class S3Client {
             const path = `/${this.config.bucketName}?${params.toString()}`
             const url = this.buildUrl(path)
 
-            const headers = await this.createAuthHeaders('GET', url)
+            const { requestUrl, headers } = await this.prepareRequest('GET', url)
 
-            const response = await fetch(url, {
+            const response = await fetch(requestUrl, {
                 method: 'GET',
                 headers
+            })
+
+            this.logSummary('list', {
+                prefix,
+                fullPrefix,
+                url: requestUrl,
+                status: response.status,
+                ok: response.ok,
+                presigned: requestUrl !== url
             })
 
             if (!response.ok) {
@@ -219,6 +249,11 @@ export class S3Client {
             return this.parseListObjectsResponse(xmlText)
         } catch (error) {
             console.error('列出对象失败:', error)
+            this.logSummary('list', {
+                prefix,
+                ok: false,
+                error: error instanceof Error ? error.message : String(error)
+            })
             return []
         }
     }
@@ -233,28 +268,29 @@ export class S3Client {
             // 统一使用buildUrl方法构建URL
             const url = this.buildUrl(`/${fullKey}`)
 
-            console.warn(`🗑️ 准备删除文件: ${key} -> ${fullKey}`)
-            console.warn(`🗑️ 删除URL: ${url}`)
+            const { requestUrl, headers } = await this.prepareRequest('DELETE', url)
 
-            // 对于七牛云，使用Basic认证
-            const headers = await this.createAuthHeaders('DELETE', url)
-
-            const response = await fetch(url, {
+            const response = await fetch(requestUrl, {
                 method: 'DELETE',
                 headers
             })
 
-            console.warn(`🗑️ 删除响应: ${response.status} ${response.statusText}`)
-
-            if (response.ok) {
-                console.warn(`✅ 文件删除成功: ${fullKey}`)
-            } else {
-                console.warn(`❌ 文件删除失败: ${fullKey}`)
-            }
+            this.logSummary('delete', {
+                key,
+                fullKey,
+                url: requestUrl,
+                status: response.status,
+                ok: response.ok
+            })
 
             return response.ok
         } catch (error) {
             console.error('❌ 删除文件失败:', error)
+            this.logSummary('delete', {
+                key,
+                ok: false,
+                error: error instanceof Error ? error.message : String(error)
+            })
             return false
         }
     }
@@ -269,25 +305,30 @@ export class S3Client {
             // 统一使用buildUrl方法构建URL
             const url = this.buildUrl(`/${fullKey}`)
 
-            console.warn(`🔍 检查文件是否存在: ${key} -> ${fullKey}`)
-            console.warn(`🔍 检查URL: ${url}`)
+            const { requestUrl, headers } = await this.prepareRequest('HEAD', url)
 
-            // 对于七牛云，使用Basic认证
-            const headers = await this.createAuthHeaders('HEAD', url)
-
-            const response = await fetch(url, {
+            const response = await fetch(requestUrl, {
                 method: 'HEAD',
                 headers
             })
 
-            console.warn(`🔍 检查响应: ${response.status} ${response.statusText}`)
-
             const exists = response.ok
-            console.warn(`${exists ? '✅' : '❌'} 文件${exists ? '存在' : '不存在'}: ${fullKey}`)
+
+            this.logSummary('head', {
+                key,
+                fullKey,
+                url: requestUrl,
+                status: response.status,
+                ok: exists,
+                presigned: requestUrl !== url
+            })
 
             return exists
         } catch (_error) {
-            console.warn(`❌ 检查文件存在性失败: ${key}`)
+            this.logSummary('head', {
+                key,
+                ok: false
+            })
             return false
         }
     }
@@ -306,7 +347,7 @@ export class S3Client {
     private buildUrl(path: string): string {
         if (this.config.endpoint) {
             // 使用自定义端点 - 七牛云等服务
-            const { resolvedEndpoint: endpoint, selectedProtocol } = this.resolveEndpoint(this.config.endpoint)
+            const { resolvedEndpoint: endpoint } = this.resolveEndpoint(this.config.endpoint)
 
             // 移除末尾的斜杠
             const normalizedEndpoint = endpoint.endsWith('/') ? endpoint.slice(0, -1) : endpoint
@@ -318,28 +359,21 @@ export class S3Client {
                 let cleanPath = path
 
                 // 如果路径以 /bucket-name/ 开头，需要移除它
-                const bucketPrefix = `/${this.config.bucketName}/`
-                if (cleanPath.startsWith(bucketPrefix)) {
-                    cleanPath = cleanPath.substring(bucketPrefix.length)
+                const bucketSlashPrefix = `/${this.config.bucketName}/`
+                if (cleanPath.startsWith(bucketSlashPrefix)) {
+                    cleanPath = cleanPath.substring(bucketSlashPrefix.length)
+                }
+
+                const bucketDirectPrefix = `/${this.config.bucketName}`
+                if (cleanPath === bucketDirectPrefix) {
+                    cleanPath = ''
+                } else if (cleanPath.startsWith(`${bucketDirectPrefix}?`)) {
+                    cleanPath = cleanPath.substring(bucketDirectPrefix.length)
                 }
 
                 // 确保路径以 / 开头
                 const finalPath = cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`
-                const finalUrl = `${normalizedEndpoint}${finalPath}`
-
-                console.warn(`🎯 七牛云URL构建:`, {
-                    原始端点: this.config.endpoint,
-                    处理后端点: normalizedEndpoint,
-                    选用协议: selectedProtocol,
-                    原始路径: path,
-                    清理后路径: cleanPath,
-                    最终路径: finalPath,
-                    最终URL: finalUrl,
-                    bucket名称: this.config.bucketName,
-                    前缀: this.config.prefix
-                })
-
-                return finalUrl
+                return `${normalizedEndpoint}${finalPath}`
             } else {
                 // 其他S3兼容服务，保持原有逻辑
                 const finalPath = path.startsWith('/') ? path : `/${path}`
@@ -349,6 +383,28 @@ export class S3Client {
             // 使用AWS S3标准端点
             return `https://s3.${this.config.region}.amazonaws.com${path}`
         }
+    }
+
+    private async prepareRequest(
+        method: string,
+        url: string,
+        additionalHeaders: Record<string, string> = {},
+        payload: string | ArrayBuffer | null = null
+    ): Promise<{ requestUrl: string; headers: Record<string, string> }> {
+        if (this.isQiniu() && (method === 'GET' || method === 'HEAD')) {
+            const presignedUrl = await this.createPresignedUrl(method, url)
+            return { requestUrl: presignedUrl, headers: additionalHeaders }
+        }
+
+        const headers = await this.createAuthHeaders(method, url, additionalHeaders, payload)
+        return {
+            requestUrl: url,
+            headers
+        }
+    }
+
+    private isQiniu(): boolean {
+        return !!this.config.endpoint && this.config.endpoint.includes('qiniu')
     }
 
     /**
@@ -438,6 +494,50 @@ export class S3Client {
         return {
             resolvedEndpoint: trimmed,
             selectedProtocol
+        }
+    }
+
+    private async createPresignedUrl(method: string, url: string, expiresInSeconds = 60): Promise<string> {
+        const requestUrl = new URL(url)
+
+        const now = new Date()
+        const amzDate = now.toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z'
+        const dateStamp = now.toISOString().slice(0, 10).replace(/-/g, '')
+        const credentialScope = `${dateStamp}/${this.config.region}/s3/aws4_request`
+
+        requestUrl.searchParams.set('X-Amz-Algorithm', 'AWS4-HMAC-SHA256')
+        requestUrl.searchParams.set('X-Amz-Credential', `${this.config.accessKeyId}/${credentialScope}`)
+        requestUrl.searchParams.set('X-Amz-Date', amzDate)
+        requestUrl.searchParams.set('X-Amz-Expires', expiresInSeconds.toString())
+        requestUrl.searchParams.set('X-Amz-SignedHeaders', 'host')
+
+        const canonicalRequest = [
+            method.toUpperCase(),
+            this.getCanonicalUri(requestUrl.pathname),
+            this.getCanonicalQueryString(requestUrl.searchParams),
+            `host:${requestUrl.host}\n`,
+            'host',
+            'UNSIGNED-PAYLOAD'
+        ].join('\n')
+
+        const stringToSign = [
+            'AWS4-HMAC-SHA256',
+            amzDate,
+            credentialScope,
+            await this.hashSha256(canonicalRequest)
+        ].join('\n')
+
+        const signingKey = await this.getSignatureKey(dateStamp)
+        const signature = await this.hmacSha256Hex(signingKey, stringToSign)
+
+        requestUrl.searchParams.set('X-Amz-Signature', signature)
+
+        return requestUrl.toString()
+    }
+
+    private logSummary(event: string, detail: Record<string, unknown>): void {
+        if (typeof console !== 'undefined' && typeof console.info === 'function') {
+            console.info(`[S3:${event}]`, detail)
         }
     }
 
