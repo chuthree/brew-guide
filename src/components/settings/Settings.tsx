@@ -13,7 +13,7 @@ import {
   BACKUP_REMINDER_INTERVALS,
   BackupReminderInterval
 } from '@/lib/utils/backupReminderUtils'
-import S3SyncManager, { SyncResult } from '@/lib/s3/syncManager'
+import S3SyncManager, { SyncResult, SyncMetadata } from '@/lib/s3/syncManager'
 
 import Image from 'next/image'
 import GrinderSettings from './GrinderSettings'
@@ -253,6 +253,8 @@ const Settings: React.FC<SettingsProps> = ({
     const [syncManager, setSyncManager] = useState<S3SyncManager | null>(null)
     const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null)
     const [isSyncing, setIsSyncing] = useState(false)
+    const [showConflictModal, setShowConflictModal] = useState(false)
+    const [conflictRemoteMetadata, setConflictRemoteMetadata] = useState<SyncMetadata | null>(null)
 
     // 创建音效播放引用
     const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -487,7 +489,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
     }
 
     // 执行同步（仅手动）
-    const performSync = useCallback(async () => {
+    const performSync = useCallback(async (direction: 'auto' | 'upload' | 'download' = 'auto') => {
         if (!syncManager) {
             setS3Error('请先测试连接')
             return
@@ -502,7 +504,14 @@ const handleChange = async <K extends keyof SettingsOptions>(
         setS3Error('')
 
         try {
-            const result: SyncResult = await syncManager.sync('auto')
+            const result: SyncResult = await syncManager.sync(direction)
+
+            if (result.conflict) {
+                setConflictRemoteMetadata(result.remoteMetadata || null)
+                setShowConflictModal(true)
+                setS3Error('数据冲突：本地和云端数据都已更改。')
+                return // 等待用户选择
+            }
 
             if (result.success) {
                 const lastSync = await syncManager.getLastSyncTime()
@@ -523,6 +532,11 @@ const handleChange = async <K extends keyof SettingsOptions>(
             setIsSyncing(false)
         }
     }, [syncManager, isSyncing, settings.hapticFeedback, onDataChange])
+
+    const handleConflictResolution = async (direction: 'upload' | 'download') => {
+        setShowConflictModal(false)
+        await performSync(direction)
+    }
 
     // 测试S3连接
     const testS3Connection = async () => {
@@ -1734,11 +1748,11 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                     </p>
                                 )}
 
-                                {/* 醒目的同步按钮 */}
+                                        {/* 醒目的同步按钮 */}
                                 {s3Status === 'connected' && (
                                     <div className="mt-2 space-y-2">
                                         <button
-                                            onClick={performSync}
+                                            onClick={() => performSync('auto')}
                                             disabled={isSyncing}
                                             className="w-full py-2 px-3 text-sm font-medium text-white bg-neutral-700 hover:bg-neutral-800 disabled:bg-neutral-400 rounded transition-colors"
                                         >
@@ -1932,6 +1946,68 @@ const handleChange = async <K extends keyof SettingsOptions>(
                     onDataChange={onDataChange}
                 />
             )}
+
+            {/* 冲突解决模态框 - 半屏 */}
+            <AnimatePresence>
+                {showConflictModal && (
+                    <motion.div
+                        className="fixed inset-0 z-[100] flex flex-col justify-end bg-black/40 dark:bg-black/60"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setShowConflictModal(false)}
+                    >
+                        <motion.div
+                            className="w-full max-w-[500px] mx-auto bg-neutral-100 dark:bg-neutral-800 rounded-t-2xl shadow-2xl p-5 pb-safe-bottom"
+                            initial={{ y: "100%" }}
+                            animate={{ y: "0%" }}
+                            exit={{ y: "100%" }}
+                            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="text-center mb-4">
+                                <h3 className="text-lg font-bold text-neutral-900 dark:text-neutral-100">数据同步冲突</h3>
+                                <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">
+                                    检测到云端数据已更新，请选择操作
+                                </p>
+                            </div>
+
+                            <div className="p-4 mb-4 bg-neutral-200/60 dark:bg-neutral-900/60 rounded-lg text-center">
+                                <p className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                                    云端数据
+                                </p>
+                                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                                    {conflictRemoteMetadata
+                                        ? `最后更新于 ${new Date(
+                                            conflictRemoteMetadata.lastSyncTime
+                                        ).toLocaleString('zh-CN', {
+                                            month: 'numeric',
+                                            day: 'numeric',
+                                            hour: '2-digit',
+                                            minute: '2-digit'
+                                        })}`
+                                        : '无法获取云端数据时间'}
+                                </p>
+                            </div>
+
+                            <div className="space-y-3">
+                                <button
+                                    onClick={() => handleConflictResolution('download')}
+                                    className="w-full py-3 px-4 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                                >
+                                    下载云端数据 (推荐)
+                                </button>
+                                <button
+                                    onClick={() => handleConflictResolution('upload')}
+                                    className="w-full py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-500"
+                                >
+                                    上传本地数据 (将覆盖云端)
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     )
 }

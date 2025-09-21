@@ -12,6 +12,8 @@ export interface SyncResult {
     uploadedFiles: number
     downloadedFiles: number
     errors: string[]
+    conflict?: boolean
+    remoteMetadata?: SyncMetadata | null
 }
 
 export interface SyncMetadata {
@@ -116,6 +118,18 @@ export class S3SyncManager {
 
             // 4. 决定同步方向
             const direction = this.determineSyncDirection(localMetadata, remoteMetadata, currentLocalDataHash, preferredDirection)
+
+            if (direction === 'conflict') {
+                return {
+                    success: false,
+                    message: '数据冲突，需要用户选择',
+                    uploadedFiles: 0,
+                    downloadedFiles: 0,
+                    errors: ['本地数据和云端数据都发生了变化'],
+                    conflict: true,
+                    remoteMetadata: remoteMetadata
+                }
+            }
 
             let manifestToPersist = localFileManifest
             let finalDataHash = currentLocalDataHash
@@ -470,50 +484,65 @@ export class S3SyncManager {
         remoteMetadata: SyncMetadata | null,
         currentDataHash: string,
         preferredDirection: 'auto' | 'upload' | 'download'
-    ): 'upload' | 'download' | 'none' {
+    ): 'upload' | 'download' | 'none' | 'conflict' {
         if (preferredDirection === 'upload' || preferredDirection === 'download') {
             console.warn('同步方向由调用方指定:', preferredDirection)
             return preferredDirection
         }
 
-        // 1. 没有远程元数据，必须上传
+        // 1. 没有远程元数据 -> 上传
         if (!remoteMetadata) {
             console.warn('首次同步：上传本地数据到S3')
             return 'upload'
         }
 
-        // 2. 没有本地元数据，必须下载
+        // 2. 没有本地元数据 (例如，新设备、重置后) -> 下载
         if (!localMetadata) {
             console.warn('本地无元数据：从S3下载数据')
             return 'download'
         }
 
-        // 3. 核心逻辑：基于哈希值比较
+        // 至此，本地和远程元数据都存在
+
         const localDataChanged = localMetadata.dataHash !== currentDataHash
-        const remoteDataIsDifferent = remoteMetadata.dataHash !== currentDataHash
+        const remoteDataChangedSinceLastSync = remoteMetadata.dataHash !== localMetadata.dataHash
 
         console.warn('数据变化检测:', {
             localStoredHash: localMetadata.dataHash?.substring(0, 8) || 'N/A',
             currentDataHash: currentDataHash.substring(0, 8),
-            localChanged: localDataChanged,
             remoteHash: remoteMetadata.dataHash?.substring(0, 8) || 'N/A',
-            remoteIsDifferent: remoteDataIsDifferent
+            localChanged: localDataChanged,
+            remoteChanged: remoteDataChangedSinceLastSync
         })
 
-        // 如果本地数据已更改，则上传
-        if (localDataChanged) {
-            console.warn('本地数据已变化：上传到S3')
+        // 如果当前数据与远程数据匹配，则表示已同步
+        if (currentDataHash === remoteMetadata.dataHash) {
+            console.warn('数据哈希值一致，无需同步')
+            return 'none'
+        }
+
+        // 如果本地数据已更改，但自上次同步以来远程数据未更改
+        // 这意味着我们是唯一进行更改的一方，可以安全上传
+        if (localDataChanged && !remoteDataChangedSinceLastSync) {
+            console.warn('本地数据已变化，远程未变：上传到S3')
             return 'upload'
         }
 
-        // 如果本地数据未更改，但远程数据不同，则下载
-        if (remoteDataIsDifferent) {
-            console.warn('远程数据更新且本地无变化：从S3下载')
+        // 如果本地数据未更改，但远程数据已更改
+        // 这意味着另一台设备已同步，可以安全下载
+        if (!localDataChanged && remoteDataChangedSinceLastSync) {
+            console.warn('本地数据未变，远程已更新：从S3下载')
             return 'download'
         }
 
-        // 如果哈希值都相同，则数据已同步
-        console.warn('数据哈希值一致，无需同步')
+        // 危险区域：自上次同步以来，本地和远程数据都已更改
+        if (localDataChanged && remoteDataChangedSinceLastSync) {
+            console.warn('冲突：本地数据和远程数据都已发生变化')
+            return 'conflict'
+        }
+
+        // 备用情况，理论上不应到达
+        console.warn('同步方向决策出现未覆盖的场景，默认不执行任何操作')
         return 'none'
     }
 
