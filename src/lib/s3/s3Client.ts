@@ -61,16 +61,20 @@ export class S3Client {
     private async testQiniuConnection(): Promise<boolean> {
         try {
             // 七牛云常用对象检测方式：尝试获取同步元数据文件
-            const exists = await this.fileExists('sync-metadata.json')
+            const { response, baseUrl } = await this.headObject('sync-metadata.json')
+            const metadataExists = response.ok
+            const reachable = metadataExists || response.status === 404
 
             this.logSummary('test-connection', {
                 service: 'qiniu',
-                ok: exists,
+                ok: reachable,
                 method: 'head-object',
-                metadataExists: exists
+                metadataExists,
+                status: response.status,
+                presigned: response.url !== baseUrl
             })
 
-            return exists
+            return reachable
         } catch (error) {
             console.error('七牛云连接测试失败:', error)
             this.logSummary('test-connection', {
@@ -296,27 +300,16 @@ export class S3Client {
      */
     async fileExists(key: string): Promise<boolean> {
         try {
-            const fullKey = this.getFullKey(key)
-
-            // 统一使用buildUrl方法构建URL
-            const url = this.buildUrl(`/${fullKey}`)
-
-            const { requestUrl, headers } = await this.prepareRequest('HEAD', url)
-
-            const response = await fetch(requestUrl, {
-                method: 'HEAD',
-                headers
-            })
-
+            const { response, fullKey, baseUrl } = await this.headObject(key)
             const exists = response.ok
 
             this.logSummary('head', {
                 key,
                 fullKey,
-                url: requestUrl,
+                url: response.url,
                 status: response.status,
                 ok: exists,
-                presigned: requestUrl !== url
+                presigned: response.url !== baseUrl
             })
 
             return exists
@@ -326,6 +319,28 @@ export class S3Client {
                 ok: false
             })
             return false
+        }
+    }
+
+    private async headObject(
+        key: string
+    ): Promise<{ response: Response; fullKey: string; baseUrl: string }> {
+        const fullKey = this.getFullKey(key)
+
+        // 统一使用buildUrl方法构建URL
+        const url = this.buildUrl(`/${fullKey}`)
+
+        const { requestUrl, headers } = await this.prepareRequest('HEAD', url)
+
+        const response = await fetch(requestUrl, {
+            method: 'HEAD',
+            headers
+        })
+
+        return {
+            response,
+            fullKey,
+            baseUrl: url
         }
     }
 
