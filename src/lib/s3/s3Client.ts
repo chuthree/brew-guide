@@ -58,12 +58,12 @@ export class S3Client {
             // 七牛云使用简化的Basic认证
             const auth = btoa(`${this.config.accessKeyId}:${this.config.secretAccessKey}`)
             const headers = {
-                'Authorization': `Basic ${auth}`,
-                'Content-Type': 'application/xml'
+                'Authorization': `Basic ${auth}`
             }
 
             console.warn('请求头:', headers)
 
+            // 带认证头进行请求
             const response = await fetch(url, {
                 method: 'GET',
                 mode: 'cors',
@@ -74,9 +74,11 @@ export class S3Client {
 
             // 对于七牛云，200表示成功，403可能是权限问题但服务可达，404表示bucket不存在但连接正常
             if (response.status === 200 || response.status === 403 || response.status === 404) {
+                console.warn('✅ 七牛云服务可达，CORS配置正常')
                 return true
             }
 
+            // 如果状态码不是预期的，尝试获取更多信息
             const responseText = await response.text()
             console.warn('响应内容片段:', responseText.substring(0, 200))
 
@@ -86,15 +88,23 @@ export class S3Client {
 
             // 检查是否是CORS错误
             if (error instanceof TypeError && error.message.includes('fetch')) {
-                console.error('===== CORS配置提示 =====')
-                console.error('CORS错误！请检查七牛云控制台的CORS配置：')
-                console.error('1. 允许的来源(Origin): * 或 http://localhost:3000')
-                console.error('2. 允许的方法(Methods): GET, POST, PUT, DELETE, HEAD, OPTIONS')
-                console.error('3. 允许的头部(Headers): *')
-                console.error('4. 暴露的头部(Expose Headers): *')
-                console.error('5. 缓存时间: 86400')
-                console.error('6. 配置后需要等待几分钟生效')
-                console.error('========================')
+                console.error('🚫 CORS错误 - 请检查以下配置：')
+                console.error('='.repeat(50))
+                console.error('🔧 七牛云CORS配置步骤：')
+                console.error('1. 登录七牛云控制台')
+                console.error('2. 对象存储 → 空间管理 → 选择您的空间')
+                console.error('3. 点击 "CORS配置" 选项卡')
+                console.error('4. 添加CORS规则：')
+                console.error('   - 允许的来源: *')
+                console.error('   - 允许的方法: GET,POST,PUT,DELETE,HEAD,OPTIONS')
+                console.error('   - 允许的头部: *')
+                console.error('   - 暴露的头部: *')
+                console.error('   - 缓存时间: 86400')
+                console.error('5. 保存后等待5-10分钟生效')
+                console.error('='.repeat(50))
+                console.error('💡 提示：您之前使用 http(s):// 格式时得到200响应')
+                console.error('   说明CORS配置是正确的，请确保端点格式一致')
+                console.error('   建议使用: http(s)://bucket-name.s3.region.qiniucs.com')
             }
 
             return false
@@ -108,16 +118,11 @@ export class S3Client {
         try {
             const fullKey = this.getFullKey(key)
 
-            // 对于七牛云，直接使用文件路径，不需要bucket名称
-            let url: string
-            if (this.config.endpoint && (this.config.endpoint.includes('qiniucs.com') || this.config.endpoint.includes(this.config.bucketName))) {
-                url = this.buildUrl(`/${fullKey}`)
-            } else {
-                url = this.buildUrl(`/${this.config.bucketName}/${fullKey}`)
-            }
+            // 统一使用buildUrl方法构建URL
+            const url = this.buildUrl(`/${fullKey}`)
 
-            console.warn(`准备上传文件: ${key} -> ${fullKey}`)
-            console.warn(`上传URL: ${url}`)
+            console.warn(`📤 准备上传文件: ${key} -> ${fullKey}`)
+            console.warn(`📤 上传URL: ${url}`)
 
             // 对于七牛云，使用Basic认证
             let headers: Record<string, string>
@@ -133,7 +138,7 @@ export class S3Client {
                 })
             }
 
-            console.warn('上传请求头:', headers)
+            console.warn('📤 上传请求头:', headers)
 
             const response = await fetch(url, {
                 method: 'PUT',
@@ -141,16 +146,18 @@ export class S3Client {
                 body: content
             })
 
-            console.warn(`上传响应: ${response.status} ${response.statusText}`)
+            console.warn(`📤 上传响应: ${response.status} ${response.statusText}`)
 
             if (!response.ok) {
                 const responseText = await response.text()
-                console.error(`上传失败，响应内容:`, responseText.substring(0, 500))
+                console.error(`❌ 上传失败，响应内容:`, responseText.substring(0, 500))
+            } else {
+                console.warn(`✅ 文件上传成功: ${fullKey}`)
             }
 
             return response.ok
         } catch (error) {
-            console.error('上传文件失败:', error)
+            console.error('❌ 上传文件失败:', error)
             return false
         }
     }
@@ -162,13 +169,11 @@ export class S3Client {
         try {
             const fullKey = this.getFullKey(key)
 
-            // 对于七牛云，直接使用文件路径
-            let url: string
-            if (this.config.endpoint && (this.config.endpoint.includes('qiniucs.com') || this.config.endpoint.includes(this.config.bucketName))) {
-                url = this.buildUrl(`/${fullKey}`)
-            } else {
-                url = this.buildUrl(`/${this.config.bucketName}/${fullKey}`)
-            }
+            // 统一使用buildUrl方法构建URL
+            const url = this.buildUrl(`/${fullKey}`)
+
+            console.warn(`📥 准备下载文件: ${key} -> ${fullKey}`)
+            console.warn(`📥 下载URL: ${url}`)
 
             // 对于七牛云，使用Basic认证
             let headers: Record<string, string>
@@ -186,28 +191,31 @@ export class S3Client {
                 headers
             })
 
+            console.warn(`📥 下载响应: ${response.status} ${response.statusText}`)
+
             if (response.ok) {
                 const content = await response.text()
 
                 // 检查是否返回了HTML内容（通常是错误页面）
                 if (content.trim().startsWith('<!DOCTYPE') || content.trim().startsWith('<html')) {
-                    console.warn(`文件 ${key} 返回了HTML内容，可能是错误页面`)
+                    console.warn(`❌ 文件 ${key} 返回了HTML内容，可能是错误页面`)
                     return null
                 }
 
+                console.warn(`✅ 文件下载成功: ${fullKey}, 大小: ${content.length} 字符`)
                 return content
             }
 
             // 对于404等错误，直接返回null
             if (response.status === 404) {
-                console.warn(`文件 ${key} 不存在`)
+                console.warn(`📁 文件 ${key} 不存在`)
                 return null
             }
 
-            console.warn(`下载文件 ${key} 失败，状态码: ${response.status}`)
+            console.warn(`❌ 下载文件 ${key} 失败，状态码: ${response.status}`)
             return null
         } catch (error) {
-            console.error('下载文件失败:', error)
+            console.error('❌ 下载文件失败:', error)
             return null
         }
     }
@@ -252,18 +260,40 @@ export class S3Client {
     async deleteFile(key: string): Promise<boolean> {
         try {
             const fullKey = this.getFullKey(key)
-            const url = this.buildUrl(`/${this.config.bucketName}/${fullKey}`)
 
-            const headers = await this.createAuthHeaders('DELETE', `/${this.config.bucketName}/${fullKey}`)
+            // 统一使用buildUrl方法构建URL
+            const url = this.buildUrl(`/${fullKey}`)
+
+            console.warn(`🗑️ 准备删除文件: ${key} -> ${fullKey}`)
+            console.warn(`🗑️ 删除URL: ${url}`)
+
+            // 对于七牛云，使用Basic认证
+            let headers: Record<string, string>
+            if (this.config.endpoint && this.config.endpoint.includes('qiniu')) {
+                const auth = btoa(`${this.config.accessKeyId}:${this.config.secretAccessKey}`)
+                headers = {
+                    'Authorization': `Basic ${auth}`
+                }
+            } else {
+                headers = await this.createAuthHeaders('DELETE', `/${this.config.bucketName}/${fullKey}`)
+            }
 
             const response = await fetch(url, {
                 method: 'DELETE',
                 headers
             })
 
+            console.warn(`🗑️ 删除响应: ${response.status} ${response.statusText}`)
+
+            if (response.ok) {
+                console.warn(`✅ 文件删除成功: ${fullKey}`)
+            } else {
+                console.warn(`❌ 文件删除失败: ${fullKey}`)
+            }
+
             return response.ok
         } catch (error) {
-            console.error('删除文件失败:', error)
+            console.error('❌ 删除文件失败:', error)
             return false
         }
     }
@@ -274,17 +304,37 @@ export class S3Client {
     async fileExists(key: string): Promise<boolean> {
         try {
             const fullKey = this.getFullKey(key)
-            const url = this.buildUrl(`/${this.config.bucketName}/${fullKey}`)
 
-            const headers = await this.createAuthHeaders('HEAD', `/${this.config.bucketName}/${fullKey}`)
+            // 统一使用buildUrl方法构建URL
+            const url = this.buildUrl(`/${fullKey}`)
+
+            console.warn(`🔍 检查文件是否存在: ${key} -> ${fullKey}`)
+            console.warn(`🔍 检查URL: ${url}`)
+
+            // 对于七牛云，使用Basic认证
+            let headers: Record<string, string>
+            if (this.config.endpoint && this.config.endpoint.includes('qiniu')) {
+                const auth = btoa(`${this.config.accessKeyId}:${this.config.secretAccessKey}`)
+                headers = {
+                    'Authorization': `Basic ${auth}`
+                }
+            } else {
+                headers = await this.createAuthHeaders('HEAD', `/${this.config.bucketName}/${fullKey}`)
+            }
 
             const response = await fetch(url, {
                 method: 'HEAD',
                 headers
             })
 
-            return response.ok
+            console.warn(`🔍 检查响应: ${response.status} ${response.statusText}`)
+
+            const exists = response.ok
+            console.warn(`${exists ? '✅' : '❌'} 文件${exists ? '存在' : '不存在'}: ${fullKey}`)
+
+            return exists
         } catch (_error) {
+            console.warn(`❌ 检查文件存在性失败: ${key}`)
             return false
         }
     }
@@ -305,13 +355,15 @@ export class S3Client {
             // 使用自定义端点 - 七牛云等服务
             let endpoint = this.config.endpoint.trim()
 
-            // 处理 http(s):// 格式，默认使用 https
+            // 处理七牛云的特殊格式
             if (endpoint.startsWith('http(s)://')) {
-                endpoint = endpoint.replace('http(s)://', 'https://')
-            }
-
-            // 确保有协议前缀
-            if (!endpoint.startsWith('http://') && !endpoint.startsWith('https://')) {
+                // 七牛云允许使用 http(s):// 格式，我们需要智能选择协议
+                // 在生产环境使用 https，开发环境根据当前页面协议决定
+                const protocol = (typeof window !== 'undefined' && window.location.protocol === 'http:') ? 'http' : 'https'
+                endpoint = endpoint.replace('http(s)://', `${protocol}://`)
+                console.warn(`🔄 转换七牛云协议: http(s):// -> ${protocol}://`)
+            } else if (!endpoint.startsWith('http://') && !endpoint.startsWith('https://')) {
+                // 没有协议前缀时添加 https://
                 endpoint = `https://${endpoint}`
             }
 
@@ -319,13 +371,33 @@ export class S3Client {
             endpoint = endpoint.endsWith('/') ? endpoint.slice(0, -1) : endpoint
 
             // 七牛云的S3端点格式：https://bucket-name.s3.region.qiniucs.com
-            // bucket名称已经包含在域名中，所以path不需要再包含bucket
+            // bucket名称已经包含在域名中，路径应该直接从prefix开始
             if (endpoint.includes('qiniucs.com') || endpoint.includes(this.config.bucketName)) {
-                // 七牛云格式，bucket已在域名中，移除path中的bucket部分
-                const cleanPath = path.replace(`/${this.config.bucketName}`, '')
+                // 对于七牛云，路径不应该包含bucket名称
+                let cleanPath = path
+
+                // 如果路径以 /bucket-name/ 开头，需要移除它
+                const bucketPrefix = `/${this.config.bucketName}/`
+                if (cleanPath.startsWith(bucketPrefix)) {
+                    cleanPath = cleanPath.substring(bucketPrefix.length)
+                }
+
+                // 确保路径以 / 开头
                 const finalPath = cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`
-                console.warn(`七牛云URL构建: endpoint=${endpoint}, path=${path}, cleanPath=${cleanPath}, finalPath=${finalPath}`)
-                return `${endpoint}${finalPath}`
+                const finalUrl = `${endpoint}${finalPath}`
+
+                console.warn(`🎯 七牛云URL构建:`, {
+                    原始端点: this.config.endpoint,
+                    处理后端点: endpoint,
+                    原始路径: path,
+                    清理后路径: cleanPath,
+                    最终路径: finalPath,
+                    最终URL: finalUrl,
+                    bucket名称: this.config.bucketName,
+                    前缀: this.config.prefix
+                })
+
+                return finalUrl
             } else {
                 // 其他S3兼容服务，保持原有逻辑
                 const finalPath = path.startsWith('/') ? path : `/${path}`
@@ -378,13 +450,12 @@ export class S3Client {
             try {
                 let endpoint = this.config.endpoint.trim()
 
-                // 处理 http(s):// 格式，默认使用 https
+                // 处理七牛云的特殊格式
                 if (endpoint.startsWith('http(s)://')) {
-                    endpoint = endpoint.replace('http(s)://', 'https://')
-                }
-
-                // 确保有协议前缀
-                if (!endpoint.startsWith('http://') && !endpoint.startsWith('https://')) {
+                    // 转换为标准协议进行URL解析
+                    const protocol = (typeof window !== 'undefined' && window.location.protocol === 'http:') ? 'http' : 'https'
+                    endpoint = endpoint.replace('http(s)://', `${protocol}://`)
+                } else if (!endpoint.startsWith('http://') && !endpoint.startsWith('https://')) {
                     endpoint = `https://${endpoint}`
                 }
 
@@ -392,7 +463,10 @@ export class S3Client {
             } catch (error) {
                 // 如果URL解析失败，尝试直接提取主机名
                 console.error('URL解析失败，端点:', this.config.endpoint, error)
-                const cleanEndpoint = this.config.endpoint.replace(/^https?:\/\//, '').replace(/^http\(s\):\/\//, '').replace(/\/$/, '')
+                const cleanEndpoint = this.config.endpoint
+                    .replace(/^https?:\/\//, '')
+                    .replace(/^http\(s\):\/\//, '')
+                    .replace(/\/$/, '')
                 return cleanEndpoint
             }
         } else {

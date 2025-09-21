@@ -80,6 +80,20 @@ export class S3SyncManager {
         }
 
         try {
+            // 添加完整的诊断信息
+            console.warn(`📋 S3同步完整诊断信息 [请复制此段给开发者]:`, {
+                配置信息: {
+                    endpoint: this.config.endpoint,
+                    region: this.config.region,
+                    bucketName: this.config.bucketName,
+                    prefix: this.config.prefix,
+                    accessKeyId: this.config.accessKeyId.substring(0, 8) + '***', // 只显示前8位
+                },
+                时间戳: new Date().toISOString(),
+                用户代理: navigator.userAgent,
+                页面URL: window.location.href
+            })
+
             // 1. 获取本地数据
             console.warn('开始同步：获取本地数据...')
             const localData = await this.getLocalData()
@@ -115,7 +129,17 @@ export class S3SyncManager {
                 ? `同步完成：上传 ${result.uploadedFiles} 个文件，下载 ${result.downloadedFiles} 个文件`
                 : `同步部分完成，遇到 ${result.errors.length} 个错误`
 
-            console.warn('同步结果:', result)
+            console.warn('🎯 同步结果:', result)
+
+            // 添加最终诊断结果
+            console.warn(`📊 S3同步结果摘要 [请复制此段给开发者]:`, {
+                成功状态: result.success,
+                上传文件数: result.uploadedFiles,
+                下载文件数: result.downloadedFiles,
+                错误数量: result.errors.length,
+                错误详情: result.errors,
+                执行时间: new Date().toISOString()
+            })
 
         } catch (error) {
             const errorMessage = `同步失败: ${error instanceof Error ? error.message : '未知错误'}`
@@ -229,9 +253,11 @@ export class S3SyncManager {
             for (const file of dataFiles) {
                 try {
                     console.warn(`下载文件: ${file.key}`)
-                    const content = await this.client.downloadFile(file.key.replace(this.config!.prefix, ''))
+                    // 直接使用file.key中去掉prefix的部分作为下载的key
+                    const downloadKey = file.key.replace(this.config!.prefix, '')
+                    const content = await this.client.downloadFile(downloadKey)
                     if (content) {
-                        const key = file.key.replace(this.config!.prefix, '').replace('.json', '')
+                        const key = downloadKey.replace('.json', '')
                         console.warn(`成功下载文件 ${key}，内容长度: ${content.length}`)
 
                         try {

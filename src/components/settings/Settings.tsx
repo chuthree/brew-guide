@@ -255,6 +255,14 @@ const Settings: React.FC<SettingsProps> = ({
         }
     }, [settings.decrementPresets]);
 
+    // 当settings.s3Sync发生变化时更新s3Settings状态
+    useEffect(() => {
+        if (settings.s3Sync) {
+            setS3Settings(settings.s3Sync);
+            console.warn('🔄 S3设置已从localStorage加载:', settings.s3Sync);
+        }
+    }, [settings.s3Sync]);
+
     // 加载备份提醒设置
     useEffect(() => {
         const loadBackupReminderSettings = async () => {
@@ -1526,24 +1534,6 @@ const handleChange = async <K extends keyof SettingsOptions>(
                     <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                         <p className="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
                             <strong>S3 云同步</strong>：将您的冲煮数据、咖啡豆信息等同步到S3兼容的对象存储服务。
-                            <br />
-                            💡 <strong>七牛云用户必读</strong>：需要在控制台配置CORS策略
-                            <br />
-                            <strong>CORS配置步骤</strong>：七牛云控制台 → 对象存储 → 空间管理 → 选择您的空间 → CORS配置
-                            <br />
-                            <strong>CORS规则</strong>：
-                            <br />
-                            • 允许的来源：* 或 http://localhost:3000,https://你的域名.com
-                            <br />
-                            • 允许的方法：GET, POST, PUT, DELETE, HEAD, OPTIONS
-                            <br />
-                            • 允许的头部：*
-                            <br />
-                            • 暴露的头部：* (可选)
-                            <br />
-                            • 缓存时间：86400 (24小时)
-                            <br />
-                            ⚠️ CORS配置后需等待5-10分钟生效，期间可能仍有错误
                         </p>
                     </div>
 
