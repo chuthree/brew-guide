@@ -13,7 +13,7 @@ import {
   BACKUP_REMINDER_INTERVALS,
   BackupReminderInterval
 } from '@/lib/utils/backupReminderUtils'
-import WebDAVSyncManager, { SyncResult } from '@/lib/webdav/syncManager'
+import S3SyncManager, { SyncResult } from '@/lib/s3/syncManager'
 
 import Image from 'next/image'
 import GrinderSettings from './GrinderSettings'
@@ -87,13 +87,15 @@ export interface SettingsOptions {
     }
     // 备份提醒设置
     backupReminder?: BackupReminderSettings
-    // WebDAV同步设置
-    webdavSync?: {
+    // S3同步设置
+    s3Sync?: {
         enabled: boolean
-        serverUrl: string
-        username: string
-        password: string
-        remotePath: string
+        accessKeyId: string
+        secretAccessKey: string
+        region: string
+        bucketName: string
+        prefix: string
+        endpoint?: string // 自定义端点，用于七牛云等S3兼容服务
         autoSync: boolean
         syncInterval: number // 分钟
     }
@@ -136,13 +138,15 @@ export const defaultSettings: SettingsOptions = {
     },
     // 备份提醒设置默认为undefined，将在运行时从BackupReminderUtils加载
     backupReminder: undefined,
-    // WebDAV同步设置默认值
-    webdavSync: {
+    // S3同步设置默认值
+    s3Sync: {
         enabled: false,
-        serverUrl: '',
-        username: '',
-        password: '',
-        remotePath: '/brew-guide-data/',
+        accessKeyId: '',
+        secretAccessKey: '',
+        region: 'cn-south-1',
+        bucketName: '',
+        prefix: 'brew-guide-data/',
+        endpoint: '', // 自定义端点
         autoSync: false,
         syncInterval: 30 // 30分钟
     }
@@ -217,13 +221,13 @@ const Settings: React.FC<SettingsProps> = ({
     const [backupReminderSettings, setBackupReminderSettings] = useState<BackupReminderSettings | null>(null)
     const [nextReminderText, setNextReminderText] = useState('')
 
-    // WebDAV同步相关状态
-    const [webdavSettings, setWebdavSettings] = useState(settings.webdavSync || defaultSettings.webdavSync!)
-    const [webdavStatus, setWebdavStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected')
-    const [webdavError, setWebdavError] = useState<string>('')
-    const [showWebdavPassword, setShowWebdavPassword] = useState(false)
-    const [webdavExpanded, setWebdavExpanded] = useState(false)
-    const [syncManager, setSyncManager] = useState<WebDAVSyncManager | null>(null)
+    // S3同步相关状态
+    const [s3Settings, setS3Settings] = useState(settings.s3Sync || defaultSettings.s3Sync!)
+    const [s3Status, setS3Status] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected')
+    const [s3Error, setS3Error] = useState<string>('')
+    const [showS3SecretKey, setShowS3SecretKey] = useState(false)
+    const [s3Expanded, setS3Expanded] = useState(false)
+    const [syncManager, setSyncManager] = useState<S3SyncManager | null>(null)
     const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null)
     const [isSyncing, setIsSyncing] = useState(false)
     const syncIntervalRef = useRef<NodeJS.Timeout | null>(null)
@@ -408,124 +412,43 @@ const handleChange = async <K extends keyof SettingsOptions>(
         }
     }
 
-    // 处理WebDAV设置变更
-    const handleWebdavSettingChange = <K extends keyof typeof webdavSettings>(
+    // 处理S3设置变更
+    const handleS3SettingChange = <K extends keyof typeof s3Settings>(
         key: K,
-        value: typeof webdavSettings[K]
+        value: typeof s3Settings[K]
     ) => {
-        const newWebdavSettings = { ...webdavSettings, [key]: value }
-        setWebdavSettings(newWebdavSettings)
-        handleChange('webdavSync', newWebdavSettings)
+        const newS3Settings = { ...s3Settings, [key]: value }
+        setS3Settings(newS3Settings)
+        handleChange('s3Sync', newS3Settings)
 
-        // 如果禁用了WebDAV或自动同步，清除定时器
+        // 如果禁用了S3或自动同步，清除定时器
         if (key === 'enabled' && !value) {
             stopAutoSync()
         } else if (key === 'autoSync' && !value) {
             stopAutoSync()
-        } else if (key === 'autoSync' && value && webdavStatus === 'connected') {
+        } else if (key === 'autoSync' && value && s3Status === 'connected') {
             // 如果启用自动同步且已连接，启动定时器
-            startAutoSync(newWebdavSettings.syncInterval)
-        } else if (key === 'syncInterval' && newWebdavSettings.autoSync && webdavStatus === 'connected') {
+            startAutoSync(newS3Settings.syncInterval)
+        } else if (key === 'syncInterval' && newS3Settings.autoSync && s3Status === 'connected') {
             // 如果更改了同步间隔，重新启动定时器
             startAutoSync(value as number)
         }
     }
 
-    // 启动自动同步
-    const startAutoSync = useCallback((intervalMinutes: number) => {
-        stopAutoSync() // 先清除现有定时器
-
-        const intervalMs = intervalMinutes * 60 * 1000
-        syncIntervalRef.current = setInterval(async () => {
-            if (syncManager && webdavStatus === 'connected' && !isSyncing) {
-                try {
-                    await manualSync()
-                } catch (error) {
-                    console.error('自动同步失败:', error)
-                }
-            }
-        }, intervalMs)
-    }, [syncManager, webdavStatus, isSyncing])
-
-    // 停止自动同步
-    const stopAutoSync = () => {
-        if (syncIntervalRef.current) {
-            clearInterval(syncIntervalRef.current)
-            syncIntervalRef.current = null
-        }
-    }
-
-    // 组件卸载时清理定时器
-    useEffect(() => {
-        return () => {
-            stopAutoSync()
-        }
-    }, [])
-
-    // 监听WebDAV连接状态和自动同步设置变化
-    useEffect(() => {
-        if (webdavStatus === 'connected' && webdavSettings.autoSync && syncManager) {
-            startAutoSync(webdavSettings.syncInterval)
-        } else {
-            stopAutoSync()
-        }
-    }, [webdavStatus, webdavSettings.autoSync, webdavSettings.syncInterval, syncManager, startAutoSync])
-
-    // 测试WebDAV连接
-    const testWebdavConnection = async () => {
-        if (!webdavSettings.serverUrl || !webdavSettings.username || !webdavSettings.password) {
-            setWebdavError('请填写完整的服务器信息')
-            setWebdavStatus('error')
-            return
-        }
-
-        setWebdavStatus('connecting')
-        setWebdavError('')
-
-        try {
-            const manager = new WebDAVSyncManager()
-            const connected = await manager.initialize({
-                serverUrl: webdavSettings.serverUrl,
-                username: webdavSettings.username,
-                password: webdavSettings.password,
-                remotePath: webdavSettings.remotePath
-            })
-
-            if (connected) {
-                setWebdavStatus('connected')
-                setSyncManager(manager)
-
-                // 获取最后同步时间
-                const lastSync = await manager.getLastSyncTime()
-                setLastSyncTime(lastSync)
-
-                if (settings.hapticFeedback) {
-                    hapticsUtils.light()
-                }
-            } else {
-                setWebdavStatus('error')
-                setWebdavError('连接失败，请检查服务器地址和凭据')
-            }
-        } catch (error) {
-            setWebdavStatus('error')
-            setWebdavError(`连接失败: ${error instanceof Error ? error.message : '未知错误'}`)
-        }
-    }
-
     // 手动同步数据
-    const manualSync = async () => {
+    const manualSync = useCallback(async () => {
         if (!syncManager) {
-            setWebdavError('请先测试连接')
+            setS3Error('请先测试连接')
             return
         }
 
         if (isSyncing) {
-            setWebdavError('同步正在进行中')
+            setS3Error('同步正在进行中')
             return
         }
 
         setIsSyncing(true)
-        setWebdavError('')
+        setS3Error('')
 
         try {
             const result: SyncResult = await syncManager.sync()
@@ -545,12 +468,95 @@ const handleChange = async <K extends keyof SettingsOptions>(
                     onDataChange()
                 }
             } else {
-                setWebdavError(result.message || '同步失败')
+                setS3Error(result.message || '同步失败')
             }
         } catch (error) {
-            setWebdavError(`同步失败: ${error instanceof Error ? error.message : '未知错误'}`)
+            setS3Error(`同步失败: ${error instanceof Error ? error.message : '未知错误'}`)
         } finally {
             setIsSyncing(false)
+        }
+    }, [syncManager, isSyncing, settings.hapticFeedback, onDataChange])
+
+    // 启动自动同步
+    const startAutoSync = useCallback((intervalMinutes: number) => {
+        stopAutoSync() // 先清除现有定时器
+
+        const intervalMs = intervalMinutes * 60 * 1000
+        syncIntervalRef.current = setInterval(async () => {
+            if (syncManager && s3Status === 'connected' && !isSyncing) {
+                try {
+                    await manualSync()
+                } catch (error) {
+                    console.error('自动同步失败:', error)
+                }
+            }
+        }, intervalMs)
+    }, [syncManager, s3Status, isSyncing, manualSync])
+
+    // 停止自动同步
+    const stopAutoSync = () => {
+        if (syncIntervalRef.current) {
+            clearInterval(syncIntervalRef.current)
+            syncIntervalRef.current = null
+        }
+    }
+
+    // 组件卸载时清理定时器
+    useEffect(() => {
+        return () => {
+            stopAutoSync()
+        }
+    }, [])
+
+    // 监听S3连接状态和自动同步设置变化
+    useEffect(() => {
+        if (s3Status === 'connected' && s3Settings.autoSync && syncManager) {
+            startAutoSync(s3Settings.syncInterval)
+        } else {
+            stopAutoSync()
+        }
+    }, [s3Status, s3Settings.autoSync, s3Settings.syncInterval, syncManager, startAutoSync])
+
+    // 测试S3连接
+    const testS3Connection = async () => {
+        if (!s3Settings.accessKeyId || !s3Settings.secretAccessKey || !s3Settings.bucketName) {
+            setS3Error('请填写完整的S3配置信息')
+            setS3Status('error')
+            return
+        }
+
+        setS3Status('connecting')
+        setS3Error('')
+
+        try {
+            const manager = new S3SyncManager()
+            const connected = await manager.initialize({
+                region: s3Settings.region,
+                accessKeyId: s3Settings.accessKeyId,
+                secretAccessKey: s3Settings.secretAccessKey,
+                bucketName: s3Settings.bucketName,
+                prefix: s3Settings.prefix,
+                endpoint: s3Settings.endpoint || undefined
+            })
+
+            if (connected) {
+                setS3Status('connected')
+                setSyncManager(manager)
+
+                // 获取最后同步时间
+                const lastSync = await manager.getLastSyncTime()
+                setLastSyncTime(lastSync)
+
+                if (settings.hapticFeedback) {
+                    hapticsUtils.light()
+                }
+            } else {
+                setS3Status('error')
+                setS3Error('连接失败，请检查S3配置信息')
+            }
+        } catch (error) {
+            setS3Status('error')
+            setS3Error(`连接失败: ${error instanceof Error ? error.message : '未知错误'}`)
         }
     }
 
@@ -1516,35 +1522,51 @@ const handleChange = async <K extends keyof SettingsOptions>(
                         数据管理
                     </h3>
 
-                    {/* WebDAV功能说明 */}
+                    {/* S3功能说明 */}
                     <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                         <p className="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
-                            <strong>WebDAV 云同步</strong>：将您的冲煮数据、咖啡豆信息等同步到支持WebDAV的云盘服务（如坚果云、NextCloud等）。
+                            <strong>S3 云同步</strong>：将您的冲煮数据、咖啡豆信息等同步到S3兼容的对象存储服务。
                             <br />
-                            💡 <strong>！暂时无法使用，因为写一半发现没实力开发 www，有没有大佬帮帮忙吧</strong>
+                            💡 <strong>七牛云用户必读</strong>：需要在控制台配置CORS策略
+                            <br />
+                            <strong>CORS配置步骤</strong>：七牛云控制台 → 对象存储 → 空间管理 → 选择您的空间 → CORS配置
+                            <br />
+                            <strong>CORS规则</strong>：
+                            <br />
+                            • 允许的来源：* 或 http://localhost:3000,https://你的域名.com
+                            <br />
+                            • 允许的方法：GET, POST, PUT, DELETE, HEAD, OPTIONS
+                            <br />
+                            • 允许的头部：*
+                            <br />
+                            • 暴露的头部：* (可选)
+                            <br />
+                            • 缓存时间：86400 (24小时)
+                            <br />
+                            ⚠️ CORS配置后需等待5-10分钟生效，期间可能仍有错误
                         </p>
                     </div>
 
-                    {/* WebDAV同步设置 */}
+                    {/* S3同步设置 */}
                     <div className="space-y-4 mb-6">
-                        {/* WebDAV主开关 */}
+                        {/* S3主开关 */}
                         <div className="flex items-center justify-between">
                             <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                                WebDAV 云同步（没实现www）
+                                S3 云同步
                             </div>
                             <div className="flex items-center space-x-2">
                                 {/* 连接状态指示器 */}
                                 <div className={`w-2 h-2 rounded-full ${
-                                    webdavStatus === 'connected' ? 'bg-green-500' :
-                                    webdavStatus === 'connecting' ? 'bg-yellow-500 animate-pulse' :
-                                    webdavStatus === 'error' ? 'bg-red-500' :
+                                    s3Status === 'connected' ? 'bg-green-500' :
+                                    s3Status === 'connecting' ? 'bg-yellow-500 animate-pulse' :
+                                    s3Status === 'error' ? 'bg-red-500' :
                                     'bg-neutral-300 dark:bg-neutral-600'
                                 }`} />
                                 <label className="relative inline-flex cursor-pointer items-center">
                                     <input
                                         type="checkbox"
-                                        checked={webdavSettings.enabled}
-                                        onChange={(e) => handleWebdavSettingChange('enabled', e.target.checked)}
+                                        checked={s3Settings.enabled}
+                                        onChange={(e) => handleS3SettingChange('enabled', e.target.checked)}
                                         className="peer sr-only"
                                     />
                                     <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
@@ -1552,17 +1574,17 @@ const handleChange = async <K extends keyof SettingsOptions>(
                             </div>
                         </div>
 
-                        {/* WebDAV详细设置 - 仅在启用时显示 */}
-                        {webdavSettings.enabled && (
+                        {/* S3详细设置 - 仅在启用时显示 */}
+                        {s3Settings.enabled && (
                             <div className="ml-4 space-y-4 border-l-2 border-neutral-200 dark:border-neutral-700 pl-4">
                                 {/* 展开/收起按钮 */}
                                 <button
-                                    onClick={() => setWebdavExpanded(!webdavExpanded)}
+                                    onClick={() => setS3Expanded(!s3Expanded)}
                                     className="flex items-center justify-between w-full py-2 text-sm font-medium text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-neutral-100"
                                 >
-                                    <span>服务器配置</span>
+                                    <span>S3配置</span>
                                     <svg
-                                        className={`w-4 h-4 transition-transform ${webdavExpanded ? 'rotate-180' : ''}`}
+                                        className={`w-4 h-4 transition-transform ${s3Expanded ? 'rotate-180' : ''}`}
                                         fill="none"
                                         viewBox="0 0 24 24"
                                         stroke="currentColor"
@@ -1571,56 +1593,87 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                     </svg>
                                 </button>
 
-                                {webdavExpanded && (
+                                {s3Expanded && (
                                     <div className="space-y-3">
-                                        {/* 服务器地址 */}
+                                        {/* 区域 */}
                                         <div>
                                             <label className="block text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
-                                                服务器地址
-                                            </label>
-                                            <input
-                                                type="url"
-                                                value={webdavSettings.serverUrl}
-                                                onChange={(e) => handleWebdavSettingChange('serverUrl', e.target.value)}
-                                                placeholder="https://your-server.com/webdav"
-                                                className="w-full py-2 px-3 text-sm bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded focus:outline-hidden focus:ring-1 focus:ring-neutral-500"
-                                            />
-                                        </div>
-
-                                        {/* 用户名 */}
-                                        <div>
-                                            <label className="block text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
-                                                用户名
+                                                区域 (Region)
                                             </label>
                                             <input
                                                 type="text"
-                                                value={webdavSettings.username}
-                                                onChange={(e) => handleWebdavSettingChange('username', e.target.value)}
-                                                placeholder="username"
+                                                value={s3Settings.region}
+                                                onChange={(e) => handleS3SettingChange('region', e.target.value)}
+                                                placeholder="cn-south-1"
                                                 className="w-full py-2 px-3 text-sm bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded focus:outline-hidden focus:ring-1 focus:ring-neutral-500"
                                             />
                                         </div>
 
-                                        {/* 密码 */}
+                                        {/* 自定义端点 */}
                                         <div>
                                             <label className="block text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
-                                                密码
+                                                自定义端点 (可选)
+                                            </label>
+                                            <input
+                                                type="url"
+                                                value={s3Settings.endpoint || ''}
+                                                onChange={(e) => handleS3SettingChange('endpoint', e.target.value)}
+                                                placeholder="https://bucket-name.s3.cn-south-1.qiniucs.com (七牛云格式)"
+                                                className="w-full py-2 px-3 text-sm bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded focus:outline-hidden focus:ring-1 focus:ring-neutral-500"
+                                            />
+                                            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                                                七牛云格式：https://bucket名称.s3.区域.qiniucs.com，留空使用AWS标准端点
+                                            </p>
+                                        </div>
+
+                                        {/* Bucket名称 */}
+                                        <div>
+                                            <label className="block text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
+                                                Bucket名称
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={s3Settings.bucketName}
+                                                onChange={(e) => handleS3SettingChange('bucketName', e.target.value)}
+                                                placeholder="my-bucket-name"
+                                                className="w-full py-2 px-3 text-sm bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded focus:outline-hidden focus:ring-1 focus:ring-neutral-500"
+                                            />
+                                        </div>
+
+                                        {/* Access Key ID */}
+                                        <div>
+                                            <label className="block text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
+                                                Access Key ID
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={s3Settings.accessKeyId}
+                                                onChange={(e) => handleS3SettingChange('accessKeyId', e.target.value)}
+                                                placeholder="AKIA..."
+                                                className="w-full py-2 px-3 text-sm bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded focus:outline-hidden focus:ring-1 focus:ring-neutral-500"
+                                            />
+                                        </div>
+
+                                        {/* Secret Access Key */}
+                                        <div>
+                                            <label className="block text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
+                                                Secret Access Key
                                             </label>
                                             <div className="relative">
                                                 <input
-                                                    type={showWebdavPassword ? "text" : "password"}
-                                                    value={webdavSettings.password}
-                                                    onChange={(e) => handleWebdavSettingChange('password', e.target.value)}
-                                                    placeholder="password"
+                                                    type={showS3SecretKey ? "text" : "password"}
+                                                    value={s3Settings.secretAccessKey}
+                                                    onChange={(e) => handleS3SettingChange('secretAccessKey', e.target.value)}
+                                                    placeholder="密钥"
                                                     className="w-full py-2 px-3 pr-10 text-sm bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded focus:outline-hidden focus:ring-1 focus:ring-neutral-500"
                                                 />
                                                 <button
                                                     type="button"
-                                                    onClick={() => setShowWebdavPassword(!showWebdavPassword)}
+                                                    onClick={() => setShowS3SecretKey(!showS3SecretKey)}
                                                     className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300"
                                                 >
                                                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        {showWebdavPassword ? (
+                                                        {showS3SecretKey ? (
                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L8.464 8.464m1.414 1.414L8.464 8.464m5.656 5.656L15.536 15.536m-1.414-1.414L15.536 15.536" />
                                                         ) : (
                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
@@ -1630,38 +1683,38 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                             </div>
                                         </div>
 
-                                        {/* 远程路径 */}
+                                        {/* 前缀 */}
                                         <div>
                                             <label className="block text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
-                                                远程路径
+                                                文件前缀
                                             </label>
                                             <input
                                                 type="text"
-                                                value={webdavSettings.remotePath}
-                                                onChange={(e) => handleWebdavSettingChange('remotePath', e.target.value)}
-                                                placeholder="/brew-guide-data/"
+                                                value={s3Settings.prefix}
+                                                onChange={(e) => handleS3SettingChange('prefix', e.target.value)}
+                                                placeholder="brew-guide-data/"
                                                 className="w-full py-2 px-3 text-sm bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded focus:outline-hidden focus:ring-1 focus:ring-neutral-500"
                                             />
                                         </div>
 
                                         {/* 测试连接按钮 */}
                                         <button
-                                            onClick={testWebdavConnection}
-                                            disabled={webdavStatus === 'connecting'}
+                                            onClick={testS3Connection}
+                                            disabled={s3Status === 'connecting'}
                                             className="w-full py-2 px-3 text-sm font-medium text-white bg-neutral-700 hover:bg-neutral-800 disabled:bg-neutral-400 rounded transition-colors"
                                         >
-                                            {webdavStatus === 'connecting' ? '连接中...' : '测试连接'}
+                                            {s3Status === 'connecting' ? '连接中...' : '测试连接'}
                                         </button>
 
                                         {/* 错误信息 */}
-                                        {webdavError && (
+                                        {s3Error && (
                                             <div className="p-2 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded">
-                                                {webdavError}
+                                                {s3Error}
                                             </div>
                                         )}
 
                                         {/* 自动同步设置 */}
-                                        {webdavStatus === 'connected' && (
+                                        {s3Status === 'connected' && (
                                             <div className="space-y-3 pt-3 border-t border-neutral-200 dark:border-neutral-700">
                                                 {/* 自动同步开关 */}
                                                 <div className="flex items-center justify-between">
@@ -1671,8 +1724,8 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                                     <label className="relative inline-flex cursor-pointer items-center">
                                                         <input
                                                             type="checkbox"
-                                                            checked={webdavSettings.autoSync}
-                                                            onChange={(e) => handleWebdavSettingChange('autoSync', e.target.checked)}
+                                                            checked={s3Settings.autoSync}
+                                                            onChange={(e) => handleS3SettingChange('autoSync', e.target.checked)}
                                                             className="peer sr-only"
                                                         />
                                                         <div className="peer h-5 w-9 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
@@ -1680,24 +1733,24 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                                 </div>
 
                                                 {/* 同步间隔 */}
-                                                {webdavSettings.autoSync && (
+                                                {s3Settings.autoSync && (
                                                     <div>
                                                         <div className="flex items-center justify-between mb-1">
                                                             <div className="text-xs font-medium text-neutral-600 dark:text-neutral-400">
                                                                 同步间隔
                                                             </div>
                                                             <div className="text-xs text-neutral-400 dark:text-neutral-500">
-                                                                {webdavSettings.syncInterval}分钟
+                                                                {s3Settings.syncInterval}分钟
                                                             </div>
                                                         </div>
                                                         <ButtonGroup
-                                                            value={webdavSettings.syncInterval.toString()}
+                                                            value={s3Settings.syncInterval.toString()}
                                                             options={[
                                                                 { value: '15', label: '15分钟' },
                                                                 { value: '30', label: '30分钟' },
                                                                 { value: '60', label: '1小时' }
                                                             ]}
-                                                            onChange={(value) => handleWebdavSettingChange('syncInterval', parseInt(value))}
+                                                            onChange={(value) => handleS3SettingChange('syncInterval', parseInt(value))}
                                                             className="w-full text-xs"
                                                         />
                                                     </div>
@@ -1729,11 +1782,11 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                 )}
 
                                 {/* 简化的状态说明 */}
-                                {!webdavExpanded && (
+                                {!s3Expanded && (
                                     <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                                        {webdavStatus === 'connected' ? '已连接 - 数据将自动同步到云端' :
-                                         webdavStatus === 'error' ? '连接失败 - 点击配置查看详情' :
-                                         '未配置 - 点击配置设置服务器信息'}
+                                        {s3Status === 'connected' ? '已连接 - 数据将自动同步到S3' :
+                                         s3Status === 'error' ? '连接失败 - 点击配置查看详情' :
+                                         '未配置 - 点击配置设置S3信息'}
                                     </p>
                                 )}
                             </div>
