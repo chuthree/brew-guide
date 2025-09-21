@@ -277,12 +277,45 @@ const Settings: React.FC<SettingsProps> = ({
         }
     }, [settings.decrementPresets]);
 
-    // 当settings.s3Sync发生变化时更新s3Settings状态
+    // 当settings.s3Sync发生变化时更新s3Settings状态，并自动尝试连接
     useEffect(() => {
         if (settings.s3Sync) {
             const normalized = normalizeS3Settings(settings.s3Sync)
             setS3Settings(normalized)
             console.warn('🔄 S3设置已从localStorage加载:', normalized)
+
+            // 如果S3同步已启用且配置完整，则自动尝试连接
+            if (
+                normalized.enabled &&
+                normalized.accessKeyId &&
+                normalized.secretAccessKey &&
+                normalized.bucketName
+            ) {
+                // 使用一个函数来避免在useEffect中直接使用async函数
+                const autoConnect = async () => {
+                    const manager = new S3SyncManager()
+                    const connected = await manager.initialize({
+                        region: normalized.region,
+                        accessKeyId: normalized.accessKeyId,
+                        secretAccessKey: normalized.secretAccessKey,
+                        bucketName: normalized.bucketName,
+                        prefix: normalized.prefix,
+                        endpoint: normalized.endpoint || undefined
+                    })
+
+                    if (connected) {
+                        setS3Status('connected')
+                        setSyncManager(manager)
+                        const lastSync = await manager.getLastSyncTime()
+                        setLastSyncTime(lastSync)
+                        setS3Expanded(false) // 连接成功后默认不展开
+                    } else {
+                        setS3Status('error')
+                        setS3Error('自动连接失败，请检查配置')
+                    }
+                }
+                autoConnect()
+            }
         }
     }, [settings.s3Sync]);
 
@@ -516,6 +549,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
             if (connected) {
                 setS3Status('connected')
                 setSyncManager(manager)
+                setS3Expanded(true) // 连接成功后自动展开
 
                 // 获取最后同步时间
                 const lastSync = await manager.getLastSyncTime()
@@ -1684,25 +1718,6 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                                 <div className="text-xs text-neutral-500 dark:text-neutral-400 bg-neutral-100/60 dark:bg-neutral-800/60 p-2 rounded leading-relaxed">
                                                     不会自动同步，请在需要时手动点击下方按钮触发同步。
                                                 </div>
-
-                                                <button
-                                                    onClick={performSync}
-                                                    disabled={isSyncing}
-                                                    className="w-full py-2 px-3 text-xs font-medium text-neutral-700 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors"
-                                                >
-                                                    {isSyncing ? '同步中...' : '立即同步'}
-                                                </button>
-
-                                                {lastSyncTime && (
-                                                    <div className="text-xs text-neutral-400 dark:text-neutral-500">
-                                                        最后同步：{lastSyncTime.toLocaleString('zh-CN', {
-                                                            month: 'numeric',
-                                                            day: 'numeric',
-                                                            hour: '2-digit',
-                                                            minute: '2-digit'
-                                                        })}
-                                                    </div>
-                                                )}
                                             </div>
                                         )}
                                     </div>
@@ -1717,6 +1732,29 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                                 ? '连接失败 - 点击配置查看详情'
                                                 : '未配置 - 点击配置设置S3信息'}
                                     </p>
+                                )}
+
+                                {/* 醒目的同步按钮 */}
+                                {s3Status === 'connected' && (
+                                    <div className="mt-2 space-y-2">
+                                        <button
+                                            onClick={performSync}
+                                            disabled={isSyncing}
+                                            className="w-full py-2 px-3 text-sm font-medium text-white bg-neutral-700 hover:bg-neutral-800 disabled:bg-neutral-400 rounded transition-colors"
+                                        >
+                                            {isSyncing ? '同步中...' : '立即同步'}
+                                        </button>
+                                        {lastSyncTime && (
+                                            <div className="text-xs text-neutral-400 dark:text-neutral-500">
+                                                最后同步：{lastSyncTime.toLocaleString('zh-CN', {
+                                                    month: 'numeric',
+                                                    day: 'numeric',
+                                                    hour: '2-digit',
+                                                    minute: '2-digit'
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
                                 )}
                             </div>
                         )}
