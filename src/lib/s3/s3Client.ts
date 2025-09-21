@@ -85,28 +85,6 @@ export class S3Client {
             return false
         } catch (error) {
             console.error('七牛云连接测试失败:', error)
-
-            // 检查是否是CORS错误
-            if (error instanceof TypeError && error.message.includes('fetch')) {
-                console.error('🚫 CORS错误 - 请检查以下配置：')
-                console.error('='.repeat(50))
-                console.error('🔧 七牛云CORS配置步骤：')
-                console.error('1. 登录七牛云控制台')
-                console.error('2. 对象存储 → 空间管理 → 选择您的空间')
-                console.error('3. 点击 "CORS配置" 选项卡')
-                console.error('4. 添加CORS规则：')
-                console.error('   - 允许的来源: *')
-                console.error('   - 允许的方法: GET,POST,PUT,DELETE,HEAD,OPTIONS')
-                console.error('   - 允许的头部: *')
-                console.error('   - 暴露的头部: *')
-                console.error('   - 缓存时间: 86400')
-                console.error('5. 保存后等待5-10分钟生效')
-                console.error('='.repeat(50))
-                console.error('💡 提示：您之前使用 http(s):// 格式时得到200响应')
-                console.error('   说明CORS配置是正确的，请确保端点格式一致')
-                console.error('   建议使用: http(s)://bucket-name.s3.region.qiniucs.com')
-            }
-
             return false
         }
     }
@@ -357,11 +335,7 @@ export class S3Client {
 
             // 处理七牛云的特殊格式
             if (endpoint.startsWith('http(s)://')) {
-                // 七牛云允许使用 http(s):// 格式，我们需要智能选择协议
-                // 在生产环境使用 https，开发环境根据当前页面协议决定
-                const protocol = (typeof window !== 'undefined' && window.location.protocol === 'http:') ? 'http' : 'https'
-                endpoint = endpoint.replace('http(s)://', `${protocol}://`)
-                console.warn(`🔄 转换七牛云协议: http(s):// -> ${protocol}://`)
+                // 七牛云允许使用 http(s):// 协议占位形式，保持原样以确保兼容
             } else if (!endpoint.startsWith('http://') && !endpoint.startsWith('https://')) {
                 // 没有协议前缀时添加 https://
                 endpoint = `https://${endpoint}`
@@ -452,9 +426,9 @@ export class S3Client {
 
                 // 处理七牛云的特殊格式
                 if (endpoint.startsWith('http(s)://')) {
-                    // 转换为标准协议进行URL解析
-                    const protocol = (typeof window !== 'undefined' && window.location.protocol === 'http:') ? 'http' : 'https'
-                    endpoint = endpoint.replace('http(s)://', `${protocol}://`)
+                    // http(s):// 是一种占位格式，例如七牛云；直接解析主机名
+                    const host = endpoint.slice('http(s)://'.length).replace(/\/.*$/, '')
+                    return host
                 } else if (!endpoint.startsWith('http://') && !endpoint.startsWith('https://')) {
                     endpoint = `https://${endpoint}`
                 }
