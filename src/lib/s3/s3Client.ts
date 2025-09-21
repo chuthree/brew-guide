@@ -62,18 +62,11 @@ export class S3Client {
         try {
             // 对于七牛云，先尝试简单的根路径GET请求
             const baseUrl = this.buildUrl('/')
-            const usingPresign = this.isQiniu()
-            const requestUrl = usingPresign ? await this.createPresignedUrl('GET', baseUrl) : baseUrl
-
-            const headers = usingPresign
-                ? {}
-                : await this.createAuthHeaders('GET', requestUrl)
+            const requestUrl = await this.createPresignedUrl('GET', baseUrl)
 
             // 带认证头进行请求
             const response = await fetch(requestUrl, {
-                method: 'GET',
-                mode: 'cors',
-                headers
+                method: 'GET'
             })
 
             const success = response.status === 200 || response.status === 403 || response.status === 404
@@ -83,7 +76,7 @@ export class S3Client {
                 url: requestUrl,
                 status: response.status,
                 ok: success,
-                presigned: usingPresign
+                presigned: true
             })
 
             if (!success) {
@@ -172,13 +165,23 @@ export class S3Client {
                 headers
             })
 
+            let errorSnippet: string | undefined
+            if (!response.ok) {
+                try {
+                    errorSnippet = (await response.clone().text()).slice(0, 200)
+                } catch (_e) {
+                    errorSnippet = undefined
+                }
+            }
+
             this.logSummary('download', {
                 key,
                 fullKey,
                 url: requestUrl,
                 status: response.status,
                 ok: response.ok,
-                presigned: requestUrl !== url
+                presigned: requestUrl !== url,
+                errorSnippet
             })
 
             if (response.ok) {
@@ -191,11 +194,6 @@ export class S3Client {
                 }
 
                 return content
-            }
-
-            // 对于404等错误，直接返回null
-            if (response.status === 404) {
-                return null
             }
 
             return null
@@ -217,7 +215,6 @@ export class S3Client {
         try {
             const fullPrefix = this.getFullKey(prefix)
             const params = new URLSearchParams({
-                'list-type': '2',
                 'prefix': fullPrefix,
                 'max-keys': maxKeys.toString()
             })
@@ -232,13 +229,23 @@ export class S3Client {
                 headers
             })
 
+            let errorSnippet: string | undefined
+            if (!response.ok) {
+                try {
+                    errorSnippet = (await response.clone().text()).slice(0, 200)
+                } catch (_e) {
+                    errorSnippet = undefined
+                }
+            }
+
             this.logSummary('list', {
                 prefix,
                 fullPrefix,
                 url: requestUrl,
                 status: response.status,
                 ok: response.ok,
-                presigned: requestUrl !== url
+                presigned: requestUrl !== url,
+                errorSnippet
             })
 
             if (!response.ok) {
@@ -391,14 +398,21 @@ export class S3Client {
         additionalHeaders: Record<string, string> = {},
         payload: string | ArrayBuffer | null = null
     ): Promise<{ requestUrl: string; headers: Record<string, string> }> {
+        let requestUrl = url
+        let headers = additionalHeaders
+
         if (this.isQiniu() && (method === 'GET' || method === 'HEAD')) {
-            const presignedUrl = await this.createPresignedUrl(method, url)
-            return { requestUrl: presignedUrl, headers: additionalHeaders }
+            requestUrl = await this.createPresignedUrl(method, url)
+            headers = {
+                'Authorization': `Basic ${btoa(`${this.config.accessKeyId}:${this.config.secretAccessKey}`)}`,
+                ...additionalHeaders
+            }
+        } else {
+            headers = await this.createAuthHeaders(method, url, additionalHeaders, payload)
         }
 
-        const headers = await this.createAuthHeaders(method, url, additionalHeaders, payload)
         return {
-            requestUrl: url,
+            requestUrl,
             headers
         }
     }
@@ -510,6 +524,7 @@ export class S3Client {
         requestUrl.searchParams.set('X-Amz-Date', amzDate)
         requestUrl.searchParams.set('X-Amz-Expires', expiresInSeconds.toString())
         requestUrl.searchParams.set('X-Amz-SignedHeaders', 'host')
+        requestUrl.searchParams.set('X-Amz-Content-Sha256', 'UNSIGNED-PAYLOAD')
 
         const canonicalRequest = [
             method.toUpperCase(),
