@@ -692,7 +692,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
         <div className="fixed inset-0 z-50 flex flex-col bg-neutral-50 dark:bg-neutral-900 max-w-[500px] mx-auto">
             {/* 头部导航栏 */}
             <div
-                className="relative flex items-center justify-center py-4 pt-safe-top border-b border-neutral-200 dark:border-neutral-800"
+                className="relative flex items-center justify-center py-4 pt-safe-top"
             >
                 <button
                     onClick={onClose}
@@ -721,9 +721,11 @@ const handleChange = async <K extends keyof SettingsOptions>(
             </div>
 
             {/* 滚动内容区域 - 新的简洁设计 */}
-            <div className="flex-1 overflow-y-auto pb-safe-bottom divide-y divide-neutral-200 dark:divide-neutral-800">
+            <div className="relative flex-1 overflow-y-auto pb-safe-bottom divide-y divide-neutral-200 dark:divide-neutral-800">
+                {/* 顶部渐变阴影（随滚动粘附）*/}
+                <div className="sticky top-0 z-10 h-12 w-full bg-linear-to-b from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none first:border-b-0"></div>
                 {/* 赞助支持 */}
-                <div className="px-6 py-4">
+                <div className="px-6 py-4 -mt-8">
                     <h3 className="text-sm uppercase font-medium tracking-wider text-neutral-500 dark:text-neutral-400 mb-3">
                         支持 & 交流
                     </h3>
@@ -738,7 +740,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                     setShowQRCodes(true);
                                 }
                             }}
-                            className="flex items-center justify-between py-3 px-4 text-sm font-medium text-neutral-800 bg-neutral-100 rounded-lg transition-colors hover:bg-neutral-200 dark:text-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700"
+                            className="flex items-center justify-between py-3 px-4 text-sm font-medium text-neutral-800 bg-neutral-100 rounded transition-colors hover:bg-neutral-200 dark:text-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700"
                         >
                             <span>{qrCodeType === 'appreciation' ? '收起二维码' : '赞赏码'}</span>
                             <svg
@@ -766,7 +768,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                     setShowQRCodes(true);
                                 }
                             }}
-                            className="flex items-center justify-between py-3 px-4 text-sm font-medium text-neutral-800 bg-neutral-100 rounded-lg transition-colors hover:bg-neutral-200 dark:text-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700"
+                            className="flex items-center justify-between py-3 px-4 text-sm font-medium text-neutral-800 bg-neutral-100 rounded transition-colors hover:bg-neutral-200 dark:text-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700"
                         >
                             <span>{qrCodeType === 'group' ? '收起二维码' : '交流群'}</span>
                             <svg
@@ -793,7 +795,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                             {qrCodeType === 'appreciation' ? (
                                 <>
                                     <div className="flex flex-col items-center">
-                                        <div className="w-full aspect-square relative rounded-lg overflow-hidden">
+                                        <div className="w-full aspect-square relative rounded overflow-hidden">
                                             <Image
                                                 src="/images/content/appreciation-code.jpg"
                                                 alt="赞赏码"
@@ -804,7 +806,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                         <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">赞赏码（开发不易，希望能支持一下，求求了 www～）</p>
                                     </div>
                                     <div className="flex flex-col items-center opacity-0">
-                                        <div className="w-full aspect-square relative rounded-lg overflow-hidden invisible">
+                                        <div className="w-full aspect-square relative rounded overflow-hidden invisible">
                                             <div className="w-full h-full" />
                                         </div>
                                         <p className="mt-2 text-xs invisible">占位</p>
@@ -813,13 +815,13 @@ const handleChange = async <K extends keyof SettingsOptions>(
                             ) : qrCodeType === 'group' ? (
                                 <>
                                     <div className="flex flex-col items-center opacity-0">
-                                        <div className="w-full aspect-square relative rounded-lg overflow-hidden invisible">
+                                        <div className="w-full aspect-square relative rounded overflow-hidden invisible">
                                             <div className="w-full h-full" />
                                         </div>
                                         <p className="mt-2 text-xs invisible">占位</p>
                                     </div>
                                     <div className="flex flex-col items-center">
-                                        <div className="w-full aspect-square relative rounded-lg overflow-hidden">
+                                        <div className="w-full aspect-square relative rounded overflow-hidden">
                                             <Image
                                                 src="https://coffee.chu3.top/images/content/group-code.jpg"
                                                 alt="交流群"
@@ -849,7 +851,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                 value={settings.username}
                                 onChange={(e) => handleChange('username', e.target.value)}
                                 placeholder="请输入您的用户名"
-                                className="w-full py-2 px-3 text-sm font-medium rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 appearance-none focus:outline-hidden focus:ring-2 focus:ring-neutral-500"
+                                className="w-full py-2 px-3 text-sm font-medium rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 appearance-none focus:outline-hidden focus:ring-2 focus:ring-neutral-500"
                             />
                             <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
                                 用于在分享时显示签名
@@ -1095,10 +1097,10 @@ const handleChange = async <K extends keyof SettingsOptions>(
                 </div>
 
                 {/* 研磨度设置组 */}
-<GrinderSettings
-    settings={settings}
-    handleChange={handleChange}
-/>
+                <GrinderSettings
+                    settings={settings}
+                    handleChange={handleChange}
+                />
 
                 {/* 库存扣除量预设值设置组 */}
                 <div className="px-6 py-4">
@@ -1111,7 +1113,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                             <button
                                 key={value}
                                 onClick={() => removeDecrementPreset(value)}
-                                className="px-3 py-1.5 bg-neutral-100 dark:bg-neutral-800 rounded-lg text-sm font-medium text-neutral-800 dark:text-neutral-200 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+                                className="px-3 py-1.5 bg-neutral-100 dark:bg-neutral-800 rounded text-sm font-medium text-neutral-800 dark:text-neutral-200 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
                             >
                                 -{value}g ×
                             </button>
@@ -1147,12 +1149,12 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                     }
                                 }}
                                 placeholder="克数"
-                                className="w-16 py-1.5 px-2 text-sm bg-neutral-100 dark:bg-neutral-800 border-y border-l border-neutral-200/50 dark:border-neutral-700 rounded-l-lg rounded-r-none focus:outline-hidden focus:ring-1 focus:ring-neutral-500"
+                                className="w-16 py-1.5 px-2 text-sm bg-neutral-100 dark:bg-neutral-800  rounded-l rounded-r-none focus:outline-hidden focus:ring-1 focus:ring-neutral-500"
                             />
                             <button
                                 onClick={addDecrementPreset}
                                 disabled={!decrementValue || isNaN(parseFloat(decrementValue)) || parseFloat(decrementValue) <= 0}
-                                className="py-1.5 px-2 bg-neutral-700 dark:bg-neutral-600 text-white rounded-r-lg disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                                className="py-1.5 px-2 bg-neutral-700 dark:bg-neutral-600 text-white rounded-r disabled:opacity-20 disabled:cursor-not-allowed text-sm"
                             >
                                 +
                             </button>
@@ -1563,14 +1565,6 @@ const handleChange = async <K extends keyof SettingsOptions>(
                     <h3 className="text-sm uppercase font-medium tracking-wider text-neutral-500 dark:text-neutral-400 mb-3">
                         数据管理
                     </h3>
-
-                    {/* S3功能说明 */}
-                    <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                        <p className="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
-                            <strong>S3 云同步</strong>：将您的冲煮数据、咖啡豆信息等同步到S3兼容的对象存储服务。
-                        </p>
-                    </div>
-
                     {/* S3同步设置 */}
                     <div className="space-y-4 mb-6">
                         {/* S3主开关 */}
@@ -1845,7 +1839,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                     <div className={backupReminderSettings ? "mt-6" : ""}>
                         <button
                             onClick={() => setIsDataManagerOpen(true)}
-                            className="w-full py-3 text-sm font-medium text-neutral-800 bg-neutral-100 rounded-lg transition-colors hover:bg-neutral-200 dark:text-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700"
+                            className="w-full py-3 text-sm font-medium text-neutral-800 bg-neutral-100 rounded transition-colors hover:bg-neutral-200 dark:text-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700"
                         >
                             数据管理
                         </button>
@@ -1864,7 +1858,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                 hapticsUtils.light();
                             }
                         }}
-                        className="w-full py-3 text-sm font-medium text-neutral-800 bg-neutral-100 rounded-lg transition-colors hover:bg-neutral-200 dark:text-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700"
+                        className="w-full py-3 text-sm font-medium text-neutral-800 bg-neutral-100 rounded transition-colors hover:bg-neutral-200 dark:text-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700"
                     >
                         提交反馈
                     </button>
@@ -1992,7 +1986,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                 </p>
                             </div>
 
-                            <div className="p-4 mb-4 bg-neutral-200/60 dark:bg-neutral-900/60 rounded-lg text-center">
+                            <div className="p-4 mb-4 bg-neutral-200/60 dark:bg-neutral-900/60 rounded text-center">
                                 <p className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
                                     云端数据
                                 </p>
@@ -2013,7 +2007,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                             <div className="space-y-3">
                                 <button
                                     onClick={() => handleConflictResolution('download')}
-                                    className="w-full py-3 px-4 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                                    className="w-full py-3 px-4 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded transition-colors"
                                 >
                                     下载云端数据 (推荐)
                                 </button>
@@ -2028,6 +2022,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                     </motion.div>
                 )}
             </AnimatePresence>
+
         </div>
     )
 }
