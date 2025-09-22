@@ -1,6 +1,6 @@
 # 咖啡冲煮指南 (Brew Guide)
 
-![版本](https://img.shields.io/badge/版本-1.3.9-blue)
+![版本](https://img.shields.io/badge/版本-1.3.10-blue)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/chu3/brew-guide)
 
 ## 项目简介

@@ -224,7 +224,7 @@ export default function DownloadPage(): React.ReactNode {
                                     </ul>
                                 </div>
                                 <div>
-                                    <p className="font-medium">v1.3.9（最新版本）</p>
+                                    <p className="font-medium">v1.3.9</p>
                                     <p className="text-xs text-neutral-500 mt-1">2025-08-06</p>
                                     <ul className="mt-2 text-xs text-neutral-500 list-disc pl-4 space-y-1">
                                         <li>(添加): 笔记支持图片查看（可选带日期），记录更直观</li>
