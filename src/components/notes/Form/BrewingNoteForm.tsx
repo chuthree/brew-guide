@@ -797,8 +797,8 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                                     className="w-full px-3 py-2 text-xs bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-md focus:outline-none focus:ring-1 focus:ring-neutral-400 dark:focus:ring-neutral-500 placeholder:text-neutral-400 dark:placeholder:text-neutral-500"
                                 />
                             </div>
-                            {/* 选择器内容 */}
-                            <div className="max-h-80 overflow-y-auto px-3">
+                            {/* 选择器内容：不限制高度，让父级/窗口承担滚动 */}
+                            <div className="px-3">
                                 <CoffeeBeanSelector
                                     coffeeBeans={coffeeBeans}
                                     selectedCoffeeBean={selectedCoffeeBean}

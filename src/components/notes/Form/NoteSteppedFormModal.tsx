@@ -56,6 +56,7 @@ const NoteSteppedFormModal: React.FC<NoteSteppedFormModalProps> = ({
 
     // 模态框DOM引用
     const modalRef = useRef<HTMLDivElement>(null)
+    const contentScrollRef = useRef<HTMLDivElement>(null)
 
     // 当初始化步骤变化时更新当前步骤
     useEffect(() => {
@@ -159,10 +160,13 @@ const NoteSteppedFormModal: React.FC<NoteSteppedFormModalProps> = ({
             currentStepContent.content as React.ReactElement<{
                 searchQuery?: string;
                 highlightedBeanId?: string | null;
+                scrollParentRef?: HTMLElement;
             }>,
             {
                 searchQuery,
-                highlightedBeanId
+                highlightedBeanId,
+                // 将内容区滚动容器传给虚拟列表，保证在模态内全高滚动
+                scrollParentRef: contentScrollRef.current || modalRef.current || undefined
             }
         );
     }, [currentStepContent?.content, isCoffeeBeanStep, searchQuery, highlightedBeanId]);
@@ -313,7 +317,7 @@ const NoteSteppedFormModal: React.FC<NoteSteppedFormModalProps> = ({
     return (
         <div
             ref={modalRef}
-            className={`fixed px-6 pt-safe-top pb-safe-bottom overflow-auto max-w-[500px] mx-auto inset-0 z-50 bg-neutral-50 dark:bg-neutral-900 transition-opacity duration-200 ${showForm ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+            className={`fixed inset-0 z-50 px-6 pt-safe-top pb-safe-bottom max-w-[500px] mx-auto bg-neutral-50 dark:bg-neutral-900 transition-opacity duration-200 ${showForm ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'} flex flex-col overflow-hidden`}
         >
             {/* 顶部导航栏 */}
             <div className="flex items-center justify-between mb-6">
@@ -333,7 +337,7 @@ const NoteSteppedFormModal: React.FC<NoteSteppedFormModalProps> = ({
             </div>
 
             {/* 步骤内容 */}
-            <div className="flex-1 overflow-y-auto pb-4">
+            <div className="flex-1 overflow-y-auto pb-4" ref={contentScrollRef}>
                 {currentStepContent && (
                     <div className="space-y-6">
                         {contentWithSearchProps}

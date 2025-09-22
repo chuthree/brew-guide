@@ -1,14 +1,12 @@
 'use client'
 
 import React, { useState, useEffect, useTransition, useCallback, useMemo, useRef } from 'react'
+import { Virtuoso } from 'react-virtuoso'
 import Image from 'next/image'
 import { CoffeeBean } from '@/types/app'
 import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager'
 import { globalCache } from './globalCache'
 import { calculateFlavorInfo } from '@/lib/utils/flavorPeriodUtils'
-
-// 每页加载的咖啡豆数量 - 增加到20个，减少分页频率
-const PAGE_SIZE = 8;
 
 // 定义组件属性接口
 interface CoffeeBeanListProps {
@@ -16,6 +14,7 @@ interface CoffeeBeanListProps {
     isOpen?: boolean
     searchQuery?: string  // 添加搜索查询参数
     highlightedBeanId?: string | null // 添加高亮咖啡豆ID参数
+    scrollParentRef?: HTMLElement
 }
 
 // 移除全局缓存变量，确保每次都从CoffeeBeanManager获取最新数据
@@ -24,7 +23,8 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
     onSelect,
     isOpen: _isOpen = true,
     searchQuery = '',  // 添加搜索查询参数默认值
-    highlightedBeanId = null // 添加高亮咖啡豆ID默认值
+    highlightedBeanId = null, // 添加高亮咖啡豆ID默认值
+    scrollParentRef
 }) => {
     // 如果缓存已有数据，直接使用缓存初始化，避免闪烁
     const [beans, setBeans] = useState<CoffeeBean[]>(() =>
@@ -38,22 +38,7 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
     // 添加ref用于存储咖啡豆元素列表
     const beanItemsRef = useRef<Map<string, HTMLDivElement>>(new Map());
 
-    // 分页状态 - 如果缓存有数据，直接初始化分页数据
-    const [displayedBeans, setDisplayedBeans] = useState<CoffeeBean[]>(() => {
-        if (globalCache.initialized && globalCache.beans.length > 0) {
-            return globalCache.beans.slice(0, PAGE_SIZE);
-        }
-        return [];
-    });
-    const [currentPage, setCurrentPage] = useState(1);
-    const [hasMore, setHasMore] = useState(() => {
-        if (globalCache.initialized && globalCache.beans.length > 0) {
-            return globalCache.beans.length > PAGE_SIZE;
-        }
-        return true;
-    });
-    const [isLoading, setIsLoading] = useState(false);
-    const loaderRef = useRef<HTMLDivElement>(null);
+    // 移除手动分页，使用虚拟列表
 
     // 移除了极简模式相关的设置加载逻辑
 
@@ -236,77 +221,7 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
         );
     }, [availableBeans, searchQuery]);
 
-    // 初始化分页数据 - 优化性能，避免JSON.stringify比较
-    useEffect(() => {
-        // 每次筛选条件变化时，重置分页状态
-        setCurrentPage(1);
-        const initialBeans = filteredBeans.slice(0, PAGE_SIZE);
-
-        // 使用长度和ID比较，避免深度比较
-        setDisplayedBeans(prevBeans => {
-            if (prevBeans.length !== initialBeans.length ||
-                prevBeans.some((bean, index) => bean.id !== initialBeans[index]?.id)) {
-                return initialBeans;
-            }
-            return prevBeans;
-        });
-
-        const newHasMore = filteredBeans.length > PAGE_SIZE;
-        setHasMore(prevHasMore => {
-            if (prevHasMore !== newHasMore) {
-                return newHasMore;
-            }
-            return prevHasMore;
-        });
-    }, [filteredBeans]);
-
-    // 加载更多咖啡豆
-    const loadMoreBeans = useCallback(() => {
-        if (!hasMore || isLoading) return;
-
-        setIsLoading(true);
-
-        try {
-            // 计算下一页的咖啡豆
-            const nextPage = currentPage + 1;
-            const endIndex = nextPage * PAGE_SIZE;
-
-            // 使用筛选后的咖啡豆作为数据源
-            const newDisplayedBeans = filteredBeans.slice(0, endIndex);
-
-            // 如果加载的数量和筛选后的总数一样，说明没有更多数据了
-            const noMoreBeans = newDisplayedBeans.length >= filteredBeans.length;
-
-            setDisplayedBeans(newDisplayedBeans);
-            setCurrentPage(nextPage);
-            setHasMore(!noMoreBeans);
-        } catch (error) {
-            console.error('加载更多咖啡豆失败:', error);
-        } finally {
-            setIsLoading(false);
-        }
-    }, [currentPage, filteredBeans, hasMore, isLoading]);
-
-    // 设置IntersectionObserver来监听加载更多的元素
-    useEffect(() => {
-        const currentLoader = loaderRef.current;
-        if (!currentLoader) return;
-
-        const observer = new IntersectionObserver(
-            (entries) => {
-                if (entries[0].isIntersecting && hasMore) {
-                    loadMoreBeans();
-                }
-            },
-            { threshold: 0.1 } // 降低阈值，提高加载触发敏感度
-        );
-
-        observer.observe(currentLoader);
-
-        return () => {
-            observer.unobserve(currentLoader);
-        };
-    }, [hasMore, loadMoreBeans, isLoading]);
+    // 移除IntersectionObserver和分页状态
 
     // 设置ref的回调函数
     const setItemRef = useCallback((id: string) => (node: HTMLDivElement | null) => {
@@ -331,11 +246,22 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
 
     // 删除加载动画，直接显示内容
 
+    // Virtuoso 自定义 List（带间距容器）
+    const VirtList = React.useMemo(() => {
+        const Cmp = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(({ style, children, ...props }, ref) => (
+            <div ref={ref} style={style} className="space-y-5" {...props}>
+                {children}
+            </div>
+        ));
+        Cmp.displayName = 'CoffeeBeanVirtuosoList';
+        return Cmp;
+    }, []);
+
     return (
-        <div className="space-y-5 pb-20">
+        <div className="pb-20">
             {/* 添加"不选择咖啡豆"选项 */}
             <div
-                className="group relative cursor-pointer text-neutral-500 dark:text-neutral-400 transition-all duration-300"
+                className="group relative cursor-pointer text-neutral-500 dark:text-neutral-400 transition-all duration-300 mb-5"
                 onClick={() => onSelect(null, null)}
             >
                 <div className="cursor-pointer">
@@ -378,7 +304,11 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
                 </div>
             )}
 
-            {displayedBeans.map((bean) => {
+            <Virtuoso
+                customScrollParent={scrollParentRef}
+                data={filteredBeans}
+                components={{ List: VirtList }}
+                itemContent={(_index, bean) => {
                 // 预计算所有需要的数据，避免在渲染中重复计算
                 const flavorInfo = getFlavorInfo(bean);
                 const { phase } = flavorInfo;
@@ -453,7 +383,6 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
 
                 return (
                     <div
-                        key={bean.id}
                         ref={setItemRef(bean.id)}
                         className="group relative cursor-pointer text-neutral-500 dark:text-neutral-400 transition-all duration-300"
                         onClick={() => onSelect(bean.id, bean)}
@@ -518,19 +447,8 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
                         </div>
                     </div>
                 );
-            })}
-
-            {/* 加载更多指示器 */}
-            {hasMore && (
-                <div
-                    ref={loaderRef}
-                    className="flex justify-center items-center py-4"
-                >
-                    <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
-                        {isLoading ? '正在加载...' : '上滑加载更多'}
-                    </div>
-                </div>
-            )}
+                }}
+            />
         </div>
     )
 }

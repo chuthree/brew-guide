@@ -1179,7 +1179,10 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                         />
                     </div>
 
-                    <div className="w-full h-full overflow-y-auto scroll-with-bottom-bar" ref={notesContainerRef}>
+                    <div
+                        className="w-full h-full overflow-y-auto scroll-with-bottom-bar"
+                        ref={notesContainerRef}
+                    >
                         {/* 笔记列表视图 - 直接传递已过滤的搜索结果 */}
                         <ListView
                             selectedEquipment={selectedEquipment}
@@ -1195,6 +1198,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                             preFilteredNotes={isSearching && searchQuery.trim() ? searchFilteredNotes : undefined}
                             viewMode={viewMode}
                             isDateImageFlowMode={isDateImageFlowMode}
+                            scrollParentRef={notesContainerRef.current || undefined}
                         />
                     </div>
 

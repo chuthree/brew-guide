@@ -1,13 +1,14 @@
 'use client'
 
-import React, { useState, useRef, useCallback, useEffect } from 'react'
+import React, { useState } from 'react'
+import { Virtuoso } from 'react-virtuoso'
 import { ExtendedCoffeeBean, BeanType } from '../types'
 import BeanListItem from './BeanListItem'
 import ImageFlowView from './ImageFlowView'
 import RemainingEditor from './RemainingEditor'
 import BeanDetailModal from '@/components/coffee-bean/Detail/BeanDetailModal'
 
-const PAGE_SIZE = 8;
+// 已移除手动分页，改用 react-virtuoso 虚拟列表
 
 interface InventoryViewProps {
     filteredBeans: ExtendedCoffeeBean[]
@@ -30,6 +31,8 @@ interface InventoryViewProps {
         notesMaxLines?: number
         showTotalPrice?: boolean
     }
+    // 外部滚动容器（Virtuoso 使用）
+    scrollParentRef?: HTMLElement
 }
 
 const InventoryView: React.FC<InventoryViewProps> = ({
@@ -45,7 +48,8 @@ const InventoryView: React.FC<InventoryViewProps> = ({
     isSearching = false,
     searchQuery = '',
     isImageFlowMode = false,
-    settings
+    settings,
+    scrollParentRef
 }) => {
     // 剩余量编辑状态
     const [editingRemaining, setEditingRemaining] = useState<{
@@ -80,6 +84,8 @@ const InventoryView: React.FC<InventoryViewProps> = ({
         });
     };
 
+    const [_rerenderTick, setRerenderTick] = useState(0);
+
     const handleQuickDecrement = async (decrementAmount: number) => {
         if (!editingRemaining) return;
 
@@ -91,12 +97,9 @@ const InventoryView: React.FC<InventoryViewProps> = ({
             if (result.success) {
                 const updatedBean = filteredBeans.find(bean => bean.id === beanId);
                 if (updatedBean) {
+                    // 乐观更新本地对象并触发一次重新渲染
                     updatedBean.remaining = result.value || "0";
-                    setDisplayedBeans(prev =>
-                        prev.map(bean =>
-                            bean.id === beanId ? {...bean, remaining: result.value || "0"} : bean
-                        )
-                    );
+                    setRerenderTick(t => t + 1);
                 }
             }
         } catch (error) {
@@ -104,52 +107,8 @@ const InventoryView: React.FC<InventoryViewProps> = ({
         }
     };
 
-    // 分页状态
-    const [displayedBeans, setDisplayedBeans] = useState<ExtendedCoffeeBean[]>([]);
-    const [currentPage, setCurrentPage] = useState(1);
-    const [hasMore, setHasMore] = useState(true);
-    const [isLoading, setIsLoading] = useState(false);
-    const loaderRef = useRef<HTMLDivElement>(null);
-
-    // 初始化分页数据
-    useEffect(() => {
-        setCurrentPage(1);
-        const initialBeans = filteredBeans.slice(0, PAGE_SIZE);
-        setDisplayedBeans(initialBeans);
-        setHasMore(filteredBeans.length > PAGE_SIZE);
-    }, [filteredBeans]);
-
-    // 加载更多数据
-    const loadMoreBeans = useCallback(() => {
-        if (!hasMore || isLoading) return;
-
-        setIsLoading(true);
-        const nextPage = currentPage + 1;
-        const endIndex = nextPage * PAGE_SIZE;
-        const newDisplayedBeans = filteredBeans.slice(0, endIndex);
-
-        setDisplayedBeans(newDisplayedBeans);
-        setCurrentPage(nextPage);
-        setHasMore(newDisplayedBeans.length < filteredBeans.length);
-        setIsLoading(false);
-    }, [currentPage, filteredBeans, hasMore, isLoading]);
-
-    // 监听滚动加载
-    useEffect(() => {
-        if (!loaderRef.current) return;
-
-        const observer = new IntersectionObserver(
-            (entries) => {
-                if (entries[0].isIntersecting && hasMore) {
-                    loadMoreBeans();
-                }
-            },
-            { threshold: 0.1 }
-        );
-
-        observer.observe(loaderRef.current);
-        return () => observer.disconnect();
-    }, [hasMore, loadMoreBeans]);
+    // 兼容之前编辑剩余量时的就地更新
+    // 虚拟列表场景下直接依赖 filteredBeans 的外部更新即可
 
     // 如果是图片流模式，直接返回图片流视图
     if (isImageFlowMode) {
@@ -164,7 +123,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
     }
 
     return (
-        <div className="w-full h-full overflow-y-auto scroll-with-bottom-bar relative">
+        <div className="w-full h-full relative">
             {filteredBeans.length === 0 ? (
                 <div className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
                     {searchQuery.trim() ?
@@ -179,28 +138,39 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                     }
                 </div>
             ) : (
-                <div className="min-h-full pb-20">
-                    <div className="mx-6 flex flex-col gap-y-5 mt-5">
-                        {displayedBeans.map((bean, index) => (
-                            <BeanListItem
-                                key={bean.id}
-                                bean={bean}
-                                isLast={index === displayedBeans.length - 1}
-                                onRemainingClick={handleRemainingClick}
-                                onDetailClick={handleDetailClick}
-                                searchQuery={isSearching ? searchQuery : ''}
-                                settings={settings}
-                            />
-                        ))}
-
-                        {hasMore && (
-                            <div ref={loaderRef} className="flex justify-center items-center py-4">
-                                <div className="text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
-                                    {isLoading ? '正在加载...' : '上滑加载更多'}
+                <div className="pb-20">
+                    {(() => {
+                        const VirtuosoList = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+                            ({ style, children, ...props }, ref) => (
+                                <div ref={ref} style={style} className="mx-6 flex flex-col gap-y-5" {...props}>
+                                    {children}
                                 </div>
-                            </div>
-                        )}
-                    </div>
+                            )
+                        );
+                        VirtuosoList.displayName = 'VirtuosoList';
+
+                        return (
+                            <Virtuoso
+                                data={filteredBeans}
+                                customScrollParent={scrollParentRef}
+                                components={{
+                                    List: VirtuosoList,
+                                    Header: () => <div className="h-5" />
+                                }}
+                                itemContent={(_index, bean) => (
+                                    <BeanListItem
+                                        key={bean.id}
+                                        bean={bean}
+                                        isLast={false}
+                                        onRemainingClick={handleRemainingClick}
+                                        onDetailClick={handleDetailClick}
+                                        searchQuery={isSearching ? searchQuery : ''}
+                                        settings={settings}
+                                    />
+                                )}
+                            />
+                        );
+                    })()}
                 </div>
             )}
 

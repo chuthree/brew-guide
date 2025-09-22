@@ -46,6 +46,8 @@ export interface NoteItemProps {
     isShareMode?: boolean
     isSelected?: boolean
     onToggleSelect?: (noteId: string, enterShareMode?: boolean) => void
+    // 是否为列表中的最后一项（用于虚拟化下控制分割线）
+    isLast?: boolean
 }
 
 

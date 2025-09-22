@@ -187,6 +187,10 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         }
     };
 
+    // 滚动容器元素（供虚拟列表 customScrollParent 使用）
+    const [inventoryScrollEl, setInventoryScrollEl] = React.useState<HTMLElement | null>(null);
+    const [rankingScrollEl, setRankingScrollEl] = React.useState<HTMLElement | null>(null);
+
     // 使用增强的筛选Hook
     const {
         filteredBeans,
@@ -1232,22 +1236,28 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
             <div className="flex-1 overflow-hidden">
                 {/* 根据视图模式显示不同内容 */}
                 {viewMode === VIEW_OPTIONS.INVENTORY && (
-                <InventoryView
-                    filteredBeans={isSearching ? searchFilteredBeans : filteredBeans}
-                    selectedVariety={selectedVariety}
-                    showEmptyBeans={showEmptyBeans}
-                    selectedBeanType={selectedBeanType}
-                    beans={beans}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                    onShare={(bean) => handleShare(bean, copyText)}
-                    onQuickDecrement={handleQuickDecrement}
-                    isSearching={isSearching}
-                    searchQuery={searchQuery}
-                    isImageFlowMode={isImageFlowMode}
-                    settings={settings}
-                />
-            )}
+                    <div
+                        className="w-full h-full overflow-y-auto scroll-with-bottom-bar"
+                        ref={(el) => setInventoryScrollEl(el)}
+                    >
+                        <InventoryView
+                            filteredBeans={isSearching ? searchFilteredBeans : filteredBeans}
+                            selectedVariety={selectedVariety}
+                            showEmptyBeans={showEmptyBeans}
+                            selectedBeanType={selectedBeanType}
+                            beans={beans}
+                            onEdit={handleEdit}
+                            onDelete={handleDelete}
+                            onShare={(bean) => handleShare(bean, copyText)}
+                            onQuickDecrement={handleQuickDecrement}
+                            isSearching={isSearching}
+                            searchQuery={searchQuery}
+                            isImageFlowMode={isImageFlowMode}
+                            settings={settings}
+                            scrollParentRef={inventoryScrollEl ?? undefined}
+                        />
+                    </div>
+                )}
             {/* 添加统计视图 */}
             {viewMode === VIEW_OPTIONS.STATS && (
                 <div className="w-full h-full overflow-y-auto scroll-with-bottom-bar">
@@ -1260,7 +1270,10 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
             )}
             {/* 添加榜单和博主榜单视图 */}
             {(viewMode === VIEW_OPTIONS.RANKING || viewMode === VIEW_OPTIONS.BLOGGER) && (
-                <div className="w-full h-full overflow-y-auto scroll-with-bottom-bar">
+                <div
+                    className="w-full h-full overflow-y-auto scroll-with-bottom-bar"
+                    ref={(el) => setRankingScrollEl(el)}
+                >
                     <CoffeeBeanRanking
                         isOpen={viewMode === VIEW_OPTIONS.RANKING || viewMode === VIEW_OPTIONS.BLOGGER}
                         onShowRatingForm={handleShowRatingForm}
@@ -1273,6 +1286,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
                         blogger={viewMode === VIEW_OPTIONS.BLOGGER ? bloggerType : undefined}
                         isSearching={isSearching}
                         searchQuery={searchQuery}
+                        scrollParentRef={rankingScrollEl ?? undefined}
                     />
                 </div>
             )}

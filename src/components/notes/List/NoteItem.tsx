@@ -24,7 +24,8 @@ const NoteItem: React.FC<NoteItemProps> = ({
     unitPriceCache,
     isShareMode = false,
     isSelected = false,
-    onToggleSelect
+    onToggleSelect,
+    isLast = false
 }) => {
     // 添加用户设置状态
     const [_settings, setSettings] = useState<SettingsOptions>(defaultSettings);
@@ -77,7 +78,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
 
     return (
         <div
-            className={`group space-y-3 px-6 py-5 border-b border-neutral-200 dark:border-neutral-800 last:border-b-0 ${isShareMode ? 'cursor-pointer' : ''} note-item`}
+            className={`group space-y-3 px-6 py-5 ${!isLast ? 'border-b border-neutral-200 dark:border-neutral-800' : ''} ${isShareMode ? 'cursor-pointer' : ''} note-item`}
             onClick={isShareMode ? handleNoteClick : undefined}
             data-note-id={note.id}
         >

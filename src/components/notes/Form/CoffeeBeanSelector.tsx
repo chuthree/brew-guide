@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useMemo, useRef, useEffect } from 'react'
+import { Virtuoso } from 'react-virtuoso'
 import Image from 'next/image'
 import type { CoffeeBean } from '@/types/app'
 import { calculateFlavorInfo } from '@/lib/utils/flavorPeriodUtils'
@@ -11,6 +12,7 @@ interface CoffeeBeanSelectorProps {
   onSelect: (bean: CoffeeBean | null) => void
   searchQuery?: string
   highlightedBeanId?: string | null
+  scrollParentRef?: HTMLElement
 }
 
 // 计算咖啡豆的赏味期阶段和剩余天数
@@ -39,7 +41,8 @@ const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
   selectedCoffeeBean: _selectedCoffeeBean,
   onSelect,
   searchQuery = '',
-  highlightedBeanId = null
+  highlightedBeanId = null,
+  scrollParentRef
 }) => {
   // 添加ref用于存储咖啡豆元素列表
   const beanItemsRef = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -125,42 +128,54 @@ const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
     );
   }, [availableBeans, searchQuery]);
 
+  // 构造用于渲染的数据：把“不要使用咖啡豆”作为第一个虚拟项，与豆子列表一起滚动
+  const virtuosoData = useMemo(() => {
+    return [{ __type: 'none' } as const, ...filteredBeans.map(b => ({ __type: 'bean' as const, bean: b }))];
+  }, [filteredBeans]);
+
   return (
     <div className="py-3">
       <div>
         <div className="space-y-5">
-          {/* 不选择咖啡豆选项 */}
-          <div
-            className="group relative cursor-pointer text-neutral-500 dark:text-neutral-400 transition-all duration-300"
-            onClick={() => onSelect(null)}
-          >
-            <div className="cursor-pointer">
-              <div className="flex gap-3">
-                {/* 左侧图标区域 - 实线边框，空内容 */}
-                <div className="relative self-start">
-                  <div className="w-14 h-14 relative shrink-0 rounded border border-neutral-200/50 dark:border-neutral-800/50 bg-neutral-100 dark:bg-neutral-800/20">
-                    {/* 空内容，表示"不选择" */}
-                  </div>
-                </div>
-
-                {/* 右侧内容区域 - 与图片等高 */}
-                <div className="flex-1 min-w-0 flex flex-col justify-center gap-y-1.5 h-14">
-                  {/* 选项名称 */}
-                  <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100 leading-tight line-clamp-2 text-justify">
-                    不使用咖啡豆
-                  </div>
-
-                  {/* 描述信息 */}
-                  <div className="flex items-center text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
-                    <span className="shrink-0">跳过咖啡豆选择</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
           {filteredBeans.length > 0 ? (
-            filteredBeans.map((bean) => {
+            <Virtuoso
+              {...(scrollParentRef ? { customScrollParent: scrollParentRef } : { useWindowScroll: true })}
+              data={virtuosoData}
+              components={(() => {
+                const ListCmp = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(({ style, children, ...props }, ref) => (
+                  <div ref={ref} style={style} className="space-y-5" {...props}>
+                    {children}
+                  </div>
+                ));
+                ListCmp.displayName = 'CoffeeBeanSelectorVirtuosoList';
+                return { List: ListCmp };
+              })()}
+              itemContent={(_index, item) => {
+              if ((item as any).__type === 'none') {
+                return (
+                  <div
+                    className="group relative cursor-pointer text-neutral-500 dark:text-neutral-400 transition-all duration-300"
+                    onClick={() => onSelect(null)}
+                  >
+                    <div className="cursor-pointer">
+                      <div className="flex gap-3">
+                        <div className="relative self-start">
+                          <div className="w-14 h-14 relative shrink-0 rounded border border-neutral-200/50 dark:border-neutral-800/50 bg-neutral-100 dark:bg-neutral-800/20" />
+                        </div>
+                        <div className="flex-1 min-w-0 flex flex-col justify-center gap-y-1.5 h-14">
+                          <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100 leading-tight line-clamp-2 text-justify">
+                            不使用咖啡豆
+                          </div>
+                          <div className="flex items-center text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
+                            <span className="shrink-0">跳过咖啡豆选择</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+              const bean = (item as any).bean as CoffeeBean;
               // 获取赏味期状态
               let freshStatus = "";
               let statusClass = "text-neutral-500 dark:text-neutral-400";
@@ -252,7 +267,6 @@ const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
 
               return (
                 <div
-                  key={bean.id}
                   className="group relative cursor-pointer text-neutral-500 dark:text-neutral-400 transition-all duration-300"
                   onClick={() => onSelect(bean)}
                   ref={setItemRef(bean.id)}
@@ -312,7 +326,8 @@ const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
                   </div>
                 </div>
               );
-            })
+              }}
+            />
           ) : (
             <div className="flex gap-3">
               {/* 左侧占位区域 - 与咖啡豆图片保持一致的尺寸 */}

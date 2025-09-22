@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
+import { Virtuoso } from 'react-virtuoso'
 import { CoffeeBean } from '@/types/app'
 import { getBloggerBeans, BloggerBean, BloggerType, getVideoUrlFromEpisode } from '@/lib/utils/csvUtils'
 
@@ -103,6 +104,8 @@ interface CoffeeBeanRankingProps {
     // 搜索相关props
     isSearching?: boolean
     searchQuery?: string
+    // 外部滚动容器（Virtuoso 使用）
+    scrollParentRef?: HTMLElement
 }
 
 const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
@@ -117,7 +120,8 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
     blogger: externalBlogger = 'peter',
     // 搜索相关props
     isSearching = false,
-    searchQuery = ''
+    searchQuery = '',
+    scrollParentRef
 }) => {
     const [ratedBeans, setRatedBeans] = useState<(CoffeeBean | BloggerBean)[]>([])
     const [unratedBeans, setUnratedBeans] = useState<CoffeeBean[]>([])
@@ -509,195 +513,202 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                     )}
                 </div>
             ) : (
-                <div>
-                    {filteredRatedBeans.map((bean, index) => (
-                        <div
-                            key={bean.id}
-                            className="border-b border-neutral-200/60 dark:border-neutral-800/40 last:border-none"
-                        >
-                            <div className="flex items-start px-6 py-3">
-                                {/* 序号 - 极简风格 */}
-                                <div className="text-xs font-medium text-neutral-600 dark:text-neutral-400 w-4 mr-2 shrink-0">
-                                    {index + 1}
-                                </div>
-
-                                {/* 咖啡豆信息 */}
-                                <div className="cursor-pointer flex-1 min-w-0 ">
-                                    <div className="flex items-center leading-none">
-                                        <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100 truncate">{bean.name}</div>
-                                        <div className="ml-2 text-xs font-medium text-neutral-800 dark:text-neutral-100 shrink-0">
-                                            {viewMode === 'blogger' && blogger === 'fenix' && (bean as BloggerBean).originalRating
-                                                ? (bean as BloggerBean).originalRating // 直接显示原始评分格式，如 5+, 5, 5-
-                                                : `+${bean.overallRating !== undefined ? bean.overallRating : 0}`
-                                            }
-                                        </div>
+                <div className="w-full">
+                    <Virtuoso
+                        data={filteredRatedBeans}
+                        customScrollParent={scrollParentRef}
+                        itemContent={(index, bean) => (
+                            <div className="border-b border-neutral-200/60 dark:border-neutral-800/40 last:border-none">
+                                <div className="flex items-start px-6 py-3">
+                                    {/* 序号 - 极简风格 */}
+                                    <div className="text-xs font-medium text-neutral-600 dark:text-neutral-400 w-4 mr-2 shrink-0">
+                                        {index + 1}
                                     </div>
-                                    <div className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mt-1.5 text-justify">
+
+                                    {/* 咖啡豆信息 */}
+                                    <div className="cursor-pointer flex-1 min-w-0 ">
+                                        <div className="flex items-center leading-none">
+                                            <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100 truncate">{bean.name}</div>
+                                            <div className="ml-2 text-xs font-medium text-neutral-800 dark:text-neutral-100 shrink-0">
+                                                {viewMode === 'blogger' && blogger === 'fenix' && (bean as BloggerBean).originalRating
+                                                    ? (bean as BloggerBean).originalRating // 直接显示原始评分格式，如 5+, 5, 5-
+                                                    : `+${(bean as CoffeeBean).overallRating !== undefined ? (bean as CoffeeBean).overallRating : 0}`
+                                                }
+                                            </div>
+                                        </div>
+                                        <div className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mt-1.5 text-justify">
+                                            {(() => {
+                                                // 显示信息数组
+                                                const infoArray: (React.ReactNode | string)[] = [];
+                                                
+                                                // 矮人博主特殊信息显示
+                                                if (viewMode === 'blogger' && blogger === 'fenix') {
+                                                    const fenixBean = bean as BloggerBean;
+
+                                                    // 产区信息
+                                                    if (fenixBean.origin) {
+                                                        infoArray.push(fenixBean.origin);
+                                                    }
+
+                                                    // 风味描述
+                                                    if (fenixBean.flavorDescription) {
+                                                        infoArray.push(fenixBean.flavorDescription);
+                                                    }
+                                                } else {
+                                                    // 豆子类型 - 只有在"全部豆子"视图下显示
+                                                    if (beanType === 'all') {
+                                                        infoArray.push((bean as CoffeeBean).beanType === 'espresso' ? '意式豆' : '手冲豆');
+                                                    }
+                                                }
+                                                
+                                                // 处理法和烘焙度 - 仅对Peter博主显示
+                                                if (viewMode === 'blogger' && blogger === 'peter') {
+                                                    if ((bean as BloggerBean).year === 2025 && (bean as CoffeeBean).beanType === 'filter') {
+                                                        // 2025手冲豆：处理法 · 烘焙度
+                                                        const processInfo = (bean as BloggerBean).process && (bean as BloggerBean).process !== '/' ? (bean as BloggerBean).process : '';
+                                                        const roastInfo = (bean as CoffeeBean).roastLevel && (bean as CoffeeBean).roastLevel !== '未知' && (bean as CoffeeBean).roastLevel !== '/' ? (bean as CoffeeBean).roastLevel as string : '';
+
+                                                        if (processInfo && roastInfo) {
+                                                            infoArray.push(`${processInfo} · ${roastInfo}`);
+                                                        } else if (processInfo) {
+                                                            infoArray.push(processInfo);
+                                                        } else if (roastInfo) {
+                                                            infoArray.push(roastInfo);
+                                                        }
+                                                    } else {
+                                                        // 其他情况：只显示烘焙度
+                                                        if ((bean as CoffeeBean).roastLevel && (bean as CoffeeBean).roastLevel !== '未知') {
+                                                            infoArray.push((bean as CoffeeBean).roastLevel as string);
+                                                        }
+                                                    }
+                                                } else if (viewMode !== 'blogger') {
+                                                    // 个人榜单：显示烘焙度
+                                                    if ((bean as CoffeeBean).roastLevel && (bean as CoffeeBean).roastLevel !== '未知') {
+                                                        infoArray.push((bean as CoffeeBean).roastLevel as string);
+                                                    }
+                                                }
+                                                
+                                                // 视频期数 - 仅Peter博主榜单模式下显示
+                                                if (viewMode === 'blogger' && blogger === 'peter' && (bean as BloggerBean).videoEpisode) {
+                                                    const episode = (bean as BloggerBean).videoEpisode;
+                                                    // Extract brand and bean name from the full bean name (e.g., "Joker 摆脱冷气")
+                                                    const nameParts = bean.name.split(' ');
+                                                    const brand = nameParts[0]; // Assuming first part is brand
+                                                    const beanNameOnly = nameParts.slice(1).join(' '); // Rest is bean name
+                                                    
+                                                    const videoUrl = getVideoUrlFromEpisode(episode, brand, beanNameOnly);
+                                                    
+                                                    if (videoUrl) {
+                                                        // 有视频链接时，添加可点击的元素
+                                                        infoArray.push(
+                                                            <span 
+                                                                key={`video-${(bean as CoffeeBean).id}`}
+                                                                className="inline-flex items-center cursor-pointer underline"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    openLink(videoUrl);
+                                                                }}
+                                                            >
+                                                                第{episode}期
+                                                            </span>
+                                                        );
+                                                    } else {
+                                                        // 没有视频链接时，仍显示期数但不可点击
+                                                        infoArray.push(`第${episode}期`);
+                                                    }
+                                                }
+                                                
+                                                // 每克价格
+                                                const pricePerGram = calculatePricePerGram(bean as CoffeeBean);
+                                                if (pricePerGram) {
+                                                    infoArray.push(`${pricePerGram}元/克`);
+                                                }
+                                                
+                                                // 意式豆特有信息 - 美式分数和奶咖分数 (Only for 2025 data)
+                                                if ((bean as CoffeeBean).beanType === 'espresso' && viewMode === 'blogger' && (bean as BloggerBean).year === 2025) {
+                                                    const bloggerBean = bean as BloggerBean;
+                                                    if (bloggerBean.ratingEspresso !== undefined && bloggerBean.ratingMilkBased !== undefined) {
+                                                        infoArray.push(`美式/奶咖:${bloggerBean.ratingEspresso}/${bloggerBean.ratingMilkBased}`);
+                                                    } else if (bloggerBean.ratingEspresso !== undefined) {
+                                                        infoArray.push(`美式:${bloggerBean.ratingEspresso}`);
+                                                    } else if (bloggerBean.ratingMilkBased !== undefined) {
+                                                        infoArray.push(`奶咖:${bloggerBean.ratingMilkBased}`);
+                                                    }
+                                                }
+                                                
+
+
+                                                // 评价备注 - 个人榜单模式下不在这里显示，改为独立区域显示
+                                                // if (viewMode !== 'blogger' && bean.ratingNotes) {
+                                                //     infoArray.push(bean.ratingNotes);
+                                                // }
+                                                
+                                                // 渲染信息数组，在元素之间添加分隔点
+                                                return infoArray.map((info, index) => (
+                                                    <React.Fragment key={index}>
+                                                        {index > 0 && <span className="mx-1">·</span>}
+                                                        {info}
+                                                    </React.Fragment>
+                                                ));
+                                            })()}
+                                        </div>
+
+                                        {/* 矮人博主优缺点显示区域 */}
+                                        {viewMode === 'blogger' && blogger === 'fenix' && (
+                                            <div className="mt-2 space-y-1">
+                                                {(bean as BloggerBean).advantages && (
+                                                    <div className="text-xs font-medium bg-neutral-200/30 dark:bg-neutral-800/40 p-1.5 rounded tracking-widest text-neutral-800/70 dark:text-neutral-400/85 leading-tight flex items-start">
+                                                        <span className="w-3.5 shrink-0 text-center">+</span>
+                                                        <span className="flex-1">{(bean as BloggerBean).advantages}</span>
+                                                    </div>
+                                                )}
+                                                {(bean as BloggerBean).disadvantages && (
+                                                    <div className="text-xs font-medium bg-neutral-200/30 dark:bg-neutral-800/40 p-1.5 rounded tracking-widest text-neutral-800/70 dark:text-neutral-400/85 leading-tight flex items-start">
+                                                        <span className="w-3.5 shrink-0 text-center">-</span>
+                                                        <span className="flex-1">{(bean as BloggerBean).disadvantages}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {/* Peter博主备注显示区域 */}
                                         {(() => {
-                                            // 显示信息数组
-                                            const infoArray: (React.ReactNode | string)[] = [];
-                                            
-                                            // 矮人博主特殊信息显示
-                                            if (viewMode === 'blogger' && blogger === 'fenix') {
-                                                const fenixBean = bean as BloggerBean;
+                                            const rn = (bean as CoffeeBean).ratingNotes;
+                                            return viewMode === 'blogger' && blogger === 'peter' && typeof rn === 'string' && rn.trim();
+                                        })() && (
+                                            <div className="mt-2">
+                                                <div className="text-xs font-medium bg-neutral-200/30 dark:bg-neutral-800/40 p-1.5 rounded tracking-widest text-neutral-800/70 dark:text-neutral-400/85 leading-tight">
+                                                    {(bean as CoffeeBean).ratingNotes as string}
+                                                </div>
+                                            </div>
+                                        )}
 
-                                                // 产区信息
-                                                if (fenixBean.origin) {
-                                                    infoArray.push(fenixBean.origin);
-                                                }
-
-                                                // 风味描述
-                                                if (fenixBean.flavorDescription) {
-                                                    infoArray.push(fenixBean.flavorDescription);
-                                                }
-                                            } else {
-                                                // 豆子类型 - 只有在"全部豆子"视图下显示
-                                                if (beanType === 'all') {
-                                                    infoArray.push(bean.beanType === 'espresso' ? '意式豆' : '手冲豆');
-                                                }
-                                            }
-                                            
-                                            // 处理法和烘焙度 - 仅对Peter博主显示
-                                            if (viewMode === 'blogger' && blogger === 'peter') {
-                                                if ((bean as BloggerBean).year === 2025 && bean.beanType === 'filter') {
-                                                    // 2025手冲豆：处理法 · 烘焙度
-                                                    const processInfo = (bean as BloggerBean).process && (bean as BloggerBean).process !== '/' ? (bean as BloggerBean).process : '';
-                                                    const roastInfo = bean.roastLevel && bean.roastLevel !== '未知' && bean.roastLevel !== '/' ? bean.roastLevel : '';
-
-                                                    if (processInfo && roastInfo) {
-                                                        infoArray.push(`${processInfo} · ${roastInfo}`);
-                                                    } else if (processInfo) {
-                                                        infoArray.push(processInfo);
-                                                    } else if (roastInfo) {
-                                                        infoArray.push(roastInfo);
-                                                    }
-                                                } else {
-                                                    // 其他情况：只显示烘焙度
-                                                    if (bean.roastLevel && bean.roastLevel !== '未知') {
-                                                        infoArray.push(bean.roastLevel);
-                                                    }
-                                                }
-                                            } else if (viewMode !== 'blogger') {
-                                                // 个人榜单：显示烘焙度
-                                                if (bean.roastLevel && bean.roastLevel !== '未知') {
-                                                    infoArray.push(bean.roastLevel);
-                                                }
-                                            }
-                                            
-                                            // 视频期数 - 仅Peter博主榜单模式下显示
-                                            if (viewMode === 'blogger' && blogger === 'peter' && (bean as BloggerBean).videoEpisode) {
-                                                const episode = (bean as BloggerBean).videoEpisode;
-                                                // Extract brand and bean name from the full bean name (e.g., "Joker 摆脱冷气")
-                                                const nameParts = bean.name.split(' ');
-                                                const brand = nameParts[0]; // Assuming first part is brand
-                                                const beanNameOnly = nameParts.slice(1).join(' '); // Rest is bean name
-                                                
-                                                const videoUrl = getVideoUrlFromEpisode(episode, brand, beanNameOnly);
-                                                
-                                                if (videoUrl) {
-                                                    // 有视频链接时，添加可点击的元素
-                                                    infoArray.push(
-                                                        <span 
-                                                            key={`video-${bean.id}`}
-                                                            className="inline-flex items-center cursor-pointer underline"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                openLink(videoUrl);
-                                                            }}
-                                                        >
-                                                            第{episode}期
-                                                        </span>
-                                                    );
-                                                } else {
-                                                    // 没有视频链接时，仍显示期数但不可点击
-                                                    infoArray.push(`第${episode}期`);
-                                                }
-                                            }
-                                            
-                                            // 每克价格
-                                            const pricePerGram = calculatePricePerGram(bean);
-                                            if (pricePerGram) {
-                                                infoArray.push(`${pricePerGram}元/克`);
-                                            }
-                                            
-                                            // 意式豆特有信息 - 美式分数和奶咖分数 (Only for 2025 data)
-                                            if (bean.beanType === 'espresso' && viewMode === 'blogger' && (bean as BloggerBean).year === 2025) {
-                                                const bloggerBean = bean as BloggerBean;
-                                                if (bloggerBean.ratingEspresso !== undefined && bloggerBean.ratingMilkBased !== undefined) {
-                                                    infoArray.push(`美式/奶咖:${bloggerBean.ratingEspresso}/${bloggerBean.ratingMilkBased}`);
-                                                } else if (bloggerBean.ratingEspresso !== undefined) {
-                                                    infoArray.push(`美式:${bloggerBean.ratingEspresso}`);
-                                                } else if (bloggerBean.ratingMilkBased !== undefined) {
-                                                    infoArray.push(`奶咖:${bloggerBean.ratingMilkBased}`);
-                                                }
-                                            }
-                                            
-
-
-                                            // 评价备注 - 个人榜单模式下不在这里显示，改为独立区域显示
-                                            // if (viewMode !== 'blogger' && bean.ratingNotes) {
-                                            //     infoArray.push(bean.ratingNotes);
-                                            // }
-                                            
-                                            // 渲染信息数组，在元素之间添加分隔点
-                                            return infoArray.map((info, index) => (
-                                                <React.Fragment key={index}>
-                                                    {index > 0 && <span className="mx-1">·</span>}
-                                                    {info}
-                                                </React.Fragment>
-                                            ));
-                                        })()}
+                                        {/* 个人榜单备注显示区域 */}
+                                        {(() => {
+                                            const rn = (bean as CoffeeBean).ratingNotes;
+                                            return viewMode !== 'blogger' && typeof rn === 'string' && rn.trim();
+                                        })() && (
+                                            <div className="mt-2">
+                                                <div className="text-xs font-medium bg-neutral-200/30 dark:bg-neutral-800/40 p-1.5 rounded tracking-widest text-neutral-800/70 dark:text-neutral-400/85 leading-tight">
+                                                    {(bean as CoffeeBean).ratingNotes as string}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
 
-                                    {/* 矮人博主优缺点显示区域 */}
-                                    {viewMode === 'blogger' && blogger === 'fenix' && (
-                                        <div className="mt-2 space-y-1">
-                                            {(bean as BloggerBean).advantages && (
-                                                <div className="text-xs font-medium bg-neutral-200/30 dark:bg-neutral-800/40 p-1.5 rounded tracking-widest text-neutral-800/70 dark:text-neutral-400/85 leading-tight flex items-start">
-                                                    <span className="w-3.5 shrink-0 text-center">+</span>
-                                                    <span className="flex-1">{(bean as BloggerBean).advantages}</span>
-                                                </div>
-                                            )}
-                                            {(bean as BloggerBean).disadvantages && (
-                                                <div className="text-xs font-medium bg-neutral-200/30 dark:bg-neutral-800/40 p-1.5 rounded tracking-widest text-neutral-800/70 dark:text-neutral-400/85 leading-tight flex items-start">
-                                                    <span className="w-3.5 shrink-0 text-center">-</span>
-                                                    <span className="flex-1">{(bean as BloggerBean).disadvantages}</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    {/* Peter博主备注显示区域 */}
-                                    {viewMode === 'blogger' && blogger === 'peter' && bean.ratingNotes && bean.ratingNotes.trim() && (
-                                        <div className="mt-2">
-                                            <div className="text-xs font-medium bg-neutral-200/30 dark:bg-neutral-800/40 p-1.5 rounded tracking-widest text-neutral-800/70 dark:text-neutral-400/85 leading-tight">
-                                                {bean.ratingNotes}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* 个人榜单备注显示区域 */}
-                                    {viewMode !== 'blogger' && bean.ratingNotes && bean.ratingNotes.trim() && (
-                                        <div className="mt-2">
-                                            <div className="text-xs font-medium bg-neutral-200/30 dark:bg-neutral-800/40 p-1.5 rounded tracking-widest text-neutral-800/70 dark:text-neutral-400/85 leading-tight">
-                                                {bean.ratingNotes}
-                                            </div>
-                                        </div>
+                                    {/* 操作按钮 - 仅在编辑模式下显示 */}
+                                    {editMode && (
+                                        <button
+                                            onClick={() => handleRateBeanClick(bean as CoffeeBean)}
+                                            className="text-xs text-neutral-600 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-100 leading-none"
+                                        >
+                                            编辑
+                                        </button>
                                     )}
                                 </div>
-
-                                {/* 操作按钮 - 仅在编辑模式下显示 */}
-                                {editMode && (
-                                    <button
-                                        onClick={() => handleRateBeanClick(bean as CoffeeBean)}
-                                        className="text-xs text-neutral-600 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-100 leading-none"
-                                    >
-                                        编辑
-                                    </button>
-                                )}
                             </div>
-                        </div>
-                    ))}
+                        )}
+                    />
                 </div>
             )}
 

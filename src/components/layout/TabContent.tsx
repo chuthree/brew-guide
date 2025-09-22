@@ -608,6 +608,9 @@ const TabContent: React.FC<TabContentProps> = ({
         };
     };
 
+    // 供“咖啡豆”Tab 的虚拟列表绑定外层滚动容器
+    const [beanScrollEl, setBeanScrollEl] = useState<HTMLElement | null>(null);
+
     // 如果不是在冲煮主Tab，不显示内容
     if (activeMainTab !== '冲煮') return null;
 
@@ -615,13 +618,16 @@ const TabContent: React.FC<TabContentProps> = ({
     if (activeTab === '咖啡豆') {
         return (
             <>
+                <div className="w-full h-full overflow-y-auto scroll-with-bottom-bar" ref={(el) => setBeanScrollEl(el)}>
                 <CoffeeBeanList
                     onSelect={(beanId, bean) => {
                         if (onCoffeeBeanSelect) onCoffeeBeanSelect(beanId, bean);
                     }}
                     searchQuery={searchQuery}
                     highlightedBeanId={highlightedBeanId}
+                    scrollParentRef={beanScrollEl ?? undefined}
                 />
+                </div>
 
                 {/* 随机选豆按钮 - 单独放置在搜索工具栏上方 */}
                 <div className="fixed bottom-[60px] left-0 right-0 mb-[var(--safe-area-bottom)] p-6 flex justify-end items-center z-10 max-w-[500px] mx-auto pointer-events-none">
