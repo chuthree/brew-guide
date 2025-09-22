@@ -254,7 +254,7 @@ export class S3Client {
                 ok: false,
                 error: error instanceof Error ? error.message : String(error)
             })
-            return []
+            throw error
         }
     }
 

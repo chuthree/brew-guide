@@ -51,6 +51,28 @@ export class S3SyncManager {
     }
 
     /**
+     * 检查是否需要同步
+     */
+    public async needsSync(): Promise<boolean> {
+        try {
+            const { dataForHashing } = await this.getLocalData()
+            const currentLocalDataHash = await this.generateDataHash(dataForHashing)
+            const remoteMetadata = await this.getRemoteMetadata()
+
+            // 如果没有远程元数据，则需要上传
+            if (!remoteMetadata) {
+                return true
+            }
+
+            // 如果哈希值不匹配，则需要同步
+            return currentLocalDataHash !== remoteMetadata.dataHash
+        } catch (error) {
+            console.error('检查同步状态时出错:', error)
+            return false // 发生错误时，安全起见返回false
+        }
+    }
+
+    /**
      * 执行数据同步
      */
     async sync(preferredDirection: 'auto' | 'upload' | 'download' = 'auto'): Promise<SyncResult> {

@@ -14,6 +14,7 @@ import {
   BackupReminderInterval
 } from '@/lib/utils/backupReminderUtils'
 import S3SyncManager, { SyncResult, SyncMetadata } from '@/lib/s3/syncManager'
+import { ChevronLeft, RefreshCw, Loader } from 'lucide-react'
 
 import Image from 'next/image'
 import GrinderSettings from './GrinderSettings'
@@ -97,6 +98,7 @@ export interface SettingsOptions {
         prefix: string
         endpoint?: string // 自定义端点，用于七牛云等S3兼容服务
         syncMode: 'manual'
+        lastConnectionSuccess?: boolean
     }
 }
 
@@ -255,6 +257,7 @@ const Settings: React.FC<SettingsProps> = ({
     const [isSyncing, setIsSyncing] = useState(false)
     const [showConflictModal, setShowConflictModal] = useState(false)
     const [conflictRemoteMetadata, setConflictRemoteMetadata] = useState<SyncMetadata | null>(null)
+    const [isSyncNeeded, setIsSyncNeeded] = useState(false)
 
     // 创建音效播放引用
     const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -279,16 +282,17 @@ const Settings: React.FC<SettingsProps> = ({
         }
     }, [settings.decrementPresets]);
 
-    // 当settings.s3Sync发生变化时更新s3Settings状态，并自动尝试连接
+    // 当settings.s3Sync发生变化时更新s3Settings状态，并根据上次成功状态自动尝试连接
     useEffect(() => {
         if (settings.s3Sync) {
             const normalized = normalizeS3Settings(settings.s3Sync)
             setS3Settings(normalized)
             console.warn('🔄 S3设置已从localStorage加载:', normalized)
 
-            // 如果S3同步已启用且配置完整，则自动尝试连接
+            // 如果上次连接成功，则自动尝试连接
             if (
                 normalized.enabled &&
+                normalized.lastConnectionSuccess &&
                 normalized.accessKeyId &&
                 normalized.secretAccessKey &&
                 normalized.bucketName
@@ -311,6 +315,9 @@ const Settings: React.FC<SettingsProps> = ({
                         const lastSync = await manager.getLastSyncTime()
                         setLastSyncTime(lastSync)
                         setS3Expanded(false) // 连接成功后默认不展开
+                        // 检查是否需要同步
+                        const needsSync = await manager.needsSync()
+                        setIsSyncNeeded(needsSync)
                     } else {
                         setS3Status('error')
                         setS3Error('自动连接失败，请检查配置')
@@ -483,7 +490,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
         key: K,
         value: S3SyncSettings[K]
     ) => {
-        const newS3Settings = normalizeS3Settings({ ...s3Settings, [key]: value } as S3SyncSettings)
+        const newS3Settings = normalizeS3Settings({ ...s3Settings, [key]: value, lastConnectionSuccess: false } as S3SyncSettings)
         setS3Settings(newS3Settings)
         handleChange('s3Sync', newS3Settings)
     }
@@ -516,6 +523,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
             if (result.success) {
                 const lastSync = await syncManager.getLastSyncTime()
                 setLastSyncTime(lastSync)
+                setIsSyncNeeded(false) // 同步成功后，重置状态
 
                 if (settings.hapticFeedback) {
                     hapticsUtils.medium()
@@ -565,9 +573,17 @@ const handleChange = async <K extends keyof SettingsOptions>(
                 setSyncManager(manager)
                 setS3Expanded(true) // 连接成功后自动展开
 
+                // 保存连接成功的状态
+                const newS3Settings = { ...s3Settings, lastConnectionSuccess: true }
+                handleChange('s3Sync', newS3Settings)
+
                 // 获取最后同步时间
                 const lastSync = await manager.getLastSyncTime()
                 setLastSyncTime(lastSync)
+
+                // 检查是否需要同步
+                const needsSync = await manager.needsSync()
+                setIsSyncNeeded(needsSync)
 
                 if (settings.hapticFeedback) {
                     hapticsUtils.light()
@@ -682,22 +698,26 @@ const handleChange = async <K extends keyof SettingsOptions>(
                     onClick={onClose}
                     className="absolute left-4 flex items-center justify-center w-10 h-10 rounded-full text-neutral-700 bg-neutral-100 dark:text-neutral-300 dark:bg-neutral-800 transition-colors"
                 >
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                    >
-                        <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={1.5}
-                            d="M15 19l-7-7 7-7"
-                        />
-                    </svg>
+                    <ChevronLeft className="h-5 w-5" />
                 </button>
                 <h2 className="text-lg font-medium text-neutral-800 dark:text-neutral-200">设置</h2>
+                {/* 同步按钮 */}
+                {s3Status === 'connected' && (
+                    <button
+                        onClick={() => performSync('auto')}
+                        disabled={isSyncing}
+                        className="absolute right-4 flex items-center justify-center w-10 h-10 rounded-full text-neutral-700 bg-neutral-100 dark:text-neutral-300 dark:bg-neutral-800 transition-colors"
+                    >
+                        {isSyncing ? (
+                            <Loader className="animate-spin h-5 w-5" />
+                        ) : (
+                            <RefreshCw className="h-5 w-5" />
+                        )}
+                        {isSyncNeeded && !isSyncing && (
+                            <span className="absolute top-1.5 right-1.5 block w-2.5 h-2.5 bg-blue-500 rounded-full border-2 border-neutral-100 dark:border-neutral-800"></span>
+                        )}
+                    </button>
+                )}
             </div>
 
             {/* 滚动内容区域 - 新的简洁设计 */}
