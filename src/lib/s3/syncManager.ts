@@ -572,7 +572,8 @@ export class S3SyncManager {
      * 更新同步元数据
      */
     private async updateSyncMetadata(files: string[], dataHash: string, localOnly = false): Promise<void> {
-        const uniqueFiles = Array.from(new Set(files.filter(Boolean))).sort()
+        const compareAlpha = (a: string, b: string) => a.localeCompare(b, undefined, { sensitivity: 'base' })
+        const uniqueFiles = Array.from(new Set(files.filter(Boolean))).sort(compareAlpha)
 
         const metadata: SyncMetadata = {
             lastSyncTime: Date.now(),
@@ -608,7 +609,8 @@ export class S3SyncManager {
         }
 
         const sortedObj: Record<string, unknown> = {}
-        const sortedKeys = Object.keys(obj).sort()
+        const compareAlpha = (a: string, b: string) => a.localeCompare(b, undefined, { sensitivity: 'base' })
+        const sortedKeys = Object.keys(obj).sort(compareAlpha)
 
         for (const key of sortedKeys) {
             sortedObj[key] = this.deepSortObject(obj[key])

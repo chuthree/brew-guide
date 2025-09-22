@@ -462,7 +462,7 @@ export class S3Client {
             canonicalHeadersMap.set(key.toLowerCase(), value.trim())
         })
 
-        const sortedHeaderKeys = Array.from(canonicalHeadersMap.keys()).sort()
+        const sortedHeaderKeys = Array.from(canonicalHeadersMap.keys()).sort((a, b) => a.localeCompare(b))
         const canonicalHeaders = sortedHeaderKeys
             .map(key => `${key}:${canonicalHeadersMap.get(key)}`)
             .join('\n') + '\n'
@@ -583,7 +583,7 @@ export class S3Client {
             canonicalHeadersMap.set(key.toLowerCase(), value.trim())
         })
 
-        const sortedHeaderKeys = Array.from(canonicalHeadersMap.keys()).sort()
+        const sortedHeaderKeys = Array.from(canonicalHeadersMap.keys()).sort((a, b) => a.localeCompare(b))
         const canonicalHeaders = sortedHeaderKeys
             .map(key => `${key}:${canonicalHeadersMap.get(key)}`)
             .join('\n') + '\n'
