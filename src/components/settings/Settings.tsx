@@ -14,13 +14,14 @@ import {
   BackupReminderInterval
 } from '@/lib/utils/backupReminderUtils'
 import S3SyncManager, { SyncResult, SyncMetadata } from '@/lib/s3/syncManager'
-import { ChevronLeft, ChevronRight, RefreshCw, Loader, Monitor, SlidersHorizontal, Archive, List, CalendarDays } from 'lucide-react'
+import { ChevronLeft, ChevronRight, RefreshCw, Loader, Monitor, SlidersHorizontal, Archive, List, CalendarDays, Timer } from 'lucide-react'
 
 import Image from 'next/image'
 import GrinderSettings from './GrinderSettings'
 import StockSettings from './StockSettings' // 导入新的组件
 import BeanSettings from './BeanSettings' // 导入新的组件
 import FlavorPeriodSettings from './FlavorPeriodSettings'
+import TimerSettings from './TimerSettings'
 import { motion, AnimatePresence } from 'framer-motion'
 // 导入Lottie动画JSON文件
 import chuchuAnimation from '../../../public/animations/chuchu-animation.json'
@@ -190,6 +191,9 @@ const Settings: React.FC<SettingsProps> = ({
 
     // 添加赏味期设置状态
     const [showFlavorPeriodSettings, setShowFlavorPeriodSettings] = useState(false)
+
+    // 添加计时器布局设置状态
+    const [showTimerSettings, setShowTimerSettings] = useState(false)
 
     // 添加二维码显示状态
     const [showQRCodes, setShowQRCodes] = useState(false)
@@ -862,6 +866,16 @@ const handleChange = async <K extends keyof SettingsOptions>(
                         </div>
                         <ChevronRight className="h-4 w-4 text-neutral-400" />
                     </button>
+                    <button
+                        onClick={() => setShowTimerSettings(true)}
+                        className="w-full py-3 px-4 text-sm font-medium text-neutral-800 bg-neutral-100 rounded transition-colors hover:bg-neutral-200 dark:text-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 flex items-center justify-between"
+                    >
+                        <div className="flex items-center space-x-3">
+                            <Timer className="h-4 w-4 text-neutral-500" />
+                            <span>计时器布局</span>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-neutral-400" />
+                    </button>
                 </div>
 
                     
@@ -870,150 +884,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
 
 
 
-                {/* 计时器布局设置组 */}
-                <div className="px-6 py-4">
-                    <h3 className="text-sm uppercase font-medium tracking-wider text-neutral-500 dark:text-neutral-400 mb-3">
-                        计时器布局
-                    </h3>
 
-                    <div className="space-y-5">
-
-                        {/* 阶段信息布局反转 */}
-                        <div className="flex items-center justify-between">
-                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                                阶段信息布局反转
-                            </div>
-                            <label className="relative inline-flex cursor-pointer items-center">
-                                <input
-                                    type="checkbox"
-                                    checked={settings.layoutSettings?.stageInfoReversed || false}
-                                    onChange={(e) => {
-                                        const newLayoutSettings = {
-                                            ...settings.layoutSettings,
-                                            stageInfoReversed: e.target.checked
-                                        };
-                                        handleChange('layoutSettings', newLayoutSettings);
-                                    }}
-                                    className="peer sr-only"
-                                />
-                                <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-                            </label>
-                        </div>
-
-                        {/* 控制区布局反转 */}
-                        <div className="flex items-center justify-between">
-                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                                控制区布局反转
-                            </div>
-                            <label className="relative inline-flex cursor-pointer items-center">
-                                <input
-                                    type="checkbox"
-                                    checked={settings.layoutSettings?.controlsReversed || false}
-                                    onChange={(e) => {
-                                        const newLayoutSettings = {
-                                            ...settings.layoutSettings,
-                                            controlsReversed: e.target.checked
-                                        };
-                                        handleChange('layoutSettings', newLayoutSettings);
-                                    }}
-                                    className="peer sr-only"
-                                />
-                                <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-                            </label>
-                        </div>
-
-                        {/* 始终显示计时器信息 */}
-                        <div className="flex items-center justify-between">
-                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                                始终显示计时器信息
-                            </div>
-                            <label className="relative inline-flex cursor-pointer items-center">
-                                <input
-                                    type="checkbox"
-                                    checked={settings.layoutSettings?.alwaysShowTimerInfo || false}
-                                    onChange={(e) => {
-                                        const newLayoutSettings = {
-                                            ...settings.layoutSettings,
-                                            alwaysShowTimerInfo: e.target.checked
-                                        };
-                                        handleChange('layoutSettings', newLayoutSettings);
-                                    }}
-                                    className="peer sr-only"
-                                />
-                                <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-                            </label>
-                        </div>
-
-                        {/* 显示阶段分隔线 */}
-                        <div className="flex items-center justify-between">
-                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                                显示阶段分隔线
-                            </div>
-                            <label className="relative inline-flex cursor-pointer items-center">
-                                <input
-                                    type="checkbox"
-                                    checked={settings.layoutSettings?.showStageDivider || false}
-                                    onChange={(e) => {
-                                        const newLayoutSettings = {
-                                            ...settings.layoutSettings,
-                                            showStageDivider: e.target.checked
-                                        };
-                                        handleChange('layoutSettings', newLayoutSettings);
-                                    }}
-                                    className="peer sr-only"
-                                />
-                                <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-                            </label>
-                        </div>
-
-                        {/* 显示流速 */}
-                        <div className="flex items-center justify-between">
-                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                                显示流速
-                            </div>
-                            <label className="relative inline-flex cursor-pointer items-center">
-                                <input
-                                    type="checkbox"
-                                    checked={settings.showFlowRate || false}
-                                    onChange={(e) => handleChange('showFlowRate', e.target.checked)}
-                                    className="peer sr-only"
-                                />
-                                <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-                            </label>
-                        </div>
-
-                        {/* 进度条高度 */}
-                        <div className="flex items-center justify-between mb-2">
-                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                                进度条高度
-                            </div>
-                            <div className="text-sm text-neutral-400 dark:text-neutral-500">
-                                {settings.layoutSettings?.progressBarHeight || 4}px (默认 4px)
-                            </div>
-                        </div>
-                        <div className="px-1 mb-3">
-                            <input
-                                type="range"
-                                min="2"
-                                max="12"
-                                step="1"
-                                value={settings.layoutSettings?.progressBarHeight || 4}
-                                onChange={(e) => {
-                                    const newLayoutSettings = {
-                                        ...settings.layoutSettings,
-                                        progressBarHeight: parseInt(e.target.value)
-                                    };
-                                    handleChange('layoutSettings', newLayoutSettings);
-                                }}
-                                className="w-full h-1.5 bg-neutral-200 rounded-full appearance-none cursor-pointer dark:bg-neutral-700"
-                            />
-                            <div className="flex justify-between mt-1 text-xs text-neutral-500">
-                                <span>细</span>
-                                <span>粗</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
                 {/* 数据管理组 */}
                 <div className="px-6 py-4">
@@ -1457,6 +1328,17 @@ const handleChange = async <K extends keyof SettingsOptions>(
                     <FlavorPeriodSettings
                         settings={settings}
                         onClose={() => setShowFlavorPeriodSettings(false)}
+                        handleChange={handleChange}
+                    />
+                )}
+            </AnimatePresence>
+
+            {/* 计时器布局设置组件 */}
+            <AnimatePresence>
+                {showTimerSettings && (
+                    <TimerSettings
+                        settings={settings}
+                        onClose={() => setShowTimerSettings(false)}
                         handleChange={handleChange}
                     />
                 )}
