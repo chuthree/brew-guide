@@ -14,7 +14,7 @@ import {
   BackupReminderInterval
 } from '@/lib/utils/backupReminderUtils'
 import S3SyncManager, { SyncResult, SyncMetadata } from '@/lib/s3/syncManager'
-import { ChevronLeft, ChevronRight, RefreshCw, Loader, Monitor, SlidersHorizontal, Archive, List, CalendarDays, Timer } from 'lucide-react'
+import { ChevronLeft, ChevronRight, RefreshCw, Loader, Monitor, SlidersHorizontal, Archive, List, CalendarDays, Timer, Database } from 'lucide-react'
 
 import Image from 'next/image'
 import GrinderSettings from './GrinderSettings'
@@ -29,6 +29,7 @@ import chuchuAnimation from '../../../public/animations/chuchu-animation.json'
 // 导入ButtonGroup组件
 import { ButtonGroup } from '../ui/ButtonGroup'
 import DisplaySettings from './DisplaySettings'
+import DataSettings from './DataSettings'
 // 自定义磨豆机接口
 export interface CustomGrinder {
     id: string
@@ -194,6 +195,9 @@ const Settings: React.FC<SettingsProps> = ({
 
     // 添加计时器布局设置状态
     const [showTimerSettings, setShowTimerSettings] = useState(false)
+
+    // 添加数据管理设置状态
+    const [showDataSettings, setShowDataSettings] = useState(false)
 
     // 添加二维码显示状态
     const [showQRCodes, setShowQRCodes] = useState(false)
@@ -886,290 +890,18 @@ const handleChange = async <K extends keyof SettingsOptions>(
 
 
 
-                {/* 数据管理组 */}
+                {/* 数据管理入口按钮 */}
                 <div className="px-6 py-4">
-                    <h3 className="text-sm uppercase font-medium tracking-wider text-neutral-500 dark:text-neutral-400 mb-3">
-                        数据管理
-                    </h3>
-                    {/* S3同步设置 */}
-                    <div className="space-y-4 mb-6">
-                        {/* S3主开关 */}
-                        <div className="flex items-center justify-between">
-                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                                S3 云同步
-                            </div>
-                            <div className="flex items-center space-x-2">
-                                {/* 连接状态指示器 */}
-                                <div className={`w-2 h-2 rounded-full ${
-                                    s3Status === 'connected' ? 'bg-green-500' :
-                                    s3Status === 'connecting' ? 'bg-yellow-500 animate-pulse' :
-                                    s3Status === 'error' ? 'bg-red-500' :
-                                    'bg-neutral-300 dark:bg-neutral-600'
-                                }`} />
-                                <label className="relative inline-flex cursor-pointer items-center">
-                                    <input
-                                        type="checkbox"
-                                        checked={s3Settings.enabled}
-                                        onChange={(e) => handleS3SettingChange('enabled', e.target.checked)}
-                                        className="peer sr-only"
-                                    />
-                                    <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-                                </label>
-                            </div>
+                    <button
+                        onClick={() => setShowDataSettings(true)}
+                        className="w-full py-3 px-4 text-sm font-medium text-neutral-800 bg-neutral-100 rounded transition-colors hover:bg-neutral-200 dark:text-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 flex items-center justify-between"
+                    >
+                        <div className="flex items-center space-x-3">
+                            <Database className="h-4 w-4 text-neutral-500" />
+                            <span>数据管理</span>
                         </div>
-
-                        {/* S3详细设置 - 仅在启用时显示 */}
-                        {s3Settings.enabled && (
-                            <div className="ml-4 space-y-4 border-l-2 border-neutral-200 dark:border-neutral-700 pl-4">
-                                {/* 展开/收起按钮 */}
-                                <button
-                                    onClick={() => setS3Expanded(!s3Expanded)}
-                                    className="flex items-center justify-between w-full py-2 text-sm font-medium text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-neutral-100"
-                                >
-                                    <span>S3配置</span>
-                                    <svg
-                                        className={`w-4 h-4 transition-transform ${s3Expanded ? 'rotate-180' : ''}`}
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke="currentColor"
-                                    >
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 9l-7 7-7-7" />
-                                    </svg>
-                                </button>
-
-                                {s3Expanded && (
-                                    <div className="space-y-3">
-                                        {/* 区域 */}
-                                        <div>
-                                            <label className="block text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
-                                                区域 (Region)
-                                            </label>
-                                            <input
-                                                type="text"
-                                                value={s3Settings.region}
-                                                onChange={(e) => handleS3SettingChange('region', e.target.value)}
-                                                placeholder="cn-south-1"
-                                                className="w-full py-2 px-3 text-sm bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded focus:outline-hidden focus:ring-1 focus:ring-neutral-500"
-                                            />
-                                        </div>
-
-                                        {/* 自定义端点 */}
-                                        <div>
-                                            <label className="block text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
-                                                自定义端点 (可选)
-                                            </label>
-                                            <input
-                                                type="url"
-                                                value={s3Settings.endpoint || ''}
-                                                onChange={(e) => handleS3SettingChange('endpoint', e.target.value)}
-                                                placeholder="https://bucket-name.s3.cn-south-1.qiniucs.com (七牛云格式)"
-                                                className="w-full py-2 px-3 text-sm bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded focus:outline-hidden focus:ring-1 focus:ring-neutral-500"
-                                            />
-                                            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
-                                                七牛云格式：https://bucket名称.s3.区域.qiniucs.com，留空使用AWS标准端点
-                                            </p>
-                                        </div>
-
-                                        {/* Bucket名称 */}
-                                        <div>
-                                            <label className="block text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
-                                                Bucket名称
-                                            </label>
-                                            <input
-                                                type="text"
-                                                value={s3Settings.bucketName}
-                                                onChange={(e) => handleS3SettingChange('bucketName', e.target.value)}
-                                                placeholder="my-bucket-name"
-                                                className="w-full py-2 px-3 text-sm bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded focus:outline-hidden focus:ring-1 focus:ring-neutral-500"
-                                            />
-                                        </div>
-
-                                        {/* Access Key ID */}
-                                        <div>
-                                            <label className="block text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
-                                                Access Key ID
-                                            </label>
-                                            <input
-                                                type="text"
-                                                value={s3Settings.accessKeyId}
-                                                onChange={(e) => handleS3SettingChange('accessKeyId', e.target.value)}
-                                                placeholder="AKIA..."
-                                                className="w-full py-2 px-3 text-sm bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded focus:outline-hidden focus:ring-1 focus:ring-neutral-500"
-                                            />
-                                        </div>
-
-                                        {/* Secret Access Key */}
-                                        <div>
-                                            <label className="block text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
-                                                Secret Access Key
-                                            </label>
-                                            <div className="relative">
-                                                <input
-                                                    type={showS3SecretKey ? "text" : "password"}
-                                                    value={s3Settings.secretAccessKey}
-                                                    onChange={(e) => handleS3SettingChange('secretAccessKey', e.target.value)}
-                                                    placeholder="密钥"
-                                                    className="w-full py-2 px-3 pr-10 text-sm bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded focus:outline-hidden focus:ring-1 focus:ring-neutral-500"
-                                                />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setShowS3SecretKey(!showS3SecretKey)}
-                                                    className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300"
-                                                >
-                                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        {showS3SecretKey ? (
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L8.464 8.464m1.414 1.414L8.464 8.464m5.656 5.656L15.536 15.536m-1.414-1.414L15.536 15.536" />
-                                                        ) : (
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                                        )}
-                                                    </svg>
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        {/* 前缀 */}
-                                        <div>
-                                            <label className="block text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
-                                                文件前缀
-                                            </label>
-                                            <input
-                                                type="text"
-                                                value={s3Settings.prefix}
-                                                onChange={(e) => handleS3SettingChange('prefix', e.target.value)}
-                                                placeholder="brew-guide-data/"
-                                                className="w-full py-2 px-3 text-sm bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded focus:outline-hidden focus:ring-1 focus:ring-neutral-500"
-                                            />
-                                        </div>
-
-                                        {/* 测试连接按钮 */}
-                                        <button
-                                            onClick={testS3Connection}
-                                            disabled={s3Status === 'connecting'}
-                                            className="w-full py-2 px-3 text-sm font-medium text-white bg-neutral-700 hover:bg-neutral-800 disabled:bg-neutral-400 rounded transition-colors"
-                                        >
-                                            {s3Status === 'connecting' ? '连接中...' : '测试连接'}
-                                        </button>
-
-                                        {/* 错误信息 */}
-                                        {s3Error && (
-                                            <div className="p-2 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded">
-                                                {s3Error}
-                                            </div>
-                                        )}
-
-                                        {/* 同步模式说明 */}
-                                        {s3Status === 'connected' && (
-                                            <div className="space-y-3 pt-3 border-t border-neutral-200 dark:border-neutral-700">
-                                                <div className="flex items-center justify-between gap-2">
-                                                    <div className="text-xs font-medium text-neutral-600 dark:text-neutral-400">
-                                                        同步模式
-                                                    </div>
-                                                    <span className="text-xs text-neutral-500 dark:text-neutral-400">
-                                                        完全手动
-                                                    </span>
-                                                </div>
-
-                                                <div className="text-xs text-neutral-500 dark:text-neutral-400 bg-neutral-100/60 dark:bg-neutral-800/60 p-2 rounded leading-relaxed">
-                                                    不会自动同步，请在需要时手动点击下方按钮触发同步。
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-
-                                {/* 简化的状态说明 */}
-                                {!s3Expanded && (
-                                    <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                                        {s3Status === 'connected'
-                                            ? '已连接 - 需手动触发同步'
-                                            : s3Status === 'error'
-                                                ? '连接失败 - 点击配置查看详情'
-                                                : '未配置 - 点击配置设置S3信息'}
-                                    </p>
-                                )}
-
-                                        {/* 醒目的同步按钮 */}
-                                {s3Status === 'connected' && (
-                                    <div className="mt-2 space-y-2">
-                                        <button
-                                            onClick={() => performSync('auto')}
-                                            disabled={isSyncing}
-                                            className="w-full py-2 px-3 text-sm font-medium text-white bg-neutral-700 hover:bg-neutral-800 disabled:bg-neutral-400 rounded transition-colors"
-                                        >
-                                            {isSyncing ? '同步中...' : '立即同步'}
-                                        </button>
-                                        {lastSyncTime && (
-                                            <div className="text-xs text-neutral-400 dark:text-neutral-500">
-                                                最后同步：{lastSyncTime.toLocaleString('zh-CN', {
-                                                    month: 'numeric',
-                                                    day: 'numeric',
-                                                    hour: '2-digit',
-                                                    minute: '2-digit'
-                                                })}
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </div>
-
-                    {/* 备份提醒设置 */}
-                    {backupReminderSettings && (
-                        <>
-                            {/* 备份提醒开关 */}
-                            <div className="flex items-center justify-between">
-                                <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                                    备份提醒
-                                </div>
-                                <label className="relative inline-flex cursor-pointer items-center">
-                                    <input
-                                        type="checkbox"
-                                        checked={backupReminderSettings.enabled}
-                                        onChange={(e) => handleBackupReminderChange(e.target.checked)}
-                                        className="peer sr-only"
-                                    />
-                                    <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-                                </label>
-                            </div>
-
-                            {/* 提醒间隔设置 */}
-                            {backupReminderSettings.enabled && (
-                                <div className="mt-4">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                                            提醒频率
-                                        </div>
-                                        {nextReminderText && (
-                                            <div className="text-xs text-neutral-400 dark:text-neutral-500">
-                                                下次：{nextReminderText}
-                                            </div>
-                                        )}
-                                    </div>
-                                    <ButtonGroup
-                                        value={backupReminderSettings.interval.toString()}
-                                        options={[
-                                            { value: BACKUP_REMINDER_INTERVALS.WEEKLY.toString(), label: '每周' },
-                                            { value: BACKUP_REMINDER_INTERVALS.BIWEEKLY.toString(), label: '每两周' },
-                                            { value: BACKUP_REMINDER_INTERVALS.MONTHLY.toString(), label: '每月' }
-                                        ]}
-                                        onChange={(value) => handleBackupIntervalChange(parseInt(value) as BackupReminderInterval)}
-                                        className="w-full"
-                                    />
-                                </div>
-                            )}
-                        </>
-                    )}
-
-                    {/* 数据管理按钮 */}
-                    <div className={backupReminderSettings ? "mt-6" : ""}>
-                        <button
-                            onClick={() => setIsDataManagerOpen(true)}
-                            className="w-full py-3 text-sm font-medium text-neutral-800 bg-neutral-100 rounded transition-colors hover:bg-neutral-200 dark:text-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700"
-                        >
-                            数据管理
-                        </button>
-                    </div>
+                        <ChevronRight className="h-4 w-4 text-neutral-400" />
+                    </button>
                 </div>
 
                 {/* 意见反馈组 */}
@@ -1344,74 +1076,15 @@ const handleChange = async <K extends keyof SettingsOptions>(
                 )}
             </AnimatePresence>
 
-            {/* 数据管理组件 */}
-            {isDataManagerOpen && (
-                <DataManager
-                    isOpen={isDataManagerOpen}
-                    onClose={() => setIsDataManagerOpen(false)}
-                    onDataChange={onDataChange}
-                />
-            )}
-
-            {/* 冲突解决模态框 - 半屏 */}
+            {/* 数据管理设置组件 */}
             <AnimatePresence>
-                {showConflictModal && (
-                    <motion.div
-                        className="fixed inset-0 z-[100] flex flex-col justify-end bg-black/40 dark:bg-black/60"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        onClick={() => setShowConflictModal(false)}
-                    >
-                        <motion.div
-                            className="w-full max-w-[500px] mx-auto bg-neutral-100 dark:bg-neutral-800 rounded-t-2xl shadow-2xl p-5 pb-safe-bottom"
-                            initial={{ y: "100%" }}
-                            animate={{ y: "0%" }}
-                            exit={{ y: "100%" }}
-                            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <div className="text-center mb-4">
-                                <h3 className="text-lg font-bold text-neutral-900 dark:text-neutral-100">数据同步冲突</h3>
-                                <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">
-                                    检测到云端数据已更新，请选择操作
-                                </p>
-                            </div>
-
-                            <div className="p-4 mb-4 bg-neutral-200/60 dark:bg-neutral-900/60 rounded text-center">
-                                <p className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                                    云端数据
-                                </p>
-                                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
-                                    {conflictRemoteMetadata
-                                        ? `最后更新于 ${new Date(
-                                            conflictRemoteMetadata.lastSyncTime
-                                        ).toLocaleString('zh-CN', {
-                                            month: 'numeric',
-                                            day: 'numeric',
-                                            hour: '2-digit',
-                                            minute: '2-digit'
-                                        })}`
-                                        : '无法获取云端数据时间'}
-                                </p>
-                            </div>
-
-                            <div className="space-y-3">
-                                <button
-                                    onClick={() => handleConflictResolution('download')}
-                                    className="w-full py-3 px-4 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded transition-colors"
-                                >
-                                    下载云端数据 (推荐)
-                                </button>
-                                <button
-                                    onClick={() => handleConflictResolution('upload')}
-                                    className="w-full py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-500"
-                                >
-                                    上传本地数据 (将覆盖云端)
-                                </button>
-                            </div>
-                        </motion.div>
-                    </motion.div>
+                {showDataSettings && (
+                    <DataSettings
+                        settings={settings}
+                        onClose={() => setShowDataSettings(false)}
+                        handleChange={handleChange}
+                        onDataChange={onDataChange}
+                    />
                 )}
             </AnimatePresence>
 
