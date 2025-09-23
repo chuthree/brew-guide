@@ -59,7 +59,10 @@ const StockSettings: React.FC<StockSettingsProps> = ({
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            transition={{
+                duration: 0.35,
+                ease: [0.25, 0.1, 0.25, 1]
+            }}
         >
             <div className="relative flex items-center justify-center py-4 pt-safe-top">
                 <button

@@ -739,7 +739,7 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
         const valid = isStepValid();
         const canSave = valid && ['basic', 'detail', 'flavor'].includes(currentStep) && !isSimpleMode;
 
-        const springTransition = { type: "spring", stiffness: 500, damping: 25 };
+        const springTransition = { stiffness: 500, damping: 25 };
         const buttonBaseClass = "rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100";
 
         return (

@@ -143,7 +143,7 @@ const ScratchCard: React.FC<{
     lastPositionRef.current = null // 重置位置
   }
 
-  const springTransition = { type: "spring", stiffness: 500, damping: 25 }
+  const springTransition = { stiffness: 500, damping: 25 }
 
   return (
     <div className="relative flex flex-col items-center justify-center w-full h-full p-6">
@@ -288,7 +288,7 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
   const [cardDimensionsReady, setCardDimensionsReady] = useState(false)
 
   // 动画过渡参数
-  const springTransition = { type: "spring", stiffness: 500, damping: 25 }
+  const springTransition = { stiffness: 500, damping: 25 }
 
   // 获取有效的豆子列表（过滤掉无效或为空的豆子，以及在途状态的豆子）
   const validBeans = beans.filter(bean => {

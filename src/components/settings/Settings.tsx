@@ -550,7 +550,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                     >
                         <div className="flex items-center space-x-3">
                             <Monitor className="h-4 w-4 text-neutral-500" />
-                            <span>基础设置</span>
+                            <span>显示设置</span>
                         </div>
                         <ChevronRight className="h-4 w-4 text-neutral-400" />
                     </button>

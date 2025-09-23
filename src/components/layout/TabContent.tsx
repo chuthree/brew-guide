@@ -419,7 +419,7 @@ const TabContent: React.FC<TabContentProps> = ({
     const searchInputRef = useRef<HTMLInputElement>(null);
 
     const buttonBaseClass = "rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100";
-    const springTransition = { type: "spring", stiffness: 500, damping: 25 };
+    const springTransition = { stiffness: 500, damping: 25 };
 
     const handleSearchClick = async () => {
         await triggerHapticFeedback();
