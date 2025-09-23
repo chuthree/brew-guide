@@ -57,7 +57,7 @@ const DisplaySettings: React.FC<DisplaySettingsProps> = ({
                 >
                     <ChevronLeft className="h-5 w-5" />
                 </button>
-                <h2 className="text-lg font-medium text-neutral-800 dark:text-neutral-200">显示设置</h2>
+                <h2 className="text-md font-medium text-neutral-800 dark:text-neutral-200">显示设置</h2>
             </div>
 
             {/* 滚动内容区域 */}

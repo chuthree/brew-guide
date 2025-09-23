@@ -14,10 +14,11 @@ import {
   BackupReminderInterval
 } from '@/lib/utils/backupReminderUtils'
 import S3SyncManager, { SyncResult, SyncMetadata } from '@/lib/s3/syncManager'
-import { ChevronLeft, ChevronRight, RefreshCw, Loader, Monitor } from 'lucide-react'
+import { ChevronLeft, ChevronRight, RefreshCw, Loader, Monitor, SlidersHorizontal, Archive } from 'lucide-react'
 
 import Image from 'next/image'
 import GrinderSettings from './GrinderSettings'
+import StockSettings from './StockSettings' // 导入新的组件
 import { motion, AnimatePresence } from 'framer-motion'
 // 导入Lottie动画JSON文件
 import chuchuAnimation from '../../../public/animations/chuchu-animation.json'
@@ -197,16 +198,18 @@ const Settings: React.FC<SettingsProps> = ({
     // 添加显示设置状态
     const [showDisplaySettings, setShowDisplaySettings] = useState(false)
 
+    // 添加研磨度设置状态
+    const [showGrinderSettings, setShowGrinderSettings] = useState(false)
+
+    // 添加库存扣除预设值设置状态
+    const [showStockSettings, setShowStockSettings] = useState(false)
+
     // 添加二维码显示状态
     const [showQRCodes, setShowQRCodes] = useState(false)
     // 添加显示哪种二维码的状态
     const [qrCodeType, setQrCodeType] = useState<'appreciation' | 'group' | null>(null)
 
-    // 新增用于编辑扣除量预设的状态
-    const [decrementValue, setDecrementValue] = useState<string>('')
-    const [decrementPresets, setDecrementPresets] = useState<number[]>(
-        settings.decrementPresets || defaultSettings.decrementPresets
-    )
+
 
     // 添加彩蛋动画状态
     const [showEasterEgg, setShowEasterEgg] = useState(false)
@@ -247,12 +250,7 @@ const Settings: React.FC<SettingsProps> = ({
         }
     }, [])
 
-    // 当settings发生变化时更新decrementPresets状态
-    useEffect(() => {
-        if (settings.decrementPresets) {
-            setDecrementPresets(settings.decrementPresets);
-        }
-    }, [settings.decrementPresets]);
+
 
     // 当settings.s3Sync发生变化时更新s3Settings状态，并根据上次成功状态自动尝试连接
     useEffect(() => {
@@ -559,39 +557,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
 
 
 
-    // 添加预设值函数
-    const addDecrementPreset = () => {
-        const value = parseFloat(decrementValue)
-        if (!isNaN(value) && value > 0) {
-            // 保留一位小数
-            const formattedValue = parseFloat(value.toFixed(1))
 
-            // 检查是否已经存在该预设值
-            if (!decrementPresets.includes(formattedValue)) {
-                const newPresets = [...decrementPresets, formattedValue].sort((a, b) => a - b)
-                setDecrementPresets(newPresets)
-                handleChange('decrementPresets', newPresets)
-                setDecrementValue('')
-
-                // 提供触感反馈
-                if (settings.hapticFeedback) {
-                    hapticsUtils.light()
-                }
-            }
-        }
-    }
-
-    // 删除预设值函数
-    const removeDecrementPreset = (value: number) => {
-        const newPresets = decrementPresets.filter(v => v !== value)
-        setDecrementPresets(newPresets)
-        handleChange('decrementPresets', newPresets)
-
-        // 提供触感反馈
-        if (settings.hapticFeedback) {
-            hapticsUtils.light()
-        }
-    }
 
     // 处理Lottie动画完成事件
     const handleAnimationComplete = () => {
@@ -647,7 +613,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                 >
                     <ChevronLeft className="h-5 w-5" />
                 </button>
-                <h2 className="text-lg font-medium text-neutral-800 dark:text-neutral-200">设置</h2>
+                <h2 className="text-md font-medium text-neutral-800 dark:text-neutral-200">设置</h2>
                 {/* 同步按钮 */}
                 {s3Status === 'connected' && (
                     <button
@@ -869,73 +835,29 @@ const handleChange = async <K extends keyof SettingsOptions>(
                         </div>
                         <ChevronRight className="h-4 w-4 text-neutral-400" />
                     </button>
-                </div>
-
-                {/* 研磨度设置组 */}
-                <GrinderSettings
-                    settings={settings}
-                    handleChange={handleChange}
-                />
-
-                {/* 库存扣除量预设值设置组 */}
-                <div className="px-6 py-4">
-                    <h3 className="text-sm uppercase font-medium tracking-wider text-neutral-500 dark:text-neutral-400 mb-3">
-                        库存扣除预设值
-                    </h3>
-
-                    <div className="flex gap-2 mb-3 flex-wrap">
-                        {decrementPresets.map((value) => (
-                            <button
-                                key={value}
-                                onClick={() => removeDecrementPreset(value)}
-                                className="px-3 py-1.5 bg-neutral-100 dark:bg-neutral-800 rounded text-sm font-medium text-neutral-800 dark:text-neutral-200 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
-                            >
-                                -{value}g ×
-                            </button>
-                        ))}
-
-                        <div className="flex h-9">
-                            <input
-                                type="text"
-                                inputMode="decimal"
-                                value={decrementValue}
-                                onChange={(e) => {
-                                    // 限制只能输入数字和小数点
-                                    const value = e.target.value.replace(/[^0-9.]/g, '');
-
-                                    // 确保只有一个小数点
-                                    const dotCount = (value.match(/\./g) || []).length;
-                                    let sanitizedValue = dotCount > 1 ?
-                                        value.substring(0, value.lastIndexOf('.')) :
-                                        value;
-
-                                    // 限制小数点后只能有一位数字
-                                    const dotIndex = sanitizedValue.indexOf('.');
-                                    if (dotIndex !== -1 && dotIndex < sanitizedValue.length - 2) {
-                                        sanitizedValue = sanitizedValue.substring(0, dotIndex + 2);
-                                    }
-
-                                    setDecrementValue(sanitizedValue);
-                                }}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
-                                        e.preventDefault()
-                                        addDecrementPreset()
-                                    }
-                                }}
-                                placeholder="克数"
-                                className="w-16 py-1.5 px-2 text-sm bg-neutral-100 dark:bg-neutral-800  rounded-l rounded-r-none focus:outline-hidden focus:ring-1 focus:ring-neutral-500"
-                            />
-                            <button
-                                onClick={addDecrementPreset}
-                                disabled={!decrementValue || isNaN(parseFloat(decrementValue)) || parseFloat(decrementValue) <= 0}
-                                className="py-1.5 px-2 bg-neutral-700 dark:bg-neutral-600 text-white rounded-r disabled:opacity-20 disabled:cursor-not-allowed text-sm"
-                            >
-                                +
-                            </button>
+                    <button
+                        onClick={() => setShowGrinderSettings(true)}
+                        className="w-full py-3 px-4 text-sm font-medium text-neutral-800 bg-neutral-100 rounded transition-colors hover:bg-neutral-200 dark:text-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 flex items-center justify-between"
+                    >
+                        <div className="flex items-center space-x-3">
+                            <SlidersHorizontal className="h-4 w-4 text-neutral-500" />
+                            <span>研磨度设置</span>
                         </div>
-                    </div>
+                        <ChevronRight className="h-4 w-4 text-neutral-400" />
+                    </button>
+                    <button
+                        onClick={() => setShowStockSettings(true)}
+                        className="w-full py-3 px-4 text-sm font-medium text-neutral-800 bg-neutral-100 rounded transition-colors hover:bg-neutral-200 dark:text-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 flex items-center justify-between"
+                    >
+                        <div className="flex items-center space-x-3">
+                            <Archive className="h-4 w-4 text-neutral-500" />
+                            <span>库存扣除预设值</span>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-neutral-400" />
+                    </button>
                 </div>
+
+                    
 
                 {/* 咖啡豆显示设置组 */}
                 <div className="px-6 py-4">
@@ -1733,6 +1655,28 @@ const handleChange = async <K extends keyof SettingsOptions>(
                     <DisplaySettings
                         settings={settings}
                         onClose={() => setShowDisplaySettings(false)}
+                        handleChange={handleChange}
+                    />
+                )}
+            </AnimatePresence>
+
+            {/* 研磨度设置组件 */}
+            <AnimatePresence>
+                {showGrinderSettings && (
+                    <GrinderSettings
+                        settings={settings}
+                        onClose={() => setShowGrinderSettings(false)}
+                        handleChange={handleChange}
+                    />
+                )}
+            </AnimatePresence>
+
+            {/* 库存扣除预设值设置组件 */}
+            <AnimatePresence>
+                {showStockSettings && (
+                    <StockSettings
+                        settings={settings}
+                        onClose={() => setShowStockSettings(false)}
                         handleChange={handleChange}
                     />
                 )}
