@@ -1,5 +1,21 @@
 'use client'
 
+/*
+ * 笔记列表组件 - 存储架构说明
+ * 
+ * 数据存储分层：
+ * 1. 笔记数据 (brewingNotes): 存储在 IndexedDB 中 (通过 Storage API)
+ * 2. UI 偏好设置: 存储在 localStorage 中 (视图模式、图片流设置等)
+ * 3. 筛选偏好: 存储在 localStorage 中 (通过 globalCache.ts)
+ * 
+ * 事件监听：
+ * - storage: localStorage 变化 (仅 UI 偏好设置)
+ * - customStorageChange: IndexedDB 变化 (笔记数据)
+ * - storage:changed: 存储系统统一事件 (笔记数据)
+ * - coffeeBeansUpdated: 咖啡豆数据变化
+ * - brewingNotesUpdated: 笔记数据变化
+ */
+
 import React, { useState, useEffect, useRef, useCallback, useReducer, useMemo } from 'react'
 import { BrewingNote } from '@/lib/core/config'
 import { BrewingHistoryProps } from '../types'
@@ -12,7 +28,7 @@ import BrewingNoteEditModal from '../Form/BrewingNoteEditModal'
 import ChangeRecordEditModal from '../Form/ChangeRecordEditModal'
 import { BrewingNoteData } from '@/types/app'
 import { getEquipmentName, normalizeEquipmentId } from '../utils'
-import { globalCache, saveSelectedEquipmentPreference, saveSelectedBeanPreference, saveFilterModePreference, saveSortOptionPreference, calculateTotalCoffeeConsumption, formatConsumption, initializeGlobalCache } from './globalCache'
+import { globalCache, saveSelectedEquipmentPreference, saveSelectedBeanPreference, saveFilterModePreference, saveSortOptionPreference, calculateTotalCoffeeConsumption, formatConsumption, initializeGlobalCache, forceReinitializeGlobalCache } from './globalCache'
 import ListView from './ListView'
 import { SortOption } from '../types'
 import { exportSelectedNotes } from '../Share/NotesExporter'
@@ -25,6 +41,8 @@ import { useEnhancedNotesFiltering } from './hooks/useEnhancedNotesFiltering'
 declare global {
     interface Window {
         refreshBrewingNotes?: () => void;
+        forceReinitializeBrewingNotes?: () => void;
+        ensureBrewingNotesSync?: () => Promise<void>;
     }
 }
 
@@ -57,7 +75,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     const [isSearching, setIsSearching] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
 
-    // 显示模式状态（持久化记忆）
+    // 显示模式状态（持久化记忆 - 使用 localStorage 存储 UI 偏好设置）
     const [viewMode, setViewMode] = useState<'list' | 'gallery'>(() => {
         if (typeof window !== 'undefined') {
             return (localStorage.getItem('notes-view-mode') as 'list' | 'gallery') || 'list'
@@ -65,7 +83,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         return 'list'
     })
 
-    // 图片流模式状态（持久化记忆）
+    // 图片流模式状态（持久化记忆 - 使用 localStorage 存储 UI 偏好设置）
     const [isImageFlowMode, setIsImageFlowMode] = useState<boolean>(() => {
         if (typeof window !== 'undefined') {
             return localStorage.getItem('notes-is-image-flow-mode') === 'true'
@@ -73,7 +91,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         return false
     })
 
-    // 带日期图片流模式状态（持久化记忆）
+    // 带日期图片流模式状态（持久化记忆 - 使用 localStorage 存储 UI 偏好设置）
     const [isDateImageFlowMode, setIsDateImageFlowMode] = useState<boolean>(() => {
         if (typeof window !== 'undefined') {
             return localStorage.getItem('notes-is-date-image-flow-mode') === 'true'
@@ -81,7 +99,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         return false
     })
 
-    // 记住用户上次使用的图片流模式类型（持久化存储）
+    // 记住用户上次使用的图片流模式类型（持久化存储 - 使用 localStorage 存储 UI 偏好设置）
     const [lastImageFlowType, setLastImageFlowType] = useState<'normal' | 'date'>(() => {
         if (typeof window !== 'undefined') {
             return (localStorage.getItem('notes-last-image-flow-type') as 'normal' | 'date') || 'normal'
@@ -349,13 +367,17 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     // 加载可用设备和咖啡豆列表
     const loadEquipmentsAndBeans = useCallback(async () => {
         try {
-            // 避免未打开状态下加载数据
-            if (!isOpen) return;
+            console.log('开始加载设备和咖啡豆数据，isOpen:', isOpen);
+            
+            // 移除 isOpen 检查，确保数据总是可以被加载
+            // 这样在应用重新进入时也能正常刷新数据
 
             // 从存储中加载数据
             const { Storage } = await import('@/lib/core/storage');
             const savedNotes = await Storage.get('brewingNotes');
             let parsedNotes: BrewingNote[] = savedNotes ? JSON.parse(savedNotes) : [];
+
+            console.log('加载到的笔记数量:', parsedNotes.length);
 
             // 清理重复器具（一次性修复历史数据）
             parsedNotes = await cleanupDuplicateEquipments(parsedNotes);
@@ -465,11 +487,13 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
             // 确保globalCache.initialized设置为true
             globalCache.initialized = true;
 
+            console.log('数据加载完成，笔记数量:', parsedNotes.length, '设备数量:', uniqueEquipmentIds.length, '咖啡豆数量:', beanNames.length);
+
             // 数据处理现在由 useEnhancedNotesFiltering Hook 自动处理
         } catch (error) {
             console.error("加载设备和咖啡豆数据失败:", error);
         }
-    }, [isOpen, cleanupDuplicateEquipments]);
+    }, [cleanupDuplicateEquipments]);
     
     // 初始化 - 确保在组件挂载时正确初始化数据
     useEffect(() => {
@@ -495,43 +519,120 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
             })();
         }
     }, [isOpen, loadEquipmentsAndBeans, triggerRerender]);
+
+    // 添加页面可见性监听 - 修复应用重新进入时数据不刷新的问题
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const handleVisibilityChange = () => {
+            // 当页面重新变为可见时，重新加载数据
+            if (!document.hidden) {
+                console.log('页面重新可见，刷新笔记数据');
+                loadEquipmentsAndBeans();
+            }
+        };
+
+        const handleAppResume = () => {
+            // 当应用从后台恢复时，重新加载数据
+            console.log('应用恢复，刷新笔记数据');
+            // 使用强制重新初始化，确保获取最新数据
+            forceReinitializeGlobalCache().then(() => {
+                loadEquipmentsAndBeans();
+            });
+        };
+
+        // 监听页面可见性变化
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        
+        // 监听应用恢复事件（主要用于移动端）
+        window.addEventListener('focus', handleAppResume);
+        
+        // Capacitor 应用状态变化监听
+        if (typeof window !== 'undefined' && window.Capacitor) {
+            window.addEventListener('appStateChange', handleAppResume);
+        }
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            window.removeEventListener('focus', handleAppResume);
+            if (typeof window !== 'undefined' && window.Capacitor) {
+                window.removeEventListener('appStateChange', handleAppResume);
+            }
+        };
+    }, [isOpen, loadEquipmentsAndBeans]);
     
     // 监听存储变化
     useEffect(() => {
         const handleStorageChange = (e: StorageEvent) => {
-            if (e.key === 'brewingNotes' && e.newValue !== null) {
-                loadEquipmentsAndBeans();
+            // localStorage 只存储 UI 偏好设置，不存储笔记数据
+            // 笔记数据存储在 IndexedDB 中，通过其他事件监听
+            if (e.key && e.key.startsWith('notes-') && e.newValue !== null) {
+                console.log('检测到笔记 UI 偏好设置变化:', e.key);
+                // UI 偏好设置变化不需要重新加载笔记数据
             }
         };
         
         const handleCustomStorageChange = (e: CustomEvent) => {
             if (e.detail?.key === 'brewingNotes') {
-                // 总是重新加载数据以确保UI同步，但避免重复的网络请求
+                console.log('检测到 IndexedDB 笔记数据变化，重新加载笔记数据');
+                // IndexedDB 中的笔记数据变化时才重新加载数据
+                loadEquipmentsAndBeans();
+            }
+        };
+
+        // 监听 IndexedDB 存储变化事件（这是正确的笔记数据变化事件）
+        const handleStorageChanged = (e: CustomEvent) => {
+            if (e.detail?.key === 'brewingNotes') {
+                console.log('检测到存储系统笔记数据变化，重新加载笔记数据');
                 loadEquipmentsAndBeans();
             }
         };
 
         // 监听咖啡豆更新事件
         const handleCoffeeBeansUpdated = () => {
+            console.log('检测到咖啡豆更新，重新加载笔记数据');
             loadEquipmentsAndBeans();
         };
 
         // 监听笔记更新事件（由咖啡豆管理器触发）
         const handleBrewingNotesUpdated = () => {
+            console.log('检测到笔记更新事件，重新加载笔记数据');
             loadEquipmentsAndBeans();
         };
 
+        // 添加全局刷新函数到 window 对象
+        window.refreshBrewingNotes = () => {
+            console.log('手动触发笔记数据刷新');
+            loadEquipmentsAndBeans();
+        };
+
+        // 添加强制重新初始化函数到 window 对象
+        window.forceReinitializeBrewingNotes = () => {
+            console.log('强制重新初始化笔记数据');
+            forceReinitializeGlobalCache().then(() => {
+                loadEquipmentsAndBeans();
+            });
+        };
 
         window.addEventListener('storage', handleStorageChange)
         window.addEventListener('customStorageChange', handleCustomStorageChange as EventListener)
+        window.addEventListener('storage:changed', handleStorageChanged as EventListener)
         window.addEventListener('coffeeBeansUpdated', handleCoffeeBeansUpdated)
         window.addEventListener('brewingNotesUpdated', handleBrewingNotesUpdated)
 
         return () => {
             window.removeEventListener('storage', handleStorageChange)
             window.removeEventListener('customStorageChange', handleCustomStorageChange as EventListener)
+            window.removeEventListener('storage:changed', handleStorageChanged as EventListener)
             window.removeEventListener('coffeeBeansUpdated', handleCoffeeBeansUpdated)
             window.removeEventListener('brewingNotesUpdated', handleBrewingNotesUpdated)
+            // 清理全局刷新函数
+            if (window.refreshBrewingNotes) {
+                delete window.refreshBrewingNotes;
+            }
+            if (window.forceReinitializeBrewingNotes) {
+                delete window.forceReinitializeBrewingNotes;
+            }
         }
     }, [isOpen, loadEquipmentsAndBeans])
     
@@ -638,6 +739,9 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
             // 保存到存储 - Storage.set() 会自动触发事件
             await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
 
+            // 主动刷新数据，确保UI立即更新
+            await loadEquipmentsAndBeans();
+            
             showToast('笔记已删除', 'success');
         } catch (error) {
             console.error('删除笔记失败:', error);
@@ -707,6 +811,9 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
 
             // 保存更新后的笔记 - Storage.set() 会自动触发事件
             await Storage.set('brewingNotes', JSON.stringify(parsedNotes))
+
+            // 主动刷新数据，确保UI立即更新
+            await loadEquipmentsAndBeans();
 
             // 关闭模态和编辑状态
             setEditingNote(null)
@@ -846,6 +953,9 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
             // 保存更新后的笔记 - Storage.set() 会自动触发事件
             await Storage.set('brewingNotes', JSON.stringify(parsedNotes))
 
+            // 主动刷新数据，确保UI立即更新
+            await loadEquipmentsAndBeans();
+
             // 关闭模态和编辑状态
             setEditingChangeRecord(null)
             setShowChangeRecordEditModal(false)
@@ -866,6 +976,30 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
             onAddNote();
         }
     };
+
+    // 确保数据同步的通用函数
+    const ensureDataSync = useCallback(async () => {
+        try {
+            console.log('确保数据同步');
+            await forceReinitializeGlobalCache();
+            await loadEquipmentsAndBeans();
+            triggerRerender();
+        } catch (error) {
+            console.error('数据同步失败:', error);
+        }
+    }, [loadEquipmentsAndBeans, triggerRerender]);
+
+    // 暴露同步函数到组件外部，便于调试和手动触发
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            window.ensureBrewingNotesSync = ensureDataSync;
+        }
+        return () => {
+            if (typeof window !== 'undefined' && window.ensureBrewingNotesSync) {
+                delete window.ensureBrewingNotesSync;
+            }
+        };
+    }, [ensureDataSync]);
 
 
 
