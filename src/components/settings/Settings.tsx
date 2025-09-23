@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { APP_VERSION, sponsorsList } from '@/lib/core/config'
 import DataManager from '../common/data/DataManager'
 import hapticsUtils from '@/lib/ui/haptics'
-import fontZoomUtils from '@/lib/utils/fontZoomUtils'
+
 import { useTheme } from 'next-themes'
 import { LayoutSettings } from '../brewing/Timer/Settings'
 import {
@@ -14,7 +14,7 @@ import {
   BackupReminderInterval
 } from '@/lib/utils/backupReminderUtils'
 import S3SyncManager, { SyncResult, SyncMetadata } from '@/lib/s3/syncManager'
-import { ChevronLeft, RefreshCw, Loader } from 'lucide-react'
+import { ChevronLeft, ChevronRight, RefreshCw, Loader, Monitor } from 'lucide-react'
 
 import Image from 'next/image'
 import GrinderSettings from './GrinderSettings'
@@ -22,34 +22,9 @@ import { motion, AnimatePresence } from 'framer-motion'
 // 导入Lottie动画JSON文件
 import chuchuAnimation from '../../../public/animations/chuchu-animation.json'
 
-// 按钮组组件
-interface ButtonGroupProps<T extends string> {
-    value: T
-    options: { value: T; label: string }[]
-    onChange: (value: T) => void
-    className?: string
-}
-
-function ButtonGroup<T extends string>({ value, options, onChange, className = '' }: ButtonGroupProps<T>) {
-    return (
-        <div className={`inline-flex rounded bg-neutral-100/60 p-0.5 dark:bg-neutral-800/60 ${className}`}>
-            {options.map((option) => (
-                <button
-                    key={option.value}
-                    className={`px-2.5 py-1 text-xs font-medium rounded transition-all  ${
-                        value === option.value
-                            ? 'bg-white dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100'
-                            : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'
-                    }`}
-                    onClick={() => onChange(option.value)}
-                >
-                    {option.label}
-                </button>
-            ))}
-        </div>
-    )
-}
-
+// 导入ButtonGroup组件
+import { ButtonGroup } from '../ui/ButtonGroup'
+import DisplaySettings from './DisplaySettings'
 // 自定义磨豆机接口
 export interface CustomGrinder {
     id: string
@@ -216,14 +191,11 @@ const Settings: React.FC<SettingsProps> = ({
     // 添加数据管理状态
     const [isDataManagerOpen, setIsDataManagerOpen] = useState(false)
 
-    // 添加字体缩放状态追踪
-    const [zoomLevel, setZoomLevel] = useState(settings.textZoomLevel || 1.0)
-
-    // 添加检查字体缩放是否可用的状态
-    const [isFontZoomEnabled, setIsFontZoomEnabled] = useState(false)
-
     // 获取主题相关方法
-    const { theme, setTheme } = useTheme()
+    const { theme } = useTheme()
+
+    // 添加显示设置状态
+    const [showDisplaySettings, setShowDisplaySettings] = useState(false)
 
     // 添加二维码显示状态
     const [showQRCodes, setShowQRCodes] = useState(false)
@@ -409,22 +381,7 @@ const Settings: React.FC<SettingsProps> = ({
         }
     }, [theme]);
 
-    // 初始化时检查字体缩放功能是否可用并加载当前缩放级别
-    useEffect(() => {
-        // 检查字体缩放功能是否可用
-        setIsFontZoomEnabled(fontZoomUtils.isAvailable());
 
-        const loadFontZoomLevel = () => {
-            if (fontZoomUtils.isAvailable()) {
-                const currentZoom = fontZoomUtils.get();
-                setZoomLevel(currentZoom);
-            }
-        };
-
-        if (isOpen) {
-            loadFontZoomLevel();
-        }
-    }, [isOpen]);
 
     // showConfetti 函数已移到 GrinderSettings 组件中
 
@@ -600,17 +557,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
 
 
 
-    // 处理字体缩放变更
-    const handleFontZoomChange = async (newValue: number) => {
-        setZoomLevel(newValue);
-        fontZoomUtils.set(newValue);
-        await handleChange('textZoomLevel', newValue);
 
-        // 触发震动反馈
-        if (settings.hapticFeedback) {
-            hapticsUtils.light();
-        }
-    }
 
     // 添加预设值函数
     const addDecrementPreset = () => {
@@ -910,190 +857,18 @@ const handleChange = async <K extends keyof SettingsOptions>(
                     </div>
                 </div>
 
-                {/* 显示设置组 */}
-                <div className="px-6 py-4">
-                    <h3 className="text-sm uppercase font-medium tracking-wider text-neutral-500 dark:text-neutral-40 mb-3">
-                        显示
-                    </h3>
-
-                    <div className="space-y-5">
-                        {/* 外观模式 */}
-                        <div className="flex items-center justify-between">
-                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                                外观模式
-                            </div>
-                            <ButtonGroup
-                                value={theme || 'system'}
-                                options={[
-                                    { value: 'light', label: '浅色' },
-                                    { value: 'dark', label: '深色' },
-                                    { value: 'system', label: '系统' }
-                                ]}
-                                onChange={(value) => {
-                                    setTheme(value)
-                                    if (settings.hapticFeedback) {
-                                        hapticsUtils.light();
-                                    }
-                                }}
-                            />
+                {/* 按钮组 */}
+                <div className="px-6 py-4 space-y-4">
+                    <button
+                        onClick={() => setShowDisplaySettings(true)}
+                        className="w-full py-3 px-4 text-sm font-medium text-neutral-800 bg-neutral-100 rounded transition-colors hover:bg-neutral-200 dark:text-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 flex items-center justify-between"
+                    >
+                        <div className="flex items-center space-x-3">
+                            <Monitor className="h-4 w-4 text-neutral-500" />
+                            <span>显示设置</span>
                         </div>
-
-                        {/* 字体缩放设置 - 统一的字体缩放功能 */}
-                        {isFontZoomEnabled && (
-                            <div className="mb-4">
-                                <div className="flex items-center justify-between mb-3">
-                                    <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                                        字体大小
-                                    </div>
-                                    <div className="text-sm text-neutral-400 dark:text-neutral-500">
-                                        {zoomLevel.toFixed(1)}×
-                                    </div>
-                                </div>
-                                <div className="px-1">
-                                    <input
-                                        type="range"
-                                        min="0.8"
-                                        max="1.4"
-                                        step="0.1"
-                                        value={zoomLevel}
-                                        onChange={(e) => handleFontZoomChange(parseFloat(e.target.value))}
-                                        className="w-full h-1.5 bg-neutral-200 rounded-full appearance-none cursor-pointer dark:bg-neutral-700"
-                                    />
-                                    <div className="flex justify-between mt-1 text-xs text-neutral-500">
-                                        <span>小</span>
-                                        <span>大</span>
-                                    </div>
-                                </div>
-                                <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
-                                    调整应用的字体大小，设置会自动保存
-                                </p>
-                            </div>
-                        )}
-
-
-                    </div>
-                </div>
-
-                {/* 安全区域边距设置组 */}
-                <div className="px-6 py-4">
-                    <div className="flex items-center justify-between mb-3">
-                        <h3 className="text-sm uppercase font-medium tracking-wider text-neutral-500 dark:text-neutral-400">
-                            安全区域边距
-                        </h3>
-                        <button
-                            onClick={() => {
-                                const defaultMargins = defaultSettings.safeAreaMargins!;
-                                handleChange('safeAreaMargins', defaultMargins);
-                                if (settings.hapticFeedback) {
-                                    hapticsUtils.light();
-                                }
-                            }}
-                            className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200 transition-colors px-2 py-1 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800"
-                        >
-                            还原默认
-                        </button>
-                    </div>
-                    <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-4">
-                        调整应用界面的上下边距，影响导航栏和内容区域的间距
-                    </p>
-
-                    <div className="space-y-4">
-                        {/* 顶部边距 */}
-                        <div>
-                            <div className="flex items-center justify-between mb-2">
-                                <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                                    顶部边距
-                                </div>
-                                <button
-                                    onClick={() => {
-                                        const currentMargins = settings.safeAreaMargins || defaultSettings.safeAreaMargins!;
-                                        const newMargins = {
-                                            ...currentMargins,
-                                            top: defaultSettings.safeAreaMargins!.top
-                                        };
-                                        handleChange('safeAreaMargins', newMargins);
-                                        if (settings.hapticFeedback) {
-                                            hapticsUtils.light();
-                                        }
-                                    }}
-                                    className="text-sm text-neutral-400 dark:text-neutral-500 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors px-1 py-0.5 rounded"
-                                    title="点击重置为默认值"
-                                >
-                                    {settings.safeAreaMargins?.top || defaultSettings.safeAreaMargins!.top}px
-                                </button>
-                            </div>
-                            <div className="px-1">
-                                <input
-                                    type="range"
-                                    min="12"
-                                    max="84"
-                                    step="2"
-                                    value={settings.safeAreaMargins?.top || defaultSettings.safeAreaMargins!.top}
-                                    onChange={(e) => {
-                                        const currentMargins = settings.safeAreaMargins || defaultSettings.safeAreaMargins!;
-                                        const newMargins = {
-                                            ...currentMargins,
-                                            top: parseInt(e.target.value)
-                                        };
-                                        handleChange('safeAreaMargins', newMargins);
-                                    }}
-                                    className="w-full h-1.5 bg-neutral-200 rounded-full appearance-none cursor-pointer dark:bg-neutral-700"
-                                />
-                                <div className="flex justify-between mt-1 text-xs text-neutral-500">
-                                    <span>20px</span>
-                                    <span>80px</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* 底部边距 */}
-                        <div>
-                            <div className="flex items-center justify-between mb-2">
-                                <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                                    底部边距
-                                </div>
-                                <button
-                                    onClick={() => {
-                                        const currentMargins = settings.safeAreaMargins || defaultSettings.safeAreaMargins!;
-                                        const newMargins = {
-                                            ...currentMargins,
-                                            bottom: defaultSettings.safeAreaMargins!.bottom
-                                        };
-                                        handleChange('safeAreaMargins', newMargins);
-                                        if (settings.hapticFeedback) {
-                                            hapticsUtils.light();
-                                        }
-                                    }}
-                                    className="text-sm text-neutral-400 dark:text-neutral-500 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors px-1 py-0.5 rounded"
-                                    title="点击重置为默认值"
-                                >
-                                    {settings.safeAreaMargins?.bottom || defaultSettings.safeAreaMargins!.bottom}px
-                                </button>
-                            </div>
-                            <div className="px-1">
-                                <input
-                                    type="range"
-                                    min="20"
-                                    max="80"
-                                    step="2"
-                                    value={settings.safeAreaMargins?.bottom || defaultSettings.safeAreaMargins!.bottom}
-                                    onChange={(e) => {
-                                        const currentMargins = settings.safeAreaMargins || defaultSettings.safeAreaMargins!;
-                                        const newMargins = {
-                                            ...currentMargins,
-                                            bottom: parseInt(e.target.value)
-                                        };
-                                        handleChange('safeAreaMargins', newMargins);
-                                    }}
-                                    className="w-full h-1.5 bg-neutral-200 rounded-full appearance-none cursor-pointer dark:bg-neutral-700"
-                                />
-                                <div className="flex justify-between mt-1 text-xs text-neutral-500">
-                                    <span>20px</span>
-                                    <span>80px</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                        <ChevronRight className="h-4 w-4 text-neutral-400" />
+                    </button>
                 </div>
 
                 {/* 研磨度设置组 */}
@@ -1951,6 +1726,17 @@ const handleChange = async <K extends keyof SettingsOptions>(
                     </AnimatePresence>
                 </div>
             </div>
+
+            {/* 显示设置组件 */}
+            <AnimatePresence>
+                {showDisplaySettings && (
+                    <DisplaySettings
+                        settings={settings}
+                        onClose={() => setShowDisplaySettings(false)}
+                        handleChange={handleChange}
+                    />
+                )}
+            </AnimatePresence>
 
             {/* 数据管理组件 */}
             {isDataManagerOpen && (
