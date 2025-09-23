@@ -14,11 +14,13 @@ import {
   BackupReminderInterval
 } from '@/lib/utils/backupReminderUtils'
 import S3SyncManager, { SyncResult, SyncMetadata } from '@/lib/s3/syncManager'
-import { ChevronLeft, ChevronRight, RefreshCw, Loader, Monitor, SlidersHorizontal, Archive } from 'lucide-react'
+import { ChevronLeft, ChevronRight, RefreshCw, Loader, Monitor, SlidersHorizontal, Archive, List, CalendarDays } from 'lucide-react'
 
 import Image from 'next/image'
 import GrinderSettings from './GrinderSettings'
 import StockSettings from './StockSettings' // 导入新的组件
+import BeanSettings from './BeanSettings' // 导入新的组件
+import FlavorPeriodSettings from './FlavorPeriodSettings'
 import { motion, AnimatePresence } from 'framer-motion'
 // 导入Lottie动画JSON文件
 import chuchuAnimation from '../../../public/animations/chuchu-animation.json'
@@ -168,27 +170,6 @@ const Settings: React.FC<SettingsProps> = ({
     setSettings,
     onDataChange,
 }) => {
-    // 辅助函数：更新自定义赏味期设置
-    const updateCustomFlavorPeriod = (
-        roastType: 'light' | 'medium' | 'dark',
-        field: 'startDay' | 'endDay',
-        value: number
-    ) => {
-        const current = settings.customFlavorPeriod || {
-            light: { startDay: 0, endDay: 0 },
-            medium: { startDay: 0, endDay: 0 },
-            dark: { startDay: 0, endDay: 0 }
-        };
-
-        const newCustomFlavorPeriod = {
-            ...current,
-            [roastType]: {
-                ...current[roastType],
-                [field]: value
-            }
-        };
-        handleChange('customFlavorPeriod', newCustomFlavorPeriod);
-    };
     // 添加数据管理状态
     const [isDataManagerOpen, setIsDataManagerOpen] = useState(false)
 
@@ -203,6 +184,12 @@ const Settings: React.FC<SettingsProps> = ({
 
     // 添加库存扣除预设值设置状态
     const [showStockSettings, setShowStockSettings] = useState(false)
+
+    // 添加豆仓列表显示设置状态
+    const [showBeanSettings, setShowBeanSettings] = useState(false)
+
+    // 添加赏味期设置状态
+    const [showFlavorPeriodSettings, setShowFlavorPeriodSettings] = useState(false)
 
     // 添加二维码显示状态
     const [showQRCodes, setShowQRCodes] = useState(false)
@@ -836,6 +823,16 @@ const handleChange = async <K extends keyof SettingsOptions>(
                         <ChevronRight className="h-4 w-4 text-neutral-400" />
                     </button>
                     <button
+                        onClick={() => setShowBeanSettings(true)}
+                        className="w-full py-3 px-4 text-sm font-medium text-neutral-800 bg-neutral-100 rounded transition-colors hover:bg-neutral-200 dark:text-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 flex items-center justify-between"
+                    >
+                        <div className="flex items-center space-x-3">
+                            <List className="h-4 w-4 text-neutral-500" />
+                            <span>豆仓列表显示设置</span>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-neutral-400" />
+                    </button>
+                    <button
                         onClick={() => setShowGrinderSettings(true)}
                         className="w-full py-3 px-4 text-sm font-medium text-neutral-800 bg-neutral-100 rounded transition-colors hover:bg-neutral-200 dark:text-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 flex items-center justify-between"
                     >
@@ -855,262 +852,23 @@ const handleChange = async <K extends keyof SettingsOptions>(
                         </div>
                         <ChevronRight className="h-4 w-4 text-neutral-400" />
                     </button>
+                    <button
+                        onClick={() => setShowFlavorPeriodSettings(true)}
+                        className="w-full py-3 px-4 text-sm font-medium text-neutral-800 bg-neutral-100 rounded transition-colors hover:bg-neutral-200 dark:text-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 flex items-center justify-between"
+                    >
+                        <div className="flex items-center space-x-3">
+                            <CalendarDays className="h-4 w-4 text-neutral-500" />
+                            <span>赏味期预设值</span>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-neutral-400" />
+                    </button>
                 </div>
 
                     
 
-                {/* 咖啡豆显示设置组 */}
-                <div className="px-6 py-4">
-                    <h3 className="text-sm uppercase font-medium tracking-wider text-neutral-500 dark:text-neutral-400 mb-3">
-                        豆仓列表显示设置
-                    </h3>
 
-                    <div className="space-y-5">
-                        {/* 简化咖啡豆名称 */}
-                        <div className="flex items-center justify-between">
-                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                                简化咖啡豆名称
-                            </div>
-                            <label className="relative inline-flex cursor-pointer items-center">
-                                <input
-                                    type="checkbox"
-                                    checked={settings.showOnlyBeanName || false}
-                                    onChange={(e) => handleChange('showOnlyBeanName', e.target.checked)}
-                                    className="peer sr-only"
-                                />
-                                <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-                            </label>
-                        </div>
 
-                        {/* 日期显示模式 */}
-                        <div className="flex items-center justify-between">
-                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                                日期显示模式
-                            </div>
-                            <ButtonGroup
-                                value={settings.dateDisplayMode || 'date'}
-                                options={[
-                                    { value: 'date', label: '日期' },
-                                    { value: 'flavorPeriod', label: '赏味期' },
-                                    { value: 'agingDays', label: '养豆天数' }
-                                ]}
-                                onChange={(value) => handleChange('dateDisplayMode', value as 'date' | 'flavorPeriod' | 'agingDays')}
-                            />
-                        </div>
 
-                        {/* 显示总价格 */}
-                        <div className="flex items-center justify-between">
-                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                                显示总价格
-                            </div>
-                            <label className="relative inline-flex cursor-pointer items-center">
-                                <input
-                                    type="checkbox"
-                                    checked={settings.showTotalPrice || false}
-                                    onChange={(e) => handleChange('showTotalPrice', e.target.checked)}
-                                    className="peer sr-only"
-                                />
-                                <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-                            </label>
-                        </div>
-
-                        {/* 显示风味信息 */}
-                        <div className="flex items-center justify-between">
-                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                                显示风味信息
-                            </div>
-                            <label className="relative inline-flex cursor-pointer items-center">
-                                <input
-                                    type="checkbox"
-                                    checked={settings.showFlavorInfo || false}
-                                    onChange={(e) => handleChange('showFlavorInfo', e.target.checked)}
-                                    className="peer sr-only"
-                                />
-                                <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-                            </label>
-                        </div>
-
-                        {/* 限制备注显示行数 */}
-                        <div className="flex items-center justify-between">
-                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                                限制备注显示行数
-                            </div>
-                            <label className="relative inline-flex cursor-pointer items-center">
-                                <input
-                                    type="checkbox"
-                                    checked={settings.limitNotesLines || false}
-                                    onChange={(e) => handleChange('limitNotesLines', e.target.checked)}
-                                    className="peer sr-only"
-                                />
-                                <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-                            </label>
-                        </div>
-
-                        {/* 备注最大显示行数 - 只有在开启限制时才显示 */}
-                        {settings.limitNotesLines && (
-                            <div className="ml-4 border-l-2 border-neutral-200 dark:border-neutral-700 pl-4">
-                                <div className="flex items-center justify-between mb-2">
-                                    <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                                        最大显示行数
-                                    </div>
-                                    <div className="text-sm text-neutral-400 dark:text-neutral-500">
-                                        {settings.notesMaxLines || 3}行
-                                    </div>
-                                </div>
-                                <div className="px-1">
-                                    <input
-                                        type="range"
-                                        min="1"
-                                        max="6"
-                                        step="1"
-                                        value={settings.notesMaxLines || 3}
-                                        onChange={(e) => handleChange('notesMaxLines', parseInt(e.target.value))}
-                                        className="w-full h-1.5 bg-neutral-200 rounded-full appearance-none cursor-pointer dark:bg-neutral-700"
-                                    />
-                                    <div className="flex justify-between mt-1 text-xs text-neutral-500">
-                                        <span>1行</span>
-                                        <span>6行</span>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                    </div>
-                </div>
-
-                {/* 自定义赏味期设置组 */}
-                <div className="px-6 py-4">
-                    <h3 className="text-sm uppercase font-medium tracking-wider text-neutral-500 dark:text-neutral-400 mb-3">
-                        自定义赏味期预设
-                    </h3>
-                    <div className="space-y-3">
-                        {/* 浅烘焙设置 */}
-                        <div className="flex items-center justify-between">
-                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200 w-12">
-                                浅烘
-                            </div>
-                            <div className="flex items-center space-x-3">
-                                <div className="flex items-center space-x-1">
-                                    <span className="text-sm text-neutral-500 dark:text-neutral-400">养豆</span>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        max="30"
-                                        value={settings.customFlavorPeriod?.light?.startDay === 0 ? '' : settings.customFlavorPeriod?.light?.startDay || ''}
-                                        placeholder="7"
-                                        onChange={(e) => {
-                                            const value = e.target.value === '' ? 0 : parseInt(e.target.value) || 0;
-                                            updateCustomFlavorPeriod('light', 'startDay', value);
-                                        }}
-                                        className="w-12 py-1 px-2 text-xs text-center bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded focus:outline-hidden focus:ring-1 focus:ring-neutral-500"
-                                    />
-                                    <span className="text-sm text-neutral-500 dark:text-neutral-400">天</span>
-                                </div>
-                                <div className="flex items-center space-x-1">
-                                    <span className="text-sm text-neutral-500 dark:text-neutral-400">赏味</span>
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        max="90"
-                                        value={settings.customFlavorPeriod?.light?.endDay === 0 ? '' : settings.customFlavorPeriod?.light?.endDay || ''}
-                                        placeholder="30"
-                                        onChange={(e) => {
-                                            const value = e.target.value === '' ? 0 : parseInt(e.target.value) || 0;
-                                            updateCustomFlavorPeriod('light', 'endDay', value);
-                                        }}
-                                        className="w-12 py-1 px-2 text-xs text-center bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded focus:outline-hidden focus:ring-1 focus:ring-neutral-500"
-                                    />
-                                    <span className="text-sm text-neutral-500 dark:text-neutral-400">天</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* 中烘焙设置 */}
-                        <div className="flex items-center justify-between">
-                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200 w-12">
-                                中烘
-                            </div>
-                            <div className="flex items-center space-x-3">
-                                <div className="flex items-center space-x-1">
-                                    <span className="text-sm text-neutral-500 dark:text-neutral-400">养豆</span>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        max="30"
-                                        value={settings.customFlavorPeriod?.medium?.startDay === 0 ? '' : settings.customFlavorPeriod?.medium?.startDay || ''}
-                                        placeholder="10"
-                                        onChange={(e) => {
-                                            const value = e.target.value === '' ? 0 : parseInt(e.target.value) || 0;
-                                            updateCustomFlavorPeriod('medium', 'startDay', value);
-                                        }}
-                                        className="w-12 py-1 px-2 text-xs text-center bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded focus:outline-hidden focus:ring-1 focus:ring-neutral-500"
-                                    />
-                                    <span className="text-sm text-neutral-500 dark:text-neutral-400">天</span>
-                                </div>
-                                <div className="flex items-center space-x-1">
-                                    <span className="text-sm text-neutral-500 dark:text-neutral-400">赏味</span>
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        max="90"
-                                        value={settings.customFlavorPeriod?.medium?.endDay === 0 ? '' : settings.customFlavorPeriod?.medium?.endDay || ''}
-                                        placeholder="30"
-                                        onChange={(e) => {
-                                            const value = e.target.value === '' ? 0 : parseInt(e.target.value) || 0;
-                                            updateCustomFlavorPeriod('medium', 'endDay', value);
-                                        }}
-                                        className="w-12 py-1 px-2 text-xs text-center bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded focus:outline-hidden focus:ring-1 focus:ring-neutral-500"
-                                    />
-                                    <span className="text-sm text-neutral-500 dark:text-neutral-400">天</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* 深烘焙设置 */}
-                        <div className="flex items-center justify-between">
-                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200 w-12">
-                                深烘
-                            </div>
-                            <div className="flex items-center space-x-3">
-                                <div className="flex items-center space-x-1">
-                                    <span className="text-sm text-neutral-500 dark:text-neutral-400">养豆</span>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        max="30"
-                                        value={settings.customFlavorPeriod?.dark?.startDay === 0 ? '' : settings.customFlavorPeriod?.dark?.startDay || ''}
-                                        placeholder="14"
-                                        onChange={(e) => {
-                                            const value = e.target.value === '' ? 0 : parseInt(e.target.value) || 0;
-                                            updateCustomFlavorPeriod('dark', 'startDay', value);
-                                        }}
-                                        className="w-12 py-1 px-2 text-xs text-center bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded focus:outline-hidden focus:ring-1 focus:ring-neutral-500"
-                                    />
-                                    <span className="text-sm text-neutral-500 dark:text-neutral-400">天</span>
-                                </div>
-                                <div className="flex items-center space-x-1">
-                                    <span className="text-sm text-neutral-500 dark:text-neutral-400">赏味</span>
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        max="90"
-                                        value={settings.customFlavorPeriod?.dark?.endDay === 0 ? '' : settings.customFlavorPeriod?.dark?.endDay || ''}
-                                        placeholder="60"
-                                        onChange={(e) => {
-                                            const value = e.target.value === '' ? 0 : parseInt(e.target.value) || 0;
-                                            updateCustomFlavorPeriod('dark', 'endDay', value);
-                                        }}
-                                        className="w-12 py-1 px-2 text-xs text-center bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded focus:outline-hidden focus:ring-1 focus:ring-neutral-500"
-                                    />
-                                    <span className="text-sm text-neutral-500 dark:text-neutral-400">天</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                     <h3 className="text-sm text-neutral-500 dark:text-neutral-400 mt-3">
-                        添加咖啡豆时，会根据烘焙度自动设定赏味期。
-                    </h3>
-                </div>
 
                 {/* 计时器布局设置组 */}
                 <div className="px-6 py-4">
@@ -1677,6 +1435,28 @@ const handleChange = async <K extends keyof SettingsOptions>(
                     <StockSettings
                         settings={settings}
                         onClose={() => setShowStockSettings(false)}
+                        handleChange={handleChange}
+                    />
+                )}
+            </AnimatePresence>
+
+            {/* 豆仓列表显示设置组件 */}
+            <AnimatePresence>
+                {showBeanSettings && (
+                    <BeanSettings
+                        settings={settings}
+                        onClose={() => setShowBeanSettings(false)}
+                        handleChange={handleChange}
+                    />
+                )}
+            </AnimatePresence>
+
+            {/* 赏味期设置组件 */}
+            <AnimatePresence>
+                {showFlavorPeriodSettings && (
+                    <FlavorPeriodSettings
+                        settings={settings}
+                        onClose={() => setShowFlavorPeriodSettings(false)}
                         handleChange={handleChange}
                     />
                 )}

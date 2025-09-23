@@ -6,7 +6,7 @@ import { SettingsOptions } from './Settings'
 import { useTheme } from 'next-themes'
 import fontZoomUtils from '@/lib/utils/fontZoomUtils'
 import hapticsUtils from '@/lib/ui/haptics'
-import { ButtonGroup } from '../ui/ButtonGroup'
+import { ButtonGroup } from '@/components/ui/ButtonGroup'
 import { motion } from 'framer-motion'
 
 interface DisplaySettingsProps {
