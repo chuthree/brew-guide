@@ -1,10 +1,9 @@
 'use client'
 
 import React, { useState, useCallback, useEffect, useRef } from 'react'
-import { ChevronLeft, RefreshCw, Loader, Database } from 'lucide-react'
+import { ChevronLeft} from 'lucide-react'
 import { DataManager as DataManagerUtil } from '@/lib/core/dataManager'
 import { compressBase64Image } from '@/lib/utils/imageCapture'
-import { APP_VERSION } from '@/lib/core/config'
 import { Capacitor } from '@capacitor/core'
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem'
 import { Share } from '@capacitor/share'
@@ -12,7 +11,6 @@ import { SettingsOptions } from './Settings'
 import { ButtonGroup } from '../ui/ButtonGroup'
 import { motion, AnimatePresence } from 'framer-motion'
 import S3SyncManager, { SyncResult, SyncMetadata } from '@/lib/s3/syncManager'
-import DataManager from '../common/data/DataManager'
 import {
   BackupReminderSettings,
   BackupReminderUtils,
@@ -793,18 +791,21 @@ const DataSettings: React.FC<DataSettingsProps> = ({
                                             disabled={isSyncing}
                                             className="w-full py-2 px-3 text-sm font-medium text-white bg-neutral-700 hover:bg-neutral-800 disabled:bg-neutral-400 rounded transition-colors"
                                         >
-                                            {isSyncing ? '同步中...' : '立即同步'}
+                                            {isSyncing ? '同步中...' : isSyncNeeded ? '需要同步' : '立即同步'}
                                         </button>
-                                        {lastSyncTime && (
-                                            <div className="text-xs text-neutral-400 dark:text-neutral-500">
-                                                最后同步：{lastSyncTime.toLocaleString('zh-CN', {
-                                                    month: 'numeric',
-                                                    day: 'numeric',
-                                                    hour: '2-digit',
-                                                    minute: '2-digit'
-                                                })}
-                                            </div>
-                                        )}
+                                        <div className="text-xs text-neutral-400 dark:text-neutral-500">
+                                            {isSyncNeeded && <div className="text-orange-500 dark:text-orange-400">检测到数据变更，建议同步</div>}
+                                            {lastSyncTime && (
+                                                <div>
+                                                    最后同步：{lastSyncTime.toLocaleString('zh-CN', {
+                                                        month: 'numeric',
+                                                        day: 'numeric',
+                                                        hour: '2-digit',
+                                                        minute: '2-digit'
+                                                    })}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 )}
                             </div>

@@ -2,19 +2,11 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { APP_VERSION, sponsorsList } from '@/lib/core/config'
-import DataManager from '../common/data/DataManager'
 import hapticsUtils from '@/lib/ui/haptics'
 
 import { useTheme } from 'next-themes'
 import { LayoutSettings } from '../brewing/Timer/Settings'
-import {
-  BackupReminderSettings,
-  BackupReminderUtils,
-  BACKUP_REMINDER_INTERVALS,
-  BackupReminderInterval
-} from '@/lib/utils/backupReminderUtils'
-import S3SyncManager, { SyncResult, SyncMetadata } from '@/lib/s3/syncManager'
-import { ChevronLeft, ChevronRight, RefreshCw, Loader, Monitor, SlidersHorizontal, Archive, List, CalendarDays, Timer, Database } from 'lucide-react'
+import { ChevronLeft, ChevronRight, RefreshCw, Loader, Monitor, SlidersHorizontal, Archive, List, CalendarDays, Timer, Database, Bell, ClipboardPen } from 'lucide-react'
 
 import Image from 'next/image'
 import GrinderSettings from './GrinderSettings'
@@ -27,9 +19,9 @@ import { motion, AnimatePresence } from 'framer-motion'
 import chuchuAnimation from '../../../public/animations/chuchu-animation.json'
 
 // 导入ButtonGroup组件
-import { ButtonGroup } from '../ui/ButtonGroup'
 import DisplaySettings from './DisplaySettings'
 import DataSettings from './DataSettings'
+import NotificationSettings from './NotificationSettings'
 // 自定义磨豆机接口
 export interface CustomGrinder {
     id: string
@@ -67,7 +59,12 @@ export interface SettingsOptions {
         dark: { startDay: number; endDay: number } // 深烘焙
     }
     // 备份提醒设置
-    backupReminder?: BackupReminderSettings
+    backupReminder?: {
+        enabled: boolean
+        interval: string
+        lastBackupDate: string
+        nextBackupDate: string
+    }
     // S3同步设置
     s3Sync?: {
         enabled: boolean
@@ -140,30 +137,7 @@ interface SettingsProps {
     onDataChange?: () => void
 }
 
-type S3SyncSettings = NonNullable<SettingsOptions['s3Sync']>
 
-const normalizeS3Settings = (incoming?: SettingsOptions['s3Sync'] | null): S3SyncSettings => {
-    const defaults = defaultSettings.s3Sync!
-
-    if (!incoming) {
-        return { ...defaults }
-    }
-
-    const sanitizedRecord = { ...(incoming || {}) } as Record<string, unknown>
-    delete sanitizedRecord.autoSync
-    delete sanitizedRecord.syncInterval
-
-    const withDefaults: S3SyncSettings = {
-        ...defaults,
-        ...(sanitizedRecord as Partial<S3SyncSettings>),
-        syncMode: 'manual'
-    }
-
-    return {
-        ...withDefaults,
-        endpoint: withDefaults.endpoint || ''
-    }
-}
 
 const Settings: React.FC<SettingsProps> = ({
     isOpen,
@@ -172,9 +146,6 @@ const Settings: React.FC<SettingsProps> = ({
     setSettings,
     onDataChange,
 }) => {
-    // 添加数据管理状态
-    const [isDataManagerOpen, setIsDataManagerOpen] = useState(false)
-
     // 获取主题相关方法
     const { theme } = useTheme()
 
@@ -199,12 +170,13 @@ const Settings: React.FC<SettingsProps> = ({
     // 添加数据管理设置状态
     const [showDataSettings, setShowDataSettings] = useState(false)
 
+    // 添加通知设置状态
+    const [showNotificationSettings, setShowNotificationSettings] = useState(false)
+
     // 添加二维码显示状态
     const [showQRCodes, setShowQRCodes] = useState(false)
     // 添加显示哪种二维码的状态
     const [qrCodeType, setQrCodeType] = useState<'appreciation' | 'group' | null>(null)
-
-
 
     // 添加彩蛋动画状态
     const [showEasterEgg, setShowEasterEgg] = useState(false)
@@ -212,21 +184,9 @@ const Settings: React.FC<SettingsProps> = ({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [LottieComponent, setLottieComponent] = useState<any>(null)
 
-    // 备份提醒相关状态
-    const [backupReminderSettings, setBackupReminderSettings] = useState<BackupReminderSettings | null>(null)
-    const [nextReminderText, setNextReminderText] = useState('')
-
-    // S3同步相关状态
-    const [s3Settings, setS3Settings] = useState<S3SyncSettings>(() => normalizeS3Settings(settings.s3Sync))
+    // S3同步相关状态（仅用于同步按钮）
     const [s3Status, setS3Status] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected')
-    const [s3Error, setS3Error] = useState<string>('')
-    const [showS3SecretKey, setShowS3SecretKey] = useState(false)
-    const [s3Expanded, setS3Expanded] = useState(false)
-    const [syncManager, setSyncManager] = useState<S3SyncManager | null>(null)
-    const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null)
     const [isSyncing, setIsSyncing] = useState(false)
-    const [showConflictModal, setShowConflictModal] = useState(false)
-    const [conflictRemoteMetadata, setConflictRemoteMetadata] = useState<SyncMetadata | null>(null)
     const [isSyncNeeded, setIsSyncNeeded] = useState(false)
 
     // 创建音效播放引用
@@ -247,67 +207,21 @@ const Settings: React.FC<SettingsProps> = ({
 
 
 
-    // 当settings.s3Sync发生变化时更新s3Settings状态，并根据上次成功状态自动尝试连接
+        // 通过 DataSettings 组件获取 S3 同步状态
     useEffect(() => {
-        if (settings.s3Sync) {
-            const normalized = normalizeS3Settings(settings.s3Sync)
-            setS3Settings(normalized)
-            console.warn('🔄 S3设置已从localStorage加载:', normalized)
+        const handleS3StatusChange = (event: CustomEvent) => {
+            const { status, syncing, needsSync } = event.detail;
+            setS3Status(status);
+            setIsSyncing(syncing);
+            setIsSyncNeeded(needsSync);
+        };
 
-            // 如果上次连接成功，则自动尝试连接
-            if (
-                normalized.enabled &&
-                normalized.lastConnectionSuccess &&
-                normalized.accessKeyId &&
-                normalized.secretAccessKey &&
-                normalized.bucketName
-            ) {
-                // 使用一个函数来避免在useEffect中直接使用async函数
-                const autoConnect = async () => {
-                    const manager = new S3SyncManager()
-                    const connected = await manager.initialize({
-                        region: normalized.region,
-                        accessKeyId: normalized.accessKeyId,
-                        secretAccessKey: normalized.secretAccessKey,
-                        bucketName: normalized.bucketName,
-                        prefix: normalized.prefix,
-                        endpoint: normalized.endpoint || undefined
-                    })
+        // 监听来自 DataSettings 组件的状态更新事件
+        window.addEventListener('s3StatusChange', handleS3StatusChange as EventListener);
 
-                    if (connected) {
-                        setS3Status('connected')
-                        setSyncManager(manager)
-                        const lastSync = await manager.getLastSyncTime()
-                        setLastSyncTime(lastSync)
-                        setS3Expanded(false) // 连接成功后默认不展开
-                        // 检查是否需要同步
-                        const needsSync = await manager.needsSync()
-                        setIsSyncNeeded(needsSync)
-                    } else {
-                        setS3Status('error')
-                        setS3Error('自动连接失败，请检查配置')
-                    }
-                }
-                autoConnect()
-            }
-        }
-    }, [settings.s3Sync]);
-
-    // 加载备份提醒设置
-    useEffect(() => {
-        const loadBackupReminderSettings = async () => {
-            try {
-                const reminderSettings = await BackupReminderUtils.getSettings()
-                setBackupReminderSettings(reminderSettings)
-
-                const nextText = await BackupReminderUtils.getNextReminderText()
-                setNextReminderText(nextText)
-            } catch (error) {
-                console.error('加载备份提醒设置失败:', error)
-            }
-        }
-
-        loadBackupReminderSettings()
+        return () => {
+            window.removeEventListener('s3StatusChange', handleS3StatusChange as EventListener);
+        };
     }, []);
 
     // 添加主题颜色更新的 Effect
@@ -397,156 +311,16 @@ const handleChange = async <K extends keyof SettingsOptions>(
 
 }
 
-    // 处理备份提醒设置变更
-    const handleBackupReminderChange = async (enabled: boolean) => {
-        try {
-            await BackupReminderUtils.setEnabled(enabled)
-            const updatedSettings = await BackupReminderUtils.getSettings()
-            setBackupReminderSettings(updatedSettings)
-
-            const nextText = await BackupReminderUtils.getNextReminderText()
-            setNextReminderText(nextText)
-
-            // 触发震动反馈
-            if (settings.hapticFeedback) {
-                hapticsUtils.light();
-            }
-        } catch (error) {
-            console.error('更新备份提醒设置失败:', error)
+    // 执行同步，现在通过事件触发
+    const performSync = useCallback(() => {
+        // 触发同步事件，让 DataSettings 组件处理
+        window.dispatchEvent(new CustomEvent('s3SyncRequested'));
+        
+        // 触发震动反馈
+        if (settings.hapticFeedback) {
+            hapticsUtils.light();
         }
-    }
-
-    // 处理备份提醒间隔变更
-    const handleBackupIntervalChange = async (interval: BackupReminderInterval) => {
-        try {
-            await BackupReminderUtils.updateInterval(interval)
-            const updatedSettings = await BackupReminderUtils.getSettings()
-            setBackupReminderSettings(updatedSettings)
-
-            const nextText = await BackupReminderUtils.getNextReminderText()
-            setNextReminderText(nextText)
-
-            // 触发震动反馈
-            if (settings.hapticFeedback) {
-                hapticsUtils.light();
-            }
-        } catch (error) {
-            console.error('更新备份提醒间隔失败:', error)
-        }
-    }
-
-    // 处理S3设置变更
-    const handleS3SettingChange = <K extends keyof S3SyncSettings>(
-        key: K,
-        value: S3SyncSettings[K]
-    ) => {
-        const newS3Settings = normalizeS3Settings({ ...s3Settings, [key]: value, lastConnectionSuccess: false } as S3SyncSettings)
-        setS3Settings(newS3Settings)
-        handleChange('s3Sync', newS3Settings)
-    }
-
-    // 执行同步（仅手动）
-    const performSync = useCallback(async (direction: 'auto' | 'upload' | 'download' = 'auto') => {
-        if (!syncManager) {
-            setS3Error('请先测试连接')
-            return
-        }
-
-        if (isSyncing) {
-            setS3Error('同步正在进行中')
-            return
-        }
-
-        setIsSyncing(true)
-        setS3Error('')
-
-        try {
-            const result: SyncResult = await syncManager.sync(direction)
-
-            if (result.conflict) {
-                setConflictRemoteMetadata(result.remoteMetadata || null)
-                setShowConflictModal(true)
-                setS3Error('数据冲突：本地和云端数据都已更改。')
-                return // 等待用户选择
-            }
-
-            if (result.success) {
-                const lastSync = await syncManager.getLastSyncTime()
-                setLastSyncTime(lastSync)
-                setIsSyncNeeded(false) // 同步成功后，重置状态
-
-                if (settings.hapticFeedback) {
-                    hapticsUtils.medium()
-                }
-
-                onDataChange?.()
-            } else {
-                setS3Error(result.message || '同步失败')
-            }
-        } catch (error) {
-            console.error('同步失败:', error)
-            setS3Error(`同步失败: ${error instanceof Error ? error.message : '未知错误'}`)
-        } finally {
-            setIsSyncing(false)
-        }
-    }, [syncManager, isSyncing, settings.hapticFeedback, onDataChange])
-
-    const handleConflictResolution = async (direction: 'upload' | 'download') => {
-        setShowConflictModal(false)
-        await performSync(direction)
-    }
-
-    // 测试S3连接
-    const testS3Connection = async () => {
-        if (!s3Settings.accessKeyId || !s3Settings.secretAccessKey || !s3Settings.bucketName) {
-            setS3Error('请填写完整的S3配置信息')
-            setS3Status('error')
-            return
-        }
-
-        setS3Status('connecting')
-        setS3Error('')
-
-        try {
-            const manager = new S3SyncManager()
-            const connected = await manager.initialize({
-                region: s3Settings.region,
-                accessKeyId: s3Settings.accessKeyId,
-                secretAccessKey: s3Settings.secretAccessKey,
-                bucketName: s3Settings.bucketName,
-                prefix: s3Settings.prefix,
-                endpoint: s3Settings.endpoint || undefined
-            })
-
-            if (connected) {
-                setS3Status('connected')
-                setSyncManager(manager)
-                setS3Expanded(true) // 连接成功后自动展开
-
-                // 保存连接成功的状态
-                const newS3Settings = { ...s3Settings, lastConnectionSuccess: true }
-                handleChange('s3Sync', newS3Settings)
-
-                // 获取最后同步时间
-                const lastSync = await manager.getLastSyncTime()
-                setLastSyncTime(lastSync)
-
-                // 检查是否需要同步
-                const needsSync = await manager.needsSync()
-                setIsSyncNeeded(needsSync)
-
-                if (settings.hapticFeedback) {
-                    hapticsUtils.light()
-                }
-            } else {
-                setS3Status('error')
-                setS3Error('连接失败，请检查S3配置信息')
-            }
-        } catch (error) {
-            setS3Status('error')
-            setS3Error(`连接失败: ${error instanceof Error ? error.message : '未知错误'}`)
-        }
-    }
+    }, [settings.hapticFeedback])
 
 
 
@@ -612,7 +386,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                 {/* 同步按钮 */}
                 {s3Status === 'connected' && (
                     <button
-                        onClick={() => performSync('auto')}
+                        onClick={performSync}
                         disabled={isSyncing}
                         className="absolute right-4 flex items-center justify-center w-10 h-10 rounded-full text-neutral-700 bg-neutral-100 dark:text-neutral-300 dark:bg-neutral-800 transition-colors"
                     >
@@ -748,7 +522,6 @@ const handleChange = async <K extends keyof SettingsOptions>(
                 {/* 个人信息设置组 */}
                 <div className="px-6 py-4">
                     <div className="space-y-4">
-                        {/* 用户名 */}
                         <div>
                             <label htmlFor="username" className="block text-sm font-medium text-neutral-800 dark:text-neutral-200 mb-2">
                                 用户名
@@ -761,62 +534,13 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                 placeholder="请输入您的用户名"
                                 className="w-full py-2 px-3 text-sm font-medium rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 appearance-none focus:outline-hidden focus:ring-2 focus:ring-neutral-500"
                             />
-                            <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
+                            <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
                                 用于在分享时显示签名
                             </p>
                         </div>
                     </div>
                 </div>
 
-                {/* 时间框架设置组 */}
-                <div className="px-6 py-4">
-                    <h3 className="text-sm uppercase font-medium tracking-wider text-neutral-500 dark:text-neutral-400 mb-3">
-                        通知
-                    </h3>
-
-                    {/* 统一样式的设置项 */}
-                    <div className="space-y-5">
-                        {/* 提示音 */}
-                        <div className="flex items-center justify-between">
-                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                                提示音
-                            </div>
-                            <label className="relative inline-flex cursor-pointer items-center">
-                                <input
-                                    type="checkbox"
-                                    checked={settings.notificationSound}
-                                    onChange={(e) =>
-                                        handleChange('notificationSound', e.target.checked)
-                                    }
-                                    className="peer sr-only"
-                                />
-                                <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-                            </label>
-                        </div>
-
-                        {/* 震动反馈 */}
-                        <div className="flex items-center justify-between">
-                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                                震动反馈
-                            </div>
-                            <label className="relative inline-flex cursor-pointer items-center">
-                                <input
-                                    type="checkbox"
-                                    checked={settings.hapticFeedback}
-                                    onChange={(e) => {
-                                        if (e.target.checked) {
-                                            hapticsUtils.medium();
-                                            setTimeout(() => hapticsUtils.light(), 200);
-                                        }
-                                        handleChange('hapticFeedback', e.target.checked);
-                                    }}
-                                    className="peer sr-only"
-                                />
-                                <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-                            </label>
-                        </div>
-                    </div>
-                </div>
 
                 {/* 按钮组 */}
                 <div className="px-6 py-4 space-y-4">
@@ -826,17 +550,29 @@ const handleChange = async <K extends keyof SettingsOptions>(
                     >
                         <div className="flex items-center space-x-3">
                             <Monitor className="h-4 w-4 text-neutral-500" />
-                            <span>显示设置</span>
+                            <span>基础设置</span>
                         </div>
                         <ChevronRight className="h-4 w-4 text-neutral-400" />
                     </button>
                     <button
-                        onClick={() => setShowBeanSettings(true)}
+                        onClick={() => setShowNotificationSettings(true)}
                         className="w-full py-3 px-4 text-sm font-medium text-neutral-800 bg-neutral-100 rounded transition-colors hover:bg-neutral-200 dark:text-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 flex items-center justify-between"
                     >
                         <div className="flex items-center space-x-3">
-                            <List className="h-4 w-4 text-neutral-500" />
-                            <span>豆仓列表显示设置</span>
+                            <Bell className="h-4 w-4 text-neutral-500" />
+                            <span>通知设置</span>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-neutral-400" />
+                    </button>
+                </div>
+                <div className="px-6 py-4 space-y-4">
+                    <button
+                        onClick={() => setShowTimerSettings(true)}
+                        className="w-full py-3 px-4 text-sm font-medium text-neutral-800 bg-neutral-100 rounded transition-colors hover:bg-neutral-200 dark:text-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 flex items-center justify-between"
+                    >
+                        <div className="flex items-center space-x-3">
+                            <Timer className="h-4 w-4 text-neutral-500" />
+                            <span>计时器设置</span>
                         </div>
                         <ChevronRight className="h-4 w-4 text-neutral-400" />
                     </button>
@@ -850,13 +586,27 @@ const handleChange = async <K extends keyof SettingsOptions>(
                         </div>
                         <ChevronRight className="h-4 w-4 text-neutral-400" />
                     </button>
+                </div>
+
+                <div className="px-6 py-4 space-y-4">
+                    <button
+                        onClick={() => setShowBeanSettings(true)}
+                        className="w-full py-3 px-4 text-sm font-medium text-neutral-800 bg-neutral-100 rounded transition-colors hover:bg-neutral-200 dark:text-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 flex items-center justify-between"
+                    >
+                        <div className="flex items-center space-x-3">
+                            <List className="h-4 w-4 text-neutral-500" />
+                            <span>豆仓设置</span>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-neutral-400" />
+                    </button>
+                    
                     <button
                         onClick={() => setShowStockSettings(true)}
                         className="w-full py-3 px-4 text-sm font-medium text-neutral-800 bg-neutral-100 rounded transition-colors hover:bg-neutral-200 dark:text-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 flex items-center justify-between"
                     >
                         <div className="flex items-center space-x-3">
                             <Archive className="h-4 w-4 text-neutral-500" />
-                            <span>库存扣除预设值</span>
+                            <span>扣除设置</span>
                         </div>
                         <ChevronRight className="h-4 w-4 text-neutral-400" />
                     </button>
@@ -866,29 +616,11 @@ const handleChange = async <K extends keyof SettingsOptions>(
                     >
                         <div className="flex items-center space-x-3">
                             <CalendarDays className="h-4 w-4 text-neutral-500" />
-                            <span>赏味期预设值</span>
-                        </div>
-                        <ChevronRight className="h-4 w-4 text-neutral-400" />
-                    </button>
-                    <button
-                        onClick={() => setShowTimerSettings(true)}
-                        className="w-full py-3 px-4 text-sm font-medium text-neutral-800 bg-neutral-100 rounded transition-colors hover:bg-neutral-200 dark:text-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 flex items-center justify-between"
-                    >
-                        <div className="flex items-center space-x-3">
-                            <Timer className="h-4 w-4 text-neutral-500" />
-                            <span>计时器布局</span>
+                            <span>赏味期设置</span>
                         </div>
                         <ChevronRight className="h-4 w-4 text-neutral-400" />
                     </button>
                 </div>
-
-                    
-
-
-
-
-
-
 
                 {/* 数据管理入口按钮 */}
                 <div className="px-6 py-4">
@@ -906,9 +638,6 @@ const handleChange = async <K extends keyof SettingsOptions>(
 
                 {/* 意见反馈组 */}
                 <div className="px-6 py-4">
-                    <h3 className="text-sm uppercase font-medium tracking-wider text-neutral-500 dark:text-neutral-400 mb-3">
-                        意见反馈
-                    </h3>
                     <button
                         onClick={() => {
                             window.open('https://wj.qq.com/s2/19403076/7f02/', '_blank');
@@ -916,9 +645,13 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                 hapticsUtils.light();
                             }
                         }}
-                        className="w-full py-3 text-sm font-medium text-neutral-800 bg-neutral-100 rounded transition-colors hover:bg-neutral-200 dark:text-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700"
+                        className="w-full py-3 px-4 text-sm font-medium text-neutral-800 bg-neutral-100 rounded transition-colors hover:bg-neutral-200 dark:text-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 flex items-center justify-between"
                     >
-                        提交反馈
+                        <div className="flex items-center space-x-3">
+                            <ClipboardPen className="h-4 w-4 text-neutral-500" />
+                            <span>提交反馈</span>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-neutral-400" />
                     </button>
                 </div>
 
@@ -1088,6 +821,16 @@ const handleChange = async <K extends keyof SettingsOptions>(
                 )}
             </AnimatePresence>
 
+            {/* 通知设置组件 */}
+            <AnimatePresence>
+                {showNotificationSettings && (
+                    <NotificationSettings
+                        settings={settings}
+                        onClose={() => setShowNotificationSettings(false)}
+                        handleChange={handleChange}
+                    />
+                )}
+            </AnimatePresence>
         </div>
     )
 }
