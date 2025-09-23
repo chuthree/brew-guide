@@ -47,7 +47,7 @@ const FlavorPeriodSettings: React.FC<FlavorPeriodSettingsProps> = ({
             exit={{ x: "100%" }}
             transition={{
                 duration: 0.35,
-                ease: [0.25, 0.1, 0.25, 1]
+                ease: [0.36, 0.66, 0.04, 1]
             }}
         >
             {/* 头部导航栏 */}
