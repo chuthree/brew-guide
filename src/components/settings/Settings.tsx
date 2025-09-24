@@ -414,7 +414,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
             >
                 <button
                     onClick={onClose}
-                    className="absolute left-4 flex items-center justify-center w-10 h-10 rounded-full text-neutral-700 bg-neutral-100 dark:text-neutral-300 dark:bg-neutral-800 transition-colors"
+                    className="absolute left-4 flex items-center justify-center w-10 h-10 rounded-full text-neutral-700 dark:text-neutral-300"
                 >
                     <ChevronLeft className="h-5 w-5" />
                 </button>
