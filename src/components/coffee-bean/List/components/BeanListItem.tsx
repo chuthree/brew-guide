@@ -29,6 +29,7 @@ interface BeanListItemProps {
         limitNotesLines?: boolean
         notesMaxLines?: number
         showTotalPrice?: boolean
+        showStatusDots?: boolean
     }
 }
 
@@ -52,6 +53,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
     const limitNotesLines = settings?.limitNotesLines ?? true;
     const notesMaxLines = settings?.notesMaxLines ?? 3;
     const showTotalPrice = settings?.showTotalPrice ?? false;
+    const showStatusDots = settings?.showStatusDots ?? true;
 
 
 
@@ -237,7 +239,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                         )}
                     </div>
 
-                    {bean.roastDate && (bean.startDay || bean.endDay || bean.roastLevel) && (
+                    {showStatusDots && bean.roastDate && (bean.startDay || bean.endDay || bean.roastLevel) && (
                         <div className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full ${getStatusDotColor(flavorInfo.phase)} border-2 border-neutral-50 dark:border-neutral-900`} />
                     )}
                 </div>

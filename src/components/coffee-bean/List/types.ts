@@ -52,6 +52,7 @@ export interface CoffeeBeansProps {
         limitNotesLines?: boolean
         notesMaxLines?: number
         showTotalPrice?: boolean
+        showStatusDots?: boolean
     }
 }
 

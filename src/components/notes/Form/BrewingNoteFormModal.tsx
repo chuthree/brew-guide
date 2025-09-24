@@ -358,6 +358,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
           coffeeBeans={coffeeBeans}
           selectedCoffeeBean={selectedCoffeeBean}
           onSelect={handleCoffeeBeanSelect}
+          showStatusDots={settings?.showStatusDots}
         />
       ),
       isValid: true // 咖啡豆选择为可选

@@ -2141,7 +2141,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                         showFlavorInfo: settings.showFlavorInfo,
                         limitNotesLines: settings.limitNotesLines,
                         notesMaxLines: settings.notesMaxLines,
-                        showTotalPrice: settings.showTotalPrice
+                        showTotalPrice: settings.showTotalPrice,
+                        showStatusDots: settings.showStatusDots
                     }}
                 />
             )}

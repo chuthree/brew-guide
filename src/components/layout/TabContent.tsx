@@ -621,6 +621,7 @@ const TabContent: React.FC<TabContentProps> = ({
                     searchQuery={searchQuery}
                     highlightedBeanId={highlightedBeanId}
                     scrollParentRef={beanScrollEl ?? undefined}
+                    showStatusDots={settings.showStatusDots}
                 />
                 </div>
 

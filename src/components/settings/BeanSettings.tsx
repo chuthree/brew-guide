@@ -113,6 +113,53 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
                             </label>
                         </div>
 
+                        {/* 显示状态点 */}
+                        <div className="flex items-center justify-between">
+                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                                显示状态点
+                            </div>
+                            <label className="relative inline-flex cursor-pointer items-center">
+                                <input
+                                    type="checkbox"
+                                    checked={settings.showStatusDots || false}
+                                    onChange={(e) => handleChange('showStatusDots', e.target.checked)}
+                                    className="peer sr-only"
+                                />
+                                <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
+                            </label>
+                        </div>
+
+                        {/* 状态点颜色说明 - 只在开启时显示 */}
+                        {settings.showStatusDots && (
+                            <div className="ml-4 border-l-2 border-neutral-200 dark:border-neutral-700 pl-4">
+                                <div className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-2">
+                                    状态颜色说明
+                                </div>
+                                <div className="space-y-1.5">
+                                    <div className="flex items-center gap-2 text-xs text-neutral-600 dark:text-neutral-400">
+                                        <div className="w-2 h-2 rounded-full bg-green-400"></div>
+                                        <span>赏味期 - 最佳品尝时间</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-xs text-neutral-600 dark:text-neutral-400">
+                                        <div className="w-2 h-2 rounded-full bg-amber-400"></div>
+                                        <span>养豆期 - 等待最佳状态</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-xs text-neutral-600 dark:text-neutral-400">
+                                        <div className="w-2 h-2 rounded-full bg-red-400"></div>
+                                        <span>衰退期 - 风味开始衰减</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-xs text-neutral-600 dark:text-neutral-400">
+                                        <div className="w-2 h-2 rounded-full bg-blue-400"></div>
+                                        <span>在途 - 运输中咖啡豆</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-xs text-neutral-600 dark:text-neutral-400">
+                                        <div className="w-2 h-2 rounded-full bg-cyan-400"></div>
+                                        <span>冰冻 - 冷冻保存中</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {/* 限制备注显示行数 */}
                         <div className="flex items-center justify-between">
                             <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">

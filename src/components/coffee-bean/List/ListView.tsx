@@ -15,6 +15,7 @@ interface CoffeeBeanListProps {
     searchQuery?: string  // 添加搜索查询参数
     highlightedBeanId?: string | null // 添加高亮咖啡豆ID参数
     scrollParentRef?: HTMLElement
+    showStatusDots?: boolean // 是否显示状态点
 }
 
 // 移除全局缓存变量，确保每次都从CoffeeBeanManager获取最新数据
@@ -24,7 +25,8 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
     isOpen: _isOpen = true,
     searchQuery = '',  // 添加搜索查询参数默认值
     highlightedBeanId = null, // 添加高亮咖啡豆ID默认值
-    scrollParentRef
+    scrollParentRef,
+    showStatusDots = true // 默认显示状态点
 }) => {
     // 如果缓存已有数据，直接使用缓存初始化，避免闪烁
     const [beans, setBeans] = useState<CoffeeBean[]>(() =>
@@ -417,7 +419,7 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
                                     </div>
 
                                     {/* 状态圆点 - 右下角，边框超出图片边界 - 只有当有赏味期数据时才显示 */}
-                                    {bean.roastDate && (bean.startDay || bean.endDay || bean.roastLevel) && (
+                                    {showStatusDots && bean.roastDate && (bean.startDay || bean.endDay || bean.roastLevel) && (
                                         <div className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full ${getStatusDotColor(phase)} border-2 border-neutral-50 dark:border-neutral-900`} />
                                     )}
                                 </div>

@@ -13,6 +13,7 @@ interface CoffeeBeanSelectorProps {
   searchQuery?: string
   highlightedBeanId?: string | null
   scrollParentRef?: HTMLElement
+  showStatusDots?: boolean
 }
 
 // 计算咖啡豆的赏味期阶段和剩余天数
@@ -42,7 +43,8 @@ const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
   onSelect,
   searchQuery = '',
   highlightedBeanId = null,
-  scrollParentRef
+  scrollParentRef,
+  showStatusDots = true
 }) => {
   // 添加ref用于存储咖啡豆元素列表
   const beanItemsRef = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -296,7 +298,7 @@ const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
                         </div>
 
                         {/* 状态圆点 - 右下角，边框超出图片边界 - 只有当有赏味期数据时才显示 */}
-                        {bean.roastDate && (bean.startDay || bean.endDay || bean.roastLevel) && (
+                        {showStatusDots && bean.roastDate && (bean.startDay || bean.endDay || bean.roastLevel) && (
                           <div className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full ${getStatusDotColor(phase)} border-2 border-neutral-50 dark:border-neutral-900`} />
                         )}
                       </div>

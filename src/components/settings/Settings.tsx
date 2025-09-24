@@ -47,6 +47,7 @@ export interface SettingsOptions {
     limitNotesLines: boolean // 是否限制备注显示行数
     notesMaxLines: number // 备注最大显示行数
     showTotalPrice: boolean // 是否显示总价格而不是单价
+    showStatusDots: boolean // 是否显示状态点
     customGrinders?: CustomGrinder[] // 添加自定义磨豆机列表
     simpleBeanFormMode: boolean // 咖啡豆表单简单模式
     safeAreaMargins?: {
@@ -116,6 +117,7 @@ export const defaultSettings: SettingsOptions = {
     limitNotesLines: true, // 默认限制备注显示行数
     notesMaxLines: 1, // 默认最大显示1行
     showTotalPrice: false, // 默认显示单价
+    showStatusDots: true, // 默认显示状态点
     customGrinders: [], // 默认无自定义磨豆机
     simpleBeanFormMode: false, // 默认使用完整表单模式
     safeAreaMargins: {

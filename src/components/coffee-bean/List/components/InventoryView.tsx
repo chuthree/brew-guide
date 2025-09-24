@@ -30,6 +30,7 @@ interface InventoryViewProps {
         limitNotesLines?: boolean
         notesMaxLines?: number
         showTotalPrice?: boolean
+        showStatusDots?: boolean
     }
     // 外部滚动容器（Virtuoso 使用）
     scrollParentRef?: HTMLElement

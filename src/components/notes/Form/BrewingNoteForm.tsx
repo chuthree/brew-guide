@@ -804,6 +804,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                                     selectedCoffeeBean={selectedCoffeeBean}
                                     onSelect={handleCoffeeBeanSelect}
                                     searchQuery={coffeeBeanSearchQuery}
+                                    showStatusDots={settings?.showStatusDots}
                                 />
                             </div>
                         </div>
