@@ -754,11 +754,11 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
 
             {/* Form content - 更新内容区域样式以确保正确滚动 */}
             <div className="grow space-y-6 pb-20">
-                {/* 咖啡豆信息 */}
-                <div className="space-y-4">
-                    <div className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400 mb-3">
-                        {(selectedCoffeeBean || (initialData.id && formData.coffeeBeanInfo.name)) ? (
-                            // 显示选择的咖啡豆信息，只在咖啡豆名称部分添加下划线
+                {/* 咖啡豆信息 - 只有在有选择咖啡豆或编辑已有记录时才显示 */}
+                {(selectedCoffeeBean || (initialData.id && formData.coffeeBeanInfo.name)) && (
+                    <div className="space-y-4">
+                        <div className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400 mb-3">
+                            {/* 显示选择的咖啡豆信息，只在咖啡豆名称部分添加下划线 */}
                             <>
                                 <span>咖啡豆信息 ·</span>
                                 {initialData.id && coffeeBeans.length > 0 ? (
@@ -778,38 +778,35 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                                     <span className="ml-1">{selectedCoffeeBean?.name || formData.coffeeBeanInfo.name || '未知咖啡豆'}</span>
                                 )}
                             </>
-                        ) : (
-                            // 只显示标题
-                            '咖啡豆信息'
+                        </div>
+
+                        {/* 咖啡豆选择器 - 直接在咖啡豆信息下面 */}
+                        {initialData.id && coffeeBeans.length > 0 && showCoffeeBeanSelector && (
+                            <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg bg-neutral-50 dark:bg-neutral-900">
+                                {/* 搜索框 */}
+                                <div className="p-3 border-b border-neutral-200 dark:border-neutral-800">
+                                    <input
+                                        type="text"
+                                        value={coffeeBeanSearchQuery}
+                                        onChange={(e) => setCoffeeBeanSearchQuery(e.target.value)}
+                                        placeholder="搜索咖啡豆..."
+                                        className="w-full px-3 py-2 text-xs bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-md focus:outline-none focus:ring-1 focus:ring-neutral-400 dark:focus:ring-neutral-500 placeholder:text-neutral-400 dark:placeholder:text-neutral-500"
+                                    />
+                                </div>
+                                {/* 选择器内容：不限制高度，让父级/窗口承担滚动 */}
+                                <div className="px-3">
+                                    <CoffeeBeanSelector
+                                        coffeeBeans={coffeeBeans}
+                                        selectedCoffeeBean={selectedCoffeeBean}
+                                        onSelect={handleCoffeeBeanSelect}
+                                        searchQuery={coffeeBeanSearchQuery}
+                                        showStatusDots={settings?.showStatusDots}
+                                    />
+                                </div>
+                            </div>
                         )}
                     </div>
-
-                    {/* 咖啡豆选择器 - 直接在咖啡豆信息下面 */}
-                    {initialData.id && coffeeBeans.length > 0 && showCoffeeBeanSelector && (
-                        <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg bg-neutral-50 dark:bg-neutral-900">
-                            {/* 搜索框 */}
-                            <div className="p-3 border-b border-neutral-200 dark:border-neutral-800">
-                                <input
-                                    type="text"
-                                    value={coffeeBeanSearchQuery}
-                                    onChange={(e) => setCoffeeBeanSearchQuery(e.target.value)}
-                                    placeholder="搜索咖啡豆..."
-                                    className="w-full px-3 py-2 text-xs bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-md focus:outline-none focus:ring-1 focus:ring-neutral-400 dark:focus:ring-neutral-500 placeholder:text-neutral-400 dark:placeholder:text-neutral-500"
-                                />
-                            </div>
-                            {/* 选择器内容：不限制高度，让父级/窗口承担滚动 */}
-                            <div className="px-3">
-                                <CoffeeBeanSelector
-                                    coffeeBeans={coffeeBeans}
-                                    selectedCoffeeBean={selectedCoffeeBean}
-                                    onSelect={handleCoffeeBeanSelect}
-                                    searchQuery={coffeeBeanSearchQuery}
-                                    showStatusDots={settings?.showStatusDots}
-                                />
-                            </div>
-                        </div>
-                    )}
-                </div>
+                )}
 
                 {/* 笔记图片 */}
                 <div className="space-y-2 w-full">
