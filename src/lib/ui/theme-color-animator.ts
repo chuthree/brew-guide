@@ -57,9 +57,8 @@ function updateThemeColor(color: string) {
 
 // 保存所有当前的 theme-color 标签配置
 function saveAllThemeColorMetas() {
-  if (savedThemeColorMetas.length > 0) {
-    return // 已经保存过了
-  }
+  // 清空之前保存的配置，重新获取最新的
+  savedThemeColorMetas.length = 0
   
   const allMetas = document.querySelectorAll('meta[name="theme-color"]') as NodeListOf<HTMLMetaElement>
   
@@ -92,7 +91,9 @@ function restoreAllThemeColorMetas() {
 // 获取当前实际生效的主题色
 function getCurrentThemeColor(): string {
   // 检查当前是否为深色模式
-  const isDark = document.documentElement.classList.contains('dark')
+  const isDark = document.documentElement.classList.contains('dark') || 
+                 (document.documentElement.classList.contains('system') && 
+                  window.matchMedia('(prefers-color-scheme: dark)').matches)
   
   // 首先尝试获取无 media 属性的 meta 标签（明确的主题选择）
   const singleMeta = document.querySelector('meta[name="theme-color"]:not([media])') as HTMLMetaElement
@@ -113,30 +114,15 @@ function getCurrentThemeColor(): string {
 
 // 获取当前主题的默认主题色（用于动画起点）
 function getDefaultThemeColor(): string {
-  // 尝试从保存的配置中获取对应的主题色
-  if (savedThemeColorMetas.length > 0) {
-    const isDark = document.documentElement.classList.contains('dark')
-    
-    // 寻找对应模式的主题色
-    const targetMeta = savedThemeColorMetas.find(meta => {
-      if (!meta.media) {
-        return true // 无 media 属性的标签适用于当前模式
-      }
-      return isDark ? meta.media.includes('dark') : meta.media.includes('light')
-    })
-    
-    if (targetMeta) {
-      return targetMeta.content
-    }
-  }
-  
+  // 直接使用当前实际生效的主题色，确保与当前状态一致
   return getCurrentThemeColor()
 }
 
 // 获取抽屉展开后的遮罩颜色（背景+遮罩的最终效果色）
 function getDrawerOverlayColor(): string {
   const isDark = document.documentElement.classList.contains('dark') || 
-                 window.matchMedia('(prefers-color-scheme: dark)').matches
+                 (document.documentElement.classList.contains('system') && 
+                  window.matchMedia('(prefers-color-scheme: dark)').matches)
   return isDark ? '#101010' : '#AFAFAF'
 }
 
@@ -217,6 +203,11 @@ export class ThemeColorAnimator {
     this.stop()
     restoreAllThemeColorMetas()
   }
+}
+
+// 清除保存的主题色配置（用于主题切换后重新同步）
+export function clearSavedThemeColorMetas() {
+  savedThemeColorMetas.length = 0
 }
 
 // 导出单例实例
