@@ -390,7 +390,11 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
 
     return (
         <motion.div
-            className="sticky top-0 z-20 pt-safe-top bg-neutral-50/95 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800"
+            className={`sticky top-0 z-20 pt-safe-top border-b transition-colors duration-300 ease-in-out ${
+                activeBrewingStep === 'brewing' || activeBrewingStep === 'notes'
+                    ? 'border-transparent' 
+                    : 'border-neutral-200 dark:border-neutral-800'
+            }`}
             transition={{ duration: 0.3, ease: "easeInOut" }}
         >
 
@@ -430,7 +434,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                     {canGoBack() && onBackClick ? (
                                         <ArrowLeft className="w-4 h-4 mr-1" />
                                     ) : (
-                                        <Equal className="w-4 h-4 mr-1" />
+                                        <Equal className="w-4 h-4" />
                                     )}
                                     {!(canGoBack() && onBackClick) && <span></span>}
                                 </div>
