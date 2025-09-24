@@ -1,7 +1,9 @@
 'use client'
 
-import React, { useRef, useEffect, useCallback } from 'react'
-import { equipmentList, type CustomEquipment } from '@/lib/core/config'
+import React, { useRef } from 'react'
+import { type CustomEquipment } from '@/lib/core/config'
+import { useEquipmentList } from '@/lib/equipment/useEquipmentList'
+import { useScrollToSelected } from '@/lib/equipment/useScrollToSelected'
 
 interface EquipmentCategoryBarProps {
   selectedEquipment: string | null
@@ -49,12 +51,15 @@ const EquipmentCategoryBar: React.FC<EquipmentCategoryBarProps> = ({
   onEquipmentSelect
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
-
-  // 合并所有器具数据
-  const allEquipments = [
-    ...equipmentList.map((eq) => ({ ...eq, isCustom: false })),
-    ...customEquipments
-  ]
+  
+  // 使用自定义Hook管理器具列表
+  const { allEquipments } = useEquipmentList({ customEquipments })
+  
+  // 使用自定义Hook管理滚动
+  useScrollToSelected({
+    selectedItem: selectedEquipment,
+    containerRef: scrollContainerRef
+  })
 
   // 构建所有项目数据
   const allItems = allEquipments.map(equipment => ({
@@ -65,39 +70,6 @@ const EquipmentCategoryBar: React.FC<EquipmentCategoryBarProps> = ({
     isCustom: equipment.isCustom || false,
     onClick: () => onEquipmentSelect(equipment.id)
   }))
-
-  // 滚动到选中项的函数
-  const scrollToSelected = useCallback(() => {
-    if (!scrollContainerRef.current || !selectedEquipment) return
-
-    const selectedElement = scrollContainerRef.current.querySelector(`[data-tab="${selectedEquipment}"]`)
-    if (!selectedElement) return
-
-    const container = scrollContainerRef.current
-    const containerRect = container.getBoundingClientRect()
-    const elementRect = selectedElement.getBoundingClientRect()
-
-    // 计算元素相对于容器的位置
-    const elementLeft = elementRect.left - containerRect.left + container.scrollLeft
-    const elementWidth = elementRect.width
-    const containerWidth = containerRect.width
-
-    // 计算目标滚动位置（将选中项居中）
-    const targetScrollLeft = elementLeft - (containerWidth - elementWidth) / 2
-
-    // 平滑滚动到目标位置
-    container.scrollTo({
-      left: Math.max(0, targetScrollLeft),
-      behavior: 'smooth'
-    })
-  }, [selectedEquipment])
-
-  // 当选中项变化时滚动到选中项
-  useEffect(() => {
-    // 延迟执行以确保DOM已更新
-    const timer = setTimeout(scrollToSelected, 100)
-    return () => clearTimeout(timer)
-  }, [selectedEquipment, scrollToSelected])
 
   return (
     <div className="relative w-full overflow-hidden mb-3">

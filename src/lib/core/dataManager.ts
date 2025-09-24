@@ -42,6 +42,7 @@ export const APP_DATA_KEYS = [
 	"brewingNotesVersion", // 数据版本
 	"coffeeBeans", // 咖啡豆数据
 	"customEquipments", // 自定义器具
+	"equipmentOrder", // 器具排序信息
 	"onboardingCompleted", // 引导完成标记
 ];
 
@@ -294,6 +295,16 @@ export const DataManager = {
 				console.error('清理咖啡豆管理器缓存失败:', error);
 			}
 
+			// 触发器具排序更新事件
+			if (importData.data.equipmentOrder) {
+				try {
+					const { equipmentEventBus } = await import('@/lib/equipment/equipmentEventBus');
+					equipmentEventBus.notify();
+				} catch (error) {
+					console.error('触发器具排序更新事件失败:', error);
+				}
+			}
+
 			// 触发数据变更事件，通知应用中的组件重新加载数据
 			if (isBrowser) {
 				const eventDetail = { source: 'importAllData' };
@@ -413,6 +424,14 @@ export const DataManager = {
 
 			// 触发数据变更事件，通知应用中的组件重新加载数据
 			if (isBrowser) {
+				// 触发器具排序更新事件
+				try {
+					const { equipmentEventBus } = await import('@/lib/equipment/equipmentEventBus');
+					equipmentEventBus.notify();
+				} catch (error) {
+					console.error('触发器具排序更新事件失败:', error);
+				}
+
 				// 触发自定义器具更新事件
 				const equipmentEvent = new CustomEvent('customEquipmentUpdate', {
 					detail: { source: 'resetAllData' }

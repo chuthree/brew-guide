@@ -33,6 +33,42 @@ export function invalidateEquipmentsCache(): void {
 }
 
 /**
+ * 器具排序数据 - 简化版本，统一管理所有器具的顺序
+ */
+interface EquipmentOrder {
+    equipmentIds: string[];  // 所有器具的ID顺序（包含系统和自定义器具）
+}
+
+/**
+ * 加载器具排序信息
+ */
+export async function loadEquipmentOrder(): Promise<EquipmentOrder> {
+    try {
+        const storage = await getStorage();
+        const savedOrder = await storage.get('equipmentOrder');
+        if (savedOrder) {
+            return JSON.parse(savedOrder) as EquipmentOrder;
+        }
+        return { equipmentIds: [] };
+    } catch (error) {
+        console.error('[loadEquipmentOrder] 加载器具排序失败:', error);
+        return { equipmentIds: [] };
+    }
+}
+
+/**
+ * 保存器具排序信息
+ */
+export async function saveEquipmentOrder(order: EquipmentOrder): Promise<void> {
+    try {
+        const storage = await getStorage();
+        await storage.set('equipmentOrder', JSON.stringify(order));
+    } catch (error) {
+        console.error('[saveEquipmentOrder] 保存器具排序失败:', error);
+    }
+}
+
+/**
  * 从存储加载自定义器具
  * @returns 自定义器具数组
  */

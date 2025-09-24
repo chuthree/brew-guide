@@ -191,7 +191,7 @@ const BackupReminderModal: React.FC<BackupReminderModalProps> = ({
               <div className="w-10 h-1 bg-neutral-300 dark:bg-neutral-600 rounded-full" />
             </div>
 
-            <div className="px-6 pb-6 pb-safe">
+            <div className="px-6 pb-6">
               {/* 标题 */}
               <div className="mb-5">
                 <h3 className="text-lg font-medium text-neutral-900 dark:text-neutral-100 mb-1">
@@ -226,7 +226,7 @@ const BackupReminderModal: React.FC<BackupReminderModalProps> = ({
                     稍后提醒
                   </button>
 
-                  {nextReminderText && (
+                                    {nextReminderText && (
                     <span className="text-neutral-400 dark:text-neutral-500">
                       下次：{nextReminderText}
                     </span>

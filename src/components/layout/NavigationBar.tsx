@@ -9,9 +9,10 @@ import { formatGrindSize } from '@/lib/utils/grindUtils'
 import { BREWING_EVENTS, ParameterInfo } from '@/lib/brewing/constants'
 import { listenToEvent } from '@/lib/brewing/events'
 import { updateParameterInfo, getEquipmentName } from '@/lib/brewing/parameters'
+import EquipmentBar from '@/components/equipment/EquipmentBar'
+import EquipmentManagementDrawer from '@/components/equipment/EquipmentManagementDrawer'
 
 import { Equal, ArrowLeft, ChevronsUpDown } from 'lucide-react'
-import { saveStringState } from '@/lib/core/statePersistence'
 import { saveMainTabPreference } from '@/lib/navigation/navigationCache'
 import { ViewOption, VIEW_LABELS } from '@/components/coffee-bean/List/types'
 
@@ -60,328 +61,6 @@ const TabButton: React.FC<TabButtonProps> = ({
         </div>
     )
 }
-
-// 自定义Hook：处理触感反馈
-const useHapticFeedback = (settings: { hapticFeedback?: boolean }) =>
-    useCallback(async () => {
-        if (settings?.hapticFeedback) hapticsUtils.light()
-    }, [settings?.hapticFeedback])
-
-// 自定义Hook：处理编辑模式状态
-const useEditMode = () => {
-    const [editingEquipment, setEditingEquipment] = useState<string | null>(null)
-
-    const enterEditMode = useCallback((equipmentId: string) => {
-        setEditingEquipment(equipmentId)
-    }, [])
-
-    const exitEditMode = useCallback(() => {
-        setEditingEquipment(null)
-    }, [])
-
-    return { editingEquipment, enterEditMode, exitEditMode }
-}
-
-// 器具指示器组件接口
-interface EquipmentIndicatorProps {
-    selectedEquipment: string | null
-    customEquipments: CustomEquipment[]
-    onEquipmentSelect: (equipmentId: string) => void
-    onAddEquipment: () => void
-    onEditEquipment: (equipment: CustomEquipment) => void
-    onDeleteEquipment: (equipment: CustomEquipment) => void
-    onShareEquipment: (equipment: CustomEquipment) => void
-    settings: { hapticFeedback?: boolean }
-}
-
-const EquipmentIndicator: React.FC<EquipmentIndicatorProps> = ({
-    selectedEquipment, customEquipments, onEquipmentSelect, onAddEquipment,
-    onEditEquipment, onDeleteEquipment, onShareEquipment, settings
-}) => {
-    const triggerHaptic = useHapticFeedback(settings)
-    const { editingEquipment, enterEditMode, exitEditMode } = useEditMode()
-    const scrollContainerRef = React.useRef<HTMLDivElement>(null)
-    const [showLeftBorder, setShowLeftBorder] = React.useState(false)
-    const [showRightBorder, setShowRightBorder] = React.useState(false)
-
-    // 合并所有器具数据
-    const allEquipments = [
-        ...equipmentList.map((eq) => ({ ...eq, isCustom: false })),
-        ...customEquipments
-    ]
-
-    // 创建处理函数的工厂
-    const createHandler = <T extends unknown[]>(action: (...args: T) => void) => async (...args: T) => {
-        await triggerHaptic()
-        action(...args)
-    }
-
-    // 使用工厂函数创建处理器
-    const handlers = {
-        equipment: createHandler((id: string) => {
-            // 检查是否是自定义器具且已选中，如果是则进入编辑模式
-            const equipment = allEquipments.find(eq => eq.id === id)
-            if (equipment?.isCustom && selectedEquipment === id) {
-                enterEditMode(id)
-            } else {
-                onEquipmentSelect(id)
-                // 保存器具选择到缓存
-                saveStringState('brewing-equipment', 'selectedEquipment', id)
-            }
-        }),
-        add: createHandler(() => onAddEquipment()),
-        edit: createHandler((equipment: CustomEquipment) => onEditEquipment(equipment)),
-        delete: createHandler((equipment: CustomEquipment) => onDeleteEquipment(equipment)),
-        share: createHandler((equipment: CustomEquipment) => onShareEquipment(equipment)),
-        exitEdit: createHandler(() => {
-            exitEditMode()
-            // 退出编辑模式后滚动到选中的器具
-            setTimeout(scrollToSelected, 100)
-        })
-    }
-
-    // 滚动到选中项的函数
-    const scrollToSelected = React.useCallback(() => {
-        if (!scrollContainerRef.current || !selectedEquipment) return
-
-        const selectedElement = scrollContainerRef.current.querySelector(`[data-tab="${selectedEquipment}"]`)
-        if (!selectedElement) return
-
-        const container = scrollContainerRef.current
-        const containerRect = container.getBoundingClientRect()
-        const elementRect = selectedElement.getBoundingClientRect()
-
-        // 计算元素相对于容器的位置
-        const elementLeft = elementRect.left - containerRect.left + container.scrollLeft
-        const elementWidth = elementRect.width
-        const containerWidth = containerRect.width
-
-        // 计算目标滚动位置（将选中项居中）
-        const targetScrollLeft = elementLeft - (containerWidth - elementWidth) / 2
-
-        // 平滑滚动到目标位置
-        container.scrollTo({
-            left: Math.max(0, targetScrollLeft),
-            behavior: 'smooth'
-        })
-    }, [selectedEquipment])
-
-    // 点击外部退出编辑模式
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            const target = event.target as HTMLElement
-            if (!target.closest('[data-edit-mode]') && editingEquipment) {
-                exitEditMode()
-                // 退出编辑模式后滚动到选中的器具
-                setTimeout(scrollToSelected, 100)
-            }
-        }
-
-        if (editingEquipment) {
-            document.addEventListener('click', handleClickOutside)
-            return () => document.removeEventListener('click', handleClickOutside)
-        }
-    }, [editingEquipment, exitEditMode, scrollToSelected])
-
-    // 当选中项变化时滚动到选中项
-    React.useEffect(() => {
-        // 延迟执行以确保DOM已更新
-        const timer = setTimeout(scrollToSelected, 100)
-        return () => clearTimeout(timer)
-    }, [scrollToSelected])
-
-    // 当编辑模式状态变化时触发滚动（从编辑模式退出到正常模式时）
-    React.useEffect(() => {
-        if (!editingEquipment && selectedEquipment) {
-            // 从编辑模式退出时，延迟更长时间确保AnimatePresence动画完成后DOM已更新
-            const timer = setTimeout(scrollToSelected, 300)
-            return () => clearTimeout(timer)
-        }
-    }, [editingEquipment, selectedEquipment, scrollToSelected])
-
-    // 构建所有项目数据
-    const allItems = [
-        ...allEquipments.map(equipment => ({
-            type: 'equipment' as const,
-            id: equipment.id,
-            name: equipment.name,
-            isSelected: selectedEquipment === equipment.id,
-            isCustom: equipment.isCustom || false,
-            onClick: () => handlers.equipment(equipment.id)
-        })),
-        {
-            type: 'addButton' as const,
-            id: 'add',
-            name: '添加器具',
-            isSelected: false,
-            isCustom: false,
-            onClick: handlers.add
-        }
-    ]
-
-    // 监听滚动事件来控制左右边框显示
-    React.useEffect(() => {
-        const container = scrollContainerRef.current
-        if (!container) return
-
-        const handleScroll = () => {
-            const scrollLeft = container.scrollLeft
-            const scrollWidth = container.scrollWidth
-            const clientWidth = container.clientWidth
-
-            // 左边框：当向右滚动时显示
-            setShowLeftBorder(scrollLeft > 0)
-
-            // 右边框：当还能继续向右滚动时显示
-            const maxScrollLeft = scrollWidth - clientWidth
-            const canScrollRight = maxScrollLeft > 0 && scrollLeft < maxScrollLeft - 1
-            setShowRightBorder(canScrollRight)
-        }
-
-        // 延迟初始检查，确保DOM已完全渲染
-        const timer = setTimeout(handleScroll, 100)
-
-        container.addEventListener('scroll', handleScroll)
-        window.addEventListener('resize', handleScroll)
-
-        return () => {
-            clearTimeout(timer)
-            container.removeEventListener('scroll', handleScroll)
-            window.removeEventListener('resize', handleScroll)
-        }
-    }, [allItems.length])
-
-    return (
-        <div className="relative w-full overflow-hidden">
-            <div
-                ref={scrollContainerRef}
-                className="flex items-center gap-4 overflow-x-auto mt-2"
-                style={{
-                    scrollbarWidth: 'none',
-                    msOverflowStyle: 'none',
-                    WebkitOverflowScrolling: 'touch'
-                }}
-            >
-                <style jsx>{`
-                    div::-webkit-scrollbar {
-                        display: none;
-                    }
-                `}</style>
-
-                {/* 编辑模式和正常模式的简洁切换 */}
-                <AnimatePresence mode="wait">
-                    {editingEquipment ? (
-                        <motion.div
-                            key="edit-mode"
-                            className="flex items-center gap-2 whitespace-nowrap"
-                            data-edit-mode
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            transition={{ duration: 0.2 }}
-                        >
-                            {(() => {
-                                const equipment = allEquipments.find(eq => eq.id === editingEquipment)
-                                return equipment ? (
-                                    <>
-                                        <span className="text-xs font-medium tracking-widest text-neutral-800 dark:text-neutral-100 pb-3">
-                                            {equipment.name}
-                                        </span>
-                                        <span className="text-[12px] tracking-widest text-neutral-400 dark:text-neutral-500 pb-3">｜</span>
-                                        <button
-                                            onClick={() => equipment.isCustom && handlers.edit(equipment as CustomEquipment)}
-                                            className="text-xs font-medium tracking-widest cursor-pointer text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-100 pb-3 transition-colors duration-150"
-                                        >
-                                            编辑
-                                        </button>
-                                        <button
-                                            onClick={() => equipment.isCustom && handlers.delete(equipment as CustomEquipment)}
-                                            className="text-xs font-medium tracking-widest cursor-pointer text-neutral-500 dark:text-neutral-400 hover:text-red-600 dark:hover:text-red-400 pb-3 transition-colors duration-150"
-                                        >
-                                            删除
-                                        </button>
-                                        <button
-                                            onClick={() => equipment.isCustom && handlers.share(equipment as CustomEquipment)}
-                                            className="text-xs font-medium tracking-widest cursor-pointer text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-100 pb-3 transition-colors duration-150"
-                                        >
-                                            分享
-                                        </button>
-                                        <span className="text-[12px] tracking-widest text-neutral-400 dark:text-neutral-500 pb-3">｜</span>
-                                        <button
-                                            onClick={handlers.exitEdit}
-                                            className="text-xs font-medium tracking-widest cursor-pointer text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-100 pb-3 transition-colors duration-150"
-                                        >
-                                            返回
-                                        </button>
-                                    </>
-                                ) : null
-                            })()}
-                        </motion.div>
-                    ) : (
-                        /* 正常模式 */
-                        <motion.div
-                            key="normal-mode"
-                            className="flex items-center gap-4"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            transition={{ duration: 0.2 }}
-                        >
-                            {allItems.map((item) => (
-                                <div key={item.id} className="flex-shrink-0 flex items-center">
-                                    {item.type === 'addButton' ? (
-                                        <div
-                                            onClick={item.onClick}
-                                            className="text-xs font-medium tracking-widest cursor-pointer text-neutral-500 dark:text-neutral-400 flex items-center whitespace-nowrap pb-3 transition-colors duration-150"
-                                        >
-                                            添加器具
-                                        </div>
-                                    ) : (
-                                        <div className="whitespace-nowrap flex items-center relative">
-                                            <div
-                                                onClick={item.onClick}
-                                                className="text-xs font-medium tracking-widest whitespace-nowrap pb-3 relative cursor-pointer"
-                                                data-tab={item.id}
-                                            >
-                                                <span className={`relative ${item.isSelected
-                                                    ? 'text-neutral-800 dark:text-neutral-100'
-                                                    : 'text-neutral-500 dark:text-neutral-400'
-                                                }`}>
-                                                    {item.name}
-                                                </span>
-                                                {item.isSelected && (
-                                                    <span className="absolute bottom-0 left-0 w-full h-px bg-neutral-800 dark:bg-neutral-100"></span>
-                                                )}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-
-                {/* 左边框指示器 */}
-                <div
-                    className={`absolute top-0 left-0 w-6 h-full bg-gradient-to-r from-neutral-50/95 dark:from-neutral-900/95 to-transparent pointer-events-none transition-opacity duration-200 ease-out ${
-                        showLeftBorder ? 'opacity-100' : 'opacity-0'
-                    }`}
-                />
-
-                {/* 右边框指示器 */}
-                <div
-                    className={`absolute top-0 right-0 w-6 h-full bg-gradient-to-l from-neutral-50/95 dark:from-neutral-900/95 to-transparent pointer-events-none transition-opacity duration-200 ease-out ${
-                        showRightBorder ? 'opacity-100' : 'opacity-0'
-                    }`}
-                />
-            </div>
-
-
-        </div>
-    );
-};
-
-
 
 // 优化的EditableParameter组件 - 使用更简洁的逻辑和hooks
 interface EditableParameterProps {
@@ -573,6 +252,42 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
 }) => {
 
     const { canGoBack } = useNavigation(activeBrewingStep, activeMainTab, hasCoffeeBeans)
+    
+    // 抽屉管理状态
+    const [isManagementDrawerOpen, setIsManagementDrawerOpen] = useState(false)
+
+    // 处理抽屉开关
+    const handleToggleManagementDrawer = () => {
+        setIsManagementDrawerOpen(!isManagementDrawerOpen)
+    }
+
+    // 处理器具排序
+    const handleReorderEquipments = async (newOrder: CustomEquipment[]) => {
+        try {
+            // 动态导入排序管理函数
+            const { saveEquipmentOrder, loadEquipmentOrder } = await import('@/lib/managers/customEquipments')
+            const { equipmentUtils } = await import('@/lib/equipment/equipmentUtils')
+            
+            // 获取当前完整的器具列表（保持现有顺序，只更新自定义器具部分）
+            const currentOrder = await loadEquipmentOrder()
+            const allCurrentEquipments = equipmentUtils.getAllEquipments(customEquipments, currentOrder)
+            
+            // 更新自定义器具的位置，保持系统器具的位置不变
+            const updatedEquipments = allCurrentEquipments.map(eq => {
+                if (!eq.isCustom) return eq; // 系统器具位置不变
+                const reorderedCustomEq = newOrder.find(newEq => newEq.id === eq.id);
+                return reorderedCustomEq ? { ...reorderedCustomEq, isCustom: true } : eq;
+            });
+            
+            // 生成新的排序数据
+            const newEquipmentOrder = equipmentUtils.generateEquipmentOrder(updatedEquipments)
+            
+            // 保存排序
+            await saveEquipmentOrder(newEquipmentOrder)
+        } catch (error) {
+            console.error('保存器具排序失败:', error)
+        }
+    }
 
     // 获取当前视图的显示名称
     const getCurrentViewLabel = () => {
@@ -1037,14 +752,11 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                         }}
                                         className="overflow-hidden mx-6"
                                     >
-                                            <EquipmentIndicator
+                                            <EquipmentBar
                                                 selectedEquipment={selectedEquipment}
                                                 customEquipments={customEquipments}
                                                 onEquipmentSelect={onEquipmentSelect || (() => {})}
-                                                onAddEquipment={onAddEquipment || (() => {})}
-                                                onEditEquipment={onEditEquipment || (() => {})}
-                                                onDeleteEquipment={onDeleteEquipment || (() => {})}
-                                                onShareEquipment={onShareEquipment || (() => {})}
+                                                onToggleManagementDrawer={handleToggleManagementDrawer}
                                                 settings={settings}
                                             />
                                     </motion.div>
@@ -1054,6 +766,19 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                     )}
                 </AnimatePresence>
             )}
+
+            {/* 器具管理抽屉 */}
+            <EquipmentManagementDrawer
+                isOpen={isManagementDrawerOpen}
+                onClose={() => setIsManagementDrawerOpen(false)}
+                customEquipments={customEquipments}
+                onAddEquipment={onAddEquipment || (() => {})}
+                onEditEquipment={onEditEquipment || (() => {})}
+                onDeleteEquipment={onDeleteEquipment || (() => {})}
+                onShareEquipment={onShareEquipment || (() => {})}
+                onReorderEquipments={handleReorderEquipments}
+                settings={settings}
+            />
         </motion.div>
     );
 };
