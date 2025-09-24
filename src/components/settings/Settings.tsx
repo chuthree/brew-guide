@@ -7,7 +7,6 @@ import hapticsUtils from '@/lib/ui/haptics'
 import { useTheme } from 'next-themes'
 import { LayoutSettings } from '../brewing/Timer/Settings'
 import { ChevronLeft, ChevronRight, RefreshCw, Loader, Monitor, SlidersHorizontal, Archive, List, CalendarDays, Timer, Database, Bell, ClipboardPen, Shuffle } from 'lucide-react'
-import { clearSavedThemeColorMetas } from '@/lib/ui/theme-color-animator'
 
 import Image from 'next/image'
 import GrinderSettings from './GrinderSettings'
@@ -264,9 +263,6 @@ const Settings: React.FC<SettingsProps> = ({
 
         const updateThemeColor = () => {
             const themeColorMeta = document.querySelectorAll('meta[name="theme-color"]');
-
-            // 清除主题色动画器中保存的过时配置
-            clearSavedThemeColorMetas();
 
             // 如果没有找到 meta 标签，创建它们
             if (themeColorMeta.length === 0) {

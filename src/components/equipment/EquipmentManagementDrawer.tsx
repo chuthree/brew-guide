@@ -6,11 +6,6 @@ import { Plus, GripVertical, Edit, Trash2, Share2, X } from 'lucide-react'
 import { type CustomEquipment } from '@/lib/core/config'
 import hapticsUtils from '@/lib/ui/haptics'
 import { SettingsOptions } from '@/components/settings/Settings'
-import { 
-    animateThemeColorForDrawerOpen, 
-    animateThemeColorForDrawerClose,
-    themeColorAnimator
-} from '@/lib/ui/theme-color-animator'
 import { useEquipmentList } from '@/lib/equipment/useEquipmentList'
 
 interface EquipmentManagementDrawerProps {
@@ -155,28 +150,20 @@ const EquipmentManagementDrawer: React.FC<EquipmentManagementDrawerProps> = ({
 
 
 
-    // 监听 isOpen 变化，处理关闭时的主题色动画
+    // 监听 isOpen 变化
     React.useEffect(() => {
-        if (!isOpen) {
-            // 抽屉开始关闭时，立即开始主题色恢复动画
-            animateThemeColorForDrawerClose()
-        }
+        // 可以在这里添加其他关闭时的逻辑
     }, [isOpen])
 
-    // 组件卸载时重置主题色
+    // 组件卸载时的清理
     React.useEffect(() => {
         return () => {
-            themeColorAnimator.reset()
+            // 可以在这里添加其他清理逻辑
         }
     }, [])
 
     return (
-        <AnimatePresence 
-            onExitComplete={() => {
-                // 退出动画完成后，确保主题色已恢复
-                themeColorAnimator.reset()
-            }}
-        >
+        <AnimatePresence>
             {isOpen && (
                 <>
                     <motion.div
@@ -185,10 +172,6 @@ const EquipmentManagementDrawer: React.FC<EquipmentManagementDrawerProps> = ({
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.265 }}
                         className="fixed inset-0 z-50 bg-black/30 backdrop-blur-xs"
-                        onAnimationStart={() => {
-                            // 进入动画开始时立即触发主题色动画
-                            animateThemeColorForDrawerOpen()
-                        }}
                         onClick={onClose}
                     />
 
@@ -218,18 +201,18 @@ const EquipmentManagementDrawer: React.FC<EquipmentManagementDrawerProps> = ({
 
                         <div className="px-6 pb-6">
                             <div className="flex items-center justify-between mb-5">
-                                <h3 className="text-lg font-medium text-neutral-900 dark:text-neutral-100">
-                                    器具管理
+                                <h3 className="text-base font-medium text-neutral-900 dark:text-neutral-100">
+                                    器具列表
                                 </h3>
                                 <button
                                     onClick={handleAddEquipment}
-                                    className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-neutral-100 active:bg-neutral-200 dark:hover:bg-neutral-700 dark:active:bg-neutral-600 transition-colors duration-150 active:scale-95"
+                                    className="flex items-center justify-center px-3 py-1  rounded-full bg-neutral-100  dark:bg-neutral-800 transition-all duration-150 active:scale-95 active:opacity-80"
                                 >
-                                    <Plus className="w-4 h-4 text-neutral-600 dark:text-neutral-400" />
+                                    <span className='text-sm font-medium text-neutral-800 dark:text-neutral-100'>+ 添加器具</span>
                                 </button>
                             </div>
 
-                            <div className="space-y-2 max-h-[85vh] overflow-y-auto pb-safe-bottom">
+                            <div className="space-y-2 max-h-[85vh] overflow-y-auto overflow-x-hidden pb-safe-bottom">
                                 {allEquipments.length > 0 ? (
                                     <div className="space-y-2">
                                         <Reorder.Group
@@ -278,7 +261,7 @@ const EquipmentManagementDrawer: React.FC<EquipmentManagementDrawerProps> = ({
                                                         </div>
                                                         
                                                         <motion.span 
-                                                            className={`flex-1 text-md font-medium text-neutral-700 dark:text-neutral-200 transition-colors duration-150 ${
+                                                            className={`flex-1 text-base font-medium text-neutral-700 dark:text-neutral-200 transition-colors duration-150 ${
                                                                 !equipment.isSystem && equipment.showActions ? 'truncate' : ''
                                                             }`}
                                                             whileDrag={{

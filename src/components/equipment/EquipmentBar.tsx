@@ -88,13 +88,13 @@ const EquipmentBar: React.FC<EquipmentBarProps> = ({
                             <div className="whitespace-nowrap flex items-center relative">
                                 <div
                                     onClick={() => handleEquipmentSelect(equipment.id)}
-                                    className="text-xs font-medium tracking-widest whitespace-nowrap pb-3 relative cursor-pointer"
+                                    className="text-xs font-medium tracking-widest whitespace-nowrap pb-2 relative cursor-pointer"
                                     data-tab={equipment.id}
                                 >
                                     <span className={`relative transition-colors duration-150 ${
                                         selectedEquipment === equipment.id
                                             ? 'text-neutral-800 dark:text-neutral-100'
-                                            : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300'
+                                            : 'text-neutral-600 dark:text-neutral-400 hover:opacity-80'
                                     }`}>
                                         {equipment.name}
                                     </span>
@@ -118,11 +118,12 @@ const EquipmentBar: React.FC<EquipmentBarProps> = ({
                 <div className="flex-shrink-0 flex items-center relative">
                     <button
                         onClick={handleToggleManagement}
-                        className="text-xs font-medium tracking-widest whitespace-nowrap pb-3 relative cursor-pointer flex items-center justify-center"
-                        aria-label="器具管理"
+                        className="tracking-widest whitespace-nowrap pl-3 pb-2 relative cursor-pointer flex items-center justify-center"
+                        aria-label="器具列表"
                     >
-                        <span className="relative transition-colors duration-150 text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300">
-                            <Menu className="w-4 h-4" />
+                        <div className="w-px h-3 bg-neutral-200 dark:bg-neutral-800 mr-3"></div>
+                        <span className="text-xs font-medium text-neutral-600 dark:text-neutral-400 flex items-center whitespace-nowrap">
+                            编辑
                         </span>
                     </button>
 
