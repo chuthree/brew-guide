@@ -895,7 +895,7 @@ const DataSettings: React.FC<DataSettingsProps> = ({
                         <div>
                             <button
                                 onClick={handleExport}
-                                className="w-full rounded-md text-sm py-2 px-4 font-medium bg-neutral-100 dark:bg-neutral-700 text-neutral-800 dark:text-neutral-200 hover:bg-neutral-200 dark:hover:bg-neutral-600 transition-colors"
+                                className="w-full rounded text-sm py-2 px-4 font-medium bg-neutral-100 dark:bg-neutral-700 text-neutral-800 dark:text-neutral-200 hover:bg-neutral-200 dark:hover:bg-neutral-600 transition-colors"
                             >
                                 导出数据
                             </button>
@@ -908,7 +908,7 @@ const DataSettings: React.FC<DataSettingsProps> = ({
                         <div>
                             <button
                                 onClick={handleImportClick}
-                                className="w-full rounded-md text-sm py-2 px-4 font-medium bg-neutral-100 dark:bg-neutral-700 text-neutral-800 dark:text-neutral-200 hover:bg-neutral-200 dark:hover:bg-neutral-600 transition-colors"
+                                className="w-full rounded text-sm py-2 px-4 font-medium bg-neutral-100 dark:bg-neutral-700 text-neutral-800 dark:text-neutral-200 hover:bg-neutral-200 dark:hover:bg-neutral-600 transition-colors"
                             >
                                 导入数据（替换）
                             </button>
@@ -929,7 +929,7 @@ const DataSettings: React.FC<DataSettingsProps> = ({
                             {!showConfirmReset ? (
                                 <button
                                     onClick={() => setShowConfirmReset(true)}
-                                    className="w-full rounded-md bg-red-100 px-4 py-2 text-sm font-medium text-red-800 transition-colors hover:bg-red-200 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30"
+                                    className="w-full rounded bg-red-100 px-4 py-2 text-sm font-medium text-red-800 transition-colors hover:bg-red-200 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30"
                                 >
                                     重置数据
                                 </button>
@@ -997,7 +997,7 @@ const DataSettings: React.FC<DataSettingsProps> = ({
                             <button
                                 onClick={handleCompressImages}
                                 disabled={isCompressing}
-                                className="w-full rounded-md text-sm py-2 px-4 font-medium bg-neutral-100 dark:bg-neutral-700 text-neutral-800 dark:text-neutral-200 hover:bg-neutral-200 dark:hover:bg-neutral-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                className="w-full rounded text-sm py-2 px-4 font-medium bg-neutral-100 dark:bg-neutral-700 text-neutral-800 dark:text-neutral-200 hover:bg-neutral-200 dark:hover:bg-neutral-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                             >
                                 {isCompressing ? (
                                     <span className="flex items-center justify-center">

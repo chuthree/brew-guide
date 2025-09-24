@@ -5,6 +5,7 @@ import React from 'react'
 import { ChevronLeft } from 'lucide-react'
 import { SettingsOptions } from './Settings'
 import { motion } from 'framer-motion'
+import TimerPreview from './TimerPreview'
 
 interface TimerSettingsProps {
     settings: SettingsOptions
@@ -42,13 +43,17 @@ const TimerSettings: React.FC<TimerSettingsProps> = ({
             </div>
 
             {/* 滚动内容区域 */}
-            <div className="relative flex-1 overflow-y-auto pb-safe-bottom divide-y divide-neutral-200 dark:divide-neutral-800">
+            <div className="relative flex-1 overflow-y-auto pb-safe-bottom">
                 {/* 顶部渐变阴影 */}
-                <div className="sticky top-0 z-10 h-12 w-full bg-linear-to-b from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none first:border-b-0"></div>
-
+                {/* 预览区域 */}
+                <TimerPreview settings={settings} />
                 {/* 设置内容 */}
-                <div className="px-6 py-4 -mt-8">
-                    <div className="space-y-5">
+                <div className="space-y-8 px-6">
+                    {/* 布局设置分组 */}
+                    <div className="space-y-4">
+                        <h3 className="text-sm uppercase font-medium tracking-wider text-neutral-500 dark:text-neutral-400 mb-3">
+                            布局设置
+                        </h3>
 
                         {/* 阶段信息布局反转 */}
                         <div className="flex items-center justify-between">
@@ -93,6 +98,13 @@ const TimerSettings: React.FC<TimerSettingsProps> = ({
                                 <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
                             </label>
                         </div>
+                    </div>
+
+                    {/* 显示选项分组 */}
+                    <div className="space-y-4">
+                        <h3 className="text-sm uppercase font-medium tracking-wider text-neutral-500 dark:text-neutral-400 mb-3">
+                            显示设置
+                        </h3>
 
                         {/* 始终显示计时器信息 */}
                         <div className="flex items-center justify-between">
@@ -116,27 +128,7 @@ const TimerSettings: React.FC<TimerSettingsProps> = ({
                             </label>
                         </div>
 
-                        {/* 显示阶段分隔线 */}
-                        <div className="flex items-center justify-between">
-                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                                显示阶段分隔线
-                            </div>
-                            <label className="relative inline-flex cursor-pointer items-center">
-                                <input
-                                    type="checkbox"
-                                    checked={settings.layoutSettings?.showStageDivider || false}
-                                    onChange={(e) => {
-                                        const newLayoutSettings = {
-                                            ...settings.layoutSettings,
-                                            showStageDivider: e.target.checked
-                                        };
-                                        handleChange('layoutSettings', newLayoutSettings);
-                                    }}
-                                    className="peer sr-only"
-                                />
-                                <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-                            </label>
-                        </div>
+
 
                         {/* 显示流速 */}
                         <div className="flex items-center justify-between">
@@ -148,28 +140,6 @@ const TimerSettings: React.FC<TimerSettingsProps> = ({
                                     type="checkbox"
                                     checked={settings.showFlowRate || false}
                                     onChange={(e) => handleChange('showFlowRate', e.target.checked)}
-                                    className="peer sr-only"
-                                />
-                                <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-                            </label>
-                        </div>
-
-                        {/* 简洁模式 */}
-                        <div className="flex items-center justify-between">
-                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                                简洁模式
-                            </div>
-                            <label className="relative inline-flex cursor-pointer items-center">
-                                <input
-                                    type="checkbox"
-                                    checked={settings.layoutSettings?.compactMode || false}
-                                    onChange={(e) => {
-                                        const newLayoutSettings = {
-                                            ...settings.layoutSettings,
-                                            compactMode: e.target.checked
-                                        };
-                                        handleChange('layoutSettings', newLayoutSettings);
-                                    }}
                                     className="peer sr-only"
                                 />
                                 <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
@@ -206,6 +176,58 @@ const TimerSettings: React.FC<TimerSettingsProps> = ({
                                 <span>粗</span>
                             </div>
                         </div>
+                    </div>
+
+                    {/* 外观定制分组 */}
+                    <div className="space-y-4">
+                        <h3 className="text-sm uppercase font-medium tracking-wider text-neutral-500 dark:text-neutral-400 mb-3">
+                            方案列表设置
+                        </h3>
+
+                        {/* 显示阶段分隔线 */}
+                        <div className="flex items-center justify-between">
+                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                                显示阶段分隔线
+                            </div>
+                            <label className="relative inline-flex cursor-pointer items-center">
+                                <input
+                                    type="checkbox"
+                                    checked={settings.layoutSettings?.showStageDivider || false}
+                                    onChange={(e) => {
+                                        const newLayoutSettings = {
+                                            ...settings.layoutSettings,
+                                            showStageDivider: e.target.checked
+                                        };
+                                        handleChange('layoutSettings', newLayoutSettings);
+                                    }}
+                                    className="peer sr-only"
+                                />
+                                <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
+                            </label>
+                        </div>
+
+                        {/* 简洁模式 */}
+                        <div className="flex items-center justify-between">
+                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                                简洁模式
+                            </div>
+                            <label className="relative inline-flex cursor-pointer items-center">
+                                <input
+                                    type="checkbox"
+                                    checked={settings.layoutSettings?.compactMode || false}
+                                    onChange={(e) => {
+                                        const newLayoutSettings = {
+                                            ...settings.layoutSettings,
+                                            compactMode: e.target.checked
+                                        };
+                                        handleChange('layoutSettings', newLayoutSettings);
+                                    }}
+                                    className="peer sr-only"
+                                />
+                                <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
+                            </label>
+                        </div>
+
                     </div>
                 </div>
             </div>

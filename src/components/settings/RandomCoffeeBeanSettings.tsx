@@ -69,7 +69,7 @@ const RandomCoffeeBeanSettings: React.FC<RandomCoffeeBeanSettingsProps> = ({
             </div>
 
             {/* 滚动内容区域 */}
-            <div className="flex-1 overflow-y-auto pb-safe-bottom divide-y divide-neutral-200 dark:divide-neutral-800">
+            <div className="flex-1 overflow-y-auto pb-safe-bottom">
                 {/* 顶部渐变阴影 */}
                 <div className="sticky top-0 z-10 h-12 w-full bg-linear-to-b from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none first:border-b-0"></div>
                 

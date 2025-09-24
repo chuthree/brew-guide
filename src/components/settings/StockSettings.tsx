@@ -80,7 +80,7 @@ const StockSettings: React.FC<StockSettingsProps> = ({
                 <div className="sticky top-0 z-10 h-12 w-full bg-linear-to-b from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none"></div>
                 <div className="px-6 py-4 -mt-8">
                     {/* 功能开关选项 */}
-                    <div className="space-y-4 mb-6">
+                    <div className="space-y-4 mb-8">
                         {/* ALL扣除选项开关 */}
                         <div className="flex items-center justify-between">
                             <div>
@@ -124,8 +124,6 @@ const StockSettings: React.FC<StockSettingsProps> = ({
                         </div>
                     </div>
 
-                    {/* 分隔线 */}
-                    <div className="border-t border-neutral-200 dark:border-neutral-700 mb-4"></div>
 
                     {/* 预设值管理 */}
                     <div className="mb-2">
