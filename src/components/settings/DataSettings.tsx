@@ -587,16 +587,19 @@ const DataSettings: React.FC<DataSettingsProps> = ({
                 {/* 顶部渐变阴影 */}
                 <div className="sticky top-0 z-10 h-12 w-full bg-linear-to-b from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none first:border-b-0"></div>
 
-                {/* 设置内容 */}
+                {/* 云同步设置组 */}
                 <div className="px-6 py-4 -mt-8">
-                    {/* S3同步设置 */}
-                    <div className="space-y-4 mb-6">
+                    <h3 className="text-sm uppercase font-medium tracking-wider text-neutral-500 dark:text-neutral-400 mb-3">
+                        云同步
+                    </h3>
+
+                    <div className="space-y-5">
                         {/* S3主开关 */}
                         <div className="flex items-center justify-between">
-                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                                S3 云同步
-                            </div>
                             <div className="flex items-center space-x-2">
+                                <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                                    S3 云同步
+                                </div>
                                 {/* 连接状态指示器 */}
                                 <div className={`w-2 h-2 rounded-full ${
                                     s3Status === 'connected' ? 'bg-green-500' :
@@ -604,21 +607,21 @@ const DataSettings: React.FC<DataSettingsProps> = ({
                                     s3Status === 'error' ? 'bg-red-500' :
                                     'bg-neutral-300 dark:bg-neutral-600'
                                 }`} />
-                                <label className="relative inline-flex cursor-pointer items-center">
-                                    <input
-                                        type="checkbox"
-                                        checked={s3Settings.enabled}
-                                        onChange={(e) => handleS3SettingChange('enabled', e.target.checked)}
-                                        className="peer sr-only"
-                                    />
-                                    <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-                                </label>
                             </div>
+                            <label className="relative inline-flex cursor-pointer items-center">
+                                <input
+                                    type="checkbox"
+                                    checked={s3Settings.enabled}
+                                    onChange={(e) => handleS3SettingChange('enabled', e.target.checked)}
+                                    className="peer sr-only"
+                                />
+                                <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
+                            </label>
                         </div>
 
                         {/* S3详细设置 - 仅在启用时显示 */}
                         {s3Settings.enabled && (
-                            <div className="ml-4 space-y-4 border-l-2 border-neutral-200 dark:border-neutral-700 pl-4">
+                            <div className="ml-0 space-y-4">
                                 {/* 展开/收起按钮 */}
                                 <button
                                     onClick={() => setS3Expanded(!s3Expanded)}
@@ -647,7 +650,7 @@ const DataSettings: React.FC<DataSettingsProps> = ({
                                                 value={s3Settings.region}
                                                 onChange={(e) => handleS3SettingChange('region', e.target.value)}
                                                 placeholder="cn-south-1"
-                                                className="w-full py-2 px-3 text-sm bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded focus:outline-hidden focus:ring-1 focus:ring-neutral-500"
+                                                className="w-full py-2 px-3 text-sm bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-md focus:outline-none focus:ring-1 focus:ring-neutral-500"
                                             />
                                         </div>
 
@@ -660,11 +663,11 @@ const DataSettings: React.FC<DataSettingsProps> = ({
                                                 type="url"
                                                 value={s3Settings.endpoint || ''}
                                                 onChange={(e) => handleS3SettingChange('endpoint', e.target.value)}
-                                                placeholder="https://bucket-name.s3.cn-south-1.qiniucs.com (七牛云格式)"
-                                                className="w-full py-2 px-3 text-sm bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded focus:outline-hidden focus:ring-1 focus:ring-neutral-500"
+                                                placeholder="https://bucket-name.s3.cn-south-1.qiniucs.com"
+                                                className="w-full py-2 px-3 text-sm bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-md focus:outline-none focus:ring-1 focus:ring-neutral-500"
                                             />
                                             <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
-                                                七牛云格式：https://bucket名称.s3.区域.qiniucs.com，留空使用AWS标准端点
+                                                七牛云等兼容S3服务的端点，留空使用AWS标准端点
                                             </p>
                                         </div>
 
@@ -678,7 +681,7 @@ const DataSettings: React.FC<DataSettingsProps> = ({
                                                 value={s3Settings.bucketName}
                                                 onChange={(e) => handleS3SettingChange('bucketName', e.target.value)}
                                                 placeholder="my-bucket-name"
-                                                className="w-full py-2 px-3 text-sm bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded focus:outline-hidden focus:ring-1 focus:ring-neutral-500"
+                                                className="w-full py-2 px-3 text-sm bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-md focus:outline-none focus:ring-1 focus:ring-neutral-500"
                                             />
                                         </div>
 
@@ -692,7 +695,7 @@ const DataSettings: React.FC<DataSettingsProps> = ({
                                                 value={s3Settings.accessKeyId}
                                                 onChange={(e) => handleS3SettingChange('accessKeyId', e.target.value)}
                                                 placeholder="AKIA..."
-                                                className="w-full py-2 px-3 text-sm bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded focus:outline-hidden focus:ring-1 focus:ring-neutral-500"
+                                                className="w-full py-2 px-3 text-sm bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-md focus:outline-none focus:ring-1 focus:ring-neutral-500"
                                             />
                                         </div>
 
@@ -707,7 +710,7 @@ const DataSettings: React.FC<DataSettingsProps> = ({
                                                     value={s3Settings.secretAccessKey}
                                                     onChange={(e) => handleS3SettingChange('secretAccessKey', e.target.value)}
                                                     placeholder="密钥"
-                                                    className="w-full py-2 px-3 pr-10 text-sm bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded focus:outline-hidden focus:ring-1 focus:ring-neutral-500"
+                                                    className="w-full py-2 px-3 pr-10 text-sm bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-md focus:outline-none focus:ring-1 focus:ring-neutral-500"
                                                 />
                                                 <button
                                                     type="button"
@@ -735,7 +738,7 @@ const DataSettings: React.FC<DataSettingsProps> = ({
                                                 value={s3Settings.prefix}
                                                 onChange={(e) => handleS3SettingChange('prefix', e.target.value)}
                                                 placeholder="brew-guide-data/"
-                                                className="w-full py-2 px-3 text-sm bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded focus:outline-hidden focus:ring-1 focus:ring-neutral-500"
+                                                className="w-full py-2 px-3 text-sm bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-md focus:outline-none focus:ring-1 focus:ring-neutral-500"
                                             />
                                         </div>
 
@@ -743,14 +746,14 @@ const DataSettings: React.FC<DataSettingsProps> = ({
                                         <button
                                             onClick={testS3Connection}
                                             disabled={s3Status === 'connecting'}
-                                            className="w-full py-2 px-3 text-sm font-medium text-white bg-neutral-700 hover:bg-neutral-800 disabled:bg-neutral-400 rounded transition-colors"
+                                            className="w-full py-2 px-3 text-sm font-medium text-white bg-neutral-700 hover:bg-neutral-800 disabled:bg-neutral-400 rounded-md transition-colors"
                                         >
                                             {s3Status === 'connecting' ? '连接中...' : '测试连接'}
                                         </button>
 
                                         {/* 错误信息 */}
                                         {s3Error && (
-                                            <div className="p-2 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded">
+                                            <div className="p-3 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-md">
                                                 {s3Error}
                                             </div>
                                         )}
@@ -775,24 +778,24 @@ const DataSettings: React.FC<DataSettingsProps> = ({
                                     </div>
                                 )}
 
-                                {/* 简化的状态说明 */}
+                                {/* 状态简要说明 */}
                                 {!s3Expanded && (
                                     <p className="text-xs text-neutral-500 dark:text-neutral-400">
                                         {s3Status === 'connected'
-                                            ? '已连接 - 需手动触发同步'
+                                            ? '已连接，手动同步模式'
                                             : s3Status === 'error'
-                                                ? '连接失败 - 点击配置查看详情'
-                                                : '未配置 - 点击配置设置S3信息'}
+                                                ? '连接失败，请检查配置'
+                                                : '未配置，点击展开设置'}
                                     </p>
                                 )}
 
                                 {/* 同步按钮 */}
                                 {s3Status === 'connected' && (
-                                    <div className="mt-2 space-y-2">
+                                    <div className="mt-4 space-y-3">
                                         <button
                                             onClick={() => performSync('auto')}
                                             disabled={isSyncing}
-                                            className="w-full py-2 px-3 text-sm font-medium text-white bg-neutral-700 hover:bg-neutral-800 disabled:bg-neutral-400 rounded transition-colors"
+                                            className="w-full py-2 px-3 text-sm font-medium text-white bg-neutral-700 hover:bg-neutral-800 disabled:bg-neutral-400 rounded-md transition-colors"
                                         >
                                             {isSyncing ? '同步中...' : isSyncNeeded ? '需要同步' : '立即同步'}
                                         </button>
@@ -814,10 +817,16 @@ const DataSettings: React.FC<DataSettingsProps> = ({
                             </div>
                         )}
                     </div>
+                </div>
 
-                    {/* 备份提醒设置 */}
-                    {backupReminderSettings && (
-                        <>
+                {/* 备份提醒设置组 */}
+                {backupReminderSettings && (
+                    <div className="px-6 py-4">
+                        <h3 className="text-sm uppercase font-medium tracking-wider text-neutral-500 dark:text-neutral-400 mb-3">
+                            数据备份提醒
+                        </h3>
+
+                        <div className="space-y-5">
                             {/* 备份提醒开关 */}
                             <div className="flex items-center justify-between">
                                 <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
@@ -836,8 +845,8 @@ const DataSettings: React.FC<DataSettingsProps> = ({
 
                             {/* 提醒间隔设置 */}
                             {backupReminderSettings.enabled && (
-                                <div className="mt-4">
-                                    <div className="flex items-center justify-between mb-2">
+                                <div>
+                                    <div className="flex items-center justify-between mb-3">
                                         <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
                                             提醒频率
                                         </div>
@@ -859,164 +868,166 @@ const DataSettings: React.FC<DataSettingsProps> = ({
                                     />
                                 </div>
                             )}
-                        </>
+                        </div>
+                    </div>
+                )}
+
+                {/* 数据管理设置组 */}
+                <div className="px-6 py-4">
+                    <h3 className="text-sm uppercase font-medium tracking-wider text-neutral-500 dark:text-neutral-400 mb-3">
+                        数据管理
+                    </h3>
+
+                    {status.type && (
+                        <div className={`mb-4 rounded-md p-3 text-sm ${
+                            status.type === 'success'
+                                ? 'bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-400'
+                                : status.type === 'error'
+                                    ? 'bg-red-50 text-red-800 dark:bg-red-900/20 dark:text-red-400'
+                                    : 'bg-blue-50 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400'
+                        }`}>
+                            {status.message}
+                        </div>
                     )}
 
-                    {/* 数据管理功能区域 */}
-                    <div className={backupReminderSettings ? "mt-6" : ""}>
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                                数据管理
-                            </div>
+                    <div className="space-y-5">
+                        {/* 导出按钮 */}
+                        <div>
+                            <button
+                                onClick={handleExport}
+                                className="w-full rounded-md text-sm py-2 px-4 font-medium bg-neutral-100 dark:bg-neutral-700 text-neutral-800 dark:text-neutral-200 hover:bg-neutral-200 dark:hover:bg-neutral-600 transition-colors"
+                            >
+                                导出数据
+                            </button>
+                            <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                                {isNative ? '将数据导出到文档目录' : '将数据下载为 JSON 文件'}
+                            </p>
                         </div>
 
-                        {status.type && (
-                            <div className={`mb-4 rounded-md p-3 text-sm ${
-                                status.type === 'success'
-                                    ? 'bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-400'
-                                    : status.type === 'error'
-                                        ? 'bg-red-50 text-red-800 dark:bg-red-900/20 dark:text-red-400'
-                                        : 'bg-blue-50 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400'
-                            }`}>
-                                {status.message}
-                            </div>
-                        )}
+                        {/* 导入按钮 */}
+                        <div>
+                            <button
+                                onClick={handleImportClick}
+                                className="w-full rounded-md text-sm py-2 px-4 font-medium bg-neutral-100 dark:bg-neutral-700 text-neutral-800 dark:text-neutral-200 hover:bg-neutral-200 dark:hover:bg-neutral-600 transition-colors"
+                            >
+                                导入数据（替换）
+                            </button>
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept=".json"
+                                onChange={handleFileChange}
+                                className="hidden"
+                            />
+                            <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                                导入数据将替换所有现有数据
+                            </p>
+                        </div>
 
-                        <div className="space-y-4">
-                            {/* 导出按钮 */}
-                            <div>
+                        {/* 重置按钮 */}
+                        <div>
+                            {!showConfirmReset ? (
                                 <button
-                                    onClick={handleExport}
-                                    className="w-full rounded text-sm py-2 font-medium bg-neutral-100 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-500"
+                                    onClick={() => setShowConfirmReset(true)}
+                                    className="w-full rounded-md bg-red-100 px-4 py-2 text-sm font-medium text-red-800 transition-colors hover:bg-red-200 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30"
                                 >
-                                    <span className="text-neutral-800 dark:text-neutral-200">导出</span>数据
+                                    重置数据
                                 </button>
-                                <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-                                    {isNative ? '将数据导出到文档目录' : '将数据下载为 JSON 文件'}
-                                </p>
-                            </div>
-
-                            {/* 导入按钮 */}
-                            <div>
-                                <button
-                                    onClick={handleImportClick}
-                                    className="w-full rounded text-sm py-2 font-medium bg-neutral-100 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-500"
-                                >
-                                    <span className="text-neutral-800 dark:text-neutral-200">导入</span>数据（<span className="text-neutral-800 dark:text-neutral-200">替换</span>）
-                                </button>
-                                <input
-                                    ref={fileInputRef}
-                                    type="file"
-                                    accept=".json"
-                                    onChange={handleFileChange}
-                                    className="hidden"
-                                />
-                                <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-                                    导入数据将替换所有现有数据
-                                </p>
-                            </div>
-
-                            {/* 重置按钮 */}
-                            <div>
-                                {!showConfirmReset ? (
-                                    <button
-                                        onClick={() => setShowConfirmReset(true)}
-                                        className="w-full rounded-md bg-red-100 px-4 py-2 text-sm font-medium text-red-800 transition-colors hover:bg-red-200 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30"
-                                    >
-                                        重置数据
-                                    </button>
-                                ) : (
-                                    <div className="mt-4">
-                                        <div className="p-4 rounded-md bg-red-50 dark:bg-red-900/20">
-                                            <div className="flex items-center space-x-2 mb-3">
-                                                <svg
-                                                    xmlns="http://www.w3.org/2000/svg"
-                                                    className="h-5 w-5 text-red-600 dark:text-red-400"
-                                                    viewBox="0 0 20 20"
-                                                    fill="currentColor"
-                                                >
-                                                    <path
-                                                        fillRule="evenodd"
-                                                        d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                                                        clipRule="evenodd"
-                                                    />
-                                                </svg>
-                                                <h3 className="text-sm font-medium text-red-800 dark:text-red-300">
-                                                    确认重置数据
-                                                </h3>
-                                            </div>
-                                            <p className="text-xs text-red-600 dark:text-red-400 mb-4">
-                                                此操作无法撤销，数据将被删除。建议在重置前先导出备份。
-                                            </p>
-                                            
-                                            <p className="text-xs text-red-600 dark:text-red-400 mb-4">
-                                                将彻底重置数据，包括自定义器具、应用设置和导航状态。
-                                            </p>
-                                            
-                                            <div className="flex space-x-2 justify-end">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setShowConfirmReset(false)}
-                                                    className="px-3 py-1.5 text-xs rounded-md bg-neutral-100 text-neutral-800 dark:bg-neutral-700 dark:text-neutral-100 transition-colors hover:bg-neutral-200 dark:hover:bg-neutral-600"
-                                                >
-                                                    取消
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={handleReset}
-                                                    className="px-3 py-1.5 text-xs rounded-md bg-red-600 text-neutral-100 transition-colors hover:bg-red-700"
-                                                >
-                                                    确认重置
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-                                <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-                                    完全删除数据并恢复到初始状态，包括设置和缓存
-                                </p>
-                            </div>
-
-                            {/* 分割线 */}
-                            <div className="my-6 border-t border-neutral-200 dark:border-neutral-700"></div>
-
-                            {/* 图片压缩功能 */}
-                            <div>
-                                <button
-                                    onClick={handleCompressImages}
-                                    disabled={isCompressing}
-                                    className="w-full rounded text-sm py-2 font-medium bg-neutral-100 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    {isCompressing ? (
-                                        <span className="flex items-center justify-center">
-                                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
-                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            ) : (
+                                <div className="space-y-3">
+                                    <div className="p-4 rounded-md bg-red-50 dark:bg-red-900/20">
+                                        <div className="flex items-center space-x-2 mb-3">
+                                            <svg
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                className="h-5 w-5 text-red-600 dark:text-red-400"
+                                                viewBox="0 0 20 20"
+                                                fill="currentColor"
+                                            >
+                                                <path
+                                                    fillRule="evenodd"
+                                                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                                                    clipRule="evenodd"
+                                                />
                                             </svg>
-                                            压缩中...
-                                        </span>
-                                    ) : (
-                                        <span className="text-neutral-800 dark:text-neutral-200">补压图片</span>
-                                    )}
-                                </button>
-                                <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-                                    压缩大于 200KB 的图片，降低存储占用。适用于之前未自动压缩的图片。（仅咖啡豆图片）
-                                </p>
-                                {isCompressing && compressionProgress.total > 0 && (
-                                    <div className="mt-2">
-                                        <div className="flex justify-between text-xs text-neutral-500 dark:text-neutral-400 mb-1">
-                                            <span>进度</span>
-                                            <span>{compressionProgress.current}/{compressionProgress.total}</span>
+                                            <h3 className="text-sm font-medium text-red-800 dark:text-red-300">
+                                                确认重置数据
+                                            </h3>
                                         </div>
-                                        <div className="w-full bg-neutral-200 dark:bg-neutral-700 rounded-full h-1.5">
-                                            <div
-                                                className="bg-orange-600 h-1.5 rounded-full transition-all duration-300"
-                                                style={{ width: `${(compressionProgress.current / compressionProgress.total) * 100}%` }}
-                                            ></div>
+                                        <p className="text-xs text-red-600 dark:text-red-400 mb-3">
+                                            此操作无法撤销，数据将被删除。建议在重置前先导出备份。
+                                        </p>
+                                        <p className="text-xs text-red-600 dark:text-red-400 mb-4">
+                                            将彻底重置数据，包括自定义器具、应用设置和导航状态。
+                                        </p>
+                                        <div className="flex space-x-2 justify-end">
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowConfirmReset(false)}
+                                                className="px-3 py-1.5 text-xs rounded-md bg-neutral-100 text-neutral-800 dark:bg-neutral-700 dark:text-neutral-100 transition-colors hover:bg-neutral-200 dark:hover:bg-neutral-600"
+                                            >
+                                                取消
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={handleReset}
+                                                className="px-3 py-1.5 text-xs rounded-md bg-red-600 text-neutral-100 transition-colors hover:bg-red-700"
+                                            >
+                                                确认重置
+                                            </button>
                                         </div>
                                     </div>
+                                </div>
+                            )}
+                            <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
+                                完全删除数据并恢复到初始状态，包括设置和缓存
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* 工具设置组 */}
+                <div className="px-6 py-4">
+                    <h3 className="text-sm uppercase font-medium tracking-wider text-neutral-500 dark:text-neutral-400 mb-3">
+                        工具
+                    </h3>
+
+                    <div className="space-y-5">
+                        {/* 图片压缩功能 */}
+                        <div>
+                            <button
+                                onClick={handleCompressImages}
+                                disabled={isCompressing}
+                                className="w-full rounded-md text-sm py-2 px-4 font-medium bg-neutral-100 dark:bg-neutral-700 text-neutral-800 dark:text-neutral-200 hover:bg-neutral-200 dark:hover:bg-neutral-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
+                                {isCompressing ? (
+                                    <span className="flex items-center justify-center">
+                                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        压缩中...
+                                    </span>
+                                ) : (
+                                    '图片补压'
                                 )}
-                            </div>
+                            </button>
+                            <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
+                                压缩大于 200KB 的图片，降低存储占用。适用于之前未自动压缩的图片。（仅咖啡豆图片）
+                            </p>
+                            {isCompressing && compressionProgress.total > 0 && (
+                                <div className="mt-3">
+                                    <div className="flex justify-between text-xs text-neutral-500 dark:text-neutral-400 mb-1">
+                                        <span>进度</span>
+                                        <span>{compressionProgress.current}/{compressionProgress.total}</span>
+                                    </div>
+                                    <div className="w-full bg-neutral-200 dark:bg-neutral-700 rounded-full h-1.5">
+                                        <div
+                                            className="bg-orange-600 h-1.5 rounded-full transition-all duration-300"
+                                            style={{ width: `${(compressionProgress.current / compressionProgress.total) * 100}%` }}
+                                        ></div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -1057,7 +1068,7 @@ const DataSettings: React.FC<DataSettingsProps> = ({
                                     云端数据
                                 </p>
                                 <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
-                                    {conflictRemoteMetadata
+                                    {conflictRemoteMetadata && conflictRemoteMetadata.lastSyncTime
                                         ? `最后更新于 ${new Date(
                                             conflictRemoteMetadata.lastSyncTime
                                         ).toLocaleString('zh-CN', {
