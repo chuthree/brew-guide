@@ -154,6 +154,28 @@ const TimerSettings: React.FC<TimerSettingsProps> = ({
                             </label>
                         </div>
 
+                        {/* 简洁模式 */}
+                        <div className="flex items-center justify-between">
+                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                                简洁模式
+                            </div>
+                            <label className="relative inline-flex cursor-pointer items-center">
+                                <input
+                                    type="checkbox"
+                                    checked={settings.layoutSettings?.compactMode || false}
+                                    onChange={(e) => {
+                                        const newLayoutSettings = {
+                                            ...settings.layoutSettings,
+                                            compactMode: e.target.checked
+                                        };
+                                        handleChange('layoutSettings', newLayoutSettings);
+                                    }}
+                                    className="peer sr-only"
+                                />
+                                <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
+                            </label>
+                        </div>
+
                         {/* 进度条高度 */}
                         <div className="flex items-center justify-between mb-2">
                             <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
