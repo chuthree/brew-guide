@@ -363,7 +363,7 @@ export default function DownloadPage(): React.ReactNode {
                                     <p className="font-medium">v1.2.4.6</p>
                                     <p className="text-xs text-neutral-500 mt-1">2025-05-13</p>
                                     <ul className="mt-2 text-xs text-neutral-500 list-disc pl-4 space-y-1">
-                                        <li>(添加): 咖啡豆新增&quot;冰冻&quot;保存状态</li>
+                                        <li>(添加): 咖啡豆新增&quot;冷冻&quot;保存状态</li>
                                         <li>(添加): 统计视图新增平均消耗与预计完成日期显示</li>
                                         <li>(优化): 笔记编辑流程更加顺畅，操作体验升级</li>
                                         <li>(优化): 调整安全区域的填充和位置，以改善界面适应性</li>

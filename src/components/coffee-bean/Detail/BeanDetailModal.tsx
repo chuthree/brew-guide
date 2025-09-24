@@ -188,7 +188,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
             items.push({
                 key: 'flavor',
                 label: '状态',
-                value: '冰冻',
+                value: '冷冻',
                 type: 'status',
                 color: 'text-cyan-600 dark:text-cyan-400'
             })

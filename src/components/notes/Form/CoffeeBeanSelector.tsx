@@ -29,7 +29,7 @@ const getFlavorInfo = (bean: CoffeeBean) => {
 const getPhaseValue = (phase: string): number => {
   switch (phase) {
     case '在途': return -1; // 在途状态优先级最高
-    case '冰冻': return 0; // 冰冻状态与赏味期同等优先级
+    case '冷冻': return 0; // 冷冻状态与赏味期同等优先级
     case '赏味期': return 0;
     case '养豆期': return 1;
     case '衰退期':
@@ -187,8 +187,8 @@ const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
                 freshStatus = "(在途)";
                 statusClass = "text-neutral-600 dark:text-neutral-400";
               } else if (bean.isFrozen) {
-                // 冰冻状态处理
-                freshStatus = "(冰冻)";
+                // 冷冻状态处理
+                freshStatus = "(冷冻)";
                 statusClass = "text-blue-400 dark:text-blue-300";
               } else if (bean.roastDate) {
                 const { phase } = getFlavorInfo(bean);
@@ -256,7 +256,7 @@ const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
                     return 'bg-red-400'; // 红色
                   case '在途':
                     return 'bg-blue-400'; // 蓝色
-                  case '冰冻':
+                  case '冷冻':
                     return 'bg-cyan-400'; // 冰蓝色
                   case '未知':
                   default:

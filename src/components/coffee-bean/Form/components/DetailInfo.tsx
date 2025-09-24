@@ -100,7 +100,7 @@ const DetailInfo: React.FC<DetailInfoProps> = ({
                                 onClick={toggleFrozenState}
                                 className="text-xs text-neutral-600 dark:text-neutral-400 underline"
                             >
-                                设为冰冻状态
+                                设为冷冻状态
                             </button>
                         </div>
                     </div>
@@ -150,7 +150,7 @@ const DetailInfo: React.FC<DetailInfoProps> = ({
                                 onClick={toggleFrozenState}
                                 className="text-xs text-neutral-600 dark:text-neutral-400 underline"
                             >
-                                取消冰冻状态
+                                取消冷冻状态
                             </button>
                         </div>
                     </div>

@@ -154,7 +154,7 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
                                     </div>
                                     <div className="flex items-center gap-2 text-xs text-neutral-600 dark:text-neutral-400">
                                         <div className="w-2 h-2 rounded-full bg-cyan-400"></div>
-                                        <span>冰冻 - 冷冻保存中</span>
+                                        <span>冷冻 - 冷冻保存中</span>
                                     </div>
                                 </div>
                             </div>

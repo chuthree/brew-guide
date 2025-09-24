@@ -133,9 +133,9 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
             return { phase: '在途', remainingDays: 0 };
         }
 
-        // 处理冰冻状态
+        // 处理冷冻状态
         if (bean.isFrozen) {
-            return { phase: '冰冻', remainingDays: 0 };
+            return { phase: '冷冻', remainingDays: 0 };
         }
 
         if (!bean.roastDate) {
@@ -155,7 +155,7 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
     const getPhaseValue = (phase: string): number => {
         switch (phase) {
             case '在途': return -1; // 在途状态优先级最高
-            case '冰冻': return 0; // 冰冻状态与赏味期同等优先级
+            case '冷冻': return 0; // 冷冻状态与赏味期同等优先级
             case '赏味期': return 0;
             case '养豆期': return 1;
             case '衰退期':
@@ -323,7 +323,7 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
                     freshStatus = "(在途)";
                     statusClass = "text-neutral-600 dark:text-neutral-400";
                 } else if (bean.isFrozen) {
-                    freshStatus = "(冰冻)";
+                    freshStatus = "(冷冻)";
                     statusClass = "text-blue-400 dark:text-blue-300";
                 } else if (bean.roastDate) {
                     if (phase === '养豆期') {
@@ -378,7 +378,7 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
                         case '赏味期': return 'bg-green-400';
                         case '衰退期': return 'bg-red-400';
                         case '在途': return 'bg-blue-400';
-                        case '冰冻': return 'bg-cyan-400';
+                        case '冷冻': return 'bg-cyan-400';
                         default: return 'bg-neutral-400';
                     }
                 };

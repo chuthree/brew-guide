@@ -504,11 +504,11 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
             ...prev,
             startDay,
             endDay,
-            isFrozen: false // 设置赏味期时取消冰冻状态
+            isFrozen: false // 设置赏味期时取消冷冻状态
         }));
     };
 
-    // 切换冰冻状态
+    // 切换冷冻状态
     const toggleFrozenState = () => {
         setBean(prev => ({
             ...prev,

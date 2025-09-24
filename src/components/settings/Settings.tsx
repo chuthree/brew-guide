@@ -87,7 +87,7 @@ export interface SettingsOptions {
             aging: boolean     // 养豆期
             optimal: boolean   // 赏味期
             decline: boolean   // 衰退期
-            frozen: boolean    // 冰冻
+            frozen: boolean    // 冷冻
             inTransit: boolean // 在途
             unknown: boolean   // 未知
         }
@@ -151,7 +151,7 @@ export const defaultSettings: SettingsOptions = {
             aging: false,    // 默认不包含养豆期
             optimal: true,   // 默认包含赏味期
             decline: true,   // 默认包含衰退期
-            frozen: true,    // 默认包含冰冻
+            frozen: true,    // 默认包含冷冻
             inTransit: false,// 默认不包含在途
             unknown: true    // 默认包含未知状态
         }

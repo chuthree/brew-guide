@@ -80,7 +80,7 @@ export const calculateFlavorInfo = (bean: CoffeeBean, customFlavorPeriod?: Setti
     }
     
     if (bean.isFrozen) {
-        return { phase: '冰冻', remainingDays: 0, status: '冰冻保存' };
+        return { phase: '冷冻', remainingDays: 0, status: '冷冻保存' };
     }
     
     if (!bean.roastDate) {

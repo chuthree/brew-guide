@@ -258,7 +258,7 @@ export enum FlavorPeriodStatus {
     AGING = 'aging',         // 养豆期
     OPTIMAL = 'optimal',     // 赏味期
     DECLINE = 'decline',     // 衰退期
-    FROZEN = 'frozen',       // 冰冻
+    FROZEN = 'frozen',       // 冷冻
     IN_TRANSIT = 'in_transit', // 在途
     UNKNOWN = 'unknown'      // 未知（没有烘焙日期）
 }
@@ -270,7 +270,7 @@ export const FLAVOR_PERIOD_LABELS: Record<FlavorPeriodStatus, string> = {
     [FlavorPeriodStatus.AGING]: '养豆期',
     [FlavorPeriodStatus.OPTIMAL]: '赏味期',
     [FlavorPeriodStatus.DECLINE]: '衰退期',
-    [FlavorPeriodStatus.FROZEN]: '冰冻',
+    [FlavorPeriodStatus.FROZEN]: '冷冻',
     [FlavorPeriodStatus.IN_TRANSIT]: '在途',
     [FlavorPeriodStatus.UNKNOWN]: '未知'
 }
@@ -288,7 +288,7 @@ export const getBeanFlavorPeriodStatus = (bean: ExtendedCoffeeBean): FlavorPerio
     switch (flavorInfo.phase) {
         case '在途':
             return FlavorPeriodStatus.IN_TRANSIT;
-        case '冰冻':
+        case '冷冻':
             return FlavorPeriodStatus.FROZEN;
         case '养豆期':
             return FlavorPeriodStatus.AGING;
@@ -324,7 +324,7 @@ export const extractAvailableFlavorPeriodStatuses = (beans: ExtendedCoffeeBean[]
         statusesSet.add(status)
     })
 
-    // 按优先级排序：在途 > 冰冻 > 赏味期 > 养豆期 > 衰退期 > 未知
+    // 按优先级排序：在途 > 冷冻 > 赏味期 > 养豆期 > 衰退期 > 未知
     const priorityOrder = [
         FlavorPeriodStatus.IN_TRANSIT,
         FlavorPeriodStatus.FROZEN,

@@ -68,7 +68,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
         }
 
         if (bean.isFrozen) {
-            return { phase: '冰冻', status: '冰冻', remainingDays: 0, progressPercent: 0, preFlavorPercent: 0, flavorPercent: 100, daysSinceRoast: 0, endDay: 0, isFrozen: true, isInTransit: false };
+            return { phase: '冷冻', status: '冷冻', remainingDays: 0, progressPercent: 0, preFlavorPercent: 0, flavorPercent: 100, daysSinceRoast: 0, endDay: 0, isFrozen: true, isInTransit: false };
         }
 
         // 使用统一的赏味期计算工具
@@ -109,8 +109,8 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
             status = '已衰退';
         } else if (phase === '在途') {
             status = '在途';
-        } else if (phase === '冰冻') {
-            status = '冰冻';
+        } else if (phase === '冷冻') {
+            status = '冷冻';
         } else {
             status = '未知';
         }
@@ -169,7 +169,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
             '赏味期': 'bg-green-400',
             '衰退期': 'bg-red-400',
             '在途': 'bg-blue-400',
-            '冰冻': 'bg-cyan-400'
+            '冷冻': 'bg-cyan-400'
         };
         return colors[phase as keyof typeof colors] || 'bg-neutral-400';
     };

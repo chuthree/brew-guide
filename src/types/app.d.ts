@@ -37,7 +37,7 @@ export interface CoffeeBean {
 	// 时间管理
 	startDay?: number;    // 开始使用天数
 	endDay?: number;      // 结束使用天数
-	isFrozen?: boolean;   // 是否冰冻状态
+	isFrozen?: boolean;   // 是否冷冻状态
 	isInTransit?: boolean; // 是否在途状态
 
 	// 分类标签

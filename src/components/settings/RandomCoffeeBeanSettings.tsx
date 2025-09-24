@@ -208,11 +208,11 @@ const RandomCoffeeBeanSettings: React.FC<RandomCoffeeBeanSettingsProps> = ({
                             </label>
                         </div>
 
-                        {/* 冰冻 */}
+                        {/* 冷冻 */}
                         <div className="flex items-center justify-between">
                             <div>
                                 <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                                    冰冻
+                                    冷冻
                                 </span>
                                 <p className="text-xs text-neutral-500 dark:text-neutral-400">
                                     冷冻保存的咖啡豆
