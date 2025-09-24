@@ -6,6 +6,7 @@ import { defaultSettings, SettingsOptions } from '@/components/settings/Settings
 import { cn } from '@/lib/utils/classNameUtils'
 import { CoffeeBean } from '@/types/app'
 import { BrewingNoteData } from '@/types/app'
+import hapticsUtils from '@/lib/ui/haptics'
 
 interface RemainingEditorProps {
     position?: { x: number, y: number } | null
@@ -33,6 +34,10 @@ const RemainingEditor: React.FC<RemainingEditorProps> = ({
     const open = isOpen !== undefined ? isOpen : internalOpen
     const [positionStyle, setPositionStyle] = useState<React.CSSProperties>({})
     const [decrementValues, setDecrementValues] = useState<number[]>(defaultSettings.decrementPresets)
+    const [enableAllOption, setEnableAllOption] = useState<boolean>(defaultSettings.enableAllDecrementOption)
+    const [enableCustomInput, setEnableCustomInput] = useState<boolean>(defaultSettings.enableCustomDecrementInput)
+    const [customValue, setCustomValue] = useState<string>('')
+    const [hapticEnabled, setHapticEnabled] = useState<boolean>(defaultSettings.hapticFeedback)
     
     // 引用管理
     const popoverRef = useRef<HTMLDivElement>(null)
@@ -72,9 +77,9 @@ const RemainingEditor: React.FC<RemainingEditorProps> = ({
         }
     }, [onOpenChange, onCancel])
     
-    // 加载减量预设值
+    // 加载设置（预设值 + 功能开关）
     useEffect(() => {
-        const loadPresets = async () => {
+        const loadSettings = async () => {
             try {
                 const { Storage } = await import('@/lib/core/storage');
                 const settingsStr = await Storage.get('brewGuideSettings')
@@ -82,22 +87,33 @@ const RemainingEditor: React.FC<RemainingEditorProps> = ({
                     const settings = JSON.parse(settingsStr) as SettingsOptions
                     if (settings.decrementPresets?.length > 0) {
                         safeSetState(setDecrementValues)(settings.decrementPresets)
+                    } else {
+                        safeSetState(setDecrementValues)(defaultSettings.decrementPresets)
                     }
+                    safeSetState(setEnableAllOption)(settings.enableAllDecrementOption ?? defaultSettings.enableAllDecrementOption)
+                    safeSetState(setEnableCustomInput)(settings.enableCustomDecrementInput ?? defaultSettings.enableCustomDecrementInput)
+                    safeSetState(setHapticEnabled)(settings.hapticFeedback ?? defaultSettings.hapticFeedback)
+                } else {
+                    // 无本地设置时回退到默认
+                    safeSetState(setDecrementValues)(defaultSettings.decrementPresets)
+                    safeSetState(setEnableAllOption)(defaultSettings.enableAllDecrementOption)
+                    safeSetState(setEnableCustomInput)(defaultSettings.enableCustomDecrementInput)
+                    safeSetState(setHapticEnabled)(defaultSettings.hapticFeedback)
                 }
             } catch (error) {
-                console.error('加载库存扣除预设值失败:', error)
+                console.error('加载库存扣除设置失败:', error)
             }
         }
-        
-        loadPresets()
-        
+
+        loadSettings()
+
         // 监听设置变更
         const handleSettingsChange = (e: CustomEvent) => {
             if (e.detail?.key === 'brewGuideSettings' && isMounted.current) {
-                loadPresets()
+                loadSettings()
             }
         }
-        
+
         window.addEventListener('storageChange', handleSettingsChange as EventListener)
         return () => {
             window.removeEventListener('storageChange', handleSettingsChange as EventListener)
@@ -283,26 +299,50 @@ const RemainingEditor: React.FC<RemainingEditorProps> = ({
         }
     }
     
-    // 安全处理按钮点击 - 修改为先计算实际扣除量
-    const handleDecrementClick = async (e: React.MouseEvent, value: number) => {
-        e.stopPropagation()
+    // 执行快捷扣除（统一逻辑）
+    const performQuickDecrement = async (value: number) => {
         if (!isMounted.current || !coffeeBean) return
-
         try {
             setOpen(false)
-
-            // 获取当前剩余量
             const currentRemaining = parseFloat(coffeeBean.remaining || '0')
-            // 计算实际扣除量（不能超过剩余量）
             const actualDecrementAmount = Math.min(value, currentRemaining)
-
-            // 执行快捷扣除
             onQuickDecrement(value)
-
-            // 创建变动记录，传入请求量和实际扣除量
             await createAutoNote(value, actualDecrementAmount)
+            if (hapticEnabled) {
+                try { 
+                    hapticsUtils.light() 
+                } catch (_error) {
+                    // 静默处理触觉反馈错误
+                }
+            }
         } catch (error) {
             console.error('快捷扣除操作失败:', error)
+        }
+    }
+
+    // 预设扣除点击
+    const handleDecrementClick = async (e: React.MouseEvent, value: number) => {
+        e.stopPropagation()
+        await performQuickDecrement(value)
+    }
+
+    // ALL 扣除点击
+    const handleAllClick = async (e: React.MouseEvent) => {
+        e.stopPropagation()
+        if (!coffeeBean) return
+        const currentRemaining = Math.max(0, parseFloat(coffeeBean.remaining || '0'))
+        if (currentRemaining > 0) {
+            await performQuickDecrement(currentRemaining)
+        }
+    }
+
+    // 自定义输入应用
+    const handleCustomApply = async (e?: React.MouseEvent) => {
+        e?.stopPropagation()
+        const num = parseFloat(customValue)
+        if (!isNaN(num) && num > 0) {
+            await performQuickDecrement(num)
+            setCustomValue('')
         }
     }
     
@@ -318,24 +358,71 @@ const RemainingEditor: React.FC<RemainingEditorProps> = ({
                     exit={{ opacity: 0, y: -5 }}
                     transition={{ duration: 0.15 }}
                     className={cn(
-                        "fixed z-10 bg-white dark:bg-neutral-800 rounded-lg shadow-lg border border-neutral-200 dark:border-neutral-700 p-2",
+                        "fixed z-10 bg-white dark:bg-neutral-800 rounded-lg shadow-lg border border-neutral-200 dark:border-neutral-700 p-2 max-w-xs",
                         className
                     )}
                     style={positionStyle}
                     onClick={handleStop}
                 >
-                    <div className="flex flex-col space-y-2">
-                        <div className={`flex ${decrementValues.length > 3 ? 'flex-wrap gap-1' : 'space-x-1'}`}>
-                            {decrementValues.map((value) => (
+                    <div className="flex flex-wrap gap-1 items-center">
+                        {/* 预设值按钮 */}
+                        {decrementValues.map((value) => (
+                            <button
+                                key={value}
+                                className="h-6 px-2 text-[10px] bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-neutral-800 dark:text-neutral-200 rounded-sm transition-colors"
+                                onClick={(e) => handleDecrementClick(e, value)}
+                            >
+                                -{value}
+                            </button>
+                        ))}
+                        
+                        {/* ALL按钮 */}
+                        {enableAllOption && (
+                            <button
+                                className="h-6 px-2 text-[10px] bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-neutral-800 dark:text-neutral-200 rounded-sm transition-colors"
+                                onClick={handleAllClick}
+                            >
+                                ALL
+                            </button>
+                        )}
+                        
+                        {/* 自定义输入 - 连体设计 */}
+                        {enableCustomInput && (
+                            <div className="flex h-6 bg-neutral-100 dark:bg-neutral-700 rounded-sm overflow-hidden">
+                                <input
+                                    type="text"
+                                    inputMode="decimal"
+                                    className="w-12 h-full text-[10px] px-1 text-center bg-transparent text-neutral-800 dark:text-neutral-200 focus:outline-none focus:ring-1 focus:ring-neutral-400 rounded-none"
+                                    placeholder="15.5"
+                                    value={customValue}
+                                    onClick={handleStop}
+                                    onChange={(e) => {
+                                        const raw = e.target.value.replace(/[^0-9.]/g, '')
+                                        const dotCount = (raw.match(/\./g) || []).length
+                                        let sanitized = dotCount > 1 ? raw.substring(0, raw.lastIndexOf('.') ) : raw
+                                        const dotIndex = sanitized.indexOf('.')
+                                        if (dotIndex !== -1 && dotIndex < sanitized.length - 2) {
+                                            sanitized = sanitized.substring(0, dotIndex + 2)
+                                        }
+                                        setCustomValue(sanitized)
+                                    }}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault()
+                                            void handleCustomApply()
+                                        }
+                                    }}
+                                />
                                 <button
-                                    key={value}
-                                    className="flex-1 text-[10px] px-2 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-neutral-800 dark:text-neutral-200 rounded-sm py-1 transition-colors"
-                                    onClick={(e) => handleDecrementClick(e, value)}
+                                    className="w-6 h-full text-[10px] bg-neutral-200 hover:bg-neutral-300 dark:bg-neutral-600 dark:hover:bg-neutral-500 text-neutral-800 dark:text-neutral-200 transition-colors disabled:opacity-40 flex items-center justify-center"
+                                    disabled={!customValue || isNaN(parseFloat(customValue)) || parseFloat(customValue) <= 0}
+                                    onClick={handleCustomApply}
+                                    title="确认扣除"
                                 >
-                                    -{value}
+                                    ✓
                                 </button>
-                            ))}
-                        </div>
+                            </div>
+                        )}
                     </div>
                 </motion.div>
             )}

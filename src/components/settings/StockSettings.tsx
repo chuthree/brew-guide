@@ -79,6 +79,61 @@ const StockSettings: React.FC<StockSettingsProps> = ({
             <div className="relative flex-1 overflow-y-auto pb-safe-bottom">
                 <div className="sticky top-0 z-10 h-12 w-full bg-linear-to-b from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none"></div>
                 <div className="px-6 py-4 -mt-8">
+                    {/* 功能开关选项 */}
+                    <div className="space-y-4 mb-6">
+                        {/* ALL扣除选项开关 */}
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                                    启用&ldquo;全部扣除&rdquo;选项
+                                </div>
+                                <div className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                                    显示ALL按钮，可一次性扣除剩余库存
+                                </div>
+                            </div>
+                            <label className="relative inline-flex cursor-pointer items-center">
+                                <input
+                                    type="checkbox"
+                                    checked={settings.enableAllDecrementOption}
+                                    onChange={(e) => handleChange('enableAllDecrementOption', e.target.checked)}
+                                    className="peer sr-only"
+                                />
+                                <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
+                            </label>
+                        </div>
+
+                        {/* 自定义输入选项开关 */}
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                                    启用自定义扣除输入
+                                </div>
+                                <div className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                                    允许用户在快捷扣除框中输入任意数字
+                                </div>
+                            </div>
+                            <label className="relative inline-flex cursor-pointer items-center">
+                                <input
+                                    type="checkbox"
+                                    checked={settings.enableCustomDecrementInput}
+                                    onChange={(e) => handleChange('enableCustomDecrementInput', e.target.checked)}
+                                    className="peer sr-only"
+                                />
+                                <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
+                            </label>
+                        </div>
+                    </div>
+
+                    {/* 分隔线 */}
+                    <div className="border-t border-neutral-200 dark:border-neutral-700 mb-4"></div>
+
+                    {/* 预设值管理 */}
+                    <div className="mb-2">
+                        <h3 className="text-sm font-medium text-neutral-800 dark:text-neutral-200 mb-3">
+                            预设扣除值管理
+                        </h3>
+                    </div>
+                    
                     <div className="flex gap-2 mb-3 flex-wrap">
                         {decrementPresets.map((value) => (
                             <button

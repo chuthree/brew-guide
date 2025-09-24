@@ -41,6 +41,8 @@ export interface SettingsOptions {
     showFlowRate: boolean // 添加显示流速选项
     username: string // 添加用户名
     decrementPresets: number[] // 添加咖啡豆库存快捷扣除量预设值
+    enableAllDecrementOption: boolean // 是否启用ALL扣除选项（扣除剩余库存）
+    enableCustomDecrementInput: boolean // 是否启用用户自定义输入扣除数量
     showOnlyBeanName: boolean // 是否只显示咖啡豆名称
     dateDisplayMode: 'date' | 'flavorPeriod' | 'agingDays' // 日期显示模式：日期/赏味期/养豆天数
     showFlavorInfo: boolean // 是否在备注中显示风味信息
@@ -111,6 +113,8 @@ export const defaultSettings: SettingsOptions = {
     showFlowRate: false, // 默认不显示流速
     username: '', // 默认用户名为空
     decrementPresets: [15, 16, 18], // 默认的库存扣除量预设值
+    enableAllDecrementOption: false, // 默认关闭ALL扣除选项
+    enableCustomDecrementInput: true, // 默认启用自定义输入扣除
     showOnlyBeanName: true, // 默认简化咖啡豆名称
     dateDisplayMode: 'date', // 默认显示烘焙日期
     showFlavorInfo: false, // 默认不显示风味信息
