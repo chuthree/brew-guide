@@ -4,14 +4,14 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
-import { equipmentList, type CustomEquipment } from '@/lib/core/config'
+import { equipmentList, type CustomEquipment, type Equipment } from '@/lib/core/config'
 
 export interface UseEquipmentListOptions {
   customEquipments: CustomEquipment[]
   transformItems?: <T extends { id: string; name: string; isCustom?: boolean }>(items: T[]) => T[]
 }
 
-export interface UseEquipmentListReturn<T = any> {
+export interface UseEquipmentListReturn<T extends { id: string; name: string; isCustom?: boolean } = Equipment | CustomEquipment> {
   allEquipments: T[]
   isLoading: boolean
   error: string | null
@@ -21,7 +21,7 @@ export interface UseEquipmentListReturn<T = any> {
  * 器具列表管理Hook
  * 处理器具列表的加载、排序和实时更新
  */
-export function useEquipmentList<T = any>({
+export function useEquipmentList<T extends { id: string; name: string; isCustom?: boolean } = Equipment | CustomEquipment>({
   customEquipments,
   transformItems
 }: UseEquipmentListOptions): UseEquipmentListReturn<T> {

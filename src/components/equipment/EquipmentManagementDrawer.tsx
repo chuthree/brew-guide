@@ -69,7 +69,7 @@ const EquipmentManagementDrawer: React.FC<EquipmentManagementDrawerProps> = ({
         const equipmentsWithActions = baseEquipments.map(eq => ({
             ...eq,
             showActions: false,
-            isSystem: !eq.isCustom
+            isSystem: !('isCustom' in eq && eq.isCustom)
         } as EquipmentWithActions))
         setAllEquipments(equipmentsWithActions)
     }, [baseEquipments])

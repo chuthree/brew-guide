@@ -599,7 +599,7 @@ export class S3SyncManager {
     /**
      * 递归地对对象的键进行排序
      */
-    private deepSortObject(obj: any): any {
+    private deepSortObject(obj: unknown): unknown {
         if (typeof obj !== 'object' || obj === null) {
             return obj
         }
@@ -608,12 +608,13 @@ export class S3SyncManager {
             return obj.map(item => this.deepSortObject(item))
         }
 
+        const objRecord = obj as Record<string, unknown>
         const sortedObj: Record<string, unknown> = {}
         const compareAlpha = (a: string, b: string) => a.localeCompare(b, undefined, { sensitivity: 'base' })
-        const sortedKeys = Object.keys(obj).sort(compareAlpha)
+        const sortedKeys = Object.keys(objRecord).sort(compareAlpha)
 
         for (const key of sortedKeys) {
-            sortedObj[key] = this.deepSortObject(obj[key])
+            sortedObj[key] = this.deepSortObject(objRecord[key])
         }
 
         return sortedObj

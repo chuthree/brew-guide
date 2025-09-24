@@ -67,7 +67,7 @@ const EquipmentCategoryBar: React.FC<EquipmentCategoryBarProps> = ({
     id: equipment.id,
     name: equipment.name,
     isSelected: selectedEquipment === equipment.id,
-    isCustom: equipment.isCustom || false,
+    isCustom: ('isCustom' in equipment && equipment.isCustom) || false,
     onClick: () => onEquipmentSelect(equipment.id)
   }))
 

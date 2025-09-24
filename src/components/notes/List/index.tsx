@@ -367,8 +367,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     // 加载可用设备和咖啡豆列表
     const loadEquipmentsAndBeans = useCallback(async () => {
         try {
-            console.log('开始加载设备和咖啡豆数据，isOpen:', isOpen);
-            
             // 移除 isOpen 检查，确保数据总是可以被加载
             // 这样在应用重新进入时也能正常刷新数据
 
@@ -376,8 +374,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
             const { Storage } = await import('@/lib/core/storage');
             const savedNotes = await Storage.get('brewingNotes');
             let parsedNotes: BrewingNote[] = savedNotes ? JSON.parse(savedNotes) : [];
-
-            console.log('加载到的笔记数量:', parsedNotes.length);
 
             // 清理重复器具（一次性修复历史数据）
             parsedNotes = await cleanupDuplicateEquipments(parsedNotes);
@@ -487,8 +483,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
             // 确保globalCache.initialized设置为true
             globalCache.initialized = true;
 
-            console.log('数据加载完成，笔记数量:', parsedNotes.length, '设备数量:', uniqueEquipmentIds.length, '咖啡豆数量:', beanNames.length);
-
             // 数据处理现在由 useEnhancedNotesFiltering Hook 自动处理
         } catch (error) {
             console.error("加载设备和咖啡豆数据失败:", error);
@@ -527,14 +521,12 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         const handleVisibilityChange = () => {
             // 当页面重新变为可见时，重新加载数据
             if (!document.hidden) {
-                console.log('页面重新可见，刷新笔记数据');
                 loadEquipmentsAndBeans();
             }
         };
 
         const handleAppResume = () => {
             // 当应用从后台恢复时，重新加载数据
-            console.log('应用恢复，刷新笔记数据');
             // 使用强制重新初始化，确保获取最新数据
             forceReinitializeGlobalCache().then(() => {
                 loadEquipmentsAndBeans();
@@ -567,14 +559,12 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
             // localStorage 只存储 UI 偏好设置，不存储笔记数据
             // 笔记数据存储在 IndexedDB 中，通过其他事件监听
             if (e.key && e.key.startsWith('notes-') && e.newValue !== null) {
-                console.log('检测到笔记 UI 偏好设置变化:', e.key);
                 // UI 偏好设置变化不需要重新加载笔记数据
             }
         };
         
         const handleCustomStorageChange = (e: CustomEvent) => {
             if (e.detail?.key === 'brewingNotes') {
-                console.log('检测到 IndexedDB 笔记数据变化，重新加载笔记数据');
                 // IndexedDB 中的笔记数据变化时才重新加载数据
                 loadEquipmentsAndBeans();
             }
@@ -583,32 +573,27 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         // 监听 IndexedDB 存储变化事件（这是正确的笔记数据变化事件）
         const handleStorageChanged = (e: CustomEvent) => {
             if (e.detail?.key === 'brewingNotes') {
-                console.log('检测到存储系统笔记数据变化，重新加载笔记数据');
                 loadEquipmentsAndBeans();
             }
         };
 
         // 监听咖啡豆更新事件
         const handleCoffeeBeansUpdated = () => {
-            console.log('检测到咖啡豆更新，重新加载笔记数据');
             loadEquipmentsAndBeans();
         };
 
         // 监听笔记更新事件（由咖啡豆管理器触发）
         const handleBrewingNotesUpdated = () => {
-            console.log('检测到笔记更新事件，重新加载笔记数据');
             loadEquipmentsAndBeans();
         };
 
         // 添加全局刷新函数到 window 对象
         window.refreshBrewingNotes = () => {
-            console.log('手动触发笔记数据刷新');
             loadEquipmentsAndBeans();
         };
 
         // 添加强制重新初始化函数到 window 对象
         window.forceReinitializeBrewingNotes = () => {
-            console.log('强制重新初始化笔记数据');
             forceReinitializeGlobalCache().then(() => {
                 loadEquipmentsAndBeans();
             });
@@ -980,7 +965,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     // 确保数据同步的通用函数
     const ensureDataSync = useCallback(async () => {
         try {
-            console.log('确保数据同步');
             await forceReinitializeGlobalCache();
             await loadEquipmentsAndBeans();
             triggerRerender();

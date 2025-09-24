@@ -16,6 +16,11 @@ interface CoffeeBeanSelectorProps {
   showStatusDots?: boolean
 }
 
+// 定义列表项类型
+type VirtuosoItem = 
+  | { __type: 'none' }
+  | { __type: 'bean'; bean: CoffeeBean }
+
 // 计算咖啡豆的赏味期阶段和剩余天数
 const getFlavorInfo = (bean: CoffeeBean) => {
   const flavorInfo = calculateFlavorInfo(bean);
@@ -152,8 +157,8 @@ const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
                 ListCmp.displayName = 'CoffeeBeanSelectorVirtuosoList';
                 return { List: ListCmp };
               })()}
-              itemContent={(_index, item) => {
-              if ((item as any).__type === 'none') {
+              itemContent={(_index, item: VirtuosoItem) => {
+              if (item.__type === 'none') {
                 return (
                   <div
                     className="group relative cursor-pointer text-neutral-500 dark:text-neutral-400 transition-all duration-300"
@@ -177,7 +182,7 @@ const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
                   </div>
                 );
               }
-              const bean = (item as any).bean as CoffeeBean;
+              const bean = item.bean;
               // 获取赏味期状态
               let freshStatus = "";
               let statusClass = "text-neutral-500 dark:text-neutral-400";

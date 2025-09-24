@@ -86,7 +86,6 @@ export const initializeGlobalCache = async (): Promise<void> => {
     if (globalCache.isLoading) return;
     
     try {
-        console.log('初始化全局缓存，当前状态:', { initialized: globalCache.initialized, notesCount: globalCache.notes.length });
         globalCache.isLoading = true;
         
         // 初始化首选项
@@ -100,8 +99,6 @@ export const initializeGlobalCache = async (): Promise<void> => {
         const savedNotes = await Storage.get('brewingNotes');
         const parsedNotes: BrewingNote[] = savedNotes ? JSON.parse(savedNotes) : [];
         globalCache.notes = parsedNotes;
-        
-        console.log('全局缓存加载笔记数量:', parsedNotes.length);
         
         // 计算总消耗量
         const totalConsumption = calculateConsumption(parsedNotes);
@@ -164,7 +161,6 @@ export const initializeGlobalCache = async (): Promise<void> => {
         globalCache.filteredNotes = filteredNotes;
         
         globalCache.initialized = true;
-        console.log('全局缓存初始化完成，设备数量:', equipmentIds.length, '咖啡豆数量:', beanNames.length);
     } catch (error) {
         console.error("初始化全局缓存失败:", error);
         globalCache.initialized = false;
@@ -175,7 +171,6 @@ export const initializeGlobalCache = async (): Promise<void> => {
 
 // 强制重新初始化全局缓存 - 用于手动刷新
 export const forceReinitializeGlobalCache = async (): Promise<void> => {
-    console.log('强制重新初始化全局缓存');
     globalCache.initialized = false;
     globalCache.isLoading = false;
     await initializeGlobalCache();
