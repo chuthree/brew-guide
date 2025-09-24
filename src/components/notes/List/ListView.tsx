@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useCallback, useTransition } from 'react'
 import { Virtuoso } from 'react-virtuoso'
 import { BrewingNote } from '@/lib/core/config'
-import { globalCache } from './globalCache'
 import NoteItem from './NoteItem'
 import ChangeRecordNoteItem from './ChangeRecordNoteItem'
 import GalleryView from './GalleryView'
@@ -26,6 +25,9 @@ interface NotesListViewProps {
     isDateImageFlowMode?: boolean;
     // 外部滚动容器（Virtuoso 使用）
     scrollParentRef?: HTMLElement;
+    // 设备名称映射和价格缓存
+    equipmentNames?: Record<string, string>;
+    beanPrices?: Record<string, number>;
 }
 
 const NotesListView: React.FC<NotesListViewProps> = ({
@@ -42,11 +44,13 @@ const NotesListView: React.FC<NotesListViewProps> = ({
     preFilteredNotes,
     viewMode = 'list',
     isDateImageFlowMode = false,
-    scrollParentRef
+    scrollParentRef,
+    equipmentNames = {},
+    beanPrices = {}
 }) => {
     const [_isPending, startTransition] = useTransition()
-    const [notes, setNotes] = useState<BrewingNote[]>(globalCache.filteredNotes)
-    const [unitPriceCache] = useState<Record<string, number>>(globalCache.beanPrices)
+    const [notes, setNotes] = useState<BrewingNote[]>([])  // 初始化为空数组，完全依赖props
+    const [unitPriceCache] = useState<Record<string, number>>(beanPrices)
     const [showQuickDecrementNotes, setShowQuickDecrementNotes] = useState(false)
 
     // 判断笔记是否为变动记录（快捷扣除或容量调整）
@@ -54,36 +58,7 @@ const NotesListView: React.FC<NotesListViewProps> = ({
         return note.source === 'quick-decrement' || note.source === 'capacity-adjustment';
     }, []);
     
-    // 简化的数据加载逻辑 - 主要数据处理已移至 useEnhancedNotesFiltering Hook
-    const loadNotes = useCallback(() => {
-        try {
-            // 优先使用预筛选的笔记（搜索结果）
-            if (preFilteredNotes) {
-                startTransition(() => {
-                    setNotes(preFilteredNotes);
-                });
-                return;
-            }
-
-            // 使用全局缓存中的筛选结果
-            if (globalCache.initialized) {
-                const filteredNotes = globalCache.filteredNotes;
-                startTransition(() => {
-                    setNotes(filteredNotes);
-                });
-                return;
-            }
-        } catch (error) {
-            if (process.env.NODE_ENV === 'development') {
-                console.error("加载笔记数据失败:", error);
-            }
-        }
-    }, [preFilteredNotes]);
-
-    useEffect(() => {
-        loadNotes();
-    }, [loadNotes]);
-
+    // 直接响应preFilteredNotes的变化
     useEffect(() => {
         if (preFilteredNotes) {
             startTransition(() => {
@@ -91,17 +66,6 @@ const NotesListView: React.FC<NotesListViewProps> = ({
             });
         }
     }, [preFilteredNotes]);
-
-    useEffect(() => {
-        const handleNotesUpdated = () => loadNotes();
-        window.addEventListener('brewingNotesUpdated', handleNotesUpdated);
-        window.refreshBrewingNotes = handleNotesUpdated;
-
-        return () => {
-            window.removeEventListener('brewingNotesUpdated', handleNotesUpdated);
-            delete window.refreshBrewingNotes;
-        };
-    }, [loadNotes]);
 
     const handleToggleSelect = useCallback((noteId: string, enterShareMode?: boolean) => {
         onToggleSelect?.(noteId, enterShareMode);
@@ -117,7 +81,7 @@ const NotesListView: React.FC<NotesListViewProps> = ({
                 {isSearching && searchQuery.trim()
                     ? `[ 没有找到匹配"${searchQuery.trim()}"的冲煮记录 ]`
                     : (selectedEquipment && filterMode === 'equipment')
-                    ? `[ 没有使用${globalCache.equipmentNames[selectedEquipment] || selectedEquipment}的冲煮记录 ]`
+                    ? `[ 没有使用${equipmentNames[selectedEquipment] || selectedEquipment}的冲煮记录 ]`
                     : (selectedBean && filterMode === 'bean')
                     ? `[ 没有使用${selectedBean}的冲煮记录 ]`
                     : '[ 暂无冲煮记录 ]'}
@@ -211,7 +175,7 @@ const NotesListView: React.FC<NotesListViewProps> = ({
                     <NoteItem
                         key={note.id}
                         note={note}
-                        equipmentNames={globalCache.equipmentNames}
+                        equipmentNames={equipmentNames}
                         onEdit={onNoteClick}
                         onDelete={onDeleteNote}
                         unitPriceCache={unitPriceCache}

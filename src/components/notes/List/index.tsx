@@ -16,7 +16,7 @@
  * - brewingNotesUpdated: 笔记数据变化
  */
 
-import React, { useState, useEffect, useRef, useCallback, useReducer, useMemo } from 'react'
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { BrewingNote } from '@/lib/core/config'
 import { BrewingHistoryProps } from '../types'
 
@@ -27,8 +27,7 @@ import Toast from '../ui/Toast'
 import BrewingNoteEditModal from '../Form/BrewingNoteEditModal'
 import ChangeRecordEditModal from '../Form/ChangeRecordEditModal'
 import { BrewingNoteData } from '@/types/app'
-import { getEquipmentName, normalizeEquipmentId } from '../utils'
-import { globalCache, saveSelectedEquipmentPreference, saveSelectedBeanPreference, saveFilterModePreference, saveSortOptionPreference, calculateTotalCoffeeConsumption, formatConsumption, initializeGlobalCache, forceReinitializeGlobalCache } from './globalCache'
+import { globalCache, saveSelectedEquipmentPreference, saveSelectedBeanPreference, saveFilterModePreference, saveSortOptionPreference, calculateTotalCoffeeConsumption, formatConsumption, getSelectedEquipmentPreference, getSelectedBeanPreference, getFilterModePreference, getSortOptionPreference } from './globalCache'
 import ListView from './ListView'
 import { SortOption } from '../types'
 import { exportSelectedNotes } from '../Share/NotesExporter'
@@ -37,14 +36,7 @@ import { useEnhancedNotesFiltering } from './hooks/useEnhancedNotesFiltering'
 
 
 
-// 为Window对象声明类型扩展
-declare global {
-    interface Window {
-        refreshBrewingNotes?: () => void;
-        forceReinitializeBrewingNotes?: () => void;
-        ensureBrewingNotesSync?: () => Promise<void>;
-    }
-}
+
 
 const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     isOpen,
@@ -54,11 +46,11 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     setShowAlternativeHeader: _setShowAlternativeHeader, // 不再使用，保留以兼容接口
     settings
 }) => {
-    // 用于跟踪用户选择
-    const [sortOption, setSortOption] = useState<SortOption>(globalCache.sortOption)
-    const [filterMode, setFilterMode] = useState<'equipment' | 'bean'>(globalCache.filterMode)
-    const [selectedEquipment, setSelectedEquipment] = useState<string | null>(globalCache.selectedEquipment)
-    const [selectedBean, setSelectedBean] = useState<string | null>(globalCache.selectedBean)
+    // 用于跟踪用户选择 - 从本地存储初始化
+    const [sortOption, setSortOption] = useState<SortOption>(getSortOptionPreference())
+    const [filterMode, setFilterMode] = useState<'equipment' | 'bean'>(getFilterModePreference())
+    const [selectedEquipment, setSelectedEquipment] = useState<string | null>(getSelectedEquipmentPreference())
+    const [selectedBean, setSelectedBean] = useState<string | null>(getSelectedBeanPreference())
     const [editingNote, setEditingNote] = useState<BrewingNoteData | null>(null)
     const [editingChangeRecord, setEditingChangeRecord] = useState<BrewingNote | null>(null)
 
@@ -160,6 +152,10 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         }
     }, [isDateImageFlowMode, isImageFlowMode, lastImageFlowType, updateImageFlowState, viewMode]) // 添加所有依赖项
     
+    // 本地状态管理笔记数据 - 需要在Hook之前声明
+    const [notes, setNotes] = useState<BrewingNote[]>([]);
+    const [equipmentNames, setEquipmentNames] = useState<Record<string, string>>({});
+
     // 预览容器引用
     const notesContainerRef = useRef<HTMLDivElement>(null)
     
@@ -170,107 +166,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         type: 'info' as 'success' | 'error' | 'info'
     })
     
-    // 搜索过滤逻辑 - 需要在Hook之前定义
-    const searchFilteredNotes = useMemo(() => {
-        if (!isSearching || !searchQuery.trim()) return globalCache.filteredNotes;
-
-        const query = searchQuery.toLowerCase().trim();
-
-        // 将查询拆分为多个关键词，移除空字符串
-        const queryTerms = query.split(/\s+/).filter(term => term.length > 0);
-
-        // 给每个笔记计算匹配分数
-        const notesWithScores = globalCache.filteredNotes.map(note => {
-            // 预处理各个字段，转化为小写并确保有值
-            const equipment = note.equipment?.toLowerCase() || '';
-            const method = note.method?.toLowerCase() || '';
-            const beanName = note.coffeeBeanInfo?.name?.toLowerCase() || '';
-            const roastLevel = note.coffeeBeanInfo?.roastLevel?.toLowerCase() || '';
-            const notes = note.notes?.toLowerCase() || '';
-
-            // 处理参数信息
-            const coffee = note.params?.coffee?.toLowerCase() || '';
-            const water = note.params?.water?.toLowerCase() || '';
-            const ratio = note.params?.ratio?.toLowerCase() || '';
-            const grindSize = note.params?.grindSize?.toLowerCase() || '';
-            const temp = note.params?.temp?.toLowerCase() || '';
-
-            // 处理口味评分信息
-            const tasteInfo = `酸度${note.taste?.acidity || 0} 甜度${note.taste?.sweetness || 0} 苦度${note.taste?.bitterness || 0} 醇厚度${note.taste?.body || 0}`.toLowerCase();
-
-            // 处理时间信息
-            const dateInfo = note.timestamp ? new Date(note.timestamp).toLocaleDateString() : '';
-            const totalTime = note.totalTime ? `${note.totalTime}秒` : '';
-
-            // 将评分转换为可搜索文本，如"评分4"、"4分"、"4星"
-            const ratingText = note.rating ? `评分${note.rating} ${note.rating}分 ${note.rating}星`.toLowerCase() : '';
-
-            // 组合所有可搜索文本到一个数组，为不同字段分配权重
-            const searchableTexts = [
-                { text: beanName, weight: 3 },          // 豆子名称权重最高
-                { text: equipment, weight: 2 },         // 设备名称权重较高
-                { text: method, weight: 2 },            // 冲煮方法权重较高
-                { text: notes, weight: 2 },             // 笔记内容权重较高
-                { text: roastLevel, weight: 1 },        // 烘焙度权重一般
-                { text: coffee, weight: 1 },            // 咖啡粉量权重一般
-                { text: water, weight: 1 },             // 水量权重一般
-                { text: ratio, weight: 1 },             // 比例权重一般
-                { text: grindSize, weight: 1 },         // 研磨度权重一般
-                { text: temp, weight: 1 },              // 水温权重一般
-                { text: tasteInfo, weight: 1 },         // 口味信息权重一般
-                { text: dateInfo, weight: 1 },          // 日期信息权重一般
-                { text: totalTime, weight: 1 },         // 总时间权重一般
-                { text: ratingText, weight: 1 }         // 评分文本权重一般
-            ];
-
-            // 计算匹配分数 - 所有匹配关键词的权重总和
-            let score = 0;
-            let allTermsMatch = true;
-
-            for (const term of queryTerms) {
-                // 检查当前关键词是否至少匹配一个字段
-                const termMatches = searchableTexts.some(({ text }) => text.includes(term));
-
-                if (!termMatches) {
-                    allTermsMatch = false;
-                    break;
-                }
-
-                // 累加匹配到的权重
-                for (const { text, weight } of searchableTexts) {
-                    if (text.includes(term)) {
-                        score += weight;
-
-                        // 精确匹配整个字段给予额外加分
-                        if (text === term) {
-                            score += weight * 2;
-                        }
-
-                        // 匹配字段开头给予额外加分
-                        if (text.startsWith(term)) {
-                            score += weight;
-                        }
-                    }
-                }
-            }
-
-            return {
-                note,
-                score,
-                matches: allTermsMatch
-            };
-        });
-
-        // 过滤掉不匹配所有关键词的笔记
-        const matchingNotes = notesWithScores.filter(item => item.matches);
-
-        // 根据分数排序，分数高的在前面
-        matchingNotes.sort((a, b) => b.score - a.score);
-
-        // 返回排序后的笔记列表
-        return matchingNotes.map(item => item.note);
-    }, [isSearching, searchQuery]);
-
     // 使用增强的笔记筛选Hook
     const {
         filteredNotes,
@@ -280,346 +175,157 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         availableBeans,
         debouncedUpdateFilters
     } = useEnhancedNotesFiltering({
-        notes: globalCache.notes,
+        notes: notes,
         sortOption,
         filterMode,
         selectedEquipment,
         selectedBean,
         searchQuery,
-        isSearching,
-        preFilteredNotes: isSearching && searchQuery.trim() ? searchFilteredNotes : undefined
+        isSearching
     })
 
-    // 计算总咖啡消耗量
-    const totalCoffeeConsumption = useRef(globalCache.totalConsumption || 0)
-    const [, _forceUpdate] = useReducer(x => x + 1, 0)
+    // 搜索过滤逻辑 - 在Hook之后定义以避免循环依赖
+    const searchFilteredNotes = useMemo(() => {
+        if (!isSearching || !searchQuery.trim()) return filteredNotes;
 
-    // 强制组件重新渲染的函数
-    const triggerRerender = useCallback(() => {
-        _forceUpdate()
-    }, [])
+        const query = searchQuery.toLowerCase().trim();
+        const queryTerms = query.split(/\s+/).filter(term => term.length > 0);
 
-    // 更新全局缓存的函数
-    const updateGlobalCache = useCallback(() => {
-        globalCache.filteredNotes = filteredNotes
-        globalCache.totalConsumption = totalConsumption
-        totalCoffeeConsumption.current = totalConsumption
+        const notesWithScores = filteredNotes.map((note: BrewingNote) => {
+            const equipment = note.equipment?.toLowerCase() || '';
+            const method = note.method?.toLowerCase() || '';
+            const beanName = note.coffeeBeanInfo?.name?.toLowerCase() || '';
+            const roastLevel = note.coffeeBeanInfo?.roastLevel?.toLowerCase() || '';
+            const notes = note.notes?.toLowerCase() || '';
+            const coffee = note.params?.coffee?.toLowerCase() || '';
+            const water = note.params?.water?.toLowerCase() || '';
+            const ratio = note.params?.ratio?.toLowerCase() || '';
+            const grindSize = note.params?.grindSize?.toLowerCase() || '';
+            const temp = note.params?.temp?.toLowerCase() || '';
+            const tasteInfo = `酸度${note.taste?.acidity || 0} 甜度${note.taste?.sweetness || 0} 苦度${note.taste?.bitterness || 0} 醇厚度${note.taste?.body || 0}`.toLowerCase();
+            const dateInfo = note.timestamp ? new Date(note.timestamp).toLocaleDateString() : '';
+            const totalTime = note.totalTime ? `${note.totalTime}秒` : '';
+            const ratingText = note.rating ? `评分${note.rating} ${note.rating}分 ${note.rating}星`.toLowerCase() : '';
 
-        // 触发重新渲染
-        if (typeof window !== 'undefined' && window.refreshBrewingNotes) {
-            window.refreshBrewingNotes()
-        }
-        triggerRerender()
-    }, [filteredNotes, totalConsumption, triggerRerender])
+            const searchableTexts = [
+                { text: beanName, weight: 3 },
+                { text: equipment, weight: 2 },
+                { text: method, weight: 2 },
+                { text: notes, weight: 2 },
+                { text: roastLevel, weight: 1 },
+                { text: coffee, weight: 1 },
+                { text: water, weight: 1 },
+                { text: ratio, weight: 1 },
+                { text: grindSize, weight: 1 },
+                { text: temp, weight: 1 },
+                { text: tasteInfo, weight: 1 },
+                { text: dateInfo, weight: 1 },
+                { text: totalTime, weight: 1 },
+                { text: ratingText, weight: 1 }
+            ];
 
-    // 当筛选结果变化时更新全局缓存
-    useEffect(() => {
-        updateGlobalCache()
-    }, [updateGlobalCache])
+            let score = 0;
+            let allTermsMatch = true;
 
-    // 清理重复器具的工具函数
-    const cleanupDuplicateEquipments = useCallback(async (notes: BrewingNote[]): Promise<BrewingNote[]> => {
-        const normalizedEquipmentMap: Record<string, string> = {};
-        let hasChanges = false;
+            for (const term of queryTerms) {
+                const termMatches = searchableTexts.some(({ text }) => text.includes(term));
+                if (!termMatches) {
+                    allTermsMatch = false;
+                    break;
+                }
 
-        // 构建规范化映射
-        for (const note of notes) {
-            if (note.equipment && !normalizedEquipmentMap[note.equipment]) {
-                try {
-                    const normalizedId = await normalizeEquipmentId(note.equipment);
-                    normalizedEquipmentMap[note.equipment] = normalizedId;
-                    if (normalizedId !== note.equipment) {
-                        hasChanges = true;
+                for (const { text, weight } of searchableTexts) {
+                    if (text.includes(term)) {
+                        score += weight;
+                        if (text === term) {
+                            score += weight * 2;
+                        }
+                        if (text.startsWith(term)) {
+                            score += weight;
+                        }
                     }
-                } catch (error) {
-                    console.error(`规范化设备ID失败: ${note.equipment}`, error);
-                    normalizedEquipmentMap[note.equipment] = note.equipment;
                 }
             }
-        }
 
-        // 如果有变化，更新笔记中的器具ID
-        if (hasChanges) {
-            const updatedNotes = notes.map(note => {
-                if (note.equipment && normalizedEquipmentMap[note.equipment] !== note.equipment) {
-                    return {
-                        ...note,
-                        equipment: normalizedEquipmentMap[note.equipment]
-                    };
-                }
-                return note;
-            });
+            return { note, score, matches: allTermsMatch };
+        });
 
-            // 保存更新后的笔记
-            try {
-                const { Storage } = await import('@/lib/core/storage');
-                await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
-            } catch (error) {
-                console.error('保存清理后的笔记失败:', error);
-            }
+        type NoteWithScore = { note: BrewingNote; score: number; matches: boolean };
+        const matchingNotes = notesWithScores.filter((item: NoteWithScore) => item.matches);
+        matchingNotes.sort((a: NoteWithScore, b: NoteWithScore) => b.score - a.score);
+        return matchingNotes.map((item: NoteWithScore) => item.note);
+    }, [isSearching, searchQuery, filteredNotes]);
 
-            return updatedNotes;
-        }
+    // 计算总咖啡消耗量
+    const totalCoffeeConsumption = useRef(0)
 
-        return notes;
-    }, []);
 
-    // 加载可用设备和咖啡豆列表
-    const loadEquipmentsAndBeans = useCallback(async () => {
+
+    // 简化的数据加载函数 - 直接加载并更新状态
+    const loadNotesData = useCallback(async () => {
         try {
-            // 移除 isOpen 检查，确保数据总是可以被加载
-            // 这样在应用重新进入时也能正常刷新数据
-
-            // 从存储中加载数据
             const { Storage } = await import('@/lib/core/storage');
             const savedNotes = await Storage.get('brewingNotes');
-            let parsedNotes: BrewingNote[] = savedNotes ? JSON.parse(savedNotes) : [];
+            const parsedNotes: BrewingNote[] = savedNotes ? JSON.parse(savedNotes) : [];
 
-            // 清理重复器具（一次性修复历史数据）
-            parsedNotes = await cleanupDuplicateEquipments(parsedNotes);
+            // 直接更新本地状态
+            setNotes(parsedNotes);
 
-            // 收集设备ID并规范化
-            const rawEquipmentIds = parsedNotes
-                .map(note => note.equipment)
-                .filter(Boolean) as string[];
-
-            // 规范化设备ID - 确保相同设备只出现一次
-            const normalizedEquipmentMap: Record<string, string> = {};
-
-            // 首先尝试将所有设备ID规范化
-            for (const id of rawEquipmentIds) {
-                try {
-                    const normalizedId = await normalizeEquipmentId(id);
-                    normalizedEquipmentMap[id] = normalizedId;
-                } catch (error) {
-                    console.error(`规范化设备ID失败: ${id}`, error);
-                    normalizedEquipmentMap[id] = id; // 失败时使用原始ID
-                }
-            }
-
-            // 根据规范化的ID去重
-            const uniqueEquipmentIds = Array.from(new Set(
-                Object.values(normalizedEquipmentMap)
-            ));
-
-            // 获取设备名称 - 优化版本
+            // 获取设备名称映射
             const { equipmentList } = await import('@/lib/core/config');
             const { loadCustomEquipments } = await import('@/lib/managers/customEquipments');
-            
-            // 并行加载自定义设备和处理咖啡豆数据，提高性能
-            const [customEquipments, beanNames] = await Promise.all([
-                loadCustomEquipments(),
-                (async () => {
-                    // 收集所有不重复的咖啡豆名称 - 优先使用最新的咖啡豆名称
-                    const beanNamesSet = new Set<string>();
-                    const { CoffeeBeanManager } = await import('@/lib/managers/coffeeBeanManager');
+            const customEquipments = await loadCustomEquipments();
 
-                    for (const note of parsedNotes) {
-                        let beanName = '';
-
-                        // 优先通过 beanId 获取最新的咖啡豆名称
-                        if (note.beanId) {
-                            try {
-                                const bean = await CoffeeBeanManager.getBeanById(note.beanId);
-                                if (bean?.name) {
-                                    beanName = bean.name;
-                                }
-                            } catch (error) {
-                                console.warn('获取咖啡豆信息失败:', error);
-                            }
-                        }
-
-                        // 如果通过 beanId 没有找到，使用笔记中存储的名称
-                        if (!beanName && note.coffeeBeanInfo?.name) {
-                            beanName = note.coffeeBeanInfo.name;
-                        }
-
-                        if (beanName) {
-                            beanNamesSet.add(beanName);
-                        }
-                    }
-
-                    return Array.from(beanNamesSet);
-                })()
-            ]);
-            
-            // 构建设备名称映射 - 一次性完成，避免多次循环
             const namesMap: Record<string, string> = {};
-            
-            // 处理标准设备和自定义设备
             equipmentList.forEach(equipment => {
                 namesMap[equipment.id] = equipment.name;
             });
-            
             customEquipments.forEach(equipment => {
                 namesMap[equipment.id] = equipment.name;
             });
-            
-            // 处理可能的遗漏ID - 只处理未映射的ID
-            const missingIds = uniqueEquipmentIds.filter(id => !namesMap[id]);
-            if (missingIds.length > 0) {
-                for (const id of missingIds) {
-                    try {
-                        const name = await getEquipmentName(id);
-                        namesMap[id] = name || id;
-                    } catch (error) {
-                        console.error(`获取设备名称失败: ${id}`, error);
-                        namesMap[id] = id;
-                    }
-                }
-            }
-            
-            // 更新全局缓存
-            globalCache.equipmentNames = namesMap;
-            globalCache.availableEquipments = uniqueEquipmentIds;
-            globalCache.availableBeans = beanNames;
-            globalCache.notes = parsedNotes;
-            
-            // 计算总消耗量并更新全局缓存
-            const totalConsumption = calculateTotalCoffeeConsumption(parsedNotes);
-            globalCache.totalConsumption = totalConsumption;
-            totalCoffeeConsumption.current = totalConsumption;
 
-            // 确保globalCache.initialized设置为true
-            globalCache.initialized = true;
+            setEquipmentNames(namesMap);
 
-            // 数据处理现在由 useEnhancedNotesFiltering Hook 自动处理
+            // 更新总消耗量引用
+            totalCoffeeConsumption.current = calculateTotalCoffeeConsumption(parsedNotes);
+
         } catch (error) {
-            console.error("加载设备和咖啡豆数据失败:", error);
+            console.error("加载笔记数据失败:", error);
         }
-    }, [cleanupDuplicateEquipments]);
+    }, []);
     
-    // 初始化 - 确保在组件挂载时正确初始化数据
+    // 简化初始化 - 直接加载数据
     useEffect(() => {
         if (isOpen) {
-            // 确保全局缓存已初始化
-            (async () => {
-                if (!globalCache.initialized) {
-                    await initializeGlobalCache();
-                    
-                    // 从全局缓存更新状态
-                    setSortOption(globalCache.sortOption);
-                    setFilterMode(globalCache.filterMode);
-                    setSelectedEquipment(globalCache.selectedEquipment);
-                    setSelectedBean(globalCache.selectedBean);
-                    totalCoffeeConsumption.current = globalCache.totalConsumption;
-                    
-                    // 触发重新渲染
-                    triggerRerender();
-                }
-                
-                // 无论全局缓存是否已初始化，都重新加载数据以确保最新
-                loadEquipmentsAndBeans();
-            })();
+            loadNotesData();
         }
-    }, [isOpen, loadEquipmentsAndBeans, triggerRerender]);
+    }, [isOpen, loadNotesData]);
 
-    // 添加页面可见性监听 - 修复应用重新进入时数据不刷新的问题
+
+    
+    // 简化存储监听 - 只监听关键的数据变化事件
     useEffect(() => {
         if (!isOpen) return;
 
-        const handleVisibilityChange = () => {
-            // 当页面重新变为可见时，重新加载数据
-            if (!document.hidden) {
-                loadEquipmentsAndBeans();
+        const handleDataChange = () => {
+            loadNotesData();
+        };
+
+        // 监听笔记数据变化事件
+        window.addEventListener('storage:changed', (e) => {
+            const event = e as CustomEvent;
+            if (event.detail?.key === 'brewingNotes') {
+                handleDataChange();
             }
-        };
+        });
 
-        const handleAppResume = () => {
-            // 当应用从后台恢复时，重新加载数据
-            // 使用强制重新初始化，确保获取最新数据
-            forceReinitializeGlobalCache().then(() => {
-                loadEquipmentsAndBeans();
-            });
-        };
-
-        // 监听页面可见性变化
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-        
-        // 监听应用恢复事件（主要用于移动端）
-        window.addEventListener('focus', handleAppResume);
-        
-        // Capacitor 应用状态变化监听
-        if (typeof window !== 'undefined' && window.Capacitor) {
-            window.addEventListener('appStateChange', handleAppResume);
-        }
+        window.addEventListener('brewingNotesUpdated', handleDataChange);
 
         return () => {
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
-            window.removeEventListener('focus', handleAppResume);
-            if (typeof window !== 'undefined' && window.Capacitor) {
-                window.removeEventListener('appStateChange', handleAppResume);
-            }
-        };
-    }, [isOpen, loadEquipmentsAndBeans]);
-    
-    // 监听存储变化
-    useEffect(() => {
-        const handleStorageChange = (e: StorageEvent) => {
-            // localStorage 只存储 UI 偏好设置，不存储笔记数据
-            // 笔记数据存储在 IndexedDB 中，通过其他事件监听
-            if (e.key && e.key.startsWith('notes-') && e.newValue !== null) {
-                // UI 偏好设置变化不需要重新加载笔记数据
-            }
-        };
-        
-        const handleCustomStorageChange = (e: CustomEvent) => {
-            if (e.detail?.key === 'brewingNotes') {
-                // IndexedDB 中的笔记数据变化时才重新加载数据
-                loadEquipmentsAndBeans();
-            }
-        };
-
-        // 监听 IndexedDB 存储变化事件（这是正确的笔记数据变化事件）
-        const handleStorageChanged = (e: CustomEvent) => {
-            if (e.detail?.key === 'brewingNotes') {
-                loadEquipmentsAndBeans();
-            }
-        };
-
-        // 监听咖啡豆更新事件
-        const handleCoffeeBeansUpdated = () => {
-            loadEquipmentsAndBeans();
-        };
-
-        // 监听笔记更新事件（由咖啡豆管理器触发）
-        const handleBrewingNotesUpdated = () => {
-            loadEquipmentsAndBeans();
-        };
-
-        // 添加全局刷新函数到 window 对象
-        window.refreshBrewingNotes = () => {
-            loadEquipmentsAndBeans();
-        };
-
-        // 添加强制重新初始化函数到 window 对象
-        window.forceReinitializeBrewingNotes = () => {
-            forceReinitializeGlobalCache().then(() => {
-                loadEquipmentsAndBeans();
-            });
-        };
-
-        window.addEventListener('storage', handleStorageChange)
-        window.addEventListener('customStorageChange', handleCustomStorageChange as EventListener)
-        window.addEventListener('storage:changed', handleStorageChanged as EventListener)
-        window.addEventListener('coffeeBeansUpdated', handleCoffeeBeansUpdated)
-        window.addEventListener('brewingNotesUpdated', handleBrewingNotesUpdated)
-
-        return () => {
-            window.removeEventListener('storage', handleStorageChange)
-            window.removeEventListener('customStorageChange', handleCustomStorageChange as EventListener)
-            window.removeEventListener('storage:changed', handleStorageChanged as EventListener)
-            window.removeEventListener('coffeeBeansUpdated', handleCoffeeBeansUpdated)
-            window.removeEventListener('brewingNotesUpdated', handleBrewingNotesUpdated)
-            // 清理全局刷新函数
-            if (window.refreshBrewingNotes) {
-                delete window.refreshBrewingNotes;
-            }
-            if (window.forceReinitializeBrewingNotes) {
-                delete window.forceReinitializeBrewingNotes;
-            }
+            window.removeEventListener('storage:changed', handleDataChange);
+            window.removeEventListener('brewingNotesUpdated', handleDataChange);
         }
-    }, [isOpen, loadEquipmentsAndBeans])
+    }, [isOpen, loadNotesData])
     
     // 显示消息提示
     const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
@@ -715,17 +421,17 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
             // 删除笔记
             const updatedNotes = notes.filter(note => note.id !== noteId);
 
-            // 立即同步更新全局缓存
-            globalCache.notes = updatedNotes;
+            // 直接更新本地状态
+            setNotes(updatedNotes);
 
-            // 重新计算总消耗量
-            globalCache.totalConsumption = calculateTotalCoffeeConsumption(updatedNotes);
+            // 更新总消耗量
+            totalCoffeeConsumption.current = calculateTotalCoffeeConsumption(updatedNotes);
 
             // 保存到存储 - Storage.set() 会自动触发事件
             await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
 
             // 主动刷新数据，确保UI立即更新
-            await loadEquipmentsAndBeans();
+            await loadNotesData();
             
             showToast('笔记已删除', 'success');
         } catch (error) {
@@ -786,11 +492,11 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                 return note
             })
 
-            // 立即更新全局缓存
-            globalCache.notes = parsedNotes;
+            // 直接更新本地状态
+            setNotes(parsedNotes);
 
-            // 重新计算总消耗量
-            globalCache.totalConsumption = calculateTotalCoffeeConsumption(parsedNotes);
+            // 更新总消耗量
+            totalCoffeeConsumption.current = calculateTotalCoffeeConsumption(parsedNotes);
 
             // 数据处理现在由 useEnhancedNotesFiltering Hook 自动处理
 
@@ -798,7 +504,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
             await Storage.set('brewingNotes', JSON.stringify(parsedNotes))
 
             // 主动刷新数据，确保UI立即更新
-            await loadEquipmentsAndBeans();
+            await loadNotesData();
 
             // 关闭模态和编辑状态
             setEditingNote(null)
@@ -927,19 +633,17 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                 return note
             })
 
-            // 立即更新全局缓存
-            globalCache.notes = parsedNotes;
+            // 直接更新本地状态
+            setNotes(parsedNotes);
 
-            // 重新计算总消耗量
-            globalCache.totalConsumption = calculateTotalCoffeeConsumption(parsedNotes);
-
-            // 数据处理现在由 useEnhancedNotesFiltering Hook 自动处理
+            // 更新总消耗量
+            totalCoffeeConsumption.current = calculateTotalCoffeeConsumption(parsedNotes);
 
             // 保存更新后的笔记 - Storage.set() 会自动触发事件
             await Storage.set('brewingNotes', JSON.stringify(parsedNotes))
 
             // 主动刷新数据，确保UI立即更新
-            await loadEquipmentsAndBeans();
+            await loadNotesData();
 
             // 关闭模态和编辑状态
             setEditingChangeRecord(null)
@@ -962,28 +666,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         }
     };
 
-    // 确保数据同步的通用函数
-    const ensureDataSync = useCallback(async () => {
-        try {
-            await forceReinitializeGlobalCache();
-            await loadEquipmentsAndBeans();
-            triggerRerender();
-        } catch (error) {
-            console.error('数据同步失败:', error);
-        }
-    }, [loadEquipmentsAndBeans, triggerRerender]);
 
-    // 暴露同步函数到组件外部，便于调试和手动触发
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            window.ensureBrewingNotesSync = ensureDataSync;
-        }
-        return () => {
-            if (typeof window !== 'undefined' && window.ensureBrewingNotesSync) {
-                delete window.ensureBrewingNotesSync;
-            }
-        };
-    }, [ensureDataSync]);
 
 
 
@@ -995,7 +678,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     const handleSortChange = (option: typeof sortOption) => {
         setSortOption(option);
         saveSortOptionPreference(option);
-        globalCache.sortOption = option;
+        // 已保存到本地存储
         // 数据筛选由 useEnhancedNotesFiltering Hook 自动处理
         debouncedUpdateFilters({ sortOption: option });
     };
@@ -1049,7 +732,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     const handleFilterModeChange = (mode: 'equipment' | 'bean') => {
         setFilterMode(mode);
         saveFilterModePreference(mode);
-        globalCache.filterMode = mode;
+        // 已保存到本地存储
         // 切换模式时清空选择
         setSelectedEquipment(null);
         setSelectedBean(null);
@@ -1065,7 +748,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     const handleEquipmentClick = useCallback((equipment: string | null) => {
         setSelectedEquipment(equipment);
         saveSelectedEquipmentPreference(equipment);
-        globalCache.selectedEquipment = equipment;
+        // 已保存到本地存储
         // 数据筛选由 useEnhancedNotesFiltering Hook 自动处理
         debouncedUpdateFilters({ selectedEquipment: equipment });
     }, [debouncedUpdateFilters]);
@@ -1074,7 +757,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     const handleBeanClick = useCallback((bean: string | null) => {
         setSelectedBean(bean);
         saveSelectedBeanPreference(bean);
-        globalCache.selectedBean = bean;
+        // 已保存到本地存储
         // 数据筛选由 useEnhancedNotesFiltering Hook 自动处理
         debouncedUpdateFilters({ selectedBean: bean });
     }, [debouncedUpdateFilters]);
@@ -1276,7 +959,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                             selectedBean={selectedBean}
                             availableEquipments={imageFlowAvailableOptions.equipments}
                             availableBeans={imageFlowAvailableOptions.beans}
-                            equipmentNames={globalCache.equipmentNames}
+                            equipmentNames={equipmentNames}
                             onFilterModeChange={handleFilterModeChange}
                             onEquipmentClick={handleEquipmentClick}
                             onBeanClick={handleBeanClick}
@@ -1301,7 +984,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                         className="w-full h-full overflow-y-auto scroll-with-bottom-bar"
                         ref={notesContainerRef}
                     >
-                        {/* 笔记列表视图 - 直接传递已过滤的搜索结果 */}
+                        {/* 笔记列表视图 - 始终传递正确的笔记数据 */}
                         <ListView
                             selectedEquipment={selectedEquipment}
                             selectedBean={selectedBean}
@@ -1313,10 +996,12 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                             onToggleSelect={handleToggleSelect}
                             searchQuery={searchQuery}
                             isSearching={isSearching}
-                            preFilteredNotes={isSearching && searchQuery.trim() ? searchFilteredNotes : undefined}
+                            preFilteredNotes={isSearching && searchQuery.trim() ? searchFilteredNotes : filteredNotes}
                             viewMode={viewMode}
                             isDateImageFlowMode={isDateImageFlowMode}
                             scrollParentRef={notesContainerRef.current || undefined}
+                            equipmentNames={equipmentNames}
+                            beanPrices={{}}
                         />
                     </div>
 
