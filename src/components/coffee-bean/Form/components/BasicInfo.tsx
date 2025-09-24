@@ -3,7 +3,6 @@ import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CornerDownRight } from 'lucide-react';
 import AutocompleteInput from '@/components/common/forms/AutocompleteInput';
-import AutoResizeTextarea from '@/components/common/forms/AutoResizeTextarea';
 import { ExtendedCoffeeBean } from '../types';
 import { pageVariants, pageTransition } from '../constants';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/coffee-bean/ui/select';
@@ -18,7 +17,6 @@ interface BasicInfoProps {
     validateRemaining: () => void;
     handleCapacityBlur?: () => void;
     toggleInTransitState: () => void;
-    isSimpleMode?: boolean;
     isEdit?: boolean;
 }
 
@@ -30,7 +28,6 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
     validateRemaining,
     handleCapacityBlur,
     toggleInTransitState,
-    isSimpleMode = false,
     isEdit = false,
 }) => {
     // 处理容量和剩余容量的状态
@@ -423,80 +420,62 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
                 )}
             </AnimatePresence>
 
-            {!isSimpleMode && (
-                <div className="grid grid-cols-2 gap-6 w-full">
-                    <div className="space-y-2">
-                        <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                            烘焙度
-                        </label>
-                        <Select
-                            value={bean.roastLevel || '浅度烘焙'}
-                            onValueChange={(value) => onBeanChange('roastLevel')(value)}
-                        >
-                            <SelectTrigger
-                                className="w-full py-2 bg-transparent border-0 border-b border-neutral-300 dark:border-neutral-700 focus-within:border-neutral-800 dark:focus-within:border-neutral-400 shadow-none rounded-none h-auto px-0 text-base"
-                            >
-                                <SelectValue placeholder="选择烘焙度" />
-                            </SelectTrigger>
-                            <SelectContent
-                                className="max-h-[40vh] overflow-y-auto border-neutral-200/70 dark:border-neutral-800/70 shadow-lg backdrop-blur-xs bg-white/95 dark:bg-neutral-900/95 rounded-lg"
-                            >
-                                <SelectItem value="极浅烘焙">极浅烘焙</SelectItem>
-                                <SelectItem value="浅度烘焙">浅度烘焙</SelectItem>
-                                <SelectItem value="中浅烘焙">中浅烘焙</SelectItem>
-                                <SelectItem value="中度烘焙">中度烘焙</SelectItem>
-                                <SelectItem value="中深烘焙">中深烘焙</SelectItem>
-                                <SelectItem value="深度烘焙">深度烘焙</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                            <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                                烘焙日期
-                            </label>
-                            <button
-                                type="button"
-                                onClick={toggleInTransitState}
-                                className={`text-xs ${bean.isInTransit ? 'text-neutral-700 dark:text-neutral-300' : 'text-neutral-600 dark:text-neutral-400'} underline`}
-                            >
-                                {bean.isInTransit ? '取消在途状态' : '设为在途'}
-                            </button>
-                        </div>
-                        <div className="flex items-center justify-start w-full relative">
-                            {bean.isInTransit ? (
-                                <div className="w-full py-2 bg-transparent border-b border-neutral-300 dark:border-neutral-700 opacity-50 text-neutral-500 dark:text-neutral-400">
-                                    在途中...
-                                </div>
-                            ) : (
-                                <DatePicker
-                                    date={parseRoastDate(bean.roastDate)}
-                                    onDateChange={handleDateChange}
-                                    placeholder="选择烘焙日期"
-                                    className="w-full"
-                                />
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {isSimpleMode && (
-                <div className="space-y-2 w-full">
+            <div className="grid grid-cols-2 gap-6 w-full">
+                <div className="space-y-2">
                     <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                        备注
+                        烘焙度
                     </label>
-                    <AutoResizeTextarea
-                        value={bean.notes || ''}
-                        onChange={(e) => onBeanChange('notes')(e.target.value)}
-                        placeholder="其他备注信息..."
-                        className="w-full py-2 bg-transparent outline-hidden border-b border-neutral-300 dark:border-neutral-700 focus:border-neutral-800 dark:focus:border-neutral-400"
-                        minRows={2}
-                        maxRows={8}
-                    />
+                    <Select
+                        value={bean.roastLevel || '浅度烘焙'}
+                        onValueChange={(value) => onBeanChange('roastLevel')(value)}
+                    >
+                        <SelectTrigger
+                            className="w-full py-2 bg-transparent border-0 border-b border-neutral-300 dark:border-neutral-700 focus-within:border-neutral-800 dark:focus-within:border-neutral-400 shadow-none rounded-none h-auto px-0 text-base"
+                        >
+                            <SelectValue placeholder="选择烘焙度" />
+                        </SelectTrigger>
+                        <SelectContent
+                            className="max-h-[40vh] overflow-y-auto border-neutral-200/70 dark:border-neutral-800/70 shadow-lg backdrop-blur-xs bg-white/95 dark:bg-neutral-900/95 rounded-lg"
+                        >
+                            <SelectItem value="极浅烘焙">极浅烘焙</SelectItem>
+                            <SelectItem value="浅度烘焙">浅度烘焙</SelectItem>
+                            <SelectItem value="中浅烘焙">中浅烘焙</SelectItem>
+                            <SelectItem value="中度烘焙">中度烘焙</SelectItem>
+                            <SelectItem value="中深烘焙">中深烘焙</SelectItem>
+                            <SelectItem value="深度烘焙">深度烘焙</SelectItem>
+                        </SelectContent>
+                    </Select>
                 </div>
-            )}
+
+                <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                        <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                            烘焙日期
+                        </label>
+                        <button
+                            type="button"
+                            onClick={toggleInTransitState}
+                            className={`text-xs ${bean.isInTransit ? 'text-neutral-700 dark:text-neutral-300' : 'text-neutral-600 dark:text-neutral-400'} underline`}
+                        >
+                            {bean.isInTransit ? '取消在途状态' : '设为在途'}
+                        </button>
+                    </div>
+                    <div className="flex items-center justify-start w-full relative">
+                        {bean.isInTransit ? (
+                            <div className="w-full py-2 bg-transparent border-b border-neutral-300 dark:border-neutral-700 opacity-50 text-neutral-500 dark:text-neutral-400">
+                                在途中...
+                            </div>
+                        ) : (
+                            <DatePicker
+                                date={parseRoastDate(bean.roastDate)}
+                                onDateChange={handleDateChange}
+                                placeholder="选择烘焙日期"
+                                className="w-full"
+                            />
+                        )}
+                    </div>
+                </div>
+            </div>
         </motion.div>
     );
 };

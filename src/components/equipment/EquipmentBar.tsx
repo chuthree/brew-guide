@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useCallback, useRef } from 'react'
-import { Menu } from 'lucide-react'
 import { type CustomEquipment } from '@/lib/core/config'
 import hapticsUtils from '@/lib/ui/haptics'
 import { saveStringState } from '@/lib/core/statePersistence'

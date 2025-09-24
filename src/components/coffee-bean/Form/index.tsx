@@ -31,8 +31,7 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
     onCancel,
     initialBean,
 }) => {
-    // 简单模式状态 - 从设置中读取
-    const [isSimpleMode, setIsSimpleMode] = useState(false)
+
 
     // 当前步骤状态
     const [currentStep, setCurrentStep] = useState<Step>('basic')
@@ -118,7 +117,7 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
     // 定义额外的状态来跟踪风味标签输入
     const [flavorInput, setFlavorInput] = useState('');
 
-    // 从设置中加载简单模式状态和自定义赏味期设置
+    // 从设置中加载自定义赏味期设置
     useEffect(() => {
         const loadSettingsAndInitializeBean = async () => {
             try {
@@ -129,8 +128,6 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                 if (settingsStr) {
                     settings = JSON.parse(settingsStr)
                 }
-
-                setIsSimpleMode(settings.simpleBeanFormMode ?? defaultSettings.simpleBeanFormMode)
 
                 // 如果是新建咖啡豆且没有设置赏味期，使用自定义设置初始化
                 if (!initialBean && bean.startDay === 0 && bean.endDay === 0 && bean.roastLevel) {
@@ -145,7 +142,6 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                 }
             } catch (error) {
                 console.error('加载设置失败:', error)
-                setIsSimpleMode(defaultSettings.simpleBeanFormMode)
             }
         }
 
@@ -189,12 +185,6 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
     // 下一步
     const handleNextStep = () => {
         validateRemaining();
-
-        // 简单模式直接提交
-        if (isSimpleMode) {
-            handleSubmit();
-            return;
-        }
 
         const currentIndex = getCurrentStepIndex();
         if (currentIndex < steps.length - 1) {
@@ -539,34 +529,7 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
         }));
     };
 
-    // 切换简单模式并保存到设置
-    const handleSimpleModeToggle = async (newSimpleMode: boolean) => {
-        setIsSimpleMode(newSimpleMode)
 
-        try {
-            // 获取当前设置
-            const { Storage } = await import('@/lib/core/storage');
-            const settingsStr = await Storage.get('brewGuideSettings')
-            let settings: SettingsOptions = defaultSettings
-
-            if (settingsStr) {
-                settings = { ...defaultSettings, ...JSON.parse(settingsStr) }
-            }
-
-            // 更新简单模式设置
-            const newSettings = { ...settings, simpleBeanFormMode: newSimpleMode }
-
-            // 保存到存储
-            await Storage.set('brewGuideSettings', JSON.stringify(newSettings))
-
-            // 触发设置变更事件
-            window.dispatchEvent(new CustomEvent('storageChange', {
-                detail: { key: 'brewGuideSettings' }
-            }))
-        } catch (error) {
-            console.error('保存简单模式设置失败:', error)
-        }
-    };
 
     // 处理图片上传
     const handleImageUpload = async (file: File) => {
@@ -634,23 +597,6 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
 
     // 渲染步骤内容
     const renderStepContent = () => {
-        // 简单模式只显示基本信息
-        if (isSimpleMode) {
-            return (
-                <BasicInfo
-                    bean={bean}
-                    onBeanChange={handleInputChange}
-                    onImageUpload={handleImageUpload}
-                    editingRemaining={editingRemaining}
-                    validateRemaining={validateRemaining}
-                    handleCapacityBlur={handleCapacityBlur}
-                    toggleInTransitState={toggleInTransitState}
-                    isSimpleMode={true}
-                    isEdit={!!initialBean}
-                />
-            );
-        }
-
         switch (currentStep) {
             case 'basic':
                 return (
@@ -662,7 +608,6 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                         validateRemaining={validateRemaining}
                         handleCapacityBlur={handleCapacityBlur}
                         toggleInTransitState={toggleInTransitState}
-                        isSimpleMode={false}
                         isEdit={!!initialBean}
                     />
                 );
@@ -711,7 +656,7 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
     const renderNextButton = () => {
         const isLastStep = getCurrentStepIndex() === steps.length - 1;
         const valid = isStepValid();
-        const canSave = valid && ['basic', 'detail', 'flavor'].includes(currentStep) && !isSimpleMode;
+        const canSave = valid && ['basic', 'detail', 'flavor'].includes(currentStep);
 
         const springTransition = { stiffness: 500, damping: 25 };
         const buttonBaseClass = "rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100";
@@ -748,9 +693,9 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                         transition={springTransition}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        className={`${buttonBaseClass} flex items-center justify-center ${!valid ? 'opacity-0 cursor-not-allowed' : ''} ${isLastStep || isSimpleMode ? 'px-6 py-3' : 'p-4'}`}
+                        className={`${buttonBaseClass} flex items-center justify-center ${!valid ? 'opacity-0 cursor-not-allowed' : ''} ${isLastStep ? 'px-6 py-3' : 'p-4'}`}
                     >
-                        {isLastStep || isSimpleMode ? (
+                        {isLastStep ? (
                             <span className="font-medium">完成</span>
                         ) : (
                             <ArrowRight className="w-4 h-4" strokeWidth="3" />
@@ -773,31 +718,12 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                     <ArrowLeft className="w-5 h-5 text-neutral-800 dark:text-neutral-200" />
                 </button>
 
-                {!isSimpleMode && (
-                    <div className="flex-1 px-4">
-                        {renderProgressBar()}
-                    </div>
-                )}
+                <div className="flex-1 px-4">
+                    {renderProgressBar()}
+                </div>
 
-                <div className="flex items-center gap-3">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                            type="checkbox"
-                            checked={isSimpleMode}
-                            onChange={(e) => handleSimpleModeToggle(e.target.checked)}
-                            className="sr-only"
-                        />
-                        <div className={`relative w-8 h-4 rounded-full transition-colors duration-200 ${isSimpleMode ? 'bg-neutral-800 dark:bg-neutral-200' : 'bg-neutral-300 dark:bg-neutral-600'}`}>
-                            <div className={`absolute top-0.5 w-3 h-3 bg-white dark:bg-neutral-800 rounded-full transition-transform duration-200 ${isSimpleMode ? 'translate-x-4.5' : 'translate-x-0.5'}`} />
-                        </div>
-                        <span className="text-sm font-medium text-neutral-600 dark:text-neutral-400">简单</span>
-                    </label>
-
-                    {!isSimpleMode && (
-                        <div className="text-sm font-medium text-neutral-600 dark:text-neutral-400">
-                            {getCurrentStepIndex() + 1}/{steps.length}
-                        </div>
-                    )}
+                <div className="text-sm font-medium text-neutral-600 dark:text-neutral-400">
+                    {getCurrentStepIndex() + 1}/{steps.length}
                 </div>
             </div>
 

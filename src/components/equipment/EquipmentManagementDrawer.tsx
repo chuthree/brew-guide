@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { motion, AnimatePresence, Reorder } from 'framer-motion'
-import { Plus, GripVertical, Edit, Trash2, Share2, X } from 'lucide-react'
+import { GripVertical, Edit, Trash2, Share2, X } from 'lucide-react'
 import { type CustomEquipment } from '@/lib/core/config'
 import hapticsUtils from '@/lib/ui/haptics'
 import { SettingsOptions } from '@/components/settings/Settings'
