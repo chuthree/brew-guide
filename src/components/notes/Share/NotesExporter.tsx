@@ -61,8 +61,42 @@ export async function exportSelectedNotes({
       }
     });
     
+    // 等待所有图片加载完成的辅助函数
+    const waitForImages = (element: HTMLElement): Promise<void> => {
+      return new Promise((resolve) => {
+        const images = element.querySelectorAll('img');
+        if (images.length === 0) {
+          resolve();
+          return;
+        }
+
+        let loadedCount = 0;
+        const totalImages = images.length;
+
+        const checkComplete = () => {
+          loadedCount++;
+          if (loadedCount === totalImages) {
+            resolve();
+          }
+        };
+
+        images.forEach((img) => {
+          if (img.complete && img.naturalWidth > 0) {
+            checkComplete();
+          } else {
+            img.addEventListener('load', checkComplete);
+            img.addEventListener('error', checkComplete);
+            // 设置超时，避免无限等待
+            setTimeout(checkComplete, 3000);
+          }
+        });
+      });
+    };
+
     // 然后处理每个笔记元素并添加到临时容器
-    selectedNoteElements.forEach((clone, index) => {
+    for (let index = 0; index < selectedNoteElements.length; index++) {
+      const clone = selectedNoteElements[index];
+      
       // 移除复选框 - 保留其父级div避免影响布局
       const checkbox = clone.querySelector('input[type="checkbox"]');
       if (checkbox) {
@@ -76,6 +110,51 @@ export async function exportSelectedNotes({
         actionMenu.innerHTML = '';
         (actionMenu as HTMLElement).style.display = 'none';
       }
+      
+      // 处理 Next.js Image 组件 - 转换为原生 img 元素以确保在 html-to-image 中正确渲染
+      const nextImages = clone.querySelectorAll('img[src], img[srcSet]');
+      nextImages.forEach((img) => {
+        const imgElement = img as HTMLImageElement;
+        // 创建新的 img 元素
+        const newImg = document.createElement('img');
+        
+        // 复制基本属性
+        if (imgElement.src) newImg.src = imgElement.src;
+        if (imgElement.alt) newImg.alt = imgElement.alt;
+        
+        // 复制样式类和内联样式
+        newImg.className = imgElement.className;
+        
+        // 检查是否是相册视图中的图片（通过父元素类名判断）
+        const isGalleryImage = imgElement.closest('.grid') !== null; // 相册视图使用grid布局
+        const parentContainer = imgElement.parentElement;
+        const hasAspectSquare = parentContainer?.classList.contains('aspect-square');
+        
+        if (isGalleryImage || hasAspectSquare) {
+          // 相册视图中的图片保持其原有尺寸比例
+          newImg.style.cssText = imgElement.style.cssText;
+          // 确保图片能正确填充容器
+          newImg.style.objectFit = 'cover';
+          newImg.style.width = '100%';
+          newImg.style.height = '100%';
+        } else {
+          // 列表视图中的图片使用固定尺寸
+          newImg.style.cssText = imgElement.style.cssText;
+          newImg.style.width = '56px'; // 14*4 = 56px (Tailwind的w-14)
+          newImg.style.height = '56px';
+          newImg.style.objectFit = 'cover';
+          newImg.style.borderRadius = '6px';
+        }
+        
+        // 确保图片完全加载
+        newImg.loading = 'eager';
+        newImg.decoding = 'sync';
+        
+        // 替换原来的图片元素
+        if (imgElement.parentNode) {
+          imgElement.parentNode.replaceChild(newImg, imgElement);
+        }
+      });
       
       // 评分显示已经在界面上处理，不需要额外添加"总体评分"字样
       
@@ -112,7 +191,10 @@ export async function exportSelectedNotes({
       }
       
       tempContainer.appendChild(clone);
-    });
+    }
+
+    // 等待所有图片加载完成
+    await waitForImages(tempContainer);
     
     // 获取用户名
     // const { Storage } = await import('@/lib/core/storage');
@@ -162,6 +244,17 @@ export async function exportSelectedNotes({
       quality: 1,
       pixelRatio: 5,
       backgroundColor: backgroundColor,
+      // 添加过滤器确保不包含隐藏元素
+      filter: (node) => {
+        // 跳过隐藏元素
+        if (node instanceof HTMLElement) {
+          const style = getComputedStyle(node);
+          if (style.display === 'none' || style.visibility === 'hidden') {
+            return false;
+          }
+        }
+        return true;
+      }
     });
     
     // 删除临时容器
@@ -180,8 +273,21 @@ export async function exportSelectedNotes({
     
     onSuccess('笔记已保存为图片');
   } catch (error) {
-    console.error('生成笔记图片失败', error);
-    onError('生成图片失败');
+    console.error('生成笔记图片失败:', error);
+    
+    // 提供更详细的错误信息
+    let errorMessage = '生成图片失败';
+    if (error instanceof Error) {
+      if (error.message.includes('canvas')) {
+        errorMessage = '图片渲染失败，请检查图片是否正常显示';
+      } else if (error.message.includes('network')) {
+        errorMessage = '网络错误，请检查图片是否能正常加载';
+      } else if (error.message.includes('timeout')) {
+        errorMessage = '图片加载超时，请重试';
+      }
+    }
+    
+    onError(errorMessage);
   } finally {
     onComplete();
   }

@@ -18,8 +18,6 @@ interface CoffeeBeanListProps {
     showStatusDots?: boolean // 是否显示状态点
 }
 
-// 移除全局缓存变量，确保每次都从CoffeeBeanManager获取最新数据
-
 const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
     onSelect,
     isOpen: _isOpen = true,
@@ -35,15 +33,8 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
     const [_isPending, startTransition] = useTransition()
     const [forceRefreshKey, setForceRefreshKey] = useState(0) // 添加强制刷新的key
 
-    // 移除了极简模式相关的设置状态
-
     // 添加ref用于存储咖啡豆元素列表
     const beanItemsRef = useRef<Map<string, HTMLDivElement>>(new Map());
-
-    // 移除手动分页，使用虚拟列表
-
-    // 移除了极简模式相关的设置加载逻辑
-
 
     // 优化的加载咖啡豆数据函数 - 支持强制刷新
     const loadBeans = useCallback(async (forceReload = false) => {
