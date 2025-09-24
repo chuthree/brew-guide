@@ -137,12 +137,10 @@ const TabContent: React.FC<TabContentProps> = ({
     // 添加高亮豆子ID状态
     const [highlightedBeanId, setHighlightedBeanId] = useState<string | null>(null);
 
-    // 添加随机按钮禁用状态
-    const [isRandomButtonDisabled, setIsRandomButtonDisabled] = useState(false);
-
     // 随机选择器状态
     const [showRandomPicker, setShowRandomPicker] = useState(false);
     const [allBeans, setAllBeans] = useState<CoffeeBean[]>([]);
+    const [isLongPressRandom, setIsLongPressRandom] = useState(false);
 
     // 分享功能已简化为直接复制到剪贴板，不再需要模态框状态
 
@@ -463,9 +461,7 @@ const TabContent: React.FC<TabContentProps> = ({
     const [isCommonMethodsCollapsed, setIsCommonMethodsCollapsed] = useState(false);
 
     // 简化的随机选择咖啡豆
-    const handleRandomBean = async () => {
-        if (isRandomButtonDisabled) return;
-
+    const handleRandomBean = async (isLongPress: boolean = false) => {
         await triggerHapticFeedback();
         try {
             if (allBeans.length === 0) {
@@ -481,9 +477,8 @@ const TabContent: React.FC<TabContentProps> = ({
             });
 
             if (availableBeans.length > 0) {
+                setIsLongPressRandom(isLongPress);
                 setShowRandomPicker(true);
-                setIsRandomButtonDisabled(true);
-                setTimeout(() => setIsRandomButtonDisabled(false), 3000);
             } else {
                 showToast({ type: 'info', title: '没有可用的咖啡豆', duration: 2000 });
             }
@@ -633,14 +628,35 @@ const TabContent: React.FC<TabContentProps> = ({
                 <div className="fixed bottom-[60px] left-0 right-0 mb-[var(--safe-area-bottom)] p-6 flex justify-end items-center z-10 max-w-[500px] mx-auto pointer-events-none">
                     <motion.button
                         type="button"
-                        onClick={handleRandomBean}
+                        onClick={() => handleRandomBean(false)}
+                        onMouseDown={(_e) => {
+                            // 长按逻辑
+                            const timer = setTimeout(() => {
+                                handleRandomBean(true);
+                            }, 500); // 500ms 长按
+                            
+                            const handleMouseUp = () => {
+                                clearTimeout(timer);
+                                document.removeEventListener('mouseup', handleMouseUp);
+                            };
+                            document.addEventListener('mouseup', handleMouseUp);
+                        }}
+                        onTouchStart={(_e) => {
+                            // 触摸长按
+                            const timer = setTimeout(() => {
+                                handleRandomBean(true);
+                            }, 500);
+                            
+                            const handleTouchEnd = () => {
+                                clearTimeout(timer);
+                                document.removeEventListener('touchend', handleTouchEnd);
+                            };
+                            document.addEventListener('touchend', handleTouchEnd);
+                        }}
                         transition={springTransition}
-                        className={`${buttonBaseClass} p-4 flex items-center justify-center pointer-events-auto ${
-                            isRandomButtonDisabled ? 'opacity-40 cursor-not-allowed bg-neutral-200 dark:bg-neutral-700' : ''
-                        }`}
-                        whileHover={isRandomButtonDisabled ? {} : { scale: 1.05 }}
-                        whileTap={isRandomButtonDisabled ? {} : { scale: 0.95 }}
-                        disabled={isRandomButtonDisabled}
+                        className={`${buttonBaseClass} p-4 flex items-center justify-center pointer-events-auto`}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
                     >
                         <Shuffle className="w-4 h-4" strokeWidth="3" />
                     </motion.button>
@@ -703,7 +719,9 @@ const TabContent: React.FC<TabContentProps> = ({
                             setTimeout(() => setHighlightedBeanId(null), 4000);
                         }
                         setShowRandomPicker(false);
+                        setIsLongPressRandom(false); // 重置长按状态
                     }}
+                    isLongPress={isLongPressRandom}
                 />
             </>
         );

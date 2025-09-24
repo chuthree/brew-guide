@@ -6,7 +6,7 @@ import hapticsUtils from '@/lib/ui/haptics'
 
 import { useTheme } from 'next-themes'
 import { LayoutSettings } from '../brewing/Timer/Settings'
-import { ChevronLeft, ChevronRight, RefreshCw, Loader, Monitor, SlidersHorizontal, Archive, List, CalendarDays, Timer, Database, Bell, ClipboardPen } from 'lucide-react'
+import { ChevronLeft, ChevronRight, RefreshCw, Loader, Monitor, SlidersHorizontal, Archive, List, CalendarDays, Timer, Database, Bell, ClipboardPen, Shuffle } from 'lucide-react'
 
 import Image from 'next/image'
 import GrinderSettings from './GrinderSettings'
@@ -22,6 +22,7 @@ import chuchuAnimation from '../../../public/animations/chuchu-animation.json'
 import DisplaySettings from './DisplaySettings'
 import DataSettings from './DataSettings'
 import NotificationSettings from './NotificationSettings'
+import RandomCoffeeBeanSettings from './RandomCoffeeBeanSettings'
 // 自定义磨豆机接口
 export interface CustomGrinder {
     id: string
@@ -77,6 +78,19 @@ export interface SettingsOptions {
         syncMode: 'manual'
         lastConnectionSuccess?: boolean
     }
+    // 随机咖啡豆设置
+    randomCoffeeBeans?: {
+        enableLongPressRandomType: boolean // 长按随机不同类型咖啡豆
+        defaultRandomType: 'espresso' | 'filter' // 默认随机类型（长按时使用）
+        flavorPeriodRanges: {  // 赏味期范围设置
+            aging: boolean     // 养豆期
+            optimal: boolean   // 赏味期
+            decline: boolean   // 衰退期
+            frozen: boolean    // 冰冻
+            inTransit: boolean // 在途
+            unknown: boolean   // 未知
+        }
+    }
 }
 
 // 默认设置
@@ -126,6 +140,19 @@ export const defaultSettings: SettingsOptions = {
         prefix: 'brew-guide-data/',
         endpoint: '', // 自定义端点
         syncMode: 'manual'
+    },
+    // 随机咖啡豆设置默认值
+    randomCoffeeBeans: {
+        enableLongPressRandomType: false, // 默认不启用长按随机类型
+        defaultRandomType: 'espresso', // 默认长按随机意式豆
+        flavorPeriodRanges: {
+            aging: false,    // 默认不包含养豆期
+            optimal: true,   // 默认包含赏味期
+            decline: true,   // 默认包含衰退期
+            frozen: true,    // 默认包含冰冻
+            inTransit: false,// 默认不包含在途
+            unknown: true    // 默认包含未知状态
+        }
     }
 }
 
@@ -172,6 +199,9 @@ const Settings: React.FC<SettingsProps> = ({
 
     // 添加通知设置状态
     const [showNotificationSettings, setShowNotificationSettings] = useState(false)
+
+    // 添加随机咖啡豆设置状态
+    const [showRandomCoffeeBeanSettings, setShowRandomCoffeeBeanSettings] = useState(false)
 
     // 添加二维码显示状态
     const [showQRCodes, setShowQRCodes] = useState(false)
@@ -586,6 +616,16 @@ const handleChange = async <K extends keyof SettingsOptions>(
                         </div>
                         <ChevronRight className="h-4 w-4 text-neutral-400" />
                     </button>
+                    <button
+                        onClick={() => setShowRandomCoffeeBeanSettings(true)}
+                        className="w-full py-3 px-4 text-sm font-medium text-neutral-800 bg-neutral-100 rounded transition-colors hover:bg-neutral-200 dark:text-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 flex items-center justify-between"
+                    >
+                        <div className="flex items-center space-x-3">
+                            <Shuffle className="h-4 w-4 text-neutral-500" />
+                            <span>随机咖啡豆设置</span>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-neutral-400" />
+                    </button>
                 </div>
 
                 <div className="px-6 py-4 space-y-4">
@@ -610,6 +650,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                         </div>
                         <ChevronRight className="h-4 w-4 text-neutral-400" />
                     </button>
+
                     <button
                         onClick={() => setShowFlavorPeriodSettings(true)}
                         className="w-full py-3 px-4 text-sm font-medium text-neutral-800 bg-neutral-100 rounded transition-colors hover:bg-neutral-200 dark:text-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 flex items-center justify-between"
@@ -827,6 +868,17 @@ const handleChange = async <K extends keyof SettingsOptions>(
                     <NotificationSettings
                         settings={settings}
                         onClose={() => setShowNotificationSettings(false)}
+                        handleChange={handleChange}
+                    />
+                )}
+            </AnimatePresence>
+
+            {/* 随机咖啡豆设置组件 */}
+            <AnimatePresence>
+                {showRandomCoffeeBeanSettings && (
+                    <RandomCoffeeBeanSettings
+                        settings={settings}
+                        onClose={() => setShowRandomCoffeeBeanSettings(false)}
                         handleChange={handleChange}
                     />
                 )}

@@ -11,6 +11,7 @@ import Complete from './components/Complete'
 import { addCustomPreset, DEFAULT_ORIGINS, DEFAULT_PROCESSES, DEFAULT_VARIETIES } from './constants'
 import { defaultSettings, type SettingsOptions } from '@/components/settings/Settings'
 import { compressBase64Image } from '@/lib/utils/imageCapture'
+import { getDefaultFlavorPeriodByRoastLevelSync } from '@/lib/utils/flavorPeriodUtils'
 
 interface CoffeeBeanFormProps {
     onSave: (bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>) => void
@@ -134,19 +135,7 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                 // 如果是新建咖啡豆且没有设置赏味期，使用自定义设置初始化
                 if (!initialBean && bean.startDay === 0 && bean.endDay === 0 && bean.roastLevel) {
                     const customFlavorPeriod = settings.customFlavorPeriod || defaultSettings.customFlavorPeriod;
-                    let startDay = 0;
-                    let endDay = 0;
-
-                    if (bean.roastLevel.includes('浅')) {
-                        startDay = customFlavorPeriod!.light.startDay;
-                        endDay = customFlavorPeriod!.light.endDay;
-                    } else if (bean.roastLevel.includes('深')) {
-                        startDay = customFlavorPeriod!.dark.startDay;
-                        endDay = customFlavorPeriod!.dark.endDay;
-                    } else {
-                        startDay = customFlavorPeriod!.medium.startDay;
-                        endDay = customFlavorPeriod!.medium.endDay;
-                    }
+                    const { startDay, endDay } = getDefaultFlavorPeriodByRoastLevelSync(bean.roastLevel, customFlavorPeriod);
 
                     setBean(prev => ({
                         ...prev,
@@ -509,31 +498,16 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
                 customFlavorPeriod = settings.customFlavorPeriod || defaultSettings.customFlavorPeriod;
             }
 
-            // 根据烘焙度选择对应的赏味期设置
-            if (bean.roastLevel?.includes('浅')) {
-                startDay = customFlavorPeriod!.light.startDay;
-                endDay = customFlavorPeriod!.light.endDay;
-            } else if (bean.roastLevel?.includes('深')) {
-                startDay = customFlavorPeriod!.dark.startDay;
-                endDay = customFlavorPeriod!.dark.endDay;
-            } else {
-                // 默认为中烘焙
-                startDay = customFlavorPeriod!.medium.startDay;
-                endDay = customFlavorPeriod!.medium.endDay;
-            }
+            // 使用工具函数获取烘焙度对应的赏味期设置
+            const flavorPeriod = getDefaultFlavorPeriodByRoastLevelSync(bean.roastLevel || '', customFlavorPeriod);
+            startDay = flavorPeriod.startDay;
+            endDay = flavorPeriod.endDay;
         } catch (error) {
             console.error('获取自定义赏味期设置失败，使用默认值:', error);
-            // 使用默认值
-            if (bean.roastLevel?.includes('浅')) {
-                startDay = 7;
-                endDay = 30;
-            } else if (bean.roastLevel?.includes('深')) {
-                startDay = 14;
-                endDay = 60;
-            } else {
-                startDay = 10;
-                endDay = 30;
-            }
+            // 使用工具函数获取默认值
+            const flavorPeriod = getDefaultFlavorPeriodByRoastLevelSync(bean.roastLevel || '');
+            startDay = flavorPeriod.startDay;
+            endDay = flavorPeriod.endDay;
         }
 
         setBean(prev => ({

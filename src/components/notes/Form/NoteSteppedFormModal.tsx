@@ -22,7 +22,7 @@ interface NoteSteppedFormModalProps {
     onStepChange?: (index: number) => void
     currentStep?: number
     setCurrentStep?: React.Dispatch<React.SetStateAction<number>>
-    onRandomBean?: () => void
+    onRandomBean?: (isLongPress?: boolean) => void
 }
 
 const NoteSteppedFormModal: React.FC<NoteSteppedFormModalProps> = ({
@@ -172,10 +172,10 @@ const NoteSteppedFormModal: React.FC<NoteSteppedFormModalProps> = ({
     }, [currentStepContent?.content, isCoffeeBeanStep, searchQuery, highlightedBeanId]);
 
     // 随机选择咖啡豆
-    const handleRandomBean = async () => {
+    const handleRandomBean = async (isLongPress: boolean = false) => {
         // 如果提供了自定义随机豆子方法，则调用它
         if (onRandomBean) {
-            onRandomBean();
+            onRandomBean(isLongPress);
             return;
         }
 
@@ -208,13 +208,10 @@ const NoteSteppedFormModal: React.FC<NoteSteppedFormModalProps> = ({
                 // 设置高亮豆子ID，而不是直接选择
                 setHighlightedBeanId(randomBean.id);
 
-                // 禁用随机按钮3秒
-                setIsRandomButtonDisabled(true);
+                // 4秒后清除高亮状态
                 setTimeout(() => {
-                    setIsRandomButtonDisabled(false);
-                    // 4秒后恢复边框颜色
                     setHighlightedBeanId(null);
-                },3500);
+                }, 4000);
             } else {
                 showToast({
                     type: 'info',
@@ -299,7 +296,35 @@ const NoteSteppedFormModal: React.FC<NoteSteppedFormModalProps> = ({
                     {isValid && isCoffeeBeanStep && !isSearching && (
                         <button
                             type="button"
-                            onClick={handleRandomBean}
+                            onClick={() => handleRandomBean(false)}
+                            onMouseDown={(_e) => {
+                                if (isRandomButtonDisabled) return;
+                                
+                                // 长按逻辑
+                                const timer = setTimeout(() => {
+                                    handleRandomBean(true);
+                                }, 500); // 500ms 长按
+                                
+                                const handleMouseUp = () => {
+                                    clearTimeout(timer);
+                                    document.removeEventListener('mouseup', handleMouseUp);
+                                };
+                                document.addEventListener('mouseup', handleMouseUp);
+                            }}
+                            onTouchStart={(_e) => {
+                                if (isRandomButtonDisabled) return;
+                                
+                                // 触摸长按
+                                const timer = setTimeout(() => {
+                                    handleRandomBean(true);
+                                }, 500);
+                                
+                                const handleTouchEnd = () => {
+                                    clearTimeout(timer);
+                                    document.removeEventListener('touchend', handleTouchEnd);
+                                };
+                                document.addEventListener('touchend', handleTouchEnd);
+                            }}
                             className={`${buttonBaseClass} p-4 flex items-center justify-center ${
                                 isRandomButtonDisabled ? 'opacity-40 cursor-not-allowed bg-neutral-200 dark:bg-neutral-700' : ''
                             }`}

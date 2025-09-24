@@ -53,6 +53,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
 
   // 随机选择器状态
   const [isRandomPickerOpen, setIsRandomPickerOpen] = useState(false)
+  const [isLongPressRandom, setIsLongPressRandom] = useState(false)
 
   // 使用方法管理Hook
   const {
@@ -168,7 +169,8 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
   }, [])
 
   // 打开随机选择器
-  const handleOpenRandomPicker = () => {
+  const handleOpenRandomPicker = (isLongPress: boolean = false) => {
+    setIsLongPressRandom(isLongPress)
     setIsRandomPickerOpen(true)
   }
 
@@ -425,8 +427,12 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
       <CoffeeBeanRandomPicker
         beans={coffeeBeans}
         isOpen={isRandomPickerOpen}
-        onClose={() => setIsRandomPickerOpen(false)}
+        onClose={() => {
+          setIsRandomPickerOpen(false)
+          setIsLongPressRandom(false) // 重置长按状态
+        }}
         onSelect={handleRandomBeanSelect}
+        isLongPress={isLongPressRandom}
       />
     </>
   )
