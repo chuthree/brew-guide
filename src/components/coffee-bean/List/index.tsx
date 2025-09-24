@@ -420,7 +420,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         } else if (viewMode === VIEW_OPTIONS.RANKING) {
             loadRatedBeans();
         } else if (viewMode === VIEW_OPTIONS.INVENTORY) {
-            // 在切换到仓库视图时，应用当前的排序选项重新排序
+            // 在切换到库存视图时，应用当前的排序选项重新排序
             if (beans.length > 0) {
                 const compatibleBeans = beans.map(bean => ({
                     id: bean.id,
@@ -518,7 +518,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     // 当排序选项改变时更新数据 - 优化防抖动
     useEffect(() => {
         if (viewMode === VIEW_OPTIONS.INVENTORY && beans.length > 0) {
-            // 仓库视图：直接使用本地排序
+            // 库存视图：直接使用本地排序
             const compatibleBeans = beans.map(bean => ({
                 id: bean.id,
                 name: bean.name,
@@ -1292,7 +1292,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
             )}
             </div>
 
-            {/* 添加和导入按钮 - 仅在仓库视图显示 */}
+            {/* 添加和导入按钮 - 仅在库存视图显示 */}
             {viewMode === VIEW_OPTIONS.INVENTORY && (
                 <BottomActionBar
                     buttons={[

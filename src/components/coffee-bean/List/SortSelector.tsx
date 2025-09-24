@@ -243,7 +243,7 @@ export const sortBeans = (beansToSort: CoffeeBean[], option: SortOption): Coffee
     }
 };
 
-// 转换仓库排序选项到榜单排序选项
+// 转换库存排序选项到榜单排序选项
 export const convertToRankingSortOption = (option: SortOption, viewMode: 'inventory' | 'ranking' | 'blogger' | 'stats'): RankingSortOption => {
     if (viewMode === 'blogger') {
         // 博主榜单视图的特殊处理

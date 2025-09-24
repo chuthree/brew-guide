@@ -225,7 +225,7 @@ const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
                 return `${pricePerGram.toFixed(2)}元/克`;
               };
 
-              // 构建参数信息项（使用与咖啡豆仓库列表相同的格式）
+              // 构建参数信息项（使用与咖啡豆库存列表相同的格式）
               const infoItems = [];
 
               // 添加烘焙日期（在途状态不显示）

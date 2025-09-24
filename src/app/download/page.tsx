@@ -315,7 +315,7 @@ export default function DownloadPage(): React.ReactNode {
                                     <ul className="mt-2 text-xs text-neutral-500 list-disc pl-4 space-y-1">
                                         <li>(添加): 支持双击器具分类栏中的自定义器具直接进入编辑模式</li>
                                         <li>(添加): &quot;跳过方案选择&quot;功能，操作更快捷</li>
-                                        <li>(添加): 咖啡豆仓库支持双击&quot;全部豆种&quot;切换为图片流展示</li>
+                                        <li>(添加): 咖啡豆库存支持双击&quot;全部豆种&quot;切换为图片流展示</li>
                                         <li>(添加): 导航栏增加选择缓存功能，切换页面更便捷</li>
                                         <li>(添加): 自定义磨豆机功能</li>
                                         <li>(优化): 器具分类栏添加渐变阴影与过渡动画</li>

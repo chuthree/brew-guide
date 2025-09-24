@@ -988,7 +988,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                                     >
                                         <div className="px-6 py-4">
                                             <div className="space-y-4">
-                                                {/* 分类模式选择 - 仅在仓库视图显示 */}
+                                                {/* 分类模式选择 - 仅在库存视图显示 */}
                                                 {viewMode === VIEW_OPTIONS.INVENTORY && onFilterModeChange && (
                                                     <FilterModeSection
                                                         filterMode={filterMode}
