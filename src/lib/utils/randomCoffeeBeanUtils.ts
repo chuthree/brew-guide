@@ -105,6 +105,7 @@ export class RandomCoffeeBeanSelector {
                 return null
             }
 
+            // Math.random() 在此处是安全的，用于UI功能的随机选择，不涉及加密或安全敏感操作
             const randomIndex = Math.floor(Math.random() * availableBeans.length)
             return {
                 bean: availableBeans[randomIndex],
@@ -125,6 +126,7 @@ export class RandomCoffeeBeanSelector {
             return null
         }
 
+        // Math.random() 在此处是安全的，用于UI功能的随机选择，不涉及加密或安全敏感操作
         const randomIndex = Math.floor(Math.random() * allAvailable.length)
         return allAvailable[randomIndex]
     }

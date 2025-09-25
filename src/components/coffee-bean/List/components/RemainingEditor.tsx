@@ -313,11 +313,9 @@ const RemainingEditor: React.FC<RemainingEditorProps> = ({
             onQuickDecrement(value)
             await createAutoNote(value, actualDecrementAmount)
             if (hapticEnabled) {
-                try { 
-                    hapticsUtils.light() 
-                } catch (_error) {
+                hapticsUtils.light().catch(() => {
                     // 静默处理触觉反馈错误
-                }
+                })
             }
         } catch (error) {
             console.error('快捷扣除操作失败:', error)
