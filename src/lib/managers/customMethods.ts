@@ -135,6 +135,14 @@ export async function saveCustomMethod(
 				methods: uniqueMethods
 			});
 
+			// 触发自定义方案变化事件，通知所有监听组件
+			if (typeof window !== 'undefined') {
+				const event = new CustomEvent('customMethodsChanged', {
+					detail: { equipmentId }
+				});
+				window.dispatchEvent(event);
+			}
+
 			return true;
 		} catch (_error) {
 			console.error(`[saveCustomMethod] 保存方案失败:`, _error);
@@ -175,6 +183,14 @@ export async function saveCustomMethod(
 			equipmentId: selectedEquipment,
 			methods: uniqueMethods
 		});
+
+		// 触发自定义方案变化事件，通知所有监听组件
+		if (typeof window !== 'undefined') {
+			const event = new CustomEvent('customMethodsChanged', {
+				detail: { equipmentId: selectedEquipment }
+			});
+			window.dispatchEvent(event);
+		}
 
 		// 重新加载所有方案数据
 		try {
@@ -234,6 +250,14 @@ export async function deleteCustomMethod(
 				methods: updatedMethods
 			});
 
+			// 触发自定义方案变化事件，通知所有监听组件
+			if (typeof window !== 'undefined') {
+				const event = new CustomEvent('customMethodsChanged', {
+					detail: { equipmentId }
+				});
+				window.dispatchEvent(event);
+			}
+
 			return true;
 		} catch (_error) {
 			console.error(`[deleteCustomMethod] 删除方案失败:`, _error);
@@ -258,6 +282,14 @@ export async function deleteCustomMethod(
 			equipmentId: selectedEquipment,
 			methods: updatedMethods
 		});
+
+		// 触发自定义方案变化事件，通知所有监听组件
+		if (typeof window !== 'undefined') {
+			const event = new CustomEvent('customMethodsChanged', {
+				detail: { equipmentId: selectedEquipment }
+			});
+			window.dispatchEvent(event);
+		}
 
 		// 重新加载所有方案数据
 		try {

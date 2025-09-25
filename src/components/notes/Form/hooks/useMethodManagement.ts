@@ -139,6 +139,32 @@ export function useMethodManagement({
     fetchCustomMethods()
   }, [selectedEquipment])
 
+  // 监听自定义方案数据变化，确保及时更新
+  useEffect(() => {
+    const handleCustomMethodsChange = async (e: Event) => {
+      const customEvent = e as CustomEvent
+      // 检查变化是否与当前选择的器具相关
+      if (customEvent.detail?.equipmentId === selectedEquipment || !customEvent.detail?.equipmentId) {
+        try {
+          if (selectedEquipment) {
+            const methodsModule = await import('@/lib/managers/customMethods')
+            const methods = await methodsModule.loadCustomMethodsForEquipment(selectedEquipment)
+            setCustomMethods(methods)
+          }
+        } catch (error) {
+          console.error('响应方案变化时重新加载失败:', error)
+        }
+      }
+    }
+
+    // 监听自定义方案变化事件
+    window.addEventListener('customMethodsChanged', handleCustomMethodsChange)
+
+    return () => {
+      window.removeEventListener('customMethodsChanged', handleCustomMethodsChange)
+    }
+  }, [selectedEquipment])
+
   // 处理器具变化时的方案类型调整
   useEffect(() => {
     if (selectedEquipment && customEquipments.length > 0) {
