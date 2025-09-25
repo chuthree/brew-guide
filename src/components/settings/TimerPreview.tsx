@@ -300,10 +300,8 @@ const TimerPreview: React.FC<TimerPreviewProps> = ({ settings }) => {
                     <div className={`flex items-center ${
                         controlsReversed ? "flex-row-reverse" : "flex-row"
                     } justify-between`}>
-                        <div className={`grid ${
-                            controlsReversed
-                                ? `grid-cols-[auto_auto_auto] ${showFlowRate ? 'gap-4' : 'gap-8'}`
-                                : `grid-cols-[auto_auto_auto] ${showFlowRate ? 'gap-4' : 'gap-8'}`
+                        <div className={`grid grid-cols-[auto_auto_auto] ${
+                            showFlowRate ? 'gap-4' : 'gap-8'
                         }`}>
                             {/* 时间显示 */}
                             <div className={`flex flex-col ${

@@ -87,6 +87,15 @@ const EquipmentBar: React.FC<EquipmentBarProps> = ({
                             <div className="whitespace-nowrap flex items-center relative">
                                 <div
                                     onClick={() => handleEquipmentSelect(equipment.id)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' || e.key === ' ') {
+                                            e.preventDefault()
+                                            handleEquipmentSelect(equipment.id)
+                                        }
+                                    }}
+                                    tabIndex={0}
+                                    role="button"
+                                    aria-label={`选择器具: ${equipment.name}`}
                                     className="text-xs font-medium tracking-widest whitespace-nowrap pb-2 relative cursor-pointer"
                                     data-tab={equipment.id}
                                 >

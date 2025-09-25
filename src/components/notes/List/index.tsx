@@ -32,7 +32,7 @@ import ListView from './ListView'
 import { SortOption } from '../types'
 import { exportSelectedNotes } from '../Share/NotesExporter'
 import { useEnhancedNotesFiltering } from './hooks/useEnhancedNotesFiltering'
-import { extractExtractionTime } from '../utils'
+import { extractExtractionTime, sortNotes } from '../utils'
 
 
 
@@ -52,6 +52,9 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     const [filterMode, setFilterMode] = useState<'equipment' | 'bean'>(getFilterModePreference())
     const [selectedEquipment, setSelectedEquipment] = useState<string | null>(getSelectedEquipmentPreference())
     const [selectedBean, setSelectedBean] = useState<string | null>(getSelectedBeanPreference())
+    
+    // 搜索排序状态 - 独立于普通排序，可选的
+    const [searchSortOption, setSearchSortOption] = useState<SortOption | null>(null)
     const [editingNote, setEditingNote] = useState<BrewingNoteData | null>(null)
     const [editingChangeRecord, setEditingChangeRecord] = useState<BrewingNote | null>(null)
 
@@ -182,7 +185,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         selectedEquipment,
         selectedBean,
         searchQuery,
-        isSearching
+        isSearching,
+        preFilteredNotes: undefined // 暂时不使用，我们需要重新组织逻辑
     })
 
     // 搜索过滤逻辑 - 在Hook之后定义以避免循环依赖
@@ -192,7 +196,9 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         const query = searchQuery.toLowerCase().trim();
         const queryTerms = query.split(/\s+/).filter(term => term.length > 0);
 
-        const notesWithScores = filteredNotes.map((note: BrewingNote) => {
+        // 从原始笔记开始搜索，而不是从已排序的filteredNotes
+        const baseNotes = filteredNotes.length > 0 ? filteredNotes : notes;
+        const notesWithScores = baseNotes.map((note: BrewingNote) => {
             const equipment = note.equipment?.toLowerCase() || '';
             const method = note.method?.toLowerCase() || '';
             const beanName = note.coffeeBeanInfo?.name?.toLowerCase() || '';
@@ -253,9 +259,16 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
 
         type NoteWithScore = { note: BrewingNote; score: number; matches: boolean };
         const matchingNotes = notesWithScores.filter((item: NoteWithScore) => item.matches);
-        matchingNotes.sort((a: NoteWithScore, b: NoteWithScore) => b.score - a.score);
-        return matchingNotes.map((item: NoteWithScore) => item.note);
-    }, [isSearching, searchQuery, filteredNotes]);
+        
+        // 获取匹配的笔记
+        const matchedNotesOnly = matchingNotes.map((item: NoteWithScore) => item.note);
+        
+        // 对搜索结果应用排序选项：优先使用搜索排序，否则使用普通排序
+        const effectiveSortOption = searchSortOption || sortOption;
+        const sortedMatchedNotes = sortNotes(matchedNotesOnly, effectiveSortOption);
+        
+        return sortedMatchedNotes;
+    }, [isSearching, searchQuery, filteredNotes, notes, searchSortOption, sortOption]);
 
     // 检测搜索结果中是否有萃取时间数据
     const hasExtractionTimeData = useMemo(() => {
@@ -695,6 +708,12 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         debouncedUpdateFilters({ sortOption: option });
     };
 
+    // 处理搜索排序选项变化 - 独立于普通排序
+    const handleSearchSortChange = (option: SortOption | null) => {
+        setSearchSortOption(option);
+        // 搜索排序不需要持久化存储，因为它是临时的
+    };
+
     // 处理显示模式变化
     const handleViewModeChange = useCallback((mode: 'list' | 'gallery') => {
         updateViewMode(mode);
@@ -828,8 +847,9 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     const handleSearchClick = () => {
         setIsSearching(!isSearching);
         if (isSearching) {
-            // 清空搜索查询
+            // 退出搜索时：清空搜索查询并重置搜索排序状态
             setSearchQuery('');
+            setSearchSortOption(null);
         }
     };
     
@@ -843,6 +863,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         if (e.key === 'Escape') {
             setIsSearching(false);
             setSearchQuery('');
+            setSearchSortOption(null); // 重置搜索排序状态
         }
     };
     
@@ -991,6 +1012,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                             onSmartToggleImageFlow={handleSmartToggleImageFlow}
                             settings={settings}
                             hasExtractionTimeData={hasExtractionTimeData}
+                            searchSortOption={searchSortOption || undefined}
+                            onSearchSortChange={handleSearchSortChange}
                         />
                     </div>
 

@@ -277,51 +277,192 @@ const SortSection: React.FC<SortSectionProps> = ({ sortOption, onSortChange, set
 
 // 搜索排序栏组件 - 只在搜索时显示
 interface SearchSortBarProps {
-    sortOption: SortOption
-    onSortChange: (option: SortOption) => void
+    searchSortOption?: SortOption
+    onSearchSortChange?: (option: SortOption | null) => void
+    defaultSortOption: SortOption // 普通排序选项，作为默认值
     settings?: import('@/components/settings/Settings').SettingsOptions
     hasExtractionTimeData: boolean // 搜索结果中是否有萃取时间数据
 }
 
 const SearchSortBar: React.FC<SearchSortBarProps> = ({ 
-    sortOption, 
-    onSortChange, 
+    searchSortOption, 
+    onSearchSortChange,
+    defaultSortOption: _defaultSortOption, 
     settings, 
     hasExtractionTimeData 
 }) => {
-    const { type: currentType, order: currentOrder } = getSortTypeAndOrder(sortOption);
+    // 用于激活状态判断的排序选项（只基于搜索排序选项）
+    const searchSortType = searchSortOption ? getSortTypeAndOrder(searchSortOption) : null;
+
+    // 滚动容器引用和阴影状态
+    const searchScrollContainerRef = useRef<HTMLDivElement>(null);
+    const [showLeftShadow, setShowLeftShadow] = useState(false);
+    const [showRightShadow, setShowRightShadow] = useState(false);
+
+    // 处理滚动事件以控制阴影显示
+    const handleSearchScroll = useCallback(() => {
+        if (searchScrollContainerRef.current) {
+            const { scrollLeft, scrollWidth, clientWidth } = searchScrollContainerRef.current;
+            setShowLeftShadow(scrollLeft > 2);
+            setShowRightShadow(scrollLeft < scrollWidth - clientWidth - 2);
+        }
+    }, []);
+
+    // 移除了自动吸附滚动功能 - 只保留普通滚动处理
+
+    // 监听滚动事件和容器大小变化
+    useEffect(() => {
+        const scrollContainer = searchScrollContainerRef.current;
+        if (scrollContainer) {
+            // 初始检测
+            handleSearchScroll();
+            
+            // 添加滚动事件监听（移除了吸附功能）
+            scrollContainer.addEventListener('scroll', handleSearchScroll);
+            
+            // 添加resize observer监听容器大小变化
+            const resizeObserver = new ResizeObserver(handleSearchScroll);
+            resizeObserver.observe(scrollContainer);
+            
+            return () => {
+                scrollContainer.removeEventListener('scroll', handleSearchScroll);
+                resizeObserver.disconnect();
+            };
+        }
+    }, [handleSearchScroll]);
+
+    // 检查是否有任何排序选项可用
+    const hasAnyOption = settings?.searchSort?.enabled && (
+        settings?.searchSort?.time || 
+        settings?.searchSort?.rating || 
+        (settings?.searchSort?.extractionTime && hasExtractionTimeData)
+    );
 
     // 如果搜索排序功能未启用或没有任何可用的搜索排序选项，不显示组件
-    if (!settings?.searchSort?.enabled || !hasExtractionTimeData) {
+    if (!hasAnyOption || !onSearchSortChange) {
         return null;
     }
 
     return (
         <div className="px-6 py-3 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50/30 dark:bg-neutral-900/30">
-            <div className="flex items-center space-x-2">
-                <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mr-2">
+            <div className="flex items-center">
+                <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mr-3 flex-shrink-0">
                     搜索排序:
                 </span>
                 
-                {/* 萃取时间排序按钮 */}
-                {settings?.searchSort?.extractionTime && hasExtractionTimeData && (
-                    <>
-                        <FilterButton
-                            isActive={currentType === 'extraction_time' && currentOrder === 'asc'}
-                            onClick={() => onSortChange(SORT_OPTIONS.EXTRACTION_TIME_ASC)}
-                            className="text-xs"
-                        >
-                            萃取时间 ↑
-                        </FilterButton>
-                        <FilterButton
-                            isActive={currentType === 'extraction_time' && currentOrder === 'desc'}
-                            onClick={() => onSortChange(SORT_OPTIONS.EXTRACTION_TIME_DESC)}
-                            className="text-xs"
-                        >
-                            萃取时间 ↓
-                        </FilterButton>
-                    </>
-                )}
+                {/* 滚动容器包装器 - 限制最大宽度防止溢出 */}
+                <div className="flex-1 relative min-w-0">
+                    {/* 左侧渐变阴影 */}
+                    {showLeftShadow && (
+                        <div className="absolute left-0 top-0 bottom-0 w-6 pointer-events-none bg-gradient-to-r from-neutral-50/80 to-transparent dark:from-neutral-900/80 z-10"></div>
+                    )}
+                    
+                    {/* 右侧渐变阴影 */}
+                    {showRightShadow && (
+                        <div className="absolute right-0 top-0 bottom-0 w-6 pointer-events-none bg-gradient-to-l from-neutral-50/80 to-transparent dark:from-neutral-900/80 z-10"></div>
+                    )}
+
+                    {/* 滚动容器 */}
+                    <div 
+                        ref={searchScrollContainerRef}
+                        className="flex items-center space-x-2 overflow-x-auto w-full"
+                        style={{
+                            scrollbarWidth: 'none',
+                            msOverflowStyle: 'none',
+                            WebkitOverflowScrolling: 'touch'
+                        }}
+                    >
+                        <style jsx>{`
+                            div::-webkit-scrollbar {
+                                display: none;
+                            }
+                        `}</style>
+
+                        {/* 时间排序按钮 */}
+                    {settings?.searchSort?.time && (
+                        <>
+                            <FilterButton
+                                isActive={searchSortType?.type === 'time' && searchSortType?.order === 'desc'}
+                                onClick={() => {
+                                    // 如果已经是激活状态，点击取消选中；否则设置为降序（最新）
+                                    const isCurrentlyActive = searchSortType?.type === 'time' && searchSortType?.order === 'desc';
+                                    onSearchSortChange(isCurrentlyActive ? null : SORT_OPTIONS.TIME_DESC);
+                                }}
+                                className="text-xs flex-shrink-0"
+                            >
+                                时间 ↓
+                            </FilterButton>
+                            <FilterButton
+                                isActive={searchSortType?.type === 'time' && searchSortType?.order === 'asc'}
+                                onClick={() => {
+                                    // 如果已经是激活状态，点击取消选中；否则设置为升序（最早）
+                                    const isCurrentlyActive = searchSortType?.type === 'time' && searchSortType?.order === 'asc';
+                                    onSearchSortChange(isCurrentlyActive ? null : SORT_OPTIONS.TIME_ASC);
+                                }}
+                                className="text-xs flex-shrink-0"
+                            >
+                                时间 ↑
+                            </FilterButton>
+                        </>
+                    )}
+
+                    {/* 评分排序按钮 */}
+                    {settings?.searchSort?.rating && (
+                        <>
+                            <FilterButton
+                                isActive={searchSortType?.type === 'rating' && searchSortType?.order === 'desc'}
+                                onClick={() => {
+                                    // 如果已经是激活状态，点击取消选中；否则设置为降序（最高分）
+                                    const isCurrentlyActive = searchSortType?.type === 'rating' && searchSortType?.order === 'desc';
+                                    onSearchSortChange(isCurrentlyActive ? null : SORT_OPTIONS.RATING_DESC);
+                                }}
+                                className="text-xs flex-shrink-0"
+                            >
+                                评分 ↓
+                            </FilterButton>
+                            <FilterButton
+                                isActive={searchSortType?.type === 'rating' && searchSortType?.order === 'asc'}
+                                onClick={() => {
+                                    // 如果已经是激活状态，点击取消选中；否则设置为升序（最低分）
+                                    const isCurrentlyActive = searchSortType?.type === 'rating' && searchSortType?.order === 'asc';
+                                    onSearchSortChange(isCurrentlyActive ? null : SORT_OPTIONS.RATING_ASC);
+                                }}
+                                className="text-xs flex-shrink-0"
+                            >
+                                评分 ↑
+                            </FilterButton>
+                        </>
+                    )}
+                
+                    {/* 萃取时间排序按钮 */}
+                    {settings?.searchSort?.extractionTime && hasExtractionTimeData && (
+                        <>
+                            <FilterButton
+                                isActive={searchSortType?.type === 'extraction_time' && searchSortType?.order === 'asc'}
+                                onClick={() => {
+                                    // 如果已经是激活状态，点击取消选中；否则设置为升序
+                                    const isCurrentlyActive = searchSortType?.type === 'extraction_time' && searchSortType?.order === 'asc';
+                                    onSearchSortChange(isCurrentlyActive ? null : SORT_OPTIONS.EXTRACTION_TIME_ASC);
+                                }}
+                                className="text-xs flex-shrink-0"
+                            >
+                                萃取时间 ↑
+                            </FilterButton>
+                            <FilterButton
+                                isActive={searchSortType?.type === 'extraction_time' && searchSortType?.order === 'desc'}
+                                onClick={() => {
+                                    // 如果已经是激活状态，点击取消选中；否则设置为降序
+                                    const isCurrentlyActive = searchSortType?.type === 'extraction_time' && searchSortType?.order === 'desc';
+                                    onSearchSortChange(isCurrentlyActive ? null : SORT_OPTIONS.EXTRACTION_TIME_DESC);
+                                }}
+                                className="text-xs flex-shrink-0"
+                            >
+                                萃取时间 ↓
+                            </FilterButton>
+                        </>
+                    )}
+                    </div>
+                </div>
             </div>
         </div>
     );
@@ -353,7 +494,9 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
     onToggleDateImageFlowMode,
     onSmartToggleImageFlow,
     settings,
-    hasExtractionTimeData = false
+    hasExtractionTimeData = false,
+    searchSortOption,
+    onSearchSortChange
 }) {
     // 搜索输入框引用 - 移到条件语句前面
     const searchInputRef = useRef<HTMLInputElement>(null);
@@ -637,10 +780,11 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
             </div>
 
             {/* 搜索排序栏 - 只在搜索时且有相关数据时显示 */}
-            {isSearching && sortOption && onSortChange && (
+            {isSearching && sortOption && (
                 <SearchSortBar
-                    sortOption={sortOption}
-                    onSortChange={onSortChange}
+                    searchSortOption={searchSortOption}
+                    onSearchSortChange={onSearchSortChange}
+                    defaultSortOption={sortOption}
                     settings={settings}
                     hasExtractionTimeData={hasExtractionTimeData}
                 />

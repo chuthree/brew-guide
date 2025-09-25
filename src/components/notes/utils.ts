@@ -22,10 +22,10 @@ export const extractExtractionTime = (notes: string): number | null => {
     /(\d+)\s*[sS]/g,
     // 匹配 "25秒", "30 秒" 等格式
     /(\d+)\s*秒/g,
-    // 匹配更复杂的描述，如 "萃取25秒", "extraction 30s" 等
-    /(?:萃取|extraction|extract).*?(\d+)\s*[sS秒]/gi,
-    // 匹配时间:分钟格式，如 "0:25", "00:30" (转换为秒数)
-    /(?:萃取|extraction|extract|time).*?(\d+):(\d+)/gi
+    // 匹配更复杂的描述，如 "萃取25秒", "extraction 30s" 等 - 使用原子组避免回溯
+    /(?:萃取|extraction|extract)(?:[^0-9]*?)(\d+)\s*[sS秒]/gi,
+    // 匹配时间:分钟格式，如 "0:25", "00:30" (转换为秒数) - 使用原子组避免回溯
+    /(?:萃取|extraction|extract|time)(?:[^0-9:]*?)(\d+):(\d+)/gi
   ]
 
   const matches: number[] = []
@@ -140,7 +140,7 @@ export const calculateTotalCoffeeConsumption = (notes: BrewingNote[]): number =>
         } else if (note.params && note.params.coffee) {
             // 处理普通冲煮笔记
             // 提取咖啡量中的数字部分
-            const match = note.params.coffee.match(/(\d+(\.\d+)?)/);
+            const match = note.params.coffee.match(/(\d+(?:\.\d+)?)/);
             if (match) {
                 const coffeeAmount = parseFloat(match[0]);
                 if (!isNaN(coffeeAmount)) {
@@ -160,9 +160,9 @@ export const getCoffeeBeanUnitPrice = async (beanName: string): Promise<number> 
         // 查找匹配的咖啡豆
         const bean = beans.find(b => b.name === beanName);
         if (bean && bean.price && bean.capacity) {
-            // 价格格式可能是"100元"或"100"
-            const priceMatch = bean.price.match(/(\d+(\.\d+)?)/);
-            const capacityMatch = bean.capacity.match(/(\d+(\.\d+)?)/);
+            // 价格格式可能是"100元"或"100" - 使用原子组避免回溯
+            const priceMatch = bean.price.match(/(\d+(?:\.\d+)?)/);
+            const capacityMatch = bean.capacity.match(/(\d+(?:\.\d+)?)/);
             
             if (priceMatch && capacityMatch) {
                 const price = parseFloat(priceMatch[0]);
@@ -185,7 +185,7 @@ export const getCoffeeBeanUnitPrice = async (beanName: string): Promise<number> 
 export const calculateNoteCost = async (note: BrewingNote): Promise<number> => {
     if (!note.params?.coffee || !note.coffeeBeanInfo?.name) return 0;
     
-    const coffeeMatch = note.params.coffee.match(/(\d+(\.\d+)?)/);
+    const coffeeMatch = note.params.coffee.match(/(\d+(?:\.\d+)?)/);
     if (!coffeeMatch) return 0;
     
     const coffeeAmount = parseFloat(coffeeMatch[0]);
@@ -258,7 +258,7 @@ export const extractCoffeeAmountFromNote = (note: BrewingNote): number => {
         // 处理普通笔记
         if (note.params && note.params.coffee) {
             // 提取咖啡量中的数字部分（如"18g" -> 18）
-            const match = note.params.coffee.match(/(\d+(\.\d+)?)/);
+            const match = note.params.coffee.match(/(\d+(?:\.\d+)?)/);
             if (match) {
                 const coffeeAmount = parseFloat(match[0]);
                 if (!isNaN(coffeeAmount) && coffeeAmount > 0) {

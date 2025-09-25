@@ -91,6 +91,9 @@ export interface FilterTabsProps {
     settings?: import('@/components/settings/Settings').SettingsOptions
     // 搜索结果中是否包含萃取时间数据
     hasExtractionTimeData?: boolean
+    // 搜索排序相关props - 独立于普通排序
+    searchSortOption?: SortOption
+    onSearchSortChange?: (option: SortOption | null) => void
 }
 
 // 添加笔记按钮属性

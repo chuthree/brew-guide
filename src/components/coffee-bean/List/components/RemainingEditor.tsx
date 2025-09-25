@@ -105,12 +105,16 @@ const RemainingEditor: React.FC<RemainingEditorProps> = ({
             }
         }
 
-        loadSettings()
+        loadSettings().catch(error => {
+            console.error('初始化加载设置失败:', error)
+        })
 
         // 监听设置变更
         const handleSettingsChange = (e: CustomEvent) => {
             if (e.detail?.key === 'brewGuideSettings' && isMounted.current) {
-                loadSettings()
+                loadSettings().catch(error => {
+                    console.error('设置变更时加载设置失败:', error)
+                })
             }
         }
 

@@ -98,6 +98,8 @@ export interface SettingsOptions {
     // 搜索排序设置
     searchSort?: {
         enabled: boolean // 是否启用搜索排序功能
+        time: boolean // 是否启用时间排序
+        rating: boolean // 是否启用评分排序
         extractionTime: boolean // 是否启用萃取时间排序
     }
 }
@@ -168,7 +170,9 @@ export const defaultSettings: SettingsOptions = {
     },
     // 搜索排序设置默认值
     searchSort: {
-        enabled: true, // 默认启用搜索排序功能
+        enabled: false, // 默认启用搜索排序功能
+        time: false, // 默认不启用时间排序
+        rating: false, // 默认不启用评分排序
         extractionTime: true, // 默认启用萃取时间排序
     }
 }

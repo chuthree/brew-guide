@@ -62,6 +62,8 @@ const SearchSortSettings: React.FC<SearchSortSettingsProps> = ({
                                         checked={settings.searchSort?.enabled}
                                         onChange={(e) => handleChange('searchSort', {
                                             enabled: e.target.checked,
+                                            time: settings.searchSort?.time ?? false,
+                                            rating: settings.searchSort?.rating ?? false,
                                             extractionTime: settings.searchSort?.extractionTime ?? true
                                         })}
                                         className="peer sr-only"
@@ -79,6 +81,59 @@ const SearchSortSettings: React.FC<SearchSortSettingsProps> = ({
                                 排序项目
                             </h3>
                             <div className="space-y-4">
+                                {/* 时间排序 */}
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <div className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                                            时间排序
+                                        </div>
+                                        <div className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                                            根据笔记创建时间进行排序
+                                        </div>
+                                    </div>
+                                    <label className="relative inline-flex cursor-pointer items-center">
+                                        <input
+                                            type="checkbox"
+                                            checked={settings.searchSort?.time}
+                                            onChange={(e) => handleChange('searchSort', {
+                                                enabled: settings.searchSort?.enabled ?? true,
+                                                time: e.target.checked,
+                                                rating: settings.searchSort?.rating ?? false,
+                                                extractionTime: settings.searchSort?.extractionTime ?? true
+                                            })}
+                                            className="peer sr-only"
+                                        />
+                                        <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
+                                    </label>
+                                </div>
+
+                                {/* 评分排序 */}
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <div className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                                            评分排序
+                                        </div>
+                                        <div className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                                            根据笔记评分进行排序
+                                        </div>
+                                    </div>
+                                    <label className="relative inline-flex cursor-pointer items-center">
+                                        <input
+                                            type="checkbox"
+                                            checked={settings.searchSort?.rating}
+                                            onChange={(e) => handleChange('searchSort', {
+                                                enabled: settings.searchSort?.enabled ?? true,
+                                                time: settings.searchSort?.time ?? false,
+                                                rating: e.target.checked,
+                                                extractionTime: settings.searchSort?.extractionTime ?? true
+                                            })}
+                                            className="peer sr-only"
+                                        />
+                                        <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
+                                    </label>
+                                </div>
+
+                                {/* 萃取时间排序 */}
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <div className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
@@ -94,6 +149,8 @@ const SearchSortSettings: React.FC<SearchSortSettingsProps> = ({
                                             checked={settings.searchSort?.extractionTime}
                                             onChange={(e) => handleChange('searchSort', {
                                                 enabled: settings.searchSort?.enabled ?? true,
+                                                time: settings.searchSort?.time ?? false,
+                                                rating: settings.searchSort?.rating ?? false,
                                                 extractionTime: e.target.checked
                                             })}
                                             className="peer sr-only"
