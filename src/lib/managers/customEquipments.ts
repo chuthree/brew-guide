@@ -123,7 +123,7 @@ export async function loadCustomEquipments(): Promise<CustomEquipment[]> {
  * @returns 唯一ID
  */
 function generateCustomId(animationType: string): string {
-	return `custom-${animationType}-${Date.now()}-${Math.random()
+	return `custom-${animationType}-${Date.now()}-${Math.random() // NOSONAR: safe for unique ID generation
 		.toString(36)
 		.substring(2, 9)}`;
 }

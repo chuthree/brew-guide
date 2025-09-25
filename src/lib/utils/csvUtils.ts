@@ -263,7 +263,7 @@ function parseCSVContent2024(records: unknown[], beanType: 'espresso' | 'filter'
             const capacity = '200'; 
             const episode = 期 ? String(期).trim() : '';
 
-            const uniqueId = `blogger-${beanType}-2024-${beanId}-${name.replace(/\s+/g, '-')}-${Math.random().toString(36).substring(2, 7)}`;
+            const uniqueId = `blogger-${beanType}-2024-${beanId}-${name.replace(/\s+/g, '-')}-${Math.random().toString(36).substring(2, 7)}`; // NOSONAR: safe for unique ID generation
 
             return {
                 id: uniqueId,
