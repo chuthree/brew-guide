@@ -82,7 +82,9 @@ const FilterButton: React.FC<FilterButtonProps> = ({ isActive, onClick, children
 
 // 排序相关辅助函数
 const getSortTypeAndOrder = (sortOption: SortOption) => {
-    if (sortOption.includes('time')) {
+    if (sortOption.includes('extraction_time')) {
+        return { type: 'extraction_time', order: sortOption.includes('desc') ? 'desc' : 'asc' };
+    } else if (sortOption.includes('time')) {
         return { type: 'time', order: sortOption.includes('desc') ? 'desc' : 'asc' };
     } else if (sortOption.includes('rating')) {
         return { type: 'rating', order: sortOption.includes('desc') ? 'desc' : 'asc' };
@@ -91,7 +93,9 @@ const getSortTypeAndOrder = (sortOption: SortOption) => {
 };
 
 const getSortOption = (type: string, order: string): SortOption => {
-    if (type === 'time') {
+    if (type === 'extraction_time') {
+        return order === 'desc' ? SORT_OPTIONS.EXTRACTION_TIME_DESC : SORT_OPTIONS.EXTRACTION_TIME_ASC;
+    } else if (type === 'time') {
         return order === 'desc' ? SORT_OPTIONS.TIME_DESC : SORT_OPTIONS.TIME_ASC;
     } else if (type === 'rating') {
         return order === 'desc' ? SORT_OPTIONS.RATING_DESC : SORT_OPTIONS.RATING_ASC;
@@ -100,7 +104,9 @@ const getSortOption = (type: string, order: string): SortOption => {
 };
 
 const getSortOrderLabel = (type: string, order: string) => {
-    if (type === 'time') {
+    if (type === 'extraction_time') {
+        return order === 'desc' ? '慢到快' : '快到慢';
+    } else if (type === 'time') {
         return order === 'desc' ? '最新' : '最早';
     } else if (type === 'rating') {
         return order === 'desc' ? '最高' : '最低';
@@ -204,9 +210,10 @@ const ViewModeSection: React.FC<ViewModeSectionProps> = ({
 interface SortSectionProps {
     sortOption: SortOption
     onSortChange: (option: SortOption) => void
+    settings?: import('@/components/settings/Settings').SettingsOptions
 }
 
-const SortSection: React.FC<SortSectionProps> = ({ sortOption, onSortChange }) => {
+const SortSection: React.FC<SortSectionProps> = ({ sortOption, onSortChange, settings }) => {
     const { type: currentType, order: currentOrder } = getSortTypeAndOrder(sortOption);
 
     return (
@@ -233,6 +240,19 @@ const SortSection: React.FC<SortSectionProps> = ({ sortOption, onSortChange }) =
                     >
                         评分
                     </FilterButton>
+                    
+                    {/* 萃取时间排序选项 - 只在设置中启用时显示 */}
+                    {settings?.searchSort?.enabled && settings?.searchSort?.extractionTime && (
+                        <FilterButton
+                            isActive={currentType === 'extraction_time'}
+                            onClick={() => {
+                                const newOption = getSortOption('extraction_time', currentOrder);
+                                onSortChange(newOption);
+                            }}
+                        >
+                            萃取时间
+                        </FilterButton>
+                    )}
                 </div>
 
                 {/* 排序顺序 */}
@@ -250,6 +270,58 @@ const SortSection: React.FC<SortSectionProps> = ({ sortOption, onSortChange }) =
                         {getSortOrderLabel(currentType, 'asc')}
                     </FilterButton>
                 </div>
+            </div>
+        </div>
+    );
+};
+
+// 搜索排序栏组件 - 只在搜索时显示
+interface SearchSortBarProps {
+    sortOption: SortOption
+    onSortChange: (option: SortOption) => void
+    settings?: import('@/components/settings/Settings').SettingsOptions
+    hasExtractionTimeData: boolean // 搜索结果中是否有萃取时间数据
+}
+
+const SearchSortBar: React.FC<SearchSortBarProps> = ({ 
+    sortOption, 
+    onSortChange, 
+    settings, 
+    hasExtractionTimeData 
+}) => {
+    const { type: currentType, order: currentOrder } = getSortTypeAndOrder(sortOption);
+
+    // 如果搜索排序功能未启用或没有任何可用的搜索排序选项，不显示组件
+    if (!settings?.searchSort?.enabled || !hasExtractionTimeData) {
+        return null;
+    }
+
+    return (
+        <div className="px-6 py-3 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50/30 dark:bg-neutral-900/30">
+            <div className="flex items-center space-x-2">
+                <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mr-2">
+                    搜索排序:
+                </span>
+                
+                {/* 萃取时间排序按钮 */}
+                {settings?.searchSort?.extractionTime && hasExtractionTimeData && (
+                    <>
+                        <FilterButton
+                            isActive={currentType === 'extraction_time' && currentOrder === 'asc'}
+                            onClick={() => onSortChange(SORT_OPTIONS.EXTRACTION_TIME_ASC)}
+                            className="text-xs"
+                        >
+                            萃取时间 ↑
+                        </FilterButton>
+                        <FilterButton
+                            isActive={currentType === 'extraction_time' && currentOrder === 'desc'}
+                            onClick={() => onSortChange(SORT_OPTIONS.EXTRACTION_TIME_DESC)}
+                            className="text-xs"
+                        >
+                            萃取时间 ↓
+                        </FilterButton>
+                    </>
+                )}
             </div>
         </div>
     );
@@ -279,7 +351,9 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
     onToggleImageFlowMode,
     isDateImageFlowMode = false,
     onToggleDateImageFlowMode,
-    onSmartToggleImageFlow
+    onSmartToggleImageFlow,
+    settings,
+    hasExtractionTimeData = false
 }) {
     // 搜索输入框引用 - 移到条件语句前面
     const searchInputRef = useRef<HTMLInputElement>(null);
@@ -552,6 +626,7 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                                         <SortSection
                                             sortOption={sortOption}
                                             onSortChange={onSortChange}
+                                            settings={settings}
                                         />
                                     </div>
                                 </div>
@@ -560,6 +635,17 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                     )}
                 </AnimatePresence>
             </div>
+
+            {/* 搜索排序栏 - 只在搜索时且有相关数据时显示 */}
+            {isSearching && sortOption && onSortChange && (
+                <SearchSortBar
+                    sortOption={sortOption}
+                    onSortChange={onSortChange}
+                    settings={settings}
+                    hasExtractionTimeData={hasExtractionTimeData}
+                />
+            )}
+
         </div>
     )
 })

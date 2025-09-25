@@ -6,6 +6,57 @@ import type { BrewingNote } from '@/lib/core/config'
 import { SortOption, SORT_OPTIONS } from './types'
 import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager'
 
+/**
+ * 从用户备注中提取萃取时间
+ * @param notes 用户备注内容
+ * @returns 提取到的萃取时间（秒数），如果未匹配到则返回 null
+ */
+export const extractExtractionTime = (notes: string): number | null => {
+  if (!notes || typeof notes !== 'string') {
+    return null
+  }
+
+  // 正则表达式匹配各种萃取时间格式
+  const timePatterns = [
+    // 匹配 "12s25g", "30s", "45 s" 等格式 - 移除负前瞻以支持复合格式
+    /(\d+)\s*[sS]/g,
+    // 匹配 "25秒", "30 秒" 等格式
+    /(\d+)\s*秒/g,
+    // 匹配更复杂的描述，如 "萃取25秒", "extraction 30s" 等
+    /(?:萃取|extraction|extract).*?(\d+)\s*[sS秒]/gi,
+    // 匹配时间:分钟格式，如 "0:25", "00:30" (转换为秒数)
+    /(?:萃取|extraction|extract|time).*?(\d+):(\d+)/gi
+  ]
+
+  const matches: number[] = []
+
+  for (const pattern of timePatterns) {
+    let match
+    while ((match = pattern.exec(notes)) !== null) {
+      if (match[1] && match[2]) {
+        // 处理分钟:秒格式 (如 "0:25" = 25秒, "1:30" = 90秒)
+        const minutes = parseInt(match[1], 10)
+        const seconds = parseInt(match[2], 10)
+        const totalSeconds = minutes * 60 + seconds
+        if (totalSeconds > 0 && totalSeconds < 600) { // 限制在10分钟内
+          matches.push(totalSeconds)
+        }
+      } else if (match[1]) {
+        // 处理纯秒数格式
+        const time = parseInt(match[1], 10)
+        // 合理的萃取时间范围：5秒到300秒（5分钟）
+        if (time >= 5 && time <= 300) {
+          matches.push(time)
+        }
+      }
+    }
+  }
+
+  // 如果找到多个匹配项，返回最后一个（通常是最准确的）
+  // 如果没有匹配项，返回 null
+  return matches.length > 0 ? matches[matches.length - 1] : null
+}
+
 // 日期格式化函数
 export const formatDate = (timestamp: number): string => {
     const date = new Date(timestamp);
@@ -250,6 +301,32 @@ export const sortNotes = (notes: BrewingNote[], sortOption: SortOption): Brewing
             return [...notes].sort((a, b) => b.rating - a.rating)
         case SORT_OPTIONS.RATING_ASC:
             return [...notes].sort((a, b) => a.rating - b.rating)
+        case SORT_OPTIONS.EXTRACTION_TIME_DESC:
+            return [...notes].sort((a, b) => {
+                const timeA = extractExtractionTime(a.notes || '')
+                const timeB = extractExtractionTime(b.notes || '')
+                
+                // 有萃取时间的排在前面
+                if (timeA === null && timeB === null) return 0
+                if (timeA === null) return 1
+                if (timeB === null) return -1
+                
+                // 都有萃取时间时，按时间长短排序（降序：慢到快）
+                return timeB - timeA
+            })
+        case SORT_OPTIONS.EXTRACTION_TIME_ASC:
+            return [...notes].sort((a, b) => {
+                const timeA = extractExtractionTime(a.notes || '')
+                const timeB = extractExtractionTime(b.notes || '')
+                
+                // 有萃取时间的排在前面
+                if (timeA === null && timeB === null) return 0
+                if (timeA === null) return 1
+                if (timeB === null) return -1
+                
+                // 都有萃取时间时，按时间长短排序（升序：快到慢）
+                return timeA - timeB
+            })
         default:
             return notes
     }

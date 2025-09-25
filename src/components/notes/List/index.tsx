@@ -32,6 +32,7 @@ import ListView from './ListView'
 import { SortOption } from '../types'
 import { exportSelectedNotes } from '../Share/NotesExporter'
 import { useEnhancedNotesFiltering } from './hooks/useEnhancedNotesFiltering'
+import { extractExtractionTime } from '../utils'
 
 
 
@@ -255,6 +256,17 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         matchingNotes.sort((a: NoteWithScore, b: NoteWithScore) => b.score - a.score);
         return matchingNotes.map((item: NoteWithScore) => item.note);
     }, [isSearching, searchQuery, filteredNotes]);
+
+    // 检测搜索结果中是否有萃取时间数据
+    const hasExtractionTimeData = useMemo(() => {
+        if (!isSearching || !searchQuery.trim()) return false;
+        
+        // 检查搜索结果中是否有至少一条笔记包含萃取时间信息
+        return searchFilteredNotes.some(note => {
+            const extractionTime = extractExtractionTime(note.notes || '');
+            return extractionTime !== null;
+        });
+    }, [isSearching, searchQuery, searchFilteredNotes]);
 
     // 计算总咖啡消耗量
     const totalCoffeeConsumption = useRef(0)
@@ -977,6 +989,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                             isDateImageFlowMode={isDateImageFlowMode}
                             onToggleDateImageFlowMode={handleToggleDateImageFlowMode}
                             onSmartToggleImageFlow={handleSmartToggleImageFlow}
+                            settings={settings}
+                            hasExtractionTimeData={hasExtractionTimeData}
                         />
                     </div>
 

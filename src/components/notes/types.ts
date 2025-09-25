@@ -7,6 +7,9 @@ export const SORT_OPTIONS = {
     TIME_ASC: 'time_asc',
     RATING_DESC: 'rating_desc',
     RATING_ASC: 'rating_asc',
+    // 搜索排序选项
+    EXTRACTION_TIME_DESC: 'extraction_time_desc',
+    EXTRACTION_TIME_ASC: 'extraction_time_asc',
 } as const;
 
 export type SortOption = typeof SORT_OPTIONS[keyof typeof SORT_OPTIONS];
@@ -17,6 +20,8 @@ export const SORT_LABELS: Record<SortOption, string> = {
     [SORT_OPTIONS.TIME_ASC]: '时间',
     [SORT_OPTIONS.RATING_DESC]: '评分',
     [SORT_OPTIONS.RATING_ASC]: '评分',
+    [SORT_OPTIONS.EXTRACTION_TIME_DESC]: '萃取时间',
+    [SORT_OPTIONS.EXTRACTION_TIME_ASC]: '萃取时间',
 };
 
 // 消息提示状态接口
@@ -82,6 +87,10 @@ export interface FilterTabsProps {
     onToggleDateImageFlowMode?: () => void
     // 智能切换图片流模式（用于双击"全部"）
     onSmartToggleImageFlow?: () => void
+    // 新增设置参数（用于搜索排序功能）
+    settings?: import('@/components/settings/Settings').SettingsOptions
+    // 搜索结果中是否包含萃取时间数据
+    hasExtractionTimeData?: boolean
 }
 
 // 添加笔记按钮属性

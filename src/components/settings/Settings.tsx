@@ -6,7 +6,7 @@ import hapticsUtils from '@/lib/ui/haptics'
 
 import { useTheme } from 'next-themes'
 import { LayoutSettings } from '../brewing/Timer/Settings'
-import { ChevronLeft, ChevronRight, RefreshCw, Loader, Monitor, SlidersHorizontal, Archive, List, CalendarDays, Timer, Database, Bell, ClipboardPen, Shuffle } from 'lucide-react'
+import { ChevronLeft, ChevronRight, RefreshCw, Loader, Monitor, SlidersHorizontal, Archive, List, CalendarDays, Timer, Database, Bell, ClipboardPen, Shuffle, ArrowUpDown } from 'lucide-react'
 
 import Image from 'next/image'
 import GrinderSettings from './GrinderSettings'
@@ -23,6 +23,7 @@ import DisplaySettings from './DisplaySettings'
 import DataSettings from './DataSettings'
 import NotificationSettings from './NotificationSettings'
 import RandomCoffeeBeanSettings from './RandomCoffeeBeanSettings'
+import SearchSortSettings from './SearchSortSettings'
 // 自定义磨豆机接口
 export interface CustomGrinder {
     id: string
@@ -94,6 +95,11 @@ export interface SettingsOptions {
             unknown: boolean   // 未知
         }
     }
+    // 搜索排序设置
+    searchSort?: {
+        enabled: boolean // 是否启用搜索排序功能
+        extractionTime: boolean // 是否启用萃取时间排序
+    }
 }
 
 // 默认设置
@@ -159,6 +165,11 @@ export const defaultSettings: SettingsOptions = {
             inTransit: false,// 默认不包含在途
             unknown: true    // 默认包含未知状态
         }
+    },
+    // 搜索排序设置默认值
+    searchSort: {
+        enabled: true, // 默认启用搜索排序功能
+        extractionTime: true, // 默认启用萃取时间排序
     }
 }
 
@@ -208,6 +219,9 @@ const Settings: React.FC<SettingsProps> = ({
 
     // 添加随机咖啡豆设置状态
     const [showRandomCoffeeBeanSettings, setShowRandomCoffeeBeanSettings] = useState(false)
+
+    // 添加搜索排序设置状态
+    const [showSearchSortSettings, setShowSearchSortSettings] = useState(false)
 
     // 添加二维码显示状态
     const [showQRCodes, setShowQRCodes] = useState(false)
@@ -669,6 +683,20 @@ const handleChange = async <K extends keyof SettingsOptions>(
                     </button>
                 </div>
 
+                {/* 笔记相关设置 */}
+                <div className="px-6 py-4">
+                    <button
+                        onClick={() => setShowSearchSortSettings(true)}
+                        className="w-full py-3 px-4 text-sm font-medium text-neutral-800 bg-neutral-100 rounded transition-colors hover:bg-neutral-200 dark:text-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 flex items-center justify-between"
+                    >
+                        <div className="flex items-center space-x-3">
+                            <ArrowUpDown className="h-4 w-4 text-neutral-500" />
+                            <span>搜索排序设置</span>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-neutral-400" />
+                    </button>
+                </div>
+
                 {/* 数据管理入口按钮 */}
                 <div className="px-6 py-4">
                     <button
@@ -885,6 +913,17 @@ const handleChange = async <K extends keyof SettingsOptions>(
                     <RandomCoffeeBeanSettings
                         settings={settings}
                         onClose={() => setShowRandomCoffeeBeanSettings(false)}
+                        handleChange={handleChange}
+                    />
+                )}
+            </AnimatePresence>
+
+            {/* 搜索排序设置组件 */}
+            <AnimatePresence>
+                {showSearchSortSettings && (
+                    <SearchSortSettings
+                        settings={settings}
+                        onClose={() => setShowSearchSortSettings(false)}
                         handleChange={handleChange}
                     />
                 )}
