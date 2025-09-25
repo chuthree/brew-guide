@@ -120,7 +120,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
         setRatioAmount(ratio)
         setWaterAmount(method.params.water)
         // 设置研磨度时应用转换
-        const displayGrindSize = settings ? formatGrindSize(method.params.grindSize, settings.grindType) : method.params.grindSize
+        const displayGrindSize = settings ? formatGrindSize(method.params.grindSize, settings.grindType, settings.customGrinders as Record<string, unknown>[] | undefined) : method.params.grindSize
         setGrindSize(displayGrindSize)
         setTempValue(temp)
       }
@@ -198,7 +198,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
               <div className="flex items-center">
                 <span className="text-xs font-medium w-14">研磨度:</span>
                 <span className="text-xs font-medium">
-                  {settings ? formatGrindSize(method.params.grindSize, settings.grindType) : method.params.grindSize}
+                  {settings ? formatGrindSize(method.params.grindSize, settings.grindType, settings.customGrinders as Record<string, unknown>[] | undefined) : method.params.grindSize}
                 </span>
               </div>
             </div>

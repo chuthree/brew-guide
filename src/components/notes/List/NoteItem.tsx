@@ -196,10 +196,10 @@ const NoteItem: React.FC<NoteItemProps> = ({
                                                     <span>
                                                         {isShareMode && _settings.grindType !== 'generic' && _grinderName ? (
                                                             // 在分享模式下显示磨豆机名称 + 研磨度
-                                                            <>{_grinderName} {_formatGrindSize(note.params.grindSize, _settings.grindType)} · {note.params.temp}</>
+                                                            <>{_grinderName} {_formatGrindSize(note.params.grindSize, _settings.grindType, _settings.customGrinders as Record<string, unknown>[] | undefined)} · {note.params.temp}</>
                                                         ) : (
                                                             // 普通显示 - 也应用转换
-                                                            <>{_formatGrindSize(note.params.grindSize, _settings.grindType)} · {note.params.temp}</>
+                                                            <>{_formatGrindSize(note.params.grindSize, _settings.grindType, _settings.customGrinders as Record<string, unknown>[] | undefined)} · {note.params.temp}</>
                                                         )}
                                                     </span>
                                                 ) : (
@@ -207,10 +207,10 @@ const NoteItem: React.FC<NoteItemProps> = ({
                                                         {note.params.grindSize ? (
                                                             isShareMode && _settings.grindType !== 'generic' && _grinderName ? (
                                                                 // 在分享模式下只显示研磨度
-                                                                <>{_grinderName} {_formatGrindSize(note.params.grindSize, _settings.grindType)}</>
+                                                                <>{_grinderName} {_formatGrindSize(note.params.grindSize, _settings.grindType, _settings.customGrinders as Record<string, unknown>[] | undefined)}</>
                                                             ) : (
                                                                 // 普通显示 - 也应用转换
-                                                                <>{_formatGrindSize(note.params.grindSize, _settings.grindType)}</>
+                                                                <>{_formatGrindSize(note.params.grindSize, _settings.grindType, _settings.customGrinders as Record<string, unknown>[] | undefined)}</>
                                                             )
                                                         ) : (
                                                             // 只有水温

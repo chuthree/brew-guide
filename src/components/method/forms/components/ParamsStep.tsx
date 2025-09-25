@@ -211,7 +211,7 @@ const ParamsStep: React.FC<ParamsStepProps> = ({
           </label>
           <input
             type="text"
-            value={formatGrindSize(params.grindSize || '', settings.grindType)}
+            value={formatGrindSize(params.grindSize || '', settings.grindType, settings.customGrinders as Record<string, unknown>[] | undefined)}
             onChange={(e) => onGrindSizeChange(e.target.value)}
             onFocus={(e) => e.target.select()}
             placeholder={

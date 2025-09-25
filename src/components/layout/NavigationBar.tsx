@@ -642,7 +642,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                                                 <>
                                                                     <span className="shrink-0">·</span>
                                                                     <EditableParameter
-                                                                        value={formatGrindSize(editableParams.grindSize, settings.grindType)}
+                                                                        value={formatGrindSize(editableParams.grindSize, settings.grindType, settings.customGrinders as Record<string, unknown>[] | undefined)}
                                                                         onChange={(v) => handleParamChange('grindSize', v)}
                                                                         unit=""
                                                                         className=""
@@ -709,7 +709,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                                             {espressoUtils.isEspresso(selectedMethod) ? (
                                                                 <>
                                                                     <span className="whitespace-nowrap">
-                                                                        {formatGrindSize(parameterInfo.params.grindSize || "", settings.grindType)}
+                                                                        {formatGrindSize(parameterInfo.params.grindSize || "", settings.grindType, settings.customGrinders as Record<string, unknown>[] | undefined)}
                                                                     </span>
                                                                     <span className="shrink-0">·</span>
                                                                     <span className="truncate max-w-[30px] sm:max-w-[40px]">{parameterInfo.params.coffee}</span>
@@ -727,7 +727,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                                                     <span className="whitespace-nowrap">{parameterInfo.params.ratio}</span>
                                                                     <span className="shrink-0">·</span>
                                                                     <span className="whitespace-nowrap">
-                                                                        {formatGrindSize(parameterInfo.params.grindSize || "", settings.grindType)}
+                                                                        {formatGrindSize(parameterInfo.params.grindSize || "", settings.grindType, settings.customGrinders as Record<string, unknown>[] | undefined)}
                                                                     </span>
                                                                     <span className="shrink-0">·</span>
                                                                     <span className="whitespace-nowrap">{parameterInfo.params.temp}</span>

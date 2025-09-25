@@ -233,7 +233,7 @@ export function useBrewingContent({
 						items = [
 							`水粉比 ${method.params.ratio}`,
 							`总时长 ${formatTime(totalTime, true)}`,
-							`研磨度 ${formatGrindSize(method.params.grindSize, settings.grindType)}`,
+							`研磨度 ${formatGrindSize(method.params.grindSize, settings.grindType, settings.customGrinders as Record<string, unknown>[] | undefined)}`,
 						];
 					}
 
@@ -280,7 +280,7 @@ export function useBrewingContent({
 						items = [
 							`水粉比 ${method.params.ratio}`,
 							`总时长 ${formatTime(totalTime, true)}`,
-							`研磨度 ${formatGrindSize(method.params.grindSize, settings.grindType)}`,
+							`研磨度 ${formatGrindSize(method.params.grindSize, settings.grindType, settings.customGrinders as Record<string, unknown>[] | undefined)}`,
 						];
 					}
 
