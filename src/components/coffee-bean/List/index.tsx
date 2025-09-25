@@ -1242,7 +1242,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
                 {/* 根据视图模式显示不同内容 */}
                 {viewMode === VIEW_OPTIONS.INVENTORY && (
                     <div
-                        className="w-full h-full overflow-y-auto scroll-with-bottom-bar"
+                        className="w-full h-full overflow-y-auto "
                         ref={(el) => setInventoryScrollEl(el)}
                     >
                         <InventoryView
