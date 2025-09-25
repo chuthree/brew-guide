@@ -28,6 +28,7 @@ export const globalCache: {
     availableFlavorPeriods: FlavorPeriodStatus[];
     availableRoasters: string[];
     showEmptyBeans: boolean;
+    isImageFlowMode: boolean;
     viewMode: ViewOption;
     sortOption: SortOption;
     // 为每个视图模式添加独立的排序选项
@@ -61,6 +62,7 @@ export const globalCache: {
     availableFlavorPeriods: [],
     availableRoasters: [],
     showEmptyBeans: false,
+    isImageFlowMode: false,
     viewMode: 'inventory',
     sortOption: 'remaining_days_asc',
     // 为每个视图模式设置默认排序选项
@@ -293,10 +295,21 @@ export const saveSelectedRoasterPreference = (value: string | null): void => {
     saveStringState(MODULE_NAME, 'selectedRoaster', value || '');
 };
 
+// 从localStorage读取图片流模式
+export const getImageFlowModePreference = (): boolean => {
+    return getBooleanState(MODULE_NAME, 'isImageFlowMode', false);
+};
+
+// 保存图片流模式到localStorage
+export const saveImageFlowModePreference = (value: boolean): void => {
+    saveBooleanState(MODULE_NAME, 'isImageFlowMode', value);
+};
+
 // 初始化全局缓存的状态
 globalCache.showEmptyBeans = getShowEmptyBeansPreference();
 globalCache.selectedVariety = getSelectedVarietyPreference();
 globalCache.selectedBeanType = getSelectedBeanTypePreference();
+globalCache.isImageFlowMode = getImageFlowModePreference();
 globalCache.viewMode = getViewModePreference();
 globalCache.sortOption = getSortOptionPreference();
 globalCache.inventorySortOption = getInventorySortOptionPreference();
@@ -331,6 +344,7 @@ if (typeof window !== 'undefined') {
         globalCache.availableFlavorPeriods = [];
         globalCache.availableRoasters = [];
         globalCache.showEmptyBeans = false;
+        globalCache.isImageFlowMode = false;
         globalCache.viewMode = 'inventory';
         globalCache.sortOption = 'remaining_days_asc';
         globalCache.inventorySortOption = 'remaining_days_asc';

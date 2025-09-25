@@ -40,7 +40,8 @@ import {
     saveFilterModePreference,
     saveSelectedOriginPreference,
     saveSelectedFlavorPeriodPreference,
-    saveSelectedRoasterPreference
+    saveSelectedRoasterPreference,
+    saveImageFlowModePreference
 } from './globalCache'
 import { useBeanOperations } from './hooks/useBeanOperations'
 import { useEnhancedBeanFiltering } from './hooks/useEnhancedBeanFiltering'
@@ -252,12 +253,16 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     const [rankingBeansCount, setRankingBeansCount] = useState<number>(0);
     const [bloggerBeansCount, setBloggerBeansCount] = useState<number>(0);
 
-    // 添加图片流模式状态
-    const [isImageFlowMode, setIsImageFlowMode] = useState<boolean>(false);
+    // 添加图片流模式状态 - 从globalCache读取持久化状态
+    const [isImageFlowMode, setIsImageFlowMode] = useState<boolean>(globalCache.isImageFlowMode);
 
     // 切换图片流模式
     const handleToggleImageFlowMode = () => {
-        setIsImageFlowMode(prev => !prev);
+        const newMode = !isImageFlowMode;
+        setIsImageFlowMode(newMode);
+        // 保存到全局缓存和localStorage
+        globalCache.isImageFlowMode = newMode;
+        saveImageFlowModePreference(newMode);
     };
 
     // 加载已评分的咖啡豆
