@@ -55,7 +55,7 @@ const StockSettings: React.FC<StockSettingsProps> = ({
 
     return (
         <motion.div
-            className="fixed inset-0 z-50 pt-safe-top  max-w-[640px] sm:max-w-full mx-auto bg-neutral-50 dark:bg-neutral-900 transition-opacity duration-200 opacity-100 pointer-events-auto flex flex-col "
+            className="fixed inset-0 z-50 px-6 pt-safe-top pb-safe-bottom max-w-[640px] sm:max-w-full mx-auto bg-neutral-50 dark:bg-neutral-900 transition-opacity duration-200 opacity-100 pointer-events-auto flex flex-col "
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
@@ -64,7 +64,7 @@ const StockSettings: React.FC<StockSettingsProps> = ({
                 ease: [0.36, 0.66, 0.04, 1]
             }}
         >
-            <div className="relative flex items-center justify-center pb-4  sm:max-w-sm w-full mx-auto">
+            <div className="relative flex items-center justify-center py-4 pt-safe-top sm:max-w-sm w-full mx-auto">
                 <button
                     onClick={onClose}
                     className="absolute left-4 flex items-center justify-center w-10 h-10 rounded-full text-neutral-700 dark:text-neutral-300"
@@ -76,7 +76,7 @@ const StockSettings: React.FC<StockSettingsProps> = ({
                 </h2>
             </div>
 
-            <div className="relative flex-1 overflow-y-auto pb-safe-bottom sm:max-w-sm w-full mx-auto">
+            <div className="relative flex-1 overflow-y-auto pb-safe-bottom sm:max-w-sm w-full mx-auto sm:max-w-sm w-full mx-auto">
                 <div className="sticky top-0 z-10 h-12 w-full bg-linear-to-b from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none"></div>
                 <div className="px-6 py-4 -mt-4">
                     {/* 功能开关选项 */}

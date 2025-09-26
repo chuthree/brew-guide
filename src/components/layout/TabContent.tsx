@@ -626,7 +626,7 @@ const TabContent: React.FC<TabContentProps> = ({
                 </div>
 
                 {/* 随机选豆按钮 - 单独放置在搜索工具栏上方 */}
-                <div className="fixed bottom-[60px] left-0 right-0 mb-[var(--safe-area-bottom)] p-6 flex justify-end items-center z-10 max-w-[640px] sm:max-w-full mx-auto pointer-events-none">
+                <div className="fixed bottom-[60px] left-0 right-0 mb-[var(--safe-area-bottom)] p-6 flex justify-end items-center z-10 max-w-[640px] mx-auto pointer-events-none">
                     <motion.button
                         type="button"
                         onClick={() => handleRandomBean(false)}
@@ -664,7 +664,7 @@ const TabContent: React.FC<TabContentProps> = ({
                 </div>
 
                 {/* 底部搜索工具栏 */}
-                <div className="fixed bottom-0 left-0 right-0 mb-[var(--safe-area-bottom)] p-6 flex justify-end items-center z-10 max-w-[640px] sm:max-w-full mx-auto pointer-events-none">
+                <div className="fixed bottom-0 left-0 right-0 mb-[var(--safe-area-bottom)] p-6 flex justify-end items-center z-10 max-w-[640px] mx-auto pointer-events-none">
                     <div className="flex items-center justify-center gap-2 pointer-events-none">
                         <AnimatePresence mode="popLayout">
                             {isSearching && (
