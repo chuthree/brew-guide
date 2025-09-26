@@ -518,7 +518,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                         data={filteredRatedBeans}
                         customScrollParent={scrollParentRef}
                         itemContent={(index, bean) => (
-                            <div className="border-b border-neutral-200/60 dark:border-neutral-800/40 last:border-none">
+                            <div className={`${index < filteredRatedBeans.length - 1 ? 'border-b border-neutral-200/60 dark:border-neutral-800/40' : ''}`}>
                                 <div className="flex items-start px-6 py-3">
                                     {/* 序号 - 极简风格 */}
                                     <div className="text-xs font-medium text-neutral-600 dark:text-neutral-400 w-4 mr-2 shrink-0">
@@ -739,10 +739,10 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                     {/* 未评分咖啡豆列表 */}
                     {showUnrated && (
                         <div className="opacity-60">
-                            {filteredUnratedBeans.map((bean, _index) => (
+                            {filteredUnratedBeans.map((bean, index) => (
                                 <div
                                     key={bean.id}
-                                    className="border-b border-neutral-200/60 dark:border-neutral-800/40 last:border-none"
+                                    className={`${index < filteredUnratedBeans.length - 1 ? 'border-b border-neutral-200/60 dark:border-neutral-800/40' : ''}`}
                                 >
                                     <div className="flex justify-between items-start px-6 py-2.5">
                                         <div className="flex items-start">
