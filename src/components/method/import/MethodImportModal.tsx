@@ -305,7 +305,7 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
                                     <button
                                         type="button"
                                         onClick={handleClose}
-                                        className="rounded-full p-2"
+                                        className="rounded-full p-2 pl-0"
                                     >
                                         <svg
                                             width="16"

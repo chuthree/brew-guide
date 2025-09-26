@@ -83,7 +83,7 @@ const CustomEquipmentFormModal: React.FC<CustomEquipmentFormModalProps> = ({
                                     <button
                                         type="button"
                                         onClick={onClose}
-                                        className="rounded-full p-2"
+                                        className="rounded-full p-2 pl-0"
                                     >
                                         <svg
                                             width="16"

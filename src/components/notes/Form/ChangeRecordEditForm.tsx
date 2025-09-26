@@ -121,7 +121,7 @@ const ChangeRecordEditForm: React.FC<ChangeRecordEditFormProps> = ({
 
     if (!isOpen) return null;
 
-    const containerClassName = `relative flex flex-col p-6 pt-6 ${hideHeader ? 'pt-6' : ''} h-full overflow-y-auto overscroll-contain`;
+    const containerClassName = `relative flex flex-col h-full overflow-y-auto overscroll-contain`;
 
     return (
         <form 

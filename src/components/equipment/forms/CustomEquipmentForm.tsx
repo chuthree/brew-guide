@@ -148,7 +148,7 @@ const TopNav: React.FC<TopNavProps> = ({ title, onBack, onSave, saveDisabled = f
     <div className="fixed top-0 left-0 right-0 z-10 bg-neutral-50 dark:bg-neutral-900 px-4 py-3 flex justify-between items-center">
         <button
             onClick={onBack}
-            className="rounded-full p-2"
+            className="rounded-full p-2 pl-0"
         >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
