@@ -22,6 +22,7 @@
 | 平台 | 技术 | 特性 |
 |------|------|------|
 | Web | PWA | 离线支持、输入流畅、及时更新 |
+| 桌面应用 | Pake | 原生体验、离线支持、跨平台 |
 | iOS | Capacitor | 离线支持、字体缩放、震动反馈 |
 | Android | Capacitor | 离线支持、字体缩放、震动反馈 |
 
@@ -94,6 +95,11 @@ npm run build
 # 或
 pnpm build
 
+# 桌面应用构建（使用 Pake）
+npm run build:desktop
+# 或
+pnpm build:desktop
+
 # Capacitor 构建
 npm run cap:build
 # 或
@@ -110,6 +116,22 @@ npm run cap:android
 pnpm cap:android
 ```
 
+#### 桌面应用构建说明
+
+项目包含 `build-desktop.sh` 脚本，用于自动构建跨平台桌面应用：
+
+- **技术方案**：使用 [Pake](https://github.com/tw93/Pake) 将 Web 应用打包为原生桌面应用
+- **支持平台**：macOS (.dmg/.app)、Windows (.msi)、Linux (.deb)
+- **构建特性**：
+  - 自动构建静态版本
+  - 应用图标和窗口配置
+  - 隐藏标题栏，提供沉浸式体验
+  - 中文安装语言支持
+
+构建完成后，生成的桌面应用文件将保存在 `desktop/` 目录中。
+
+> **注意**：桌面应用构建需要预先安装 Pake 工具。请参考 [Pake 官方文档](https://github.com/tw93/Pake) 进行安装。
+
 ## 技术栈
 
 - [Next.js 15](https://nextjs.org/) - React 框架
@@ -118,6 +140,7 @@ pnpm cap:android
 - [Framer Motion](https://www.framer.com/motion/) - 动画库
 - [TypeScript](https://www.typescriptlang.org/) - 类型安全
 - [Capacitor](https://capacitorjs.com/) - 跨平台原生运行时
+- [Pake](https://github.com/tw93/Pake) - 桌面应用打包工具
 - [Dexie](https://dexie.org/) - IndexedDB 包装器
 
 ## 社区与贡献

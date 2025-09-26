@@ -15,7 +15,8 @@
     "cap:ios": "npx cap open ios",
     "cap:android": "npx cap open android",
     "cap:add:ios": "npx cap add ios",
-    "cap:add:android": "npx cap add android"
+    "cap:add:android": "npx cap add android",
+    "build:desktop": "./build-desktop.sh"
   },
   "dependencies": {
     "@capacitor-community/keep-awake": "^7.1.0",
