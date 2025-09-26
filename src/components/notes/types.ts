@@ -53,6 +53,10 @@ export interface NoteItemProps {
     onToggleSelect?: (noteId: string, enterShareMode?: boolean) => void
     // 是否为列表中的最后一项（用于虚拟化下控制分割线）
     isLast?: boolean
+    // 当前列数（用于多列布局样式调整）
+    columnCount?: number
+    // 是否为该行的最后一列（用于控制右边框）
+    isLastColumn?: boolean
 }
 
 

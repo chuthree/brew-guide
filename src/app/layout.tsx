@@ -185,7 +185,7 @@ export default function RootLayout({
                 <StorageInit />
                 <KeyboardManager />
               </Suspense>
-                <div className="h-full w-full overflow-hidden max-w-[500px] mx-auto">
+                <div className="h-full w-full overflow-hidden max-w-[640px] sm:max-w-full mx-auto">
                 {children}
                 </div>
               <AppInstallAndUpdatePrompt />

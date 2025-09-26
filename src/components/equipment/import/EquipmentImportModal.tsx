@@ -286,7 +286,7 @@ const EquipmentImportModal: React.FC<EquipmentImportModalProps> = ({
                         style={{
                             willChange: "transform"
                         }}
-                        className={`absolute inset-x-0 bottom-0 max-w-[500px] mx-auto max-h-[90vh] overflow-hidden rounded-t-2xl bg-neutral-50 dark:bg-neutral-900 shadow-xl`}
+                        className={`absolute inset-x-0 bottom-0 max-w-[640px] mx-auto max-h-[90vh] overflow-hidden rounded-t-2xl bg-neutral-50 dark:bg-neutral-900 shadow-xl`}
                     >
                         {/* 拖动条 */}
                         <div className="sticky top-0 z-10 flex justify-center py-2 bg-neutral-50 dark:bg-neutral-900">

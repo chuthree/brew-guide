@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useMemo, useState, useEffect } from 'react'
+import React, { useMemo, useState } from 'react'
 import Image from 'next/image'
 import { ExtendedCoffeeBean } from '../types'
 import BeanDetailModal from '../../Detail/BeanDetailModal'
@@ -22,26 +22,6 @@ const ImageFlowView: React.FC<ImageFlowViewProps> = ({
 }) => {
     // 详情弹窗状态 - 简化为单一状态
     const [detailBean, setDetailBean] = useState<ExtendedCoffeeBean | null>(null);
-    // 添加方形尺寸状态
-    const [squareSize, setSquareSize] = useState<number>(0);
-
-    // 计算正方形尺寸
-    useEffect(() => {
-        const calculateSquareSize = () => {
-            // 获取视口宽度，减去左右 padding (24px * 2) 和格子间距
-            const viewportWidth = window.innerWidth;
-            const totalPadding = 48; // 左右各 24px
-            const gap = 16; // 格子之间的间距 (约4%)
-            const availableWidth = viewportWidth - totalPadding - gap;
-            const size = Math.floor(availableWidth / 2);
-            setSquareSize(size);
-        };
-
-        calculateSquareSize();
-        window.addEventListener('resize', calculateSquareSize);
-        
-        return () => window.removeEventListener('resize', calculateSquareSize);
-    }, []);
 
     // 处理详情点击
     const handleDetailClick = (bean: ExtendedCoffeeBean) => {
@@ -70,15 +50,11 @@ const ImageFlowView: React.FC<ImageFlowViewProps> = ({
     return (
         <div className="w-full h-full overflow-y-auto scroll-with-bottom-bar">
             <div className="min-h-full pb-20 px-6">
-                <div className="flex flex-wrap justify-between pt-4 gap-y-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 justify-between pt-4 gap-4">
                     {beansWithImages.map((bean) => (
                         <div 
                             key={bean.id} 
-                            className="cursor-pointer bg-neutral-200/30 dark:bg-neutral-800/40 p-4"
-                            style={{
-                                width: squareSize,
-                                height: squareSize,
-                            }}
+                            className="cursor-pointer bg-neutral-200/30 dark:bg-neutral-800/40 p-4 aspect-square"
                             onClick={() => handleDetailClick(bean)}
                         >
                             <Image
@@ -87,7 +63,7 @@ const ImageFlowView: React.FC<ImageFlowViewProps> = ({
                                 width={0}
                                 height={0}
                                 className="w-full h-full object-contain rounded"
-                                sizes="50vw"
+                                sizes="(max-width: 640px) 50vw, 33vw"
                                 priority={false}
                                 loading="lazy"
                                 unoptimized

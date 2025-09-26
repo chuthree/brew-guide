@@ -41,7 +41,7 @@ const DetailInfo: React.FC<DetailInfoProps> = ({
             exit="out"
             variants={pageVariants}
             transition={pageTransition}
-            className="space-y-8 max-w-md mx-auto flex flex-col items-center justify-center h-full"
+            className="space-y-8  mx-auto flex flex-col items-center justify-center h-full"
         >
             <div className="grid grid-cols-1 gap-6 w-full">
                 <div className="space-y-2">

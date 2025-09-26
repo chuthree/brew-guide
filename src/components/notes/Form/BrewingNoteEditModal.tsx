@@ -107,7 +107,7 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
             animate={{ opacity: showModal && !isClosing ? 1 : 0 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.265, ease: "easeInOut" }}
-            className="fixed px-6 pt-safe-top pb-safe-bottom overflow-auto max-w-[500px] mx-auto inset-0 z-50 bg-neutral-50 dark:bg-neutral-900 transition-opacity duration-200"
+            className="fixed px-6 pt-safe-top pb-safe-bottom overflow-auto max-w-[640px] mx-auto inset-0 z-50 bg-neutral-50 dark:bg-neutral-900 transition-opacity duration-200"
             style={{
                 pointerEvents: showModal && !isClosing ? "auto" : "none",
             }}

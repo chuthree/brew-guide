@@ -192,7 +192,7 @@ const EquipmentManagementDrawer: React.FC<EquipmentManagementDrawerProps> = ({
                                 onClose()
                             }
                         }}
-                        className="fixed bottom-0 left-0 right-0 z-50 max-w-[500px] mx-auto bg-neutral-50 dark:bg-neutral-900 backdrop-blur-xl rounded-t-3xl"
+                        className="fixed bottom-0 left-0 right-0 z-50 max-w-[640px] mx-auto bg-neutral-50 dark:bg-neutral-900 backdrop-blur-xl rounded-t-3xl"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="flex justify-center pt-3 pb-2">

@@ -238,7 +238,7 @@ const NoteSteppedFormModal: React.FC<NoteSteppedFormModalProps> = ({
         const isValid = currentStepContent?.isValid !== false;
 
         return (
-            <div className="modal-bottom-button flex items-center justify-center">
+            <div className="modal-bottom-button flex items-center justify-center w-full ">
                 <div className="flex items-center justify-center gap-2">
                     {/* 搜索输入框 */}
                     {isValid && isCoffeeBeanStep && isSearching && (
@@ -342,10 +342,10 @@ const NoteSteppedFormModal: React.FC<NoteSteppedFormModalProps> = ({
     return (
         <div
             ref={modalRef}
-            className={`fixed inset-0 z-50 px-6 pt-safe-top pb-safe-bottom max-w-[500px] mx-auto bg-neutral-50 dark:bg-neutral-900 transition-opacity duration-200 ${showForm ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'} flex flex-col overflow-hidden`}
+            className={`fixed inset-0 z-50 px-6 pt-safe-top pb-safe-bottom max-w-[640px] sm:max-w-full mx-auto bg-neutral-50 dark:bg-neutral-900 transition-opacity duration-200 ${showForm ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'} flex flex-col `}
         >
             {/* 顶部导航栏 */}
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-6 sm:max-w-sm w-full mx-auto">
                 <button
                     type="button"
                     onClick={handleBack}
@@ -362,7 +362,7 @@ const NoteSteppedFormModal: React.FC<NoteSteppedFormModalProps> = ({
             </div>
 
             {/* 步骤内容 */}
-            <div className="flex-1 overflow-y-auto pb-4" ref={contentScrollRef}>
+            <div className="flex-1 overflow-y-scroll pb-4 sm:max-w-sm w-full mx-auto" ref={contentScrollRef}>
                 {currentStepContent && (
                     <div className="space-y-6">
                         {contentWithSearchProps}
