@@ -233,7 +233,7 @@ body[data-scroll-locked] {
 
 /* 模态框底部按钮 */
 .modal-bottom-button {
-  position: fixed;
+  position: sticky;
   bottom: 16px;
   z-index: 10;
   margin: 16px 0;

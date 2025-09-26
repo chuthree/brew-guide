@@ -8,7 +8,7 @@ interface MethodPreviewCardProps {
 
 const MethodPreviewCard: React.FC<MethodPreviewCardProps> = () => {
     return (
-        <div className="w-full  aspect-square bg-white dark:bg-neutral-900 flex items-center justify-center">
+        <div className="w-full max-w-md aspect-square bg-white dark:bg-neutral-900 flex items-center justify-center">
             <div className="text-xl text-neutral-500 dark:text-neutral-400">
                 开发中...
             </div>

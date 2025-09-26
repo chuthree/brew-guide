@@ -107,7 +107,7 @@ const DataMigrationModal: React.FC<DataMigrationModalProps> = ({
                     initial={{ opacity: 0, scale: 0.95, y: 20 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                    className="relative w-full  mx-4 bg-white dark:bg-neutral-800 rounded-lg shadow-xl"
+                    className="relative w-full max-w-md mx-4 bg-white dark:bg-neutral-800 rounded-lg shadow-xl"
                 >
                     {/* 头部 */}
                     <div className="flex items-center justify-between p-6 border-b border-neutral-200 dark:border-neutral-700">

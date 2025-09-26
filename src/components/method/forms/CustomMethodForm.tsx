@@ -1298,7 +1298,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         };
 
         return (
-            <div className="modal-bottom-button flex items-center justify-center  left-0 right-0 mx-auto">
+            <div className="modal-bottom-button flex items-center justify-center">
                 <button
                     type="button"
                     onClick={handleButtonClick}
@@ -1335,7 +1335,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
             />
 
             {/* 步骤内容 */}
-            <div className="flex-1 overflow-y-auto pr-2  sm:max-w-sm w-full mx-auto">
+            <div className="flex-1 overflow-y-auto pr-2">
                 {renderStepContent()}
             </div>
 

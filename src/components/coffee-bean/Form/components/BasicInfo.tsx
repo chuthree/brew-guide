@@ -182,7 +182,7 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
             exit="out"
             variants={pageVariants}
             transition={pageTransition}
-            className="space-y-8  mx-auto flex flex-col items-center justify-center h-full"
+            className="space-y-8 max-w-md mx-auto flex flex-col items-center justify-center h-full"
         >
             <div className="space-y-2 w-full">
                 <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">

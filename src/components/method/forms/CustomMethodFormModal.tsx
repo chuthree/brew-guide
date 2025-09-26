@@ -136,7 +136,7 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
         <>
             {/* 自定义方案表单 - 只在设备信息加载完成后显示 */}
             {showCustomForm && currentCustomEquipment && (
-                <div className="fixed inset-0 z-50 px-6 pt-safe-top pb-safe-bottom max-w-[640px] sm:max-w-full mx-auto bg-neutral-50 dark:bg-neutral-900 transition-opacity duration-200 opacity-100 pointer-events-auto flex flex-col ">
+                <div className="fixed inset-0 z-50 inset-x-0 bottom-0 max-w-[500px] mx-auto h-full overflow-hidden bg-neutral-50 dark:bg-neutral-900 px-6 pt-safe-top pb-safe-bottom flex flex-col">
                     <CustomMethodForm
                         onSave={handleSaveMethod}
                         onBack={onCloseCustomForm}

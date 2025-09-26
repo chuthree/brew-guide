@@ -326,7 +326,6 @@ export function useBrewingContent({
 		selectedEquipment,
 		methodType,
 		settings.grindType,
-		settings.customGrinders,
 		customEquipments,
 		currentEquipmentCustomMethods, // 添加依赖，确保currentEquipmentCustomMethods变化时更新content
 	]);

@@ -32,7 +32,7 @@ const Steps: React.FC<StepsProps> = ({ steps, currentStep, onBack }) => {
   };
 
   return (
-    <div className="flex items-center justify-between mt-3 mb-6  sm:max-w-sm w-full mx-auto">
+    <div className="flex items-center justify-between mt-3 mb-6">
       <button
         type="button"
         onClick={onBack}

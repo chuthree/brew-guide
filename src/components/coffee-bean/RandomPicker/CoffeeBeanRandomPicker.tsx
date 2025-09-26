@@ -287,7 +287,7 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
             // 统一的选择界面
             <div className="relative flex flex-col items-center justify-center w-full h-full p-6">
               {/* 中间指示器和卡片容器 */}
-              <div className="relative w-full " ref={containerRef}>
+              <div className="relative w-full max-w-md" ref={containerRef}>
                 {/* 中间指示器 - 永远在中间 */}
                 {!isSingleBean && (
                   <div

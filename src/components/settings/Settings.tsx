@@ -429,10 +429,10 @@ const handleChange = async <K extends keyof SettingsOptions>(
     if (!isOpen) return null
 
     return (
-        <div className="fixed inset-0 z-50 px-6 pt-safe-top pb-safe-bottom max-w-[640px] sm:max-w-full mx-auto bg-neutral-50 dark:bg-neutral-900 transition-opacity duration-200 opacity-100 pointer-events-auto flex flex-col">
+        <div className="fixed inset-0 z-50 flex flex-col bg-neutral-50 dark:bg-neutral-900 max-w-[500px] mx-auto">
             {/* 头部导航栏 */}
             <div
-                className="relative flex items-center justify-center py-4 pt-safe-top sm:max-w-sm w-full mx-auto  sm:max-w-sm w-full mx-auto"
+                className="relative flex items-center justify-center py-4 pt-safe-top"
             >
                 <button
                     onClick={onClose}
@@ -461,7 +461,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
             </div>
 
             {/* 滚动内容区域 - 新的简洁设计 */}
-            <div className="relative flex-1 overflow-y-auto pb-safe-bottom sm:max-w-sm w-full mx-auto sm:max-w-sm w-full mx-auto divide-y divide-neutral-200 dark:divide-neutral-800 sm:max-w-sm w-full mx-auto sm:max-w-sm w-full mx-auto">
+            <div className="relative flex-1 overflow-y-auto pb-safe-bottom divide-y divide-neutral-200 dark:divide-neutral-800">
                 {/* 顶部渐变阴影（随滚动粘附）*/}
                 <div className="sticky top-0 z-10 h-12 w-full bg-linear-to-b from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none first:border-b-0"></div>
                 {/* 赞助支持 */}
