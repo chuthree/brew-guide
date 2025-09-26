@@ -484,7 +484,7 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({
 
     return (
         <motion.div
-            className="fixed inset-0 z-50 px-6 pt-safe-top pb-safe-bottom max-w-[640px] sm:max-w-full mx-auto bg-neutral-50 dark:bg-neutral-900 transition-opacity duration-200 opacity-100 pointer-events-auto flex flex-col "
+            className="fixed inset-0 z-50 pt-safe-top  max-w-[640px] sm:max-w-full mx-auto bg-neutral-50 dark:bg-neutral-900 transition-opacity duration-200 opacity-100 pointer-events-auto flex flex-col "
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
@@ -494,7 +494,7 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({
             }}
         >
             {/* 头部导航栏 */}
-            <div className="relative flex items-center justify-center py-4 pt-safe-top sm:max-w-sm w-full mx-auto">
+            <div className="relative flex items-center justify-center pb-4  sm:max-w-sm w-full mx-auto">
                 <button
                     onClick={onClose}
                     className="absolute left-4 flex items-center justify-center w-10 h-10 rounded-full text-neutral-700 dark:text-neutral-300"

@@ -560,7 +560,7 @@ const DataSettings: React.FC<DataSettingsProps> = ({
 
     return (
         <motion.div
-            className="fixed inset-0 z-50 px-6 pt-safe-top pb-safe-bottom max-w-[640px] sm:max-w-full mx-auto bg-neutral-50 dark:bg-neutral-900 transition-opacity duration-200 opacity-100 pointer-events-auto flex flex-col "
+            className="fixed inset-0 z-50 pt-safe-top  max-w-[640px] sm:max-w-full mx-auto bg-neutral-50 dark:bg-neutral-900 transition-opacity duration-200 opacity-100 pointer-events-auto flex flex-col "
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
@@ -570,7 +570,7 @@ const DataSettings: React.FC<DataSettingsProps> = ({
             }}
         >
             {/* 头部导航栏 */}
-            <div className="relative flex items-center justify-center py-4 pt-safe-top sm:max-w-sm w-full mx-auto">
+            <div className="relative flex items-center justify-center pb-4  sm:max-w-sm w-full mx-auto">
                 <button
                     onClick={onClose}
                     className="absolute left-4 flex items-center justify-center w-10 h-10 rounded-full text-neutral-700 dark:text-neutral-300"
@@ -583,7 +583,7 @@ const DataSettings: React.FC<DataSettingsProps> = ({
             </div>
 
             {/* 滚动内容区域 */}
-            <div className="relative flex-1 overflow-y-auto pb-safe-bottom sm:max-w-sm w-full mx-auto sm:max-w-sm w-full mx-auto divide-y divide-neutral-200 dark:divide-neutral-800 sm:max-w-sm w-full mx-auto">
+            <div className="relative flex-1 overflow-y-auto pb-safe-bottom sm:max-w-sm w-full mx-auto divide-y divide-neutral-200 dark:divide-neutral-800">
                 {/* 顶部渐变阴影 */}
                 <div className="sticky top-0 z-10 h-12 w-full bg-linear-to-b from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none first:border-b-0"></div>
 

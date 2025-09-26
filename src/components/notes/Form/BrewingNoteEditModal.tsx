@@ -107,13 +107,13 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
             animate={{ opacity: showModal && !isClosing ? 1 : 0 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.265, ease: "easeInOut" }}
-            className="fixed px-6 pt-safe-top pb-safe-bottom overflow-auto max-w-[640px] mx-auto inset-0 z-50 bg-neutral-50 dark:bg-neutral-900 transition-opacity duration-200"
+            className="fixed inset-0 z-50 px-6 pt-safe-top pb-safe-bottom max-w-[640px] sm:max-w-full mx-auto bg-neutral-50 dark:bg-neutral-900 transition-opacity duration-200 opacity-100 pointer-events-auto flex flex-col "
             style={{
                 pointerEvents: showModal && !isClosing ? "auto" : "none",
             }}
         >
             {/* 顶部标题栏 */}
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between sm:max-w-sm w-full mx-auto">
                 <button
                     type="button"
                     onClick={handleClose}
@@ -172,7 +172,7 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
             </div>
 
             {/* 表单内容容器 */}
-            <div className="flex-1">
+            <div className="flex-1 sm:max-w-sm w-full mx-auto">
                 <BrewingNoteForm
                     id={initialData.id}
                     isOpen={true}
@@ -188,7 +188,7 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
             </div>
 
             {/* 底部保存按钮 - 使用sticky定位相对于容器固定 */}
-            <div className="modal-bottom-button flex items-center justify-center">
+            <div className="modal-bottom-button flex items-center justify-center w-full">
                 <button
                     type="button"
                     onClick={handleSaveClick}
