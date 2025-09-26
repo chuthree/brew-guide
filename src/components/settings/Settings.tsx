@@ -543,7 +543,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                                 className="object-cover"
                                             />
                                         </div>
-                                        <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">赞赏码（开发不易，希望能支持一下，求求了 www～）</p>
+                                        <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">赞赏码（开发不易，要是能支持一下就太好了 www）</p>
                                     </div>
                                     <div className="flex flex-col items-center opacity-0">
                                         <div className="w-full aspect-square relative rounded overflow-hidden invisible">
@@ -569,7 +569,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                                                 className="object-cover"
                                             />
                                         </div>
-                                        <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">交流群（9 月 26 日前有效）</p>
+                                        <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">交流群（实时更新，随时可用）</p>
                                     </div>
                                 </>
                             ) : null}
