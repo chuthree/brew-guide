@@ -78,7 +78,7 @@ const StockSettings: React.FC<StockSettingsProps> = ({
 
             <div className="relative flex-1 overflow-y-auto pb-safe-bottom sm:max-w-sm w-full mx-auto">
                 <div className="sticky top-0 z-10 h-12 w-full bg-linear-to-b from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none"></div>
-                <div className="px-6 py-4 -mt-8">
+                <div className="px-6 py-4 -mt-4">
                     {/* 功能开关选项 */}
                     <div className="space-y-4 mb-8">
                         {/* ALL扣除选项开关 */}

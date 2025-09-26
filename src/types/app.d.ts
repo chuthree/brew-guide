@@ -1,10 +1,7 @@
 import { Stage } from "@/lib/core/config";
 
 export interface TasteRatings {
-	acidity: number;
-	sweetness: number;
-	bitterness: number;
-	body: number;
+	[key: string]: number;
 }
 
 // 拼配成分接口定义

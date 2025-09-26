@@ -9,6 +9,7 @@ import { formatDate, formatRating } from '../utils'
 import { SettingsOptions, defaultSettings } from '@/components/settings/Settings'
 import { formatGrindSize as _formatGrindSize } from '@/lib/utils/grindUtils'
 import { availableGrinders } from '@/lib/core/config'
+import { useFlavorDimensions } from '@/lib/hooks/useFlavorDimensions'
 
 // 动态导入 ImageViewer 组件 - 移除加载占位符
 const ImageViewer = dynamic(() => import('@/components/common/ui/ImageViewer'), {
@@ -35,8 +36,12 @@ const NoteItem: React.FC<NoteItemProps> = ({
     const [imageViewerOpen, setImageViewerOpen] = useState(false);
     const [imageError, setImageError] = useState(false);
 
+    // 使用风味维度hook
+    const { getValidTasteRatings } = useFlavorDimensions();
+
     // 预先计算一些条件，避免在JSX中重复计算
     const hasTasteRatings = Object.values(note.taste).some(value => value > 0);
+    const validTasteRatings = getValidTasteRatings(note.taste);
     const hasNotes = Boolean(note.notes);
     const equipmentName = (note.equipment && note.equipment.trim() !== '') ? (equipmentNames[note.equipment] || note.equipment) : '未知器具';
     const beanName = note.coffeeBeanInfo?.name;
@@ -274,33 +279,19 @@ const NoteItem: React.FC<NoteItemProps> = ({
                 {/* 风味评分 - 只有当存在有效评分(大于0)时才显示 */}
                 {hasTasteRatings ? (
                     <div className="grid grid-cols-2 gap-4">
-                        {Object.entries(note.taste)
-                            .map(([key, value], _i) => (
-                                <div key={key} className="space-y-1">
-                                    <div className="flex items-center justify-between">
-                                        <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
-                                            {(() => {
-                                                switch (key) {
-                                                    case 'acidity':
-                                                        return '酸度';
-                                                    case 'sweetness':
-                                                        return '甜度';
-                                                    case 'bitterness':
-                                                        return '苦度';
-                                                    case 'body':
-                                                        return '口感';
-                                                    default:
-                                                        return key;
-                                                }
-                                            })()}
-                                        </div>
-                                        <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
-                                            {value}
-                                        </div>
+                        {validTasteRatings.map((rating) => (
+                            <div key={rating.id} className="space-y-1">
+                                <div className="flex items-center justify-between">
+                                    <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
+                                        {rating.label}
                                     </div>
+                                    <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
+                                        {rating.value}
+                                    </div>
+                                </div>
                                     <div className="h-px w-full overflow-hidden bg-neutral-200/50 dark:bg-neutral-800">
                                         <div
-                                            style={{ width: `${value === 0 ? 0 : (value / 5) * 100}%` }}
+                                            style={{ width: `${rating.value === 0 ? 0 : (rating.value / 5) * 100}%` }}
                                             className="h-full bg-neutral-600 dark:bg-neutral-400"
                                         />
                                     </div>

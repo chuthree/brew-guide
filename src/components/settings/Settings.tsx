@@ -6,7 +6,7 @@ import hapticsUtils from '@/lib/ui/haptics'
 
 import { useTheme } from 'next-themes'
 import { LayoutSettings } from '../brewing/Timer/Settings'
-import { ChevronLeft, ChevronRight, RefreshCw, Loader, Monitor, SlidersHorizontal, Archive, List, CalendarDays, Timer, Database, Bell, ClipboardPen, Shuffle, ArrowUpDown } from 'lucide-react'
+import { ChevronLeft, ChevronRight, RefreshCw, Loader, Monitor, SlidersHorizontal, Archive, List, CalendarDays, Timer, Database, Bell, ClipboardPen, Shuffle, ArrowUpDown, Palette } from 'lucide-react'
 
 import Image from 'next/image'
 import GrinderSettings from './GrinderSettings'
@@ -24,6 +24,7 @@ import DataSettings from './DataSettings'
 import NotificationSettings from './NotificationSettings'
 import RandomCoffeeBeanSettings from './RandomCoffeeBeanSettings'
 import SearchSortSettings from './SearchSortSettings'
+import FlavorDimensionSettings from './FlavorDimensionSettings'
 // 自定义磨豆机接口
 export interface CustomGrinder {
     id: string
@@ -226,6 +227,9 @@ const Settings: React.FC<SettingsProps> = ({
 
     // 添加搜索排序设置状态
     const [showSearchSortSettings, setShowSearchSortSettings] = useState(false)
+
+    // 添加风味维度设置状态
+    const [showFlavorDimensionSettings, setShowFlavorDimensionSettings] = useState(false)
 
     // 添加二维码显示状态
     const [showQRCodes, setShowQRCodes] = useState(false)
@@ -461,7 +465,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                 {/* 顶部渐变阴影（随滚动粘附）*/}
                 <div className="sticky top-0 z-10 h-12 w-full bg-linear-to-b from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none first:border-b-0"></div>
                 {/* 赞助支持 */}
-                <div className="px-6 py-4 -mt-8">
+                <div className="px-6 py-4 -mt-4">
                     <h3 className="text-sm uppercase font-medium tracking-wider text-neutral-500 dark:text-neutral-400 mb-3">
                         支持 & 交流
                     </h3>
@@ -688,7 +692,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                 </div>
 
                 {/* 笔记相关设置 */}
-                <div className="px-6 py-4">
+                <div className="px-6 py-4 space-y-4">
                     <button
                         onClick={() => setShowSearchSortSettings(true)}
                         className="w-full py-3 px-4 text-sm font-medium text-neutral-800 bg-neutral-100 rounded transition-colors hover:bg-neutral-200 dark:text-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 flex items-center justify-between"
@@ -696,6 +700,17 @@ const handleChange = async <K extends keyof SettingsOptions>(
                         <div className="flex items-center space-x-3">
                             <ArrowUpDown className="h-4 w-4 text-neutral-500" />
                             <span>搜索排序设置</span>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-neutral-400" />
+                    </button>
+                    
+                    <button
+                        onClick={() => setShowFlavorDimensionSettings(true)}
+                        className="w-full py-3 px-4 text-sm font-medium text-neutral-800 bg-neutral-100 rounded transition-colors hover:bg-neutral-200 dark:text-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 flex items-center justify-between"
+                    >
+                        <div className="flex items-center space-x-3">
+                            <Palette className="h-4 w-4 text-neutral-500" />
+                            <span>风味维度设置</span>
                         </div>
                         <ChevronRight className="h-4 w-4 text-neutral-400" />
                     </button>
@@ -928,6 +943,17 @@ const handleChange = async <K extends keyof SettingsOptions>(
                     <SearchSortSettings
                         settings={settings}
                         onClose={() => setShowSearchSortSettings(false)}
+                        handleChange={handleChange}
+                    />
+                )}
+            </AnimatePresence>
+
+            {/* 风味维度设置组件 */}
+            <AnimatePresence>
+                {showFlavorDimensionSettings && (
+                    <FlavorDimensionSettings
+                        settings={settings}
+                        onClose={() => setShowFlavorDimensionSettings(false)}
                         handleChange={handleChange}
                     />
                 )}

@@ -44,6 +44,8 @@ export const APP_DATA_KEYS = [
 	"customEquipments", // 自定义器具
 	"equipmentOrder", // 器具排序信息
 	"onboardingCompleted", // 引导完成标记
+	"customFlavorDimensions", // 自定义风味维度
+	"flavorDimensionHistoricalLabels", // 风味维度历史标签
 ];
 
 /**

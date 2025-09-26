@@ -69,7 +69,7 @@ const DisplaySettings: React.FC<DisplaySettingsProps> = ({
                 <div className="sticky top-0 z-10 h-12 w-full bg-linear-to-b from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none first:border-b-0"></div>
 
                 {/* 显示设置组 */}
-                <div className="px-6 py-4 -mt-8">
+                <div className="px-6 py-4 -mt-4">
                     <h3 className="text-sm uppercase font-medium tracking-wider text-neutral-500 dark:text-neutral-400 mb-3">
                         显示
                     </h3>

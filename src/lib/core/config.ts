@@ -94,10 +94,7 @@ export interface BrewingNote {
 	image?: string;        // 添加可选的图片字段
 	rating: number;
 	taste: {
-		acidity: number;
-		sweetness: number;
-		bitterness: number;
-		body: number;
+		[key: string]: number;
 	};
 	notes: string;
 	totalTime: number;

@@ -43,7 +43,7 @@ const SearchSortSettings: React.FC<SearchSortSettingsProps> = ({
                 {/* 顶部渐变阴影 */}
                 <div className="sticky top-0 z-10 h-12 w-full bg-linear-to-b from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none first:border-b-0"></div>
                 
-                <div className="px-6 py-4 -mt-8 space-y-6">
+                <div className="px-6 py-4 -mt-4 space-y-6">
                     {/* 功能开关 */}
                     <div>
                         <div className="space-y-4">

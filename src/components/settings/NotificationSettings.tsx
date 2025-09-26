@@ -46,7 +46,7 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
                 <div className="sticky top-0 z-10 h-12 w-full bg-linear-to-b from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none first:border-b-0"></div>
 
                 {/* 设置内容 */}
-                <div className="px-6 py-4 -mt-8">
+                <div className="px-6 py-4 -mt-4">
                     {/* 统一样式的设置项 */}
                     <div className="space-y-5">
                         {/* 提示音 */}

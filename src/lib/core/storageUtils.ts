@@ -20,6 +20,7 @@ const STORAGE_TYPE_MAPPING: Record<string, StorageType> = {
   'brewingNotes': StorageType.INDEXED_DB,
   'coffeeBeans': StorageType.INDEXED_DB, // 咖啡豆数据也使用IndexedDB存储
   'customEquipments': StorageType.INDEXED_DB, // 添加自定义器具到IndexedDB存储
+  'customFlavorDimensions': StorageType.PREFERENCES, // 自定义风味维度使用小型存储
   // 对于自定义方案，由于键名是动态的(customMethods_[equipmentId])，
   // 我们将在getStorageType函数中处理这种模式
   

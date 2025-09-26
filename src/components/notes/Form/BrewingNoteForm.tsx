@@ -12,6 +12,7 @@ import { loadCustomEquipments } from '@/lib/managers/customEquipments'
 import { loadCustomMethods } from '@/lib/managers/customMethods'
 import { formatGrindSize, hasSpecificGrindScale, getGrindScaleUnit } from '@/lib/utils/grindUtils'
 import { SettingsOptions } from '@/components/settings/Settings'
+import { CustomFlavorDimensionsManager, FlavorDimension } from '@/lib/managers/customFlavorDimensions'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/coffee-bean/ui/select'
 import CoffeeBeanSelector from './CoffeeBeanSelector'
 import { useCoffeeBeanData } from './hooks/useCoffeeBeanData'
@@ -21,13 +22,6 @@ const ROAST_LEVELS = [
     '极浅烘焙', '浅度烘焙', '中浅烘焙',
     '中度烘焙', '中深烘焙', '深度烘焙'
 ] as const
-
-const TASTE_LABELS = {
-    acidity: '酸度',
-    sweetness: '甜度',
-    bitterness: '苦度',
-    body: '口感'
-} as const
 
 // 动画类型到器具ID的映射
 const ANIMATION_TYPE_MAPPING: Record<string, string> = {
@@ -87,12 +81,9 @@ dark:[&::-webkit-slider-thumb]:border-neutral-600 dark:[&::-webkit-slider-thumb]
 [&::-moz-range-thumb]:shadow-none [&::-moz-range-thumb]:outline-none
 dark:[&::-moz-range-thumb]:border-neutral-600 dark:[&::-moz-range-thumb]:bg-neutral-900`
 
-// 类型定义
+// 类型定义 - 使用动态的风味评分类型
 interface TasteRatings {
-    acidity: number;
-    sweetness: number;
-    bitterness: number;
-    body: number;
+    [key: string]: number;
 }
 
 interface FormData {
@@ -172,6 +163,10 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     settings,
 }) => {
 
+    // 风味维度数据
+    const [flavorDimensions, setFlavorDimensions] = useState<FlavorDimension[]>([])
+    const [displayDimensions, setDisplayDimensions] = useState<FlavorDimension[]>([])
+
     // 咖啡豆数据和状态管理
     const { beans: coffeeBeans } = useCoffeeBeanData()
     const [selectedCoffeeBean, setSelectedCoffeeBean] = useState<CoffeeBean | null>(
@@ -185,12 +180,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         coffeeBeanInfo: getInitialCoffeeBeanInfo(initialData),
         image: typeof initialData.image === 'string' ? initialData.image : '',
         rating: initialData?.rating || 3,
-        taste: {
-            acidity: initialData?.taste?.acidity || 0,
-            sweetness: initialData?.taste?.sweetness || 0,
-            bitterness: initialData?.taste?.bitterness || 0,
-            body: initialData?.taste?.body || 0
-        },
+        taste: initialData?.taste || {},
         notes: initialData?.notes || ''
     });
 
@@ -278,6 +268,84 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     }), [currentSliderValue]);
     
 
+
+    // 创建显示维度（包含历史维度）
+    const createDisplayDimensions = async (currentDimensions: FlavorDimension[], tasteData: Record<string, number>) => {
+        const historicalLabels = await CustomFlavorDimensionsManager.getHistoricalLabels()
+        const displayDims = [...currentDimensions]
+        
+        // 检查笔记中是否有当前维度列表中不存在的风味评分
+        Object.keys(tasteData).forEach(tasteId => {
+            const existsInCurrent = currentDimensions.some(d => d.id === tasteId)
+            if (!existsInCurrent && tasteData[tasteId] > 0) {
+                // 创建一个历史维度项
+                const historicalDimension: FlavorDimension = {
+                    id: tasteId,
+                    label: historicalLabels[tasteId] || '已删除的风味维度',
+                    order: 999, // 放在最后
+                    isDefault: false
+                }
+                displayDims.push(historicalDimension)
+            }
+        })
+        
+        // 按order排序
+        return displayDims.sort((a, b) => a.order - b.order)
+    }
+
+    // 加载风味维度数据
+    useEffect(() => {
+        const loadFlavorDimensions = async () => {
+            try {
+                const dimensions = await CustomFlavorDimensionsManager.getFlavorDimensions()
+                setFlavorDimensions(dimensions)
+                
+                // 如果是新笔记或者现有笔记缺少风味数据，初始化风味评分
+                if (!initialData.taste || Object.keys(initialData.taste).length === 0) {
+                    const emptyTaste = CustomFlavorDimensionsManager.createEmptyTasteRatings(dimensions)
+                    setFormData(prev => ({ ...prev, taste: emptyTaste }))
+                    setDisplayDimensions(dimensions)
+                } else {
+                    // 迁移现有的风味评分数据以确保兼容性
+                    const migratedTaste = CustomFlavorDimensionsManager.migrateTasteRatings(initialData.taste, dimensions)
+                    setFormData(prev => ({ ...prev, taste: migratedTaste }))
+                    
+                    // 创建包含历史维度的显示维度列表
+                    const displayDims = await createDisplayDimensions(dimensions, initialData.taste)
+                    setDisplayDimensions(displayDims)
+                }
+            } catch (error) {
+                console.error('加载风味维度失败:', error)
+            }
+        }
+
+        loadFlavorDimensions()
+    }, [initialData.taste])
+
+    // 监听风味维度变化
+    useEffect(() => {
+        const handleFlavorDimensionsChange = async (event: Event) => {
+            const customEvent = event as CustomEvent
+            const { dimensions } = customEvent.detail
+            setFlavorDimensions(dimensions)
+            
+            // 更新表单数据以匹配新的维度
+            setFormData(prev => {
+                const migratedTaste = CustomFlavorDimensionsManager.migrateTasteRatings(prev.taste, dimensions)
+                return { ...prev, taste: migratedTaste }
+            })
+            
+            // 重新创建显示维度列表
+            const currentTaste = formData.taste
+            const displayDims = await createDisplayDimensions(dimensions, currentTaste)
+            setDisplayDimensions(displayDims)
+        }
+
+        window.addEventListener('flavorDimensionsChanged', handleFlavorDimensionsChange)
+        return () => {
+            window.removeEventListener('flavorDimensionsChanged', handleFlavorDimensionsChange)
+        }
+    }, [formData.taste])
 
     // 加载器具和方案数据
     useEffect(() => {
@@ -401,12 +469,9 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                 ...prev,
                 image: typeof current.image === 'string' ? current.image : prev.image,
                 rating: current.rating || prev.rating,
-                taste: {
-                    acidity: current.taste?.acidity ?? prev.taste.acidity,
-                    sweetness: current.taste?.sweetness ?? prev.taste.sweetness,
-                    bitterness: current.taste?.bitterness ?? prev.taste.bitterness,
-                    body: current.taste?.body ?? prev.taste.body
-                },
+                taste: current.taste ? 
+                    CustomFlavorDimensionsManager.migrateTasteRatings(current.taste, flavorDimensions) : 
+                    prev.taste,
                 notes: current.notes || prev.notes
             }));
         }
@@ -430,7 +495,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         setFormData(prev => ({ ...prev, rating: value }));
     };
 
-    const updateTasteRating = (key: keyof TasteRatings) => (value: number) => {
+    const updateTasteRating = (key: string) => (value: number) => {
         setFormData(prev => ({
             ...prev,
             taste: { ...prev.taste, [key]: value }
@@ -439,7 +504,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
 
     // 创建滑块处理器
     const ratingHandlers = createSliderHandlers(updateRating, 1, 5, 0.5);
-    const tasteHandlers = (key: keyof TasteRatings) =>
+    const tasteHandlers = (key: string) =>
         createSliderHandlers(updateTasteRating(key), 0, 5, 1);
 
     // 计算水量
@@ -536,12 +601,8 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     // Inside the component, add a new state for showing/hiding flavor ratings
     const [showFlavorRatings, setShowFlavorRatings] = useState(() => {
         // 初始化时检查是否有任何风味评分大于0
-        const hasTasteValues = initialData?.taste && (
-            (initialData.taste.acidity > 0) || 
-            (initialData.taste.sweetness > 0) || 
-            (initialData.taste.bitterness > 0) || 
-            (initialData.taste.body > 0)
-        );
+        const hasTasteValues = initialData?.taste && 
+            Object.values(initialData.taste).some(value => value > 0);
         
         // 如果有风味评分，默认展开
         return hasTasteValues || false;
@@ -550,11 +611,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     // 监听风味评分变化
     useEffect(() => {
         // 检查任何风味评分是否大于0
-        const hasTasteValues = 
-            formData.taste.acidity > 0 || 
-            formData.taste.sweetness > 0 || 
-            formData.taste.bitterness > 0 || 
-            formData.taste.body > 0;
+        const hasTasteValues = Object.values(formData.taste).some(value => value > 0);
         
         // 如果有任何风味评分大于0，自动展开风味评分区域
         if (hasTasteValues && !showFlavorRatings) {
@@ -1080,40 +1137,46 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                     
                     {showFlavorRatings && (
                         <div className="grid grid-cols-2 gap-8">
-                            {Object.entries(formData.taste).map(([key, value]) => (
-                                <div key={key} className="space-y-2">
-                                    <div className="flex items-center justify-between">
-                                        <div className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
-                                            {TASTE_LABELS[key as keyof typeof TASTE_LABELS]}
+                            {displayDimensions.map((dimension) => {
+                                const value = formData.taste[dimension.id] || 0;
+                                return (
+                                    <div key={dimension.id} className="space-y-2">
+                                        <div className="flex items-center justify-between">
+                                            <div className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
+                                                {dimension.label}
+                                                {dimension.order === 999 && (
+                                                    <span className="ml-1 text-neutral-400 dark:text-neutral-500 text-[10px]">(已删除)</span>
+                                                )}
+                                            </div>
+                                            <div className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
+                                                [ {value || 0} ]
+                                            </div>
                                         </div>
-                                        <div className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
-                                            [ {value || 0} ]
+                                        <div className="relative py-4 -my-4">
+                                            <input
+                                                type="range"
+                                                min="0"
+                                                max="5"
+                                                step="1"
+                                                value={value || 0}
+                                                onChange={(e) =>
+                                                    setFormData({
+                                                        ...formData,
+                                                        taste: {
+                                                            ...formData.taste,
+                                                            [dimension.id]: parseInt(e.target.value),
+                                                        },
+                                                    })
+                                                }
+                                                onTouchStart={tasteHandlers(dimension.id).onTouchStart(value)}
+                                                onTouchMove={tasteHandlers(dimension.id).onTouchMove}
+                                                onTouchEnd={tasteHandlers(dimension.id).onTouchEnd}
+                                                className={SLIDER_STYLES}
+                                            />
                                         </div>
                                     </div>
-                                    <div className="relative py-4 -my-4">
-                                        <input
-                                            type="range"
-                                            min="0"
-                                            max="5"
-                                            step="1"
-                                            value={value || 0}
-                                            onChange={(e) =>
-                                                setFormData({
-                                                    ...formData,
-                                                    taste: {
-                                                        ...formData.taste,
-                                                        [key]: parseInt(e.target.value),
-                                                    },
-                                                })
-                                            }
-                                            onTouchStart={tasteHandlers(key as keyof TasteRatings).onTouchStart(value)}
-                                            onTouchMove={tasteHandlers(key as keyof TasteRatings).onTouchMove}
-                                            onTouchEnd={tasteHandlers(key as keyof TasteRatings).onTouchEnd}
-                                            className={SLIDER_STYLES}
-                                        />
-                                    </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
                 </div>
