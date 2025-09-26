@@ -56,6 +56,15 @@ const ImageFlowView: React.FC<ImageFlowViewProps> = ({
                             key={bean.id} 
                             className="cursor-pointer bg-neutral-200/30 dark:bg-neutral-800/40 p-4 aspect-square"
                             onClick={() => handleDetailClick(bean)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault()
+                                    handleDetailClick(bean)
+                                }
+                            }}
+                            tabIndex={0}
+                            role="button"
+                            aria-label={`查看 ${bean.name || '咖啡豆'} 详情`}
                         >
                             <Image
                                 src={bean.image!}
