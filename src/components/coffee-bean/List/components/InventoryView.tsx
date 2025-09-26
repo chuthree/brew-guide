@@ -139,7 +139,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                     }
                 </div>
             ) : (
-                <div className="pb-20">
+                <div className="pb-64">
                     {(() => {
                         const VirtuosoList = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
                             ({ style, children, ...props }, ref) => (
