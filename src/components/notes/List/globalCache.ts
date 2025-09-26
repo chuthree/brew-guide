@@ -187,27 +187,7 @@ globalCache.selectedBean = getSelectedBeanPreference();
 globalCache.filterMode = getFilterModePreference();
 globalCache.sortOption = getSortOptionPreference();
 
-// 监听全局缓存重置事件
-if (typeof window !== 'undefined') {
-    window.addEventListener('globalCacheReset', () => {
-        // 重置所有缓存数据到初始状态
-        globalCache.notes = [];
-        globalCache.filteredNotes = [];
-        globalCache.equipmentNames = {};
-        globalCache.beanPrices = {};
-        globalCache.selectedEquipment = null;
-        globalCache.selectedBean = null;
-        globalCache.filterMode = 'equipment';
-        globalCache.sortOption = SORT_OPTIONS.TIME_DESC;
-        globalCache.availableEquipments = [];
-        globalCache.availableBeans = [];
-        globalCache.initialized = false;
-        globalCache.totalConsumption = 0;
-        globalCache.isLoading = false;
-
-        console.warn('笔记全局缓存已重置');
-    });
-}
+// 移除复杂的全局事件监听系统
 
 // 导出主utils文件的函数，保持兼容性
 export const calculateTotalCoffeeConsumption = calculateConsumption;

@@ -160,59 +160,26 @@ class ChunkErrorManager {
     }
 
     /**
-     * 清除缓存并重试
+     * 清除缓存并重试 - 简化版本
      */
     private async clearCachesAndRetry() {
         try {
-            // 清除 Service Worker 缓存
-            if ('serviceWorker' in navigator && 'caches' in window) {
-                const cacheNames = await caches.keys();
-                const chunkCacheNames = cacheNames.filter(name =>
-                    name.includes('js-chunks') ||
-                    name.includes('static-resources') ||
-                    name.includes('next-static') ||
-                    name.includes('pages') ||
-                    name.includes('pages-rsc')
-                );
-
-                if (chunkCacheNames.length > 0) {
-                    console.warn('清除相关缓存:', chunkCacheNames);
-                    await Promise.all(
-                        chunkCacheNames.map(cacheName => caches.delete(cacheName))
-                    );
-                } else {
-                    console.warn('未找到需要清除的缓存');
-                }
-            }
-
-            // 延迟后重新加载，给缓存清理一些时间
+            console.warn('Chunk加载失败，正在重新加载页面...');
+            // 简单直接重新加载，不进行复杂的缓存清理
             setTimeout(() => {
                 window.location.reload();
             }, this.retryDelay);
-
         } catch (error) {
-            console.error('清除缓存失败:', error);
-            await this.forceReload();
+            console.error('重新加载失败:', error);
+            window.location.reload();
         }
     }
 
     /**
-     * 强制重新加载页面
+     * 强制重新加载页面 - 简化版本
      */
     private async forceReload() {
         console.warn('强制重新加载页面');
-        
-        // 尝试更新 Service Worker
-        if ('serviceWorker' in navigator) {
-            try {
-                const registration = await navigator.serviceWorker.ready;
-                await registration.update();
-            } catch (error) {
-                console.warn('更新 Service Worker 失败:', error);
-            }
-        }
-
-        // 强制刷新页面
         window.location.reload();
     }
 

@@ -32,12 +32,7 @@ export const getMainTabPreference = (): MainTabType => {
 export const saveMainTabPreference = (tab: MainTabType): void => {
     saveStringState(MODULE_NAME, 'activeMainTab', tab);
     
-    // 触发自定义事件，通知其他组件导航状态已更新
-    if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('navigationCacheChanged', {
-            detail: { activeMainTab: tab }
-        }));
-    }
+    // 简化：不需要复杂的事件通知系统
 };
 
 /**
@@ -53,10 +48,4 @@ export const clearNavigationCache = (): void => {
     }
 };
 
-// 监听全局缓存重置事件，自动清除导航缓存
-if (typeof window !== 'undefined') {
-    window.addEventListener('globalCacheReset', () => {
-        clearNavigationCache();
-        console.warn('导航缓存已重置');
-    });
-}
+// 移除复杂的全局事件监听系统

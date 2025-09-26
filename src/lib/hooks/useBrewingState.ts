@@ -22,9 +22,7 @@ export const getSelectedEquipmentPreference = (): string => {
 
 export const saveSelectedEquipmentPreference = (equipmentId: string): void => {
     saveStringState(MODULE_NAME, 'selectedEquipment', equipmentId);
-    window.dispatchEvent(new CustomEvent('equipmentCacheChanged', {
-        detail: { equipmentId }
-    }));
+    // 移除不必要的事件分发
 };
 
 // 定义标签类型
@@ -156,22 +154,7 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 	}, []);
 
 	// 监听器具缓存变化，实现跨组件同步
-	useEffect(() => {
-		const handleEquipmentCacheChange = (e: CustomEvent<{ equipmentId: string }>) => {
-			const newEquipment = e.detail.equipmentId;
-			// 只有当缓存中的值与当前状态不同时才更新
-			if (newEquipment !== selectedEquipment) {
-				setSelectedEquipment(newEquipment);
-			}
-		};
-
-		// 监听自定义事件
-		window.addEventListener('equipmentCacheChanged', handleEquipmentCacheChange as EventListener);
-
-		return () => {
-			window.removeEventListener('equipmentCacheChanged', handleEquipmentCacheChange as EventListener);
-		};
-	}, [selectedEquipment]);
+	// 移除复杂的缓存事件监听系统
 
 	// 简化的前置条件检查
 	const checkPrerequisites = useCallback(

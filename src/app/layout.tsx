@@ -3,7 +3,6 @@ import { ThemeProvider } from 'next-themes'
 // 导入polyfill库以增强浏览器兼容性
 import 'core-js/stable'
 import 'regenerator-runtime/runtime'
-import AppInstallAndUpdatePrompt from '@/components/app/AppInstallAndUpdatePrompt'
 import { Analytics } from '@vercel/analytics/next';
 import Script from 'next/script'
 import { Inter } from 'next/font/google'
@@ -188,7 +187,6 @@ export default function RootLayout({
                 <div className="h-full w-full overflow-hidden max-w-[640px] sm:max-w-full mx-auto">
                 {children}
                 </div>
-              <AppInstallAndUpdatePrompt />
             </ToastProvider>
           </ThemeProvider>
         <Analytics />
