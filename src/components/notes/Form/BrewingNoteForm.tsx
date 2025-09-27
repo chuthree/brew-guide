@@ -11,6 +11,7 @@ import { equipmentList, commonMethods, type Method, type CustomEquipment } from 
 import { loadCustomEquipments } from '@/lib/managers/customEquipments'
 import { loadCustomMethods } from '@/lib/managers/customMethods'
 import { formatGrindSize, hasSpecificGrindScale, getGrindScaleUnit } from '@/lib/utils/grindUtils'
+import { getEquipmentNameById } from '@/lib/utils/equipmentUtils'
 import { SettingsOptions } from '@/components/settings/Settings'
 import { CustomFlavorDimensionsManager, FlavorDimension } from '@/lib/managers/customFlavorDimensions'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/coffee-bean/ui/select'
@@ -587,9 +588,10 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
 
     // 获取当前器具和方案名称 - 使用useMemo优化
     const currentEquipmentName = useMemo(() => {
-        const equipment = availableEquipments.find(eq => eq.id === selectedEquipment);
-        return equipment?.name || selectedEquipment || '未知器具';
-    }, [availableEquipments, selectedEquipment]);
+        // 从availableEquipments中过滤出自定义器具
+        const customEquips = availableEquipments.filter(eq => 'isCustom' in eq && eq.isCustom) as CustomEquipment[];
+        return getEquipmentNameById(selectedEquipment, customEquips) || '未知器具';
+    }, [selectedEquipment, availableEquipments]);
 
     const currentMethodName = useMemo(() => {
         const method = availableMethods.find(m =>

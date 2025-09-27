@@ -7,7 +7,6 @@ import type { BrewingNoteData, CoffeeBean } from "@/types/app";
 import type { Method, Stage } from "@/lib/core/config";
 import type { SettingsOptions } from "@/components/settings/Settings";
 import hapticsUtils from "@/lib/ui/haptics";
-import { equipmentList } from "@/lib/core/config";
 import {
   BrewingTimerSettings,
   formatTime,
@@ -1880,10 +1879,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
               onSave={handleSaveNote}
               initialData={
                 noteFormInitialData || {
-                  equipment: selectedEquipment
-                    ? equipmentList.find((e) => e.id === selectedEquipment)
-                        ?.name || selectedEquipment
-                    : "",
+                  equipment: selectedEquipment || "",
                   method: currentBrewingMethod?.name || "",
                   params: {
                     coffee: currentBrewingMethod?.params?.coffee || "",

@@ -1,6 +1,7 @@
 import { useCallback } from "react";
-import { Method, equipmentList, Stage, commonMethods } from "@/lib/core/config";
+import { Method, Stage, commonMethods } from "@/lib/core/config";
 import { EditableParams } from "./useBrewingParameters";
+import { getEquipmentNameById } from "@/lib/utils/equipmentUtils";
 import { TabType, BrewingStep } from "./useBrewingState";
 
 export interface UseMethodSelectorProps {
@@ -62,7 +63,7 @@ export function useMethodSelector({
 
 			// 更新参数栏信息
 			const equipmentName = selectedEquipment ?
-				equipmentList.find(e => e.id === selectedEquipment)?.name || selectedEquipment
+				getEquipmentNameById(selectedEquipment, [])
 				: null;
 
 			setParameterInfo({

@@ -40,6 +40,7 @@ import DataMigrationModal from '@/components/common/modals/DataMigrationModal'
 import { showToast } from '@/components/common/feedback/GlobalToast'
 import BackupReminderModal from '@/components/common/modals/BackupReminderModal'
 import { BackupReminderUtils, BackupReminderType } from '@/lib/utils/backupReminderUtils'
+import { getEquipmentNameById, getEquipmentById } from '@/lib/utils/equipmentUtils'
 
 // 为Window对象声明类型扩展
 declare global {
@@ -1262,23 +1263,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     };
 
     const handleEquipmentSelectWithName = useCallback((equipmentIdOrName: string) => {
-        let standardEquipment = equipmentList.find(e => e.id === equipmentIdOrName);
-
-        if (!standardEquipment) {
-            standardEquipment = equipmentList.find(e => e.name === equipmentIdOrName);
-        }
-
-        let customEquipment = null;
-        for (let i = customEquipments.length - 1; i >= 0; i--) {
-            if (customEquipments[i].id === equipmentIdOrName || customEquipments[i].name === equipmentIdOrName) {
-                customEquipment = customEquipments[i];
-                // 找到匹配的自定义器具
-                break;
-            }
-        }
-
-        const equipmentId = customEquipment?.id || standardEquipment?.id || equipmentIdOrName;
-        const equipmentName = customEquipment?.name || standardEquipment?.name || equipmentIdOrName;
+        // 使用统一工具函数获取器具信息
+        const equipment = getEquipmentById(equipmentIdOrName, customEquipments);
+        const equipmentId = equipment?.id || equipmentIdOrName;
+        const equipmentName = getEquipmentNameById(equipmentIdOrName, customEquipments);
 
         setParameterInfo({
             equipment: equipmentName,
@@ -1286,7 +1274,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             params: null
         });
 
-        const isCustomPresetEquipment = customEquipment?.animationType === 'custom';
+        const isCustomPresetEquipment = equipment && 'animationType' in equipment && equipment.animationType === 'custom';
 
         if (isCustomPresetEquipment) {
             setMethodType('custom');

@@ -11,6 +11,7 @@ import { NavigationOptions, STEP_RULES } from "../brewing/constants";
 import { updateParameterInfo } from "../brewing/parameters";
 import { getStringState, saveStringState } from "@/lib/core/statePersistence";
 import { getMainTabPreference, saveMainTabPreference } from "@/lib/navigation/navigationCache";
+import { getEquipmentIdByName } from "@/lib/utils/equipmentUtils";
 
 // 器具选择缓存
 const MODULE_NAME = 'brewing-equipment';
@@ -262,26 +263,24 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 				window.dispatchEvent(new CustomEvent("brewing:reset"));
 			}
 
-			// 设置器具
-			const equipment = equipmentList.find((e) => e.name === equipmentName)?.id || equipmentName;
-			setSelectedEquipment(equipment);
-			saveSelectedEquipmentPreference(equipment);
+			// 设置器具 - 使用统一工具函数
+		const equipment = getEquipmentIdByName(equipmentName, customEquipments);
+		setSelectedEquipment(equipment);
+		saveSelectedEquipmentPreference(equipment);
 
-			// 重置方案状态
-			setSelectedMethod(null);
-			setCurrentBrewingMethod(null);
-			setMethodType('common');
+		// 重置方案状态
+		setSelectedMethod(null);
+		setCurrentBrewingMethod(null);
+		setMethodType('common');
 
-			// 导航到方案步骤
-			setActiveTab("方案");
-			setActiveBrewingStep("method");
+		// 导航到方案步骤
+		setActiveTab("方案");
+		setActiveBrewingStep("method");
 
-			return equipmentName;
-		},
-		[activeMainTab, showComplete, resetBrewingState]
-	);
-
-	// 加载自定义方案
+		return equipmentName;
+	},
+	[activeMainTab, showComplete, resetBrewingState, customEquipments]
+);	// 加载自定义方案
 	useEffect(() => {
 		const loadMethods = async () => {
 			try {

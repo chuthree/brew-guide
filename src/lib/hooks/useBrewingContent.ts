@@ -121,8 +121,10 @@ export function useBrewingContent({
 				// 确认是否为自定义器具
 				const isCustomEquipment = !!customEquipment;
 
-				// 检查是否是意式机类型（animationType === 'espresso'）
-				const isEspressoEquipment = customEquipment?.animationType === 'espresso';
+				// 检查是否是意式机类型（animationType === 'espresso' 或系统意式机）
+				const _isEspressoEquipment = 
+					customEquipment?.animationType === 'espresso' || 
+					selectedEquipment === 'Espresso';
 
 				// 现在我们将获取两种方案列表
 				let customMethodsForEquipment: Method[] = [];
@@ -131,8 +133,8 @@ export function useBrewingContent({
 				// 总是获取自定义方案
 				customMethodsForEquipment = currentEquipmentCustomMethods;
 
-				// 获取通用方案（除了意式机类型）
-				if (!isEspressoEquipment) {
+				// 获取通用方案
+				{
 					if (isCustomEquipment && customEquipment) {
 						// 自定义器具，根据animationType获取对应的通用方案
 						let baseEquipmentId = '';
@@ -152,8 +154,7 @@ export function useBrewingContent({
 								baseEquipmentId = 'CleverDripper';
 								break;
 							case 'espresso':
-								// 意式机不继承任何通用方案
-								baseEquipmentId = '';
+								baseEquipmentId = 'Espresso';
 								break;
 							case 'custom':
 								// 自定义预设器具不使用任何通用方案
@@ -185,8 +186,7 @@ export function useBrewingContent({
 							} else if (selectedEquipment.includes('-origami-')) {
 								baseEquipmentId = 'Origami';
 							} else if (selectedEquipment.includes('-espresso-')) {
-								// 意式机类型，不使用任何基础器具的方案
-								baseEquipmentId = '';
+								baseEquipmentId = 'Espresso';
 							}
 
 							if (baseEquipmentId && commonMethods[baseEquipmentId]) {
@@ -194,9 +194,6 @@ export function useBrewingContent({
 							}
 						}
 					}
-				} else {
-					// 意式机不显示通用方案
-					commonMethodsForEquipment = [];
 				}
 
 				// 准备两个方案列表

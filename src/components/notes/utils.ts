@@ -1,7 +1,6 @@
 'use client'
 
-import { equipmentList } from '@/lib/core/config'
-import { getEquipmentName as getEquipmentNameUtil } from '@/lib/brewing/parameters'
+import { getEquipmentNameById, getEquipmentIdByName } from '@/lib/utils/equipmentUtils'
 import type { BrewingNote } from '@/lib/core/config'
 import { SortOption, SORT_OPTIONS } from './types'
 import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager'
@@ -68,59 +67,34 @@ export const formatRating = (rating: number): string => {
     return `[ ${rating}/5 ]`
 }
 
-// 获取设备名称的辅助函数 - 简化实现
+// 获取设备名称的辅助函数 - 使用统一工具函数
 export const getEquipmentName = async (equipmentId: string): Promise<string> => {
-    // 首先尝试在标准设备列表中查找
-    const standardEquipment = equipmentList.find(e => e.id === equipmentId);
-    if (standardEquipment) return standardEquipment.name;
-
-    // 如果没找到，加载自定义设备列表并查找
     try {
-        // 使用动态导入，但只导入一次模块
+        // 加载自定义设备列表
         const customEquipmentsModule = await import('@/lib/managers/customEquipments');
         const customEquipments = await customEquipmentsModule.loadCustomEquipments();
-
-        // 先在自定义设备中按ID查找
-        const customEquipment = customEquipments.find(e => e.id === equipmentId);
-        if (customEquipment) return customEquipment.name;
         
-        // 如果上面都没找到，尝试使用工具函数
-        const equipmentName = getEquipmentNameUtil(equipmentId, equipmentList, customEquipments);
-        return equipmentName || equipmentId;
+        // 使用统一的工具函数
+        return getEquipmentNameById(equipmentId, customEquipments);
     } catch (error) {
         console.error('加载自定义设备失败:', error);
         return equipmentId; // 出错时返回原始ID
     }
 };
 
-// 规范化器具ID的辅助函数 - 增强实现，支持自定义器具
+// 规范化器具ID的辅助函数 - 使用统一工具函数
 export const normalizeEquipmentId = async (equipmentIdOrName: string): Promise<string> => {
-    // 首先检查这是否是标准设备的ID
-    const standardEquipmentById = equipmentList.find(e => e.id === equipmentIdOrName);
-    if (standardEquipmentById) return standardEquipmentById.id;
-
-    // 检查是否是标准设备的名称
-    const standardEquipmentByName = equipmentList.find(e => e.name === equipmentIdOrName);
-    if (standardEquipmentByName) return standardEquipmentByName.id;
-
-    // 如果不是标准设备，检查自定义器具
     try {
+        // 加载自定义器具列表
         const customEquipmentsModule = await import('@/lib/managers/customEquipments');
         const customEquipments = await customEquipmentsModule.loadCustomEquipments();
-
-        // 先按ID查找自定义器具
-        const customEquipmentById = customEquipments.find(e => e.id === equipmentIdOrName);
-        if (customEquipmentById) return customEquipmentById.id;
-
-        // 再按名称查找自定义器具
-        const customEquipmentByName = customEquipments.find(e => e.name === equipmentIdOrName);
-        if (customEquipmentByName) return customEquipmentByName.id;
+        
+        // 使用统一的工具函数：如果传入的是名称，转为ID；如果是ID，直接返回
+        return getEquipmentIdByName(equipmentIdOrName, customEquipments);
     } catch (error) {
-        console.error('加载自定义器具失败:', error);
+        console.error('规范化器具ID失败:', error);
+        return equipmentIdOrName; // 出错时返回原始值
     }
-
-    // 如果都没找到，返回原始值
-    return equipmentIdOrName;
 };
 
 // 计算总咖啡消耗量的函数
