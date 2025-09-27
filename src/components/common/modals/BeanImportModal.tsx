@@ -133,136 +133,20 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
         setCurrentMode('input');
     }, []);
 
-    // 检测是否支持剪贴板API
-    const isClipboardSupported = useCallback(() => {
-        return typeof navigator !== 'undefined' && 
-               'clipboard' in navigator && 
-               'readText' in navigator.clipboard &&
-               window.isSecureContext;
-    }, []);
-
-    // 使用粘贴事件监听的方案
-    const setupPasteListener = useCallback(() => {
-        return new Promise<string>((resolve, reject) => {
-            // 创建一个可见的 textarea 供用户粘贴
-            const existingInput = document.querySelector('#clipboard-helper-textarea') as HTMLTextAreaElement;
-            if (existingInput) {
-                existingInput.focus();
-                existingInput.select();
-                return;
-            }
-
-            const textarea = document.createElement('textarea');
-            textarea.id = 'clipboard-helper-textarea';
-            textarea.placeholder = '请在此处粘贴数据 (Cmd+V 或 Ctrl+V)';
-            textarea.style.cssText = `
-                position: fixed;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                width: 300px;
-                height: 100px;
-                z-index: 10000;
-                border: 2px solid #007AFF;
-                border-radius: 8px;
-                padding: 10px;
-                font-size: 16px;
-                background: white;
-                box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-            `;
-            
-            document.body.appendChild(textarea);
-            textarea.focus();
-            textarea.select();
-            
-            // 监听粘贴事件
-            const handlePaste = (e: Event) => {
-                const pasteEvent = e as ClipboardEvent;
-                const pastedData = pasteEvent.clipboardData?.getData('text');
-                if (pastedData) {
-                    cleanup();
-                    resolve(pastedData);
-                }
-            };
-            
-            // 监听键盘事件
-            const handleKeydown = (e: KeyboardEvent) => {
-                if (e.key === 'Escape') {
-                    cleanup();
-                    reject(new Error('用户取消操作'));
-                }
-            };
-            
-            // 监听点击外部关闭
-            const handleClickOutside = (e: MouseEvent) => {
-                if (!textarea.contains(e.target as Node)) {
-                    cleanup();
-                    reject(new Error('用户取消操作'));
-                }
-            };
-            
-            const cleanup = () => {
-                textarea.removeEventListener('paste', handlePaste);
-                document.removeEventListener('keydown', handleKeydown);
-                document.removeEventListener('click', handleClickOutside);
-                if (textarea.parentNode) {
-                    document.body.removeChild(textarea);
-                }
-            };
-            
-            textarea.addEventListener('paste', handlePaste);
-            document.addEventListener('keydown', handleKeydown);
-            setTimeout(() => {
-                document.addEventListener('click', handleClickOutside);
-            }, 100);
-            
-            // 10秒后自动超时
-            setTimeout(() => {
-                cleanup();
-                reject(new Error('操作超时'));
-            }, 10000);
-        });
-    }, []);
-
     // 处理剪贴板识别
     const handleClipboardRecognition = useCallback(async () => {
         clearMessages();
         setInputType('clipboard');
         setCurrentMode('input');
         
-        let clipboardText = '';
-        
-        // 首先尝试现代 Clipboard API
-        if (isClipboardSupported()) {
-            try {
-                clipboardText = await navigator.clipboard.readText();
-            } catch (_error) {
-                // 如果现代 API 失败，使用粘贴监听方案
-                try {
-                    clipboardText = await setupPasteListener();
-                } catch (_error) {
-                    setError('请手动粘贴数据到下方输入框');
-                    return;
-                }
-            }
-        } else {
-            // 不支持现代 API，使用粘贴监听方案
-            try {
-                setSuccess('请在弹出的输入框中粘贴数据 (Cmd+V)');
-                clipboardText = await setupPasteListener();
-            } catch (_error) {
-                setError('请手动粘贴数据到下方输入框');
+        try {
+            const clipboardText = await navigator.clipboard.readText();
+            if (!clipboardText.trim()) {
+                setError('剪贴板为空');
                 return;
             }
-        }
-        
-        if (!clipboardText.trim()) {
-            setError('剪贴板为空，请复制数据后重试');
-            return;
-        }
-        
-        // 尝试提取JSON数据
-        try {
+            
+            // 尝试提取JSON数据
             const { extractJsonFromText } = await import('@/lib/utils/jsonUtils');
             const beanData = extractJsonFromText(clipboardText);
             
@@ -274,10 +158,9 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                 setSuccess('已粘贴剪贴板内容，请检查数据格式');
             }
         } catch (_error) {
-            setImportData(clipboardText);
-            setSuccess('已读取剪贴板内容，请检查数据格式');
+            setError('无法访问剪贴板，请手动粘贴数据');
         }
-    }, [clearMessages, isClipboardSupported, setupPasteListener]);
+    }, [clearMessages]);
 
     // 处理搜索咖啡豆
     const handleSearchBeans = useCallback(() => {
@@ -332,7 +215,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                         </div>
 
                         {/* 内容区域 */}
-                        <div className="flex-1 mt-12 px-6 pb-safe-bottom">
+                        <div className="flex-1 mt-16 px-6 pb-safe-bottom">
                             {/* 大标题 */}
                             <div className="mb-8">
                                 <h1 className="text-md font-bold text-neutral-800 dark:text-white mb-4">
@@ -386,24 +269,11 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                                         {/* 识别剪切板 */}
                                         <button
                                             onClick={handleClipboardRecognition}
-                                            className={`w-full flex items-center justify-between p-4 transition-colors rounded-lg ${
-                                                isClipboardSupported() 
-                                                    ? 'bg-neutral-200/50 dark:bg-neutral-800' 
-                                                    : 'bg-neutral-100/50 dark:bg-neutral-900/50'
-                                            }`}
+                                            className="w-full flex items-center justify-between p-4 bg-neutral-200/50 dark:bg-neutral-800 transition-colors rounded-lg"
                                         >
                                             <div className="flex items-center space-x-3">
                                                 <Clipboard className="w-5 h-5 text-neutral-600 dark:text-neutral-400" />
-                                                <div>
-                                                    <span className="text-neutral-800 dark:text-white font-medium">
-                                                        {isClipboardSupported() ? '识别剪切板' : '尝试读取剪切板'}
-                                                    </span>
-                                                    {!isClipboardSupported() && (
-                                                        <p className="text-xs text-neutral-500 dark:text-neutral-500 mt-1">
-                                                            iOS PWA 可能不支持，请准备手动粘贴
-                                                        </p>
-                                                    )}
-                                                </div>
+                                                <span className="text-neutral-800 dark:text-white font-medium">识别剪切板</span>
                                             </div>
                                             <ChevronRight className="w-5 h-5 text-neutral-500" />
                                         </button>
@@ -454,15 +324,9 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
 
                                         {/* 输入框 */}
                                         <textarea
-                                            className={`w-full p-4 rounded-lg focus:outline-none focus:ring-2 text-neutral-800 dark:text-white text-sm placeholder:text-neutral-400 dark:placeholder:text-neutral-500 transition-all resize-none ${
-                                                error 
-                                                    ? 'bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800 focus:ring-red-300 dark:focus:ring-red-700' 
-                                                    : success
-                                                    ? 'bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-800 focus:ring-green-300 dark:focus:ring-green-700'
-                                                    : 'bg-neutral-200/50 dark:bg-neutral-800 focus:ring-neutral-300 dark:focus:ring-neutral-700'
-                                            }`}
+                                            className="w-full p-4 rounded-lg focus:outline-none focus:ring-2 text-neutral-800 dark:text-white text-sm placeholder:text-neutral-400 dark:placeholder:text-neutral-500 transition-all resize-none bg-neutral-200/50 dark:bg-neutral-800 border border-transparent focus:ring-neutral-300 dark:focus:ring-neutral-700"
                                             placeholder={
-                                                error ? `❌ ${error}` :
+                                                error ? `${error}` :
                                                 success ? `✅ ${success}` :
                                                 inputType === 'clipboard' ? '识别剪切板内容中...' :
                                                 inputType === 'json' ? '粘贴咖啡豆数据...' :
@@ -476,11 +340,11 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
 
                                         {/* 底部按钮区域 */}
                                         <div className="space-y-3">
-                                            {/* 重新识别剪切板按钮 */}
+                                            {/* 重新识别剪切板按钮 - 只在剪切板模式且有错误时显示 */}
                                             {error && inputType === 'clipboard' && (
                                                 <button
                                                     onClick={handleRetryClipboard}
-                                                    className="w-full flex items-center justify-between p-4 bg-neutral-200/50 dark:bg-neutral-800 transition-colors rounded-lg"
+                                                    className="w-full flex items-center justify-between p-4 bg-neutral-200/50 dark:bg-neutral-800 hover:bg-neutral-200/70 dark:hover:bg-neutral-800/70 transition-colors rounded-lg"
                                                 >
                                                     <div className="flex items-center space-x-3">
                                                         <Clipboard className="w-5 h-5 text-neutral-600 dark:text-neutral-400" />
@@ -494,27 +358,17 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                                                 onClick={handleImport}
                                                 disabled={!importData.trim()}
                                                 className={`w-full flex items-center justify-center p-4 transition-colors rounded-lg ${
-                                                    error
-                                                        ? 'bg-red-100 dark:bg-red-900/30 cursor-not-allowed'
-                                                        : success && importData.trim()
-                                                        ? 'bg-green-200/70 dark:bg-green-800 hover:bg-green-200 dark:hover:bg-green-700'
-                                                        : importData.trim()
+                                                    importData.trim()
                                                         ? 'bg-neutral-200/50 dark:bg-neutral-800 hover:bg-neutral-200/70 dark:hover:bg-neutral-800/70'
                                                         : 'bg-neutral-100 dark:bg-neutral-900/50 cursor-not-allowed'
                                                 }`}
                                             >
                                                 <span className={`font-medium ${
-                                                    error
-                                                        ? 'text-red-600 dark:text-red-400'
-                                                        : success && importData.trim()
-                                                        ? 'text-green-700 dark:text-green-200'
-                                                        : importData.trim()
+                                                    importData.trim()
                                                         ? 'text-neutral-800 dark:text-white'
                                                         : 'text-neutral-400 dark:text-neutral-600'
                                                 }`}>
-                                                    {error ? '格式错误' :
-                                                     success && importData.trim() ? '✅ 添加咖啡豆' :
-                                                     importData.trim() ? '添加咖啡豆' : '请输入数据'}
+                                                    {importData.trim() ? '添加咖啡豆' : '请输入数据'}
                                                 </span>
                                             </button>
                                         </div>

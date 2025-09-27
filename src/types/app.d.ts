@@ -39,6 +39,7 @@ export interface CoffeeBean {
 
 	// 分类标签
 	beanType?: "espresso" | "filter"; // 豆子类型：意式/手冲
+	brand?: string;      // 品牌
 
 	// 评分相关字段 (榜单功能使用)
 	overallRating?: number;       // 总体评分/喜好星值 (1-5)
