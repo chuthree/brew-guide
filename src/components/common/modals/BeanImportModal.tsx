@@ -269,7 +269,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                                         {/* 识别剪切板 */}
                                         <button
                                             onClick={handleClipboardRecognition}
-                                            className="w-full flex items-center justify-between p-4 bg-neutral-200/50 dark:bg-neutral-800 transition-colors rounded-lg"
+                                            className="w-full flex items-center justify-between p-4 bg-neutral-200/50 dark:bg-neutral-800 transition-colors rounded"
                                         >
                                             <div className="flex items-center space-x-3">
                                                 <Clipboard className="w-5 h-5 text-neutral-600 dark:text-neutral-400" />
@@ -281,7 +281,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                                         {/* 输入JSON */}
                                         <button
                                             onClick={handleInputJSON}
-                                            className="w-full flex items-center justify-between p-4 bg-neutral-200/50 dark:bg-neutral-800 transition-colors rounded-lg"
+                                            className="w-full flex items-center justify-between p-4 bg-neutral-200/50 dark:bg-neutral-800 transition-colors rounded"
                                         >
                                             <div className="flex items-center space-x-3">
                                                 <Code className="w-5 h-5 text-neutral-600 dark:text-neutral-400" />
@@ -293,7 +293,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                                         {/* 搜索咖啡豆 */}
                                         <button
                                             onClick={handleSearchBeans}
-                                            className="w-full flex items-center justify-between p-4 bg-neutral-200/50 dark:bg-neutral-800 transition-colors rounded-lg"
+                                            className="w-full flex items-center justify-between p-4 bg-neutral-200/50 dark:bg-neutral-800 transition-colors rounded"
                                         >
                                             <div className="flex items-center space-x-3">
                                                 <Search className="w-5 h-5 text-neutral-600 dark:text-neutral-400" />
@@ -314,7 +314,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                                         {/* 返回按钮 */}
                                         <button
                                             onClick={handleBackToButtons}
-                                            className="w-full flex items-center justify-between p-4 bg-neutral-200/50 dark:bg-neutral-800 transition-colors rounded-lg"
+                                            className="w-full flex items-center justify-between p-4 bg-neutral-200/50 dark:bg-neutral-800 transition-colors rounded"
                                         >
                                             <div className="flex items-center space-x-3">
                                                 <ChevronLeft className="w-5 h-5 text-neutral-600 dark:text-neutral-400" />
@@ -324,7 +324,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
 
                                         {/* 输入框 */}
                                         <textarea
-                                            className="w-full p-4 rounded-lg focus:outline-none focus:ring-2 text-neutral-800 dark:text-white text-sm placeholder:text-neutral-400 dark:placeholder:text-neutral-500 transition-all resize-none bg-neutral-200/50 dark:bg-neutral-800 border border-transparent focus:ring-neutral-300 dark:focus:ring-neutral-700"
+                                            className="w-full p-4 rounded focus:outline-none focus:ring-2 text-neutral-800 dark:text-white text-sm placeholder:text-neutral-400 dark:placeholder:text-neutral-500 transition-all resize-none bg-neutral-200/50 dark:bg-neutral-800 border border-transparent focus:ring-neutral-300 dark:focus:ring-neutral-700"
                                             placeholder={
                                                 error ? `${error}` :
                                                 success ? `✅ ${success}` :
@@ -344,7 +344,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                                             {error && inputType === 'clipboard' && (
                                                 <button
                                                     onClick={handleRetryClipboard}
-                                                    className="w-full flex items-center justify-between p-4 bg-neutral-200/50 dark:bg-neutral-800 hover:bg-neutral-200/70 dark:hover:bg-neutral-800/70 transition-colors rounded-lg"
+                                                    className="w-full flex items-center justify-between p-4 bg-neutral-200/50 dark:bg-neutral-800 hover:bg-neutral-200/70 dark:hover:bg-neutral-800/70 transition-colors rounded"
                                                 >
                                                     <div className="flex items-center space-x-3">
                                                         <Clipboard className="w-5 h-5 text-neutral-600 dark:text-neutral-400" />
@@ -357,7 +357,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                                             <button
                                                 onClick={handleImport}
                                                 disabled={!importData.trim()}
-                                                className={`w-full flex items-center justify-center p-4 transition-colors rounded-lg ${
+                                                className={`w-full flex items-center justify-center p-4 transition-colors rounded ${
                                                     importData.trim()
                                                         ? 'bg-neutral-200/50 dark:bg-neutral-800 hover:bg-neutral-200/70 dark:hover:bg-neutral-800/70'
                                                         : 'bg-neutral-100 dark:bg-neutral-900/50 cursor-not-allowed'

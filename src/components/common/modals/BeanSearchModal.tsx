@@ -183,35 +183,9 @@ const BeanSearchModal: React.FC<BeanSearchModalProps> = ({
             
         } catch (error) {
             console.error('加载咖啡豆数据失败:', error);
-            // 降级到模拟数据
-            const mockBeans: CoffeeBean[] = [
-                {
-                    id: 'db-mock-1',
-                    timestamp: Date.now(),
-                    name: "Voyage 黑森林",
-                    roastLevel: "中度烘焙",
-                    beanType: "espresso" as const,
-                    price: "79.2",
-                    capacity: "200g",
-                    remaining: "200g",
-                    roastDate: "",
-                    flavor: ["巧克力", "坚果"],
-                    notes: "Voyage 的招牌意式拼配豆",
-                    blendComponents: [{
-                        origin: "巴西",
-                        process: "半日晒",
-                        variety: "卡杜拉",
-                        percentage: 60
-                    }],
-                    startDay: 3,
-                    endDay: 28,
-                    isFrozen: false,
-                    isInTransit: false,
-                    brand: 'Voyage'
-                }
-            ];
-            setAllBeans(mockBeans);
-            setBeansByBrand({ 'Voyage': mockBeans });
+            // 出错时设置为空数组
+            setAllBeans([]);
+            setBeansByBrand({});
         } finally {
             setIsLoadingAll(false);
         }
@@ -491,6 +465,79 @@ const BeanSearchModal: React.FC<BeanSearchModalProps> = ({
         handleClose();
     }, [onSelectBean, handleClose]);
 
+    // 统一的咖啡豆项渲染函数
+    const renderBeanItem = useCallback((bean: CoffeeBean, index: number, keyPrefix: string = '') => {
+        const displayTitle = generateBeanTitle(bean, userSettings.showOnlyBeanName as boolean);
+        const flavorInfo = calculateFlavorInfo(bean);
+        const shouldShowNotes = ((userSettings.showFlavorInfo as boolean) && bean.flavor?.length) || bean.notes;
+
+        return (
+            <div
+                key={`${keyPrefix}${index}`}
+                onClick={() => handleSelectSearchResult(bean)}
+                className="cursor-pointer"
+            >
+                <div className="flex gap-3">
+                    <div className="relative self-start">
+                        <div className="w-14 h-14 relative shrink-0 rounded border border-neutral-200/50 dark:border-neutral-800/50 bg-neutral-100 dark:bg-neutral-800/20 overflow-hidden">
+                            <div className="absolute inset-0 flex items-center justify-center text-xs font-medium text-neutral-400 dark:text-neutral-600">
+                                {bean.name ? bean.name.charAt(0) : '豆'}
+                            </div>
+                        </div>
+                        {(userSettings.showStatusDots as boolean) && (
+                            <div className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full ${bean.roastDate ? getStatusDotColor(flavorInfo.phase) : 'bg-neutral-400'} border-2 border-neutral-50 dark:border-neutral-900`} />
+                        )}
+                    </div>
+
+                    <div className="flex-1 min-w-0 flex flex-col gap-y-2">
+                        <div className={`flex flex-col justify-center gap-y-1.5 ${shouldShowNotes ? '' : 'h-14'}`}>
+                            <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100 pr-2 leading-tight line-clamp-2">
+                                {displayTitle}
+                            </div>
+
+                            <div className="flex items-center text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
+                                <span className="shrink-0">
+                                    {bean.roastDate 
+                                        ? ((userSettings.dateDisplayMode as string) === 'flavorPeriod'
+                                            ? getFlavorPeriodStatus(flavorInfo)
+                                            : (userSettings.dateDisplayMode as string) === 'agingDays'
+                                            ? getAgingDaysText(bean.roastDate)
+                                            : formatDateShort(bean.roastDate))
+                                        : `需养豆 ${bean.startDay || 3}天`
+                                    }
+                                </span>
+                                {(bean.capacity || (bean.price && bean.capacity)) && (
+                                    <span className="mx-2 text-neutral-400 dark:text-neutral-600">·</span>
+                                )}
+
+                                {bean.capacity && (
+                                    <>
+                                        <span className="shrink-0">
+                                            {formatNumber(bean.capacity)}克
+                                        </span>
+                                        {bean.price && bean.capacity && <span className="mx-2 text-neutral-400 dark:text-neutral-600">·</span>}
+                                    </>
+                                )}
+
+                                {bean.price && bean.capacity && (
+                                    <span className="shrink-0">{formatPrice(bean.price, bean.capacity)}</span>
+                                )}
+                            </div>
+                        </div>
+
+                        {shouldShowNotes && (
+                            <div className="text-xs font-medium bg-neutral-200/30 dark:bg-neutral-800/40 p-1.5 rounded tracking-widest text-neutral-800/70 dark:text-neutral-400/85 whitespace-pre-line leading-tight">
+                                <div className={(userSettings.limitNotesLines as boolean) ? getLineClampClass(userSettings.notesMaxLines as number) : ''}>
+                                    {getFullNotesContent(bean)}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        );
+    }, [userSettings, handleSelectSearchResult, getStatusDotColor, getFlavorPeriodStatus, getAgingDaysText, formatDateShort, formatNumber, formatPrice, getFullNotesContent, getLineClampClass]);
+
     return (
         <AnimatePresence>
             {isOpen && (
@@ -591,82 +638,11 @@ const BeanSearchModal: React.FC<BeanSearchModalProps> = ({
                         <div className="px-6 pt-4">
                             {searchQuery ? (
                                 // 显示搜索结果
-                                <div className="space-y-3">
+                                <div className="space-y-5">
                                     {searchResults.length > 0 ? (
-                                        searchResults.map((bean, index) => {
-                                            const displayTitle = generateBeanTitle(bean, userSettings.showOnlyBeanName as boolean);
-                                            const flavorInfo = calculateFlavorInfo(bean);
-                                            const shouldShowNotes = ((userSettings.showFlavorInfo as boolean) && bean.flavor?.length) || bean.notes;
-
-                                            return (
-                                                <div
-                                                    key={index}
-                                                    onClick={() => handleSelectSearchResult(bean)}
-                                                    className="cursor-pointer bg-neutral-100/80 dark:bg-neutral-800/20 hover:bg-neutral-200/60 dark:hover:bg-neutral-800/40 border transition-colors px-3 py-5"
-                                                >
-                                                    <div className="flex gap-3">
-                                                        <div className="relative self-start">
-                                                            <div className="w-14 h-14 relative shrink-0 rounded border border-neutral-200/50 dark:border-neutral-800/50 bg-neutral-100 dark:bg-neutral-800/20 overflow-hidden">
-                                                                <div className="absolute inset-0 flex items-center justify-center text-xs font-medium text-neutral-400 dark:text-neutral-600">
-                                                                    {bean.name ? bean.name.charAt(0) : '豆'}
-                                                                </div>
-                                                            </div>
-                                                            {(userSettings.showStatusDots as boolean) && (
-                                                                <div className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full ${bean.roastDate ? getStatusDotColor(flavorInfo.phase) : 'bg-neutral-400'} border-2 border-neutral-50 dark:border-neutral-900`} />
-                                                            )}
-                                                        </div>
-
-                                                        <div className="flex-1 min-w-0 flex flex-col gap-y-2">
-                                                            <div className={`flex flex-col justify-center gap-y-1.5 ${shouldShowNotes ? '' : 'h-14'}`}>
-                                                                <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100 pr-2 leading-tight line-clamp-2">
-                                                                    {displayTitle}
-                                                                </div>
-
-                                                                <div className="flex items-center text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
-                                                                    <span className="shrink-0">
-                                                                        {bean.roastDate 
-                                                                            ? ((userSettings.dateDisplayMode as string) === 'flavorPeriod'
-                                                                                ? getFlavorPeriodStatus(flavorInfo)
-                                                                                : (userSettings.dateDisplayMode as string) === 'agingDays'
-                                                                                ? getAgingDaysText(bean.roastDate)
-                                                                                : formatDateShort(bean.roastDate))
-                                                                            : `需养豆 ${bean.startDay || 3}天`
-                                                                        }
-                                                                    </span>
-                                                                    {(bean.capacity || (bean.price && bean.capacity)) && (
-                                                                        <span className="mx-2 text-neutral-400 dark:text-neutral-600">·</span>
-                                                                    )}
-
-                                                                    {bean.capacity && (
-                                                                        <>
-                                                                            <span className="shrink-0">
-                                                                                {formatNumber(bean.capacity)}克
-                                                                            </span>
-                                                                            {bean.price && bean.capacity && <span className="mx-2 text-neutral-400 dark:text-neutral-600">·</span>}
-                                                                        </>
-                                                                    )}
-
-                                                                    {bean.price && bean.capacity && (
-                                                                        <span className="shrink-0">{formatPrice(bean.price, bean.capacity)}</span>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-
-                                                            {shouldShowNotes && (
-                                                                <div className="text-xs font-medium bg-neutral-200/30 dark:bg-neutral-800/40 p-1.5 rounded tracking-widest text-neutral-800/70 dark:text-neutral-400/85 whitespace-pre-line leading-tight">
-                                                                    <div className={(userSettings.limitNotesLines as boolean) ? getLineClampClass(userSettings.notesMaxLines as number) : ''}>
-                                                                        {getFullNotesContent(bean)}
-                                                                    </div>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })
+                                        searchResults.map((bean, index) => renderBeanItem(bean, index, 'search-'))
                                     ) : (
                                         <div className="text-center text-neutral-500 dark:text-neutral-400 py-16">
-                                            <p className="text-sm">未找到相关咖啡豆</p>
                                             <p className="text-xs mt-1 opacity-60">试试搜索其他关键词</p>
                                         </div>
                                     )}
@@ -683,83 +659,15 @@ const BeanSearchModal: React.FC<BeanSearchModalProps> = ({
                                         Object.entries(beansByBrand).map(([brandName, beans]) => (
                                             <div key={brandName}>
                                                 {/* 品牌标题 */}
-                                                <div className="sticky top-0 bg-neutral-50 dark:bg-neutral-900 my-2">
+                                                <div className="z-10 sticky top-0 bg-neutral-50 dark:bg-neutral-900 pb-3">
                                                     <h3 className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">
                                                         {brandName}
                                                     </h3>
                                                 </div>
-                                                
+
                                                 {/* 品牌下的咖啡豆列表 */}
                                                 <div className="space-y-5">
-                                                    {beans.map((bean, index) => {
-                                                        const displayTitle = generateBeanTitle(bean, userSettings.showOnlyBeanName as boolean);
-                                                        const flavorInfo = calculateFlavorInfo(bean);
-                                                        const shouldShowNotes = ((userSettings.showFlavorInfo as boolean) && bean.flavor?.length) || bean.notes;
-
-                                                        return (
-                                                            <div
-                                                                key={`${brandName}-${index}`}
-                                                                onClick={() => handleSelectSearchResult(bean)}
-                                                                className='flex gap-3 gap-y-5'
-                                                            >
-                                                                <div className="relative self-start">
-                                                                    <div className="w-14 h-14 relative shrink-0 rounded border border-neutral-200/50 dark:border-neutral-800/50 bg-neutral-100 dark:bg-neutral-800/20 overflow-hidden">
-                                                                        <div className="absolute inset-0 flex items-center justify-center text-xs font-medium text-neutral-400 dark:text-neutral-600">
-                                                                            {bean.name ? bean.name.charAt(0) : '豆'}
-                                                                        </div>
-                                                                    </div>
-                                                                    {(userSettings.showStatusDots as boolean) && (
-                                                                        <div className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full ${bean.roastDate ? getStatusDotColor(flavorInfo.phase) : 'bg-neutral-400'} border-2 border-neutral-50 dark:border-neutral-900`} />
-                                                                    )}
-                                                                </div>
-
-                                                                <div className="flex-1 min-w-0 flex flex-col gap-y-2">
-                                                                    <div className={`flex flex-col justify-center gap-y-1.5 ${shouldShowNotes ? '' : 'h-14'}`}>
-                                                                        <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100 pr-2 leading-tight line-clamp-2">
-                                                                            {displayTitle}
-                                                                        </div>
-
-                                                                        <div className="flex items-center text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
-                                                                            <span className="shrink-0">
-                                                                                {bean.roastDate 
-                                                                                    ? ((userSettings.dateDisplayMode as string) === 'flavorPeriod'
-                                                                                        ? getFlavorPeriodStatus(flavorInfo)
-                                                                                        : (userSettings.dateDisplayMode as string) === 'agingDays'
-                                                                                        ? getAgingDaysText(bean.roastDate)
-                                                                                        : formatDateShort(bean.roastDate))
-                                                                                    : `需养豆 ${bean.startDay || 3}天`
-                                                                                }
-                                                                            </span>
-                                                                            {(bean.capacity || (bean.price && bean.capacity)) && (
-                                                                                <span className="mx-2 text-neutral-400 dark:text-neutral-600">·</span>
-                                                                            )}
-
-                                                                            {bean.capacity && (
-                                                                                <>
-                                                                                    <span className="shrink-0">
-                                                                                        {formatNumber(bean.capacity)}克
-                                                                                    </span>
-                                                                                    {bean.price && bean.capacity && <span className="mx-2 text-neutral-400 dark:text-neutral-600">·</span>}
-                                                                                </>
-                                                                            )}
-
-                                                                            {bean.price && bean.capacity && (
-                                                                                <span className="shrink-0">{formatPrice(bean.price, bean.capacity)}</span>
-                                                                            )}
-                                                                        </div>
-                                                                    </div>
-
-                                                                    {shouldShowNotes && (
-                                                                        <div className="text-xs font-medium bg-neutral-200/30 dark:bg-neutral-800/40 p-1.5 rounded tracking-widest text-neutral-800/70 dark:text-neutral-400/85 whitespace-pre-line leading-tight">
-                                                                            <div className={(userSettings.limitNotesLines as boolean) ? getLineClampClass(userSettings.notesMaxLines as number) : ''}>
-                                                                                {getFullNotesContent(bean)}
-                                                                            </div>
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        );
-                                                    })}
+                                                    {beans.map((bean, index) => renderBeanItem(bean, index, `${brandName}-`))}
                                                 </div>
                                             </div>
                                         ))
