@@ -498,14 +498,14 @@ const BeanSearchModal: React.FC<BeanSearchModalProps> = ({
                         )}
                     </div>
 
-                    <div className="flex-1 min-w-0 flex flex-col gap-y-2">
-                        <div className={`flex flex-col justify-center gap-y-1.5 ${shouldShowNotes ? '' : 'h-14'}`}>
+                    <div className="flex flex-col gap-y-2">
+                        <div className={`flex flex-col justify-center gap-y-1.5`}>
                             <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100 pr-2 leading-tight line-clamp-2">
                                 {displayTitle}
                             </div>
 
-                            <div className="flex items-center text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
-                                <span className="shrink-0">
+                            <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400 leading-relaxed">
+                                <span className="inline">
                                     {bean.roastDate 
                                         ? ((userSettings.dateDisplayMode as string) === 'flavorPeriod'
                                             ? getFlavorPeriodStatus(flavorInfo)
@@ -520,16 +520,14 @@ const BeanSearchModal: React.FC<BeanSearchModalProps> = ({
                                 )}
 
                                 {bean.capacity && (
-                                    <>
-                                        <span className="shrink-0">
-                                            {formatNumber(bean.capacity)}克
-                                        </span>
+                                    <span className="inline">
+                                        {formatNumber(bean.capacity)}克
                                         {bean.price && bean.capacity && <span className="mx-2 text-neutral-400 dark:text-neutral-600">·</span>}
-                                    </>
+                                    </span>
                                 )}
 
                                 {bean.price && bean.capacity && (
-                                    <span className="shrink-0">{formatPrice(bean.price, bean.capacity)}</span>
+                                    <span className="inline">{formatPrice(bean.price, bean.capacity)}</span>
                                 )}
                             </div>
                         </div>

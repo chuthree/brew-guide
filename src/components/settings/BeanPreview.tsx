@@ -262,43 +262,39 @@ const BeanPreviewItem: React.FC<{
                 )}
             </div>
 
-            <div className="flex-1 min-w-0 flex flex-col gap-y-2">
-                <div className={`flex flex-col justify-center gap-y-1.5 ${shouldShowNotes() ? '' : 'h-14'}`}>
+            <div className="flex flex-col gap-y-2">
+                <div className={`flex flex-col justify-center gap-y-1.5`}>
                     <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100 pr-2 leading-tight line-clamp-2">
                         {displayTitle}
                     </div>
 
-                    <div className="flex items-center text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
+                    <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400 leading-relaxed">
                         {bean.roastDate && (
-                            <>
-                                <span className="shrink-0">
-                                    {dateDisplayMode === 'flavorPeriod'
-                                        ? getFlavorPeriodStatus()
-                                        : dateDisplayMode === 'agingDays'
-                                        ? getAgingDaysText(bean.roastDate)
-                                        : formatDateShort(bean.roastDate)
-                                    }
-                                </span>
+                            <span className="inline">
+                                {dateDisplayMode === 'flavorPeriod'
+                                    ? getFlavorPeriodStatus()
+                                    : dateDisplayMode === 'agingDays'
+                                    ? getAgingDaysText(bean.roastDate)
+                                    : formatDateShort(bean.roastDate)
+                                }
                                 {((bean.capacity && bean.remaining) || (bean.price && bean.capacity)) && (
                                     <span className="mx-2 text-neutral-400 dark:text-neutral-600">·</span>
                                 )}
-                            </>
+                            </span>
                         )}
 
                         {bean.capacity && bean.remaining && (
-                            <>
-                                <span className="shrink-0">
-                                    <span className="border-dashed border-b border-neutral-400 dark:border-neutral-600">
-                                        {formatNumber(bean.remaining)}
-                                    </span>
-                                    /{formatNumber(bean.capacity)}克
+                            <span className="inline">
+                                <span className="border-dashed border-b border-neutral-400 dark:border-neutral-600">
+                                    {formatNumber(bean.remaining)}
                                 </span>
+                                /{formatNumber(bean.capacity)}克
                                 {bean.price && bean.capacity && <span className="mx-2 text-neutral-400 dark:text-neutral-600">·</span>}
-                            </>
+                            </span>
                         )}
 
                         {bean.price && bean.capacity && (
-                            <span className="shrink-0">{formatPrice(bean.price, bean.capacity)}</span>
+                            <span className="inline">{formatPrice(bean.price, bean.capacity)}</span>
                         )}
                     </div>
                 </div>

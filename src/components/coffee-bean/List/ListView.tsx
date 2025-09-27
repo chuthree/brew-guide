@@ -267,15 +267,15 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
                         </div>
 
                         {/* 右侧内容区域 - 与图片等高 */}
-                        <div className="flex-1 min-w-0 flex flex-col justify-center gap-y-1.5 h-14">
+                        <div className="flex flex-col justify-center gap-y-1.5 ">
                             {/* 选项名称 */}
                             <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100 leading-tight line-clamp-2 text-justify">
                                 不使用咖啡豆
                             </div>
 
                             {/* 描述信息 */}
-                            <div className="flex items-center text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
-                                <span className="shrink-0">跳过咖啡豆选择</span>
+                            <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400 leading-relaxed">
+                                <span className="inline">跳过咖啡豆选择</span>
                             </div>
                         </div>
                     </div>
@@ -416,7 +416,7 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
                                 </div>
 
                                 {/* 右侧内容区域 - 与图片等高 */}
-                                <div className="flex-1 min-w-0 flex flex-col justify-center gap-y-1.5 h-14">
+                                <div className="flex flex-col justify-center gap-y-1.5 ">
                                     {/* 咖啡豆名称和烘焙度 */}
                                     <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100 leading-tight line-clamp-2 text-justify">
                                         {bean.name}
@@ -425,10 +425,10 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
                                     </div>
 
                                     {/* 其他信息 */}
-                                    <div className="flex items-center text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
+                                    <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400 leading-relaxed">
                                         {infoItems.map((item, i) => (
                                             <React.Fragment key={i}>
-                                                <span className="shrink-0">{item}</span>
+                                                <span className="inline">{item}</span>
                                                 {i < infoItems.length - 1 && (
                                                     <span className="mx-2 text-neutral-400 dark:text-neutral-600">·</span>
                                                 )}

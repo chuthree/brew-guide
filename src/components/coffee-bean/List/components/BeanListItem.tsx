@@ -262,39 +262,35 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                             {isEmpty && <span className="text-neutral-500 dark:text-neutral-400 font-normal">（已用完）</span>}
                         </div>
 
-                        <div className="flex items-center text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
+                        <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400 leading-relaxed">
                             {bean.roastDate && !bean.isInTransit && (
-                                <>
-                                    <span className="shrink-0">
-                                        {dateDisplayMode === 'flavorPeriod'
-                                            ? flavorInfo.status
-                                            : dateDisplayMode === 'agingDays'
-                                            ? getAgingDaysText(bean.roastDate)
-                                            : formatDateShort(bean.roastDate)
-                                        }
-                                    </span>
+                                <span className="inline">
+                                    {dateDisplayMode === 'flavorPeriod'
+                                        ? flavorInfo.status
+                                        : dateDisplayMode === 'agingDays'
+                                        ? getAgingDaysText(bean.roastDate)
+                                        : formatDateShort(bean.roastDate)
+                                    }
                                     {((bean.capacity && bean.remaining) || (bean.price && bean.capacity)) && (
                                         <span className="mx-2 text-neutral-400 dark:text-neutral-600">·</span>
                                     )}
-                                </>
+                                </span>
                             )}
 
                             {bean.capacity && bean.remaining && (
-                                <>
-                                    <span className="shrink-0">
-                                        <span onClick={(e) => onRemainingClick(bean, e)} className="cursor-pointer" data-click-area="remaining-edit">
-                                            <span className="border-dashed border-b border-neutral-400 dark:border-neutral-600 transition-colors">
-                                                {formatNumber(bean.remaining)}
-                                            </span>
-                                            /{formatNumber(bean.capacity)}克
+                                <span className="inline">
+                                    <span onClick={(e) => onRemainingClick(bean, e)} className="cursor-pointer" data-click-area="remaining-edit">
+                                        <span className="border-dashed border-b border-neutral-400 dark:border-neutral-600 transition-colors">
+                                            {formatNumber(bean.remaining)}
                                         </span>
+                                        /{formatNumber(bean.capacity)}克
                                     </span>
                                     {bean.price && bean.capacity && <span className="mx-2 text-neutral-400 dark:text-neutral-600">·</span>}
-                                </>
+                                </span>
                             )}
 
                             {bean.price && bean.capacity && (
-                                <span className="shrink-0">{formatPrice(bean.price, bean.capacity)}</span>
+                                <span className="inline">{formatPrice(bean.price, bean.capacity)}</span>
                             )}
                         </div>
                     </div>
