@@ -354,7 +354,7 @@ const BeanSearchModal: React.FC<BeanSearchModalProps> = ({
     }, [isOpen, resetSearch]);
 
     // 工具函数 - 与 BeanListItem 保持一致
-    const generateBeanTitle = (bean: CoffeeBean, showOnlyName: boolean = false): string => {
+    const generateBeanTitle = useCallback((bean: CoffeeBean, showOnlyName: boolean = false): string => {
         if (showOnlyName) {
             return bean.name;
         }
@@ -372,12 +372,13 @@ const BeanSearchModal: React.FC<BeanSearchModalProps> = ({
         return additionalParams.length > 0
             ? `${bean.name} ${additionalParams.join(' ')}`
             : bean.name;
-    };
+    }, []);
 
-    const formatNumber = (value: string | undefined): string =>
-        !value ? '0' : (Number.isInteger(parseFloat(value)) ? Math.floor(parseFloat(value)).toString() : value);
+    const formatNumber = useCallback((value: string | undefined): string => {
+        return !value ? '0' : (Number.isInteger(parseFloat(value)) ? Math.floor(parseFloat(value)).toString() : value);
+    }, []);
 
-    const formatDateShort = (dateStr: string): string => {
+    const formatDateShort = useCallback((dateStr: string): string => {
         try {
             const timestamp = parseDateToTimestamp(dateStr);
             const date = new Date(timestamp);
@@ -386,9 +387,9 @@ const BeanSearchModal: React.FC<BeanSearchModalProps> = ({
         } catch {
             return dateStr;
         }
-    };
+    }, []);
 
-    const getAgingDaysText = (dateStr: string): string => {
+    const getAgingDaysText = useCallback((dateStr: string): string => {
         try {
             const timestamp = parseDateToTimestamp(dateStr);
             const roastDate = new Date(timestamp);
@@ -400,9 +401,9 @@ const BeanSearchModal: React.FC<BeanSearchModalProps> = ({
         } catch {
             return '养豆0天';
         }
-    };
+    }, []);
 
-    const formatPrice = (price: string, capacity: string): string => {
+    const formatPrice = useCallback((price: string, capacity: string): string => {
         const priceNum = parseFloat(price);
         const capacityNum = parseFloat(capacity.replace('g', ''));
         if (isNaN(priceNum) || isNaN(capacityNum) || capacityNum === 0) return '';
@@ -414,9 +415,9 @@ const BeanSearchModal: React.FC<BeanSearchModalProps> = ({
         } else {
             return `${pricePerGram}元/克`;
         }
-    };
+    }, [userSettings.showTotalPrice]);
 
-    const getStatusDotColor = (phase: string): string => {
+    const getStatusDotColor = useCallback((phase: string): string => {
         const colors = {
             '养豆期': 'bg-amber-400',
             '赏味期': 'bg-green-400',
@@ -425,9 +426,9 @@ const BeanSearchModal: React.FC<BeanSearchModalProps> = ({
             '冷冻': 'bg-cyan-400'
         };
         return colors[phase as keyof typeof colors] || 'bg-neutral-400';
-    };
+    }, []);
 
-    const getFlavorPeriodStatus = (flavorInfo: FlavorInfo): string => {
+    const getFlavorPeriodStatus = useCallback((flavorInfo: FlavorInfo): string => {
         const phase = flavorInfo.phase;
         const remainingDays = flavorInfo.remainingDays;
 
@@ -444,20 +445,20 @@ const BeanSearchModal: React.FC<BeanSearchModalProps> = ({
         } else {
             return '未知';
         }
-    };
+    }, []);
 
-    const getFullNotesContent = (bean: CoffeeBean) => {
+    const getFullNotesContent = useCallback((bean: CoffeeBean) => {
         if ((userSettings.showFlavorInfo as boolean) && bean.flavor?.length) {
             const flavorText = bean.flavor.join(' · ');
             return bean.notes ? `${flavorText}\n\n${bean.notes}` : flavorText;
         }
         return bean.notes || '';
-    };
+    }, [userSettings.showFlavorInfo]);
 
-    const getLineClampClass = (lines: number): string => {
+    const getLineClampClass = useCallback((lines: number): string => {
         const clampClasses = ['', 'line-clamp-1', 'line-clamp-2', 'line-clamp-3', 'line-clamp-4', 'line-clamp-5', 'line-clamp-6'];
         return clampClasses[lines] || 'line-clamp-3';
-    };
+    }, []);
 
     // 选择搜索结果
     const handleSelectSearchResult = useCallback((bean: CoffeeBean) => {
@@ -536,7 +537,19 @@ const BeanSearchModal: React.FC<BeanSearchModalProps> = ({
                 </div>
             </div>
         );
-    }, [userSettings, handleSelectSearchResult, getStatusDotColor, getFlavorPeriodStatus, getAgingDaysText, formatDateShort, formatNumber, formatPrice, getFullNotesContent, getLineClampClass]);
+    }, [
+        userSettings,
+        handleSelectSearchResult,
+        generateBeanTitle,
+        getStatusDotColor,
+        getFlavorPeriodStatus,
+        getAgingDaysText,
+        formatDateShort,
+        formatNumber,
+        formatPrice,
+        getFullNotesContent,
+        getLineClampClass
+    ]);
 
     return (
         <AnimatePresence>
