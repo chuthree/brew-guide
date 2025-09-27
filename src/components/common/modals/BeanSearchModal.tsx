@@ -774,8 +774,8 @@ const BeanSearchModal: React.FC<BeanSearchModalProps> = ({
                             
                             {/* 免责声明 - 更加低调的设计 */}
                             <div className="px-6 pt-16 pb-6">
-                                <p className="text-[10px] text-neutral-300 dark:text-neutral-600 text-center opacity-60">
-                                    数据来源于网络公开资源，仅供参考
+                                <p className="text-[10px] text-neutral-300 dark:text-neutral-600 text-center opacity-60 leading-relaxed">
+                                    数据来源于网络公开资源，仅供学习参考，如有异议请联系 <a href="mailto:chuthree@163.com" className="underline hover:opacity-80">chuthree@163.com</a>
                                 </p>
                             </div>
                         </div>
