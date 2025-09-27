@@ -476,7 +476,15 @@ const BeanSearchModal: React.FC<BeanSearchModalProps> = ({
             <div
                 key={`${keyPrefix}${index}`}
                 onClick={() => handleSelectSearchResult(bean)}
-                className="cursor-pointer"
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleSelectSearchResult(bean);
+                    }
+                }}
+                tabIndex={0}
+                role="button"
+                className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 rounded"
             >
                 <div className="flex gap-3">
                     <div className="relative self-start">
