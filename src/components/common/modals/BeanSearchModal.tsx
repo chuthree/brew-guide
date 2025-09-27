@@ -7,6 +7,11 @@ import { calculateFlavorInfo, type FlavorInfo } from '@/lib/utils/flavorPeriodUt
 import { parseDateToTimestamp } from '@/lib/utils/dateUtils'
 import type { CoffeeBean } from '@/types/app'
 
+// 常量定义，避免在每次渲染时重新创建
+const CACHE_DURATION = 30 * 60 * 1000; // 30分钟缓存
+const SESSION_CACHE_DURATION = 5 * 60 * 1000; // 5分钟会话缓存
+const PULL_THRESHOLD = 80; // 触发刷新的距离阈值
+
 interface BeanSearchModalProps {
     isOpen: boolean
     onClose: () => void
@@ -22,7 +27,7 @@ const BeanSearchModal: React.FC<BeanSearchModalProps> = ({
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState<CoffeeBean[]>([]);
     const [isSearching, setIsSearching] = useState(false);
-    const [searchCache, setSearchCache] = useState<Map<string, CoffeeBean[]>>(new Map());
+    const [_searchCache, setSearchCache] = useState<Map<string, CoffeeBean[]>>(new Map());
     
     // 全部咖啡豆数据
     const [allBeans, setAllBeans] = useState<CoffeeBean[]>([]);
@@ -31,15 +36,12 @@ const BeanSearchModal: React.FC<BeanSearchModalProps> = ({
     
     // 缓存相关
     const [lastOpenTime, setLastOpenTime] = useState<number | null>(null);
-    const CACHE_DURATION = 30 * 60 * 1000; // 30分钟缓存
-    const SESSION_CACHE_DURATION = 5 * 60 * 1000; // 5分钟会话缓存
     
     // 下拉刷新相关
     const [isPullRefreshing, setIsPullRefreshing] = useState(false);
     const [pullDistance, setPullDistance] = useState(0);
     const [touchStartY, setTouchStartY] = useState(0);
     const [isAtTop, setIsAtTop] = useState(true);
-    const PULL_THRESHOLD = 80; // 触发刷新的距离阈值
 
     // 获取用户设置
     const [userSettings, setUserSettings] = useState<Record<string, unknown>>({
@@ -189,7 +191,7 @@ const BeanSearchModal: React.FC<BeanSearchModalProps> = ({
         } finally {
             setIsLoadingAll(false);
         }
-    }, [CACHE_DURATION, SESSION_CACHE_DURATION, lastOpenTime]);
+    }, [lastOpenTime]); // 添加lastOpenTime依赖项
     
     // 初始化加载数据
     useEffect(() => {
@@ -206,7 +208,7 @@ const BeanSearchModal: React.FC<BeanSearchModalProps> = ({
             
             setLastOpenTime(now);
         }
-    }, [isOpen, allBeans.length, lastOpenTime, loadBeansData, SESSION_CACHE_DURATION]);
+    }, [isOpen, allBeans.length, loadBeansData, lastOpenTime]); // 添加lastOpenTime依赖项
 
     // 使用已加载的数据进行搜索（优化版本）
     const handleSearch = useCallback(async (query: string) => {
@@ -218,10 +220,13 @@ const BeanSearchModal: React.FC<BeanSearchModalProps> = ({
         const trimmedQuery = query.trim().toLowerCase();
         
         // 检查搜索缓存
-        if (searchCache.has(trimmedQuery)) {
-            setSearchResults(searchCache.get(trimmedQuery)!);
-            return;
-        }
+        setSearchCache(currentCache => {
+            if (currentCache.has(trimmedQuery)) {
+                setSearchResults(currentCache.get(trimmedQuery)!);
+                return currentCache;
+            }
+            return currentCache;
+        });
 
         setIsSearching(true);
         
@@ -240,16 +245,18 @@ const BeanSearchModal: React.FC<BeanSearchModalProps> = ({
             );
             
             // 缓存搜索结果（限制缓存大小）
-            const newCache = new Map(searchCache);
-            if (newCache.size >= 50) {
-                // 清理最早的缓存项
-                const firstKey = newCache.keys().next().value;
-                if (firstKey) {
-                    newCache.delete(firstKey);
+            setSearchCache(currentCache => {
+                const newCache = new Map(currentCache);
+                if (newCache.size >= 50) {
+                    // 清理最早的缓存项
+                    const firstKey = newCache.keys().next().value;
+                    if (firstKey) {
+                        newCache.delete(firstKey);
+                    }
                 }
-            }
-            newCache.set(trimmedQuery, filteredResults);
-            setSearchCache(newCache);
+                newCache.set(trimmedQuery, filteredResults);
+                return newCache;
+            });
             
             setSearchResults(filteredResults);
         } catch (error) {
@@ -258,7 +265,7 @@ const BeanSearchModal: React.FC<BeanSearchModalProps> = ({
         } finally {
             setIsSearching(false);
         }
-    }, [allBeans, searchCache]);
+    }, [allBeans]);
 
     // 处理搜索输入变化（不再进行实时搜索）
     const handleSearchInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -305,13 +312,15 @@ const BeanSearchModal: React.FC<BeanSearchModalProps> = ({
         const deltaY = currentY - touchStartY;
         
         if (deltaY > 0) {
-            // 阻止默认滚动行为
-            e.preventDefault();
+            // 只有在需要时才阻止默认行为，并检查是否可以阻止
+            if (e.cancelable) {
+                e.preventDefault();
+            }
             // 计算下拉距离，添加阻尼效果
             const distance = Math.min(deltaY * 0.5, PULL_THRESHOLD * 1.5);
             setPullDistance(distance);
         }
-    }, [touchStartY, isAtTop, isPullRefreshing, PULL_THRESHOLD]);
+    }, [touchStartY, isAtTop, isPullRefreshing]); // PULL_THRESHOLD是外部常量，不需要依赖
 
     const handleTouchEnd = useCallback(() => {
         if (!isAtTop || isPullRefreshing) return;
@@ -321,7 +330,7 @@ const BeanSearchModal: React.FC<BeanSearchModalProps> = ({
         } else {
             setPullDistance(0);
         }
-    }, [isAtTop, isPullRefreshing, pullDistance, PULL_THRESHOLD, handleRefresh]);
+    }, [isAtTop, isPullRefreshing, pullDistance, handleRefresh]);
 
     // 监听滚动位置
     const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
