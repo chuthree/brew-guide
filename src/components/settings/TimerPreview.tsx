@@ -299,10 +299,10 @@ const TimerPreview: React.FC<TimerPreviewProps> = ({ settings }) => {
                     {/* 控制区域 */}
                     <div className={`flex items-center ${
                         controlsReversed ? "flex-row-reverse" : "flex-row"
-                    } justify-between`}>
+                    } justify-between gap-2 min-w-0`}>
                         <div className={`grid grid-cols-[auto_auto_auto] ${
-                            showFlowRate ? 'gap-4' : 'gap-8'
-                        }`}>
+                            showFlowRate ? 'gap-2 sm:gap-4' : 'gap-4 sm:gap-8'
+                        } flex-1 min-w-0 overflow-hidden`}>
                             {/* 时间显示 */}
                             <div className={`flex flex-col ${
                                 controlsReversed ? "items-end" : "items-start"
@@ -311,7 +311,7 @@ const TimerPreview: React.FC<TimerPreviewProps> = ({ settings }) => {
                                     时间
                                 </span>
                                 <div 
-                                    className={`text-xl font-light tracking-widest text-neutral-800 dark:text-neutral-100 timer-font min-w-[4ch] ${
+                                    className={`text-xl font-light tracking-widest text-neutral-800 dark:text-neutral-100 timer-font min-w-[3ch] ${
                                         controlsReversed ? "text-right" : "text-left"
                                     }`}
                                 >
@@ -327,7 +327,7 @@ const TimerPreview: React.FC<TimerPreviewProps> = ({ settings }) => {
                                     水量
                                 </span>
                                 <div
-                                    className={`text-xl font-light tracking-widest text-neutral-800 dark:text-neutral-100 timer-font min-w-[4ch] ${
+                                    className={`text-xl font-light tracking-widest text-neutral-800 dark:text-neutral-100 timer-font min-w-[3ch] ${
                                         controlsReversed ? "text-right" : "text-left"
                                     }`}
                                 >
@@ -345,7 +345,7 @@ const TimerPreview: React.FC<TimerPreviewProps> = ({ settings }) => {
                                         流速
                                     </span>
                                     <div
-                                        className={`text-xl font-light tracking-widest text-neutral-800 dark:text-neutral-100 timer-font min-w-[3ch] ${
+                                        className={`text-xl font-light tracking-widest text-neutral-800 dark:text-neutral-100 timer-font min-w-[2.5ch] ${
                                             controlsReversed ? "text-right" : "text-left"
                                         }`}
                                     >
@@ -356,13 +356,13 @@ const TimerPreview: React.FC<TimerPreviewProps> = ({ settings }) => {
                         </div>
 
                         {/* 控制按钮 */}
-                        <div className={`flex items-center ${
+                        <div className={`flex items-center flex-shrink-0 ${
                             controlsReversed
-                                ? "flex-row-reverse space-x-4 space-x-reverse"
-                                : "flex-row space-x-4"
+                                ? "flex-row-reverse space-x-3 space-x-reverse"
+                                : "flex-row space-x-3"
                         }`}>
                             <button
-                                className={`${showFlowRate ? 'w-10 h-10' : 'w-12 h-12'} flex items-center justify-center rounded-full bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400`}
+                                className={`${showFlowRate ? 'w-11 h-11 sm:w-12 sm:h-12' : 'w-12 h-12 sm:w-14 sm:h-14'} flex-shrink-0 flex items-center justify-center rounded-full bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400`}
                             >
                                 <svg
                                     xmlns="http://www.w3.org/2000/svg"
@@ -370,7 +370,7 @@ const TimerPreview: React.FC<TimerPreviewProps> = ({ settings }) => {
                                     viewBox="0 0 24 24"
                                     strokeWidth={1.5}
                                     stroke="currentColor"
-                                    className={`${showFlowRate ? 'w-4 h-4' : 'w-5 h-5'}`}
+                                    className={`${showFlowRate ? 'w-4 h-4 sm:w-5 sm:h-5' : 'w-5 h-5 sm:w-6 sm:h-6'}`}
                                 >
                                     <path
                                         strokeLinecap="round"
@@ -380,7 +380,7 @@ const TimerPreview: React.FC<TimerPreviewProps> = ({ settings }) => {
                                 </svg>
                             </button>
                             <button
-                                className={`${showFlowRate ? 'w-10 h-10' : 'w-12 h-12'} flex items-center justify-center rounded-full bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400`}
+                                className={`${showFlowRate ? 'w-11 h-11 sm:w-12 sm:h-12' : 'w-12 h-12 sm:w-14 sm:h-14'} flex-shrink-0 flex items-center justify-center rounded-full bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400`}
                             >
                                 <svg
                                     xmlns="http://www.w3.org/2000/svg"
@@ -388,7 +388,7 @@ const TimerPreview: React.FC<TimerPreviewProps> = ({ settings }) => {
                                     viewBox="0 0 24 24"
                                     strokeWidth={1.5}
                                     stroke="currentColor"
-                                    className={`${showFlowRate ? 'w-4 h-4' : 'w-5 h-5'}`}
+                                    className={`${showFlowRate ? 'w-4 h-4 sm:w-5 sm:h-5' : 'w-5 h-5 sm:w-6 sm:h-6'}`}
                                 >
                                     <path
                                         strokeLinecap="round"

@@ -1134,7 +1134,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
   return (
     <>
       <div
-        className="px-6 sticky bottom-0 bg-neutral-50 pt-6 dark:bg-neutral-900 pb-safe-bottom"
+        className="px-6 bottom-0 bg-neutral-50 pt-6 dark:bg-neutral-900 pb-safe-bottom"
       >
         {/* 添加设置点和边框 */}
         <div className="absolute top-0 left-0 right-0 flex items-center justify-center">
@@ -1610,14 +1610,14 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         <div
           className={`flex items-center ${
             localLayoutSettings.controlsReversed ? "flex-row-reverse" : "flex-row"
-          } justify-between`}
+          } justify-between gap-2 min-w-0`}
         >
           <div
             className={`grid ${
               localLayoutSettings.controlsReversed
-                ? `grid-cols-[auto_auto_auto] ${localShowFlowRate ? 'gap-4' : 'gap-8'}`
-                : `grid-cols-[auto_auto_auto] ${localShowFlowRate ? 'gap-4' : 'gap-8'}`
-            }`}
+                ? `grid-cols-[auto_auto_auto] ${localShowFlowRate ? 'gap-2 sm:gap-4' : 'gap-4 sm:gap-8'}`
+                : `grid-cols-[auto_auto_auto] ${localShowFlowRate ? 'gap-2 sm:gap-4' : 'gap-4 sm:gap-8'}`
+            } flex-1 min-w-0 overflow-hidden`}
           >
             <div
               className={`flex flex-col ${
@@ -1636,7 +1636,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
                       transition={{ duration: 0.26 }}
-                      className={`timer-font min-w-[4ch] ${
+                      className={`timer-font min-w-[3ch] ${
                         localLayoutSettings.controlsReversed
                           ? "text-right"
                           : "text-left"
@@ -1657,7 +1657,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
                       transition={{ duration: 0.26 }}
-                      className={`timer-font min-w-[4ch] ${
+                      className={`timer-font min-w-[3ch] ${
                         localLayoutSettings.controlsReversed
                           ? "text-right"
                           : "text-left"
@@ -1686,7 +1686,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
               </span>
               <div className="text-2xl font-light tracking-widest text-neutral-800 sm:text-3xl dark:text-neutral-100">
                 <motion.div
-                  className={`timer-font min-w-[4ch] ${
+                  className={`timer-font min-w-[3ch] ${
                     localLayoutSettings.controlsReversed ? "text-right" : "text-left"
                   } transform-gpu`}
                   animate={{
@@ -1723,7 +1723,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                 </span>
                 <div className="text-2xl font-light tracking-widest text-neutral-800 sm:text-3xl dark:text-neutral-100">
                   <motion.div
-                    className={`timer-font min-w-[3ch] ${
+                    className={`timer-font min-w-[2.5ch] ${
                       localLayoutSettings.controlsReversed ? "text-right" : "text-left"
                     } transform-gpu`}
                     animate={{
@@ -1749,15 +1749,15 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
           </div>
 
           <div
-            className={`flex items-center ${
+            className={`flex items-center flex-shrink-0 ${
               localLayoutSettings.controlsReversed
-                ? "flex-row-reverse space-x-4 space-x-reverse"
-                : "flex-row space-x-4"
+                ? "flex-row-reverse space-x-3 space-x-reverse"
+                : "flex-row space-x-3"
             }`}
           >
             <motion.button
               onClick={isRunning ? pauseTimer : startTimer}
-              className={`${localShowFlowRate ? 'w-12 h-12' : 'w-14 h-14'} flex items-center justify-center rounded-full bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400 transform-gpu`}
+              className={`${localShowFlowRate ? 'w-11 h-11 sm:w-12 sm:h-12' : 'w-12 h-12 sm:w-14 sm:h-14'} flex-shrink-0 flex items-center justify-center rounded-full bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400 transform-gpu`}
               whileTap={{ scale: 0.95 }}
               transition={{ duration: 0.1, ease: [0.4, 0, 0.2, 1] }}
               style={{
@@ -1774,7 +1774,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                   viewBox="0 0 24 24"
                   strokeWidth={1.5}
                   stroke="currentColor"
-                  className={`${localShowFlowRate ? 'w-5 h-5' : 'w-6 h-6'}`}
+                  className={`${localShowFlowRate ? 'w-4 h-4 sm:w-5 sm:h-5' : 'w-5 h-5 sm:w-6 sm:h-6'}`}
                 >
                   <path
                     strokeLinecap="round"
@@ -1789,7 +1789,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                   viewBox="0 0 24 24"
                   strokeWidth={1.5}
                   stroke="currentColor"
-                  className={`${localShowFlowRate ? 'w-5 h-5' : 'w-6 h-6'}`}
+                  className={`${localShowFlowRate ? 'w-4 h-4 sm:w-5 sm:h-5' : 'w-5 h-5 sm:w-6 sm:h-6'}`}
                 >
                   <path
                     strokeLinecap="round"
@@ -1805,7 +1805,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                   ? handleSkip // 初始状态：跳过到记录页面
                   : resetTimer // 非初始状态：重置计时器
               }
-              className={`${localShowFlowRate ? 'w-12 h-12' : 'w-14 h-14'} flex items-center justify-center rounded-full bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400 transform-gpu`}
+              className={`${localShowFlowRate ? 'w-11 h-11 sm:w-12 sm:h-12' : 'w-12 h-12 sm:w-14 sm:h-14'} flex-shrink-0 flex items-center justify-center rounded-full bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400 transform-gpu`}
               whileTap={{ scale: 0.95 }}
               transition={{ duration: 0.1, ease: [0.4, 0, 0.2, 1] }}
               style={{
@@ -1824,7 +1824,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                   viewBox="0 0 24 24"
                   strokeWidth={1.5}
                   stroke="currentColor"
-                  className={`${localShowFlowRate ? 'w-5 h-5' : 'w-6 h-6'}`}
+                  className={`${localShowFlowRate ? 'w-4 h-4 sm:w-5 sm:h-5' : 'w-5 h-5 sm:w-6 sm:h-6'}`}
                 >
                   <path
                     strokeLinecap="round"
@@ -1840,7 +1840,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                   viewBox="0 0 24 24"
                   strokeWidth={1.5}
                   stroke="currentColor"
-                  className={`${localShowFlowRate ? 'w-5 h-5' : 'w-6 h-6'}`}
+                  className={`${localShowFlowRate ? 'w-4 h-4 sm:w-5 sm:h-5' : 'w-5 h-5 sm:w-6 sm:h-6'}`}
                 >
                   <path
                     strokeLinecap="round"
