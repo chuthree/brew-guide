@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { APP_VERSION, sponsorsList } from '@/lib/core/config'
 import hapticsUtils from '@/lib/ui/haptics'
 
@@ -14,7 +14,7 @@ import StockSettings from './StockSettings' // 导入新的组件
 import BeanSettings from './BeanSettings' // 导入新的组件
 import FlavorPeriodSettings from './FlavorPeriodSettings'
 import TimerSettings from './TimerSettings'
-import { motion, AnimatePresence } from 'framer-motion'
+import { AnimatePresence } from 'framer-motion'
 
 // 导入ButtonGroup组件
 import DisplaySettings from './DisplaySettings'
