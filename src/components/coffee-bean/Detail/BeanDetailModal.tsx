@@ -471,7 +471,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                             {bean?.image && (
                                 <div className="mb-4">
                                     <div className="bg-neutral-200/30 dark:bg-neutral-800/40 p-4 cursor-pointer flex justify-center">
-                                        <div className="h-32 relative rounded border border-neutral-200 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
+                                        <div className="h-32 relative bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
                                             {imageError ? (
                                                 <div className="absolute inset-0 flex items-center justify-center text-sm text-neutral-500 dark:text-neutral-400 px-8">加载失败</div>
                                             ) : (
