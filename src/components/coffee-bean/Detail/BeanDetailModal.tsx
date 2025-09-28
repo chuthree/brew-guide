@@ -36,16 +36,14 @@ const InfoGrid: React.FC<{
 }> = ({ items, className = '' }) => {
     if (items.length === 0) return null
 
-    const gridCols = items.length === 1 ? 'grid-cols-1' : 'grid-cols-2'
-
     return (
-        <div className={`grid gap-3 ${gridCols} ${className}`}>
+        <div className={`space-y-3 ${className}`}>
             {items.map((item) => (
-                <div key={item.key}>
-                    <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-0.5">
+                <div key={item.key} className="flex items-start">
+                    <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400 w-16 flex-shrink-0">
                         {item.label}
                     </div>
-                    <div className={`text-xs font-medium ${
+                    <div className={`text-xs font-medium ml-4 ${
                         item.type === 'status' && item.color ?
                         item.color :
                         'text-neutral-800 dark:text-neutral-100'
@@ -116,7 +114,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                 return formattedDate
             }
 
-            return `${formattedDate}\n(已养豆 ${daysSinceRoast} 天)`
+            return `${formattedDate} (已养豆 ${daysSinceRoast} 天)`
         } catch {
             return dateStr
         }
@@ -143,7 +141,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
             items.push({
                 key: 'inventory',
                 label: '容量',
-                value: `${formatNumber(bean.remaining)}/${formatNumber(bean.capacity)}克`,
+                value: `${formatNumber(bean.remaining)} / ${formatNumber(bean.capacity)} 克`,
                 type: 'normal'
             })
         }
@@ -160,7 +158,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
             items.push({
                 key: 'price',
                 label: '价格',
-                value: `${totalPrice}元(${pricePerGram}元/克)`,
+                value: `${totalPrice} 元 (${pricePerGram} 元/克)`,
                 type: 'normal'
             })
         }
@@ -410,162 +408,170 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.265 }}
-                    className="fixed inset-0 z-50 bg-black/30 backdrop-blur-xs"
+                    className="fixed inset-0 z-50 bg-neutral-50 dark:bg-neutral-900"
                     onClick={handleClose}
                 >
                     <motion.div
-                        initial={{ y: '100%' }}
-                        animate={{ y: 0 }}
-                        exit={{ y: '100%' }}
+                        initial={{ x: "100%" }}
+                        animate={{ x: 0 }}
+                        exit={{ x: "100%" }}
                         transition={{
-                            type: "tween",
-                            ease: [0.33, 1, 0.68, 1], // cubic-bezier(0.33, 1, 0.68, 1) - easeOutCubic
-                            duration: 0.265
+                            duration: 0.35,
+                            ease: [0.36, 0.66, 0.04, 1]
                         }}
                         style={{
                             willChange: "transform"
                         }}
-                        className="absolute inset-x-0 bottom-0 max-w-[500px] mx-auto max-h-[90vh] overflow-hidden rounded-t-2xl bg-neutral-50 dark:bg-neutral-900 shadow-xl"
+                        className="absolute inset-0 max-w-[500px] mx-auto overflow-hidden bg-neutral-50 dark:bg-neutral-900 flex flex-col"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        {/* 拖动条 */}
-                        <div className="sticky top-0 z-10 flex justify-center py-2 bg-neutral-50 dark:bg-neutral-900">
-                            <div className="h-1.5 w-12 rounded-full bg-neutral-200 dark:bg-neutral-700" />
+                        {/* 顶部按钮栏 */}
+                        <div className="sticky top-0 z-10 flex justify-between items-center pt-safe-top p-4 bg-neutral-50 dark:bg-neutral-900">
+                            {/* 左侧关闭按钮 */}
+                            <button
+                                onClick={handleClose}
+                                className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors flex items-center justify-center"
+                            >
+                                <svg className="w-4 h-4 text-neutral-600 dark:text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                            
+                            {/* 右侧操作按钮 */}
+                            <div className="flex items-center">
+                                {/* 前往按钮 */}
+                                {bean && (
+                                    <ActionMenu
+                                        items={[
+                                            { id: 'brewing', label: '去冲煮', onClick: handleGoToBrewing, color: 'default' as const },
+                                            { id: 'notes', label: '去记录', onClick: handleGoToNotes, color: 'default' as const }
+                                        ]}
+                                        triggerClassName="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors mr-3"
+                                        triggerChildren={<ArrowRight className="h-4 w-4 text-neutral-600 dark:text-neutral-400" />}
+                                    />
+                                )}
+                                
+                                {/* 原有的操作按钮 */}
+                                {bean && (onEdit || onShare || onDelete) && (
+                                    <ActionMenu
+                                        items={[
+                                            ...(onEdit ? [{ id: 'edit', label: '编辑', onClick: () => { onEdit(bean); handleClose(); }, color: 'default' as const }] : []),
+                                            ...(onShare ? [{ id: 'share', label: '分享', onClick: () => { onShare(bean); handleClose(); }, color: 'default' as const }] : []),
+                                            ...(onDelete ? [{ id: 'delete', label: '删除', onClick: () => { onDelete(bean); handleClose(); }, color: 'danger' as const }] : [])
+                                        ]}
+                                        triggerClassName="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+                                    />
+                                )}
+                            </div>
                         </div>
 
                         {/* 内容区域 */}
-                        <motion.div
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{
-                                type: "tween",
-                                ease: "easeOut",
-                                duration: 0.265,
-                                delay: 0.05
-                            }}
-                            style={{
-                                willChange: "opacity, transform"
-                            }}
-                            className="px-6 pb-safe-bottom overflow-auto max-h-[calc(85vh-40px)]"
-                        >
-                            {/* 标题和操作栏 */}
-                            <div className="flex items-center justify-between py-4 border-b border-neutral-200/60 dark:border-neutral-800/40 mb-4">
-                                <h2 className="text-base font-medium text-neutral-800 dark:text-neutral-100 truncate flex-1">
+                        <div className="pb-safe-bottom overflow-auto flex-1">
+                            {/* 图片区域 */}
+                            {bean?.image && (
+                                <div className="mb-4">
+                                    <div className="bg-neutral-200/30 dark:bg-neutral-800/40 p-4 cursor-pointer flex justify-center">
+                                        <div className="h-32 relative rounded border border-neutral-200 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
+                                            {imageError ? (
+                                                <div className="absolute inset-0 flex items-center justify-center text-sm text-neutral-500 dark:text-neutral-400 px-8">加载失败</div>
+                                            ) : (
+                                                <Image 
+                                                    src={bean.image} 
+                                                    alt={bean.name || '咖啡豆图片'} 
+                                                    height={192}
+                                                    width={192}
+                                                    className="object-cover h-full w-auto" 
+                                                    onError={() => setImageError(true)}
+                                                    onClick={() => {
+                                                        if (!imageError) {
+                                                            setCurrentImageUrl(bean.image || '')
+                                                            setImageViewerOpen(true)
+                                                        }
+                                                    }}
+                                                />
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                            
+                            {/* 标题区域 */}
+                            <div className="px-6 mb-4">
+                                <h2 className="text-sm font-medium text-neutral-800 dark:text-neutral-100">
                                     {searchQuery ? (
                                         <HighlightText text={bean?.name || '未命名'} highlight={searchQuery} />
                                     ) : (bean?.name || '未命名')}
                                 </h2>
-
-                                <div className="flex items-center">
-                                    {/* 前往按钮 */}
-                                    {bean && (
-                                        <ActionMenu
-                                            items={[
-                                                { id: 'brewing', label: '去冲煮', onClick: handleGoToBrewing, color: 'default' as const },
-                                                { id: 'notes', label: '去记录', onClick: handleGoToNotes, color: 'default' as const }
-                                            ]}
-                                            triggerClassName="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors mr-3"
-                                            triggerChildren={<ArrowRight className="h-4 w-4 text-neutral-600 dark:text-neutral-400" />}
-                                        />
-                                    )}
-                                    
-                                    {/* 原有的操作按钮 */}
-                                    {bean && (onEdit || onShare || onDelete) && (
-                                        <ActionMenu
-                                            items={[
-                                                ...(onEdit ? [{ id: 'edit', label: '编辑', onClick: () => { onEdit(bean); handleClose(); }, color: 'default' as const }] : []),
-                                                ...(onShare ? [{ id: 'share', label: '分享', onClick: () => { onShare(bean); handleClose(); }, color: 'default' as const }] : []),
-                                                ...(onDelete ? [{ id: 'delete', label: '删除', onClick: () => { onDelete(bean); handleClose(); }, color: 'danger' as const }] : [])
-                                            ]}
-                                            triggerClassName="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
-                                        />
-                                    )}
-                                </div>
                             </div>
 
                             {bean ? (
-                                <div className="space-y-4">
-                                    <div className="flex gap-4 pb-3 border-b border-neutral-200/40 dark:border-neutral-800/40">
-                                        {bean.image && (
-                                            <div className="w-16 h-16 relative rounded border border-neutral-200 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800 overflow-hidden flex-shrink-0">
-                                                {imageError ? (
-                                                    <div className="absolute inset-0 flex items-center justify-center text-xs text-neutral-500 dark:text-neutral-400">失败</div>
-                                                ) : (
-                                                    <Image src={bean.image} alt={bean.name || '咖啡豆图片'} fill className="object-cover" onError={() => setImageError(true)} />
-                                                )}
+                                <div className="px-6 space-y-4">
+                                    {/* 咖啡豆信息 */}
+                                    <div className="space-y-3">
+                                        {/* 基础信息 */}
+                                        <InfoGrid items={getBasicInfoItems()} />
+                                        
+                                        {/* 产地信息（单品豆时显示）*/}
+                                        {(() => {
+                                            const originItems = getOriginInfoItems()
+                                            const isMultipleBlend = bean?.blendComponents && bean.blendComponents.length > 1
+                                            return originItems.length > 0 && !isMultipleBlend && (
+                                                <InfoGrid items={originItems} />
+                                            )
+                                        })()}
+
+                                        {/* 拼配成分（拼配豆时显示）*/}
+                                        {bean?.blendComponents && bean.blendComponents.length > 1 && (
+                                            <div className="flex items-start">
+                                                <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400 w-16 flex-shrink-0">拼配成分</div>
+                                                <div className="space-y-2 ml-4">
+                                                    {bean.blendComponents.map((comp: { origin?: string; variety?: string; process?: string; percentage?: number }, index: number) => {
+                                                        const parts = [comp.origin, comp.variety, comp.process].filter(Boolean)
+                                                        const displayText = parts.length > 0 ? parts.join(' · ') : `组成 ${index + 1}`
+
+                                                        return (
+                                                            <div key={index} className="flex items-center gap-2">
+                                                                <span className="text-xs font-medium text-neutral-800 dark:text-neutral-100">{displayText}</span>
+                                                                {comp.percentage !== undefined && comp.percentage !== null && (
+                                                                    <span className="text-xs font-medium text-neutral-600 dark:text-neutral-400">{comp.percentage}%</span>
+                                                                )}
+                                                            </div>
+                                                        )
+                                                    })}
+                                                </div>
                                             </div>
                                         )}
-                                        <div className="flex-1 min-w-0">
-                                            <InfoGrid items={getBasicInfoItems()} />
-                                        </div>
-                                    </div>
 
-                                    {(() => {
-                                        const originItems = getOriginInfoItems()
-                                        const isMultipleBlend = bean?.blendComponents && bean.blendComponents.length > 1
-                                        return originItems.length > 0 && !isMultipleBlend && (
-                                            <div className="space-y-2">
-                                                <InfoGrid items={originItems} />
+                                        {/* 风味 */}
+                                        {bean.flavor && bean.flavor.length > 0 && (
+                                            <div className="flex items-start">
+                                                <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400 w-16 flex-shrink-0">风味</div>
+                                                <div className="flex flex-wrap gap-1 ml-4">
+                                                    {bean.flavor.map((flavor: string, index: number) => (
+                                                        <span key={index} className="px-1.5 py-0.5 bg-neutral-100 dark:bg-neutral-800 text-xs font-medium text-neutral-700 dark:text-neutral-300">
+                                                            {flavor}
+                                                        </span>
+                                                    ))}
+                                                </div>
                                             </div>
-                                        )
-                                    })()}
+                                        )}
 
-                                    {(() => {
-                                        const isMultipleBlend = bean?.blendComponents && bean.blendComponents.length > 1
-                                        const hasContent = isMultipleBlend || (bean?.flavor && bean.flavor.length > 0) || bean?.notes
-                                        return hasContent && (
-                                            <div className="space-y-3">
-                                                {isMultipleBlend && (
-                                                <div>
-                                                    <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-1.5">拼配成分</div>
-                                                    <div className="space-y-2">
-                                                        {bean.blendComponents!.map((comp: { origin?: string; variety?: string; process?: string; percentage?: number }, index: number) => {
-                                                            const parts = [comp.origin, comp.variety, comp.process].filter(Boolean)
-                                                            const displayText = parts.length > 0 ? parts.join(' · ') : `组成 ${index + 1}`
-
-                                                            return (
-                                                                <div key={index} className="flex items-center gap-2">
-                                                                    <span className="text-xs font-medium text-neutral-800 dark:text-neutral-100">{displayText}</span>
-                                                                    {comp.percentage !== undefined && comp.percentage !== null && (
-                                                                        <span className="text-xs font-medium text-neutral-600 dark:text-neutral-400">{comp.percentage}%</span>
-                                                                    )}
-                                                                </div>
-                                                            )
-                                                        })}
-                                                    </div>
+                                        {/* 备注 */}
+                                        {bean.notes && (
+                                            <div className="flex items-start">
+                                                <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400 w-16 flex-shrink-0">备注</div>
+                                                <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100 leading-relaxed whitespace-pre-line ml-4">
+                                                    {searchQuery ? (
+                                                        <HighlightText text={bean.notes} highlight={searchQuery} className="text-neutral-700 dark:text-neutral-300" />
+                                                    ) : bean.notes}
                                                 </div>
-                                            )}
-
-                                            {bean.flavor && bean.flavor.length > 0 && (
-                                                <div>
-                                                    <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-1.5">风味</div>
-                                                    <div className="flex flex-wrap gap-1">
-                                                        {bean.flavor.map((flavor: string, index: number) => (
-                                                            <span key={index} className="px-1.5 py-0.5 bg-neutral-100 dark:bg-neutral-800 text-xs font-medium text-neutral-700 dark:text-neutral-300">
-                                                                {flavor}
-                                                            </span>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {bean.notes && (
-                                                <div>
-                                                    <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-1.5">备注</div>
-                                                    <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100 leading-relaxed whitespace-pre-line">
-                                                        {searchQuery ? (
-                                                            <HighlightText text={bean.notes} highlight={searchQuery} className="text-neutral-700 dark:text-neutral-300" />
-                                                        ) : bean.notes}
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                        )
-                                    })()}
+                                            </div>
+                                        )}
+                                    </div>
 
                                     {/* 相关冲煮记录 - 简化布局 */}
                                     <div className="border-t border-neutral-200/40 dark:border-neutral-800/40 pt-3">
-                                        <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-2">
+                                        <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-2">
                                             冲煮记录 {relatedNotes.length > 0 && `(${relatedNotes.length})`}
                                         </div>
 
@@ -800,7 +806,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                     </div>
                                 </div>
                             ) : null}
-                        </motion.div>
+                        </div>
                     </motion.div>
                 </motion.div>
             )}
