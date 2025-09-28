@@ -53,6 +53,7 @@ import { toPng } from 'html-to-image'
 import { useToast } from '@/components/common/feedback/GlobalToast'
 import { exportStatsView } from './components/StatsView/StatsExporter'
 import { TempFileManager } from '@/lib/utils/tempFileManager'
+import { exportListPreview } from './components/ListExporter'
 
 // 重命名导入组件以避免混淆
 const CoffeeBeanRanking = _CoffeeBeanRanking;
@@ -101,6 +102,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     const [selectedVariety, setSelectedVariety] = useState<string | null>(globalCache.selectedVariety)
     const [selectedBeanType, setSelectedBeanType] = useState<BeanType>(globalCache.selectedBeanType)
     const [showEmptyBeans, setShowEmptyBeans] = useState<boolean>(globalCache.showEmptyBeans)
+
+    // 备注展开状态管理 - 记录每个咖啡豆的备注是否展开
+    const [expandedNotes, setExpandedNotes] = useState<Record<string, boolean>>({})
 
     // 新增分类相关状态
     const [filterMode, setFilterMode] = useState<BeanFilterMode>(globalCache.filterMode)
@@ -643,6 +647,14 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         }
     };
 
+    // 处理备注展开状态切换
+    const handleNotesExpandToggle = useCallback((beanId: string, expanded: boolean) => {
+        setExpandedNotes(prev => ({
+            ...prev,
+            [beanId]: expanded
+        }));
+    }, []);
+
     // 计算可用容量和总重量
     const calculateTotalWeight = () => {
         const totalWeight = filteredBeans
@@ -1041,6 +1053,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
 
     // 添加统计数据分享状态
     const [isExportingStats, setIsExportingStats] = useState(false)
+    const [isExportingPreview, setIsExportingPreview] = useState(false)
 
     // 处理统计数据分享
     const handleStatsShare = async () => {
@@ -1085,6 +1098,37 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
                 title: '生成图片失败'
             });
             setIsExportingStats(false);
+        }
+    };
+
+    // 处理预览图导出
+    const handleExportPreview = async () => {
+        if (isExportingPreview) return;
+        
+        setIsExportingPreview(true);
+        
+        try {
+            const result = await exportListPreview(
+                isSearching ? searchFilteredBeans : filteredBeans,
+                expandedNotes,
+                settings, // 传递用户的真实设置
+                {
+                    // 不添加标题和描述，保持简洁
+                }
+            );
+            
+            toast.showToast({
+                type: 'success',
+                title: result.message
+            });
+        } catch (error) {
+            console.error('导出预览图失败:', error);
+            toast.showToast({
+                type: 'error',
+                title: '生成预览图失败'
+            });
+        } finally {
+            setIsExportingPreview(false);
         }
     };
 
@@ -1235,6 +1279,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
                 availableFlavorPeriods={availableFlavorPeriods}
                 availableRoasters={availableRoasters}
                 originalTotalWeight={calculateOriginalTotalWeight()}
+                // 新增导出相关属性
+                onExportPreview={handleExportPreview}
             />
 
             {/* 内容区域 - 可滚动 */}
@@ -1260,6 +1306,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
                             isImageFlowMode={isImageFlowMode}
                             settings={settings}
                             scrollParentRef={inventoryScrollEl ?? undefined}
+                            expandedNotes={expandedNotes}
+                            onNotesExpandToggle={handleNotesExpandToggle}
                         />
                     </div>
                 )}

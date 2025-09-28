@@ -23,6 +23,9 @@ interface InventoryViewProps {
     isSearching?: boolean
     searchQuery?: string
     isImageFlowMode?: boolean
+    // 备注展开状态相关
+    expandedNotes?: Record<string, boolean>
+    onNotesExpandToggle?: (beanId: string, expanded: boolean) => void
     settings?: {
         dateDisplayMode?: 'date' | 'flavorPeriod' | 'agingDays'
         showOnlyBeanName?: boolean
@@ -49,6 +52,8 @@ const InventoryView: React.FC<InventoryViewProps> = ({
     isSearching = false,
     searchQuery = '',
     isImageFlowMode = false,
+    expandedNotes = {},
+    onNotesExpandToggle,
     settings,
     scrollParentRef
 }) => {
@@ -124,7 +129,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
     }
 
     return (
-        <div className="w-full h-full relative">
+        <div className="w-full h-full relative inventory-view-container">
             {filteredBeans.length === 0 ? (
                 <div className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
                     {searchQuery.trim() ?
@@ -166,6 +171,8 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                                         onRemainingClick={handleRemainingClick}
                                         onDetailClick={handleDetailClick}
                                         searchQuery={isSearching ? searchQuery : ''}
+                                        isNotesExpanded={expandedNotes[bean.id]}
+                                        onNotesExpandToggle={onNotesExpandToggle}
                                         settings={settings}
                                     />
                                 )}

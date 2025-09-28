@@ -22,6 +22,9 @@ interface BeanListItemProps {
     onRemainingClick: (bean: ExtendedCoffeeBean, event: React.MouseEvent) => void
     onDetailClick?: (bean: ExtendedCoffeeBean) => void
     searchQuery?: string
+    // 外部控制的备注展开状态
+    isNotesExpanded?: boolean
+    onNotesExpandToggle?: (beanId: string, expanded: boolean) => void
     settings?: {
         dateDisplayMode?: 'date' | 'flavorPeriod' | 'agingDays'
         showOnlyBeanName?: boolean
@@ -39,12 +42,17 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
     onRemainingClick,
     onDetailClick,
     searchQuery = '',
+    isNotesExpanded: externalNotesExpanded,
+    onNotesExpandToggle,
     settings
 }) => {
     // 状态管理
     const [imageViewerOpen, setImageViewerOpen] = useState(false);
     const [imageError, setImageError] = useState(false);
-    const [isNotesExpanded, setIsNotesExpanded] = useState(false);
+    const [internalNotesExpanded, setInternalNotesExpanded] = useState(false);
+
+    // 使用外部状态或内部状态
+    const isNotesExpanded = externalNotesExpanded !== undefined ? externalNotesExpanded : internalNotesExpanded;
 
     // 设置默认值
     const showOnlyBeanName = settings?.showOnlyBeanName ?? true;
@@ -196,7 +204,14 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
 
     const handleNotesClick = (e: React.MouseEvent) => {
         e.stopPropagation();
-        if (limitNotesLines) setIsNotesExpanded(!isNotesExpanded);
+        if (limitNotesLines) {
+            const newExpandedState = !isNotesExpanded;
+            if (onNotesExpandToggle) {
+                onNotesExpandToggle(bean.id, newExpandedState);
+            } else {
+                setInternalNotesExpanded(newExpandedState);
+            }
+        }
     };
 
     const getLineClampClass = (lines: number): string => {
@@ -208,6 +223,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
         <div
             className={`group ${isEmpty ? 'bg-neutral-100/60 dark:bg-neutral-800/30' : ''} ${onDetailClick ? 'cursor-pointer transition-colors' : ''}`}
             onClick={handleCardClick}
+            data-bean-item={bean.id}
         >
             <div className="flex gap-3">
                 <div className="relative self-start">

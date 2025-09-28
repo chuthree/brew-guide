@@ -271,6 +271,8 @@ interface ViewSwitcherProps {
     availableOrigins?: string[]
     availableFlavorPeriods?: FlavorPeriodStatus[]
     availableRoasters?: string[]
+    // 新增导出相关props
+    onExportPreview?: () => void
 }
 
 const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
@@ -320,6 +322,8 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
     availableOrigins = [],
     availableFlavorPeriods = [],
     availableRoasters = [],
+    // 新增导出相关参数
+    onExportPreview,
 }) => {
     // 添加极简模式状态
     const [_isMinimalistMode, setIsMinimalistMode] = useState(false);
@@ -1026,6 +1030,13 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                                                                 图片流
                                                             </FilterButton>
                                                         )}
+                                                        <span className="text-neutral-300/30 dark:text-neutral-600/50 mx-1">·</span>
+                                                        <FilterButton
+                                                            isActive={false}
+                                                            onClick={() => onExportPreview?.()}
+                                                        >
+                                                            导出预览图
+                                                        </FilterButton>
                                                     </div>
                                                 </div>
 
