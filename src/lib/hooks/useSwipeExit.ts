@@ -39,10 +39,10 @@ export const useSwipeExit = (options: SwipeExitOptions = {}) => {
   const touchStartTime = useRef<number>(0);
   const isEdgeSwipe = useRef<boolean>(false);
 
-  const resetSwipeCount = () => {
+  const resetSwipeCount = useCallback(() => {
     setSwipeCount(0);
     setShowExitHint(false);
-  };
+  }, []);
 
   const handleTouchStart = useCallback((event: TouchEvent) => {
     const touch = event.touches[0];
@@ -110,7 +110,7 @@ export const useSwipeExit = (options: SwipeExitOptions = {}) => {
     // 只在原生平台启用
     if (!Capacitor.isNativePlatform()) return;
 
-    let backButtonListener: any = null;
+    let backButtonListener: Awaited<ReturnType<typeof App.addListener>> | null = null;
 
     // 监听硬件返回键
     const setupBackButtonListener = async () => {
