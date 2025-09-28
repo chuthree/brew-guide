@@ -13,6 +13,10 @@ const config: CapacitorConfig = {
 		hostname: "app",
 	},
 	plugins: {
+		App: {
+			// 禁用 Capacitor 默认的返回键处理
+			disableBackButtonHandler: true,
+		},
 		SplashScreen: {
 			launchShowDuration: 2000,
 			launchAutoHide: true,
