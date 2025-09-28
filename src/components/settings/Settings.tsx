@@ -15,8 +15,6 @@ import BeanSettings from './BeanSettings' // 导入新的组件
 import FlavorPeriodSettings from './FlavorPeriodSettings'
 import TimerSettings from './TimerSettings'
 import { motion, AnimatePresence } from 'framer-motion'
-// 导入Lottie动画JSON文件
-import chuchuAnimation from '../../../public/animations/chuchu-animation.json'
 
 // 导入ButtonGroup组件
 import DisplaySettings from './DisplaySettings'
@@ -236,34 +234,10 @@ const Settings: React.FC<SettingsProps> = ({
     // 添加显示哪种二维码的状态
     const [qrCodeType, setQrCodeType] = useState<'appreciation' | 'group' | null>(null)
 
-    // 添加彩蛋动画状态
-    const [showEasterEgg, setShowEasterEgg] = useState(false)
-    const lottieRef = useRef<unknown>(null)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [LottieComponent, setLottieComponent] = useState<any>(null)
-
     // S3同步相关状态（仅用于同步按钮）
     const [s3Status, setS3Status] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected')
     const [isSyncing, setIsSyncing] = useState(false)
     const [isSyncNeeded, setIsSyncNeeded] = useState(false)
-
-    // 创建音效播放引用
-    const audioRef = useRef<HTMLAudioElement | null>(null)
-
-    // 初始化音频元素和Lottie组件
-    useEffect(() => {
-        // 仅在客户端创建音频元素
-        if (typeof window !== 'undefined') {
-            audioRef.current = new Audio('/sounds/notification-pings.mp3')
-
-            // 预加载Lottie组件
-            import('lottie-react').then(module => {
-                setLottieComponent(() => module.default)
-            })
-        }
-    }, [])
-
-
 
         // 通过 DataSettings 组件获取 S3 同步状态
     useEffect(() => {
@@ -386,44 +360,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
 
 
 
-    // 处理Lottie动画完成事件
-    const handleAnimationComplete = () => {
-        // 立即停止音频播放
-        if (audioRef.current) {
-            audioRef.current.pause()
-            audioRef.current.currentTime = 0
-        }
 
-        // 动画播放结束后关闭弹窗
-        setTimeout(() => {
-            setShowEasterEgg(false)
-        }, 500)
-    }
-
-    // 处理彩蛋动画 - 简化为一次点击即触发
-    const handleEasterEgg = () => {
-        if (showEasterEgg) return
-
-        setShowEasterEgg(true)
-
-        // 触发震动反馈
-        if (settings.hapticFeedback) {
-            hapticsUtils.medium()
-        }
-
-        // 播放音效
-        if (audioRef.current && settings.notificationSound) {
-            // 重置音频播放位置
-            audioRef.current.currentTime = 0
-            // 播放音效
-            audioRef.current.play().catch(err => {
-                // Log error in development only
-                if (process.env.NODE_ENV === 'development') {
-                    console.warn('音频播放失败:', err)
-                }
-            })
-        }
-    }
 
     // 如果不是打开状态，不渲染任何内容
     if (!isOpen) return null
@@ -780,60 +717,6 @@ const handleChange = async <K extends keyof SettingsOptions>(
                             GitHub
                         </a>
                     </p>
-
-                    {/* 添加彩蛋按钮 */}
-                    <div className="mt-8 flex justify-center">
-                        <button
-                            onClick={handleEasterEgg}
-                            className="opacity-30 hover:opacity-50 dark:opacity-20 dark:hover:opacity-40 transition-opacity duration-300 focus:outline-none"
-                            aria-label="Easter Egg"
-                        >
-                            <div className="w-0 h-0 border-l-[10px] border-r-[10px] border-t-[18px] border-l-transparent border-r-transparent border-t-neutral-400 dark:border-t-neutral-600" />
-                        </button>
-                    </div>
-
-                    {/* 彩蛋动画 - Lottie版本 */}
-                    <AnimatePresence>
-                        {showEasterEgg && typeof window !== 'undefined' && (
-                            <motion.div
-                                className="fixed inset-0 z-[100] flex items-center justify-center bg-black/20 dark:bg-black/40"
-                                initial={{ opacity: 0, backdropFilter: "blur(0px)" }}
-                                animate={{ opacity: 1, backdropFilter: "blur(3px)" }}
-                                exit={{ opacity: 0, backdropFilter: "blur(0px)" }}
-                                transition={{ duration: 0.4 }}
-                                onClick={() => setShowEasterEgg(false)}
-                            >
-                                <motion.div
-                                    className="relative w-32 h-32"
-                                    initial={{ scale: 0.5, y: 20, filter: "blur(8px)" }}
-                                    animate={{ scale: 1, y: 0, filter: "blur(0px)" }}
-                                    exit={{ scale: 0.8, y: 10, filter: "blur(8px)" }}
-                                    transition={{
-                                        type: "spring",
-                                        stiffness: 300,
-                                        damping: 20,
-                                        filter: { duration: 0.3 }
-                                    }}
-                                >
-                                    {/* Lottie动画 */}
-                                    {LottieComponent && (
-                                        <LottieComponent
-                                            lottieRef={lottieRef}
-                                            animationData={chuchuAnimation}
-                                            loop={false}
-                                            autoplay={true}
-                                            onComplete={handleAnimationComplete}
-                                            style={{ width: '100%', height: '100%' }}
-                                            rendererSettings={{
-                                                preserveAspectRatio: 'xMidYMid slice',
-                                                progressiveLoad: true
-                                            }}
-                                        />
-                                    )}
-                                </motion.div>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
                 </div>
             </div>
 
