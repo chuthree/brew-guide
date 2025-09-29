@@ -169,8 +169,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                 key: 'roastDate',
                 label: '状态',
                 value: '在途',
-                type: 'status',
-                color: 'text-blue-600 dark:text-blue-400'
+                type: 'normal'
             })
         } else if (bean?.roastDate) {
             items.push({
@@ -187,8 +186,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                 key: 'flavor',
                 label: '状态',
                 value: '冷冻',
-                type: 'status',
-                color: 'text-cyan-600 dark:text-cyan-400'
+                type: 'normal'
             })
         } else if (bean?.roastDate && !bean?.isInTransit) {
             items.push({
