@@ -182,7 +182,7 @@ export const availableGrinders: Grinder[] = [
 		法压壶: "104-160格", // 法压推荐1+44-2+0(104-160格)
 		冷萃: "130-160格", // 冷萃/冷滴1+66-2+0(130-160格)
 	}},
-	{ id: "1z_kultra", name: "1z KUltra", grindSizes: {
+	{ id: "1z_kultra", name: "1Z KUltra", grindSizes: {
 		极细: "2-3格", // 土耳其咖啡
 		特细: "3.5-5格", // 意式咖啡
 		细: "5-5.5格", // 摩卡壶
@@ -202,7 +202,7 @@ export const availableGrinders: Grinder[] = [
 		法压壶: "9-10格", // 法压壶
 		冷萃: "10格", // 冷萃
 	}},
-	{ id: "1z_zp6", name: "1Zpresso ZP6", grindSizes: {
+	{ id: "1z_zp6", name: "1Z ZP6", grindSizes: {
 		极细: "2-2.5格",   // 土耳其咖啡（理论可调，不推荐长期使用）
 		特细: "2.5-3.5格", // 意式咖啡（非最佳，出粉均匀度不及专用磨）
 		细: "3.5-4格",     // 摩卡壶
