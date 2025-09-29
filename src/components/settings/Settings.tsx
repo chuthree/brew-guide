@@ -713,6 +713,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                             href="https://github.com/chu3/brew-guide"
                             target="_blank"
                             rel="noopener noreferrer"
+                            className="underline"
                         >
                             GitHub
                         </a>
