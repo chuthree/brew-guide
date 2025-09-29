@@ -952,8 +952,11 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             }
 
             // 检查是否是咖啡豆数据类型，通过类型守卫确保安全访问属性
+            // 只要求有name字段，其他字段都是可选的
             const isCoffeeBean = (data: unknown): data is CoffeeBean =>
-                data !== null && typeof data === 'object' && 'roastLevel' in data;
+                data !== null && typeof data === 'object' && 'name' in data && 
+                typeof (data as Record<string, unknown>).name === 'string' &&
+                ((data as Record<string, unknown>).name as string).trim() !== '';
 
             // 检查是否是咖啡豆数组
             const isCoffeeBeanArray = (data: unknown): data is CoffeeBean[] =>
@@ -961,7 +964,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
             // 确保提取的数据是咖啡豆或咖啡豆数组
             if (!isCoffeeBean(extractedData) && !isCoffeeBeanArray(extractedData)) {
-                throw new Error('导入的数据不是有效的咖啡豆信息');
+                throw new Error('导入的数据不是有效的咖啡豆信息（缺少咖啡豆名称）');
             }
 
             const beansToImport = Array.isArray(extractedData) ? extractedData : [extractedData];
@@ -978,22 +981,40 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             try {
                 for (const beanData of beansToImport) {
                 // 将导入的咖啡豆转换为ExtendedCoffeeBean类型
-                const bean = {
-                    name: beanData.name,
-                    roastLevel: beanData.roastLevel || '浅度烘焙',
-                    capacity: beanData.capacity || '200',
-                    remaining: beanData.remaining || beanData.capacity || '200',
-                    price: beanData.price || '',
-                    roastDate: beanData.roastDate || '',
-                    flavor: beanData.flavor || [],
-                    notes: beanData.notes || '',
+                // 构建基础对象，只包含必填字段和确实有值的字段
+                const bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'> = {
+                    name: beanData.name, // 必填字段
+                    // 为了满足TypeScript类型要求，需要设置所有必需字段的默认值
+                    // 但在实际导入时，我们会过滤掉空值，保持数据严谨
+                    roastLevel: (beanData.roastLevel && beanData.roastLevel.trim()) || '',
+                    capacity: (beanData.capacity && beanData.capacity.toString().trim()) || '',
+                    remaining: '',
+                    price: (beanData.price && beanData.price.toString().trim()) || '',
+                    roastDate: (beanData.roastDate && beanData.roastDate.trim()) || '',
+                    flavor: (Array.isArray(beanData.flavor) && beanData.flavor.length > 0) ? beanData.flavor.filter(f => f && f.trim()) : [],
+                    notes: (beanData.notes && beanData.notes.trim()) || '',
+                };
 
-                    startDay: beanData.startDay,
-                    endDay: beanData.endDay
-                } as Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>;
+                // 特殊处理剩余量：优先使用remaining，如果没有但有capacity，则设置为capacity
+                if (beanData.remaining && beanData.remaining.toString().trim()) {
+                    bean.remaining = beanData.remaining.toString().trim();
+                } else if (bean.capacity) {
+                    bean.remaining = bean.capacity;
+                }
 
-                // 验证必要的字段
-                if (!bean.name) {
+                // 只在字段存在时才设置其他可选字段
+                if (beanData.startDay !== undefined) bean.startDay = beanData.startDay;
+                if (beanData.endDay !== undefined) bean.endDay = beanData.endDay;
+                if (beanData.image !== undefined) bean.image = beanData.image;
+                if (beanData.brand !== undefined) bean.brand = beanData.brand;
+                if (beanData.beanType !== undefined) bean.beanType = beanData.beanType;
+                if (beanData.overallRating !== undefined) bean.overallRating = beanData.overallRating;
+                if (beanData.ratingNotes !== undefined) bean.ratingNotes = beanData.ratingNotes;
+                if (beanData.isFrozen !== undefined) bean.isFrozen = beanData.isFrozen;
+                if (beanData.isInTransit !== undefined) bean.isInTransit = beanData.isInTransit;
+
+                // 验证必要的字段（只有名称是必填的）
+                if (!bean.name || bean.name.trim() === '') {
                     // 导入数据缺少咖啡豆名称，跳过
                     continue;
                 }
@@ -1042,10 +1063,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                     }
                 }
 
-                // 确保有beanType字段，默认为手冲
-                if (!bean.beanType) {
-                    bean.beanType = 'filter';
-                }
+                // beanType字段保持可选，不强制设置默认值
 
                     // 添加到数据库
                     const newBean = await CoffeeBeanManager.addBean(bean);

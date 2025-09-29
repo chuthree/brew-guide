@@ -64,9 +64,7 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
         if (initialBean) {
             const { id: _id, timestamp: _timestamp, ...beanData } = initialBean;
 
-            if (!beanData.roastLevel) {
-                beanData.roastLevel = '浅度烘焙';
-            }
+            // 不预设烘焙度默认值，保持数据严谨性
 
             // 确保有beanType字段，默认为手冲
             if (!beanData.beanType) {
@@ -102,7 +100,7 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
             name: '',
             capacity: '',
             remaining: '',
-            roastLevel: '浅度烘焙',
+            roastLevel: '',
             roastDate: '',
             flavor: [],
             price: '',

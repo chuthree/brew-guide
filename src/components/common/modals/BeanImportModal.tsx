@@ -100,9 +100,13 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
             const isArray = Array.isArray(beanData);
             const dataArray = isArray ? beanData : [beanData];
 
-            // 验证数据
-            if (!dataArray.every(item => typeof item === 'object' && item !== null && 'roastLevel' in item)) {
-                setError(isArray ? '部分数据不是有效的咖啡豆信息' : '提取的数据不是有效的咖啡豆信息');
+            // 验证数据 - 只验证是否有咖啡豆名称
+            if (!dataArray.every(item => 
+                typeof item === 'object' && item !== null && 
+                'name' in item && typeof (item as Record<string, unknown>).name === 'string' &&
+                ((item as Record<string, unknown>).name as string).trim() !== ''
+            )) {
+                setError(isArray ? '部分数据缺少咖啡豆名称' : '数据缺少咖啡豆名称');
                 return;
             }
 

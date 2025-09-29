@@ -145,14 +145,9 @@ export const CoffeeBeanManager = {
 		try {
 			const beans = await this.getAllBeans();
 
-			// 确保烘焙度有默认值
-			const beanWithDefaults = {
-				...bean,
-				roastLevel: bean.roastLevel || "浅度烘焙",
-			};
-
+			// 不预设任何默认值，保持数据严谨性
 			const newBean: CoffeeBean = {
-				...beanWithDefaults,
+				...bean,
 				id: nanoid(),
 				timestamp: Date.now(),
 			};

@@ -163,8 +163,12 @@ export function extractJsonFromText(
 		
 		// 检查是否是咖啡豆数组
 		if (Array.isArray(data)) {
-			// 验证每个元素是否都是咖啡豆数据
-			if (data.every(item => typeof item === 'object' && item !== null && 'roastLevel' in item)) {
+			// 验证每个元素是否都是咖啡豆数据 - 只检查name字段
+			if (data.every(item => 
+				typeof item === 'object' && item !== null && 
+				'name' in item && typeof (item as Record<string, unknown>).name === 'string' &&
+				((item as Record<string, unknown>).name as string).trim() !== ''
+			)) {
 				// Log in development only
 				if (process.env.NODE_ENV === 'development') {
 					console.warn("检测到咖啡豆数组格式");
@@ -223,12 +227,10 @@ export function extractJsonFromText(
 			return parseMethodFromJson(cleanedJson);
 		}
 		
-		// 检查是否是咖啡豆数据
-		if ('roastLevel' in data && 'name' in data) {
-			return data as CoffeeBean;
-		}
-		
-		// 检查是否是笔记数据
+        // 检查是否是咖啡豆数据 - 只要求有名称即可
+        if ('name' in data && typeof data.name === 'string' && data.name.trim() !== '') {
+            return data as CoffeeBean;
+        }		// 检查是否是笔记数据
 		if ('methodName' in data && 'equipment' in data) {
 			return data as BrewingNote;
 		}
@@ -479,13 +481,12 @@ export function methodToJson(method: Method): string {
  */
 export function generateBeanTemplateJson() {
 	return `{
-  "id": "",
   "name": "",
   "image": "",
   "price": "",
   "capacity": "",
   "remaining": "",
-  "roastLevel": "浅度烘焙",
+  "roastLevel": "",
   "roastDate": "",
   "flavor": [],
   "blendComponents": [
@@ -785,13 +786,7 @@ export function brewingNoteToReadableText(note: BrewingNote): string {
  * @returns 结构化的咖啡豆数据
  */
 function parseCoffeeBeanText(text: string): Partial<CoffeeBean> | null {
-	const bean: Partial<CoffeeBean> = {
-		name: "",
-		capacity: "",
-		remaining: "",
-		roastLevel: "浅度烘焙",
-		flavor: [],
-	};
+	const bean: Partial<CoffeeBean> = {};
 
 	// 提取名称
 	const nameMatch = text.match(/【咖啡豆】(.*?)(?:\n|$)/) || text.match(/【咖啡豆信息】(.*?)(?:\n|$)/);
@@ -815,6 +810,7 @@ function parseCoffeeBeanText(text: string): Partial<CoffeeBean> | null {
 			if (oldRemainingMatch && oldRemainingMatch[1]) {
 				bean.remaining = oldRemainingMatch[1];
 			} else {
+				// 只在有总量时才设置剩余量
 				bean.remaining = bean.capacity;
 			}
 		}
@@ -822,7 +818,7 @@ function parseCoffeeBeanText(text: string): Partial<CoffeeBean> | null {
 
 	// 提取烘焙度
 	const roastMatch = text.match(/烘焙度:\s*(.*?)(?:\n|$)/);
-	if (roastMatch && roastMatch[1] && roastMatch[1] !== "未知") {
+	if (roastMatch && roastMatch[1] && roastMatch[1] !== "未知" && roastMatch[1].trim() !== "") {
 		bean.roastLevel = roastMatch[1].trim();
 	}
 
@@ -879,8 +875,8 @@ function parseCoffeeBeanText(text: string): Partial<CoffeeBean> | null {
 
 	// 提取风味
 	const flavorMatch = text.match(/风味标签:\s*(.*?)(?:\n|$)/);
-	if (flavorMatch && flavorMatch[1]) {
-		bean.flavor = flavorMatch[1].split(",").map((f: string) => f.trim());
+	if (flavorMatch && flavorMatch[1] && flavorMatch[1].trim() !== "") {
+		bean.flavor = flavorMatch[1].split(",").map((f: string) => f.trim()).filter(f => f !== "");
 	}
 
 	// 提取备注（支持多行）

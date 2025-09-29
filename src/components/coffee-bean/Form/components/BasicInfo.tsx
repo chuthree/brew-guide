@@ -426,13 +426,15 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
                         烘焙度
                     </label>
                     <Select
-                        value={bean.roastLevel || '浅度烘焙'}
+                        value={bean.roastLevel || ''}
                         onValueChange={(value) => onBeanChange('roastLevel')(value)}
                     >
                         <SelectTrigger
-                            className="w-full py-2 bg-transparent border-0 border-b border-neutral-300 dark:border-neutral-700 focus-within:border-neutral-800 dark:focus-within:border-neutral-400 shadow-none rounded-none h-auto px-0 text-base"
+                            className="w-full py-2 bg-transparent border-0 border-b border-neutral-300 dark:border-neutral-700 focus-within:border-neutral-800 dark:focus-within:border-neutral-400 shadow-none rounded-none h-auto px-0 text-base placeholder:text-neutral-500 dark:placeholder:text-neutral-400 data-[placeholder]:text-neutral-500 dark:data-[placeholder]:text-neutral-400"
                         >
-                            <SelectValue placeholder="选择烘焙度" />
+                            <SelectValue 
+                                placeholder="选择烘焙度" 
+                            />
                         </SelectTrigger>
                         <SelectContent
                             className="max-h-[40vh] overflow-y-auto border-neutral-200/70 dark:border-neutral-800/70 shadow-lg backdrop-blur-xs bg-white/95 dark:bg-neutral-900/95 rounded-lg"

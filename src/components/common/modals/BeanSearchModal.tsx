@@ -133,37 +133,41 @@ const BeanSearchModal: React.FC<BeanSearchModalProps> = ({
                     return;
                 }
                 
-                const brandBeans = databaseData[brand].map((bean: Record<string, unknown>): CoffeeBean => ({
-                    // 核心标识
-                    id: `db-${brand}-${bean.name}`,
-                    timestamp: Date.now(),
-                    name: bean.name as string,
+                const brandBeans = databaseData[brand].map((bean: Record<string, unknown>): CoffeeBean => {
+                    // 构建咖啡豆对象，只设置确实有值的字段
+                    const coffeeBean: CoffeeBean = {
+                        // 核心标识
+                        id: `db-${brand}-${bean.name}`,
+                        timestamp: Date.now(),
+                        name: bean.name as string,
+                        
+                        // 基本信息 - 只设置确实有值的字段
+                        image: bean.image ? (bean.image as string).trim() : '',
+                        capacity: bean.capacity ? `${bean.capacity}`.trim() : '',
+                        remaining: bean.capacity ? `${bean.capacity}`.trim() : '', // 剩余量等于总量
+                        price: bean.price ? `${bean.price}`.trim() : '',
+                        
+                        // 产品特性 - 只设置确实有值的字段
+                        roastLevel: bean.roastLevel ? (bean.roastLevel as string).trim() : '',
+                        roastDate: bean.roastDate ? (bean.roastDate as string).trim() : '',
+                        flavor: (Array.isArray(bean.flavor) && bean.flavor.length > 0) ? bean.flavor as string[] : [],
+                        notes: bean.notes ? (bean.notes as string).trim() : '',
+                        
+                        brand: brand, // 添加品牌信息
+                    };
                     
-                    // 基本信息 - 从数据库获取实际值
-                    image: bean.image as string,
-                    capacity: bean.capacity ? `${bean.capacity}` : undefined, // 严格使用数据库中的容量，不预设
-                    remaining: bean.capacity ? `${bean.capacity}` : undefined, // 剩余量等于总量，确保导入功能正常
-                    price: bean.price as string,
+                    // 条件设置可选字段
+                    if (bean.startDay !== undefined) coffeeBean.startDay = bean.startDay as number;
+                    if (bean.endDay !== undefined) coffeeBean.endDay = bean.endDay as number;
+                    if (bean.isFrozen !== undefined) coffeeBean.isFrozen = bean.isFrozen as boolean;
+                    if (bean.isInTransit !== undefined) coffeeBean.isInTransit = bean.isInTransit as boolean;
+                    if (bean.beanType) coffeeBean.beanType = bean.beanType as "espresso" | "filter";
+                    if (bean.blendComponents && Array.isArray(bean.blendComponents) && bean.blendComponents.length > 0) {
+                        coffeeBean.blendComponents = bean.blendComponents as Array<{ origin?: string; process?: string; variety?: string; percentage?: number }>;
+                    }
                     
-                    // 产品特性
-                    roastLevel: bean.roastLevel as string,
-                    roastDate: "", // 数据库中没有烘焙日期，需要用户手动添加
-                    flavor: bean.flavor as string[],
-                    notes: bean.notes as string,
-                    
-                    // 时间管理
-                    startDay: bean.startDay as number,
-                    endDay: bean.endDay as number,
-                    isFrozen: false,
-                    isInTransit: false,
-                    
-                    // 分类标签
-                    beanType: bean.beanType as "espresso" | "filter",
-                    brand: brand, // 添加品牌信息
-                    
-                    // 拼配成分
-                    blendComponents: bean.blendComponents as Array<{ origin?: string; process?: string; variety?: string; percentage?: number }>
-                }));
+                    return coffeeBean;
+                });
                 allBeansData = allBeansData.concat(brandBeans);
                 beansByBrandData[brand] = brandBeans;
             });
