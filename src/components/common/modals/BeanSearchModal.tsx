@@ -359,6 +359,22 @@ const BeanSearchModal: React.FC<BeanSearchModalProps> = ({
         onClose();
     }, [resetSearch, onClose]);
 
+    // 拖拽结束处理
+    const handleDragEnd = (_event: unknown, info: { offset: { x: number }; velocity: { x: number } }) => {
+        const threshold = 150 // 拖拽阈值，超过150px关闭
+        const velocity = info.velocity.x // 拖拽速度
+        
+        // 如果拖拽距离超过阈值或向右拖拽速度足够快，则关闭模态框
+        if (info.offset.x > threshold || velocity > 500) {
+            handleClose()
+        }
+    }
+
+    // 拖拽开始处理
+    const handleDragStart = () => {
+        // 拖拽开始时不需要特殊处理，只是为了满足 Framer Motion 的要求
+    }
+
     // 表单关闭时重置状态
     useEffect(() => {
         if (!isOpen) {
@@ -582,6 +598,24 @@ const BeanSearchModal: React.FC<BeanSearchModalProps> = ({
                         duration: 0.35,
                         ease: [0.36, 0.66, 0.04, 1]
                     }}
+                    drag="x"
+                    dragConstraints={{ left: 0, right: 0 }}
+                    dragElastic={{ left: 0, right: 0.8 }}
+                    onDragStart={handleDragStart}
+                    onDragEnd={handleDragEnd}
+                    dragMomentum={false}
+                    dragDirectionLock={true}
+                    dragPropagation={false}
+                    onDirectionLock={(axis) => {
+                        // 当方向锁定为垂直时，我们不需要特殊处理
+                        // Framer Motion 会自动处理方向锁定逻辑
+                        if (axis === 'y') {
+                            // 垂直滚动时不需要特殊处理
+                        }
+                    }}
+                    style={{
+                        willChange: "transform"
+                    }}
                 >
                     {/* 头部导航栏 */}
                     <div className="flex items-center px-4 py-4 pt-safe-top bg-neutral-50 dark:bg-neutral-900">
@@ -664,7 +698,11 @@ const BeanSearchModal: React.FC<BeanSearchModalProps> = ({
                         onTouchEnd={handleTouchEnd}
                         style={{
                             transform: `translateY(${pullDistance}px)`,
-                            transition: isPullRefreshing || pullDistance === 0 ? 'transform 0.3s ease-out' : 'none'
+                            transition: isPullRefreshing || pullDistance === 0 ? 'transform 0.3s ease-out' : 'none',
+                            // 正常情况下允许垂直滚动
+                            overflowY: 'auto',
+                            // 使用 CSS 来处理触摸行为
+                            touchAction: 'pan-y pinch-zoom'
                         }}
                     >
                         <div className="px-6 pt-4">

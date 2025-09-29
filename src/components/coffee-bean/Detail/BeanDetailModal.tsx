@@ -344,6 +344,22 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
         onClose()
     }
 
+    // 拖拽结束处理
+    const handleDragEnd = (_event: unknown, info: { offset: { x: number }; velocity: { x: number } }) => {
+        const threshold = 150 // 拖拽阈值，超过150px关闭
+        const velocity = info.velocity.x // 拖拽速度
+        
+        // 如果拖拽距离超过阈值或向右拖拽速度足够快，则关闭模态框
+        if (info.offset.x > threshold || velocity > 500) {
+            onClose()
+        }
+    }
+
+    // 拖拽开始处理
+    const handleDragStart = () => {
+        // 拖拽开始时不需要特殊处理，只是为了满足 Framer Motion 的要求
+    }
+
     // 处理去冲煮功能
     const handleGoToBrewing = () => {
         handleClose()
@@ -404,27 +420,33 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
         <AnimatePresence>
             {isOpen && (
                 <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.265 }}
-                    className="fixed inset-0 z-50 bg-neutral-50 dark:bg-neutral-900"
-                    onClick={handleClose}
+                    initial={{ x: "100%" }}
+                    animate={{ x: 0 }}
+                    exit={{ x: "100%" }}
+                    transition={{
+                        duration: 0.35,
+                        ease: [0.36, 0.66, 0.04, 1]
+                    }}
+                    drag="x"
+                    dragConstraints={{ left: 0, right: 0 }}
+                    dragElastic={{ left: 0, right: 0.8 }}
+                    onDragStart={handleDragStart}
+                    onDragEnd={handleDragEnd}
+                    dragMomentum={false}
+                    dragDirectionLock={true}
+                    dragPropagation={false}
+                    onDirectionLock={(axis) => {
+                        // 当方向锁定为垂直时，我们不需要特殊处理
+                        // Framer Motion 会自动处理方向锁定逻辑
+                        if (axis === 'y') {
+                            // 垂直滚动时不需要特殊处理
+                        }
+                    }}
+                    style={{
+                        willChange: "transform"
+                    }}
+                    className="fixed inset-0 z-50 max-w-[500px] mx-auto overflow-hidden bg-neutral-50 dark:bg-neutral-900 flex flex-col"
                 >
-                    <motion.div
-                        initial={{ x: "100%" }}
-                        animate={{ x: 0 }}
-                        exit={{ x: "100%" }}
-                        transition={{
-                            duration: 0.35,
-                            ease: [0.36, 0.66, 0.04, 1]
-                        }}
-                        style={{
-                            willChange: "transform"
-                        }}
-                        className="absolute inset-0 max-w-[500px] mx-auto overflow-hidden bg-neutral-50 dark:bg-neutral-900 flex flex-col"
-                        onClick={(e) => e.stopPropagation()}
-                    >
                         {/* 顶部按钮栏 */}
                         <div className="sticky top-0 z-10 flex justify-between items-center pt-safe-top p-4 bg-neutral-50 dark:bg-neutral-900">
                             {/* 左侧关闭按钮 */}
@@ -466,7 +488,15 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                         </div>
 
                         {/* 内容区域 */}
-                        <div className="pb-safe-bottom overflow-auto flex-1">
+                        <div 
+                            className="pb-safe-bottom overflow-auto flex-1"
+                            style={{
+                                // 正常情况下允许垂直滚动
+                                overflowY: 'auto',
+                                // 使用 CSS 来处理触摸行为
+                                touchAction: 'pan-y pinch-zoom'
+                            }}
+                        >
                             {/* 图片区域 */}
                             {bean?.image && (
                                 <div className="mb-4">
@@ -808,7 +838,6 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                             ) : null}
                         </div>
                     </motion.div>
-                </motion.div>
             )}
         </AnimatePresence>
 
