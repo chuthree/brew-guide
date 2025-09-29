@@ -59,7 +59,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     const [editingChangeRecord, setEditingChangeRecord] = useState<BrewingNote | null>(null)
 
     // 模态显示状态
-    const [showNoteEditModal, setShowNoteEditModal] = useState(false)
     const [showChangeRecordEditModal, setShowChangeRecordEditModal] = useState(false)
     
     // 分享模式状态
@@ -497,7 +496,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
 
             // 设置编辑普通笔记数据并显示模态
             setEditingNote(noteToEdit);
-            setShowNoteEditModal(true);
         }
     };
     
@@ -533,7 +531,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
 
             // 关闭模态和编辑状态
             setEditingNote(null)
-            setShowNoteEditModal(false)
 
             // 显示成功提示
             showToast('笔记已更新', 'success')
@@ -581,7 +578,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
 
         // 打开普通笔记编辑模态
         setEditingNote(noteToEdit);
-        setShowNoteEditModal(true);
     };
 
     // 处理变动记录保存
@@ -1072,18 +1068,15 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                     )}
 
             {/* 模态组件 */}
-            {editingNote && (
-                <BrewingNoteEditModal
-                    showModal={showNoteEditModal}
-                    initialData={editingNote}
-                    onSave={handleSaveEdit}
-                    onClose={() => {
-                        setEditingNote(null)
-                        setShowNoteEditModal(false)
-                    }}
-                    settings={settings}
-                />
-            )}
+            <BrewingNoteEditModal
+                showModal={!!editingNote}
+                initialData={editingNote}
+                onSave={handleSaveEdit}
+                onClose={() => {
+                    setEditingNote(null)
+                }}
+                settings={settings}
+            />
 
             {editingChangeRecord && (
                 <ChangeRecordEditModal

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import BrewingNoteForm from './BrewingNoteForm'
 import { BrewingNoteData } from '@/types/app'
 import { SettingsOptions } from '@/components/settings/Settings'
@@ -9,7 +9,7 @@ import { Calendar } from '@/components/common/ui/Calendar'
 
 interface BrewingNoteEditModalProps {
     showModal: boolean
-    initialData: BrewingNoteData
+    initialData: BrewingNoteData | null
     onSave: (data: BrewingNoteData) => void
     onClose: () => void
     settings?: SettingsOptions
@@ -23,7 +23,7 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
     settings
 }) => {
     // 时间戳状态管理
-    const [timestamp, setTimestamp] = useState<Date>(new Date(initialData.timestamp))
+    const [timestamp, setTimestamp] = useState<Date>(new Date(initialData?.timestamp || Date.now()))
 
     // 日期选择器状态
     const [showDatePicker, setShowDatePicker] = useState(false)
@@ -31,11 +31,16 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
 
     // 内部动画状态
     const [isClosing, setIsClosing] = useState(false)
+    const [isAnimating, setIsAnimating] = useState(false)
 
     // 重置时间戳当初始数据变化时
     useEffect(() => {
-        setTimestamp(new Date(initialData.timestamp))
-    }, [initialData.timestamp])
+        if (initialData) {
+            setTimestamp(new Date(initialData.timestamp))
+            setIsClosing(false) // 重置关闭状态
+            setIsAnimating(false) // 重置动画状态
+        }
+    }, [initialData])
 
     // 处理时间戳变化
     const handleTimestampChange = useCallback((newTimestamp: Date) => {
@@ -83,41 +88,76 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
 
     // 处理关闭 - 先触发退出动画，然后调用父组件关闭
     const handleClose = useCallback(() => {
-        if (!isClosing) {
+        if (!isClosing && !isAnimating) {
+            setIsAnimating(true)
             setIsClosing(true)
             // 等待退出动画完成后再调用父组件的关闭回调
             setTimeout(() => {
                 onClose()
-            }, 265) // 与动画持续时间一致
+                setIsAnimating(false)
+            }, 200) // 匹配新的动画持续时间
         }
-    }, [isClosing, onClose])
+    }, [isClosing, isAnimating, onClose])
+
+    // 移动端优化：防止背景滚动
+    useEffect(() => {
+        if (showModal && !isClosing) {
+            // 防止背景页面滚动
+            document.body.style.overflow = 'hidden'
+            document.body.style.position = 'fixed'
+            document.body.style.width = '100%'
+        } else {
+            // 恢复背景页面滚动
+            document.body.style.overflow = ''
+            document.body.style.position = ''
+            document.body.style.width = ''
+        }
+
+        return () => {
+            // 清理函数
+            document.body.style.overflow = ''
+            document.body.style.position = ''
+            document.body.style.width = ''
+        }
+    }, [showModal, isClosing])
 
     // 处理保存按钮点击
     const handleSaveClick = useCallback(() => {
+        if (!initialData) return
         // 触发表单提交
         const form = document.querySelector(`form[id="${initialData.id}"]`) as HTMLFormElement
         if (form) {
             form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }))
         }
-    }, [initialData.id])
+    }, [initialData])
 
     return (
-        <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: showModal && !isClosing ? 1 : 0 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.265, ease: "easeInOut" }}
-            className="fixed px-6 pt-safe-top pb-safe-bottom overflow-auto max-w-[500px] mx-auto inset-0 z-50 bg-neutral-50 dark:bg-neutral-900 transition-opacity duration-200"
-            style={{
-                pointerEvents: showModal && !isClosing ? "auto" : "none",
-            }}
-        >
+        <AnimatePresence mode="wait">
+            {showModal && !isClosing && initialData && (
+                <motion.div
+                    initial={{ opacity: 0}}
+                    animate={{ opacity: 1}}
+                    exit={{ opacity: 0}}
+                    transition={{ 
+                        duration: 0.2, 
+                        ease: [0.25, 0.46, 0.45, 0.94] // 移动端友好的缓动函数
+                    }}
+                    style={{
+                        willChange: "opacity, transform", // 启用硬件加速
+                    }}
+                    className="fixed px-6 pt-safe-top pb-safe-bottom overflow-auto max-w-[500px] mx-auto inset-0 z-50 bg-neutral-50 dark:bg-neutral-900"
+                >
             {/* 顶部标题栏 */}
             <div className="flex items-center justify-between">
                 <button
                     type="button"
                     onClick={handleClose}
-                    className="rounded-full p-2 pl-0"
+                    className="rounded-full p-3 -ml-1 touch-manipulation"
+                    style={{
+                        WebkitTapHighlightColor: 'transparent', // 移除点击高亮
+                        minWidth: '44px', // 移动端最小触摸区域
+                        minHeight: '44px'
+                    }}
                 >
                     <svg
                         width="16"
@@ -197,7 +237,9 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
                     <span className="font-medium">保存笔记</span>
                 </button>
             </div>
-        </motion.div>
+                </motion.div>
+            )}
+        </AnimatePresence>
     )
 }
 
