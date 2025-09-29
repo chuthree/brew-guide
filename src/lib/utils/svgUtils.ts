@@ -26,26 +26,23 @@ export const linesToSvgPath = (
 	lines.forEach((line) => {
 		if (line.points.length === 0) return;
 
-		// 创建路径起点
-		let pathData = `M ${line.points[0].x} ${line.points[0].y}`;
+		// 创建路径起点 - 确保坐标精度，避免浮点数误差
+		let pathData = `M ${Math.round(line.points[0].x * 100) / 100} ${Math.round(line.points[0].y * 100) / 100}`;
 
-		// 添加每个点为线段
+		// 添加每个点为线段 - 确保坐标精度
 		for (let i = 1; i < line.points.length; i++) {
-			pathData += ` L ${line.points[i].x} ${line.points[i].y}`;
+			pathData += ` L ${Math.round(line.points[i].x * 100) / 100} ${Math.round(line.points[i].y * 100) / 100}`;
 		}
 
 		// 使用每条线的实际笔触宽度，而不是固定值
 		paths.push(
-			`<path d="${pathData}" stroke="var(--custom-shape-color)" stroke-width="${line.strokeWidth}" fill="none" />`
+			`<path d="${pathData}" stroke="var(--custom-shape-color)" stroke-width="${line.strokeWidth}" fill="none" stroke-linecap="round" stroke-linejoin="round" />`
 		);
 	});
 
-	// 组合所有路径为一个SVG字符串，统一使用300x300的视口
-	// 但保留原始宽高比例，通过viewBox进行适当缩放
-	const viewBoxWidth = canvasWidth;
-	const viewBoxHeight = canvasHeight;
-
-	return `<svg width="300" height="300" viewBox="0 0 ${viewBoxWidth} ${viewBoxHeight}" xmlns="http://www.w3.org/2000/svg" class="custom-cup-shape">
+	// 组合所有路径为一个SVG字符串，确保viewBox和尺寸设置正确
+	// 使用标准化的尺寸设置，避免坐标系统不一致
+	return `<svg width="${canvasWidth}" height="${canvasHeight}" viewBox="0 0 ${canvasWidth} ${canvasHeight}" xmlns="http://www.w3.org/2000/svg" class="custom-cup-shape">
     ${paths.join("\n    ")}
   </svg>`;
 };

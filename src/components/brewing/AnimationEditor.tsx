@@ -150,13 +150,15 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(({
   const mergePreviousFrames = useCallback((endIndex: number) => {
     if (endIndex <= 0 || frames.length === 0) return '';
     
-    // 开始合并前帧
+    // 创建一个全新的SVG文档，避免累积偏移问题
+    const newSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    newSvg.setAttribute('width', width.toString());
+    newSvg.setAttribute('height', height.toString());
+    newSvg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+    newSvg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    newSvg.setAttribute('class', 'custom-cup-shape outline-only');
     
-    // 创建一个临时的SVG文档
     const parser = new DOMParser();
-    let combinedSvgDoc: Document | null = null;
-    let firstSvgWidth = 0;
-    let firstSvgHeight = 0;
     
     // 遍历所有之前的帧，提取其SVG路径并合并
     for (let i = 0; i < endIndex; i++) {
@@ -166,55 +168,51 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(({
         continue;
       }
       
-      // 处理帧
-      
-      const svgDoc = parser.parseFromString(frameSvg, 'image/svg+xml');
-      
-      // 如果是第一个有效的SVG，保存其宽高并作为基础SVG
-      if (!combinedSvgDoc && svgDoc.documentElement) {
-        combinedSvgDoc = svgDoc;
-        firstSvgWidth = parseInt(svgDoc.documentElement.getAttribute('width') || `${width}`, 10);
-        firstSvgHeight = parseInt(svgDoc.documentElement.getAttribute('height') || `${height}`, 10);
+      try {
+        const svgDoc = parser.parseFromString(frameSvg, 'image/svg+xml');
         
-        // 为基础 SVG 添加类名
-        svgDoc.documentElement.setAttribute('class', 'custom-cup-shape outline-only');
-        // 使用帧作为基础SVG
-        continue;
+        if (svgDoc.documentElement && svgDoc.documentElement.tagName === 'svg') {
+          // 获取所有path元素
+          const pathElements = svgDoc.querySelectorAll('path');
+          
+          pathElements.forEach((originalPath) => {
+            // 创建一个全新的path元素，确保坐标系统正确
+            const newPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            
+            // 复制关键属性，确保坐标系统不变
+            const dAttribute = originalPath.getAttribute('d');
+            if (dAttribute) {
+              // 直接使用原始的路径数据，不进行任何变换
+              newPath.setAttribute('d', dAttribute);
+            }
+            
+            // 复制其他样式属性
+            const stroke = originalPath.getAttribute('stroke') || 'var(--custom-shape-color)';
+            const strokeWidth = originalPath.getAttribute('stroke-width') || '3';
+            const fill = originalPath.getAttribute('fill') || 'none';
+            
+            newPath.setAttribute('stroke', stroke);
+            newPath.setAttribute('stroke-width', strokeWidth);
+            newPath.setAttribute('fill', fill);
+            newPath.setAttribute('stroke-linecap', 'round');
+            newPath.setAttribute('stroke-linejoin', 'round');
+            
+            // 添加到新的SVG中
+            newSvg.appendChild(newPath);
+          });
+        }
+      } catch (error) {
+        // Log error in development only
+        if (process.env.NODE_ENV === 'development') {
+          console.error(`合并第${i}帧时出错:`, error);
+        }
       }
-      
-      // 对于后续的SVG，提取其中的path元素添加到基础SVG中
-      if (combinedSvgDoc && svgDoc.documentElement) {
-        const paths = svgDoc.querySelectorAll('path');
-        paths.forEach(path => {
-          if (combinedSvgDoc && combinedSvgDoc.documentElement) {
-            combinedSvgDoc.documentElement.appendChild(
-              combinedSvgDoc.importNode(path, true)
-            );
-          }
-        });
-        // 合并帧的路径到基础SVG
-      }
-    }
-    
-    // 如果没有有效的SVG帧，返回空字符串
-    if (!combinedSvgDoc) {
-      // 没有找到有效的SVG帧
-      return '';
-    }
-    
-    // 确保SVG设置了正确的宽高和viewBox
-    if (combinedSvgDoc.documentElement) {
-      combinedSvgDoc.documentElement.setAttribute('width', `${firstSvgWidth || width}`);
-      combinedSvgDoc.documentElement.setAttribute('height', `${firstSvgHeight || height}`);
-      combinedSvgDoc.documentElement.setAttribute('viewBox', `0 0 ${firstSvgWidth || width} ${firstSvgHeight || height}`);
-      // 确保根 SVG 元素有正确的类名
-      combinedSvgDoc.documentElement.setAttribute('class', 'custom-cup-shape outline-only');
     }
     
     // 将DOM转换回字符串
     const serializer = new XMLSerializer();
-    const result = serializer.serializeToString(combinedSvgDoc);
-    // 完成合并
+    const result = serializer.serializeToString(newSvg);
+    
     return result;
   }, [frames, width, height]);
   
