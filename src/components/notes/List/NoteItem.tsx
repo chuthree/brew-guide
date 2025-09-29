@@ -134,7 +134,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
                     {/* 名称和标签区域 */}
                     <div className="flex-1 min-w-0">
                         <div className="flex justify-between items-start">
-                            <div className="flex-1 min-w-0 overflow-hidden">
+                            <div className="flex-1 min-w-0 overflow-visible">
                                 <div className="text-xs font-medium break-words text-neutral-800 dark:text-neutral-100 pr-2">
                                     {/* 根据是否有方案来决定显示内容 */}
                                     {note.method && note.method.trim() !== '' ? (
