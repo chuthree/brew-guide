@@ -11,7 +11,6 @@ import { GeistMono } from 'geist/font'
 import { ToastProvider } from '@/components/common/feedback/GlobalToast'
 import '@/styles/base/globals.css'
 import KeyboardManager from '@/components/layout/KeyboardManager'
-import SwipeExitManager from '@/components/layout/SwipeExitManager'
 import { Suspense } from 'react'
 import CapacitorInit from '@/providers/CapacitorProvider'
 import StorageInit from '@/providers/StorageProvider'
@@ -184,7 +183,6 @@ export default function RootLayout({
                 <CapacitorInit />
                 <StorageInit />
                 <KeyboardManager />
-                <SwipeExitManager />
               </Suspense>
                 <div className="h-full w-full overflow-hidden max-w-[500px] mx-auto">
                 {children}

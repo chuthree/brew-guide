@@ -1,8 +1,6 @@
 PODS:
   - Capacitor (7.4.2):
     - CapacitorCordova
-  - CapacitorApp (7.1.0):
-    - Capacitor
   - CapacitorBrowser (7.0.1):
     - Capacitor
   - CapacitorCamera (7.0.1):
@@ -39,7 +37,6 @@ PODS:
 
 DEPENDENCIES:
   - "Capacitor (from `../../node_modules/.pnpm/@capacitor+ios@7.4.2_@capacitor+core@7.4.2/node_modules/@capacitor/ios`)"
-  - "CapacitorApp (from `../../node_modules/.pnpm/@capacitor+app@7.1.0_@capacitor+core@7.4.2/node_modules/@capacitor/app`)"
   - "CapacitorBrowser (from `../../node_modules/.pnpm/@capacitor+browser@7.0.1_@capacitor+core@7.4.2/node_modules/@capacitor/browser`)"
   - "CapacitorCamera (from `../../node_modules/.pnpm/@capacitor+camera@7.0.1_@capacitor+core@7.4.2/node_modules/@capacitor/camera`)"
   - "CapacitorCommunityKeepAwake (from `../../node_modules/.pnpm/@capacitor-community+keep-awake@7.1.0_@capacitor+core@7.4.2/node_modules/@capacitor-community/keep-awake`)"
@@ -64,8 +61,6 @@ SPEC REPOS:
 EXTERNAL SOURCES:
   Capacitor:
     :path: "../../node_modules/.pnpm/@capacitor+ios@7.4.2_@capacitor+core@7.4.2/node_modules/@capacitor/ios"
-  CapacitorApp:
-    :path: "../../node_modules/.pnpm/@capacitor+app@7.1.0_@capacitor+core@7.4.2/node_modules/@capacitor/app"
   CapacitorBrowser:
     :path: "../../node_modules/.pnpm/@capacitor+browser@7.0.1_@capacitor+core@7.4.2/node_modules/@capacitor/browser"
   CapacitorCamera:
@@ -99,7 +94,6 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   Capacitor: 9d9e481b79ffaeacaf7a85d6a11adec32bd33b59
-  CapacitorApp: 26587c2ce485d88ddb39adb21cac64f8e481afe3
   CapacitorBrowser: 6299776d496e968505464884d565992faa20444a
   CapacitorCamera: 6e73f1fc6c629a672658705a02409b60854bc0f1
   CapacitorCommunityKeepAwake: 05c75aab989f60e621870cf03b24a144a5544c30
@@ -118,6 +112,6 @@ SPEC CHECKSUMS:
   IONFilesystemLib: ceacae793975039530458eabab0c495c70515a0d
   OSInAppBrowserLib: cf8bfbe5d611a423a4153d8eb6ffbd92556dddb1
 
-PODFILE CHECKSUM: 4ba230dacbf76bf87bd5546bb44596d9e450e2f3
+PODFILE CHECKSUM: a558921437d28865e7752c795627af2f74be8978
 
 COCOAPODS: 1.16.2
