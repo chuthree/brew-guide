@@ -323,19 +323,27 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                                         </button>
 
                                         {/* 输入框 */}
-                                        <textarea
-                                            className="w-full p-4 rounded focus:outline-none focus:ring-2 text-neutral-800 dark:text-white text-sm placeholder:text-neutral-400 dark:placeholder:text-neutral-500 transition-all resize-none bg-neutral-200/50 dark:bg-neutral-800 border border-transparent focus:ring-neutral-300 dark:focus:ring-neutral-700"
-                                            placeholder={
-                                                error ? `${error}` :
-                                                success ? `✅ ${success}` :
-                                                inputType === 'clipboard' ? '识别剪切板内容中...' :
-                                                inputType === 'json' ? '粘贴咖啡豆数据...' :
-                                                '咖啡豆信息'
-                                            }
-                                            value={importData}
-                                            onChange={(e) => setImportData(e.target.value)}
-                                            rows={12}
-                                        />
+                                        <div className="relative">
+                                            <textarea
+                                                className="w-full p-4 rounded focus:outline-none focus:ring-2 text-neutral-800 dark:text-white text-sm placeholder:text-neutral-400 dark:placeholder:text-neutral-500 transition-all resize-none bg-neutral-200/50 dark:bg-neutral-800 border border-transparent focus:ring-neutral-300 dark:focus:ring-neutral-700"
+                                                placeholder={
+                                                    success ? `✅ ${success}` :
+                                                    inputType === 'clipboard' ? '识别剪切板内容中...' :
+                                                    inputType === 'json' ? '粘贴咖啡豆数据...' :
+                                                    '咖啡豆信息'
+                                                }
+                                                value={importData}
+                                                onChange={(e) => setImportData(e.target.value)}
+                                                rows={12}
+                                            />
+                                            {/* 错误提示 - 左下角 */}
+                                            {error && (
+                                                <div className="absolute bottom-3 left-3 flex items-center gap-2 text-xs text-neutral-600 dark:text-neutral-400">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-red-400/60"></span>
+                                                    <span>{error}</span>
+                                                </div>
+                                            )}
+                                        </div>
 
 
                                         {/* 底部按钮区域 */}
