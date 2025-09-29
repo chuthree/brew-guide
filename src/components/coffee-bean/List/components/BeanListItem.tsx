@@ -279,13 +279,19 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                         </div>
 
                         <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400 leading-relaxed">
-                            {bean.roastDate && !bean.isInTransit && (
+                            {(bean.roastDate || bean.isInTransit) && (
                                 <span className="inline">
-                                    {dateDisplayMode === 'flavorPeriod'
+                                    {bean.isInTransit 
+                                        ? '在途'
+                                        : bean.isFrozen
+                                        ? '冷冻'
+                                        : bean.roastDate && dateDisplayMode === 'flavorPeriod'
                                         ? flavorInfo.status
-                                        : dateDisplayMode === 'agingDays'
+                                        : bean.roastDate && dateDisplayMode === 'agingDays'
                                         ? getAgingDaysText(bean.roastDate)
-                                        : formatDateShort(bean.roastDate)
+                                        : bean.roastDate
+                                        ? formatDateShort(bean.roastDate)
+                                        : ''
                                     }
                                     {((bean.capacity && bean.remaining) || (bean.price && bean.capacity)) && (
                                         <span className="mx-2 text-neutral-400 dark:text-neutral-600">·</span>
