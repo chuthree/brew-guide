@@ -462,7 +462,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                             </button>
                             
                             {/* 右侧操作按钮 */}
-                            <div className="flex items-center">
+                            <div className="flex items-center gap-3">
                                 {/* 前往按钮 */}
                                 {bean && (
                                     <ActionMenu
@@ -470,7 +470,8 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                             { id: 'brewing', label: '去冲煮', onClick: handleGoToBrewing, color: 'default' as const },
                                             { id: 'notes', label: '去记录', onClick: handleGoToNotes, color: 'default' as const }
                                         ]}
-                                        triggerClassName="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors mr-3"
+                                        useMorphingAnimation={true}
+                                        triggerClassName="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
                                         triggerChildren={<ArrowRight className="h-4 w-4 text-neutral-600 dark:text-neutral-400" />}
                                     />
                                 )}
@@ -483,6 +484,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                             ...(onShare ? [{ id: 'share', label: '分享', onClick: () => { onShare(bean); handleClose(); }, color: 'default' as const }] : []),
                                             ...(onDelete ? [{ id: 'delete', label: '删除', onClick: () => { onDelete(bean); handleClose(); }, color: 'danger' as const }] : [])
                                         ]}
+                                        useMorphingAnimation={true}
                                         triggerClassName="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
                                     />
                                 )}

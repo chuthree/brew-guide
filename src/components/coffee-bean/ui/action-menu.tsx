@@ -21,6 +21,7 @@ interface ActionMenuProps {
   triggerChildren?: ReactNode
   menuClassName?: string
   showAnimation?: boolean
+  useMorphingAnimation?: boolean
   isOpen?: boolean
   onOpenChange?: (open: boolean) => void
   onStop?: (e: React.MouseEvent) => void
@@ -34,6 +35,7 @@ const ActionMenu: React.FC<ActionMenuProps> = ({
   triggerChildren,
   menuClassName,
   showAnimation = false,
+  useMorphingAnimation = false,
   isOpen,
   onOpenChange,
   onStop,
@@ -72,11 +74,25 @@ const ActionMenu: React.FC<ActionMenuProps> = ({
     const handleClickOutside = (event: MouseEvent) => {
       if (!isMounted.current) return
       
-      const isInMenu = menuRef.current && menuRef.current.contains(event.target as Node)
-      const isOnTrigger = triggerRef.current && triggerRef.current.contains(event.target as Node)
+      const target = event.target as Node
+      const isInMenu = menuRef.current && menuRef.current.contains(target)
+      const isOnTrigger = triggerRef.current && triggerRef.current.contains(target)
+      
+      // 检查是否点击了其他 ActionMenu 的触发按钮
+      const isOtherActionMenuTrigger = (target as Element).closest?.('.action-menu-container') && 
+                                        !menuRef.current?.contains(target)
       
       if (!isInMenu && !isOnTrigger) {
-        setOpen(false)
+        // 如果点击了其他 ActionMenu，延迟关闭以允许新菜单打开
+        if (isOtherActionMenuTrigger) {
+          setTimeout(() => {
+            if (isMounted.current) {
+              setOpen(false)
+            }
+          }, 0)
+        } else {
+          setOpen(false)
+        }
       }
     }
 
@@ -84,7 +100,7 @@ const ActionMenu: React.FC<ActionMenuProps> = ({
     return () => {
       document.removeEventListener("mousedown", handleClickOutside, true)
     }
-  }, [open, onClose, setOpen])
+  }, [open, setOpen])
 
   // 事件处理
   const handleStop = (e: React.MouseEvent) => {
@@ -137,6 +153,90 @@ const ActionMenu: React.FC<ActionMenuProps> = ({
       ))}
     </div>
   )
+
+  // 变形动画渲染
+  if (useMorphingAnimation) {
+    return (
+      <div className={cn("relative action-menu-container", className)} ref={menuRef}>
+        <motion.div
+          onClick={handleStop}
+          className={cn(
+            "flex items-center justify-center overflow-hidden relative h-8",
+            triggerClassName
+          )}
+          initial={false}
+          animate={{
+            width: open ? "auto" : "2rem",
+            borderRadius: open ? "1rem" : "1rem",
+          }}
+          transition={{
+            duration: 0.3,
+            ease: [0.4, 0, 0.2, 1],
+          }}
+        >
+          {/* 圆形按钮 - 展开时淡出 */}
+          <motion.button
+            ref={triggerRef}
+            onClick={handleTriggerClick}
+            className="absolute inset-0 flex items-center justify-center w-8"
+            initial={false}
+            animate={{
+              opacity: open ? 0 : 1,
+            }}
+            transition={{
+              duration: 0.15,
+              ease: "easeOut",
+            }}
+            style={{
+              pointerEvents: open ? 'none' : 'auto',
+            }}
+          >
+            {renderTriggerContent()}
+          </motion.button>
+
+          {/* 展开的菜单 - 收起时淡出 */}
+          <motion.div
+            className="flex items-center gap-0.5 px-1 h-full"
+            initial={false}
+            animate={{
+              opacity: open ? 1 : 0,
+            }}
+            transition={{
+              duration: 0.2,
+              delay: open ? 0.1 : 0,
+              ease: "easeOut",
+            }}
+            style={{
+              pointerEvents: open ? 'auto' : 'none',
+            }}
+          >
+            {items.map((item, index) => (
+              <motion.button
+                key={item.id}
+                onClick={(e) => handleItemClick(e, item.onClick)}
+                className={cn(
+                  "px-3 h-full text-xs font-medium whitespace-nowrap rounded-lg",
+                  "hover:bg-neutral-200/50 dark:hover:bg-neutral-700/50 transition-colors",
+                  getColorClassName(item.color)
+                )}
+                initial={false}
+                animate={{
+                  opacity: open ? 1 : 0,
+                }}
+                transition={{ 
+                  duration: 0.2, 
+                  delay: open ? 0.12 + index * 0.03 : 0,
+                  ease: "easeOut",
+                }}
+              >
+                {item.renderContent || item.label}
+              </motion.button>
+            ))}
+          </motion.div>
+        </motion.div>
+      </div>
+    )
+  }
 
   return (
     <div className={cn("relative action-menu-container", className)}>
