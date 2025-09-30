@@ -9,6 +9,7 @@ import { Inter } from 'next/font/google'
 import { Noto_Sans_SC } from 'next/font/google'
 import { GeistMono } from 'geist/font'
 import { ToastProvider } from '@/components/common/feedback/GlobalToast'
+import { ExitToast } from '@/components/common/feedback/ExitToast'
 import '@/styles/base/globals.css'
 import KeyboardManager from '@/components/layout/KeyboardManager'
 import { Suspense } from 'react'
@@ -187,6 +188,7 @@ export default function RootLayout({
                 <div className="h-full w-full overflow-hidden max-w-[500px] mx-auto">
                 {children}
                 </div>
+              <ExitToast />
             </ToastProvider>
           </ThemeProvider>
         <Analytics />
