@@ -14,6 +14,7 @@ import { formatDate, formatRating } from '@/components/notes/utils'
 import ActionMenu from '@/components/coffee-bean/ui/action-menu'
 import { ArrowRight } from 'lucide-react'
 import { BREWING_EVENTS } from '@/lib/brewing/constants'
+import { useFlavorDimensions } from '@/lib/hooks/useFlavorDimensions'
 
 // 动态导入 ImageViewer 组件
 const ImageViewer = dynamic(() => import('@/components/common/ui/ImageViewer'), {
@@ -83,6 +84,9 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     const [imageViewerOpen, setImageViewerOpen] = useState(false)
     const [currentImageUrl, setCurrentImageUrl] = useState('')
     const [noteImageErrors, setNoteImageErrors] = useState<Record<string, boolean>>({})
+    
+    // 使用风味维度hook
+    const { getValidTasteRatings } = useFlavorDimensions()
 
 
     // 重置图片错误状态
@@ -769,42 +773,33 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                                                 </div>
 
                                                                 {/* 风味评分 - 只有当存在有效评分(大于0)时才显示 */}
-                                                                {Object.values(note.taste).some(value => value > 0) && (
-                                                                    <div className="grid grid-cols-2 gap-4">
-                                                                        {Object.entries(note.taste)
-                                                                            .map(([key, value], _i) => (
-                                                                                <div key={key} className="space-y-1">
+                                                                {(() => {
+                                                                    const validTasteRatings = getValidTasteRatings(note.taste);
+                                                                    const hasTasteRatings = validTasteRatings.length > 0;
+                                                                    
+                                                                    return hasTasteRatings ? (
+                                                                        <div className="grid grid-cols-2 gap-4">
+                                                                            {validTasteRatings.map((rating) => (
+                                                                                <div key={rating.id} className="space-y-1">
                                                                                     <div className="flex items-center justify-between">
                                                                                         <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
-                                                                                            {(() => {
-                                                                                                switch (key) {
-                                                                                                    case 'acidity':
-                                                                                                        return '酸度';
-                                                                                                    case 'sweetness':
-                                                                                                        return '甜度';
-                                                                                                    case 'bitterness':
-                                                                                                        return '苦度';
-                                                                                                    case 'body':
-                                                                                                        return '口感';
-                                                                                                    default:
-                                                                                                        return key;
-                                                                                                }
-                                                                                            })()}
+                                                                                            {rating.label}
                                                                                         </div>
                                                                                         <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
-                                                                                            {value}
+                                                                                            {rating.value}
                                                                                         </div>
                                                                                     </div>
                                                                                     <div className="h-px w-full overflow-hidden bg-neutral-200/50 dark:bg-neutral-800">
                                                                                         <div
-                                                                                            style={{ width: `${value === 0 ? 0 : (value / 5) * 100}%` }}
+                                                                                            style={{ width: `${rating.value === 0 ? 0 : (rating.value / 5) * 100}%` }}
                                                                                             className="h-full bg-neutral-600 dark:bg-neutral-400"
                                                                                         />
                                                                                     </div>
                                                                                 </div>
                                                                             ))}
-                                                                    </div>
-                                                                )}
+                                                                        </div>
+                                                                    ) : null;
+                                                                })()}
 
                                                                 {/* 时间和评分 */}
                                                                 <div className="flex items-baseline justify-between">
