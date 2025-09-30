@@ -269,9 +269,9 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                     />
                 )}
 
-                <div className="flex-1 min-w-0 flex flex-col gap-y-2">
-                    <div className={`flex flex-col justify-center gap-y-1.5 ${shouldShowNotes() ? '' : 'h-14'}`}>
-                        <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100 pr-2 leading-tight line-clamp-2">
+                <div className={`flex-1 min-w-0 flex flex-col gap-y-2 ${shouldShowNotes() ? '' : 'justify-center'}`}>
+                    <div className="flex flex-col justify-center gap-y-1">
+                        <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100 leading-tight line-clamp-2 text-justify">
                             {searchQuery ? (
                                 <HighlightText text={displayTitle} highlight={searchQuery} />
                             ) : displayTitle}
