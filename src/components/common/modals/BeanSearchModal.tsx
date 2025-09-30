@@ -609,7 +609,6 @@ const BeanSearchModal: React.FC<BeanSearchModalProps> = ({
                     className="fixed inset-0 bg-neutral-50 dark:bg-neutral-900 z-50 flex flex-col max-w-[500px] mx-auto"
                     initial={{ x: "100%" }}
                     animate={{ x: 0 }}
-                    exit={{ x: "100%", transition: { duration: 0.25, ease: "easeInOut" } }}
                     transition={{
                         duration: 0.35,
                         ease: [0.36, 0.66, 0.04, 1]
