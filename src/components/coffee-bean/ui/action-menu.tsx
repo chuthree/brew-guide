@@ -167,7 +167,7 @@ const ActionMenu: React.FC<ActionMenuProps> = ({
           initial={false}
           animate={{
             width: open ? "auto" : "2rem",
-            borderRadius: open ? "1rem" : "1rem",
+            borderRadius: "1rem",
           }}
           transition={{
             duration: 0.3,
