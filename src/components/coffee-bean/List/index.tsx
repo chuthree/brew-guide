@@ -1108,13 +1108,27 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         setIsExportingPreview(true);
         
         try {
+            // 计算总重量信息和概要文本
+            const beansToExport = isSearching ? searchFilteredBeans : filteredBeans;
+            const totalWeightText = calculateTotalWeight();
+            const originalTotalWeightText = calculateOriginalTotalWeight();
+            
+            // 生成概要文本，与界面显示保持一致
+            const summaryText = (() => {
+                if (beansToExport.length === 0) return '';
+                
+                if (showEmptyBeans) {
+                    return `${beansToExport.length} 款咖啡豆，总共 ${originalTotalWeightText}，剩余 ${totalWeightText}`;
+                } else {
+                    return `${beansToExport.length} 款咖啡豆，剩余 ${totalWeightText}`;
+                }
+            })();
+            
             const result = await exportListPreview(
-                isSearching ? searchFilteredBeans : filteredBeans,
+                beansToExport,
                 expandedNotes,
                 settings, // 传递用户的真实设置
-                {
-                    // 不添加标题和描述，保持简洁
-                }
+                summaryText
             );
             
             toast.showToast({

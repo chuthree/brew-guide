@@ -81,6 +81,9 @@ const processImages = (container: HTMLElement) => {
 /**
  * 导出咖啡豆列表预览图 - 使用React组件渲染
  * @param filteredBeans 当前筛选的咖啡豆列表
+ * @param expandedNotes 展开状态记录
+ * @param userSettings 用户设置
+ * @param summaryText 概要文本
  * @param options 导出选项
  */
 export const exportListPreview = async (
@@ -95,6 +98,7 @@ export const exportListPreview = async (
         showTotalPrice?: boolean
         showStatusDots?: boolean
     },
+    summaryText?: string,
     options: ExportOptions = {}
 ) => {
     if (filteredBeans.length === 0) {
@@ -136,7 +140,8 @@ export const exportListPreview = async (
                         notesMaxLines: 1, // 默认只显示一行
                         showTotalPrice: false,
                         showStatusDots: true
-                    }
+                    },
+                    summaryText: summaryText || ''
                 })
             )
             
