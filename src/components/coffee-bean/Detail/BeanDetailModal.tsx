@@ -465,7 +465,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                         items={[
                                             ...(onDelete ? [{ id: 'delete', label: '删除', onClick: () => { onDelete(bean); handleClose(); }, color: 'danger' as const }] : []),
                                             ...(onShare ? [{ id: 'share', label: '分享', onClick: () => { onShare(bean); handleClose(); }, color: 'default' as const }] : []),
-                                            ...(onEdit ? [{ id: 'edit', label: '编辑', onClick: () => { onEdit(bean); handleClose(); }, color: 'default' as const }] : [])
+                                            ...(onEdit ? [{ id: 'edit', label: '编辑', onClick: () => { onEdit(bean); onClose(); }, color: 'default' as const }] : [])
                                         ]}
                                         useMorphingAnimation={true}
                                         triggerClassName="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"

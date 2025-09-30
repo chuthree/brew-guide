@@ -1,95 +1,103 @@
 # 模态框历史栈管理规范
 
 ## 概述
-为模态框添加历史栈管理，支持硬件返回键（Android）和浏览器返回按钮关闭模态框。
+支持硬件返回键和浏览器返回按钮关闭模态框，支持多步骤表单。
 
-## 实现模式
+## 实现方案
 
-### 1. 添加历史栈监听（useEffect）
+### 单层模态框
 
 ```typescript
-// 历史栈管理 - 支持硬件返回键和浏览器返回按钮
+// 添加历史管理
 useEffect(() => {
     if (!isOpen) return
-
-    // 添加模态框历史记录
-    window.history.pushState({ modal: 'modal-unique-id' }, '')
-
-    // 监听返回事件
-    const handlePopState = () => {
-        onClose()
-    }
-
+    
+    window.history.pushState({ modal: 'unique-id' }, '')
+    
+    const handlePopState = () => onClose()
     window.addEventListener('popstate', handlePopState)
-
-    return () => {
-        window.removeEventListener('popstate', handlePopState)
-    }
+    
+    return () => window.removeEventListener('popstate', handlePopState)
 }, [isOpen, onClose])
-```
 
-**关键点：**
-- `modal-unique-id`：每个模态框使用唯一标识符
-- 依赖项：`[isOpen, onClose]`
-- 清理函数：移除事件监听器
-
-### 2. 修改关闭处理函数
-
-```typescript
+// 关闭处理
 const handleClose = () => {
-    // 如果历史栈中有我们添加的条目，触发返回
-    if (window.history.state?.modal === 'modal-unique-id') {
+    if (window.history.state?.modal === 'unique-id') {
         window.history.back()
     } else {
-        // 否则直接关闭
         onClose()
     }
 }
 ```
 
-**关键点：**
-- 检查 `window.history.state` 是否包含模态框标识
-- 匹配时调用 `window.history.back()`，触发 popstate 事件
-- 不匹配时直接调用 `onClose()`
+### 多步骤表单模态框
 
-### 3. 移除拖拽动画（可选）
+**Modal 组件**：
+```typescript
+const formRef = useRef<{ handleBackStep: () => boolean } | null>(null)
 
-如果之前使用 `framer-motion` 的拖拽关闭功能，需要移除：
+useEffect(() => {
+    if (!showForm) return
+    
+    // 替换掉父模态框记录
+    if (window.history.state?.modal === 'parent-modal-id') {
+        window.history.replaceState(null, '')
+    }
+    
+    window.history.pushState({ modal: 'form-id' }, '')
+    
+    const handlePopState = () => {
+        if (formRef.current?.handleBackStep()) {
+            // 返回了上一步，重新添加记录
+            window.history.pushState({ modal: 'form-id' }, '')
+        } else {
+            // 已在第一步，关闭
+            onClose()
+        }
+    }
+    
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+}, [showForm, onClose])
 
-```diff
-- import { motion, AnimatePresence } from 'framer-motion'
-+ import { AnimatePresence } from 'framer-motion'
+<Form ref={formRef} ... />
+```
 
-- <motion.div
--     drag="x"
--     dragConstraints={{ left: 0, right: 0 }}
--     onDragEnd={handleDragEnd}
--     ...
-- >
-+ <div className="...">
+**Form 组件**：
+```typescript
+export interface FormHandle {
+    handleBackStep: () => boolean
+}
+
+const Form = forwardRef<FormHandle, FormProps>((props, ref) => {
+    useImperativeHandle(ref, () => ({
+        handleBackStep: () => {
+            if (currentStep > 0) {
+                setCurrentStep(currentStep - 1)
+                return true  // 处理了返回
+            }
+            return false  // 已在第一步
+        }
+    }))
+    
+    // ... 表单逻辑
+})
+
+Form.displayName = 'Form'
 ```
 
 ## 适配步骤
 
-1. 确定模态框唯一标识符（如：`bean-detail`, `brewing-detail`, `settings`）
-2. 在模态框组件中添加历史栈管理 useEffect
-3. 修改 handleClose 函数逻辑
-4. 测试：点击关闭按钮、硬件返回键、浏览器返回按钮
+1. 确定模态框唯一 ID
+2. 添加历史栈管理 useEffect
+3. 修改 handleClose 函数
+4. 多步骤表单：使用 forwardRef + useImperativeHandle
 
-## 示例：BeanDetailModal
+## 已知限制
 
-**标识符：** `bean-detail`
+**侧滑预览闪烁**：PWA/网页侧滑返回时可能短暂看到父模态框，这是浏览器机制限制，无法完全避免。硬件返回键和浏览器按钮工作正常。
 
-**位置：** `src/components/coffee-bean/Detail/BeanDetailModal.tsx`
+## 示例
 
-**修改点：**
-1. 第 91-108 行：添加历史栈管理 useEffect
-2. 第 363-371 行：修改 handleClose 函数
-3. 移除 motion.div 拖拽相关代码
-
-## 注意事项
-
-- 每个模态框使用唯一的 modal 标识符，避免冲突
-- 确保 `onClose` 在依赖项中，避免闭包问题
-- 移除事件监听器，防止内存泄漏
-- 优先使用历史栈返回，保持用户体验一致性
+- **单层**：`src/components/coffee-bean/Detail/BeanDetailModal.tsx`
+- **多步骤**：`src/components/coffee-bean/Form/Modal.tsx` + `index.tsx`

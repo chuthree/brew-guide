@@ -25,6 +25,41 @@ const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
     // 添加对模态框的引用
     const modalRef = useRef<HTMLDivElement>(null)
     
+    // 表单引用，用于调用表单的返回方法
+    const formRef = useRef<{ handleBackStep: () => boolean } | null>(null)
+    
+    // 历史栈管理 - 支持硬件返回键和浏览器返回按钮
+    useEffect(() => {
+        if (!showForm) return
+
+        // 如果历史栈中有 bean-detail 记录，用 replaceState 替换它
+        // 注意：侧滑时可能仍会短暂看到详情页，这是浏览器机制限制
+        if (window.history.state?.modal === 'bean-detail') {
+            window.history.replaceState(null, '')
+        }
+
+        // 添加表单的历史记录
+        window.history.pushState({ modal: 'bean-form' }, '')
+
+        // 监听返回事件
+        const handlePopState = () => {
+            // 询问表单是否还有上一步
+            if (formRef.current?.handleBackStep()) {
+                // 表单内部处理了返回（返回上一步），重新添加历史记录
+                window.history.pushState({ modal: 'bean-form' }, '')
+            } else {
+                // 表单已经在第一步，关闭模态框
+                onClose()
+            }
+        }
+
+        window.addEventListener('popstate', handlePopState)
+
+        return () => {
+            window.removeEventListener('popstate', handlePopState)
+        }
+    }, [showForm, onClose])
+    
     // 检测平台
     useEffect(() => {
         if (Capacitor.isNativePlatform()) {
@@ -71,6 +106,17 @@ const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
         }
     }, [showForm, isIOS])
     
+    // 处理关闭
+    const handleClose = () => {
+        // 如果历史栈中有我们添加的条目，触发返回
+        if (window.history.state?.modal === 'bean-form') {
+            window.history.back()
+        } else {
+            // 否则直接关闭
+            onClose()
+        }
+    }
+    
     return (
         <AnimatePresence>
             {showForm && (
@@ -112,8 +158,9 @@ const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
                             className={`px-6 pb-safe-bottom overflow-auto max-h-[calc(85vh-40px)] modal-form-container`}
                         >
                             <CoffeeBeanForm
+                                ref={formRef}
                                 onSave={onSave}
-                                onCancel={onClose}
+                                onCancel={handleClose}
                                 initialBean={initialBean || undefined}
                             />
                         </motion.div>

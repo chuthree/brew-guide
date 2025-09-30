@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useRef, useEffect, useCallback } from 'react'
+import React, { useState, useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowLeft, ArrowRight, Check } from 'lucide-react'
 import { ExtendedCoffeeBean, BlendComponent, Step, StepConfig } from './types'
@@ -19,6 +19,11 @@ interface CoffeeBeanFormProps {
     initialBean?: ExtendedCoffeeBean
 }
 
+// 暴露给父组件的方法
+export interface CoffeeBeanFormHandle {
+    handleBackStep: () => boolean
+}
+
 const steps: StepConfig[] = [
     { id: 'basic', label: '基本信息' },
     { id: 'detail', label: '详细信息' },
@@ -26,11 +31,11 @@ const steps: StepConfig[] = [
     { id: 'complete', label: '完成' }
 ];
 
-const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
+const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(({
     onSave,
     onCancel,
     initialBean,
-}) => {
+}, ref) => {
 
 
     // 当前步骤状态
@@ -179,6 +184,19 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
     const getCurrentStepIndex = () => {
         return steps.findIndex(step => step.id === currentStep);
     };
+
+    // 暴露给父组件的方法
+    useImperativeHandle(ref, () => ({
+        // 返回 true 表示处理了返回（返回上一步），false 表示已在第一步
+        handleBackStep: () => {
+            const currentIndex = getCurrentStepIndex();
+            if (currentIndex > 0) {
+                setCurrentStep(steps[currentIndex - 1].id);
+                return true; // 处理了返回
+            }
+            return false; // 已经在第一步，无法再返回
+        }
+    }));
 
     // 下一步
     const handleNextStep = () => {
@@ -734,6 +752,8 @@ const CoffeeBeanForm: React.FC<CoffeeBeanFormProps> = ({
             {renderNextButton()}
         </div>
     );
-};
+});
+
+CoffeeBeanForm.displayName = 'CoffeeBeanForm';
 
 export default CoffeeBeanForm; 
