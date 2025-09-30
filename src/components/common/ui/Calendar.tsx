@@ -1,10 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
 import { format, addMonths, subMonths, isSameDay, isToday, startOfMonth, eachDayOfInterval, addDays, Locale } from "date-fns";
 import { zhCN, enUS } from "date-fns/locale";
 import { cn } from "@/lib/utils/classNameUtils";
+import * as Popover from '@radix-ui/react-popover';
 
 export interface CalendarProps {
   mode?: "single" | "range" | "multiple";
@@ -108,24 +109,139 @@ export function Calendar({
     return false;
   };
 
+  const [showYearPicker, setShowYearPicker] = React.useState(false);
+  const [showMonthPicker, setShowMonthPicker] = React.useState(false);
+
+  // 生成年份选项（当前年份往前10年，共11年）
+  const currentYear = currentMonth.getFullYear();
+  const years = Array.from({ length: 11 }, (_, i) => currentYear - 10 + i);
+  
+  // 生成月份选项
+  const monthNames = locale === "zh-CN" 
+    ? ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"]
+    : ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  
+  // 处理年份选择
+  const handleYearSelect = (year: number) => {
+    const newDate = new Date(currentMonth);
+    newDate.setFullYear(year);
+    setCurrentMonth(newDate);
+    setShowYearPicker(false);
+  };
+  
+  // 处理月份选择
+  const handleMonthSelect = (monthIndex: number) => {
+    const newDate = new Date(currentMonth);
+    newDate.setMonth(monthIndex);
+    setCurrentMonth(newDate);
+    setShowMonthPicker(false);
+  };
+
   return (
     <div className={cn("p-3", className)}>
       {/* 日历头部 - 月份导航 */}
       <div className="flex items-center justify-between mb-4">
         <button
           onClick={goToPrevMonth}
-          className="p-2 hover:opacity-80 flex items-center justify-center"
+          className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 flex items-center justify-center rounded-md transition-colors"
           aria-label="上个月"
           type="button"
         >
           <ChevronLeft className="icon-xs icon-secondary" />
         </button>
-        <h2 className="text-sm font-medium">
-          {format(currentMonth, "yyyy/MM", { locale: localeObj })}
-        </h2>
+        
+        <div className="flex items-center gap-1">
+          {/* 年份选择器 */}
+          <Popover.Root open={showYearPicker} onOpenChange={setShowYearPicker}>
+            <Popover.Trigger asChild>
+              <button
+                className="flex items-center gap-1 px-2 py-1 text-sm font-medium rounded hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-800 dark:text-white transition-colors"
+                type="button"
+              >
+                {currentMonth.getFullYear()}
+                <ChevronDown className="w-3 h-3" />
+              </button>
+            </Popover.Trigger>
+            <Popover.Portal>
+              <Popover.Content
+                className={cn(
+                  "bg-white dark:bg-neutral-900 rounded-md shadow-lg border border-neutral-200 dark:border-neutral-800 z-50",
+                  "max-h-64 overflow-y-auto",
+                  "data-[state=open]:animate-in data-[state=closed]:animate-out",
+                  "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+                  "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
+                )}
+                sideOffset={4}
+              >
+                <div className="grid grid-cols-3 gap-1 p-2 min-w-[200px]">
+                  {years.map(year => (
+                    <button
+                      key={year}
+                      onClick={() => handleYearSelect(year)}
+                      className={cn(
+                        "px-3 py-2 text-sm rounded hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors",
+                        year === currentYear 
+                          ? "bg-neutral-800 text-white dark:bg-white dark:text-neutral-900 font-medium" 
+                          : "text-neutral-800 dark:text-white"
+                      )}
+                      type="button"
+                    >
+                      {year}
+                    </button>
+                  ))}
+                </div>
+              </Popover.Content>
+            </Popover.Portal>
+          </Popover.Root>
+
+          <span className="text-sm font-medium text-neutral-800 dark:text-white">/</span>
+
+          {/* 月份选择器 */}
+          <Popover.Root open={showMonthPicker} onOpenChange={setShowMonthPicker}>
+            <Popover.Trigger asChild>
+              <button
+                className="flex items-center gap-1 px-2 py-1 text-sm font-medium rounded hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-800 dark:text-white transition-colors"
+                type="button"
+              >
+                {(currentMonth.getMonth() + 1).toString().padStart(2, '0')}
+                <ChevronDown className="w-3 h-3" />
+              </button>
+            </Popover.Trigger>
+            <Popover.Portal>
+              <Popover.Content
+                className={cn(
+                  "bg-white dark:bg-neutral-900 rounded-md shadow-lg border border-neutral-200 dark:border-neutral-800 z-50",
+                  "data-[state=open]:animate-in data-[state=closed]:animate-out",
+                  "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+                  "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
+                )}
+                sideOffset={4}
+              >
+                <div className="grid grid-cols-3 gap-1 p-2 min-w-[200px]">
+                  {monthNames.map((monthName, index) => (
+                    <button
+                      key={index}
+                      onClick={() => handleMonthSelect(index)}
+                      className={cn(
+                        "px-3 py-2 text-sm rounded hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors",
+                        index === currentMonth.getMonth()
+                          ? "bg-neutral-800 text-white dark:bg-white dark:text-neutral-900 font-medium"
+                          : "text-neutral-800 dark:text-white"
+                      )}
+                      type="button"
+                    >
+                      {monthName}
+                    </button>
+                  ))}
+                </div>
+              </Popover.Content>
+            </Popover.Portal>
+          </Popover.Root>
+        </div>
+
         <button
           onClick={goToNextMonth}
-          className="p-2 hover:opacity-80 flex items-center justify-center"
+          className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 flex items-center justify-center rounded-md transition-colors"
           aria-label="下个月"
           type="button"
         >
@@ -178,7 +294,7 @@ export function Calendar({
       <div className="mt-4 flex justify-end">
         <button
           onClick={selectToday}
-          className="text-xs px-3 py-1.5 rounded-md bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-white hover:opacity-80 transition-opacity"
+          className="text-xs px-3 py-1.5 rounded-md bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-white hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
           type="button"
         >
           今天
