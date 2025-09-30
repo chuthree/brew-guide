@@ -1,6 +1,6 @@
 'use client'
 
-import React, { ReactNode, useState, useEffect, useRef } from 'react'
+import React, { ReactNode, useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react'
 import { ArrowLeft, ArrowRight, Search, X, Shuffle } from 'lucide-react'
 import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager'
 import { showToast } from "@/components/common/feedback/GlobalToast"
@@ -25,7 +25,12 @@ interface NoteSteppedFormModalProps {
     onRandomBean?: (isLongPress?: boolean) => void
 }
 
-const NoteSteppedFormModal: React.FC<NoteSteppedFormModalProps> = ({
+// 暴露给父组件的方法
+export interface NoteSteppedFormHandle {
+    handleBackStep: () => boolean
+}
+
+const NoteSteppedFormModal = forwardRef<NoteSteppedFormHandle, NoteSteppedFormModalProps>(({
     showForm,
     onClose,
     onComplete,
@@ -36,7 +41,7 @@ const NoteSteppedFormModal: React.FC<NoteSteppedFormModalProps> = ({
     currentStep,
     setCurrentStep,
     onRandomBean
-}) => {
+}, ref) => {
     const [internalStepIndex, setInternalStepIndex] = useState(initialStep)
 
     // 使用外部或内部状态控制当前步骤
@@ -57,6 +62,27 @@ const NoteSteppedFormModal: React.FC<NoteSteppedFormModalProps> = ({
     // 模态框DOM引用
     const modalRef = useRef<HTMLDivElement>(null)
     const contentScrollRef = useRef<HTMLDivElement>(null)
+
+    // 暴露给父组件的方法
+    useImperativeHandle(ref, () => ({
+        // 返回 true 表示处理了返回（返回上一步），false 表示已在第一步
+        handleBackStep: () => {
+            if (currentStepIndex > 0) {
+                const newIndex = currentStepIndex - 1;
+                setCurrentStepIndex(newIndex);
+                if (onStepChange) {
+                    onStepChange(newIndex);
+                }
+                // 重置搜索状态
+                setIsSearching(false);
+                setSearchQuery('');
+                // 重置高亮状态
+                setHighlightedBeanId(null);
+                return true; // 处理了返回
+            }
+            return false; // 已经在第一步，无法再返回
+        }
+    }), [currentStepIndex, setCurrentStepIndex, onStepChange])
 
     // 当初始化步骤变化时更新当前步骤
     useEffect(() => {
@@ -374,6 +400,8 @@ const NoteSteppedFormModal: React.FC<NoteSteppedFormModalProps> = ({
             {renderNextButton()}
         </div>
     )
-}
+})
+
+NoteSteppedFormModal.displayName = 'NoteSteppedFormModal'
 
 export default NoteSteppedFormModal

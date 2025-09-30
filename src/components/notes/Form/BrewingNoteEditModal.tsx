@@ -91,13 +91,39 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
         if (!isClosing && !isAnimating) {
             setIsAnimating(true)
             setIsClosing(true)
-            // 等待退出动画完成后再调用父组件的关闭回调
-            setTimeout(() => {
-                onClose()
-                setIsAnimating(false)
-            }, 200) // 匹配新的动画持续时间
+            
+            // 如果历史栈中有我们添加的条目，触发返回
+            if (window.history.state?.modal === 'brewing-note-edit') {
+                window.history.back()
+            } else {
+                // 否则直接关闭
+                // 等待退出动画完成后再调用父组件的关闭回调
+                setTimeout(() => {
+                    onClose()
+                    setIsAnimating(false)
+                }, 200) // 匹配新的动画持续时间
+            }
         }
     }, [isClosing, isAnimating, onClose])
+
+    // 历史栈管理 - 支持硬件返回键和浏览器返回按钮
+    useEffect(() => {
+        if (!showModal) return
+
+        // 添加模态框历史记录
+        window.history.pushState({ modal: 'brewing-note-edit' }, '')
+
+        // 监听返回事件
+        const handlePopState = () => {
+            onClose()
+        }
+
+        window.addEventListener('popstate', handlePopState)
+
+        return () => {
+            window.removeEventListener('popstate', handlePopState)
+        }
+    }, [showModal, onClose])
 
     // 移动端优化：防止背景滚动
     useEffect(() => {
