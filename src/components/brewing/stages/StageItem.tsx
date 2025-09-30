@@ -423,10 +423,12 @@ const StageItem: React.FC<StageItemProps> = ({
                                                                     ? formatTime(step.time, true)
                                                                     : ""}
                                                     </span>
-                                                    <span>·</span>
+                                                    {/* 等待步骤不显示分隔符和水量 */}
+                                                    {!isWaitingStage && <span>·</span>}
                                                 </>
                                             )}
-                                            <span>{step.items[0]}</span>
+                                            {/* 等待步骤不显示水量 */}
+                                            {!isWaitingStage && <span>{step.items[0]}</span>}
                                             {showFlowRate && step.type === 'pour' && step.note && (
                                                 <>
                                                     <span>·</span>
