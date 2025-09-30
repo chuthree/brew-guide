@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
-import { motion, AnimatePresence } from 'framer-motion'
+import { AnimatePresence } from 'framer-motion'
 import { CoffeeBean } from '@/types/app'
 import { BrewingNote } from '@/lib/core/config'
 import { parseDateToTimestamp } from '@/lib/utils/dateUtils'
@@ -88,6 +88,24 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     // 使用风味维度hook
     const { getValidTasteRatings } = useFlavorDimensions()
 
+    // 历史栈管理 - 支持硬件返回键和浏览器返回按钮
+    useEffect(() => {
+        if (!isOpen) return
+
+        // 添加模态框历史记录
+        window.history.pushState({ modal: 'bean-detail' }, '')
+
+        // 监听返回事件
+        const handlePopState = () => {
+            onClose()
+        }
+
+        window.addEventListener('popstate', handlePopState)
+
+        return () => {
+            window.removeEventListener('popstate', handlePopState)
+        }
+    }, [isOpen, onClose])
 
     // 重置图片错误状态
     useEffect(() => {
@@ -343,23 +361,13 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
 
     // 处理关闭
     const handleClose = () => {
-        onClose()
-    }
-
-    // 拖拽结束处理
-    const handleDragEnd = (_event: unknown, info: { offset: { x: number }; velocity: { x: number } }) => {
-        const threshold = 150 // 拖拽阈值，超过150px关闭
-        const velocity = info.velocity.x // 拖拽速度
-        
-        // 如果拖拽距离超过阈值或向右拖拽速度足够快，则关闭模态框
-        if (info.offset.x > threshold || velocity > 500) {
+        // 如果历史栈中有我们添加的条目，触发返回
+        if (window.history.state?.modal === 'bean-detail') {
+            window.history.back()
+        } else {
+            // 否则直接关闭
             onClose()
         }
-    }
-
-    // 拖拽开始处理
-    const handleDragStart = () => {
-        // 拖拽开始时不需要特殊处理，只是为了满足 Framer Motion 的要求
     }
 
     // 处理去冲煮功能
@@ -421,32 +429,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
         <>
         <AnimatePresence>
             {isOpen && (
-                <motion.div
-                    initial={{ x: "100%" }}
-                    animate={{ x: 0 }}
-                    exit={{ x: "100%" }}
-                    transition={{
-                        duration: 0.35,
-                        ease: [0.36, 0.66, 0.04, 1]
-                    }}
-                    drag="x"
-                    dragConstraints={{ left: 0, right: 0 }}
-                    dragElastic={{ left: 0, right: 0.8 }}
-                    onDragStart={handleDragStart}
-                    onDragEnd={handleDragEnd}
-                    dragMomentum={false}
-                    dragDirectionLock={true}
-                    dragPropagation={false}
-                    onDirectionLock={(axis) => {
-                        // 当方向锁定为垂直时，我们不需要特殊处理
-                        // Framer Motion 会自动处理方向锁定逻辑
-                        if (axis === 'y') {
-                            // 垂直滚动时不需要特殊处理
-                        }
-                    }}
-                    style={{
-                        willChange: "transform"
-                    }}
+                <div
                     className="fixed inset-0 z-50 max-w-[500px] mx-auto overflow-hidden bg-neutral-50 dark:bg-neutral-900 flex flex-col"
                 >
                         {/* 顶部按钮栏 */}
@@ -832,7 +815,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                 </div>
                             ) : null}
                         </div>
-                    </motion.div>
+                    </div>
             )}
         </AnimatePresence>
 
