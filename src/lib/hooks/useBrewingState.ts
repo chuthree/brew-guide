@@ -157,22 +157,7 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 	// 监听器具缓存变化，实现跨组件同步
 	// 移除复杂的缓存事件监听系统
 
-	// 简化的前置条件检查
-	const checkPrerequisites = useCallback(
-		(step: BrewingStep): boolean => {
-			switch (step) {
-				case "brewing":
-					return !!selectedMethod;
-				case "notes":
-					return showComplete;
-				default:
-					return true;
-			}
-		},
-		[selectedMethod, showComplete]
-	);
-
-	// 简化的步骤导航函数
+	// 简化的步骤导航函数 - 使用统一的导航管理
 	const navigateToStep = useCallback(
 		(step: BrewingStep, options?: NavigationOptions) => {
 			const { force = false } = options || {};
@@ -192,8 +177,15 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 			}
 
 			// 检查前置条件
-			if (!force && !checkPrerequisites(step)) {
-				return false;
+			if (!force) {
+				switch (step) {
+					case "brewing":
+						if (!selectedMethod) return false;
+						break;
+					case "notes":
+						if (!showComplete) return false;
+						break;
+				}
 			}
 
 			// 设置步骤和标签
@@ -221,9 +213,8 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 			activeMainTab,
 			isTimerRunning,
 			showComplete,
-			checkPrerequisites,
-			selectedEquipment,
 			selectedMethod,
+			selectedEquipment,
 			currentBrewingMethod,
 			customEquipments,
 		]

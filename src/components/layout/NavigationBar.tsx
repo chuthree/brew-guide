@@ -17,7 +17,6 @@ import { saveMainTabPreference } from '@/lib/navigation/navigationCache'
 import { ViewOption, VIEW_LABELS } from '@/components/coffee-bean/List/types'
 
 // 统一类型定义
-type TabType = '方案' | '注水' | '记录'
 type MainTabType = '冲煮' | '咖啡豆' | '笔记'
 type BrewingStep = 'coffeeBean' | 'method' | 'brewing' | 'notes'
 
@@ -77,11 +76,8 @@ const EditableParameter: React.FC<EditableParameterProps> = ({
 }) => {
     const [isEditing, setIsEditing] = useState(false)
     const inputRef = React.useRef<HTMLInputElement>(null)
-
-    // 简化逻辑：编辑时也直接使用转换后的值，让用户输入更直观
     const [tempValue, setTempValue] = useState(value)
 
-    // 自动聚焦和选择文本
     useEffect(() => {
         if (isEditing && inputRef.current) {
             inputRef.current.focus()
@@ -89,12 +85,10 @@ const EditableParameter: React.FC<EditableParameterProps> = ({
         }
     }, [isEditing])
 
-    // 同步编辑值 - 始终使用显示值
     useEffect(() => {
         setTempValue(value)
     }, [value])
 
-    // 处理提交和取消的统一逻辑
     const handleSubmit = useCallback(() => {
         setIsEditing(false)
         if (tempValue !== value) onChange(tempValue)
@@ -110,10 +104,20 @@ const EditableParameter: React.FC<EditableParameterProps> = ({
         else if (e.key === 'Escape') handleCancel()
     }, [handleSubmit, handleCancel])
 
+    if (disabled) {
+        return (
+            <span className={`inline-flex items-center ${className}`}>
+                {prefix && <span className="shrink-0">{prefix}</span>}
+                <span className="whitespace-nowrap">{value}</span>
+                {unit && <span className="ml-0.5 shrink-0">{unit}</span>}
+            </span>
+        )
+    }
+
     return (
         <span
-            className={`group relative inline-flex items-center ${className} ${disabled ? 'cursor-default' : 'cursor-pointer'} min-w-0 ${disabled ? '' : 'border-b border-dashed border-neutral-300 dark:border-neutral-600 pb-0.5'}`}
-            onClick={() => !disabled && setIsEditing(true)}
+            className={`group relative inline-flex items-center cursor-pointer min-w-0 border-b border-dashed border-neutral-300 dark:border-neutral-600 pb-0.5 ${className}`}
+            onClick={() => setIsEditing(true)}
         >
             {prefix && <span className="shrink-0">{prefix}</span>}
             {isEditing ? (
@@ -140,7 +144,6 @@ interface NavigationBarProps {
     activeMainTab: MainTabType;
     setActiveMainTab: (tab: MainTabType) => void;
     activeBrewingStep: BrewingStep;
-    setActiveBrewingStep: (step: BrewingStep) => void;
     parameterInfo: ParameterInfo;
     setParameterInfo: (info: ParameterInfo) => void;
     editableParams: EditableParams | null;
@@ -166,38 +169,21 @@ interface NavigationBarProps {
     } | null;
     handleParamChange: (type: keyof EditableParams, value: string) => void;
     setShowHistory: (show: boolean) => void;
-    setActiveTab: (tab: TabType) => void;
-    onTitleDoubleClick: () => void; // 添加双击标题的回调函数
-    settings: SettingsOptions; // 添加settings属性
-    // 添加咖啡豆相关字段
-    selectedCoffeeBean: string | null;
-    hasCoffeeBeans?: boolean; // 添加是否有咖啡豆的属性
-    navigateToStep?: (step: BrewingStep, options?: {
-        resetParams?: boolean,
-        preserveMethod?: boolean,
-        preserveEquipment?: boolean,
-        preserveCoffeeBean?: boolean,
-        force?: boolean
-    }) => void; // 添加统一的步骤导航函数
-    onStepClick?: (step: BrewingStep) => void; // 添加步骤点击回调
-    // 添加替代头部内容支持
-    alternativeHeader?: React.ReactNode; // 替代的头部内容
-    showAlternativeHeader?: boolean; // 是否显示替代头部内容
-    // 添加咖啡豆视图切换相关属性
-    currentBeanView?: ViewOption; // 当前咖啡豆视图
-    _onBeanViewChange?: (view: ViewOption) => void; // 视图切换回调
-    showViewDropdown?: boolean; // 视图下拉菜单显示状态
-    onToggleViewDropdown?: () => void; // 切换视图下拉菜单
-    // 添加萃取时间变更处理函数
+    onTitleDoubleClick: () => void;
+    settings: SettingsOptions;
+    hasCoffeeBeans?: boolean;
+    alternativeHeader?: React.ReactNode;
+    showAlternativeHeader?: boolean;
+    currentBeanView?: ViewOption;
+    showViewDropdown?: boolean;
+    onToggleViewDropdown?: () => void;
     handleExtractionTimeChange?: (time: number) => void;
-    // 添加器具相关props
     customEquipments?: CustomEquipment[];
     onEquipmentSelect?: (equipmentId: string) => void;
     onAddEquipment?: () => void;
     onEditEquipment?: (equipment: CustomEquipment) => void;
     onDeleteEquipment?: (equipment: CustomEquipment) => void;
     onShareEquipment?: (equipment: CustomEquipment) => void;
-    // 添加返回按钮相关props
     onBackClick?: () => void;
 }
 
@@ -241,10 +227,10 @@ const useNavigation = (activeBrewingStep: BrewingStep, activeMainTab: MainTabTyp
 }
 
 const NavigationBar: React.FC<NavigationBarProps> = ({
-    activeMainTab, setActiveMainTab, activeBrewingStep, setActiveBrewingStep,
+    activeMainTab, setActiveMainTab, activeBrewingStep,
     parameterInfo, setParameterInfo, editableParams, setEditableParams,
     isTimerRunning, showComplete, selectedEquipment, selectedMethod,
-    handleParamChange, setShowHistory, setActiveTab, onTitleDoubleClick,
+    handleParamChange, setShowHistory, onTitleDoubleClick,
     settings, hasCoffeeBeans, alternativeHeader, showAlternativeHeader = false,
     currentBeanView, showViewDropdown, onToggleViewDropdown,
     handleExtractionTimeChange, customEquipments = [], onEquipmentSelect,
@@ -593,34 +579,27 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                         className="overflow-hidden"
                                     >
                                         <div className="px-6 py-2 mt-2 bg-neutral-100 dark:bg-neutral-800 text-xs font-medium text-neutral-500 dark:text-neutral-400 relative">
-                                            <div className="flex items-center min-w-0 overflow-x-auto no-scrollbar max-w-full">
+                                            {/* 方案名称区域 - 仅显示信息 */}
+                                            <div className="flex items-center min-w-0 overflow-x-auto no-scrollbar max-w-full pr-[50%]">
                                                 {parameterInfo.method && (
-                                                    <span
-                                                        className="cursor-pointer whitespace-nowrap"
-                                                        onClick={() => {
-                                                            setActiveBrewingStep('method');
-                                                            setActiveTab('方案');
-                                                        }}
-                                                    >
+                                                    <span className="whitespace-nowrap">
                                                         {getSelectedEquipmentName() && (
-                                                            <>
-                                                                {getSelectedEquipmentName()} ·
-                                                            </>
+                                                            <span className="mr-1.5">{getSelectedEquipmentName()}</span>
                                                         )}
                                                         {parameterInfo.method}
                                                     </span>
                                                 )}
                                             </div>
 
+                                            {/* 参数区域 - 右侧绝对定位，独立交互 */}
                                             {parameterInfo.params && (
-                                                <div className="absolute top-2 right-6 min-w-0 max-w-full text-right z-10">
+                                                <div className="absolute top-2 right-6 min-w-0 max-w-[50%] text-right z-10">
                                                     {editableParams ? (
                                                         <div className="flex items-center justify-end bg-neutral-100 dark:bg-neutral-800 space-x-1 sm:space-x-2 overflow-x-auto pl-3">
                                                             <EditableParameter
                                                                 value={editableParams.coffee.replace('g', '')}
                                                                 onChange={(v) => handleParamChange('coffee', v)}
                                                                 unit="g"
-                                                                className=""
                                                                 disabled={isParamsDisabled}
                                                             />
 
@@ -632,7 +611,6 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                                                         onChange={(v) => handleParamChange('ratio', v)}
                                                                         unit=""
                                                                         prefix="1:"
-                                                                        className=""
                                                                         disabled={isParamsDisabled}
                                                                     />
                                                                 </>
@@ -645,7 +623,6 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                                                         value={formatGrindSize(editableParams.grindSize, settings.grindType, settings.customGrinders as Record<string, unknown>[] | undefined)}
                                                                         onChange={(v) => handleParamChange('grindSize', v)}
                                                                         unit=""
-                                                                        className=""
                                                                         disabled={isParamsDisabled}
                                                                     />
                                                                 </>
@@ -658,7 +635,6 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                                                         value={espressoUtils.formatTime(espressoUtils.getExtractionTime(selectedMethod))}
                                                                         onChange={(v) => handleTimeChange(v)}
                                                                         unit="秒"
-                                                                        className=""
                                                                         disabled={isParamsDisabled}
                                                                     />
                                                                     <span className="shrink-0">·</span>
@@ -666,7 +642,6 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                                                         value={editableParams.water.replace('g', '')}
                                                                         onChange={(v) => handleParamChange('water', v)}
                                                                         unit="g"
-                                                                        className=""
                                                                         disabled={isParamsDisabled}
                                                                     />
                                                                 </>
@@ -678,7 +653,6 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                                                             value={editableParams.temp.replace('°C', '')}
                                                                             onChange={(v) => handleParamChange('temp', v)}
                                                                             unit="°C"
-                                                                            className=""
                                                                             disabled={isParamsDisabled}
                                                                         />
                                                                     </>
@@ -686,8 +660,8 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                                             )}
                                                         </div>
                                                     ) : (
-                                                        <span
-                                                            className="cursor-pointer flex items-center justify-end space-x-1 sm:space-x-2 overflow-x-auto pl-6"
+                                                        <div
+                                                            className="cursor-pointer flex items-center justify-end space-x-1 sm:space-x-2 overflow-x-auto pl-6 hover:text-neutral-700 dark:hover:text-neutral-300 transition-colors"
                                                             onClick={() => {
                                                                 if (selectedMethod && !isTimerRunning) {
                                                                     setEditableParams({
@@ -700,12 +674,6 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                                                 }
                                                             }}
                                                         >
-                                                            {getSelectedEquipmentName() && (
-                                                                <>
-                                                                    <span className="whitespace-nowrap">{getSelectedEquipmentName()}</span>
-                                                                    <span className="shrink-0">·</span>
-                                                                </>
-                                                            )}
                                                             {espressoUtils.isEspresso(selectedMethod) ? (
                                                                 <>
                                                                     <span className="whitespace-nowrap">
@@ -733,7 +701,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                                                     <span className="whitespace-nowrap">{parameterInfo.params.temp}</span>
                                                                 </>
                                                             )}
-                                                        </span>
+                                                        </div>
                                                     )}
                                                 </div>
                                             )}
