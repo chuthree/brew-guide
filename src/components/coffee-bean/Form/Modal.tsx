@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useEffect, useState, useRef } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import { Capacitor } from '@capacitor/core'
 import { ExtendedCoffeeBean } from './types'
 import CoffeeBeanForm from './index'
@@ -19,6 +18,8 @@ const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
     onSave,
     onClose
 }) => {
+
+
     // 添加平台检测
     const [isIOS, setIsIOS] = useState(false)
     
@@ -27,6 +28,8 @@ const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
     
     // 表单引用，用于调用表单的返回方法
     const formRef = useRef<{ handleBackStep: () => boolean } | null>(null)
+
+
     
     // 历史栈管理 - 支持硬件返回键和浏览器返回按钮
     useEffect(() => {
@@ -35,11 +38,11 @@ const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
         // 如果历史栈中有 bean-detail 记录，用 replaceState 替换它
         // 注意：侧滑时可能仍会短暂看到详情页，这是浏览器机制限制
         if (window.history.state?.modal === 'bean-detail') {
-            window.history.replaceState(null, '')
+            window.history.replaceState({ modal: 'bean-form' }, '')
+        } else {
+            // 添加表单的历史记录
+            window.history.pushState({ modal: 'bean-form' }, '')
         }
-
-        // 添加表单的历史记录
-        window.history.pushState({ modal: 'bean-form' }, '')
 
         // 监听返回事件
         const handlePopState = () => {
@@ -117,55 +120,40 @@ const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
         }
     }
     
+
+
     return (
-        <AnimatePresence>
-            {showForm && (
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.265 }}
-                    className="fixed inset-0 z-50 bg-black/30 backdrop-blur-xs"
-                >
-                    <motion.div
-                        ref={modalRef}
-                        initial={{ y: '100%' }}
-                        animate={{ y: 0 }}
-                        transition={{
-                            type: "tween",
-                            ease: [0.33, 1, 0.68, 1], // cubic-bezier(0.33, 1, 0.68, 1) - easeOutCubic
-                            duration: 0.265
-                        }}
-                        style={{
-                            willChange: "transform"
-                        }}
-                        className={`absolute inset-x-0 bottom-0 max-w-[500px] mx-auto max-h-[85vh] overflow-auto rounded-t-2xl bg-neutral-50 dark:bg-neutral-900 shadow-xl`}
-                    >
-                        {/* 表单内容 */}
-                        <motion.div
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{
-                                type: "tween",
-                                ease: "easeOut",
-                                duration: 0.265,
-                                delay: 0.05
-                            }}
-                            style={{
-                                willChange: "opacity, transform"
-                            }}
-                            className={`px-6 pb-safe-bottom overflow-auto max-h-[calc(85vh-40px)] modal-form-container`}
-                        >
-                            <CoffeeBeanForm
-                                ref={formRef}
-                                onSave={onSave}
-                                onCancel={handleClose}
-                                initialBean={initialBean || undefined}
-                            />
-                        </motion.div>
-                    </motion.div>
-                </motion.div>
-            )}
-        </AnimatePresence>
+        <div
+            className={`
+                fixed inset-0 z-50 transition-all duration-300
+                ${showForm 
+                    ? 'opacity-100 pointer-events-auto bg-black/30 backdrop-blur-xs' 
+                    : 'opacity-0 pointer-events-none'
+                }
+            `}
+        >
+            <div
+                ref={modalRef}
+                className={`
+                    absolute inset-x-0 bottom-0 max-w-[500px] mx-auto max-h-[85vh] 
+                    overflow-auto rounded-t-2xl bg-neutral-50 dark:bg-neutral-900 shadow-xl
+                    transition-transform duration-300 ease-[cubic-bezier(0.33,1,0.68,1)]
+                    ${showForm ? 'translate-y-0' : 'translate-y-full'}
+                `}
+            >
+                <div className="px-6 pb-safe-bottom overflow-auto max-h-[calc(85vh-40px)] modal-form-container">
+                    {showForm && (
+                        <CoffeeBeanForm
+                            key={`bean-form-${initialBean?.id || 'new'}-${Date.now()}`}
+                            ref={formRef}
+                            onSave={onSave}
+                            onCancel={handleClose}
+                            initialBean={initialBean || undefined}
+                        />
+                    )}
+                </div>
+            </div>
+        </div>
     )
 }
 
