@@ -8,7 +8,7 @@ import { TabType, MainTabType, Content, Step as BaseStep } from '@/lib/hooks/use
 import { CoffeeBean } from '@/types/app';
 import type { BrewingNoteData } from '@/types/app';
 import { saveMainTabPreference } from '@/lib/navigation/navigationCache';
-import { showToast } from "@/components/common/feedback/GlobalToast";
+import { showToast } from "@/components/common/feedback/LightToast";
 import { getEquipmentName } from '@/lib/brewing/parameters';
 import BottomActionBar from '@/components/layout/BottomActionBar';
 import CoffeeBeanList from '@/components/coffee-bean/List/ListView';

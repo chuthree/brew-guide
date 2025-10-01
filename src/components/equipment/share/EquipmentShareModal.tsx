@@ -6,7 +6,7 @@ import { CustomEquipment, Method } from '@/lib/core/config';
 import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
-import { showToast } from '../../common/feedback/GlobalToast';
+import { showToast } from '../../common/feedback/LightToast';
 
 interface EquipmentShareModalProps {
     isOpen: boolean;

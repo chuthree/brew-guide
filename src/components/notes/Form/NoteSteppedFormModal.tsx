@@ -3,7 +3,7 @@
 import React, { ReactNode, useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react'
 import { ArrowLeft, ArrowRight, Search, X, Shuffle } from 'lucide-react'
 import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager'
-import { showToast } from "@/components/common/feedback/GlobalToast"
+import { showToast } from "@/components/common/feedback/LightToast"
 
 export interface Step {
     id: string

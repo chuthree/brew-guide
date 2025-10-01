@@ -8,7 +8,7 @@ import Script from 'next/script'
 import { Inter } from 'next/font/google'
 import { Noto_Sans_SC } from 'next/font/google'
 import { GeistMono } from 'geist/font'
-import { ToastProvider } from '@/components/common/feedback/GlobalToast'
+import { LightToast } from '@/components/common/feedback/LightToast'
 import { ExitToast } from '@/components/common/feedback/ExitToast'
 import '@/styles/base/globals.css'
 import KeyboardManager from '@/components/layout/KeyboardManager'
@@ -179,7 +179,6 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <ToastProvider>
               <Suspense>
                 <CapacitorInit />
                 <StorageInit />
@@ -188,8 +187,8 @@ export default function RootLayout({
                 <div className="h-full w-full overflow-hidden max-w-[500px] mx-auto">
                 {children}
                 </div>
+              <LightToast />
               <ExitToast />
-            </ToastProvider>
           </ThemeProvider>
         <Analytics />
       </body>

@@ -37,7 +37,7 @@ import { loadCustomEquipments, saveCustomEquipment, deleteCustomEquipment } from
 import CustomEquipmentFormModal from '@/components/equipment/forms/CustomEquipmentFormModal'
 import EquipmentImportModal from '@/components/equipment/import/EquipmentImportModal'
 import DataMigrationModal from '@/components/common/modals/DataMigrationModal'
-import { showToast } from '@/components/common/feedback/GlobalToast'
+import { showToast } from '@/components/common/feedback/LightToast'
 import BackupReminderModal from '@/components/common/modals/BackupReminderModal'
 import { BackupReminderUtils, BackupReminderType } from '@/lib/utils/backupReminderUtils'
 import { getEquipmentNameById, getEquipmentById } from '@/lib/utils/equipmentUtils'

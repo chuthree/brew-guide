@@ -50,7 +50,7 @@ import ViewSwitcher from './components/ViewSwitcher'
 import InventoryView from './components/InventoryView'
 import StatsView from './components/StatsView'
 import { toPng } from 'html-to-image'
-import { useToast } from '@/components/common/feedback/GlobalToast'
+import { showToast } from '@/components/common/feedback/LightToast'
 import { exportStatsView } from './components/StatsView/StatsExporter'
 import { TempFileManager } from '@/lib/utils/tempFileManager'
 import { exportListPreview } from './components/ListExporter'
@@ -901,14 +901,13 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     }, [filteredBeans, searchQuery, isSearching]);
 
     const [_isExportingRanking, setIsExportingRanking] = useState(false);
-    const toast = useToast();
 
     // 处理榜单分享
     const handleRankingShare = async () => {
         // 找到榜单容器
         const rankingContainer = document.querySelector('.coffee-bean-ranking-container');
         if (!rankingContainer) {
-            toast.showToast({
+            showToast({
                 type: 'error',
                 title: '无法找到榜单数据容器'
             });
@@ -1036,13 +1035,13 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
                 }
             );
 
-            toast.showToast({
+            showToast({
                 type: 'success',
                 title: '个人榜单已保存为图片'
             });
         } catch (error) {
             console.error('生成个人榜单图片失败', error);
-            toast.showToast({
+            showToast({
                 type: 'error',
                 title: '生成图片失败'
             });
@@ -1062,7 +1061,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         // 找到统计数据容器
         const statsContainer = document.querySelector('.coffee-bean-stats-container');
         if (!statsContainer) {
-            toast.showToast({
+            showToast({
                 type: 'error',
                 title: '无法找到统计数据容器'
             });
@@ -1076,13 +1075,13 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
             await exportStatsView({
                 statsContainerRef: { current: statsContainer as HTMLDivElement },
                 onSuccess: (message) => {
-                    toast.showToast({
+                    showToast({
                         type: 'success',
                         title: message
                     });
                 },
                 onError: (message) => {
-                    toast.showToast({
+                    showToast({
                         type: 'error',
                         title: message
                     });
@@ -1093,7 +1092,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
             });
         } catch (error) {
             console.error('导出统计数据时出错:', error);
-            toast.showToast({
+            showToast({
                 type: 'error',
                 title: '生成图片失败'
             });
@@ -1131,13 +1130,13 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
                 summaryText
             );
             
-            toast.showToast({
+            showToast({
                 type: 'success',
                 title: result.message
             });
         } catch (error) {
             console.error('导出预览图失败:', error);
-            toast.showToast({
+            showToast({
                 type: 'error',
                 title: '生成预览图失败'
             });

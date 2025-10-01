@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { type CustomEquipment, type Method } from '@/lib/core/config'
 import { Capacitor } from '@capacitor/core'
 import { FilePicker } from '@capawesome/capacitor-file-picker'
-import { showToast } from '../../common/feedback/GlobalToast'
+import { showToast } from '../../common/feedback/LightToast'
 
 interface EquipmentImportModalProps {
     showForm: boolean

@@ -384,7 +384,7 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 
 				// 如果是从通用方案创建的新方案，显示成功提示
 				if (isFromCommonMethod) {
-					const { showToast } = await import("@/components/common/feedback/GlobalToast");
+					const { showToast } = await import("@/components/common/feedback/LightToast");
 					showToast({ type: 'success', title: '已保存通用方案到自定义列表', duration: 2000 });
 				}
 			} catch (error) {
