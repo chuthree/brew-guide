@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
-import { AnimatePresence, motion } from 'framer-motion'
+
 import { CoffeeBean } from '@/types/app'
 import { BrewingNote } from '@/lib/core/config'
 import { parseDateToTimestamp } from '@/lib/utils/dateUtils'
@@ -84,6 +84,29 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     const [imageViewerOpen, setImageViewerOpen] = useState(false)
     const [currentImageUrl, setCurrentImageUrl] = useState('')
     const [noteImageErrors, setNoteImageErrors] = useState<Record<string, boolean>>({})
+    
+    // 控制滑入动画
+    const [shouldRender, setShouldRender] = useState(false)
+    const [isVisible, setIsVisible] = useState(false)
+    
+    // 处理显示/隐藏动画
+    useEffect(() => {
+        if (isOpen) {
+            setShouldRender(true)
+            // 短暂延迟以确保DOM已渲染，然后触发滑入动画
+            const timer = setTimeout(() => {
+                setIsVisible(true)
+            }, 10)
+            return () => clearTimeout(timer)
+        } else {
+            setIsVisible(false)
+            // 等待动画完成后再移除DOM
+            const timer = setTimeout(() => {
+                setShouldRender(false)
+            }, 350) // 与动画时长匹配
+            return () => clearTimeout(timer)
+        }
+    }, [isOpen])
     
     // 使用风味维度hook
     const { getValidTasteRatings } = useFlavorDimensions()
@@ -425,19 +448,19 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
         }, 300)
     }
 
+    // 只在需要时渲染DOM
+    if (!shouldRender) return null
+
     return (
         <>
-        <AnimatePresence>
-            {isOpen && (
-                <motion.div
-                    className="fixed inset-0 z-50 max-w-[500px] mx-auto overflow-hidden bg-neutral-50 dark:bg-neutral-900 flex flex-col"
-                    initial={{ x: "100%" }}
-                    animate={{ x: 0 }}
-                    transition={{
-                        duration: 0.35,
-                        ease: [0.36, 0.66, 0.04, 1]
-                    }}
-                >
+        <div
+            className={`
+                fixed inset-0 z-50 max-w-[500px] mx-auto overflow-hidden 
+                bg-neutral-50 dark:bg-neutral-900 flex flex-col
+                transition-transform duration-[350ms] ease-[cubic-bezier(0.36,0.66,0.04,1)]
+                ${isVisible ? 'translate-x-0' : 'translate-x-full'}
+            `}
+        >
                         {/* 顶部按钮栏 */}
                         <div className="sticky top-0 z-10 flex justify-between items-center pt-safe-top p-4 bg-neutral-50 dark:bg-neutral-900">
                             {/* 左侧关闭按钮 */}
@@ -821,9 +844,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                 </div>
                             ) : null}
                         </div>
-                    </motion.div>
-            )}
-        </AnimatePresence>
+                    </div>
 
         {/* 图片查看器 */}
         {currentImageUrl && imageViewerOpen && (
