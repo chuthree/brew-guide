@@ -578,133 +578,135 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                         }}
                                         className="overflow-hidden"
                                     >
-                                        <div className="px-6 py-2 mt-2 bg-neutral-100 dark:bg-neutral-800 text-xs font-medium text-neutral-500 dark:text-neutral-400 relative">
-                                            {/* 方案名称区域 - 仅显示信息 */}
-                                            <div className="flex items-center min-w-0 overflow-x-auto no-scrollbar max-w-full pr-[50%]">
-                                                {parameterInfo.method && (
-                                                    <span className="whitespace-nowrap">
-                                                        {getSelectedEquipmentName() && (
-                                                            <span className="mr-1.5">{getSelectedEquipmentName()}</span>
-                                                        )}
-                                                        {parameterInfo.method}
-                                                    </span>
-                                                )}
-                                            </div>
-
-                                            {/* 参数区域 - 右侧绝对定位，独立交互 */}
-                                            {parameterInfo.params && (
-                                                <div className="absolute top-2 right-6 min-w-0 max-w-[50%] text-right z-10">
-                                                    {editableParams ? (
-                                                        <div className="flex items-center justify-end bg-neutral-100 dark:bg-neutral-800 space-x-1 sm:space-x-2 overflow-x-auto pl-3">
-                                                            <EditableParameter
-                                                                value={editableParams.coffee.replace('g', '')}
-                                                                onChange={(v) => handleParamChange('coffee', v)}
-                                                                unit="g"
-                                                                disabled={isParamsDisabled}
-                                                            />
-
-                                                            {!espressoUtils.isEspresso(selectedMethod) && (
-                                                                <>
-                                                                    <span className="shrink-0">·</span>
-                                                                    <EditableParameter
-                                                                        value={editableParams.ratio.replace('1:', '')}
-                                                                        onChange={(v) => handleParamChange('ratio', v)}
-                                                                        unit=""
-                                                                        prefix="1:"
-                                                                        disabled={isParamsDisabled}
-                                                                    />
-                                                                </>
+                                        <div className="px-6 py-2 mt-2 bg-neutral-100 dark:bg-neutral-800 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                                            <div className="flex items-center justify-between gap-3">
+                                                {/* 左侧：方案名称区域 - 使用省略号 */}
+                                                <div className="flex items-center min-w-0 flex-1 overflow-hidden">
+                                                    {parameterInfo.method && (
+                                                        <span className="truncate">
+                                                            {getSelectedEquipmentName() && (
+                                                                <span className="mr-1.5">{getSelectedEquipmentName()}</span>
                                                             )}
+                                                            {parameterInfo.method}
+                                                        </span>
+                                                    )}
+                                                </div>
 
-                                                            {parameterInfo.params?.grindSize && (
-                                                                <>
-                                                                    <span className="shrink-0">·</span>
-                                                                    <EditableParameter
-                                                                        value={formatGrindSize(editableParams.grindSize, settings.grindType, settings.customGrinders as Record<string, unknown>[] | undefined)}
-                                                                        onChange={(v) => handleParamChange('grindSize', v)}
-                                                                        unit=""
-                                                                        disabled={isParamsDisabled}
-                                                                    />
-                                                                </>
-                                                            )}
+                                                {/* 右侧：参数区域 - 固定不压缩 */}
+                                                {parameterInfo.params && (
+                                                    <div className="flex items-center flex-shrink-0">
+                                                        {editableParams ? (
+                                                            <div className="flex items-center space-x-1 sm:space-x-2">
+                                                                <EditableParameter
+                                                                    value={editableParams.coffee.replace('g', '')}
+                                                                    onChange={(v) => handleParamChange('coffee', v)}
+                                                                    unit="g"
+                                                                    disabled={isParamsDisabled}
+                                                                />
 
-                                                            {espressoUtils.isEspresso(selectedMethod) ? (
-                                                                <>
-                                                                    <span className="shrink-0">·</span>
-                                                                    <EditableParameter
-                                                                        value={espressoUtils.formatTime(espressoUtils.getExtractionTime(selectedMethod))}
-                                                                        onChange={(v) => handleTimeChange(v)}
-                                                                        unit="秒"
-                                                                        disabled={isParamsDisabled}
-                                                                    />
-                                                                    <span className="shrink-0">·</span>
-                                                                    <EditableParameter
-                                                                        value={editableParams.water.replace('g', '')}
-                                                                        onChange={(v) => handleParamChange('water', v)}
-                                                                        unit="g"
-                                                                        disabled={isParamsDisabled}
-                                                                    />
-                                                                </>
-                                                            ) : (
-                                                                parameterInfo.params?.temp && (
+                                                                {!espressoUtils.isEspresso(selectedMethod) && (
                                                                     <>
                                                                         <span className="shrink-0">·</span>
                                                                         <EditableParameter
-                                                                            value={editableParams.temp.replace('°C', '')}
-                                                                            onChange={(v) => handleParamChange('temp', v)}
-                                                                            unit="°C"
+                                                                            value={editableParams.ratio.replace('1:', '')}
+                                                                            onChange={(v) => handleParamChange('ratio', v)}
+                                                                            unit=""
+                                                                            prefix="1:"
                                                                             disabled={isParamsDisabled}
                                                                         />
                                                                     </>
-                                                                )
-                                                            )}
-                                                        </div>
-                                                    ) : (
-                                                        <div
-                                                            className="cursor-pointer flex items-center justify-end space-x-1 sm:space-x-2 overflow-x-auto pl-6 hover:text-neutral-700 dark:hover:text-neutral-300 transition-colors"
-                                                            onClick={() => {
-                                                                if (selectedMethod && !isTimerRunning) {
-                                                                    setEditableParams({
-                                                                        coffee: selectedMethod.params.coffee,
-                                                                        water: selectedMethod.params.water,
-                                                                        ratio: selectedMethod.params.ratio,
-                                                                        grindSize: selectedMethod.params.grindSize,
-                                                                        temp: selectedMethod.params.temp,
-                                                                    })
-                                                                }
-                                                            }}
-                                                        >
-                                                            {espressoUtils.isEspresso(selectedMethod) ? (
-                                                                <>
-                                                                    <span className="whitespace-nowrap">
-                                                                        {formatGrindSize(parameterInfo.params.grindSize || "", settings.grindType, settings.customGrinders as Record<string, unknown>[] | undefined)}
-                                                                    </span>
-                                                                    <span className="shrink-0">·</span>
-                                                                    <span className="truncate max-w-[30px] sm:max-w-[40px]">{parameterInfo.params.coffee}</span>
-                                                                    <span className="shrink-0">·</span>
-                                                                    <span className="whitespace-nowrap">
-                                                                        {espressoUtils.formatTime(espressoUtils.getExtractionTime(selectedMethod))}秒
-                                                                    </span>
-                                                                    <span className="shrink-0">·</span>
-                                                                    <span className="whitespace-nowrap">{parameterInfo.params.water}</span>
-                                                                </>
-                                                            ) : (
-                                                                <>
-                                                                    <span className="truncate max-w-[30px] sm:max-w-[40px]">{parameterInfo.params.coffee}</span>
-                                                                    <span className="shrink-0">·</span>
-                                                                    <span className="whitespace-nowrap">{parameterInfo.params.ratio}</span>
-                                                                    <span className="shrink-0">·</span>
-                                                                    <span className="whitespace-nowrap">
-                                                                        {formatGrindSize(parameterInfo.params.grindSize || "", settings.grindType, settings.customGrinders as Record<string, unknown>[] | undefined)}
-                                                                    </span>
-                                                                    <span className="shrink-0">·</span>
-                                                                    <span className="whitespace-nowrap">{parameterInfo.params.temp}</span>
-                                                                </>
-                                                            )}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
+                                                                )}
+
+                                                                {parameterInfo.params?.grindSize && (
+                                                                    <>
+                                                                        <span className="shrink-0">·</span>
+                                                                        <EditableParameter
+                                                                            value={formatGrindSize(editableParams.grindSize, settings.grindType, settings.customGrinders as Record<string, unknown>[] | undefined)}
+                                                                            onChange={(v) => handleParamChange('grindSize', v)}
+                                                                            unit=""
+                                                                            disabled={isParamsDisabled}
+                                                                        />
+                                                                    </>
+                                                                )}
+
+                                                                {espressoUtils.isEspresso(selectedMethod) ? (
+                                                                    <>
+                                                                        <span className="shrink-0">·</span>
+                                                                        <EditableParameter
+                                                                            value={espressoUtils.formatTime(espressoUtils.getExtractionTime(selectedMethod))}
+                                                                            onChange={(v) => handleTimeChange(v)}
+                                                                            unit="秒"
+                                                                            disabled={isParamsDisabled}
+                                                                        />
+                                                                        <span className="shrink-0">·</span>
+                                                                        <EditableParameter
+                                                                            value={editableParams.water.replace('g', '')}
+                                                                            onChange={(v) => handleParamChange('water', v)}
+                                                                            unit="g"
+                                                                            disabled={isParamsDisabled}
+                                                                        />
+                                                                    </>
+                                                                ) : (
+                                                                    parameterInfo.params?.temp && (
+                                                                        <>
+                                                                            <span className="shrink-0">·</span>
+                                                                            <EditableParameter
+                                                                                value={editableParams.temp.replace('°C', '')}
+                                                                                onChange={(v) => handleParamChange('temp', v)}
+                                                                                unit="°C"
+                                                                                disabled={isParamsDisabled}
+                                                                            />
+                                                                        </>
+                                                                    )
+                                                                )}
+                                                            </div>
+                                                        ) : (
+                                                            <div
+                                                                className="cursor-pointer flex items-center space-x-1 sm:space-x-2 hover:text-neutral-700 dark:hover:text-neutral-300 transition-colors"
+                                                                onClick={() => {
+                                                                    if (selectedMethod && !isTimerRunning) {
+                                                                        setEditableParams({
+                                                                            coffee: selectedMethod.params.coffee,
+                                                                            water: selectedMethod.params.water,
+                                                                            ratio: selectedMethod.params.ratio,
+                                                                            grindSize: selectedMethod.params.grindSize,
+                                                                            temp: selectedMethod.params.temp,
+                                                                        })
+                                                                    }
+                                                                }}
+                                                            >
+                                                                {espressoUtils.isEspresso(selectedMethod) ? (
+                                                                    <>
+                                                                        <span className="whitespace-nowrap">
+                                                                            {formatGrindSize(parameterInfo.params.grindSize || "", settings.grindType, settings.customGrinders as Record<string, unknown>[] | undefined)}
+                                                                        </span>
+                                                                        <span className="shrink-0">·</span>
+                                                                        <span className="whitespace-nowrap">{parameterInfo.params.coffee}</span>
+                                                                        <span className="shrink-0">·</span>
+                                                                        <span className="whitespace-nowrap">
+                                                                            {espressoUtils.formatTime(espressoUtils.getExtractionTime(selectedMethod))}秒
+                                                                        </span>
+                                                                        <span className="shrink-0">·</span>
+                                                                        <span className="whitespace-nowrap">{parameterInfo.params.water}</span>
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <span className="whitespace-nowrap">{parameterInfo.params.coffee}</span>
+                                                                        <span className="shrink-0">·</span>
+                                                                        <span className="whitespace-nowrap">{parameterInfo.params.ratio}</span>
+                                                                        <span className="shrink-0">·</span>
+                                                                        <span className="whitespace-nowrap">
+                                                                            {formatGrindSize(parameterInfo.params.grindSize || "", settings.grindType, settings.customGrinders as Record<string, unknown>[] | undefined)}
+                                                                        </span>
+                                                                        <span className="shrink-0">·</span>
+                                                                        <span className="whitespace-nowrap">{parameterInfo.params.temp}</span>
+                                                                    </>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </motion.div>
                                 )}
