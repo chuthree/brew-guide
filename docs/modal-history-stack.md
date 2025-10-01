@@ -225,6 +225,107 @@ transition-transform duration-[350ms] ease-[cubic-bezier(0.36,0.66,0.04,1)]
 ### Q: 退出动画不完整
 **A**: 确保CSS有 exit 过渡效果，给足够时间让动画完成后再移除DOM
 
+### 多层嵌套设置页面（设置界面特殊处理）
+
+设置界面是一个复杂的多层嵌套结构，包含主设置页面和多个子设置页面。需要特殊的历史栈管理策略：
+
+**主设置组件**：
+```typescript
+// 历史栈管理 - 支持多层嵌套设置页面
+useEffect(() => {
+    if (!isOpen) return
+    
+    // 检查是否已经有设置相关的历史记录
+    const hasSettingsHistory = window.history.state?.modal?.includes('-settings') || 
+                              window.history.state?.modal === 'settings'
+    
+    if (hasSettingsHistory) {
+        // 如果已经有设置历史记录，替换它
+        window.history.replaceState({ modal: 'settings' }, '')
+    } else {
+        // 添加新的历史记录
+        window.history.pushState({ modal: 'settings' }, '')
+    }
+    
+    const handlePopState = () => {
+        // 检查是否有子设置页面打开
+        const hasSubSettingsOpen = showDisplaySettings || showGrinderSettings || 
+                                  showBeanSettings || showTimerSettings || showDataSettings
+        
+        if (hasSubSettingsOpen) {
+            // 如果有子设置页面打开，关闭它们
+            setShowDisplaySettings(false)
+            setShowGrinderSettings(false)
+            // ... 关闭所有子设置页面
+            // 重新添加主设置的历史记录
+            window.history.pushState({ modal: 'settings' }, '')
+        } else {
+            // 没有子页面打开，关闭主设置
+            onClose()
+        }
+    }
+    
+    window.addEventListener('popstate', handlePopState)
+    
+    return () => window.removeEventListener('popstate', handlePopState)
+}, [isOpen, onClose, showDisplaySettings, showGrinderSettings, /* ... 所有子设置状态 */])
+```
+
+**子设置组件**：
+```typescript
+// 子设置页面的历史栈管理
+React.useEffect(() => {
+    window.history.pushState({ modal: 'display-settings' }, '')
+    
+    const handlePopState = () => onClose()
+    window.addEventListener('popstate', handlePopState)
+    
+    return () => window.removeEventListener('popstate', handlePopState)
+}, [onClose])
+
+// 关闭处理
+const handleClose = () => {
+    if (window.history.state?.modal === 'display-settings') {
+        window.history.back()
+    } else {
+        onClose()
+    }
+}
+
+// 控制动画状态
+const [shouldRender, setShouldRender] = React.useState(false)
+const [isVisible, setIsVisible] = React.useState(false)
+
+// 处理显示/隐藏动画
+React.useEffect(() => {
+    setShouldRender(true)
+    // 短暂延迟确保DOM渲染，然后触发滑入动画
+    const timer = setTimeout(() => setIsVisible(true), 10)
+    return () => clearTimeout(timer)
+}, [])
+
+// 渲染
+if (!shouldRender) return null
+
+return (
+    <div
+        className={`
+            fixed inset-0 z-50 flex flex-col bg-neutral-50 dark:bg-neutral-900 max-w-[500px] mx-auto
+            transition-transform duration-[350ms] ease-[cubic-bezier(0.36,0.66,0.04,1)]
+            ${isVisible ? 'translate-x-0' : 'translate-x-full'}
+        `}
+    >
+        {/* 内容 */}
+    </div>
+)
+```
+
+**关键实现要点**：
+1. **智能历史记录管理**：主设置页面检测是否已有设置相关历史记录，避免重复添加
+2. **多层返回处理**：从子设置页面返回时，主设置页面不关闭，而是重新添加自己的历史记录
+3. **统一命名规范**：所有设置相关的 modal 标识都包含 'settings'，便于识别和管理
+4. **完整状态追踪**：主设置组件监听所有子设置页面的状态，确保准确判断当前层级
+
 ## 已知限制
 
 **侧滑预览闪烁**：PWA/网页侧滑返回时可能短暂看到父模态框，这是浏览器机制限制，无法完全避免。硬件返回键和浏览器按钮工作正常。
@@ -234,3 +335,4 @@ transition-transform duration-[350ms] ease-[cubic-bezier(0.36,0.66,0.04,1)]
 - **全屏滑入**：`src/components/coffee-bean/Detail/BeanDetailModal.tsx`
 - **底部弹出多步骤**：`src/components/coffee-bean/Form/Modal.tsx` + `index.tsx`
 - **底部弹出简单**：参考笔记表单的实现模式
+- **多层嵌套设置**：`src/components/settings/Settings.tsx` + 各子设置组件

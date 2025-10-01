@@ -4,7 +4,7 @@ import React from 'react'
 import { ChevronLeft } from 'lucide-react'
 import { SettingsOptions } from './Settings'
 import { ButtonGroup } from '../ui/ButtonGroup'
-import { motion } from 'framer-motion'
+
 import BeanPreview from './BeanPreview'
 
 interface BeanSettingsProps {
@@ -18,21 +18,50 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
     onClose,
     handleChange
 }) => {
+    // 历史栈管理
+    React.useEffect(() => {
+        window.history.pushState({ modal: 'bean-settings' }, '')
+        
+        const handlePopState = () => onClose()
+        window.addEventListener('popstate', handlePopState)
+        
+        return () => window.removeEventListener('popstate', handlePopState)
+    }, [onClose])
+
+    // 关闭处理
+    const handleClose = () => {
+        if (window.history.state?.modal === 'bean-settings') {
+            window.history.back()
+        } else {
+            onClose()
+        }
+    }
+
+    // 控制动画状态
+    const [shouldRender, setShouldRender] = React.useState(false)
+    const [isVisible, setIsVisible] = React.useState(false)
+
+    // 处理显示/隐藏动画
+    React.useEffect(() => {
+        setShouldRender(true)
+        const timer = setTimeout(() => setIsVisible(true), 10)
+        return () => clearTimeout(timer)
+    }, [])
+
+    if (!shouldRender) return null
+
     return (
-        <motion.div
-            className="fixed inset-0 z-50 flex flex-col bg-neutral-50 dark:bg-neutral-900 max-w-[500px] mx-auto"
-            initial={{ x: "100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "100%" }}
-            transition={{
-                duration: 0.35,
-                ease: [0.36, 0.66, 0.04, 1]
-            }}
+        <div
+            className={`
+                fixed inset-0 z-50 flex flex-col bg-neutral-50 dark:bg-neutral-900 max-w-[500px] mx-auto
+                transition-transform duration-[350ms] ease-[cubic-bezier(0.36,0.66,0.04,1)]
+                ${isVisible ? 'translate-x-0' : 'translate-x-full'}
+            `}
         >
             {/* 头部导航栏 */}
             <div className="relative flex items-center justify-center py-4 pt-safe-top">
                 <button
-                    onClick={onClose}
+                    onClick={handleClose}
                     className="absolute left-4 flex items-center justify-center w-10 h-10 rounded-full text-neutral-700 dark:text-neutral-300"
                 >
                     <ChevronLeft className="h-5 w-5" />
@@ -208,7 +237,7 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
                     </div>
                 </div>
             </div>
-        </motion.div>
+        </div>
     )
 }
 

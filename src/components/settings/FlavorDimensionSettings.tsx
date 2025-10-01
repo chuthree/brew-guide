@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect } from 'react'
 import { ChevronLeft, Plus, Trash2, Edit3, GripVertical } from 'lucide-react'
-import { motion, AnimatePresence, Reorder } from 'framer-motion'
+
 import { SettingsOptions } from './Settings'
+import { motion, AnimatePresence, Reorder } from 'framer-motion'
 import { 
     CustomFlavorDimensionsManager, 
     FlavorDimension
@@ -21,6 +22,25 @@ const FlavorDimensionSettings: React.FC<FlavorDimensionSettingsProps> = ({
     onClose,
     handleChange: _handleChange
 }) => {
+    // 历史栈管理
+    useEffect(() => {
+        window.history.pushState({ modal: 'flavor-dimension-settings' }, '')
+        
+        const handlePopState = () => onClose()
+        window.addEventListener('popstate', handlePopState)
+        
+        return () => window.removeEventListener('popstate', handlePopState)
+    }, [onClose])
+
+    // 关闭处理
+    const handleClose = () => {
+        if (window.history.state?.modal === 'flavor-dimension-settings') {
+            window.history.back()
+        } else {
+            onClose()
+        }
+    }
+
     const [dimensions, setDimensions] = useState<FlavorDimension[]>([])
     const [editingId, setEditingId] = useState<string | null>(null)
     const [editingLabel, setEditingLabel] = useState('')
@@ -167,7 +187,7 @@ const FlavorDimensionSettings: React.FC<FlavorDimensionSettingsProps> = ({
             {/* 头部导航栏 */}
             <div className="relative flex items-center justify-center pb-4 sm:max-w-sm w-full mx-auto">
                 <button
-                    onClick={onClose}
+                    onClick={handleClose}
                     className="absolute left-4 flex items-center justify-center w-10 h-10 rounded-full text-neutral-700 dark:text-neutral-300"
                 >
                     <ChevronLeft className="h-5 w-5" />

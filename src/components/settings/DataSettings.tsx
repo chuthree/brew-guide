@@ -9,7 +9,7 @@ import { Filesystem, Directory, Encoding } from '@capacitor/filesystem'
 import { Share } from '@capacitor/share'
 import { SettingsOptions } from './Settings'
 import { ButtonGroup } from '../ui/ButtonGroup'
-import { motion, AnimatePresence } from 'framer-motion'
+
 import S3SyncManager, { SyncResult, SyncMetadata } from '@/lib/s3/syncManager'
 import {
   BackupReminderSettings,
@@ -66,6 +66,25 @@ const DataSettings: React.FC<DataSettingsProps> = ({
     handleChange,
     onDataChange
 }) => {
+    // 历史栈管理
+    useEffect(() => {
+        window.history.pushState({ modal: 'data-settings' }, '')
+        
+        const handlePopState = () => onClose()
+        window.addEventListener('popstate', handlePopState)
+        
+        return () => window.removeEventListener('popstate', handlePopState)
+    }, [onClose])
+
+    // 关闭处理
+    const handleClose = () => {
+        if (window.history.state?.modal === 'data-settings') {
+            window.history.back()
+        } else {
+            onClose()
+        }
+    }
+
     const fileInputRef = useRef<HTMLInputElement>(null)
     const [status, setStatus] = useState<{ type: 'success' | 'error' | 'info' | null; message: string }>({
         type: null,
@@ -558,21 +577,31 @@ const DataSettings: React.FC<DataSettingsProps> = ({
         }
     }
 
+    // 控制动画状态
+    const [shouldRender2, setShouldRender2] = useState(false)
+    const [isVisible2, setIsVisible2] = useState(false)
+
+    // 处理显示/隐藏动画
+    useEffect(() => {
+        setShouldRender2(true)
+        const timer = setTimeout(() => setIsVisible2(true), 10)
+        return () => clearTimeout(timer)
+    }, [])
+
+    if (!shouldRender2) return null
+
     return (
-        <motion.div
-            className="fixed inset-0 z-50 flex flex-col bg-neutral-50 dark:bg-neutral-900 max-w-[500px] mx-auto"
-            initial={{ x: "100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "100%" }}
-            transition={{
-                duration: 0.35,
-                ease: [0.36, 0.66, 0.04, 1]
-            }}
+        <div
+            className={`
+                fixed inset-0 z-50 flex flex-col bg-neutral-50 dark:bg-neutral-900 max-w-[500px] mx-auto
+                transition-transform duration-[350ms] ease-[cubic-bezier(0.36,0.66,0.04,1)]
+                ${isVisible2 ? 'translate-x-0' : 'translate-x-full'}
+            `}
         >
             {/* 头部导航栏 */}
             <div className="relative flex items-center justify-center py-4 pt-safe-top">
                 <button
-                    onClick={onClose}
+                    onClick={handleClose}
                     className="absolute left-4 flex items-center justify-center w-10 h-10 rounded-full text-neutral-700 dark:text-neutral-300"
                 >
                     <ChevronLeft className="h-5 w-5" />
@@ -1036,25 +1065,14 @@ const DataSettings: React.FC<DataSettingsProps> = ({
 
 
             {/* 冲突解决模态框 - 半屏 */}
-            <AnimatePresence>
-                {showConflictModal && (
-                    <motion.div
-                        className="fixed inset-0 z-[100] flex flex-col justify-end bg-black/40 dark:bg-black/60"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        onClick={() => setShowConflictModal(false)}
-                    >
-                        <motion.div
-                            className="w-full max-w-[500px] mx-auto bg-neutral-100 dark:bg-neutral-800 rounded-t-2xl shadow-2xl p-5 pb-safe-bottom"
-                            initial={{ y: "100%" }}
-                            animate={{ y: "0%" }}
-                            exit={{ y: "100%" }}
-                             transition={{ 
-    duration: 0.35,
-    ease: [0.36, 0.66, 0.04, 1]
-  }}
-                            onClick={(e) => e.stopPropagation()}
+            {showConflictModal && (
+                <div
+                    className="fixed inset-0 z-[100] flex flex-col justify-end bg-black/40 dark:bg-black/60"
+                    onClick={() => setShowConflictModal(false)}
+                >
+                    <div
+                        className="w-full max-w-[500px] mx-auto bg-neutral-100 dark:bg-neutral-800 rounded-t-2xl shadow-2xl p-5 pb-safe-bottom"
+                        onClick={(e: React.MouseEvent) => e.stopPropagation()}
                         >
                             <div className="text-center mb-4">
                                 <h3 className="text-lg font-bold text-neutral-900 dark:text-neutral-100">数据同步冲突</h3>
@@ -1095,11 +1113,10 @@ const DataSettings: React.FC<DataSettingsProps> = ({
                                     上传本地数据 (将覆盖云端)
                                 </button>
                             </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-        </motion.div>
+                    </div>
+                </div>
+            )}
+        </div>
     )
 }
 

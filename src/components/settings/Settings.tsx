@@ -14,7 +14,7 @@ import StockSettings from './StockSettings' // 导入新的组件
 import BeanSettings from './BeanSettings' // 导入新的组件
 import FlavorPeriodSettings from './FlavorPeriodSettings'
 import TimerSettings from './TimerSettings'
-import { AnimatePresence } from 'framer-motion'
+
 
 // 导入ButtonGroup组件
 import DisplaySettings from './DisplaySettings'
@@ -196,6 +196,36 @@ const Settings: React.FC<SettingsProps> = ({
     // 获取主题相关方法
     const { theme } = useTheme()
 
+    // 控制动画状态
+    const [shouldRender, setShouldRender] = useState(false)
+    const [isVisible, setIsVisible] = useState(false)
+
+    // 处理显示/隐藏动画
+    useEffect(() => {
+        if (isOpen) {
+            setShouldRender(true)
+            // 短暂延迟确保DOM渲染，然后触发滑入动画
+            const timer = setTimeout(() => setIsVisible(true), 10)
+            return () => clearTimeout(timer)
+        } else {
+            setIsVisible(false)
+            // 等待动画完成后移除DOM
+            const timer = setTimeout(() => setShouldRender(false), 350)
+            return () => clearTimeout(timer)
+        }
+    }, [isOpen])
+
+
+
+    // 关闭处理
+    const handleClose = () => {
+        if (window.history.state?.modal === 'settings') {
+            window.history.back()
+        } else {
+            onClose()
+        }
+    }
+
     // 添加显示设置状态
     const [showDisplaySettings, setShowDisplaySettings] = useState(false)
 
@@ -320,7 +350,55 @@ const Settings: React.FC<SettingsProps> = ({
         }
     }, [theme]);
 
-
+    // 历史栈管理 - 支持多层嵌套设置页面
+    useEffect(() => {
+        if (!isOpen) return
+        
+        // 检查是否已经有设置相关的历史记录
+        const hasSettingsHistory = window.history.state?.modal?.includes('-settings') || window.history.state?.modal === 'settings'
+        
+        if (hasSettingsHistory) {
+            // 如果已经有设置历史记录，替换它
+            window.history.replaceState({ modal: 'settings' }, '')
+        } else {
+            // 添加新的历史记录
+            window.history.pushState({ modal: 'settings' }, '')
+        }
+        
+        const handlePopState = () => {
+            // 检查是否有子设置页面打开
+            const hasSubSettingsOpen = showDisplaySettings || showGrinderSettings || showStockSettings || 
+                                      showBeanSettings || showFlavorPeriodSettings || showTimerSettings || 
+                                      showDataSettings || showNotificationSettings || showRandomCoffeeBeanSettings || 
+                                      showSearchSortSettings || showFlavorDimensionSettings
+            
+            if (hasSubSettingsOpen) {
+                // 如果有子设置页面打开，关闭它们
+                setShowDisplaySettings(false)
+                setShowGrinderSettings(false)
+                setShowStockSettings(false)
+                setShowBeanSettings(false)
+                setShowFlavorPeriodSettings(false)
+                setShowTimerSettings(false)
+                setShowDataSettings(false)
+                setShowNotificationSettings(false)
+                setShowRandomCoffeeBeanSettings(false)
+                setShowSearchSortSettings(false)
+                setShowFlavorDimensionSettings(false)
+                // 重新添加主设置的历史记录
+                window.history.pushState({ modal: 'settings' }, '')
+            } else {
+                // 没有子页面打开，关闭主设置
+                onClose()
+            }
+        }
+        
+        window.addEventListener('popstate', handlePopState)
+        
+        return () => window.removeEventListener('popstate', handlePopState)
+    }, [isOpen, onClose, showDisplaySettings, showGrinderSettings, showStockSettings, showBeanSettings, 
+        showFlavorPeriodSettings, showTimerSettings, showDataSettings, showNotificationSettings, 
+        showRandomCoffeeBeanSettings, showSearchSortSettings, showFlavorDimensionSettings])
 
     // showConfetti 函数已移到 GrinderSettings 组件中
 
@@ -362,17 +440,23 @@ const handleChange = async <K extends keyof SettingsOptions>(
 
 
 
-    // 如果不是打开状态，不渲染任何内容
-    if (!isOpen) return null
+    // 如果shouldRender为false，不渲染任何内容
+    if (!shouldRender) return null
 
     return (
-        <div className="fixed inset-0 z-50 flex flex-col bg-neutral-50 dark:bg-neutral-900 max-w-[500px] mx-auto">
+        <div 
+            className={`
+                fixed inset-0 z-50 flex flex-col bg-neutral-50 dark:bg-neutral-900 max-w-[500px] mx-auto
+                transition-transform duration-[350ms] ease-[cubic-bezier(0.36,0.66,0.04,1)]
+                ${isVisible ? 'translate-x-0' : 'translate-x-full'}
+            `}
+        >
             {/* 头部导航栏 */}
             <div
                 className="relative flex items-center justify-center py-4 pt-safe-top"
             >
                 <button
-                    onClick={onClose}
+                    onClick={handleClose}
                     className="absolute left-4 flex items-center justify-center w-10 h-10 rounded-full text-neutral-700 dark:text-neutral-300"
                 >
                     <ChevronLeft className="h-5 w-5" />
@@ -722,126 +806,104 @@ const handleChange = async <K extends keyof SettingsOptions>(
             </div>
 
             {/* 显示设置组件 */}
-            <AnimatePresence>
-                {showDisplaySettings && (
-                    <DisplaySettings
-                        settings={settings}
-                        onClose={() => setShowDisplaySettings(false)}
-                        handleChange={handleChange}
-                    />
-                )}
-            </AnimatePresence>
+            {showDisplaySettings && (
+                <DisplaySettings
+                    settings={settings}
+                    onClose={() => setShowDisplaySettings(false)}
+                    handleChange={handleChange}
+                />
+            )}
 
             {/* 研磨度设置组件 */}
-            <AnimatePresence>
-                {showGrinderSettings && (
-                    <GrinderSettings
-                        settings={settings}
-                        onClose={() => setShowGrinderSettings(false)}
-                        handleChange={handleChange}
-                    />
-                )}
-            </AnimatePresence>
+            {showGrinderSettings && (
+                <GrinderSettings
+                    settings={settings}
+                    onClose={() => setShowGrinderSettings(false)}
+                    handleChange={handleChange}
+                />
+            )}
 
             {/* 库存扣除预设值设置组件 */}
-            <AnimatePresence>
-                {showStockSettings && (
-                    <StockSettings
-                        settings={settings}
-                        onClose={() => setShowStockSettings(false)}
-                        handleChange={handleChange}
-                    />
-                )}
-            </AnimatePresence>
+            {showStockSettings && (
+                <StockSettings
+                    settings={settings}
+                    onClose={() => setShowStockSettings(false)}
+                    handleChange={handleChange}
+                />
+            )}
 
             {/* 豆仓列表显示设置组件 */}
-            <AnimatePresence>
-                {showBeanSettings && (
-                    <BeanSettings
-                        settings={settings}
-                        onClose={() => setShowBeanSettings(false)}
-                        handleChange={handleChange}
-                    />
-                )}
-            </AnimatePresence>
+            {showBeanSettings && (
+                <BeanSettings
+                    settings={settings}
+                    onClose={() => setShowBeanSettings(false)}
+                    handleChange={handleChange}
+                />
+            )}
 
             {/* 赏味期设置组件 */}
-            <AnimatePresence>
-                {showFlavorPeriodSettings && (
-                    <FlavorPeriodSettings
-                        settings={settings}
-                        onClose={() => setShowFlavorPeriodSettings(false)}
-                        handleChange={handleChange}
-                    />
-                )}
-            </AnimatePresence>
+            {showFlavorPeriodSettings && (
+                <FlavorPeriodSettings
+                    settings={settings}
+                    onClose={() => setShowFlavorPeriodSettings(false)}
+                    handleChange={handleChange}
+                />
+            )}
 
             {/* 计时器布局设置组件 */}
-            <AnimatePresence>
-                {showTimerSettings && (
-                    <TimerSettings
-                        settings={settings}
-                        onClose={() => setShowTimerSettings(false)}
-                        handleChange={handleChange}
-                    />
-                )}
-            </AnimatePresence>
+            {showTimerSettings && (
+                <TimerSettings
+                    settings={settings}
+                    onClose={() => setShowTimerSettings(false)}
+                    handleChange={handleChange}
+                />
+            )}
 
             {/* 数据管理设置组件 */}
-            <AnimatePresence>
-                {showDataSettings && (
-                    <DataSettings
-                        settings={settings}
-                        onClose={() => setShowDataSettings(false)}
-                        handleChange={handleChange}
-                        onDataChange={onDataChange}
-                    />
-                )}
-            </AnimatePresence>
+            {showDataSettings && (
+                <DataSettings
+                    settings={settings}
+                    onClose={() => setShowDataSettings(false)}
+                    handleChange={handleChange}
+                    onDataChange={onDataChange}
+                />
+            )}
 
             {/* 通知设置组件 */}
-            <AnimatePresence>
-                {showNotificationSettings && (
-                    <NotificationSettings
-                        settings={settings}
-                        onClose={() => setShowNotificationSettings(false)}
-                        handleChange={handleChange}
-                    />
-                )}
-            </AnimatePresence>
+            {showNotificationSettings && (
+                <NotificationSettings
+                    settings={settings}
+                    onClose={() => setShowNotificationSettings(false)}
+                    handleChange={handleChange}
+                />
+            )}
 
             {/* 随机咖啡豆设置组件 */}
-            <AnimatePresence>
-                {showRandomCoffeeBeanSettings && (
-                    <RandomCoffeeBeanSettings
-                        settings={settings}
-                        onClose={() => setShowRandomCoffeeBeanSettings(false)}
-                        handleChange={handleChange}
-                    />
-                )}
-            </AnimatePresence>
+            {showRandomCoffeeBeanSettings && (
+                <RandomCoffeeBeanSettings
+                    settings={settings}
+                    onClose={() => setShowRandomCoffeeBeanSettings(false)}
+                    handleChange={handleChange}
+                />
+            )}
 
             {/* 搜索排序设置组件 */}
-            <AnimatePresence>
-                {showSearchSortSettings && (
-                    <SearchSortSettings
-                        settings={settings}
-                        onClose={() => setShowSearchSortSettings(false)}
-                        handleChange={handleChange}
-                    />
-                )}
-            </AnimatePresence>
+            {showSearchSortSettings && (
+                <SearchSortSettings
+                    settings={settings}
+                    onClose={() => setShowSearchSortSettings(false)}
+                    handleChange={handleChange}
+                />
+            )}
 
             {/* 风味维度设置组件 */}
-            <AnimatePresence>
-                {showFlavorDimensionSettings && (
-                    <FlavorDimensionSettings
-                        settings={settings}
-                        onClose={() => setShowFlavorDimensionSettings(false)}
-                        handleChange={handleChange}
-                    />
-                )}
-            </AnimatePresence>
+            {showFlavorDimensionSettings && (
+                <FlavorDimensionSettings
+                    settings={settings}
+                    onClose={() => setShowFlavorDimensionSettings(false)}
+                    handleChange={handleChange}
+                />
+            )}
         </div>
     )
 }

@@ -7,7 +7,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem, SelectSe
 import { SettingsOptions, CustomGrinder } from './Settings'
 import hapticsUtils from '@/lib/ui/haptics'
 import { ChevronLeft } from 'lucide-react'
-import { motion } from 'framer-motion'
+
 
 interface GrinderSettingsProps {
     settings: SettingsOptions;
@@ -20,6 +20,37 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({
     onClose,
     handleChange
 }) => {
+    // 历史栈管理
+    useEffect(() => {
+        window.history.pushState({ modal: 'grinder-settings' }, '')
+        
+        const handlePopState = () => onClose()
+        window.addEventListener('popstate', handlePopState)
+        
+        return () => window.removeEventListener('popstate', handlePopState)
+    }, [onClose])
+
+    // 关闭处理
+    const handleClose = () => {
+        if (window.history.state?.modal === 'grinder-settings') {
+            window.history.back()
+        } else {
+            onClose()
+        }
+    }
+
+    // 控制动画状态
+    const [shouldRender, setShouldRender] = useState(false)
+    const [isVisible, setIsVisible] = useState(false)
+
+    // 处理显示/隐藏动画
+    useEffect(() => {
+        setShouldRender(true)
+        // 短暂延迟确保 DOM 渲染，然后触发滑入动画
+        const timer = setTimeout(() => setIsVisible(true), 10)
+        return () => clearTimeout(timer)
+    }, [])
+
     // 状态管理
     const [isCreatingCustom, setIsCreatingCustom] = useState(false)
     const [editingCustomId, setEditingCustomId] = useState<string | null>(null)
@@ -482,21 +513,20 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({
         );
     };
 
+    if (!shouldRender) return null
+
     return (
-        <motion.div
-            className="fixed inset-0 z-50 flex flex-col bg-neutral-50 dark:bg-neutral-900 mx-auto"
-            initial={{ x: "100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "100%" }}
-            transition={{
-                duration: 0.35,
-                ease: [0.36, 0.66, 0.04, 1]
-            }}
+        <div
+            className={`
+                fixed inset-0 z-50 flex flex-col bg-neutral-50 dark:bg-neutral-900 mx-auto
+                transition-transform duration-[350ms] ease-[cubic-bezier(0.36,0.66,0.04,1)]
+                ${isVisible ? 'translate-x-0' : 'translate-x-full'}
+            `}
         >
             {/* 头部导航栏 */}
             <div className="relative flex items-center justify-center py-4 pt-safe-top">
                 <button
-                    onClick={onClose}
+                    onClick={handleClose}
                     className="absolute left-4 flex items-center justify-center w-10 h-10 rounded-full text-neutral-700 dark:text-neutral-300"
                 >
                     <ChevronLeft className="h-5 w-5" />
@@ -725,7 +755,7 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({
                     {renderGrinderReference()}
                 </div>
             </div>
-        </motion.div>
+        </div>
     );
 };
 
