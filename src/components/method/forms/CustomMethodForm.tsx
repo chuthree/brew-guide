@@ -202,15 +202,15 @@ const CustomMethodForm = React.forwardRef<CustomMethodFormHandle, CustomMethodFo
   const [localSettings, setLocalSettings] = useState<SettingsOptions>(defaultSettings);
 
   // ===== 步骤配置 =====
-  const steps: { id: Step; label: string }[] = [
-    { id: 'name', label: '方案名称' },
-    { id: 'params', label: '基本参数' },
-    { id: 'stages', label: '冲泡步骤' },
-    { id: 'complete', label: '完成' }
-  ];
+  const steps = React.useMemo(() => [
+    { id: 'name' as Step, label: '方案名称' },
+    { id: 'params' as Step, label: '基本参数' },
+    { id: 'stages' as Step, label: '冲泡步骤' },
+    { id: 'complete' as Step, label: '完成' }
+  ], []);
 
   // ===== 基本功能函数 =====
-  const getCurrentStepIndex = () => steps.findIndex(step => step.id === currentStep);
+  const getCurrentStepIndex = useCallback(() => steps.findIndex(step => step.id === currentStep), [steps, currentStep]);
 
   const handleNextStep = () => {
     const currentIndex = getCurrentStepIndex();
@@ -239,7 +239,7 @@ const CustomMethodForm = React.forwardRef<CustomMethodFormHandle, CustomMethodFo
       }
       return false; // 已经在第一步，无法再返回
     }
-  }), [getCurrentStepIndex, setCurrentStep, steps]);
+  }), [getCurrentStepIndex, steps]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);

@@ -31,10 +31,41 @@ const EquipmentImportModal: React.FC<EquipmentImportModalProps> = ({
 
     // 关闭并清除输入
     const handleClose = useCallback(() => {
-        setImportData('');
-        setError(null);
-        onClose();
+        // 如果历史栈中有我们添加的条目，触发返回
+        if (window.history.state?.modal === 'equipment-import') {
+            window.history.back()
+        } else {
+            // 否则直接关闭
+            setImportData('');
+            setError(null);
+            onClose();
+        }
     }, [onClose, setImportData, setError]);
+
+    // 历史栈管理 - 支持硬件返回键和浏览器返回按钮
+    useEffect(() => {
+        if (!showForm) {
+            // 模态框关闭时，确保清理历史栈中的模态框状态
+            if (window.history.state?.modal === 'equipment-import') {
+                window.history.replaceState(null, '')
+            }
+            return
+        }
+
+        // 添加模态框历史记录
+        window.history.pushState({ modal: 'equipment-import' }, '')
+
+        const handlePopState = () => {
+            (window as any).__modalHandlingBack = true;
+            onClose();
+            setTimeout(() => {
+                (window as any).__modalHandlingBack = false;
+            }, 50);
+        }
+        window.addEventListener('popstate', handlePopState)
+
+        return () => window.removeEventListener('popstate', handlePopState)
+    }, [showForm, onClose])
 
     // 处理导入数据
     const processImportData = useCallback((jsonText: string) => {
@@ -268,6 +299,7 @@ const EquipmentImportModal: React.FC<EquipmentImportModalProps> = ({
         <AnimatePresence>
             {showForm && (
                 <motion.div
+                    data-modal="equipment-import"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}

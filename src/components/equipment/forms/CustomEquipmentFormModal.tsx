@@ -23,7 +23,13 @@ const CustomEquipmentFormModal: React.FC<CustomEquipmentFormModalProps> = ({
 
     // 历史栈管理 - 支持多步骤表单的硬件返回键和浏览器返回按钮
     useEffect(() => {
-        if (!showForm) return;
+        if (!showForm) {
+            // 模态框关闭时，确保清理历史栈中的模态框状态
+            if (window.history.state?.modal === 'equipment-form') {
+                window.history.replaceState(null, '');
+            }
+            return;
+        }
 
         window.history.pushState({ modal: 'equipment-form' }, '');
 
@@ -34,8 +40,11 @@ const CustomEquipmentFormModal: React.FC<CustomEquipmentFormModalProps> = ({
                 // 表单内部处理了返回（返回上一步），重新添加历史记录
                 window.history.pushState({ modal: 'equipment-form' }, '');
             } else {
-                // 表单已经在第一步，关闭模态框
+                // 表单已经在第一步，关闭表单
                 onClose();
+                
+                // 不再自动关闭器具列表，让用户手动控制返回到器具列表
+                // 移除这些逻辑可以让用户从添加器具表单返回时回到器具列表，而不是直接退出整个器具管理
             }
         };
 
@@ -72,6 +81,7 @@ const CustomEquipmentFormModal: React.FC<CustomEquipmentFormModalProps> = ({
         <AnimatePresence>
             {showForm && (
                 <motion.div
+                    data-modal="equipment-form"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}

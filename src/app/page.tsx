@@ -1424,6 +1424,41 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
         // 监听返回事件
         const handlePopState = () => {
+            // 使用微任务队列确保DOM状态检查在其他事件处理后执行
+            setTimeout(() => {
+                // 方法0：检查是否有模态框正在处理返回事件
+                if ((window as any).__modalHandlingBack) {
+                    return;
+                }
+                
+                // 检查当前是否有活动的模态框，如果有则不处理冲煮界面的返回
+                const currentState = window.history.state;
+                
+                // 方法1：通过历史栈状态检查
+                if (currentState?.modal) {
+                    return;
+                }
+                
+                // 方法2：通过DOM检查是否有模态框组件处于活动状态
+                const activeModals = document.querySelectorAll([
+                    '[data-modal="custom-method-form"]',
+                    '[data-modal="method-import"]', 
+                    '[data-modal="equipment-form"]',
+                    '[data-modal="equipment-import"]',
+                    '[data-modal="equipment-management"]'
+                ].join(','));
+                
+                if (activeModals.length > 0) {
+                    return;
+                }
+                
+                // 如果没有模态框，执行冲煮界面的返回逻辑
+                executeBrewingBack();
+            }, 0);
+        };
+        
+        // 提取冲煮界面返回逻辑
+        const executeBrewingBack = () => {
             // 询问是否可以返回上一步
             const BACK_STEPS: Record<BrewingStep, BrewingStep | null> = {
                 'brewing': 'method',
@@ -1539,8 +1574,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             await saveCustomEquipment(equipment, methods);
             const updatedEquipments = await loadCustomEquipments();
             setCustomEquipments(updatedEquipments);
-            setShowEquipmentForm(false);
-            setEditingEquipment(undefined);
+            
+            // 不再在这里自动关闭表单，让模态框通过历史栈管理自己控制
+            // setShowEquipmentForm(false);
+            // setEditingEquipment(undefined);
         } catch (_error) {
             // 保存器具失败
             alert('保存器具失败，请重试');

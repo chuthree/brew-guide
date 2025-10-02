@@ -56,12 +56,24 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
 
     // 历史栈管理 - 支持硬件返回键和浏览器返回按钮
     React.useEffect(() => {
-        if (!showForm) return
+        if (!showForm) {
+            // 模态框关闭时，确保清理历史栈中的模态框状态
+            if (window.history.state?.modal === 'method-import') {
+                window.history.replaceState(null, '')
+            }
+            return
+        }
 
         // 添加模态框历史记录
         window.history.pushState({ modal: 'method-import' }, '')
 
-        const handlePopState = () => onClose()
+        const handlePopState = () => {
+            (window as any).__modalHandlingBack = true;
+            onClose();
+            setTimeout(() => {
+                (window as any).__modalHandlingBack = false;
+            }, 50);
+        }
         window.addEventListener('popstate', handlePopState)
 
         return () => window.removeEventListener('popstate', handlePopState)
@@ -294,6 +306,7 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
     
     return (
         <div
+            data-modal={showForm ? "method-import" : undefined}
             className={`
                 fixed inset-0 z-50 transition-all duration-300
                 ${showForm 

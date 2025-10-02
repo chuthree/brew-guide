@@ -121,8 +121,8 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
             // 清除错误
             setValidationError(null);
 
-            // 关闭表单
-            onCloseCustomForm();
+            // 使用历史栈管理来关闭表单，而不是直接调用onCloseCustomForm
+            handleCloseCustomForm();
 
             return methodWithId.id;
         } catch (error) {
@@ -137,21 +137,37 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
 
     // 自定义方案表单历史栈管理 - 支持硬件返回键和浏览器返回按钮
     useEffect(() => {
-        if (!showCustomForm) return
+        if (!showCustomForm) {
+            // 模态框关闭时，确保清理历史栈中的模态框状态
+            if (window.history.state?.modal === 'custom-method-form') {
+                window.history.replaceState(null, '')
+            }
+            return
+        }
 
         // 添加表单的历史记录
         window.history.pushState({ modal: 'custom-method-form' }, '')
 
         // 监听返回事件
         const handlePopState = () => {
+            // 设置全局标识，表示模态框正在处理返回事件
+            (window as any).__modalHandlingBack = true;
+            
             // 询问表单是否还有上一步
-            if (formRef.current?.handleBackStep()) {
+            const canGoBack = formRef.current?.handleBackStep()
+            if (canGoBack) {
                 // 表单内部处理了返回（返回上一步），重新添加历史记录
                 window.history.pushState({ modal: 'custom-method-form' }, '')
             } else {
-                // 表单已经在第一步，关闭模态框
+                // 表单已经在第一步，直接调用父组件关闭回调（避免双重历史栈操作）
+                // 这里直接调用父组件传入的 onCloseCustomForm，而不是 handleCloseCustomForm
                 onCloseCustomForm()
             }
+            
+            // 清除标识（延迟清除，确保其他事件处理器能看到）
+            setTimeout(() => {
+                (window as any).__modalHandlingBack = false;
+            }, 50);
         }
 
         window.addEventListener('popstate', handlePopState)
@@ -163,7 +179,13 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
 
     // 导入方案模态框历史栈管理
     useEffect(() => {
-        if (!showImportForm) return
+        if (!showImportForm) {
+            // 模态框关闭时，确保清理历史栈中的模态框状态
+            if (window.history.state?.modal === 'method-import-form') {
+                window.history.replaceState(null, '')
+            }
+            return
+        }
 
         // 如果历史栈中有自定义方案表单记录，用 replaceState 替换它
         if (window.history.state?.modal === 'custom-method-form') {
@@ -173,7 +195,13 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
             window.history.pushState({ modal: 'method-import-form' }, '')
         }
 
-        const handlePopState = () => onCloseImportForm()
+        const handlePopState = () => {
+            (window as any).__modalHandlingBack = true;
+            onCloseImportForm();
+            setTimeout(() => {
+                (window as any).__modalHandlingBack = false;
+            }, 50);
+        }
         window.addEventListener('popstate', handlePopState)
 
         return () => window.removeEventListener('popstate', handlePopState)
@@ -205,7 +233,7 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
         <>
             {/* 自定义方案表单 - 只在设备信息加载完成后显示 */}
             {showCustomForm && currentCustomEquipment && (
-                <div className="fixed inset-0 z-50 inset-x-0 bottom-0 max-w-[500px] mx-auto h-full overflow-hidden bg-neutral-50 dark:bg-neutral-900 px-6 pt-safe-top pb-safe-bottom flex flex-col">
+                <div data-modal="custom-method-form" className="fixed inset-0 z-50 inset-x-0 bottom-0 max-w-[500px] mx-auto h-full overflow-hidden bg-neutral-50 dark:bg-neutral-900 px-6 pt-safe-top pb-safe-bottom flex flex-col">
                     <CustomMethodForm
                         ref={formRef}
                         onSave={handleSaveMethod}
@@ -221,7 +249,8 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
                 showForm={showImportForm}
                 onImport={(method) => {
                     onSaveCustomMethod(method);
-                    handleCloseImportForm();
+                    // 不在这里关闭，让MethodImportModal内部的handleImport来处理关闭
+                    // handleCloseImportForm();
                 }}
                 onClose={handleCloseImportForm}
                 existingMethods={selectedEquipment && customMethods[selectedEquipment] ? customMethods[selectedEquipment] : []}

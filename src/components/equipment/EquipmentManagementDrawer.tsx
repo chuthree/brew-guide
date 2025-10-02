@@ -169,14 +169,35 @@ const EquipmentManagementDrawer: React.FC<EquipmentManagementDrawerProps> = ({
 
     // 历史栈管理 - 支持硬件返回键和浏览器返回按钮
     React.useEffect(() => {
-        if (!isOpen) return
+        if (!isOpen) {
+            // 模态框关闭时，确保清理历史栈中的模态框状态
+            if (window.history.state?.modal === 'equipment-management') {
+                window.history.replaceState(null, '')
+            }
+            return
+        }
 
         window.history.pushState({ modal: 'equipment-management' }, '')
 
-        const handlePopState = () => onClose()
+        const handlePopState = () => {
+            (window as any).__modalHandlingBack = true;
+            onClose();
+            setTimeout(() => {
+                (window as any).__modalHandlingBack = false;
+            }, 50);
+        }
+        
+        const handleCloseEquipmentManagement = () => {
+            onClose();
+        }
+        
         window.addEventListener('popstate', handlePopState)
+        window.addEventListener('closeEquipmentManagement', handleCloseEquipmentManagement)
 
-        return () => window.removeEventListener('popstate', handlePopState)
+        return () => {
+            window.removeEventListener('popstate', handlePopState)
+            window.removeEventListener('closeEquipmentManagement', handleCloseEquipmentManagement)
+        }
     }, [isOpen, onClose])
 
     // 处理关闭
@@ -194,6 +215,7 @@ const EquipmentManagementDrawer: React.FC<EquipmentManagementDrawerProps> = ({
         <>
             {/* 背景遮罩 */}
             <div
+                data-modal={isOpen ? "equipment-management" : undefined}
                 className={`
                     fixed inset-0 z-50 bg-black/30 backdrop-blur-xs
                     transition-opacity duration-300

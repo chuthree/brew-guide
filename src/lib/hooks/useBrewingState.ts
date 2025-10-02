@@ -370,8 +370,10 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 
 				const savedMethod = methods[selectedEquipment]?.find(m => m.name === cleanMethod.name);
 				setSelectedMethod(savedMethod || cleanMethod);
-				setShowCustomForm(false);
-				setEditingMethod(undefined);
+				
+				// 不再在这里自动关闭表单，让模态框通过历史栈管理自己控制
+				// setShowCustomForm(false);
+				// setEditingMethod(undefined);
 
 				// 如果是从通用方案创建的新方案，显示成功提示
 				if (isFromCommonMethod) {
