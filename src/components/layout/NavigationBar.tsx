@@ -219,7 +219,13 @@ const useNavigation = (activeBrewingStep: BrewingStep, activeMainTab: MainTabTyp
         // 只有在冲煮页面才考虑返回逻辑
         if (activeMainTab !== '冲煮') return false
 
+        // 咖啡豆步骤是第一步，不显示返回按钮
+        if (activeBrewingStep === 'coffeeBean') return false
+
+        // 如果在方案步骤但没有咖啡豆，也是第一步，不显示返回按钮
         if (activeBrewingStep === 'method' && !hasCoffeeBeans) return false
+
+        // 其他步骤检查是否有上一步
         return NAVIGABLE_STEPS[activeBrewingStep] !== null
     }, [activeBrewingStep, activeMainTab, hasCoffeeBeans])
 
@@ -298,7 +304,13 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
         }
 
         if (canGoBack() && onBackClick) {
-            onBackClick()
+            // 检查是否有历史栈记录，如果有就触发浏览器返回
+            if (window.history.state?.brewingStep) {
+                window.history.back()
+            } else {
+                // 没有历史栈记录，直接调用返回函数
+                onBackClick()
+            }
         } else {
             onTitleDoubleClick()
         }

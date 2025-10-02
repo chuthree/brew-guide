@@ -580,7 +580,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
     // 简化的主标签切换处理
     useEffect(() => {
-        // 只在切换到冲煮标签时处理
+        // 只在从其他标签切换到冲煮标签时处理
         if (activeMainTab !== '冲煮' || prevMainTabRef.current === '冲煮') {
             prevMainTabRef.current = activeMainTab;
             return;
@@ -597,6 +597,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             return;
         }
 
+        // 检查是否应该从咖啡豆步骤开始（仅限特定场景）
         const shouldStartFromCoffeeBeanStep = localStorage.getItem('shouldStartFromCoffeeBeanStep');
         if (shouldStartFromCoffeeBeanStep === 'true' && hasCoffeeBeans) {
             localStorage.removeItem('shouldStartFromCoffeeBeanStep');
@@ -606,11 +607,20 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             return;
         }
 
-        // 从其他标签切换回冲煮时，重置到初始步骤
+        // 只有从其他标签切换过来时才重置到初始步骤
+        // 添加检查：如果当前已经在有效的冲煮步骤中，不强制重置
+        const isValidBrewingStep = ['coffeeBean', 'method', 'brewing', 'notes'].includes(activeBrewingStep);
+        if (isValidBrewingStep && prevMainTabRef.current !== null) {
+            // 如果已经在有效的冲煮步骤中，只更新引用，不强制重置
+            prevMainTabRef.current = activeMainTab;
+            return;
+        }
+
+        // 只在确实需要时才重置到初始步骤
         resetBrewingState(false);
         navigateToStep(hasCoffeeBeans ? 'coffeeBean' : 'method');
         prevMainTabRef.current = activeMainTab;
-    }, [activeMainTab, resetBrewingState, prevMainTabRef, setShowHistory, navigateToStep, hasCoffeeBeans]);
+    }, [activeMainTab, activeBrewingStep, resetBrewingState, prevMainTabRef, setShowHistory, navigateToStep, hasCoffeeBeans]);
 
     const handleMethodTypeChange = useCallback((type: 'common' | 'custom') => {
         const customEquipment = customEquipments.find(
@@ -1396,6 +1406,62 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         handleMethodTypeChange,
         setParameterInfo
     ]);
+
+    // 冲煮页面历史栈管理 - 参考多步骤表单模态框的实现模式
+    useEffect(() => {
+        // 只在冲煮页面才管理历史栈
+        if (activeMainTab !== '冲煮') {
+            // 清理非冲煮页面的历史记录
+            if (window.history.state?.brewingStep) {
+                window.history.replaceState(null, '');
+            }
+            return;
+        }
+
+        // 判断是否为第一步
+        const isFirstStep = activeBrewingStep === 'coffeeBean' || 
+                           (activeBrewingStep === 'method' && !hasCoffeeBeans);
+
+        // 监听返回事件
+        const handlePopState = () => {
+            // 询问是否可以返回上一步
+            const BACK_STEPS: Record<BrewingStep, BrewingStep | null> = {
+                'brewing': 'method',
+                'method': hasCoffeeBeans ? 'coffeeBean' : null,
+                'coffeeBean': null,
+                'notes': 'brewing'
+            };
+
+            const backStep = BACK_STEPS[activeBrewingStep];
+            if (backStep) {
+                // 有上一步，执行返回逻辑，但不重新添加历史记录
+                handleBackClick();
+            }
+            // 如果没有上一步（第一步），什么都不做，浏览器会自然停留
+        };
+
+        if (isFirstStep) {
+            // 第一步时，清理历史记录，并且不监听 popstate
+            if (window.history.state?.brewingStep) {
+                window.history.replaceState(null, '');
+            }
+        } else {
+            // 非第一步时，添加历史记录并监听返回事件
+            const currentState = window.history.state;
+            if (!currentState?.brewingStep || currentState.brewingStep !== activeBrewingStep) {
+                // 使用 pushState 为每个非第一步添加历史记录
+                window.history.pushState({ brewingStep: activeBrewingStep }, '');
+            }
+
+            // 添加监听器
+            window.addEventListener('popstate', handlePopState);
+        }
+
+        return () => {
+            // 清理监听器
+            window.removeEventListener('popstate', handlePopState);
+        };
+    }, [activeMainTab, activeBrewingStep, hasCoffeeBeans, handleBackClick]);
 
     const [showNoteFormModal, setShowNoteFormModal] = useState(false)
     const [currentEditingNote, setCurrentEditingNote] = useState<Partial<BrewingNoteData>>({})
