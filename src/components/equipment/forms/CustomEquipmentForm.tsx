@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo, forwardRef, useImperativeHandle } from 'react';
 import { CustomEquipment } from '@/lib/core/config';
 import { isEquipmentNameAvailable } from '@/lib/managers/customEquipments';
 import DrawingCanvas, { DrawingCanvasRef } from '../../common/ui/DrawingCanvas';
@@ -43,6 +43,11 @@ interface CustomEquipmentFormProps {
     onSave: (equipment: CustomEquipment) => void;
     onCancel: () => void;
     initialEquipment?: CustomEquipment;
+}
+
+// 定义组件ref接口
+export interface CustomEquipmentFormHandle {
+    handleBackStep: () => boolean;
 }
 
 // 预设方案选项 - 简化为三种基本类型
@@ -171,11 +176,11 @@ const TopNav: React.FC<TopNavProps> = ({ title, onBack, onSave, saveDisabled = f
     </div>
 );
 
-const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
+const CustomEquipmentForm = forwardRef<CustomEquipmentFormHandle, CustomEquipmentFormProps>(({
     onSave,
     onCancel,
     initialEquipment
-}) => {
+}, ref) => {
     const windowSize = useWindowSize();
     const canvasContainerRef = useRef<HTMLDivElement>(null);
     const [canvasSize, setCanvasSize] = useState(300);
@@ -376,6 +381,28 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
             // 自定义预设不自动设置阀门，保持当前值
         }
     }, [selectedPreset]);
+
+    // 暴露给父组件的方法
+    useImperativeHandle(ref, () => ({
+        handleBackStep: () => {
+            // 检查当前是否在子界面，如果是则返回到主界面
+            if (showPourAnimationCanvas) {
+                setShowPourAnimationCanvas(false);
+                setCurrentEditingAnimation(null);
+                setIsPlaying(false);
+                return true; // 已处理返回
+            }
+            if (showDrawingCanvas) {
+                setShowDrawingCanvas(false);
+                return true; // 已处理返回
+            }
+            if (showValveDrawingCanvas) {
+                setShowValveDrawingCanvas(false);
+                return true; // 已处理返回
+            }
+            return false; // 已在主界面，无法再返回
+        }
+    }));
 
     // 计算画布尺寸
     useEffect(() => {
@@ -1666,6 +1693,8 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
             </AnimatePresence>
         </form>
     );
-};
+});
+
+CustomEquipmentForm.displayName = 'CustomEquipmentForm';
 
 export default CustomEquipmentForm;

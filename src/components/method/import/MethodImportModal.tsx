@@ -1,7 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import React, { useState, useEffect } from 'react'
 import { type Method, type CustomEquipment } from '@/lib/core/config'
 
 interface MethodImportModalProps {
@@ -19,6 +18,10 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
     existingMethods = [],
     customEquipment
 }) => {
+    // 动画状态管理
+    const [shouldRender, setShouldRender] = useState(false)
+    const [isVisible, setIsVisible] = useState(false)
+    
     // 导入数据的状态
     const [importData, setImportData] = useState('');
     const [error, setError] = useState<string | null>(null);
@@ -29,6 +32,19 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
         setError(null);
         setSuccess(null);
     };
+    
+    // 处理显示/隐藏动画
+    useEffect(() => {
+        if (showForm) {
+            setShouldRender(true)
+            const timer = setTimeout(() => setIsVisible(true), 10)
+            return () => clearTimeout(timer)
+        } else {
+            setIsVisible(false)
+            const timer = setTimeout(() => setShouldRender(false), 300)
+            return () => clearTimeout(timer)
+        }
+    }, [showForm])
 
     // 监听showForm变化，当表单关闭时清除输入框内容
     React.useEffect(() => {
@@ -274,49 +290,38 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
         </div>
     );
 
+    if (!shouldRender) return null
+    
     return (
-        <AnimatePresence>
-            {showForm && (
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.265 }}
-                    className="fixed inset-0 z-50 bg-black/30 backdrop-blur-xs"
-                >
-                    <motion.div
-                        initial={{ y: '100%' }}
-                        animate={{ y: 0 }}
-                        exit={{ y: '100%' }}
-                        transition={{
-                            type: "tween",
-                            ease: [0.33, 1, 0.68, 1], // cubic-bezier(0.33, 1, 0.68, 1) - easeOutCubic
-                            duration: 0.265
-                        }}
-                        style={{
-                            willChange: "transform"
-                        }}
-                        className="absolute inset-x-0 bottom-0 max-w-[500px] mx-auto max-h-[90vh] overflow-hidden rounded-t-2xl bg-neutral-50 dark:bg-neutral-900 shadow-xl"
-                    >
+        <div
+            className={`
+                fixed inset-0 z-50 transition-all duration-300
+                ${showForm 
+                    ? 'opacity-100 pointer-events-auto bg-black/30 backdrop-blur-xs' 
+                    : 'opacity-0 pointer-events-none'
+                }
+            `}
+        >
+            <div
+                className={`
+                    absolute inset-x-0 bottom-0 max-w-[500px] mx-auto max-h-[90vh] 
+                    overflow-hidden rounded-t-2xl bg-neutral-50 dark:bg-neutral-900 shadow-xl
+                    transition-transform duration-300 ease-[cubic-bezier(0.33,1,0.68,1)]
+                    ${isVisible ? 'translate-y-0' : 'translate-y-full'}
+                `}
+            >
                         {/* 拖动条 */}
                         <div className="sticky top-0 z-10 flex justify-center py-2 bg-neutral-50 dark:bg-neutral-900">
                             <div className="h-1.5 w-12 rounded-full bg-neutral-200 dark:bg-neutral-700" />
                         </div>
 
                         {/* 表单内容 */}
-                        <motion.div
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{
-                                type: "tween",
-                                ease: "easeOut",
-                                duration: 0.265,
-                                delay: 0.05
-                            }}
-                            style={{
-                                willChange: "opacity, transform"
-                            }}
-                            className="px-6  pb-safe-bottom overflow-auto max-h-[calc(90vh-40px)]"
+                        <div
+                            className={`
+                                px-6 pb-safe-bottom overflow-auto max-h-[calc(90vh-40px)]
+                                transition-all duration-300 ease-out
+                                ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}
+                            `}
                         >
                             <div className="flex flex-col">
                                 {/* 顶部标题 */}
@@ -387,11 +392,9 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
                                     </div>
                                 </div>
                             </div>
-                        </motion.div>
-                    </motion.div>
-                </motion.div>
-            )}
-        </AnimatePresence>
+                        </div>
+                    </div>
+                </div>
     )
 }
 

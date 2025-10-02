@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence, Reorder } from 'framer-motion'
 import { GripVertical, Edit, Trash2, Share2, X } from 'lucide-react'
 import { type CustomEquipment } from '@/lib/core/config'
@@ -55,14 +55,31 @@ const EquipmentManagementDrawer: React.FC<EquipmentManagementDrawerProps> = ({
     onEditEquipment,
     onDeleteEquipment,
     onShareEquipment,
-    onReorderEquipments,
+    onReorderEquipments: _onReorderEquipments,
     settings
 }) => {
+    // 动画状态管理
+    const [shouldRender, setShouldRender] = useState(false)
+    const [isVisible, setIsVisible] = useState(false)
+    
     // 使用自定义Hook管理器具列表
     const { allEquipments: baseEquipments } = useEquipmentList({ customEquipments })
 
     // 本地状态管理器具的操作显示状态
     const [allEquipments, setAllEquipments] = useState<EquipmentWithActions[]>([])
+    
+    // 处理显示/隐藏动画
+    useEffect(() => {
+        if (isOpen) {
+            setShouldRender(true)
+            const timer = setTimeout(() => setIsVisible(true), 10)
+            return () => clearTimeout(timer)
+        } else {
+            setIsVisible(false)
+            const timer = setTimeout(() => setShouldRender(false), 350)
+            return () => clearTimeout(timer)
+        }
+    }, [isOpen])
 
     // 同步基础器具列表到本地状态，添加操作状态
     React.useEffect(() => {
@@ -95,7 +112,7 @@ const EquipmentManagementDrawer: React.FC<EquipmentManagementDrawerProps> = ({
             
             // 传递自定义器具给父组件以保持向后兼容
             const customEquipmentsOnly = newOrder.filter(eq => !eq.isSystem) as CustomEquipment[]
-            onReorderEquipments(customEquipmentsOnly)
+            _onReorderEquipments(customEquipmentsOnly)
             
             // 通知所有器具栏组件更新
             const { equipmentEventBus } = await import('@/lib/equipment/equipmentEventBus')
@@ -150,57 +167,57 @@ const EquipmentManagementDrawer: React.FC<EquipmentManagementDrawerProps> = ({
 
 
 
-    // 监听 isOpen 变化
+    // 历史栈管理 - 支持硬件返回键和浏览器返回按钮
     React.useEffect(() => {
-        // 可以在这里添加其他关闭时的逻辑
-    }, [isOpen])
+        if (!isOpen) return
 
-    // 组件卸载时的清理
-    React.useEffect(() => {
-        return () => {
-            // 可以在这里添加其他清理逻辑
+        window.history.pushState({ modal: 'equipment-management' }, '')
+
+        const handlePopState = () => onClose()
+        window.addEventListener('popstate', handlePopState)
+
+        return () => window.removeEventListener('popstate', handlePopState)
+    }, [isOpen, onClose])
+
+    // 处理关闭
+    const handleClose = React.useCallback(() => {
+        if (window.history.state?.modal === 'equipment-management') {
+            window.history.back()
+        } else {
+            onClose()
         }
-    }, [])
+    }, [onClose])
+
+    if (!shouldRender) return null
 
     return (
-        <AnimatePresence>
-            {isOpen && (
-                <>
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.265 }}
-                        className="fixed inset-0 z-50 bg-black/30 backdrop-blur-xs"
-                        onClick={onClose}
-                    />
+        <>
+            {/* 背景遮罩 */}
+            <div
+                className={`
+                    fixed inset-0 z-50 bg-black/30 backdrop-blur-xs
+                    transition-opacity duration-300
+                    ${isVisible ? 'opacity-100' : 'opacity-0'}
+                `}
+                onClick={handleClose}
+            />
 
-                    <motion.div
-                        initial={{ y: "100%" }}
-                        animate={{ y: 0 }}
-                        exit={{ y: "100%" }}
-                        transition={{ 
-                            type: "tween",
-                            duration: 0.35,
-                            ease: [0.36, 0.66, 0.04, 1]
-                        }}
-                        drag="y"
-                        dragConstraints={{ top: 0, bottom: 0 }}
-                        dragElastic={{ top: 0, bottom: 0.2 }}
-                        onDragEnd={(_, info) => {
-                            if (info.offset.y > 100) {
-                                onClose()
-                            }
-                        }}
-                        className="fixed bottom-0 left-0 right-0 z-50 max-w-[500px] mx-auto bg-neutral-50 dark:bg-neutral-900 backdrop-blur-xl rounded-t-3xl"
-                        onClick={(e) => e.stopPropagation()}
-                    >
+            {/* 抽屉内容 */}
+            <div
+                className={`
+                    fixed bottom-0 left-0 right-0 z-50 max-w-[500px] mx-auto 
+                    bg-neutral-50 dark:bg-neutral-900 backdrop-blur-xl rounded-t-3xl
+                    transition-transform duration-[350ms] ease-[cubic-bezier(0.36,0.66,0.04,1)]
+                    ${isVisible ? 'translate-y-0' : 'translate-y-full'}
+                `}
+                onClick={(e) => e.stopPropagation()}
+            >
                         <div className="flex justify-center pt-3 pb-2">
                             <div className="w-10 h-1 bg-neutral-300 dark:bg-neutral-600 rounded-full" />
                         </div>
 
                         <div className="px-6 pb-6">
-                            <div className="flex items-center justify-between mb-5">
+                            <motion.div className="flex items-center justify-between mb-5">
                                 <h3 className="text-base font-medium text-neutral-900 dark:text-neutral-100">
                                     器具列表
                                 </h3>
@@ -209,10 +226,8 @@ const EquipmentManagementDrawer: React.FC<EquipmentManagementDrawerProps> = ({
                                     className="flex items-center justify-center px-3 py-1  rounded-full bg-neutral-100  dark:bg-neutral-800 transition-all duration-150 active:scale-95 active:opacity-80"
                                 >
                                     <span className='text-sm font-medium text-neutral-800 dark:text-neutral-100'>+ 添加器具</span>
-                                </button>
-                            </div>
-
-                            <div className="space-y-2 max-h-[85vh] overflow-y-auto overflow-x-hidden pb-safe-bottom">
+                                                                            </button>
+                                                                    </motion.div>                            <div className="space-y-2 max-h-[85vh] overflow-y-auto overflow-x-hidden pb-safe-bottom">
                                 {allEquipments.length > 0 ? (
                                     <div className="space-y-2">
                                         <Reorder.Group
@@ -277,13 +292,13 @@ const EquipmentManagementDrawer: React.FC<EquipmentManagementDrawerProps> = ({
                                                             <div className="flex items-center justify-end">
                                                                 <AnimatePresence mode="wait">
                                                                     {equipment.showActions ? (
-                                                                        <motion.div
-                                                                            initial={{ opacity: 0, filter: "blur(4px)" }}
-                                                                            animate={{ opacity: 1, filter: "blur(0px)" }}
-                                                                            exit={{ opacity: 0, filter: "blur(4px)" }}
-                                                                            transition={{ duration: 0.2 }}
-                                                                            className="flex items-center space-x-1"
-                                                                        >
+                                                                    <motion.div
+                                                                        initial={{ opacity: 0, filter: "blur(4px)" }}
+                                                                        animate={{ opacity: 1, filter: "blur(0px)" }}
+                                                                        exit={{ opacity: 0, filter: "blur(4px)" }}
+                                                                        transition={{ duration: 0.2 }}
+                                                                        className="flex items-center space-x-1"
+                                                                    >
                                                                             <button
                                                                                 onClick={() => handleAction('edit', equipment)}
                                                                                 className="p-2 rounded-md hover:bg-neutral-100 active:bg-neutral-200 dark:hover:bg-neutral-700 dark:active:bg-neutral-600 transition-colors duration-150"
@@ -308,19 +323,19 @@ const EquipmentManagementDrawer: React.FC<EquipmentManagementDrawerProps> = ({
                                                                             >
                                                                                 <X className="w-4 h-4 text-neutral-600 dark:text-neutral-400" />
                                                                             </button>
-                                                                        </motion.div>
-                                                                    ) : (
-                                                                        <motion.button
-                                                                            initial={{ opacity: 0.6, filter: "blur(2px)" }}
-                                                                            animate={{ opacity: 1, filter: "blur(0px)" }}
-                                                                            exit={{ opacity: 0.6, filter: "blur(2px)" }}
-                                                                            transition={{ duration: 0.2 }}
-                                                                            onClick={() => toggleActions(equipment.id)}
-                                                                            className="p-2 rounded-md hover:bg-neutral-100 active:bg-neutral-200 dark:hover:bg-neutral-700 dark:active:bg-neutral-600 transition-all duration-150"
-                                                                        >
-                                                                            <span className="flex items-center justify-center w-4 h-4 text-neutral-600 dark:text-neutral-400 text-lg font-bold leading-none select-none">⋯</span>
-                                                                        </motion.button>
-                                                                    )}
+                                                                    </motion.div>
+                                                                ) : (
+                                                                    <motion.button
+                                                                        initial={{ opacity: 0.6, filter: "blur(2px)" }}
+                                                                        animate={{ opacity: 1, filter: "blur(0px)" }}
+                                                                        exit={{ opacity: 0.6, filter: "blur(2px)" }}
+                                                                        transition={{ duration: 0.2 }}
+                                                                        onClick={() => toggleActions(equipment.id)}
+                                                                        className="p-2 rounded-md hover:bg-neutral-100 active:bg-neutral-200 dark:hover:bg-neutral-700 dark:active:bg-neutral-600 transition-all duration-150"
+                                                                    >
+                                                                        <span className="flex items-center justify-center w-4 h-4 text-neutral-600 dark:text-neutral-400 text-lg font-bold leading-none select-none">⋯</span>
+                                                                    </motion.button>
+                                                                )}
                                                                 </AnimatePresence>
                                                             </div>
                                                         )}
@@ -343,11 +358,9 @@ const EquipmentManagementDrawer: React.FC<EquipmentManagementDrawerProps> = ({
                                     </div>
                                 )}
                             </div>
-                        </div>
-                    </motion.div>
-                </>
-            )}
-        </AnimatePresence>
+                    </div>
+                </div>
+        </>
     )
 }
 

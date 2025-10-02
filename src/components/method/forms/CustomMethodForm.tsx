@@ -239,7 +239,7 @@ const CustomMethodForm = React.forwardRef<CustomMethodFormHandle, CustomMethodFo
       }
       return false; // 已经在第一步，无法再返回
     }
-  }), [getCurrentStepIndex, setCurrentStep]);
+  }), [getCurrentStepIndex, setCurrentStep, steps]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);

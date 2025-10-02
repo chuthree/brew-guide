@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CustomEquipment } from '@/lib/core/config';
-import CustomEquipmentForm from './CustomEquipmentForm';
+import CustomEquipmentForm, { CustomEquipmentFormHandle } from './CustomEquipmentForm';
 import { exportEquipment, copyToClipboard } from '@/lib/utils/exportUtils'
 
 interface CustomEquipmentFormModalProps {
@@ -19,6 +19,41 @@ const CustomEquipmentFormModal: React.FC<CustomEquipmentFormModalProps> = ({
     editingEquipment,
     onImport
 }) => {
+    const formRef = useRef<CustomEquipmentFormHandle | null>(null);
+
+    // 历史栈管理 - 支持多步骤表单的硬件返回键和浏览器返回按钮
+    useEffect(() => {
+        if (!showForm) return;
+
+        window.history.pushState({ modal: 'equipment-form' }, '');
+
+        // 监听返回事件
+        const handlePopState = () => {
+            // 询问表单是否还有上一步
+            if (formRef.current?.handleBackStep()) {
+                // 表单内部处理了返回（返回上一步），重新添加历史记录
+                window.history.pushState({ modal: 'equipment-form' }, '');
+            } else {
+                // 表单已经在第一步，关闭模态框
+                onClose();
+            }
+        };
+
+        window.addEventListener('popstate', handlePopState);
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, [showForm, onClose]);
+
+    // 处理关闭
+    const handleClose = () => {
+        // 如果历史栈中有我们添加的条目，触发返回
+        if (window.history.state?.modal === 'equipment-form') {
+            window.history.back();
+        } else {
+            // 否则直接关闭
+            onClose();
+        }
+    };
+
     const _handleExport = async (equipment: CustomEquipment) => {
         try {
             const exportData = exportEquipment(equipment);
@@ -82,7 +117,7 @@ const CustomEquipmentFormModal: React.FC<CustomEquipmentFormModalProps> = ({
                                 <div className="flex items-center justify-between mt-3 mb-6">
                                     <button
                                         type="button"
-                                        onClick={onClose}
+                                        onClick={handleClose}
                                         className="rounded-full p-2 pl-0"
                                     >
                                         <svg
@@ -111,7 +146,7 @@ const CustomEquipmentFormModal: React.FC<CustomEquipmentFormModalProps> = ({
                                             type="button"
                                             onClick={() => {
                                                 onImport();
-                                                onClose(); // 关闭当前添加器具模态框
+                                                handleClose(); // 关闭当前添加器具模态框
                                             }}
                                             className="px-3 py-1.5 text-sm text-neutral-600 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200 transition-colors"
                                         >
@@ -123,14 +158,18 @@ const CustomEquipmentFormModal: React.FC<CustomEquipmentFormModalProps> = ({
 
                                 {/* 表单内容 */}
                                 <div className="mt-2">
-                                    <CustomEquipmentForm
-                                        onSave={(equipment) => {
-                                            onSave(equipment);
-                                            onClose();
-                                        }}
-                                        onCancel={onClose}
-                                        initialEquipment={editingEquipment}
-                                    />
+                                    {showForm && (
+                                        <CustomEquipmentForm
+                                            key={`equipment-form-${editingEquipment?.id || 'new'}-${Date.now()}`}
+                                            ref={formRef}
+                                            onSave={(equipment) => {
+                                                onSave(equipment);
+                                                handleClose();
+                                            }}
+                                            onCancel={handleClose}
+                                            initialEquipment={editingEquipment}
+                                        />
+                                    )}
                                 </div>
                             </div>
                         </motion.div>
