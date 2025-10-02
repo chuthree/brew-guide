@@ -38,11 +38,30 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
         }
     }, [showForm]);
 
+    // 历史栈管理 - 支持硬件返回键和浏览器返回按钮
+    React.useEffect(() => {
+        if (!showForm) return
+
+        // 添加模态框历史记录
+        window.history.pushState({ modal: 'method-import' }, '')
+
+        const handlePopState = () => onClose()
+        window.addEventListener('popstate', handlePopState)
+
+        return () => window.removeEventListener('popstate', handlePopState)
+    }, [showForm, onClose])
+
     // 关闭并清除输入
     const handleClose = () => {
-        setImportData('');
-        clearMessages();
-        onClose();
+        // 如果历史栈中有我们添加的条目，触发返回
+        if (window.history.state?.modal === 'method-import') {
+            window.history.back()
+        } else {
+            // 否则直接关闭
+            setImportData('');
+            clearMessages();
+            onClose();
+        }
     };
 
     // 生成模板提示词

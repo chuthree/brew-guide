@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useRef, useEffect, useCallback } from 'react'
+import React, { useState, useRef, useEffect, useCallback, useImperativeHandle } from 'react'
 import { ArrowRight } from 'lucide-react'
 import { CustomEquipment } from '@/lib/core/config'
 import { isEspressoMachine, getDefaultPourType, getPourTypeName } from '@/lib/utils/equipmentUtils'
@@ -94,15 +94,20 @@ interface CustomMethodFormProps {
     onBack: () => void;
 }
 
+// 暴露给父组件的方法
+export interface CustomMethodFormHandle {
+    handleBackStep: () => boolean;
+}
+
 /**
  * 自定义冲泡方案表单组件
  */
-const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
+const CustomMethodForm = React.forwardRef<CustomMethodFormHandle, CustomMethodFormProps>(({
   initialMethod,
   customEquipment,
   onSave,
   onBack,
-}) => {
+}, ref) => {
   // ===== 状态管理 =====
   const [currentStep, setCurrentStep] = useState<Step>('name');
   const [editingCumulativeTime, setEditingCumulativeTime] = useState<{index: number, value: string} | null>(null);
@@ -222,6 +227,19 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
       onBack();
     }
   };
+
+  // 暴露给父组件的方法
+  useImperativeHandle(ref, () => ({
+    // 返回 true 表示处理了返回（返回上一步），false 表示已在第一步
+    handleBackStep: () => {
+      const currentIndex = getCurrentStepIndex();
+      if (currentIndex > 0) {
+        setCurrentStep(steps[currentIndex - 1].id);
+        return true; // 处理了返回
+      }
+      return false; // 已经在第一步，无法再返回
+    }
+  }), [getCurrentStepIndex, setCurrentStep]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -1343,6 +1361,8 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
             {renderNextButton()}
         </>
     );
-}
+});
+
+CustomMethodForm.displayName = 'CustomMethodForm';
 
 export default CustomMethodForm
