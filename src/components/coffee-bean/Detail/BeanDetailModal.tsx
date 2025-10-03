@@ -377,10 +377,9 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                     note.coffeeBeanInfo?.name === bean.name
                 )
 
-                // 按时间倒序排列，只取最近的5条记录
+                // 按时间倒序排列，显示所有记录
                 const sortedNotes = beanNotes
                     .sort((a, b) => b.timestamp - a.timestamp)
-                    .slice(0, 5)
 
                 // 获取所有设备的名称
                 const equipmentIds = Array.from(new Set(
