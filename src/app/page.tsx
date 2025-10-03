@@ -1483,7 +1483,12 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         } else {
             // 非第一步时，添加历史记录并监听返回事件
             const currentState = window.history.state;
-            if (!currentState?.brewingStep || currentState.brewingStep !== activeBrewingStep) {
+            
+            // 关键修复：确保只在步骤真正改变时才添加历史记录
+            // 避免在无咖啡豆情况下，method 步骤被重复添加到历史栈
+            const shouldAddHistory = !currentState?.brewingStep || currentState.brewingStep !== activeBrewingStep;
+            
+            if (shouldAddHistory) {
                 // 使用 pushState 为每个非第一步添加历史记录
                 window.history.pushState({ brewingStep: activeBrewingStep }, '');
             }
