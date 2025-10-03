@@ -782,13 +782,13 @@ export const brewingMethods: BrewingMethods = {
 		{
 			name: "夏季八冲(全宇宙最多人使用的咖啡冲煮手法)",
 			params: {
-				coffee: "(略)",
-				water: "(略)",
-				ratio: "(略)",
+				coffee: "0g",
+				water: "0g",
+				ratio: "1:0",
 				grindSize: "(略)",
-				temp: "(略)",
+				temp: "0°C",
 				videoUrl: "",
-				roastLevel: "(略)",
+				roastLevel: "中浅烘焙",
 				stages: [
 					{
 						time: 0,
@@ -838,13 +838,13 @@ export const brewingMethods: BrewingMethods = {
 		{
 			name: "夏季八冲(全宇宙最多人使用的咖啡冲煮手法)",
 			params: {
-				coffee: "(略)",
-				water: "(略)",
-				ratio: "(略)",
+				coffee: "0g",
+				water: "0g",
+				ratio: "1:0",
 				grindSize: "(略)",
-				temp: "(略)",
+				temp: "0°C",
 				videoUrl: "",
-				roastLevel: "(略)",
+				roastLevel: "中浅烘焙",
 				stages: [
 					{
 						time: 0,
@@ -939,13 +939,13 @@ export const brewingMethods: BrewingMethods = {
 		{
 			name: "夏季八冲(全宇宙最多人使用的咖啡冲煮手法)",
 			params: {
-				coffee: "(略)",
-				water: "(略)",
-				ratio: "(略)",
+				coffee: "0g",
+				water: "0g",
+				ratio: "1:0",
 				grindSize: "(略)",
-				temp: "(略)",
+				temp: "0°C",
 				videoUrl: "",
-				roastLevel: "(略)",
+				roastLevel: "中浅烘焙",
 				stages: [
 					{
 						time: 0,
@@ -1039,13 +1039,13 @@ export const brewingMethods: BrewingMethods = {
 		{
 			name: "夏季八冲(全宇宙最多人使用的咖啡冲煮手法)",
 			params: {
-				coffee: "(略)",
-				water: "(略)",
-				ratio: "(略)",
+				coffee: "0g",
+				water: "0g",
+				ratio: "1:0",
 				grindSize: "(略)",
-				temp: "(略)",
+				temp: "0°C",
 				videoUrl: "",
-				roastLevel: "(略)",
+				roastLevel: "中浅烘焙",
 				stages: [
 					{
 						time: 0,
