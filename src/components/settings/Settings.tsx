@@ -231,12 +231,7 @@ const Settings: React.FC<SettingsProps> = ({
     
     // 监控显示设置状态变化
     React.useEffect(() => {
-        console.log('[Settings] 📊 显示设置状态变化', {
-            showDisplaySettings,
-            timestamp: new Date().toISOString(),
-            historyState: window.history.state,
-            historyLength: window.history.length
-        })
+        // Display settings state change
     }, [showDisplaySettings])
     
     // 添加全局历史栈变化监控（仅在开发模式 - 简化版）
@@ -244,11 +239,6 @@ const Settings: React.FC<SettingsProps> = ({
         const originalPushState = window.history.pushState
         
         window.history.pushState = function(state, title, url) {
-            console.log('[GlobalHistory] ➡️ pushState', {
-                modal: state?.modal,
-                beforeLength: window.history.length,
-                afterLength: window.history.length + 1
-            })
             return originalPushState.call(this, state, title, url)
         }
         
@@ -382,60 +372,26 @@ const Settings: React.FC<SettingsProps> = ({
     useEffect(() => {
         if (!isOpen) return
         
-        console.log('[Settings] 🔍 历史栈管理 - 设置页面打开', {
-            currentState: window.history.state,
-            historyLength: window.history.length
-        })
-        
         // 检查是否已经有设置相关的历史记录
         const hasSettingsHistory = window.history.state?.modal?.includes('-settings') || window.history.state?.modal === 'settings'
         
         if (hasSettingsHistory) {
             // 如果已经有设置历史记录，替换它
-            console.log('[Settings] 🔄 替换现有设置历史记录', window.history.state)
             window.history.replaceState({ modal: 'settings' }, '')
         } else {
             // 添加新的历史记录
-            console.log('[Settings] ➕ 添加新的设置历史记录')
             window.history.pushState({ modal: 'settings' }, '')
         }
         
-        console.log('[Settings] ✅ 历史记录操作完成', {
-            newState: window.history.state,
-            historyLength: window.history.length
-        })
-        
-        const handlePopState = (event: PopStateEvent) => {
-            console.log('[Settings] ⬅️ 检测到返回操作', {
-                event,
-                currentState: window.history.state,
-                historyLength: window.history.length
-            })
-            
+        const handlePopState = (_event: PopStateEvent) => {
             // 检查是否有子设置页面打开
             const hasSubSettingsOpen = showDisplaySettings || showGrinderSettings || showStockSettings || 
                                       showBeanSettings || showFlavorPeriodSettings || showTimerSettings || 
                                       showDataSettings || showNotificationSettings || showRandomCoffeeBeanSettings || 
                                       showSearchSortSettings || showFlavorDimensionSettings
             
-            console.log('[Settings] 🔍 检查子设置页面状态', {
-                hasSubSettingsOpen,
-                showDisplaySettings,
-                showGrinderSettings,
-                showStockSettings,
-                showBeanSettings,
-                showFlavorPeriodSettings,
-                showTimerSettings,
-                showDataSettings,
-                showNotificationSettings,
-                showRandomCoffeeBeanSettings,
-                showSearchSortSettings,
-                showFlavorDimensionSettings
-            })
-            
             if (hasSubSettingsOpen) {
                 // 如果有子设置页面打开，关闭它们
-                console.log('[Settings] 🚪 关闭子设置页面')
                 setShowDisplaySettings(false)
                 setShowGrinderSettings(false)
                 setShowStockSettings(false)
@@ -448,12 +404,9 @@ const Settings: React.FC<SettingsProps> = ({
                 setShowSearchSortSettings(false)
                 setShowFlavorDimensionSettings(false)
                 // 重新添加主设置的历史记录
-                console.log('[Settings] ➕ 重新添加主设置历史记录')
                 window.history.pushState({ modal: 'settings' }, '')
-                console.log('[Settings] ✅ 主设置历史记录重新添加完成', window.history.state)
             } else {
                 // 没有子页面打开，关闭主设置
-                console.log('[Settings] 🚪 关闭主设置页面')
                 onClose()
             }
         }
@@ -461,7 +414,6 @@ const Settings: React.FC<SettingsProps> = ({
         window.addEventListener('popstate', handlePopState)
         
         return () => {
-            console.log('[Settings] 🧹 清理历史栈监听器')
             window.removeEventListener('popstate', handlePopState)
         }
     }, [isOpen, onClose, showDisplaySettings, showGrinderSettings, showStockSettings, showBeanSettings, 
@@ -475,14 +427,6 @@ const handleChange = async <K extends keyof SettingsOptions>(
     key: K,
     value: SettingsOptions[K]
 ) => {
-    console.log('[Settings] 🔧 设置变更', {
-        key,
-        oldValue: settings[key],
-        newValue: value,
-        currentHistoryState: window.history.state,
-        historyLength: window.history.length
-    })
-    
     // 直接更新设置并保存到存储
     const newSettings = { ...settings, [key]: value }
     setSettings(newSettings)
@@ -493,13 +437,6 @@ const handleChange = async <K extends keyof SettingsOptions>(
     window.dispatchEvent(new CustomEvent('storageChange', {
         detail: { key: 'brewGuideSettings' }
     }))
-    
-    console.log('[Settings] ✅ 设置变更完成', {
-        key,
-        newValue: value,
-        afterHistoryState: window.history.state,
-        afterHistoryLength: window.history.length
-    })
 }
 
     // 执行同步，现在通过事件触发
@@ -706,19 +643,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                 <div className="px-6 py-4 space-y-4">
                     <button
                         onClick={() => {
-                            console.log('[Settings] 📱 显示设置按钮点击', {
-                                currentState: window.history.state,
-                                historyLength: window.history.length,
-                                currentShowDisplaySettings: showDisplaySettings
-                            })
-                            
                             setShowDisplaySettings(true)
-                            
-                            console.log('[Settings] ✅ 显示设置状态更新完成', {
-                                newShowDisplaySettings: true,
-                                historyState: window.history.state,
-                                historyLength: window.history.length
-                            })
                         }}
                         className="w-full py-3 px-4 text-sm font-medium text-neutral-800 bg-neutral-100 rounded transition-colors hover:bg-neutral-200 dark:text-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 flex items-center justify-between"
                     >

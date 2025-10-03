@@ -26,23 +26,7 @@ export function ButtonGroup<T extends string>({
                             : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'
                     }`}
                     onClick={() => {
-                        console.log('[ButtonGroup] 🔘 按钮点击', {
-                            clickedValue: option.value,
-                            currentValue: value,
-                            historyStateBefore: window.history.state,
-                            historyLengthBefore: window.history.length
-                        })
-                        
                         onChange(option.value)
-                        
-                        // 异步检查历史状态变化
-                        setTimeout(() => {
-                            console.log('[ButtonGroup] ✅ 按钮点击后状态', {
-                                newValue: option.value,
-                                historyStateAfter: window.history.state,
-                                historyLengthAfter: window.history.length
-                            })
-                        }, 0)
                     }}
                 >
                     {option.label}
