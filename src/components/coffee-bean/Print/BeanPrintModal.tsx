@@ -1,0 +1,1015 @@
+"use client";
+
+import React, { useState, useEffect } from "react";
+import { CoffeeBean } from "@/types/app";
+import { X, Download, RotateCcw, Edit, Check, Plus, Minus } from "lucide-react";
+import { parseDateToTimestamp } from "@/lib/utils/dateUtils";
+import { DatePicker } from "@/components/common/ui/DatePicker";
+import {
+  PrintConfig,
+  getPrintConfigPreference,
+  getShowCustomSizePreference,
+  saveShowCustomSizePreference,
+  resetConfigToDefault,
+  toggleConfigField,
+  updateConfigSize,
+  toggleConfigOrientation,
+  updateConfigMargin,
+  updateConfigFontSize,
+  setPresetSize,
+} from "./printConfig";
+
+interface BeanPrintModalProps {
+  isOpen: boolean;
+  bean: CoffeeBean | null;
+  onClose: () => void;
+}
+
+interface EditableContent {
+  name: string;
+  origin: string;
+  roastLevel: string;
+  roastDate: string;
+  process: string;
+  variety: string;
+  flavor: string[];
+  notes: string;
+}
+
+const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
+  isOpen,
+  bean,
+  onClose,
+}) => {
+  const [config, setConfig] = useState<PrintConfig>(() =>
+    getPrintConfigPreference()
+  );
+  const [shouldRender, setShouldRender] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+  const [showCustomSize, setShowCustomSize] = useState(() =>
+    getShowCustomSizePreference()
+  );
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editableContent, setEditableContent] = useState<EditableContent>({
+    name: "",
+    origin: "",
+    roastLevel: "",
+    roastDate: "",
+    process: "",
+    variety: "",
+    flavor: [],
+    notes: "",
+  });
+
+  // 初始化编辑内容
+  useEffect(() => {
+    if (bean) {
+      const originInfo = (() => {
+        if (!bean.blendComponents || bean.blendComponents.length === 0)
+          return "";
+        const origins = Array.from(
+          new Set(
+            bean.blendComponents
+              .map((comp) => comp.origin)
+              .filter(
+                (value): value is string =>
+                  typeof value === "string" && value.trim() !== ""
+              )
+          )
+        );
+        return origins.join(", ");
+      })();
+
+      const processInfo = (() => {
+        if (!bean.blendComponents || bean.blendComponents.length === 0)
+          return "";
+        const processes = Array.from(
+          new Set(
+            bean.blendComponents
+              .map((comp) => comp.process)
+              .filter(
+                (value): value is string =>
+                  typeof value === "string" && value.trim() !== ""
+              )
+          )
+        );
+        return processes.join(", ");
+      })();
+
+      const varietyInfo = (() => {
+        if (!bean.blendComponents || bean.blendComponents.length === 0)
+          return "";
+        const varieties = Array.from(
+          new Set(
+            bean.blendComponents
+              .map((comp) => comp.variety)
+              .filter(
+                (value): value is string =>
+                  typeof value === "string" && value.trim() !== ""
+              )
+          )
+        );
+        return varieties.join(", ");
+      })();
+
+      setEditableContent({
+        name: bean.name || "",
+        origin: originInfo,
+        roastLevel: bean.roastLevel || "",
+        roastDate: bean.roastDate || "",
+        process: processInfo,
+        variety: varietyInfo,
+        flavor: bean.flavor || [],
+        notes: bean.notes || "",
+      });
+    }
+  }, [bean]);
+
+  // 处理显示/隐藏动画
+  useEffect(() => {
+    if (isOpen) {
+      setShouldRender(true);
+      const timer = setTimeout(() => setIsVisible(true), 10);
+      return () => clearTimeout(timer);
+    } else {
+      setIsVisible(false);
+      const timer = setTimeout(() => setShouldRender(false), 350);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
+
+  // 历史栈管理 - 支持硬件返回键和浏览器返回按钮
+  useEffect(() => {
+    if (!isOpen) return;
+
+    // 添加模态框历史记录
+    window.history.pushState({ modal: "bean-print" }, "");
+
+    // 监听返回事件
+    const handlePopState = () => {
+      onClose();
+    };
+
+    window.addEventListener("popstate", handlePopState);
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, [isOpen, onClose]);
+
+  // 关闭处理
+  const handleClose = () => {
+    // 重置编辑模式
+    setIsEditMode(false);
+
+    // 如果历史栈中有我们添加的条目，触发返回
+    if (window.history.state?.modal === "bean-print") {
+      window.history.back();
+    } else {
+      // 否则直接关闭
+      onClose();
+    }
+  };
+
+  // 格式化日期
+  const formatDate = (dateStr: string): string => {
+    try {
+      const timestamp = parseDateToTimestamp(dateStr);
+      const date = new Date(timestamp);
+      return `${date.getFullYear()}-${(date.getMonth() + 1)
+        .toString()
+        .padStart(2, "0")}-${date.getDate().toString().padStart(2, "0")}`;
+    } catch {
+      return dateStr;
+    }
+  };
+
+  // 保存为图片处理
+  const handleSaveAsImage = async () => {
+    try {
+      const previewElement = document.getElementById("print-preview");
+      if (!previewElement) {
+        console.error("预览元素未找到");
+        return;
+      }
+
+      // 动态导入 html-to-image
+      const { toPng } = await import("html-to-image");
+
+      // 生成图片数据URL
+      const dataUrl = await toPng(previewElement, {
+        backgroundColor: "#ffffff",
+        pixelRatio: 3, // 提高分辨率
+        quality: 0.95,
+      });
+
+      // 创建下载链接
+      const link = document.createElement("a");
+      link.href = dataUrl;
+      link.download = `${bean?.name || "咖啡豆标签"}-${
+        new Date().toISOString().split("T")[0]
+      }.png`;
+
+      // 触发下载
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error("保存图片失败:", error);
+      alert("保存图片失败，请重试");
+    }
+  };
+
+  // 更新字段显示状态
+  const toggleField = (field: keyof PrintConfig["fields"]) => {
+    const newConfig = toggleConfigField(config, field);
+    setConfig(newConfig);
+  };
+
+  // 重置配置
+  const resetConfig = () => {
+    const newConfig = resetConfigToDefault();
+    setConfig(newConfig);
+  };
+
+  // 更新尺寸
+  const updateSize = (dimension: "width" | "height", value: number) => {
+    const newConfig = updateConfigSize(config, dimension, value);
+    setConfig(newConfig);
+  };
+
+  // 预设尺寸 - 常用标签尺寸
+  const presetSizes = [
+    { label: "80×50", width: 80, height: 50 },
+    { label: "100×60", width: 100, height: 60 },
+    { label: "70×40", width: 70, height: 40 },
+  ];
+
+  // 布局方向切换
+  const toggleOrientation = () => {
+    const newConfig = toggleConfigOrientation(config);
+    setConfig(newConfig);
+  };
+
+  // 更新编辑内容
+  const updateEditableContent = (
+    field: keyof EditableContent,
+    value: string | string[]
+  ) => {
+    setEditableContent((prev) => ({ ...prev, [field]: value }));
+  };
+
+  // 添加风味标签
+  const addFlavorTag = () => {
+    setEditableContent((prev) => ({
+      ...prev,
+      flavor: [...prev.flavor, ""],
+    }));
+  };
+
+  // 删除风味标签
+  const removeFlavorTag = (index: number) => {
+    setEditableContent((prev) => ({
+      ...prev,
+      flavor: prev.flavor.filter((_, i) => i !== index),
+    }));
+  };
+
+  // 更新风味标签
+  const updateFlavorTag = (index: number, value: string) => {
+    setEditableContent((prev) => ({
+      ...prev,
+      flavor: prev.flavor.map((tag, i) => (i === index ? value : tag)),
+    }));
+  };
+
+  // 切换编辑模式
+  const toggleEditMode = () => {
+    setIsEditMode(!isEditMode);
+  };
+
+  // 处理自定义尺寸显示状态变化
+  const handleShowCustomSizeChange = (show: boolean) => {
+    setShowCustomSize(show);
+    saveShowCustomSizePreference(show);
+  };
+
+  // 重置编辑内容为原始数据
+  const resetEditableContent = () => {
+    if (bean) {
+      const originInfo = (() => {
+        if (!bean.blendComponents || bean.blendComponents.length === 0)
+          return "";
+        const origins = Array.from(
+          new Set(
+            bean.blendComponents
+              .map((comp) => comp.origin)
+              .filter(
+                (value): value is string =>
+                  typeof value === "string" && value.trim() !== ""
+              )
+          )
+        );
+        return origins.join(", ");
+      })();
+
+      const processInfo = (() => {
+        if (!bean.blendComponents || bean.blendComponents.length === 0)
+          return "";
+        const processes = Array.from(
+          new Set(
+            bean.blendComponents
+              .map((comp) => comp.process)
+              .filter(
+                (value): value is string =>
+                  typeof value === "string" && value.trim() !== ""
+              )
+          )
+        );
+        return processes.join(", ");
+      })();
+
+      const varietyInfo = (() => {
+        if (!bean.blendComponents || bean.blendComponents.length === 0)
+          return "";
+        const varieties = Array.from(
+          new Set(
+            bean.blendComponents
+              .map((comp) => comp.variety)
+              .filter(
+                (value): value is string =>
+                  typeof value === "string" && value.trim() !== ""
+              )
+          )
+        );
+        return varieties.join(", ");
+      })();
+
+      setEditableContent({
+        name: bean.name || "",
+        origin: originInfo,
+        roastLevel: bean.roastLevel || "",
+        roastDate: bean.roastDate || "",
+        process: processInfo,
+        variety: varietyInfo,
+        flavor: bean.flavor || [],
+        notes: bean.notes || "",
+      });
+    }
+  };
+
+  if (!shouldRender || !bean) return null;
+
+  return (
+    <>
+      <div
+        className={`
+                    fixed inset-0 z-50 max-w-[500px] mx-auto overflow-hidden 
+                    bg-neutral-50 dark:bg-neutral-900 flex flex-col
+                    transition-transform duration-[350ms] ease-[cubic-bezier(0.36,0.66,0.04,1)]
+                    ${isVisible ? "translate-x-0" : "translate-x-full"}
+                `}
+      >
+        {/* 顶部按钮栏 */}
+        <div className="sticky top-0 z-10 flex justify-between items-center pt-safe-top px-4 py-3 bg-neutral-50 dark:bg-neutral-900">
+          <button
+            onClick={handleClose}
+            className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors flex items-center justify-center"
+          >
+            <X className="w-4 h-4" />
+          </button>
+
+          <h2 className="absolute left-1/2 transform -translate-x-1/2 text-sm text-neutral-600 dark:text-neutral-400 pointer-events-none">
+            打印标签
+          </h2>
+
+          <div className="flex gap-2">
+            <button
+              onClick={resetConfig}
+              className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors flex items-center justify-center"
+            >
+              <RotateCcw className="w-4 h-4" />
+            </button>
+            <button
+              onClick={handleSaveAsImage}
+              className="w-8 h-8 rounded-full bg-neutral-800 dark:bg-neutral-700 hover:bg-neutral-700 dark:hover:bg-neutral-600 transition-colors flex items-center justify-center"
+            >
+              <Download className="w-4 h-4 text-white" />
+            </button>
+          </div>
+        </div>
+
+        {/* 内容区域 */}
+        <div className="flex-1 overflow-y-auto pb-safe-bottom">
+          <div className="p-4 space-y-4">
+            {/* 尺寸设置 */}
+            <div className="space-y-3">
+              <div className="text-xs font-medium text-neutral-600 dark:text-neutral-300">
+                尺寸设置
+              </div>
+
+              <div className="grid grid-cols-4 gap-2">
+                {/* 预设尺寸按钮 */}
+                {presetSizes.map((size) => (
+                  <button
+                    key={size.label}
+                    onClick={() => {
+                      const newConfig = setPresetSize(
+                        config,
+                        size.width,
+                        size.height
+                      );
+                      setConfig(newConfig);
+                    }}
+                    className={`px-3 py-2 text-xs font-medium rounded transition-all ${
+                      config.width === size.width &&
+                      config.height === size.height
+                        ? "bg-neutral-800 text-white dark:bg-neutral-700"
+                        : "bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
+                    }`}
+                  >
+                    {size.label}
+                  </button>
+                ))}
+
+                {/* 自定义按钮 */}
+                <button
+                  onClick={() => handleShowCustomSizeChange(!showCustomSize)}
+                  className={`px-3 py-2 text-xs font-medium rounded transition-all ${
+                    showCustomSize
+                      ? "bg-neutral-800 text-white dark:bg-neutral-700"
+                      : "bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
+                  }`}
+                >
+                  自定义
+                </button>
+              </div>
+
+              {/* 自定义尺寸输入框 - 仅在点击自定义后显示 */}
+              {showCustomSize && (
+                <div className="flex gap-2 items-center bg-neutral-50 dark:bg-neutral-800/50 p-3 rounded">
+                  <input
+                    type="number"
+                    value={config.width}
+                    onChange={(e) =>
+                      updateSize("width", parseInt(e.target.value) || 80)
+                    }
+                    className="flex-1 px-3 py-2 text-xs bg-white dark:bg-neutral-800 rounded border border-neutral-200 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-neutral-400 transition-all"
+                    placeholder="宽度"
+                    min="40"
+                    max="200"
+                  />
+                  <span className="text-neutral-400 text-xs">×</span>
+                  <input
+                    type="number"
+                    value={config.height}
+                    onChange={(e) =>
+                      updateSize("height", parseInt(e.target.value) || 50)
+                    }
+                    className="flex-1 px-3 py-2 text-xs bg-white dark:bg-neutral-800 rounded border border-neutral-200 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-neutral-400 transition-all"
+                    placeholder="高度"
+                    min="30"
+                    max="150"
+                  />
+                  <span className="text-xs text-neutral-500 dark:text-neutral-400">
+                    mm
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* 布局与字体设置 */}
+            <div className="space-y-4">
+              <div className="text-xs font-medium text-neutral-600 dark:text-neutral-300">
+                布局设置
+              </div>
+
+              {/* 方向选择 */}
+              <div>
+                <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-2">
+                  方向
+                </div>
+                <button
+                  onClick={toggleOrientation}
+                  className="w-full px-3 py-2 text-xs font-medium bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded transition-all"
+                >
+                  {config.orientation === "landscape" ? "横向 ↔" : "纵向 ↕"}
+                </button>
+              </div>
+
+              {/* 滑块设置 */}
+              <div className="grid grid-cols-2 gap-4">
+                {/* 边距 */}
+                <div>
+                  <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-2">
+                    边距 {config.margin}mm
+                  </div>
+                  <div className="px-1">
+                    <input
+                      type="range"
+                      min="1"
+                      max="8"
+                      value={config.margin}
+                      onChange={(e) => {
+                        const newConfig = updateConfigMargin(
+                          config,
+                          parseInt(e.target.value)
+                        );
+                        setConfig(newConfig);
+                      }}
+                      className="w-full h-2 bg-neutral-200 rounded-full appearance-none cursor-pointer dark:bg-neutral-700 slider"
+                    />
+                  </div>
+                </div>
+
+                {/* 字体大小 */}
+                <div>
+                  <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-2">
+                    字体 {config.fontSize}px
+                  </div>
+                  <div className="px-1">
+                    <input
+                      type="range"
+                      min="9"
+                      max="16"
+                      value={config.fontSize}
+                      onChange={(e) => {
+                        const size = parseInt(e.target.value);
+                        const newConfig = updateConfigFontSize(config, size);
+                        setConfig(newConfig);
+                      }}
+                      className="w-full h-2 bg-neutral-200 rounded-full appearance-none cursor-pointer dark:bg-neutral-700 slider"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 显示内容 */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="text-xs font-medium text-neutral-600 dark:text-neutral-300">
+                  显示内容
+                </div>
+                <button
+                  onClick={toggleEditMode}
+                  className={`px-2 py-1 text-xs font-medium rounded transition-all flex items-center gap-1 ${
+                    isEditMode
+                      ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                      : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-700"
+                  }`}
+                >
+                  {isEditMode ? (
+                    <>
+                      <Check className="w-3 h-3" />
+                      完成
+                    </>
+                  ) : (
+                    <>
+                      <Edit className="w-3 h-3" />
+                      编辑
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* 现代化按钮式选择器 */}
+              <div className="grid grid-cols-4 gap-1.5">
+                {Object.entries(config.fields).map(([field, enabled]) => {
+                  const fieldLabels = {
+                    name: "名称",
+                    origin: "产地",
+                    roastLevel: "烘焙",
+                    roastDate: "日期",
+                    flavor: "风味",
+                    process: "处理法",
+                    variety: "品种",
+                    notes: "备注",
+                  };
+
+                  return (
+                    <button
+                      key={field}
+                      onClick={() =>
+                        toggleField(field as keyof PrintConfig["fields"])
+                      }
+                      className={`px-2.5 py-2 text-xs font-medium rounded transition-all text-center ${
+                        enabled
+                          ? "bg-neutral-800 text-white dark:bg-neutral-700"
+                          : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-700"
+                      }`}
+                    >
+                      {fieldLabels[field as keyof typeof fieldLabels]}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* 编辑区域 - 仅在编辑模式下显示 */}
+              {isEditMode && (
+                <div className="mt-4 p-3 bg-neutral-50 dark:bg-neutral-800/50 rounded space-y-3">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="text-xs font-medium text-neutral-600 dark:text-neutral-300">
+                      编辑内容
+                    </div>
+                    <button
+                      onClick={resetEditableContent}
+                      className="px-2 py-1 text-xs text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300 transition-colors"
+                    >
+                      重置
+                    </button>
+                  </div>
+
+                  {/* 名称编辑 */}
+                  {config.fields.name && (
+                    <div>
+                      <label className="block text-xs text-neutral-500 dark:text-neutral-400 mb-1">
+                        名称
+                      </label>
+                      <input
+                        type="text"
+                        value={editableContent.name}
+                        onChange={(e) =>
+                          updateEditableContent("name", e.target.value)
+                        }
+                        className="w-full px-2 py-1.5 text-xs bg-white dark:bg-neutral-800 rounded border border-neutral-200 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-neutral-400 transition-all"
+                        placeholder="咖啡豆名称"
+                      />
+                    </div>
+                  )}
+
+                  {/* 产地编辑 */}
+                  {config.fields.origin && (
+                    <div>
+                      <label className="block text-xs text-neutral-500 dark:text-neutral-400 mb-1">
+                        产地
+                      </label>
+                      <input
+                        type="text"
+                        value={editableContent.origin}
+                        onChange={(e) =>
+                          updateEditableContent("origin", e.target.value)
+                        }
+                        className="w-full px-2 py-1.5 text-xs bg-white dark:bg-neutral-800 rounded border border-neutral-200 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-neutral-400 transition-all"
+                        placeholder="产地信息"
+                      />
+                    </div>
+                  )}
+
+                  {/* 烘焙度编辑 */}
+                  {config.fields.roastLevel && (
+                    <div>
+                      <label className="block text-xs text-neutral-500 dark:text-neutral-400 mb-1">
+                        烘焙度
+                      </label>
+                      <input
+                        type="text"
+                        value={editableContent.roastLevel}
+                        onChange={(e) =>
+                          updateEditableContent("roastLevel", e.target.value)
+                        }
+                        className="w-full px-2 py-1.5 text-xs bg-white dark:bg-neutral-800 rounded border border-neutral-200 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-neutral-400 transition-all"
+                        placeholder="烘焙度"
+                      />
+                    </div>
+                  )}
+
+                  {/* 烘焙日期编辑 */}
+                  {config.fields.roastDate && (
+                    <div>
+                      <label className="block text-xs text-neutral-500 dark:text-neutral-400 mb-1">
+                        烘焙日期
+                      </label>
+                      <div className="text-xs">
+                        <DatePicker
+                          date={editableContent.roastDate ? new Date(editableContent.roastDate) : undefined}
+                          onDateChange={(date) => {
+                            const formattedDate = date.toISOString().split('T')[0];
+                            updateEditableContent("roastDate", formattedDate);
+                          }}
+                          placeholder="选择烘焙日期"
+                          locale="zh-CN"
+                          className=""
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 处理法编辑 */}
+                  {config.fields.process && (
+                    <div>
+                      <label className="block text-xs text-neutral-500 dark:text-neutral-400 mb-1">
+                        处理法
+                      </label>
+                      <input
+                        type="text"
+                        value={editableContent.process}
+                        onChange={(e) =>
+                          updateEditableContent("process", e.target.value)
+                        }
+                        className="w-full px-2 py-1.5 text-xs bg-white dark:bg-neutral-800 rounded border border-neutral-200 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-neutral-400 transition-all"
+                        placeholder="处理法"
+                      />
+                    </div>
+                  )}
+
+                  {/* 品种编辑 */}
+                  {config.fields.variety && (
+                    <div>
+                      <label className="block text-xs text-neutral-500 dark:text-neutral-400 mb-1">
+                        品种
+                      </label>
+                      <input
+                        type="text"
+                        value={editableContent.variety}
+                        onChange={(e) =>
+                          updateEditableContent("variety", e.target.value)
+                        }
+                        className="w-full px-2 py-1.5 text-xs bg-white dark:bg-neutral-800 rounded border border-neutral-200 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-neutral-400 transition-all"
+                        placeholder="咖啡品种"
+                      />
+                    </div>
+                  )}
+
+                  {/* 风味编辑 */}
+                  {config.fields.flavor && (
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-xs text-neutral-500 dark:text-neutral-400">
+                          风味
+                        </label>
+                        <button
+                          onClick={addFlavorTag}
+                          className="w-5 h-5 rounded bg-neutral-200 dark:bg-neutral-700 hover:bg-neutral-300 dark:hover:bg-neutral-600 transition-colors flex items-center justify-center"
+                        >
+                          <Plus className="w-3 h-3" />
+                        </button>
+                      </div>
+                      <div className="space-y-2">
+                        {editableContent.flavor.map((flavor, index) => (
+                          <div key={index} className="flex gap-2 items-center">
+                            <input
+                              type="text"
+                              value={flavor}
+                              onChange={(e) =>
+                                updateFlavorTag(index, e.target.value)
+                              }
+                              className="flex-1 px-2 py-1.5 text-xs bg-white dark:bg-neutral-800 rounded border border-neutral-200 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-neutral-400 transition-all"
+                              placeholder="风味描述"
+                            />
+                            {editableContent.flavor.length > 1 && (
+                              <button
+                                onClick={() => removeFlavorTag(index)}
+                                className="w-5 h-5 rounded bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors flex items-center justify-center"
+                              >
+                                <Minus className="w-3 h-3 text-red-600 dark:text-red-400" />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                        {editableContent.flavor.length === 0 && (
+                          <div className="space-y-2">
+                            <button
+                              onClick={addFlavorTag}
+                              className="w-full px-2 py-2 text-xs text-neutral-500 dark:text-neutral-400 border border-dashed border-neutral-300 dark:border-neutral-600 rounded hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors"
+                            >
+                              点击添加风味标签
+                            </button>
+
+                            {/* 常用风味快捷添加 */}
+                            <div className="flex flex-wrap gap-1">
+                              {[
+                                "花香",
+                                "果香",
+                                "巧克力",
+                                "坚果",
+                                "焦糖",
+                                "柑橘",
+                              ].map((flavor) => (
+                                <button
+                                  key={flavor}
+                                  onClick={() => {
+                                    setEditableContent((prev) => ({
+                                      ...prev,
+                                      flavor: [...prev.flavor, flavor],
+                                    }));
+                                  }}
+                                  className="px-2 py-1 text-xs bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 rounded hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+                                >
+                                  {flavor}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 备注编辑 */}
+                  {config.fields.notes && (
+                    <div>
+                      <label className="block text-xs text-neutral-500 dark:text-neutral-400 mb-1">
+                        备注
+                      </label>
+                      <textarea
+                        value={editableContent.notes}
+                        onChange={(e) =>
+                          updateEditableContent("notes", e.target.value)
+                        }
+                        className="w-full px-2 py-1.5 text-xs bg-white dark:bg-neutral-800 rounded border border-neutral-200 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-neutral-400 transition-all resize-none"
+                        placeholder="备注信息"
+                        rows={2}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* 预览区域 */}
+            <div className="pt-4 border-t border-neutral-200 dark:border-neutral-800">
+              <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-3">
+                预览
+              </div>
+              <div className="flex justify-center bg-neutral-100 dark:bg-neutral-800 p-4 rounded">
+                <div
+                  id="print-preview"
+                  style={{
+                    width:
+                      config.orientation === "landscape"
+                        ? `${config.width}mm`
+                        : `${config.height}mm`,
+                    height:
+                      config.orientation === "landscape"
+                        ? `${config.height}mm`
+                        : `${config.width}mm`,
+                    padding: `${config.margin}mm`,
+                    fontSize: `${config.fontSize}px`,
+                    backgroundColor: "#ffffff",
+                    color: "#000000",
+                    lineHeight: "1.3",
+                    fontFamily:
+                      "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+                  }}
+                  className="overflow-hidden"
+                >
+                  <div className="h-full flex flex-col">
+                    {/* 标题区域 */}
+                    {config.fields.name && editableContent.name && (
+                      <div
+                        className="text-left pb-1 mb-1.5 flex-shrink-0 border-b border-black"
+                        style={{
+                          fontSize: `${config.titleFontSize}px`,
+                          // fontWeight: '500',
+                          lineHeight: "1.2",
+                        }}
+                      >
+                        {editableContent.name}
+                      </div>
+                    )}
+
+                    {/* 主要信息区域 - 自动流式布局 */}
+                    <div
+                      className="flex-1 flex flex-wrap content-start"
+                      style={{
+                        fontSize: `${config.fontSize}px`,
+                        gap: `${Math.max(config.fontSize * 0.4, 4)}px`,
+                        lineHeight: "1.3",
+                      }}
+                    >
+                      {/* 按顺序渲染所有字段，自动换行 */}
+                      {config.fields.origin && editableContent.origin && (
+                        <div className="w-full flex gap-1">
+                          <span className="shrink-0">产地:</span>
+                          <span className="break-words">
+                            {editableContent.origin}
+                          </span>
+                        </div>
+                      )}
+                      {config.fields.roastLevel &&
+                        editableContent.roastLevel && (
+                          <div className="w-full flex gap-1">
+                            <span className="shrink-0">烘焙:</span>
+                            <span>{editableContent.roastLevel}</span>
+                          </div>
+                        )}
+                      {config.fields.roastDate && editableContent.roastDate && (
+                        <div className="w-full flex gap-1">
+                          <span className="shrink-0">日期:</span>
+                          <span>{formatDate(editableContent.roastDate)}</span>
+                        </div>
+                      )}
+                      {config.fields.process && editableContent.process && (
+                        <div className="w-full flex gap-1">
+                          <span className="shrink-0">处理:</span>
+                          <span className="break-words">
+                            {editableContent.process}
+                          </span>
+                        </div>
+                      )}
+                      {config.fields.variety && editableContent.variety && (
+                        <div className="w-full flex gap-1">
+                          <span className="shrink-0">品种:</span>
+                          <span className="break-words">
+                            {editableContent.variety}
+                          </span>
+                        </div>
+                      )}
+                      {config.fields.flavor &&
+                        editableContent.flavor &&
+                        editableContent.flavor.length > 0 &&
+                        editableContent.flavor.filter((f) => f.trim()).length >
+                          0 && (
+                          <div className="w-full flex gap-1">
+                            <span className="shrink-0">风味:</span>
+                            <span className="break-words">
+                              {editableContent.flavor
+                                .filter((f) => f.trim())
+                                .join(" / ")}
+                            </span>
+                          </div>
+                        )}{" "}
+                      {config.fields.notes && editableContent.notes && (
+                        <div className="w-full flex gap-1">
+                          <span className="shrink-0">备注:</span>
+                          <span className="break-words">
+                            {editableContent.notes}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+};
+
+export default BeanPrintModal;
+
+// CSS样式定义 - 极简圆形风格
+const sliderStyles = `
+.slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #525252;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s ease;
+}
+
+.slider::-webkit-slider-thumb:hover {
+    background: #404040;
+}
+
+.slider::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #525252;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s ease;
+}
+
+.slider::-moz-range-thumb:hover {
+    background: #404040;
+}
+
+@media (prefers-color-scheme: dark) {
+    .slider::-webkit-slider-thumb {
+        background: #a3a3a3;
+    }
+    
+    .slider::-webkit-slider-thumb:hover {
+        background: #d4d4d4;
+    }
+    
+    .slider::-moz-range-thumb {
+        background: #a3a3a3;
+    }
+    
+    .slider::-moz-range-thumb:hover {
+        background: #d4d4d4;
+    }
+}
+`;
+
+// 添加样式到页面
+if (
+  typeof window !== "undefined" &&
+  !document.getElementById("bean-print-modal-styles")
+) {
+  const styleSheet = document.createElement("style");
+  styleSheet.id = "bean-print-modal-styles";
+  styleSheet.textContent = sliderStyles;
+  document.head.appendChild(styleSheet);
+}

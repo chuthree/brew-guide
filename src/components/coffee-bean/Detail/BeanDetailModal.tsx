@@ -21,6 +21,11 @@ const ImageViewer = dynamic(() => import('@/components/common/ui/ImageViewer'), 
     ssr: false
 })
 
+// 动态导入 BeanPrintModal 组件
+const BeanPrintModal = dynamic(() => import('@/components/coffee-bean/Print/BeanPrintModal'), {
+    ssr: false
+})
+
 // 信息项类型定义
 interface InfoItem {
     key: string
@@ -89,6 +94,10 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     const [shouldRender, setShouldRender] = useState(false)
     const [isVisible, setIsVisible] = useState(false)
     
+    // 打印功能状态
+    const [printModalOpen, setPrintModalOpen] = useState(false)
+    const [printEnabled, setPrintEnabled] = useState(false)
+    
     // 处理显示/隐藏动画
     useEffect(() => {
         if (isOpen) {
@@ -100,12 +109,36 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
             return () => clearTimeout(timer)
         } else {
             setIsVisible(false)
+            // 重置打印模态框状态，防止下次打开时直接显示打印界面
+            setPrintModalOpen(false)
             // 等待动画完成后再移除DOM
             const timer = setTimeout(() => {
                 setShouldRender(false)
             }, 350) // 与动画时长匹配
             return () => clearTimeout(timer)
         }
+    }, [isOpen])
+    
+    // 加载打印设置
+    useEffect(() => {
+        const loadPrintSettings = async () => {
+            try {
+                const { Storage } = await import('@/lib/core/storage')
+                const settingsStr = await Storage.get('brewGuideSettings')
+                if (settingsStr) {
+                    const settings = JSON.parse(settingsStr)
+                    const enabled = settings.enableBeanPrint === true
+                    setPrintEnabled(enabled)
+                } else {
+                    setPrintEnabled(false)
+                }
+            } catch (error) {
+                console.error('加载打印设置失败:', error)
+                setPrintEnabled(false)
+            }
+        }
+        
+        loadPrintSettings()
     }, [isOpen])
     
     // 使用风味维度hook
@@ -448,6 +481,11 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
         }, 300)
     }
 
+    // 处理打印功能
+    const handlePrint = () => {
+        setPrintModalOpen(true)
+    }
+
     // 只在需要时渲染DOM
     if (!shouldRender) return null
 
@@ -489,13 +527,14 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                 )}
                                 
                                 {/* 原有的操作按钮 */}
-                                {bean && (onEdit || onShare || onDelete) && (
+                                {bean && (onEdit || onShare || onDelete || printEnabled) && (
                                     <ActionMenu
                                         items={[
                                             ...(onDelete ? [{ id: 'delete', label: '删除', onClick: () => { onDelete(bean); handleClose(); }, color: 'danger' as const }] : []),
+                                            ...(printEnabled ? [{ id: 'print', label: '打印', onClick: handlePrint, color: 'default' as const }] : []),
                                             ...(onShare ? [{ id: 'share', label: '分享', onClick: () => { onShare(bean); handleClose(); }, color: 'default' as const }] : []),
                                             ...(onEdit ? [{ id: 'edit', label: '编辑', onClick: () => { onEdit(bean); onClose(); }, color: 'default' as const }] : [])
-                                        ]}
+                                        ].filter(item => item)} // 过滤空项
                                         useMorphingAnimation={true}
                                         triggerClassName="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
                                     />
@@ -856,6 +895,15 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                     setImageViewerOpen(false)
                     setCurrentImageUrl('')
                 }}
+            />
+        )}
+
+        {/* 打印模态框 */}
+        {printEnabled && (
+            <BeanPrintModal
+                isOpen={printModalOpen}
+                bean={bean}
+                onClose={() => setPrintModalOpen(false)}
             />
         )}
         </>
