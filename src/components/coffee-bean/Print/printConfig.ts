@@ -21,12 +21,13 @@ export interface PrintConfig {
     margin: number // mm
     fontSize: number // px
     titleFontSize: number // px
+    fontWeight: number // 字体粗细 (100-900)
 }
 
-// 默认配置
+// 默认配置 - 针对低精度打印机优化
 export const defaultConfig: PrintConfig = {
-    width: 80,
-    height: 50,
+    width: 50,
+    height: 80,
     orientation: 'landscape',
     fields: {
         name: true,
@@ -39,8 +40,9 @@ export const defaultConfig: PrintConfig = {
         notes: true
     },
     margin: 3,
-    fontSize: 11,
-    titleFontSize: 14
+    fontSize: 13, // 增大字体以适应低精度打印
+    titleFontSize: 17, // 相应增大标题字体
+    fontWeight: 500 // 默认字体粗细，中等粗细适合大多数打印机
 }
 
 /**
@@ -159,8 +161,20 @@ export const updateConfigFontSize = (
     const newConfig = { 
         ...currentConfig, 
         fontSize,
-        titleFontSize: fontSize + 3
+        titleFontSize: fontSize + 4
     }
+    savePrintConfigPreference(newConfig)
+    return newConfig
+}
+
+/**
+ * 更新字体粗细并保存
+ */
+export const updateConfigFontWeight = (
+    currentConfig: PrintConfig,
+    fontWeight: number
+): PrintConfig => {
+    const newConfig = { ...currentConfig, fontWeight }
     savePrintConfigPreference(newConfig)
     return newConfig
 }

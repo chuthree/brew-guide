@@ -241,7 +241,7 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
                         {/* 启用标签保存功能 */}
                         <div className="flex items-center justify-between">
                             <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                                启用标签保存功能
+                                标签打印功能
                             </div>
                             <label className="relative inline-flex cursor-pointer items-center">
                                 <input

@@ -17,6 +17,7 @@ import {
   toggleConfigOrientation,
   updateConfigMargin,
   updateConfigFontSize,
+  updateConfigFontWeight,
   setPresetSize,
 } from "./printConfig";
 
@@ -254,9 +255,9 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
 
   // 预设尺寸 - 常用标签尺寸
   const presetSizes = [
-    { label: "80×50", width: 80, height: 50 },
-    { label: "100×60", width: 100, height: 60 },
-    { label: "70×40", width: 70, height: 40 },
+	{ label: "50×80", width: 50, height: 80 },
+	{ label: "40×30", width: 40, height: 30 },
+	{ label: "40×60", width: 40, height: 60 },
   ];
 
   // 布局方向切换
@@ -515,7 +516,7 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
               </div>
 
               {/* 滑块设置 */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-3">
                 {/* 边距 */}
                 <div>
                   <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-2">
@@ -547,12 +548,34 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
                   <div className="px-1">
                     <input
                       type="range"
-                      min="9"
+                      min="11"
                       max="24"
                       value={config.fontSize}
                       onChange={(e) => {
                         const size = parseInt(e.target.value);
                         const newConfig = updateConfigFontSize(config, size);
+                        setConfig(newConfig);
+                      }}
+                      className="w-full h-2 bg-neutral-200 rounded-full appearance-none cursor-pointer dark:bg-neutral-700 slider"
+                    />
+                  </div>
+                </div>
+
+                {/* 字体粗细 */}
+                <div>
+                  <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-2">
+                    粗细 {config.fontWeight}
+                  </div>
+                  <div className="px-1">
+                    <input
+                      type="range"
+                      min="300"
+                      max="900"
+                      step="100"
+                      value={config.fontWeight}
+                      onChange={(e) => {
+                        const weight = parseInt(e.target.value);
+                        const newConfig = updateConfigFontWeight(config, weight);
                         setConfig(newConfig);
                       }}
                       className="w-full h-2 bg-neutral-200 rounded-full appearance-none cursor-pointer dark:bg-neutral-700 slider"
@@ -855,19 +878,20 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
                   style={{
                     width:
                       config.orientation === "landscape"
-                        ? `${config.width}mm`
-                        : `${config.height}mm`,
-                    height:
-                      config.orientation === "landscape"
                         ? `${config.height}mm`
                         : `${config.width}mm`,
+                    height:
+                      config.orientation === "landscape"
+                        ? `${config.width}mm`
+                        : `${config.height}mm`,
                     padding: `${config.margin}mm`,
                     fontSize: `${config.fontSize}px`,
                     backgroundColor: "#ffffff",
                     color: "#000000",
-                    lineHeight: "1.3",
-                    fontFamily:
-                      "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+                    lineHeight: "1.4", // 增加行距提高可读性
+                    fontFamily: '"Microsoft YaHei", "SimHei", "Noto Sans SC", "PingFang SC", Arial, sans-serif', // 优先使用适合打印的中文字体
+                    fontWeight: config.fontWeight, // 使用用户设置的字体粗细
+                    letterSpacing: "0.02em", // 稍微增加字符间距
                   }}
                   className="overflow-hidden"
                 >
@@ -875,11 +899,14 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
                     {/* 标题区域 */}
                     {config.fields.name && editableContent.name && (
                       <div
-                        className="text-left pb-1 mb-1.5 flex-shrink-0 border-b border-black"
+                        className="text-left pb-1 mb-1.5 flex-shrink-0 border-b-0 border-black"
                         style={{
                           fontSize: `${config.titleFontSize}px`,
-                          // fontWeight: '500',
-                          lineHeight: "1.2",
+                          fontWeight: config.fontWeight, // 标题使用和正文一样的字体粗细
+                          lineHeight: "1.2", // 恢复原来的行距
+                          borderBottomWidth: "1.5px", // 自定义边框粗细
+                          borderBottomStyle: "solid",
+                          borderBottomColor: "#000000",
                         }}
                       >
                         {editableContent.name}
