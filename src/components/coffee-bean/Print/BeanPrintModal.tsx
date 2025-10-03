@@ -43,9 +43,18 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
   bean,
   onClose,
 }) => {
-  const [config, setConfig] = useState<PrintConfig>(() =>
-    getPrintConfigPreference()
-  );
+  const [config, setConfig] = useState<PrintConfig>(() => {
+    const initialConfig = getPrintConfigPreference();
+    return initialConfig;
+  });
+
+  // 同步自定义尺寸输入状态与config
+  useEffect(() => {
+    setCustomSizeInputs({
+      width: config.width.toString(),
+      height: config.height.toString()
+    });
+  }, [config.width, config.height]);
   const [shouldRender, setShouldRender] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const [showCustomSize, setShowCustomSize] = useState(() =>
@@ -53,6 +62,10 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
   );
   const [isEditMode, setIsEditMode] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [customSizeInputs, setCustomSizeInputs] = useState({
+    width: "",
+    height: ""
+  });
   const [editableContent, setEditableContent] = useState<EditableContent>({
     name: "",
     origin: "",
@@ -247,11 +260,7 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
     setShowResetConfirm(false);
   };
 
-  // 更新尺寸
-  const updateSize = (dimension: "width" | "height", value: number) => {
-    const newConfig = updateConfigSize(config, dimension, value);
-    setConfig(newConfig);
-  };
+
 
   // 预设尺寸 - 常用标签尺寸
   const presetSizes = [
@@ -284,17 +293,7 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
     }));
   };
 
-  // 更新风味标签
-  const updateFlavorTag = (index: number, value: string) => {
-    setEditableContent((prev) => {
-      const newFlavor = [...prev.flavor];
-      newFlavor[index] = value;
-      return {
-        ...prev,
-        flavor: newFlavor,
-      };
-    });
-  };
+
 
   // 切换编辑模式
   const toggleEditMode = () => {
@@ -457,15 +456,16 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
                 <div className="flex gap-2 items-center bg-neutral-50 dark:bg-neutral-800/50 p-3 rounded">
                   <input
                     type="number"
-                    value={config.width || ""}
+                    value={customSizeInputs.width}
                     onChange={(e) => {
                       const value = e.target.value;
-                      // 直接更新config状态，允许空值
-                      if (value === "") {
-                        setConfig(prev => ({ ...prev, width: "" as any }));
-                      } else {
+                      // 更新本地输入状态，允许空值
+                      setCustomSizeInputs(prev => ({ ...prev, width: value }));
+                      
+                      // 如果是有效数字，即时更新config用于预览
+                      if (value !== "") {
                         const numValue = parseInt(value);
-                        if (!isNaN(numValue)) {
+                        if (!isNaN(numValue) && numValue >= 40 && numValue <= 200) {
                           setConfig(prev => ({ ...prev, width: numValue }));
                         }
                       }
@@ -473,14 +473,18 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
                     onBlur={(e) => {
                       // 失去焦点时验证并保存
                       const value = e.target.value;
-                      if (value === "" || isNaN(parseInt(value))) {
-                        const newConfig = updateConfigSize(config, "width", 80);
-                        setConfig(newConfig);
-                      } else {
+                      let finalValue = 80; // 默认值
+                      
+                      if (value !== "") {
                         const numValue = parseInt(value);
-                        const newConfig = updateConfigSize(config, "width", numValue);
-                        setConfig(newConfig);
+                        if (!isNaN(numValue)) {
+                          finalValue = Math.max(40, Math.min(200, numValue)); // 限制在范围内
+                        }
                       }
+                      
+                      const newConfig = updateConfigSize(config, "width", finalValue);
+                      setConfig(newConfig);
+                      setCustomSizeInputs(prev => ({ ...prev, width: finalValue.toString() }));
                     }}
                     className="flex-1 px-3 py-2 text-xs bg-white dark:bg-neutral-800 rounded border border-neutral-200 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-neutral-400 transition-all"
                     placeholder="宽度"
@@ -490,15 +494,16 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
                   <span className="text-neutral-400 text-xs">×</span>
                   <input
                     type="number"
-                    value={config.height || ""}
+                    value={customSizeInputs.height}
                     onChange={(e) => {
                       const value = e.target.value;
-                      // 直接更新config状态，允许空值
-                      if (value === "") {
-                        setConfig(prev => ({ ...prev, height: "" as any }));
-                      } else {
+                      // 更新本地输入状态，允许空值
+                      setCustomSizeInputs(prev => ({ ...prev, height: value }));
+                      
+                      // 如果是有效数字，即时更新config用于预览
+                      if (value !== "") {
                         const numValue = parseInt(value);
-                        if (!isNaN(numValue)) {
+                        if (!isNaN(numValue) && numValue >= 30 && numValue <= 150) {
                           setConfig(prev => ({ ...prev, height: numValue }));
                         }
                       }
@@ -506,14 +511,18 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
                     onBlur={(e) => {
                       // 失去焦点时验证并保存
                       const value = e.target.value;
-                      if (value === "" || isNaN(parseInt(value))) {
-                        const newConfig = updateConfigSize(config, "height", 50);
-                        setConfig(newConfig);
-                      } else {
+                      let finalValue = 50; // 默认值
+                      
+                      if (value !== "") {
                         const numValue = parseInt(value);
-                        const newConfig = updateConfigSize(config, "height", numValue);
-                        setConfig(newConfig);
+                        if (!isNaN(numValue)) {
+                          finalValue = Math.max(30, Math.min(150, numValue)); // 限制在范围内
+                        }
                       }
+                      
+                      const newConfig = updateConfigSize(config, "height", finalValue);
+                      setConfig(newConfig);
+                      setCustomSizeInputs(prev => ({ ...prev, height: finalValue.toString() }));
                     }}
                     className="flex-1 px-3 py-2 text-xs bg-white dark:bg-neutral-800 rounded border border-neutral-200 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-neutral-400 transition-all"
                     placeholder="高度"
