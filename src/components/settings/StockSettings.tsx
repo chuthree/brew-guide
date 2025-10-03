@@ -18,14 +18,17 @@ const StockSettings: React.FC<StockSettingsProps> = ({
     handleChange
 }) => {
     // 历史栈管理
+    const onCloseRef = React.useRef(onClose)
+    onCloseRef.current = onClose
+    
     useEffect(() => {
         window.history.pushState({ modal: 'stock-settings' }, '')
         
-        const handlePopState = () => onClose()
+        const handlePopState = () => onCloseRef.current()
         window.addEventListener('popstate', handlePopState)
         
         return () => window.removeEventListener('popstate', handlePopState)
-    }, [onClose])
+    }, []) // 空依赖数组，确保只在挂载时执行一次
 
     // 关闭处理
     const handleClose = () => {

@@ -20,19 +20,50 @@ const DisplaySettings: React.FC<DisplaySettingsProps> = ({
     onClose,
     handleChange
 }) => {
+    console.log('[DisplaySettings] 🚀 组件渲染', {
+        timestamp: new Date().toISOString(),
+        historyState: window.history.state,
+        historyLength: window.history.length
+    })
+    
     const { theme, setTheme } = useTheme()
     const [zoomLevel, setZoomLevel] = React.useState(settings.textZoomLevel || 1.0)
     const [isFontZoomEnabled, setIsFontZoomEnabled] = React.useState(false)
 
-    // 历史栈管理
+    // 历史栈管理 - 使用 ref 确保只执行一次
+    const onCloseRef = React.useRef(onClose)
+    onCloseRef.current = onClose
+    
     React.useEffect(() => {
+        console.log('[DisplaySettings] 🔍 显示设置页面初始化', {
+            currentState: window.history.state,
+            historyLength: window.history.length
+        })
+        
+        console.log('[DisplaySettings] ➕ 添加显示设置历史记录')
         window.history.pushState({ modal: 'display-settings' }, '')
         
-        const handlePopState = () => onClose()
+        console.log('[DisplaySettings] ✅ 显示设置历史记录添加完成', {
+            newState: window.history.state,
+            historyLength: window.history.length
+        })
+        
+        const handlePopState = (event: PopStateEvent) => {
+            console.log('[DisplaySettings] ⬅️ 检测到显示设置返回操作', {
+                event,
+                currentState: window.history.state,
+                historyLength: window.history.length
+            })
+            console.log('[DisplaySettings] 🚪 关闭显示设置页面')
+            onCloseRef.current()
+        }
         window.addEventListener('popstate', handlePopState)
         
-        return () => window.removeEventListener('popstate', handlePopState)
-    }, [onClose])
+        return () => {
+            console.log('[DisplaySettings] 🧹 清理显示设置监听器')
+            window.removeEventListener('popstate', handlePopState)
+        }
+    }, []) // 空依赖数组，确保只在挂载时执行一次
 
     // 关闭处理
     const handleClose = () => {
@@ -49,22 +80,58 @@ const DisplaySettings: React.FC<DisplaySettingsProps> = ({
 
     // 处理显示/隐藏动画
     React.useEffect(() => {
+        console.log('[DisplaySettings] 🎭 动画初始化开始', {
+            shouldRender,
+            isVisible,
+            historyState: window.history.state
+        })
+        
         setShouldRender(true)
         // 短暂延迟确保 DOM 渲染，然后触发滑入动画
-        const timer = setTimeout(() => setIsVisible(true), 10)
-        return () => clearTimeout(timer)
+        const timer = setTimeout(() => {
+            console.log('[DisplaySettings] ✨ 触发滑入动画')
+            setIsVisible(true)
+        }, 10)
+        
+        return () => {
+            console.log('[DisplaySettings] 🧹 清理动画定时器')
+            clearTimeout(timer)
+        }
     }, [])
 
     // 检查字体缩放功能是否可用
     React.useEffect(() => {
         setIsFontZoomEnabled(fontZoomUtils.isAvailable());
     }, [])
+    
+    // 监控主题变化
+    React.useEffect(() => {
+        console.log('[DisplaySettings] 🌈 主题状态变化', {
+            theme,
+            timestamp: new Date().toISOString(),
+            historyState: window.history.state,
+            historyLength: window.history.length
+        })
+    }, [theme])
 
     // 处理字体缩放变更
     const handleFontZoomChange = async (newValue: number) => {
+        console.log('[DisplaySettings] 🔍 字体缩放开始', {
+            oldZoom: zoomLevel,
+            newZoom: newValue,
+            historyStateBefore: window.history.state,
+            historyLengthBefore: window.history.length
+        })
+        
         setZoomLevel(newValue);
         fontZoomUtils.set(newValue);
         await handleChange('textZoomLevel', newValue);
+
+        console.log('[DisplaySettings] ✅ 字体缩放完成', {
+            newZoom: newValue,
+            historyStateAfter: window.history.state,
+            historyLengthAfter: window.history.length
+        })
 
         // 触发震动反馈
         if (settings.hapticFeedback) {
@@ -72,7 +139,19 @@ const DisplaySettings: React.FC<DisplaySettingsProps> = ({
         }
     }
 
-    if (!shouldRender) return null
+    if (!shouldRender) {
+        console.log('[DisplaySettings] ❌ 组件不渲染 (shouldRender=false)')
+        return null
+    }
+
+    console.log('[DisplaySettings] 🎨 组件即将渲染', {
+        shouldRender,
+        isVisible,
+        theme,
+        zoomLevel,
+        historyState: window.history.state,
+        historyLength: window.history.length
+    })
 
     return (
         <div
@@ -118,7 +197,21 @@ const DisplaySettings: React.FC<DisplaySettingsProps> = ({
                                     { value: 'system', label: '系统' }
                                 ]}
                                 onChange={(value: string) => {
+                                    console.log('[DisplaySettings] 🌈 外观模式切换开始', {
+                                        oldTheme: theme,
+                                        newTheme: value,
+                                        historyStateBefore: window.history.state,
+                                        historyLengthBefore: window.history.length
+                                    })
+                                    
                                     setTheme(value)
+                                    
+                                    console.log('[DisplaySettings] ✅ 外观模式切换完成', {
+                                        newTheme: value,
+                                        historyStateAfter: window.history.state,
+                                        historyLengthAfter: window.history.length
+                                    })
+                                    
                                     if (settings.hapticFeedback) {
                                         hapticsUtils.light();
                                     }
@@ -219,12 +312,25 @@ const DisplaySettings: React.FC<DisplaySettingsProps> = ({
                                     step="2"
                                     value={settings.safeAreaMargins?.top || 38}
                                     onChange={(e) => {
+                                        console.log('[DisplaySettings] 📏 顶部边距调整开始', {
+                                            oldValue: settings.safeAreaMargins?.top || 38,
+                                            newValue: parseInt(e.target.value),
+                                            historyStateBefore: window.history.state,
+                                            historyLengthBefore: window.history.length
+                                        })
+                                        
                                         const currentMargins = settings.safeAreaMargins || { top: 38, bottom: 38 };
                                         const newMargins = {
                                             ...currentMargins,
                                             top: parseInt(e.target.value)
                                         };
                                         handleChange('safeAreaMargins', newMargins);
+                                        
+                                        console.log('[DisplaySettings] ✅ 顶部边距调整完成', {
+                                            newValue: parseInt(e.target.value),
+                                            historyStateAfter: window.history.state,
+                                            historyLengthAfter: window.history.length
+                                        })
                                     }}
                                     className="w-full h-1.5 bg-neutral-200 rounded-full appearance-none cursor-pointer dark:bg-neutral-700"
                                 />
@@ -267,12 +373,25 @@ const DisplaySettings: React.FC<DisplaySettingsProps> = ({
                                     step="2"
                                     value={settings.safeAreaMargins?.bottom || 38}
                                     onChange={(e) => {
+                                        console.log('[DisplaySettings] 📏 底部边距调整开始', {
+                                            oldValue: settings.safeAreaMargins?.bottom || 38,
+                                            newValue: parseInt(e.target.value),
+                                            historyStateBefore: window.history.state,
+                                            historyLengthBefore: window.history.length
+                                        })
+                                        
                                         const currentMargins = settings.safeAreaMargins || { top: 38, bottom: 38 };
                                         const newMargins = {
                                             ...currentMargins,
                                             bottom: parseInt(e.target.value)
                                         };
                                         handleChange('safeAreaMargins', newMargins);
+                                        
+                                        console.log('[DisplaySettings] ✅ 底部边距调整完成', {
+                                            newValue: parseInt(e.target.value),
+                                            historyStateAfter: window.history.state,
+                                            historyLengthAfter: window.history.length
+                                        })
                                     }}
                                     className="w-full h-1.5 bg-neutral-200 rounded-full appearance-none cursor-pointer dark:bg-neutral-700"
                                 />
