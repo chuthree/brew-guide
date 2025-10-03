@@ -180,10 +180,10 @@ const EquipmentManagementDrawer: React.FC<EquipmentManagementDrawerProps> = ({
         window.history.pushState({ modal: 'equipment-management' }, '')
 
         const handlePopState = () => {
-            (window as any).__modalHandlingBack = true;
+            window.__modalHandlingBack = true;
             onClose();
             setTimeout(() => {
-                (window as any).__modalHandlingBack = false;
+                window.__modalHandlingBack = false;
             }, 50);
         }
         

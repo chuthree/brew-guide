@@ -68,10 +68,10 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
         window.history.pushState({ modal: 'method-import' }, '')
 
         const handlePopState = () => {
-            (window as any).__modalHandlingBack = true;
+            window.__modalHandlingBack = true;
             onClose();
             setTimeout(() => {
-                (window as any).__modalHandlingBack = false;
+                window.__modalHandlingBack = false;
             }, 50);
         }
         window.addEventListener('popstate', handlePopState)

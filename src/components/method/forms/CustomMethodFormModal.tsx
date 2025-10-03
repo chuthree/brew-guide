@@ -151,7 +151,7 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
         // 监听返回事件
         const handlePopState = () => {
             // 设置全局标识，表示模态框正在处理返回事件
-            (window as any).__modalHandlingBack = true;
+            window.__modalHandlingBack = true;
             
             // 询问表单是否还有上一步
             const canGoBack = formRef.current?.handleBackStep()
@@ -166,7 +166,7 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
             
             // 清除标识（延迟清除，确保其他事件处理器能看到）
             setTimeout(() => {
-                (window as any).__modalHandlingBack = false;
+                window.__modalHandlingBack = false;
             }, 50);
         }
 
@@ -196,10 +196,10 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
         }
 
         const handlePopState = () => {
-            (window as any).__modalHandlingBack = true;
+            window.__modalHandlingBack = true;
             onCloseImportForm();
             setTimeout(() => {
-                (window as any).__modalHandlingBack = false;
+                window.__modalHandlingBack = false;
             }, 50);
         }
         window.addEventListener('popstate', handlePopState)

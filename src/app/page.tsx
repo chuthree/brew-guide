@@ -1427,7 +1427,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             // 使用微任务队列确保DOM状态检查在其他事件处理后执行
             setTimeout(() => {
                 // 方法0：检查是否有模态框正在处理返回事件
-                if ((window as any).__modalHandlingBack) {
+                if (window.__modalHandlingBack) {
                     return;
                 }
                 
