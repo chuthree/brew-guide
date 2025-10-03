@@ -266,13 +266,7 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
     setConfig(newConfig);
   };
 
-  // 更新编辑内容
-  const updateEditableContent = (
-    field: keyof EditableContent,
-    value: string | string[]
-  ) => {
-    setEditableContent((prev) => ({ ...prev, [field]: value }));
-  };
+
 
   // 添加风味标签
   const addFlavorTag = () => {
@@ -292,10 +286,14 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
 
   // 更新风味标签
   const updateFlavorTag = (index: number, value: string) => {
-    setEditableContent((prev) => ({
-      ...prev,
-      flavor: prev.flavor.map((tag, i) => (i === index ? value : tag)),
-    }));
+    setEditableContent((prev) => {
+      const newFlavor = [...prev.flavor];
+      newFlavor[index] = value;
+      return {
+        ...prev,
+        flavor: newFlavor,
+      };
+    });
   };
 
   // 切换编辑模式
@@ -459,10 +457,31 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
                 <div className="flex gap-2 items-center bg-neutral-50 dark:bg-neutral-800/50 p-3 rounded">
                   <input
                     type="number"
-                    value={config.width}
-                    onChange={(e) =>
-                      updateSize("width", parseInt(e.target.value) || 80)
-                    }
+                    value={config.width || ""}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // 直接更新config状态，允许空值
+                      if (value === "") {
+                        setConfig(prev => ({ ...prev, width: "" as any }));
+                      } else {
+                        const numValue = parseInt(value);
+                        if (!isNaN(numValue)) {
+                          setConfig(prev => ({ ...prev, width: numValue }));
+                        }
+                      }
+                    }}
+                    onBlur={(e) => {
+                      // 失去焦点时验证并保存
+                      const value = e.target.value;
+                      if (value === "" || isNaN(parseInt(value))) {
+                        const newConfig = updateConfigSize(config, "width", 80);
+                        setConfig(newConfig);
+                      } else {
+                        const numValue = parseInt(value);
+                        const newConfig = updateConfigSize(config, "width", numValue);
+                        setConfig(newConfig);
+                      }
+                    }}
                     className="flex-1 px-3 py-2 text-xs bg-white dark:bg-neutral-800 rounded border border-neutral-200 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-neutral-400 transition-all"
                     placeholder="宽度"
                     min="40"
@@ -471,10 +490,31 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
                   <span className="text-neutral-400 text-xs">×</span>
                   <input
                     type="number"
-                    value={config.height}
-                    onChange={(e) =>
-                      updateSize("height", parseInt(e.target.value) || 50)
-                    }
+                    value={config.height || ""}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // 直接更新config状态，允许空值
+                      if (value === "") {
+                        setConfig(prev => ({ ...prev, height: "" as any }));
+                      } else {
+                        const numValue = parseInt(value);
+                        if (!isNaN(numValue)) {
+                          setConfig(prev => ({ ...prev, height: numValue }));
+                        }
+                      }
+                    }}
+                    onBlur={(e) => {
+                      // 失去焦点时验证并保存
+                      const value = e.target.value;
+                      if (value === "" || isNaN(parseInt(value))) {
+                        const newConfig = updateConfigSize(config, "height", 50);
+                        setConfig(newConfig);
+                      } else {
+                        const numValue = parseInt(value);
+                        const newConfig = updateConfigSize(config, "height", numValue);
+                        setConfig(newConfig);
+                      }
+                    }}
                     className="flex-1 px-3 py-2 text-xs bg-white dark:bg-neutral-800 rounded border border-neutral-200 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-neutral-400 transition-all"
                     placeholder="高度"
                     min="30"
@@ -669,9 +709,13 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
                       <input
                         type="text"
                         value={editableContent.name}
-                        onChange={(e) =>
-                          updateEditableContent("name", e.target.value)
-                        }
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setEditableContent((prev) => ({
+                            ...prev,
+                            name: value
+                          }));
+                        }}
                         className="w-full px-2 py-1.5 text-xs bg-white dark:bg-neutral-800 rounded border border-neutral-200 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-neutral-400 transition-all"
                         placeholder="咖啡豆名称"
                       />
@@ -687,9 +731,13 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
                       <input
                         type="text"
                         value={editableContent.origin}
-                        onChange={(e) =>
-                          updateEditableContent("origin", e.target.value)
-                        }
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setEditableContent((prev) => ({
+                            ...prev,
+                            origin: value
+                          }));
+                        }}
                         className="w-full px-2 py-1.5 text-xs bg-white dark:bg-neutral-800 rounded border border-neutral-200 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-neutral-400 transition-all"
                         placeholder="产地信息"
                       />
@@ -705,9 +753,13 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
                       <input
                         type="text"
                         value={editableContent.roastLevel}
-                        onChange={(e) =>
-                          updateEditableContent("roastLevel", e.target.value)
-                        }
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setEditableContent((prev) => ({
+                            ...prev,
+                            roastLevel: value
+                          }));
+                        }}
                         className="w-full px-2 py-1.5 text-xs bg-white dark:bg-neutral-800 rounded border border-neutral-200 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-neutral-400 transition-all"
                         placeholder="烘焙度"
                       />
@@ -725,7 +777,10 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
                           date={editableContent.roastDate ? new Date(editableContent.roastDate) : undefined}
                           onDateChange={(date) => {
                             const formattedDate = date.toISOString().split('T')[0];
-                            updateEditableContent("roastDate", formattedDate);
+                            setEditableContent((prev) => ({
+                              ...prev,
+                              roastDate: formattedDate
+                            }));
                           }}
                           placeholder="选择烘焙日期"
                           locale="zh-CN"
@@ -744,9 +799,13 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
                       <input
                         type="text"
                         value={editableContent.process}
-                        onChange={(e) =>
-                          updateEditableContent("process", e.target.value)
-                        }
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setEditableContent((prev) => ({
+                            ...prev,
+                            process: value
+                          }));
+                        }}
                         className="w-full px-2 py-1.5 text-xs bg-white dark:bg-neutral-800 rounded border border-neutral-200 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-neutral-400 transition-all"
                         placeholder="处理法"
                       />
@@ -762,9 +821,13 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
                       <input
                         type="text"
                         value={editableContent.variety}
-                        onChange={(e) =>
-                          updateEditableContent("variety", e.target.value)
-                        }
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setEditableContent((prev) => ({
+                            ...prev,
+                            variety: value
+                          }));
+                        }}
                         className="w-full px-2 py-1.5 text-xs bg-white dark:bg-neutral-800 rounded border border-neutral-200 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-neutral-400 transition-all"
                         placeholder="咖啡品种"
                       />
@@ -791,9 +854,17 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
                             <input
                               type="text"
                               value={flavor}
-                              onChange={(e) =>
-                                updateFlavorTag(index, e.target.value)
-                              }
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                setEditableContent((prev) => {
+                                  const newFlavor = [...prev.flavor];
+                                  newFlavor[index] = value;
+                                  return {
+                                    ...prev,
+                                    flavor: newFlavor,
+                                  };
+                                });
+                              }}
                               className="flex-1 px-2 py-1.5 text-xs bg-white dark:bg-neutral-800 rounded border border-neutral-200 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-neutral-400 transition-all"
                               placeholder="风味描述"
                             />
@@ -854,9 +925,13 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
                       </label>
                       <textarea
                         value={editableContent.notes}
-                        onChange={(e) =>
-                          updateEditableContent("notes", e.target.value)
-                        }
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setEditableContent((prev) => ({
+                            ...prev,
+                            notes: value
+                          }));
+                        }}
                         className="w-full px-2 py-1.5 text-xs bg-white dark:bg-neutral-800 rounded border border-neutral-200 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-neutral-400 transition-all resize-none"
                         placeholder="备注信息"
                         rows={2}
