@@ -597,7 +597,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                                     {parameterInfo.method && (
                                                         <span className="truncate">
                                                             {getSelectedEquipmentName() && (
-                                                                <span className="mr-1.5">{getSelectedEquipmentName()}</span>
+                                                                <span>{getSelectedEquipmentName()}<span className="mx-1">·</span></span>
                                                             )}
                                                             {parameterInfo.method}
                                                         </span>
