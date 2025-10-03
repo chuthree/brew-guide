@@ -5,6 +5,7 @@ import { CoffeeBean } from "@/types/app";
 import { X, Download, RotateCcw, Edit, Check, Plus, Minus } from "lucide-react";
 import { parseDateToTimestamp } from "@/lib/utils/dateUtils";
 import { DatePicker } from "@/components/common/ui/DatePicker";
+import { TempFileManager } from "@/lib/utils/tempFileManager";
 import {
   PrintConfig,
   getPrintConfigPreference,
@@ -50,6 +51,7 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
     getShowCustomSizePreference()
   );
   const [isEditMode, setIsEditMode] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [editableContent, setEditableContent] = useState<EditableContent>({
     name: "",
     origin: "",
@@ -203,17 +205,20 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
         quality: 0.95,
       });
 
-      // 创建下载链接
-      const link = document.createElement("a");
-      link.href = dataUrl;
-      link.download = `${bean?.name || "咖啡豆标签"}-${
+      // 使用统一的文件管理器进行跨平台兼容的图片分享/下载
+      const fileName = `${bean?.name || "咖啡豆标签"}-${
         new Date().toISOString().split("T")[0]
-      }.png`;
-
-      // 触发下载
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      }`;
+      
+      await TempFileManager.shareImageFile(
+        dataUrl,
+        fileName,
+        {
+          title: "咖啡豆标签",
+          text: `${bean?.name || "咖啡豆"}标签图片`,
+          dialogTitle: "保存标签图片"
+        }
+      );
     } catch (error) {
       console.error("保存图片失败:", error);
       alert("保存图片失败，请重试");
@@ -227,9 +232,18 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
   };
 
   // 重置配置
-  const resetConfig = () => {
+  const handleResetConfig = () => {
+    setShowResetConfirm(true);
+  };
+
+  const confirmReset = () => {
     const newConfig = resetConfigToDefault();
     setConfig(newConfig);
+    setShowResetConfirm(false);
+  };
+
+  const cancelReset = () => {
+    setShowResetConfirm(false);
   };
 
   // 更新尺寸
@@ -385,12 +399,6 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
 
           <div className="flex gap-2">
             <button
-              onClick={resetConfig}
-              className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors flex items-center justify-center"
-            >
-              <RotateCcw className="w-4 h-4" />
-            </button>
-            <button
               onClick={handleSaveAsImage}
               className="w-8 h-8 rounded-full bg-neutral-800 dark:bg-neutral-700 hover:bg-neutral-700 dark:hover:bg-neutral-600 transition-colors flex items-center justify-center"
             >
@@ -480,8 +488,17 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
 
             {/* 布局与字体设置 */}
             <div className="space-y-4">
-              <div className="text-xs font-medium text-neutral-600 dark:text-neutral-300">
-                布局设置
+              <div className="flex items-center justify-between">
+                <div className="text-xs font-medium text-neutral-600 dark:text-neutral-300">
+                  布局设置
+                </div>
+                <button
+                  onClick={handleResetConfig}
+                  className="px-2 py-1 text-xs text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300 transition-colors flex items-center gap-1"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  重置配置
+                </button>
               </div>
 
               {/* 方向选择 */}
@@ -531,7 +548,7 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
                     <input
                       type="range"
                       min="9"
-                      max="16"
+                      max="24"
                       value={config.fontSize}
                       onChange={(e) => {
                         const size = parseInt(e.target.value);
@@ -945,6 +962,34 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
             </div>
           </div>
         </div>
+
+        {/* 重置确认对话框 */}
+        {showResetConfirm && (
+          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center p-4 z-20">
+            <div className="bg-white dark:bg-neutral-800 rounded-lg p-4 max-w-sm w-full mx-4 shadow-lg">
+              <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200 mb-2">
+                重置配置
+              </div>
+              <div className="text-xs text-neutral-600 dark:text-neutral-400 mb-4">
+                这将重置所有打印设置到默认值，确定要继续吗？
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button
+                  onClick={cancelReset}
+                  className="px-3 py-1.5 text-xs font-medium text-neutral-600 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200 transition-colors"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={confirmReset}
+                  className="px-3 py-1.5 text-xs font-medium bg-neutral-800 text-white dark:bg-neutral-700 hover:bg-neutral-700 dark:hover:bg-neutral-600 rounded transition-colors"
+                >
+                  确定重置
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );
