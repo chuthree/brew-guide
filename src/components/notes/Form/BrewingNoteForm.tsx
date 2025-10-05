@@ -6,6 +6,7 @@ import Image from 'next/image'
 import type { BrewingNoteData, CoffeeBean } from '@/types/app'
 import AutoResizeTextarea from '@/components/common/forms/AutoResizeTextarea'
 import NoteFormHeader from '@/components/notes/ui/NoteFormHeader'
+import ImagePickerDrawer from '@/components/common/ImagePickerDrawer'
 import { captureImage, compressBase64Image } from '@/lib/utils/imageCapture'
 import { equipmentList, commonMethods, type Method, type CustomEquipment } from '@/lib/core/config'
 import { loadCustomEquipments } from '@/lib/managers/customEquipments'
@@ -189,6 +190,9 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     const [timestamp, setTimestamp] = useState<Date>(
         initialData.timestamp ? new Date(initialData.timestamp) : new Date()
     );
+
+    // 添加图片选择抽屉状态
+    const [showImagePicker, setShowImagePicker] = useState(false)
 
     // 监听initialData.timestamp的变化，同步更新内部状态
     useEffect(() => {
@@ -657,10 +661,12 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
             const blob = await response.blob();
             const file = new File([blob], `image.${result.format}`, { type: `image/${result.format}` });
             handleImageUpload(file);
+            setShowImagePicker(false); // 成功后关闭抽屉
         } catch (error) {
             if (process.env.NODE_ENV === 'development') {
                 console.error('打开相机/相册失败:', error);
             }
+            setShowImagePicker(false); // 出错也要关闭抽屉
         }
     }, [handleImageUpload]);
 
@@ -821,8 +827,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                             <>
                                 <span>咖啡豆信息 ·</span>
                                 {initialData.id && coffeeBeans.length > 0 ? (
-                                    <button
-                                        type="button"
+                                    <span
                                         onClick={() => {
                                             setShowCoffeeBeanSelector(!showCoffeeBeanSelector);
                                             if (!showCoffeeBeanSelector) {
@@ -832,7 +837,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                                         className="ml-1 text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400 border-b border-dashed border-neutral-400 dark:border-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 hover:border-neutral-600 dark:hover:border-neutral-400 transition-colors cursor-pointer"
                                     >
                                         {selectedCoffeeBean?.name || formData.coffeeBeanInfo.name || '未知咖啡豆'}
-                                    </button>
+                                    </span>
                                 ) : (
                                     <span className="ml-1">{selectedCoffeeBean?.name || formData.coffeeBeanInfo.name || '未知咖啡豆'}</span>
                                 )}
@@ -845,6 +850,8 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                                 {/* 搜索框 */}
                                 <div className="p-3 border-b border-neutral-200 dark:border-neutral-800">
                                     <input
+                                        id="coffee-bean-search"
+                                        name="coffeeBeanSearch"
                                         type="text"
                                         value={coffeeBeanSearchQuery}
                                         onChange={(e) => setCoffeeBeanSearchQuery(e.target.value)}
@@ -869,79 +876,48 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
 
                 {/* 笔记图片 */}
                 <div className="space-y-2 w-full">
-                    <div className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400 mb-3">
-                        笔记图片
-                    </div>
-                    <div className="flex items-center justify-center relative">
-                        <div className="w-32 h-32 rounded-lg border-2 border-dashed border-neutral-300 dark:border-neutral-700 flex flex-col items-center justify-center overflow-hidden relative">
-                            {formData.image ? (
-                                <div className="relative w-full h-full">
+                    {/* 合并的图片按钮和显示容器 */}
+                    <div className="w-16 h-16 rounded bg-neutral-200/40 dark:bg-neutral-800/60 overflow-hidden relative">
+                        {formData.image ? (
+                            <>
+                                {/* 显示图片 */}
+                                <div 
+                                    className="w-full h-full cursor-pointer"
+                                    onClick={() => setShowImagePicker(true)}
+                                >
                                     <Image
                                         src={formData.image}
                                         alt="笔记图片"
-                                        className="object-contain"
+                                        className="object-cover"
                                         fill
-                                        sizes="(max-width: 768px) 100vw, 300px"
+                                        sizes="64px"
                                     />
-                                    {/* 操作按钮组 */}
-                                    <div className="absolute top-1 right-1 flex space-x-1">
-                                        {/* 删除按钮 */}
-                                        <button
-                                            type="button"
-                                            className="w-6 h-6 bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-800 rounded-full flex items-center justify-center shadow-md hover:bg-red-500 dark:hover:bg-red-500 dark:hover:text-white transition-colors z-10"
-                                            onClick={() => setFormData(prev => ({...prev, image: ''}))}
-                                        >
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                                                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                                            </svg>
-                                        </button>
-                                    </div>
                                 </div>
-                            ) : (
-                                <div className="flex flex-col items-center justify-between h-full w-full">
-                                    <div className="flex-1 flex flex-col items-center justify-center">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-neutral-400 dark:text-neutral-600 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                        </svg>
-                                        <span className="text-xs text-neutral-500 dark:text-neutral-400">选择图片</span>
-                                        <span className="text-[9px] text-neutral-400 dark:text-neutral-500 mt-1">200kb以上将自动压缩</span>
-                                    </div>
-                                    
-                                    {/* 图片上传按钮组 */}
-                                    <div className="flex w-full mt-auto">
-                                        <button
-                                            type="button"
-                                            onClick={() => handleImageSelect('camera')}
-                                            className="flex-1 py-1 text-xs text-neutral-600 dark:text-neutral-400 border-t-2 border-r-2 border-dashed border-neutral-300 dark:border-neutral-700"
-                                        >
-                                            <span className="flex items-center justify-center">
-                                                <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                </svg>
-                                                拍照
-                                            </span>
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => handleImageSelect('gallery')}
-                                            className="flex-1 py-1 text-xs text-neutral-600 dark:text-neutral-400 border-t-2 border-dashed border-neutral-300 dark:border-neutral-700"
-                                        >
-                                            <span className="flex items-center justify-center">
-                                                <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                                </svg>
-                                                相册
-                                            </span>
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
+                                {/* 右上角固定删除按钮 */}
+                                <button
+                                    type="button"
+                                    onClick={() => setFormData(prev => ({...prev, image: ''}))}
+                                    className="absolute top-1 right-1 w-6 h-6 bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-800 rounded-full flex items-center justify-center shadow-md hover:bg-red-500 dark:hover:bg-red-500 dark:hover:text-white transition-colors z-10"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                    </svg>
+                                </button>
+                            </>
+                        ) : (
+                            /* 添加图片状态 */
+                            <button
+                                type="button"
+                                onClick={() => setShowImagePicker(true)}
+                                className="w-full h-full flex items-center justify-center"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-neutral-300 dark:text-neutral-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                </svg>
+                            </button>
+                        )}
                     </div>
-                </div>
-
-                {/* 咖啡豆信息 */}
+                </div>                {/* 咖啡豆信息 */}
                 <div className="space-y-4">
                     {/* 只有在新建笔记且没有选择咖啡豆时才显示输入框 */}
                     {!initialData.coffeeBean && !initialData.id && (
@@ -949,6 +925,8 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                             <div className="grid grid-cols-2 gap-6">
                                 <div>
                                     <input
+                                        id="coffee-bean-name"
+                                        name="coffeeBeanName"
                                         type="text"
                                         value={formData.coffeeBeanInfo.name}
                                         onChange={(e) =>
@@ -1076,6 +1054,8 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                     <div className="grid grid-cols-4 gap-6">
                         <div className="relative">
                             <input
+                                id="coffee-amount"
+                                name="coffeeAmount"
                                 type="text"
                                 inputMode="decimal"
                                 value={numericValues.coffee}
@@ -1089,6 +1069,8 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                             <div className="flex items-center">
                                 <span className="text-xs text-neutral-400 dark:text-neutral-500 mr-1 flex-shrink-0">1:</span>
                                 <input
+                                    id="coffee-ratio"
+                                    name="coffeeRatio"
                                     type="text"
                                     inputMode="decimal"
                                     value={numericValues.ratio}
@@ -1100,6 +1082,8 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                         </div>
                         <div>
                             <input
+                                id="grind-size"
+                                name="grindSize"
                                 type="text"
                                 value={settings ? formatGrindSize(methodParams.grindSize, settings.grindType, settings.customGrinders as Record<string, unknown>[] | undefined) : methodParams.grindSize}
                                 onChange={(e) => setMethodParams({...methodParams, grindSize: e.target.value})}
@@ -1109,6 +1093,8 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                         </div>
                         <div className="relative">
                             <input
+                                id="water-temperature"
+                                name="waterTemperature"
                                 type="text"
                                 inputMode="decimal"
                                 value={numericValues.temp}
@@ -1156,6 +1142,8 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                                         </div>
                                         <div className="relative py-4 -my-4">
                                             <input
+                                                id={`taste-${dimension.id}`}
+                                                name={`taste_${dimension.id}`}
                                                 type="range"
                                                 min="0"
                                                 max="5"
@@ -1196,6 +1184,8 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                     <div className="relative py-3">
                         <div className="relative py-4 -my-4">
                             <input
+                                id="overall-rating"
+                                name="overallRating"
                                 type="range"
                                 min="1"
                                 max="5"
@@ -1222,6 +1212,8 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                         笔记
                     </div>
                     <AutoResizeTextarea
+                        id="brewing-notes"
+                        name="brewingNotes"
                         value={formData.notes}
                         onChange={(e) =>
                             setFormData({
@@ -1248,6 +1240,14 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                     </button>
                 </div>
             )}
+
+            {/* 图片选择抽屉 */}
+            <ImagePickerDrawer
+                isOpen={showImagePicker}
+                onClose={() => setShowImagePicker(false)}
+                onSelectCamera={() => handleImageSelect('camera')}
+                onSelectGallery={() => handleImageSelect('gallery')}
+            />
         </form>
     )
 }
