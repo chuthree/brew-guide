@@ -17,7 +17,11 @@ const eslintConfig = [
       "out/**",
       "build/**",
       "dist/**",
-      "coverage/**"
+      "coverage/**",
+      "ios/**",
+      "android/**",
+      "public/sw*.js",
+      "public/workbox-*.js"
     ]
   },
   ...compat.extends("next/core-web-vitals", "next/typescript"),
