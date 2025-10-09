@@ -613,7 +613,7 @@ const TabContent: React.FC<TabContentProps> = ({
     if (activeTab === '咖啡豆') {
         return (
             <>
-                <div className="w-full h-full overflow-y-auto scroll-with-bottom-bar" ref={(el) => setBeanScrollEl(el)}>
+                <div className="w-full h-full overflow-y-auto scroll-with-bottom-bar p-6" ref={(el) => setBeanScrollEl(el)}>
                 <CoffeeBeanList
                     onSelect={(beanId, bean) => {
                         if (onCoffeeBeanSelect) onCoffeeBeanSelect(beanId, bean);

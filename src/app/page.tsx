@@ -2023,7 +2023,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
             {activeMainTab === '冲煮' && (
                 <div
-                    className="h-full overflow-y-auto space-y-5 p-6"
+                    className="h-full overflow-y-auto space-y-5"
                 >
                     <TabContent
                         activeMainTab={activeMainTab}
