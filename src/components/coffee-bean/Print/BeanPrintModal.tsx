@@ -597,7 +597,7 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
                   <div className="px-1">
                     <input
                       type="range"
-                      min="11"
+                      min="6"
                       max="24"
                       value={config.fontSize}
                       onChange={(e) => {
