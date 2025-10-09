@@ -400,7 +400,7 @@ const StageItem: React.FC<StageItemProps> = ({
                     ) : (
                         // 原有的标准模式渲染
                         <>
-                            <div className="flex items-baseline justify-between">
+                            <div className="flex justify-between items-center">
                                 <div className="flex items-baseline gap-3 min-w-0 overflow-hidden">
                                     {step.icon && (
                                         <span className="text-xs mr-1">{step.icon}</span>

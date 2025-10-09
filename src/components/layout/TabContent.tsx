@@ -763,7 +763,7 @@ const TabContent: React.FC<TabContentProps> = ({
     // 渲染默认列表内容
     return (
         <>
-            <div className="space-y-4 content-area">
+            <div className="space-y-4 content-area m-6">
                 {showEmptyMethodsMessage ? (
                     <div className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400 mt-4">
                         [ 当前器具暂无自定义方案，请点击下方按钮添加 ]

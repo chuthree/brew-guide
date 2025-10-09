@@ -128,7 +128,8 @@ const EditableParameter: React.FC<EditableParameterProps> = ({
                     onChange={(e) => setTempValue(e.target.value)}
                     onBlur={handleSubmit}
                     onKeyDown={handleKeyDown}
-                    className="w-full bg-transparent text-center text-xs font-medium outline-hidden px-0.5"
+                    className="bg-transparent text-center text-xs outline-hidden min-w-0 max-w-none"
+                    size={Math.max(tempValue.length || 1, 2)}
                 />
             ) : (
                 <span className="inline-flex items-center whitespace-nowrap">
