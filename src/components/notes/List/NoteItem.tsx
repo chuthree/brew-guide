@@ -39,8 +39,8 @@ const NoteItem: React.FC<NoteItemProps> = ({
     const { getValidTasteRatings } = useFlavorDimensions();
 
     // 预先计算一些条件，避免在JSX中重复计算
-    const hasTasteRatings = Object.values(note.taste).some(value => value > 0);
     const validTasteRatings = getValidTasteRatings(note.taste);
+    const hasTasteRatings = validTasteRatings.length > 0;
     const hasNotes = Boolean(note.notes);
     const equipmentName = (note.equipment && note.equipment.trim() !== '') ? (equipmentNames[note.equipment] || note.equipment) : '未知器具';
     const beanName = note.coffeeBeanInfo?.name;

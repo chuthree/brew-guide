@@ -66,12 +66,12 @@ export const useFlavorDimensions = () => {
     }
 
     /**
-     * 获取所有有效的风味评分（值大于0的评分）
+     * 获取所有有效的风味评分（值大于等于0的评分）
      */
     const getValidTasteRatings = (taste: Record<string, number>): Array<{ id: string; label: string; value: number }> => {
         // 先创建所有有效评分的数组
         const validRatings = Object.entries(taste)
-            .filter(([_, value]) => value > 0)
+            .filter(([_, value]) => value >= 0)
             .map(([id, value]) => ({
                 id,
                 label: getDimensionLabel(id),
