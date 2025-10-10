@@ -794,9 +794,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
 
     if (!isOpen) return null
 
-    // 动态设置容器 padding，在冲煮页面时不需要额外 padding
-    // 当hideHeader为true时，添加足够的顶部边距，确保表单内容不会位于导航栏下面
-    const containerClassName = `relative flex flex-col ${!inBrewPage ? 'p-6 pt-6' : ''} ${hideHeader ? 'pt-6' : ''} h-full overflow-y-auto overscroll-contain`;
+    const containerClassName = "relative flex flex-col h-full overflow-y-auto overscroll-contain";
 
     return (
         <form 

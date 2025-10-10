@@ -730,7 +730,11 @@ const TabContent: React.FC<TabContentProps> = ({
 
     // 渲染笔记表单
     if (activeTab === '记录') {
-        return <NoteFormWrapper />;
+        return (
+            <div className="px-6 pt-3">
+                <NoteFormWrapper />
+            </div>
+        );
     }
 
     // 显示计时器动画 - 添加条件仅在"注水"标签时显示
