@@ -157,7 +157,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     onClose: _onClose,
     onSave,
     initialData,
-    inBrewPage = false,
+    inBrewPage: _inBrewPage = false,
     showSaveButton = true,
     onSaveSuccess,
     hideHeader = false,
