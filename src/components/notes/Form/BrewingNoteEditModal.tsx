@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { ArrowLeft } from 'lucide-react'
 import BrewingNoteForm from './BrewingNoteForm'
 import { BrewingNoteData } from '@/types/app'
 import { SettingsOptions } from '@/components/settings/Settings'
@@ -177,29 +178,9 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
                 <button
                     type="button"
                     onClick={handleClose}
-                    className="rounded-full p-3 -ml-1 touch-manipulation"
-                    style={{
-                        WebkitTapHighlightColor: 'transparent', // 移除点击高亮
-                        minWidth: '44px', // 移动端最小触摸区域
-                        minHeight: '44px'
-                    }}
+                    className="text-neutral-800 dark:text-neutral-200"
                 >
-                    <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="text-neutral-800 dark:text-neutral-200"
-                    >
-                        <path
-                            d="M19 12H5M5 12L12 19M5 12L12 5"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                        />
-                    </svg>
+                    <ArrowLeft size={16} />
                 </button>
 
                 {/* 中间的时间戳编辑区域 */}
@@ -237,7 +218,7 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
             </div>
 
             {/* 表单内容容器 */}
-            <div className="flex-1">
+            <div className="flex-1 mt-6">
                 <BrewingNoteForm
                     id={initialData.id}
                     isOpen={true}

@@ -66,7 +66,7 @@ const ImagePickerDrawer: React.FC<ImagePickerDrawerProps> = ({
                     <button
                         type="button"
                         onClick={onSelectCamera}
-                        className="w-full flex items-center justify-center py-3 mb-2 rounded bg-neutral-100 dark:bg-neutral-800 transition-colors "
+                        className="w-full flex items-center justify-center py-3 mb-3 rounded bg-neutral-100 dark:bg-neutral-800 transition-colors "
                     >
                         <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">拍照</span>
                     </button>
