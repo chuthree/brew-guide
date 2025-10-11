@@ -66,10 +66,18 @@ export const useFlavorDimensions = () => {
     }
 
     /**
-     * 获取所有有效的风味评分（值大于等于0的评分）
+     * 获取所有有效的风味评分（当至少有一个评分大于0时，返回所有评分）
      */
     const getValidTasteRatings = (taste: Record<string, number>): Array<{ id: string; label: string; value: number }> => {
-        // 先创建所有有效评分的数组
+        // 检查是否有任何评分大于0
+        const hasAnyRating = Object.values(taste).some(value => value > 0)
+        
+        // 如果没有任何评分大于0，返回空数组
+        if (!hasAnyRating) {
+            return []
+        }
+        
+        // 如果至少有一个评分大于0，返回所有评分（包括为0的）
         const validRatings = Object.entries(taste)
             .filter(([_, value]) => value >= 0)
             .map(([id, value]) => ({

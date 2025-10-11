@@ -200,7 +200,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onSettingsChange, onComplete })
                                     开始使用
                                 </button>
                             </div>
-                  div   </div>
+                        </div>
                     </div>
                 </div>
             </div>
