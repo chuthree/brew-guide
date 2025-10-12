@@ -248,6 +248,9 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
     
     // 抽屉管理状态
     const [isManagementDrawerOpen, setIsManagementDrawerOpen] = useState(false)
+    
+    // 🎯 笔记步骤中参数显示的叠加层状态（仅用于UI显示，不影响实际数据）
+    const [displayOverlay, setDisplayOverlay] = useState<Partial<EditableParams> | null>(null)
 
     // 处理抽屉开关
     const handleToggleManagementDrawer = () => {
@@ -337,6 +340,9 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                 console.error('加载自定义设备失败:', error)
                 updateParameterInfo(detail.step, selectedEquipment, methodForUpdate, equipmentList)
             }
+            
+            // 🎯 步骤改变时清除显示叠加层
+            setDisplayOverlay(null)
         }
 
         return listenToEvent(BREWING_EVENTS.STEP_CHANGED, handleStepChanged)
@@ -349,6 +355,78 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
 
         return listenToEvent(BREWING_EVENTS.PARAMS_UPDATED, handleParameterInfoUpdate)
     }, [setParameterInfo])
+    
+    // 🎯 监听笔记步骤中的导航栏显示更新事件
+    useEffect(() => {
+        const handleNavbarDisplayUpdate = (e: CustomEvent) => {
+            if (activeBrewingStep !== 'notes' || !editableParams) return
+            
+            const { type, value } = e.detail
+            
+            // 获取当前显示值（优先使用叠加层，否则使用原始值）
+            const getCurrentDisplayValue = (key: keyof EditableParams) => {
+                return displayOverlay?.[key] || editableParams[key]
+            }
+            
+            const currentCoffeeNum = parseFloat(getCurrentDisplayValue('coffee').replace('g', ''))
+            const currentRatioNum = parseFloat(getCurrentDisplayValue('ratio').split(':')[1])
+            
+            switch (type) {
+                case 'coffee': {
+                    const coffeeValue = parseFloat(value)
+                    if (isNaN(coffeeValue) || coffeeValue <= 0) return
+                    
+                    const calculatedWater = Math.round(coffeeValue * currentRatioNum)
+                    setDisplayOverlay(prev => ({
+                        ...prev,
+                        coffee: `${coffeeValue}g`,
+                        water: `${calculatedWater}g`
+                    }))
+                    break
+                }
+                case 'ratio': {
+                    const ratioValue = parseFloat(value)
+                    if (isNaN(ratioValue) || ratioValue <= 0) return
+                    
+                    const calculatedWater = Math.round(currentCoffeeNum * ratioValue)
+                    setDisplayOverlay(prev => ({
+                        ...prev,
+                        ratio: `1:${ratioValue}`,
+                        water: `${calculatedWater}g`
+                    }))
+                    break
+                }
+                case 'grindSize': {
+                    setDisplayOverlay(prev => ({
+                        ...prev,
+                        grindSize: value
+                    }))
+                    break
+                }
+                case 'temp': {
+                    const formattedTemp = value.includes('°C') ? value : `${value}°C`
+                    setDisplayOverlay(prev => ({
+                        ...prev,
+                        temp: formattedTemp
+                    }))
+                    break
+                }
+            }
+        }
+        
+        window.addEventListener('brewing:updateNavbarDisplay', handleNavbarDisplayUpdate as EventListener)
+        
+        return () => {
+            window.removeEventListener('brewing:updateNavbarDisplay', handleNavbarDisplayUpdate as EventListener)
+        }
+    }, [activeBrewingStep, editableParams, displayOverlay])
+    
+    // 🎯 当 editableParams 变为 null 或步骤不是 notes 时，清除显示叠加层
+    useEffect(() => {
+        if (!editableParams || activeBrewingStep !== 'notes') {
+            setDisplayOverlay(null)
+        }
+    }, [editableParams, activeBrewingStep])
 
     const shouldHideHeader = activeBrewingStep === 'brewing' && isTimerRunning && !showComplete
 
@@ -610,13 +688,13 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                                         {editableParams ? (
                                                             <div className="flex items-center space-x-1 sm:space-x-2">
                                                                 <EditableParameter
-                                                                    value={editableParams.coffee.replace('g', '')}
+                                                                    value={(displayOverlay?.coffee || editableParams.coffee).replace('g', '')}
                                                                     onChange={(v) => handleParamChange('coffee', v)}
                                                                     unit="g"
                                                                 />
                                                                 <span className="shrink-0">·</span>
                                                                 <EditableParameter
-                                                                    value={editableParams.ratio.replace('1:', '')}
+                                                                    value={(displayOverlay?.ratio || editableParams.ratio).replace('1:', '')}
                                                                     onChange={(v) => handleParamChange('ratio', v)}
                                                                     unit=""
                                                                     prefix="1:"
@@ -625,7 +703,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                                                     <>
                                                                         <span className="shrink-0">·</span>
                                                                         <EditableParameter
-                                                                            value={formatGrindSize(editableParams.grindSize, settings.grindType, settings.customGrinders as Record<string, unknown>[] | undefined)}
+                                                                            value={formatGrindSize(displayOverlay?.grindSize || editableParams.grindSize, settings.grindType, settings.customGrinders as Record<string, unknown>[] | undefined)}
                                                                             onChange={(v) => handleParamChange('grindSize', v)}
                                                                             unit=""
                                                                         />
@@ -635,7 +713,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                                                     <>
                                                                         <span className="shrink-0">·</span>
                                                                         <EditableParameter
-                                                                            value={editableParams.temp.replace('°C', '')}
+                                                                            value={(displayOverlay?.temp || editableParams.temp).replace('°C', '')}
                                                                             onChange={(v) => handleParamChange('temp', v)}
                                                                             unit="°C"
                                                                         />

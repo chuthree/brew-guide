@@ -542,6 +542,15 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 }
             });
             window.dispatchEvent(event);
+            
+            // 🎯 同时触发导航栏显示更新事件，更新UI显示
+            const displayEvent = new CustomEvent('brewing:updateNavbarDisplay', {
+                detail: {
+                    type,
+                    value
+                }
+            });
+            window.dispatchEvent(displayEvent);
             return;
         }
 
