@@ -655,7 +655,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
 
                                     {/* 相关冲煮记录 - 简化布局 */}
                                     <div className="border-t border-neutral-200/40 dark:border-neutral-800/40 pt-3">
-                                        <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-2">
+                                        <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
                                             冲煮记录 {relatedNotes.length > 0 && `(${relatedNotes.length})`}
                                         </div>
 
