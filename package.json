@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "npx serve@latest out --single",
+    "start": "npx serve@latest out --single --no-request-logging",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
     "cap:build": "next build && npx cap sync",
     "cap:ios": "npx cap open ios",
