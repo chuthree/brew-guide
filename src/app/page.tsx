@@ -532,6 +532,20 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
 
     const handleParamChangeWrapper = async (type: keyof EditableParams, value: string) => {
+        // 🎯 如果在笔记步骤，直接通过事件通知 BrewingNoteForm 更新参数
+        // 不触发全局的参数更新流程，避免 brewing:paramsUpdated 事件导致数据覆盖
+        if (activeBrewingStep === 'notes') {
+            const event = new CustomEvent('brewing:updateNoteParams', {
+                detail: {
+                    type,
+                    value
+                }
+            });
+            window.dispatchEvent(event);
+            return;
+        }
+
+        // 其他步骤正常处理参数更新
         await handleParamChange(
             type,
             value,

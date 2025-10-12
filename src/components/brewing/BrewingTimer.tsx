@@ -1853,48 +1853,39 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
           </div>
         </div>
       </div>
-      <AnimatePresence mode="wait">
-        {showNoteForm && currentBrewingMethod && (
-          <motion.div
-            key="note-form"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.26 }}
-            className="absolute inset-0 bg-neutral-50 dark:bg-neutral-900"
-            style={{
-              willChange: "transform, opacity",
-              zIndex: 50,
-              transform: "translateZ(0)",
+      {showNoteForm && currentBrewingMethod && (
+        <div
+          className="absolute inset-0 bg-neutral-50 dark:bg-neutral-900"
+          style={{
+            zIndex: 50,
+          }}
+        >
+          <BrewingNoteForm
+            id="brewingNoteForm"
+            isOpen={showNoteForm}
+            onClose={() => {
+              setShowNoteForm(false);
+              // 注意：这里不清除brewingNoteInProgress，保留未完成状态
+              // 允许用户稍后返回继续填写
             }}
-          >
-            <BrewingNoteForm
-              id="brewingNoteForm"
-              isOpen={showNoteForm}
-              onClose={() => {
-                setShowNoteForm(false);
-                // 注意：这里不清除brewingNoteInProgress，保留未完成状态
-                // 允许用户稍后返回继续填写
-              }}
-              onSave={handleSaveNote}
-              initialData={
-                noteFormInitialData || {
-                  equipment: selectedEquipment || "",
-                  method: currentBrewingMethod?.name || "",
-                  params: {
-                    coffee: currentBrewingMethod?.params?.coffee || "",
-                    water: currentBrewingMethod?.params?.water || "",
-                    ratio: currentBrewingMethod?.params?.ratio || "",
-                    grindSize: currentBrewingMethod?.params?.grindSize || "",
-                    temp: currentBrewingMethod?.params?.temp || "",
-                  },
-                  totalTime: currentTime,
-                }
+            onSave={handleSaveNote}
+            initialData={
+              noteFormInitialData || {
+                equipment: selectedEquipment || "",
+                method: currentBrewingMethod?.name || "",
+                params: {
+                  coffee: currentBrewingMethod?.params?.coffee || "",
+                  water: currentBrewingMethod?.params?.water || "",
+                  ratio: currentBrewingMethod?.params?.ratio || "",
+                  grindSize: currentBrewingMethod?.params?.grindSize || "",
+                  temp: currentBrewingMethod?.params?.temp || "",
+                },
+                totalTime: currentTime,
               }
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
+            }
+          />
+        </div>
+      )}
     </>
   );
 };
