@@ -668,21 +668,17 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                                 暂无冲煮记录
                                             </div>
                                         ) : (
-                                <div className="space-y-2">
-                                    {relatedNotes.map((note) => {
+                                <div className="space-y-0">
+                                    {relatedNotes.map((note, index) => {
                                         const isChangeRecord = isSimpleChangeRecord(note)
+                                        const isLast = index === relatedNotes.length - 1
 
                                         return (
-                                            <div key={note.id} className="p-2 bg-neutral-100 dark:bg-neutral-800 rounded">
+                                            <div key={note.id} className={`${!isLast ? 'border-b border-neutral-200/30 dark:border-neutral-800/30' : ''}`}>
                                                 {isChangeRecord ? (
                                                     // 变动记录（快捷扣除和容量调整）
-                                                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                                                        {/* 咖啡豆名称 - 固定宽度 */}
-                                                        <div className="w-20 text-xs font-medium text-neutral-800 dark:text-neutral-100 truncate" title={bean?.name || '咖啡豆'}>
-                                                            {bean?.name || '咖啡豆'}
-                                                        </div>
-
-                                                        {/* 变动量标签 - 固定宽度 */}
+                                                    <div className="flex items-center gap-2 py-3 opacity-60">
+                                                        {/* 变动量标签 */}
                                                         {(() => {
                                                             let displayLabel = '0g'
 
@@ -724,157 +720,156 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                                             {formatDate(note.timestamp)}
                                                         </div>
                                                     </div>
-                                                ) : (
-                                                    // 普通冲煮记录
-                                                    <div className="space-y-3">
-                                                        {/* 图片和基本信息区域 */}
-                                                        <div className="flex gap-4">
-                                                            {/* 笔记图片 - 只在有图片时显示 */}
-                                                            {note.image && (
-                                                                <div
-                                                                    className="h-14 overflow-hidden shrink-0 relative cursor-pointer border border-neutral-200 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        if (!noteImageErrors[note.id] && note.image) {
-                                                                            setCurrentImageUrl(note.image);
-                                                                            setImageViewerOpen(true);
-                                                                        }
-                                                                    }}
-                                                                >
-                                                                    {noteImageErrors[note.id] ? (
-                                                                        <div className="absolute inset-0 flex items-center justify-center text-xs text-neutral-500 dark:text-neutral-400">
-                                                                            加载失败
-                                                                        </div>
-                                                                    ) : (
-                                                                        <Image
-                                                                            src={note.image}
-                                                                            alt={bean?.name || '笔记图片'}
-                                                                            height={56}
-                                                                            width={56}
-                                                                            unoptimized
-                                                                            style={{ width: 'auto', height: '100%' }}
-                                                                            className="object-cover"
-                                                                            sizes="56px"
-                                                                            priority={false}
-                                                                            loading="lazy"
-                                                                            onError={() => setNoteImageErrors(prev => ({ ...prev, [note.id]: true }))}
-                                                                        />
-                                                                    )}
-                                                                </div>
+                                ) : (
+                                    // 普通冲煮记录
+                                    <div className="py-3 space-y-3">
+                                        {/* 图片和标题参数区域 */}
+                                        <div className="flex gap-4">
+                                            {/* 笔记图片 - 只在有图片时显示 */}
+                                            {note.image && (
+                                                <div
+                                                    className="w-14 h-14 relative shrink-0 cursor-pointer rounded border border-neutral-200/50 dark:border-neutral-800/50 bg-neutral-100 dark:bg-neutral-800/20 overflow-hidden"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if (!noteImageErrors[note.id] && note.image) {
+                                                            setCurrentImageUrl(note.image);
+                                                            setImageViewerOpen(true);
+                                                        }
+                                                    }}
+                                                >
+                                                    {noteImageErrors[note.id] ? (
+                                                        <div className="absolute inset-0 flex items-center justify-center text-xs text-neutral-500 dark:text-neutral-400">
+                                                            加载失败
+                                                        </div>
+                                                    ) : (
+                                                        <Image
+                                                            src={note.image}
+                                                            alt={bean?.name || '笔记图片'}
+                                                            height={48}
+                                                            width={48}
+                                                            unoptimized
+                                                            style={{ width: '100%', height: '100%' }}
+                                                            className="object-cover"
+                                                            sizes="48px"
+                                                            priority={false}
+                                                            loading="lazy"
+                                                            onError={() => setNoteImageErrors(prev => ({ ...prev, [note.id]: true }))}
+                                                        />
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {/* 名称和标签区域 */}
+                                            <div className="flex-1 min-w-0">
+                                                <div className="space-y-1.5">
+                                                    {/* 标题行 - 复杂的显示逻辑 */}
+                                                    <div className="text-xs font-medium break-words text-neutral-800 dark:text-neutral-100">
+                                                        {note.method && note.method.trim() !== '' ? (
+                                                            // 有方案时的显示逻辑
+                                                            bean?.name ? (
+                                                                <>
+                                                                    {bean.name}
+                                                                    <span className="mx-1">·</span>
+                                                                    <span>{note.method}</span>
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    {note.equipment ? (equipmentNames[note.equipment] || note.equipment) : '未知器具'}
+                                                                    <span className="mx-1">·</span>
+                                                                    <span>{note.method}</span>
+                                                                </>
+                                                            )
+                                                        ) : (
+                                                            // 没有方案时的显示逻辑
+                                                            bean?.name ? (
+                                                                bean.name === (note.equipment ? (equipmentNames[note.equipment] || note.equipment) : '未知器具') ? (
+                                                                    bean.name
+                                                                ) : (
+                                                                    <>
+                                                                        {bean.name}
+                                                                        <span className="mx-1">·</span>
+                                                                        <span>{note.equipment ? (equipmentNames[note.equipment] || note.equipment) : '未知器具'}</span>
+                                                                    </>
+                                                                )
+                                                            ) : (
+                                                                note.equipment ? (equipmentNames[note.equipment] || note.equipment) : '未知器具'
+                                                            )
+                                                        )}
+                                                    </div>
+
+                                                    {/* 方案信息 - 只在有方案时显示 */}
+                                                    {note.params && note.method && note.method.trim() !== '' && (
+                                                        <div className="text-xs font-medium mt-1.5 tracking-wide text-neutral-600 dark:text-neutral-400 space-x-1 leading-relaxed">
+                                                            {bean?.name && (
+                                                                <>
+                                                                    <span>{note.equipment ? (equipmentNames[note.equipment] || note.equipment) : '未知器具'}</span>
+                                                                    <span>·</span>
+                                                                </>
                                                             )}
+                                                            <span>{note.params.coffee}</span>
+                                                            <span>·</span>
+                                                            <span>{note.params.ratio}</span>
+                                                            {(note.params.grindSize || note.params.temp) && (
+                                                                <>
+                                                                    <span>·</span>
+                                                                    <span>{[note.params.grindSize, note.params.temp].filter(Boolean).join(' · ')}</span>
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
 
-                                                            {/* 内容区域 */}
-                                                            <div className="flex-1 min-w-0 space-y-3">
-                                                                {/* 标题和参数信息 */}
-                                                                <div className="space-y-1">
-                                                                    {/* 标题行 - 复杂的显示逻辑 */}
-                                                                    <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100 leading-tight">
-                                                                        {note.method && note.method.trim() !== '' ? (
-                                                                            // 有方案时的显示逻辑
-                                                                            bean?.name ? (
-                                                                                <>
-                                                                                    {bean.name}
-                                                                                    <span className="text-neutral-600 dark:text-neutral-400 mx-1">·</span>
-                                                                                    <span className="text-neutral-600 dark:text-neutral-400">{note.method}</span>
-                                                                                </>
-                                                                            ) : (
-                                                                                <>
-                                                                                    {note.equipment ? (equipmentNames[note.equipment] || note.equipment) : '未知器具'}
-                                                                                    <span className="text-neutral-600 dark:text-neutral-400 mx-1">·</span>
-                                                                                    <span className="text-neutral-600 dark:text-neutral-400">{note.method}</span>
-                                                                                </>
-                                                                            )
-                                                                        ) : (
-                                                                            // 没有方案时的显示逻辑
-                                                                            bean?.name ? (
-                                                                                bean.name === (note.equipment ? (equipmentNames[note.equipment] || note.equipment) : '未知器具') ? (
-                                                                                    bean.name
-                                                                                ) : (
-                                                                                    <>
-                                                                                        {bean.name}
-                                                                                        <span className="text-neutral-600 dark:text-neutral-400 mx-1">·</span>
-                                                                                        <span className="text-neutral-600 dark:text-neutral-400">{note.equipment ? (equipmentNames[note.equipment] || note.equipment) : '未知器具'}</span>
-                                                                                    </>
-                                                                                )
-                                                                            ) : (
-                                                                                note.equipment ? (equipmentNames[note.equipment] || note.equipment) : '未知器具'
-                                                                            )
-                                                                        )}
-                                                                    </div>
-
-                                                                    {/* 方案信息 - 只在有方案时显示 */}
-                                                                    {note.params && note.method && note.method.trim() !== '' && (
-                                                                        <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400 space-x-1 leading-relaxed">
-                                                                            {bean?.name && (
-                                                                                <>
-                                                                                    <span>{note.equipment ? (equipmentNames[note.equipment] || note.equipment) : '未知器具'}</span>
-                                                                                    <span>·</span>
-                                                                                </>
-                                                                            )}
-                                                                            <span>{note.params.coffee}</span>
-                                                                            <span>·</span>
-                                                                            <span>{note.params.ratio}</span>
-                                                                            {(note.params.grindSize || note.params.temp) && (
-                                                                                <>
-                                                                                    <span>·</span>
-                                                                                    <span>{[note.params.grindSize, note.params.temp].filter(Boolean).join(' · ')}</span>
-                                                                                </>
-                                                                            )}
-                                                                        </div>
-                                                                    )}
+                                        {/* 风味评分 - 只有当存在有效评分(大于0)时才显示 */}
+                                        {(() => {
+                                            const validTasteRatings = getValidTasteRatings(note.taste);
+                                            const hasTasteRatings = validTasteRatings.length > 0;
+                                            
+                                            return hasTasteRatings ? (
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    {validTasteRatings.map((rating) => (
+                                                        <div key={rating.id} className="space-y-1">
+                                                            <div className="flex items-center justify-between">
+                                                                <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
+                                                                    {rating.label}
                                                                 </div>
-
-                                                                {/* 风味评分 - 只有当存在有效评分(大于0)时才显示 */}
-                                                                {(() => {
-                                                                    const validTasteRatings = getValidTasteRatings(note.taste);
-                                                                    const hasTasteRatings = validTasteRatings.length > 0;
-                                                                    
-                                                                    return hasTasteRatings ? (
-                                                                        <div className="grid grid-cols-2 gap-4">
-                                                                            {validTasteRatings.map((rating) => (
-                                                                                <div key={rating.id} className="space-y-1">
-                                                                                    <div className="flex items-center justify-between">
-                                                                                        <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
-                                                                                            {rating.label}
-                                                                                        </div>
-                                                                                        <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
-                                                                                            {rating.value}
-                                                                                        </div>
-                                                                                    </div>
-                                                                                    <div className="h-px w-full overflow-hidden bg-neutral-200/50 dark:bg-neutral-800">
-                                                                                        <div
-                                                                                            style={{ width: `${rating.value === 0 ? 0 : (rating.value / 5) * 100}%` }}
-                                                                                            className="h-full bg-neutral-600 dark:bg-neutral-400"
-                                                                                        />
-                                                                                    </div>
-                                                                                </div>
-                                                                            ))}
-                                                                        </div>
-                                                                    ) : null;
-                                                                })()}
-
-                                                                {/* 时间和评分 */}
-                                                                <div className="flex items-baseline justify-between">
-                                                                    <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
-                                                                        {formatDate(note.timestamp)}
-                                                                    </div>
-                                                                    <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
-                                                                        {formatRating(note.rating)}
-                                                                    </div>
+                                                                <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
+                                                                    {rating.value}
                                                                 </div>
-
-                                                                {/* 备注信息 */}
-                                                                {note.notes && note.notes.trim() && (
-                                                                    <div className="text-xs font-medium bg-neutral-200/30 dark:bg-neutral-700/30 p-1.5 rounded tracking-widest text-neutral-800/70 dark:text-neutral-400/85 whitespace-pre-line leading-tight">
-                                                                        {note.notes}
-                                                                    </div>
-                                                                )}
+                                                            </div>
+                                                            <div className="h-px w-full overflow-hidden bg-neutral-200/50 dark:bg-neutral-800">
+                                                                <div
+                                                                    style={{ width: `${rating.value === 0 ? 0 : (rating.value / 5) * 100}%` }}
+                                                                    className="h-full bg-neutral-600 dark:bg-neutral-400"
+                                                                />
                                                             </div>
                                                         </div>
-                                                    </div>
-                                                )}
+                                                    ))}
+                                                </div>
+                                            ) : null;
+                                        })()}
+
+                                        {/* 时间和评分 */}
+                                        <div className="flex items-baseline justify-between">
+                                            <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
+                                                {formatDate(note.timestamp)}
                                             </div>
-                                        )
+                                            <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
+                                                {formatRating(note.rating)}
+                                            </div>
+                                        </div>
+
+                                        {/* 备注信息 */}
+                                        {note.notes && note.notes.trim() && (
+                                            <div className="text-xs font-medium bg-neutral-200/30 dark:bg-neutral-800/40 p-1.5 rounded tracking-widest text-neutral-800/70 dark:text-neutral-400/85 whitespace-pre-line leading-tight">
+                                                {note.notes}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )
                                     })}
                                             </div>
                                         )}
