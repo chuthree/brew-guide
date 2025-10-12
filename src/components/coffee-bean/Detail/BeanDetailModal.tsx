@@ -98,6 +98,9 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     const [printModalOpen, setPrintModalOpen] = useState(false)
     const [printEnabled, setPrintEnabled] = useState(false)
     
+    // 标题可见性状态
+    const [isTitleVisible, setIsTitleVisible] = useState(true)
+    
     // 处理显示/隐藏动画
     useEffect(() => {
         if (isOpen) {
@@ -143,6 +146,42 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     
     // 使用风味维度hook
     const { getValidTasteRatings } = useFlavorDimensions()
+
+    // 监测标题可见性
+    useEffect(() => {
+        if (!isOpen || !isVisible) return
+
+        let observer: IntersectionObserver | null = null
+
+        // 延迟一下，确保 DOM 已经渲染
+        const timer = setTimeout(() => {
+            const titleElement = document.getElementById('bean-detail-title')
+            if (!titleElement) {
+                console.log('标题元素未找到')
+                return
+            }
+
+            observer = new IntersectionObserver(
+                ([entry]) => {
+                    console.log('标题可见性:', entry.isIntersecting)
+                    setIsTitleVisible(entry.isIntersecting)
+                },
+                {
+                    threshold: 0,
+                    rootMargin: '-60px 0px 0px 0px' // 考虑顶部栏的高度
+                }
+            )
+
+            observer.observe(titleElement)
+        }, 100)
+
+        return () => {
+            clearTimeout(timer)
+            if (observer) {
+                observer.disconnect()
+            }
+        }
+    }, [isOpen, isVisible])
 
     // 历史栈管理 - 支持硬件返回键和浏览器返回按钮
     useEffect(() => {
@@ -499,19 +538,43 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
             `}
         >
                         {/* 顶部按钮栏 */}
-                        <div className="sticky top-0 z-10 flex justify-between items-center pt-safe-top p-4 bg-neutral-50 dark:bg-neutral-900">
+                        <div className="sticky top-0 z-10 flex items-center pt-safe-top p-4 bg-neutral-50 dark:bg-neutral-900 gap-3">
                             {/* 左侧关闭按钮 */}
                             <button
                                 onClick={handleClose}
-                                className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors flex items-center justify-center"
+                                className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors flex items-center justify-center flex-shrink-0"
                             >
                                 <svg className="w-4 h-4 text-neutral-600 dark:text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                                 </svg>
                             </button>
                             
+                            {/* 居中标题 - 当原标题不可见时显示，占据剩余空间 */}
+                            <div 
+                                className={`flex-1 flex justify-center min-w-0 transition-all duration-300 ${
+                                    isTitleVisible 
+                                        ? 'opacity-0 blur-sm pointer-events-none' 
+                                        : 'opacity-100 blur-0'
+                                }`}
+                                style={{
+                                    transitionProperty: 'opacity, filter, transform',
+                                    transitionTimingFunction: 'cubic-bezier(0.32, 0.72, 0, 1)',
+                                    willChange: 'opacity, filter, transform'
+                                }}
+                            >
+                                <div className="relative max-w-full px-2 overflow-hidden">
+                                    <h2 className="text-sm font-medium text-neutral-800 dark:text-neutral-100 text-center whitespace-nowrap">
+                                        {bean?.name || '未命名'}
+                                    </h2>
+                                    {/* 左侧渐变阴影 */}
+                                    <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none" />
+                                    {/* 右侧渐变阴影 */}
+                                    <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none" />
+                                </div>
+                            </div>
+                            
                             {/* 右侧操作按钮 */}
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-3 flex-shrink-0">
                                 {/* 前往按钮 */}
                                 {bean && (
                                     <ActionMenu
@@ -581,7 +644,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                             
                             {/* 标题区域 */}
                             <div className="px-6 mb-4">
-                                <h2 className="text-sm font-medium text-neutral-800 dark:text-neutral-100">
+                                <h2 id="bean-detail-title" className="text-sm font-medium text-neutral-800 dark:text-neutral-100">
                                     {searchQuery ? (
                                         <HighlightText text={bean?.name || '未命名'} highlight={searchQuery} />
                                     ) : (bean?.name || '未命名')}
