@@ -553,7 +553,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                             <div 
                                 className={`flex-1 flex justify-center min-w-0 transition-all duration-300 ${
                                     isTitleVisible 
-                                        ? 'opacity-0 blur-sm pointer-events-none' 
+                                        ? 'opacity-0 blur-xs pointer-events-none' 
                                         : 'opacity-100 blur-0'
                                 }`}
                                 style={{
