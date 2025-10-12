@@ -149,7 +149,11 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
 
     // 监测标题可见性
     useEffect(() => {
-        if (!isOpen || !isVisible) return
+        if (!isOpen || !isVisible) {
+            // 重置状态
+            setIsTitleVisible(true)
+            return
+        }
 
         let observer: IntersectionObserver | null = null
 
@@ -157,13 +161,16 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
         const timer = setTimeout(() => {
             const titleElement = document.getElementById('bean-detail-title')
             if (!titleElement) {
-                console.log('标题元素未找到')
                 return
             }
 
+            // 立即检查一次初始状态，避免闪烁
+            const rect = titleElement.getBoundingClientRect()
+            const isVisible = rect.top >= 60 // 顶部栏高度
+            setIsTitleVisible(isVisible)
+
             observer = new IntersectionObserver(
                 ([entry]) => {
-                    console.log('标题可见性:', entry.isIntersecting)
                     setIsTitleVisible(entry.isIntersecting)
                 },
                 {
@@ -566,8 +573,6 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                     <h2 className="text-sm font-medium text-neutral-800 dark:text-neutral-100 text-center whitespace-nowrap">
                                         {bean?.name || '未命名'}
                                     </h2>
-                                    {/* 左侧渐变阴影 */}
-                                    <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none" />
                                     {/* 右侧渐变阴影 */}
                                     <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none" />
                                 </div>
