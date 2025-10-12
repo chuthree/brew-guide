@@ -222,8 +222,8 @@ export function useBrewingContent({
 						const extractionStage = method.params.stages.find(stage => stage.pourType === 'extraction');
 						items = [
 							`粉量 ${method.params.coffee}`,
-							`萃取时间 ${formatTime(totalTime, true)}`,
 							`液重 ${extractionStage?.water || method.params.water}`,
+							`萃取时间 ${formatTime(totalTime, true)}`,
 						];
 					} else {
 						// 传统方案显示: 水粉比、总时长、研磨度

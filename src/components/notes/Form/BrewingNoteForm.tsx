@@ -744,13 +744,17 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
             }
         }
 
+        // 规范化器具ID（将名称转换为ID）
+        const { normalizeEquipmentId } = await import('@/components/notes/utils');
+        const normalizedEquipmentId = await normalizeEquipmentId(selectedEquipment || initialData.equipment || '');
+
         // 创建完整的笔记数据
         const noteData: BrewingNoteData = {
             id: id || Date.now().toString(),
             // 使用当前的时间戳状态
             timestamp: timestamp.getTime(),
             ...formData,
-            equipment: selectedEquipment || initialData.equipment,
+            equipment: normalizedEquipmentId,
             method: selectedMethod || initialData.method,
             params: {
                 // 使用当前的方案参数
