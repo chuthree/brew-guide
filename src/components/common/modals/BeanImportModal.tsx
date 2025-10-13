@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronLeft, ChevronRight, Clipboard, Code, Search, ExternalLink } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Clipboard, Code, ExternalLink, ScanLine } from 'lucide-react'
 import BeanSearchModal from './BeanSearchModal'
+import QRScannerModal from '@/components/coffee-bean/Scanner/QRScannerModal'
 import type { CoffeeBean } from '@/types/app'
 
 interface BeanImportModalProps {
@@ -29,9 +30,11 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
     const [currentMode, setCurrentMode] = useState<'buttons' | 'input'>('buttons');
-    const [inputType, setInputType] = useState<'clipboard' | 'json' | 'search'>('clipboard');
+    const [inputType, setInputType] = useState<'clipboard' | 'json' | 'search' | 'qr'>('clipboard');
     // 搜索模态框状态
     const [showSearchModal, setShowSearchModal] = useState(false);
+    // 二维码扫描模态框状态
+    const [showQRScannerModal, setShowQRScannerModal] = useState(false);
 
     // 历史栈管理 - 支持硬件返回键和浏览器返回按钮
     useEffect(() => {
@@ -165,6 +168,15 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
         setCurrentMode('input');
     }, []);
 
+    // 从二维码扫描获取咖啡豆
+    const handleScanSuccess = useCallback((bean: Partial<CoffeeBean>) => {
+        setImportData(JSON.stringify(bean, null, 2));
+        setSuccess('✨ 已扫描二维码，请检查信息是否正确');
+        setInputType('qr');
+        setCurrentMode('input');
+        setShowQRScannerModal(false); // 关闭扫描器模态框
+    }, []);
+
     // 处理剪贴板识别
     const handleClipboardRecognition = useCallback(async () => {
         clearMessages();
@@ -195,8 +207,13 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
     }, [clearMessages]);
 
     // 处理搜索咖啡豆
-    const handleSearchBeans = useCallback(() => {
-        setShowSearchModal(true);
+    // const handleSearchBeans = useCallback(() => {
+    //     setShowSearchModal(true);
+    // }, []);
+
+    // 处理扫描二维码
+    const handleScanQRCode = useCallback(() => {
+        setShowQRScannerModal(true);
     }, []);
 
     // 处理输入JSON
@@ -288,6 +305,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                                                 {inputType === 'clipboard' && '已自动识别剪切板内容，请检查数据格式是否正确'}
                                                 {inputType === 'json' && '请粘贴咖啡豆的 JSON 数据或文本信息'}
                                                 {inputType === 'search' && '从搜索结果自动填入，请检查信息是否正确'}
+                                                {inputType === 'qr' && '已扫描二维码，请检查信息是否正确'}
                                             </>
                                         )}
                                     </motion.p>
@@ -329,8 +347,20 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                                             <ChevronRight className="w-5 h-5 text-neutral-500" />
                                         </button>
 
-                                        {/* 搜索咖啡豆 */}
+                                        {/* 扫描二维码 */}
                                         <button
+                                            onClick={handleScanQRCode}
+                                            className="w-full flex items-center justify-between p-4 bg-neutral-200/50 dark:bg-neutral-800 transition-colors rounded"
+                                        >
+                                            <div className="flex items-center space-x-3">
+                                                <ScanLine className="w-5 h-5 text-neutral-600 dark:text-neutral-400" />
+                                                <span className="text-neutral-800 dark:text-white font-medium">扫描二维码</span>
+                                            </div>
+                                            <ChevronRight className="w-5 h-5 text-neutral-500" />
+                                        </button>
+
+                                        {/* 搜索咖啡豆：暂时禁用*/}
+                                        {/* <button
                                             onClick={handleSearchBeans}
                                             className="w-full flex items-center justify-between p-4 bg-neutral-200/50 dark:bg-neutral-800 transition-colors rounded"
                                         >
@@ -339,7 +369,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                                                 <span className="text-neutral-800 dark:text-white font-medium">搜索咖啡豆</span>
                                             </div>
                                             <ChevronRight className="w-5 h-5 text-neutral-500" />
-                                        </button>
+                                        </button> */}
                                     </motion.div>
                                 ) : (
                                     <motion.div
@@ -432,6 +462,13 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                 isOpen={showSearchModal}
                 onClose={() => setShowSearchModal(false)}
                 onSelectBean={handleSelectFromSearch}
+            />
+
+            {/* 二维码扫描模态框 */}
+            <QRScannerModal
+                isOpen={showQRScannerModal}
+                onClose={() => setShowQRScannerModal(false)}
+                onScanSuccess={handleScanSuccess}
             />
         </>
     )

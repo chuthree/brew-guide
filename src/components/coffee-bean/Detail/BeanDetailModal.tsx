@@ -27,6 +27,11 @@ const BeanPrintModal = dynamic(() => import('@/components/coffee-bean/Print/Bean
     ssr: false
 })
 
+// 动态导入 BeanShareModal 组件
+const BeanShareModal = dynamic(() => import('@/components/coffee-bean/Share/BeanShareModal'), {
+    ssr: false
+})
+
 // 信息项类型定义
 interface InfoItem {
     key: string
@@ -108,6 +113,9 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     // 打印功能状态
     const [printModalOpen, setPrintModalOpen] = useState(false)
     const [printEnabled, setPrintEnabled] = useState(false)
+    
+    // 分享状态
+    const [shareModalOpen, setShareModalOpen] = useState(false)
     
     // 标题可见性状态
     const [isTitleVisible, setIsTitleVisible] = useState(true)
@@ -210,7 +218,13 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
 
         // 监听返回事件
         const handlePopState = () => {
-            onClose()
+            // 如果分享模态框打开，先关闭分享模态框
+            if (shareModalOpen) {
+                setShareModalOpen(false)
+            } else {
+                // 否则关闭详情模态框
+                onClose()
+            }
         }
 
         window.addEventListener('popstate', handlePopState)
@@ -218,7 +232,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
         return () => {
             window.removeEventListener('popstate', handlePopState)
         }
-    }, [isOpen, onClose])
+    }, [isOpen, shareModalOpen, onClose])
 
     // 重置图片错误状态
     useEffect(() => {
@@ -610,7 +624,8 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                         items={[
                                             ...(onDelete ? [{ id: 'delete', label: '删除', onClick: () => { onDelete(bean); handleClose(); }, color: 'danger' as const }] : []),
                                             ...(printEnabled ? [{ id: 'print', label: '打印', onClick: handlePrint, color: 'default' as const }] : []),
-                                            ...(onShare ? [{ id: 'share', label: '分享', onClick: () => { onShare(bean); handleClose(); }, color: 'default' as const }] : []),
+                                            // 统一分享按钮
+                                            ...(onShare ? [{ id: 'share', label: '分享', onClick: () => setShareModalOpen(true), color: 'default' as const }] : []),
                                             ...(onEdit ? [{ id: 'edit', label: '编辑', onClick: () => { onEdit(bean); onClose(); }, color: 'default' as const }] : [])
                                         ].filter(item => item)} // 过滤空项
                                         useMorphingAnimation={true}
@@ -1033,6 +1048,18 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                 onClose={() => setPrintModalOpen(false)}
             />
         )}
+
+        {/* 分享模态框 */}
+        <BeanShareModal
+            isOpen={shareModalOpen}
+            bean={bean}
+            onClose={() => setShareModalOpen(false)}
+            onTextShare={(bean) => {
+                if (onShare) {
+                    onShare(bean)
+                }
+            }}
+        />
         </>
     )
 }
