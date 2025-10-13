@@ -264,7 +264,7 @@ const NoteSteppedFormModal = forwardRef<NoteSteppedFormHandle, NoteSteppedFormMo
         const isValid = currentStepContent?.isValid !== false;
 
         return (
-            <div className="modal-bottom-button flex items-center justify-center">
+            <div className="modal-bottom-button flex items-center justify-center pointer-events-auto">
                 <div className="flex items-center justify-center gap-2">
                     {/* 搜索输入框 */}
                     {isValid && isCoffeeBeanStep && isSearching && (
@@ -368,7 +368,7 @@ const NoteSteppedFormModal = forwardRef<NoteSteppedFormHandle, NoteSteppedFormMo
     return (
         <div
             ref={modalRef}
-            className={`fixed inset-0 z-50 px-6 pt-safe-top pb-safe-bottom max-w-[500px] mx-auto bg-neutral-50 dark:bg-neutral-900 transition-opacity duration-200 ${showForm ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'} flex flex-col overflow-hidden`}
+            className={`fixed inset-0 z-50 px-6 pt-safe-top max-w-[500px] mx-auto bg-neutral-50 dark:bg-neutral-900 transition-opacity duration-200 ${showForm ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'} flex flex-col overflow-hidden`}
         >
             {/* 顶部导航栏 */}
             <div className="flex items-center justify-between mb-6">
@@ -388,7 +388,7 @@ const NoteSteppedFormModal = forwardRef<NoteSteppedFormHandle, NoteSteppedFormMo
             </div>
 
             {/* 步骤内容 */}
-            <div className="flex-1 overflow-y-auto pb-4" ref={contentScrollRef}>
+            <div className="flex-1 overflow-y-auto pb-[calc(80px+env(safe-area-inset-bottom))]" ref={contentScrollRef}>
                 {currentStepContent && (
                     <div className="space-y-6">
                         {contentWithSearchProps}
@@ -396,8 +396,10 @@ const NoteSteppedFormModal = forwardRef<NoteSteppedFormHandle, NoteSteppedFormMo
                 )}
             </div>
 
-            {/* 底部按钮区域 */}
-            {renderNextButton()}
+            {/* 底部按钮区域 - 悬浮在内容上方 */}
+            <div className="absolute bottom-0 left-0 right-0 pb-safe-bottom pointer-events-none">
+                {renderNextButton()}
+            </div>
         </div>
     )
 })
