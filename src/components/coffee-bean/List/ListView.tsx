@@ -239,10 +239,10 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
 
     // 删除加载动画，直接显示内容
 
-    // Virtuoso 自定义 List（带间距容器）
+    // Virtuoso 自定义 List - 移除 space-y 避免滚动计算问题
     const VirtList = React.useMemo(() => {
         const Cmp = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(({ style, children, ...props }, ref) => (
-            <div ref={ref} style={style} className="space-y-5" {...props}>
+            <div ref={ref} style={style} {...props}>
                 {children}
             </div>
         ));
@@ -377,7 +377,7 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
                 return (
                     <div
                         ref={setItemRef(bean.id)}
-                        className="group relative cursor-pointer text-neutral-500 dark:text-neutral-400 transition-all duration-300"
+                        className="group relative cursor-pointer text-neutral-500 dark:text-neutral-400 transition-all duration-300 pb-5"
                         onClick={() => onSelect(bean.id, bean)}
                     >
                         <div className="cursor-pointer">

@@ -150,7 +150,7 @@ const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
               data={virtuosoData}
               components={(() => {
                 const ListCmp = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(({ style, children, ...props }, ref) => (
-                  <div ref={ref} style={style} className="space-y-5" {...props}>
+                  <div ref={ref} style={style} {...props}>
                     {children}
                   </div>
                 ));
@@ -161,7 +161,7 @@ const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
               if (item.__type === 'none') {
                 return (
                   <div
-                    className="group relative cursor-pointer text-neutral-500 dark:text-neutral-400 transition-all duration-300"
+                    className="group relative cursor-pointer text-neutral-500 dark:text-neutral-400 transition-all duration-300 pb-5"
                     onClick={() => onSelect(null)}
                   >
                     <div className="cursor-pointer">
@@ -274,7 +274,7 @@ const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
 
               return (
                 <div
-                  className="group relative cursor-pointer text-neutral-500 dark:text-neutral-400 transition-all duration-300"
+                  className="group relative cursor-pointer text-neutral-500 dark:text-neutral-400 transition-all duration-300 pb-5"
                   onClick={() => onSelect(bean)}
                   ref={setItemRef(bean.id)}
                 >
