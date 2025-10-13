@@ -263,7 +263,7 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-white/90 dark:bg-neutral-900/90 backdrop-blur-xs pt-safe-top"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-50/90 dark:bg-neutral-900/90 backdrop-blur-xs pt-safe-top"
           initial="closed"
           animate="open"
           exit="closed"

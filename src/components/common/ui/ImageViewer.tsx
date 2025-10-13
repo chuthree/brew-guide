@@ -34,7 +34,7 @@ const ImageViewer: React.FC<ImageViewerProps> = ({
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.2 }}
-                    className="fixed inset-0 z-100 bg-white/90 dark:bg-neutral-900/90 backdrop-blur-xs flex items-center justify-center p-4"
+                    className="fixed inset-0 z-100 bg-neutral-50/90 dark:bg-neutral-900/90 backdrop-blur-xs flex items-center justify-center p-4"
                     onClick={(e) => {
                         e.stopPropagation()
                         onClose()

@@ -91,7 +91,7 @@ export function LightToast() {
                 transition: 'all 0.2s ease-out'
             }}
         >
-            <div className="bg-white/90 dark:bg-neutral-900/90 backdrop-blur-xl px-5 py-3 rounded-full text-sm font-medium shadow-xl whitespace-nowrap max-w-[280px] text-neutral-900 dark:text-white border border-white/20 dark:border-white/10">
+            <div className="bg-neutral-50/90 dark:bg-neutral-900/90 backdrop-blur-xl px-5 py-3 rounded-full text-sm font-medium shadow-xl whitespace-nowrap max-w-[280px] text-neutral-900 dark:text-white border border-white/20 dark:border-white/10">
                 <div className="flex items-center justify-center gap-2">
                     <div className={`w-2 h-2 rounded-full ${getDotColor()}`} />
                     <span>{currentToast.title}</span>
