@@ -736,12 +736,13 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                                 暂无冲煮记录
                                             </div>
                                         ) : (
-                                <div className="space-y-2 mt-3">
-                                    {relatedNotes.map((note, index) => {
+                                <div className="space-y-2 mt-2">
+                                    {relatedNotes.map((note) => {
                                         const isChangeRecord = isSimpleChangeRecord(note)
 
                                         return (
-                                            <div key={note.id} className="bg-neutral-100 dark:bg-neutral-800 rounded p-1.5">{/* card wrapper */}
+                                            <div key={note.id} className="bg-neutral-100 dark:bg-neutral-800 rounded p-1.5">
+                                                {/* card wrapper */}
                                                 {isChangeRecord ? (
                                                     // 变动记录（快捷扣除和容量调整）
                                                     <div className="flex items-center gap-2 opacity-80">
