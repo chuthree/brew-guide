@@ -736,16 +736,15 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                                 暂无冲煮记录
                                             </div>
                                         ) : (
-                                <div className="space-y-0">
+                                <div className="space-y-2 mt-3">
                                     {relatedNotes.map((note, index) => {
                                         const isChangeRecord = isSimpleChangeRecord(note)
-                                        const isLast = index === relatedNotes.length - 1
 
                                         return (
-                                            <div key={note.id} className={`${!isLast ? 'border-b border-neutral-200/30 dark:border-neutral-800/30' : ''}`}>
+                                            <div key={note.id} className="bg-neutral-100 dark:bg-neutral-800 rounded p-1.5">{/* card wrapper */}
                                                 {isChangeRecord ? (
                                                     // 变动记录（快捷扣除和容量调整）
-                                                    <div className="flex items-center gap-2 py-3 opacity-60">
+                                                    <div className="flex items-center gap-2 opacity-80">
                                                         {/* 变动量标签 */}
                                                         {(() => {
                                                             let displayLabel = '0g'
@@ -770,7 +769,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                                             }
 
                                                             return (
-                                                                <div className="w-12 text-xs font-medium bg-neutral-100 dark:bg-neutral-800 px-1 py-px rounded-xs text-neutral-600 dark:text-neutral-400 text-center whitespace-nowrap overflow-hidden">
+                                                                <div className="w-12 text-xs font-medium bg-neutral-200/50 dark:bg-neutral-700/50 px-1 py-px rounded-xs text-neutral-600 dark:text-neutral-300 text-center whitespace-nowrap overflow-hidden">
                                                                     {displayLabel}
                                                                 </div>
                                                             )
@@ -778,7 +777,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
 
                                                         {/* 备注 - 弹性宽度，占用剩余空间 */}
                                                         {note.notes && (
-                                                            <div className="flex-1 min-w-0 text-xs text-neutral-500 dark:text-neutral-400 truncate" title={note.notes}>
+                                                            <div className="flex-1 min-w-0 text-xs text-neutral-600 dark:text-neutral-300 truncate" title={note.notes}>
                                                                 {note.notes}
                                                             </div>
                                                         )}
@@ -790,13 +789,13 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                                     </div>
                                 ) : (
                                     // 普通冲煮记录
-                                    <div className="py-3 space-y-3">
+                                    <div className="space-y-3">
                                         {/* 图片和标题参数区域 */}
                                         <div className="flex gap-4">
                                             {/* 笔记图片 - 只在有图片时显示 */}
                                             {note.image && (
                                                 <div
-                                                    className="w-14 h-14 relative shrink-0 cursor-pointer rounded border border-neutral-200/50 dark:border-neutral-800/50 bg-neutral-100 dark:bg-neutral-800/20 overflow-hidden"
+                                                    className="w-14 h-14 relative shrink-0 cursor-pointer rounded border border-neutral-200/50 dark:border-neutral-700/40 bg-neutral-100 dark:bg-neutral-800/20 overflow-hidden"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         if (!noteImageErrors[note.id] && note.image) {
@@ -906,10 +905,10 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                                                     {rating.value}
                                                                 </div>
                                                             </div>
-                                                            <div className="h-px w-full overflow-hidden bg-neutral-200/50 dark:bg-neutral-800">
+                                                            <div className="h-px w-full overflow-hidden bg-neutral-200/50 dark:bg-neutral-700/50">
                                                                 <div
                                                                     style={{ width: `${rating.value === 0 ? 0 : (rating.value / 5) * 100}%` }}
-                                                                    className="h-full bg-neutral-600 dark:bg-neutral-400"
+                                                                    className="h-full bg-neutral-600 dark:bg-neutral-300"
                                                                 />
                                                             </div>
                                                         </div>
@@ -930,14 +929,14 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
 
                                         {/* 备注信息 */}
                                         {note.notes && note.notes.trim() && (
-                                            <div className="text-xs font-medium bg-neutral-200/30 dark:bg-neutral-800/40 p-1.5 rounded tracking-widest text-neutral-800/70 dark:text-neutral-400/85 whitespace-pre-line leading-tight">
+                                            <div className="text-xs font-medium bg-neutral-200/50 dark:bg-neutral-700/50 p-1.5 rounded tracking-widest text-neutral-800/70 dark:text-neutral-400/85 whitespace-pre-line leading-tight">
                                                 {note.notes}
                                             </div>
                                         )}
                                     </div>
                                 )}
-                            </div>
-                        )
+                                                </div>
+                                        )
                                     })}
                                             </div>
                                         )}
