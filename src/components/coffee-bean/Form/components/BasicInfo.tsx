@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CornerDownRight } from 'lucide-react';
+import { CornerDownRight, Camera, Image as ImageIcon, X } from 'lucide-react';
 import AutocompleteInput from '@/components/common/forms/AutocompleteInput';
 import { ExtendedCoffeeBean } from '../types';
 import { pageVariants, pageTransition } from '../constants';
@@ -130,47 +130,20 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
     // 处理图片选择逻辑 (相册或拍照)
     const handleImageSelect = async (source: 'camera' | 'gallery') => {
         try {
+            // 获取图片（已经是base64格式）
             const result = await captureImage({ source });
-
-            // 先预览一下图片，以便用户知道已经选择了图片
-            onBeanChange('image')(result.dataUrl);
-
-            // 将 dataUrl 转换为 File 对象
+            
+            // 将 dataUrl 转换为 File 对象并传递给父组件处理
             const response = await fetch(result.dataUrl);
             const blob = await response.blob();
             const file = new File([blob], `image.${result.format}`, { type: `image/${result.format}` });
-
-            // 然后正常处理添加
-            handleFileSelect(file);
-        } catch (error) {
-            // 处理不同类型的错误
-            const errorMessage = error instanceof Error ? error.message : '图片选择失败';
-
-            // 如果是用户取消操作，不显示错误
-            if (errorMessage.includes('取消') || errorMessage.includes('未选择')) {
-                // 静默处理用户取消
-                return;
-            }
-
-            console.error('打开相机/相册失败:', error);
-        }
-    };
-
-    // 处理直接选择文件添加
-    const handleFileSelect = (file: File) => {
-        try {
-            // 检查文件类型
-            if (!file.type.startsWith('image/')) {
-                console.error('不支持的文件类型:', file.type);
-                return;
-            }
-
-            // 选择的文件信息
-
-            // 使用传入的onImageUpload函数处理文件
+            
+            // 使用传入的onImageUpload函数处理文件（父组件会进行压缩）
             onImageUpload(file);
-        } catch (_error) {
-            // 图片添加失败
+        } catch (error) {
+            if (process.env.NODE_ENV === 'development') {
+                console.error('打开相机/相册失败:', error);
+            }
         }
     };
 
@@ -188,72 +161,51 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
                 <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
                     咖啡豆图片
                 </label>
-                <div className="flex items-center justify-center relative">
-                    <div className="w-32 h-32 rounded-lg border-2 border-dashed border-neutral-300 dark:border-neutral-700 flex flex-col items-center justify-center overflow-hidden relative">
-                        {bean.image ? (
-                            <div className="relative w-full h-full">
-                                <Image
-                                    src={bean.image}
-                                    alt="咖啡豆图片"
-                                    className="object-contain"
-                                    fill
-                                    sizes="(max-width: 768px) 100vw, 300px"
-                                />
-                                {/* 操作按钮组 */}
-                                <div className="absolute top-1 right-1 flex space-x-1">
-                                    {/* 删除按钮 */}
-                                    <button
-                                        type="button"
-                                        className="w-6 h-6 bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-800 rounded-full flex items-center justify-center shadow-md hover:bg-red-500 dark:hover:bg-red-500 dark:hover:text-white transition-colors z-10"
-                                        onClick={() => onBeanChange('image')('')}
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                                        </svg>
-                                    </button>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="flex flex-col items-center justify-between h-full w-full">
-                                <div className="flex-1 flex flex-col items-center justify-center">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-neutral-400 dark:text-neutral-600 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                    </svg>
-                                    <span className="text-xs text-neutral-500 dark:text-neutral-400">选择图片</span>
-                                    <span className="text-[9px] text-neutral-400 dark:text-neutral-500 mt-1">200kb以上将自动压缩</span>
-                                </div>
-                                
-                                {/* 图片上传按钮组 */}
-                                <div className="flex w-full mt-auto">
-                                    <button
-                                        type="button"
-                                        onClick={() => handleImageSelect('camera')}
-                                        className="flex-1 py-1 text-xs text-neutral-600 dark:text-neutral-400 border-t-2 border-r-2 border-dashed border-neutral-300 dark:border-neutral-700"
-                                    >
-                                        <span className="flex items-center justify-center">
-                                            <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                                            </svg>
-                                            拍照
-                                        </span>
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => handleImageSelect('gallery')}
-                                        className="flex-1 py-1 text-xs text-neutral-600 dark:text-neutral-400 border-t-2 border-dashed border-neutral-300 dark:border-neutral-700"
-                                    >
-                                        <span className="flex items-center justify-center">
-                                            <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                            </svg>
-                                            相册
-                                        </span>
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                    </div>
+                {/* 笔记图片 */}
+                <div className="flex items-center gap-2 w-full">
+                    {bean.image ? (
+                        /* 有图片时：只显示图片 */
+                        <div className="w-16 h-16 rounded bg-neutral-200/40 dark:bg-neutral-800/60 overflow-hidden relative flex-shrink-0">
+                            <Image
+                                src={bean.image}
+                                alt="咖啡豆图片"
+                                className="object-cover"
+                                fill
+                                sizes="64px"
+                            />
+                            {/* 删除按钮 */}
+                            <button
+                                type="button"
+                                onClick={() => onBeanChange('image')('')}
+                                className="absolute top-1 right-1 w-5 h-5 bg-neutral-800/80 dark:bg-neutral-200/80 text-white dark:text-neutral-800 rounded-full flex items-center justify-center hover:bg-red-500 dark:hover:bg-red-500 dark:hover:text-white transition-colors"
+                            >
+                                <X className="h-2.5 w-2.5" />
+                            </button>
+                        </div>
+                    ) : (
+                        /* 无图片时：显示两个占位框 */
+                        <>
+                            {/* 拍照框 */}
+                            <button
+                                type="button"
+                                onClick={() => handleImageSelect('camera')}
+                                className="w-16 h-16 rounded bg-neutral-200/40 dark:bg-neutral-800/60 flex items-center justify-center hover:bg-neutral-200/60 dark:hover:bg-neutral-800/80 transition-colors flex-shrink-0"
+                                title="拍照"
+                            >
+                                <Camera className="w-5 h-5 text-neutral-300 dark:text-neutral-600" />
+                            </button>
+                            
+                            {/* 相册框 */}
+                            <button
+                                type="button"
+                                onClick={() => handleImageSelect('gallery')}
+                                className="w-16 h-16 rounded bg-neutral-200/40 dark:bg-neutral-800/60 flex items-center justify-center hover:bg-neutral-200/60 dark:hover:bg-neutral-800/80 transition-colors flex-shrink-0"
+                                title="相册"
+                            >
+                                <ImageIcon className="w-5 h-5 text-neutral-300 dark:text-neutral-600" />
+                            </button>
+                        </>
+                    )}
                 </div>
             </div>
 
