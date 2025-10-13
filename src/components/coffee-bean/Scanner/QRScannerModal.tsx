@@ -2,9 +2,8 @@
 
 import React, { useState, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Camera, Upload, X, AlertCircle } from 'lucide-react'
-import { Capacitor } from '@capacitor/core'
-import { scanQRCode, scanImageFile, isScannerAvailable } from '@/lib/utils/qrScannerUtils'
+import { Upload, X, AlertCircle } from 'lucide-react'
+import { scanImageFile } from '@/lib/utils/qrScannerUtils'
 import { isValidBeanQRCode, deserializeBeanFromQRCode } from '@/lib/utils/beanQRCodeUtils'
 import type { CoffeeBean } from '@/types/app'
 
@@ -21,18 +20,11 @@ const QRScannerModal: React.FC<QRScannerModalProps> = ({
 }) => {
     const [isScanning, setIsScanning] = useState(false)
     const [error, setError] = useState<string | null>(null)
-    const [scannerAvailable, setScannerAvailable] = useState<{
-        native: boolean
-        webAPI: boolean
-        fileUpload: boolean
-    } | null>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
 
-    // 检查扫描器可用性，并在关闭时重置状态
+    // 在关闭时重置状态
     React.useEffect(() => {
-        if (isOpen) {
-            isScannerAvailable().then(setScannerAvailable)
-        } else {
+        if (!isOpen) {
             // 关闭时重置所有状态
             setIsScanning(false)
             setError(null)
@@ -87,31 +79,6 @@ const QRScannerModal: React.FC<QRScannerModalProps> = ({
         onScanSuccess(bean)
         handleClose()
     }, [onScanSuccess, handleClose])
-
-    // 相机扫描
-    const handleCameraScan = useCallback(async () => {
-        setError(null)
-        setIsScanning(true)
-
-        try {
-            const result = await scanQRCode()
-
-            if (result.success && result.data) {
-                handleScanResult(result.data)
-            } else if (result.error === 'web_file_required') {
-                // Web 平台需要文件选择
-                setError('Web 端请使用上传图片功能')
-                setIsScanning(false)
-            } else {
-                setError(result.error || '扫描失败')
-                setIsScanning(false)
-            }
-        } catch (error) {
-            console.error('Scan error:', error)
-            setError('扫描失败，请重试')
-            setIsScanning(false)
-        }
-    }, [handleScanResult])
 
     // 文件上传扫描
     const handleFileUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -197,9 +164,7 @@ const QRScannerModal: React.FC<QRScannerModalProps> = ({
                             {/* 说明文字 */}
                             <div className="mb-6">
                                 <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-3">
-                                    {Capacitor.isNativePlatform()
-                                        ? '使用相机扫描咖啡豆二维码，或从相册选择包含二维码的图片'
-                                        : '上传包含咖啡豆二维码的图片进行识别'}
+                                    上传包含咖啡豆二维码的图片进行识别
                                 </p>
                             </div>
 
@@ -215,29 +180,15 @@ const QRScannerModal: React.FC<QRScannerModalProps> = ({
 
                             {/* 操作按钮 */}
                             <div className="flex flex-col gap-3 mb-4">
-                                {/* 相机扫描（仅移动端） */}
-                                {scannerAvailable?.native && (
-                                    <button
-                                        onClick={handleCameraScan}
-                                        disabled={isScanning}
-                                        className="flex items-center justify-center gap-3 py-4 bg-neutral-900 dark:bg-neutral-100 text-neutral-100 dark:text-neutral-900 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
-                                    >
-                                        <Camera className="w-5 h-5" />
-                                        <span className="text-sm font-medium">
-                                            {isScanning ? '扫描中...' : '打开相机扫描'}
-                                        </span>
-                                    </button>
-                                )}
-
                                 {/* 上传图片 */}
                                 <button
                                     onClick={handleUploadClick}
                                     disabled={isScanning}
-                                    className="flex items-center justify-center gap-3 py-4 bg-neutral-200 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+                                    className="flex items-center justify-center gap-3 py-4 bg-neutral-900 dark:bg-neutral-100 text-neutral-100 dark:text-neutral-900 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
                                 >
                                     <Upload className="w-5 h-5" />
                                     <span className="text-sm font-medium">
-                                        {isScanning ? '识别中...' : Capacitor.isNativePlatform() ? '从相册选择' : '上传图片'}
+                                        {isScanning ? '识别中...' : '上传图片'}
                                     </span>
                                 </button>
 

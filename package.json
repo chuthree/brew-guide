@@ -21,7 +21,6 @@
   "dependencies": {
     "@capacitor-community/keep-awake": "^7.1.0",
     "@capacitor-community/safe-area": "7.0.0-alpha.1",
-    "@capacitor-mlkit/barcode-scanning": "^7.3.0",
     "@capacitor/android": "^7.4.2",
     "@capacitor/app": "^7.1.0",
     "@capacitor/browser": "^7.0.1",
@@ -48,8 +47,6 @@
     "@tailwindcss/postcss": "^4.1.11",
     "@types/canvas-confetti": "^1.9.0",
     "@vercel/analytics": "^1.5.0",
-    "@zxing/browser": "^0.1.5",
-    "@zxing/library": "^0.21.3",
     "autoprefixer": "^10.4.21",
     "canvas-confetti": "^1.9.3",
     "class-variance-authority": "^0.7.1",
