@@ -128,8 +128,8 @@ const normalizeRoastLevel = (roastLevel?: string): string => {
     };
 
     return roastMap[roastLevel] ||
-           Object.entries(roastMap).find(([key]) => roastLevel.includes(key))?.[1] ||
-           '中度烘焙';
+        Object.entries(roastMap).find(([key]) => roastLevel.includes(key))?.[1] ||
+        '中度烘焙';
 };
 
 const getInitialCoffeeBeanInfo = (initialData: BrewingNoteFormProps['initialData']) => {
@@ -177,6 +177,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     const [showCoffeeBeanSelector, setShowCoffeeBeanSelector] = useState(false)
     const [coffeeBeanSearchQuery, setCoffeeBeanSearchQuery] = useState('')
     const [originalBeanId] = useState<string | undefined>(initialData.beanId) // 记录原始的beanId用于容量同步
+    const [showFlavorInfo, setShowFlavorInfo] = useState(false) // 控制风味信息的显示
 
     const [formData, setFormData] = useState<FormData>({
         coffeeBeanInfo: getInitialCoffeeBeanInfo(initialData),
@@ -213,7 +214,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         setTimestamp(newTimestamp);
         onTimestampChange?.(newTimestamp);
     };
-    
+
     // 添加方案参数状态 - 分离数值和单位
     const [methodParams, setMethodParams] = useState({
         coffee: getParamValue(initialData?.params?.coffee, 'coffee'),
@@ -238,7 +239,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     const [showEquipmentMethodSelector, setShowEquipmentMethodSelector] = useState(false);
     const [selectedEquipment, setSelectedEquipment] = useState(initialData.equipment || '');
     const [selectedMethod, setSelectedMethod] = useState(initialData.method || '');
-    
+
     const formRef = useRef<HTMLFormElement>(null);
     const [currentSliderValue, setCurrentSliderValue] = useState<number | null>(null);
 
@@ -268,14 +269,14 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         },
         onTouchEnd: () => setCurrentSliderValue(null)
     }), [currentSliderValue]);
-    
+
 
 
     // 创建显示维度（包含历史维度）
     const createDisplayDimensions = async (currentDimensions: FlavorDimension[], tasteData: Record<string, number>) => {
         const historicalLabels = await CustomFlavorDimensionsManager.getHistoricalLabels()
         const displayDims = [...currentDimensions]
-        
+
         // 检查笔记中是否有当前维度列表中不存在的风味评分
         Object.keys(tasteData).forEach(tasteId => {
             const existsInCurrent = currentDimensions.some(d => d.id === tasteId)
@@ -290,7 +291,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                 displayDims.push(historicalDimension)
             }
         })
-        
+
         // 按order排序
         return displayDims.sort((a, b) => a.order - b.order)
     }
@@ -301,7 +302,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
             try {
                 const dimensions = await CustomFlavorDimensionsManager.getFlavorDimensions()
                 setFlavorDimensions(dimensions)
-                
+
                 // 如果是新笔记或者现有笔记缺少风味数据，初始化风味评分
                 if (!initialData.taste || Object.keys(initialData.taste).length === 0) {
                     const emptyTaste = CustomFlavorDimensionsManager.createEmptyTasteRatings(dimensions)
@@ -311,7 +312,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                     // 迁移现有的风味评分数据以确保兼容性
                     const migratedTaste = CustomFlavorDimensionsManager.migrateTasteRatings(initialData.taste, dimensions)
                     setFormData(prev => ({ ...prev, taste: migratedTaste }))
-                    
+
                     // 创建包含历史维度的显示维度列表
                     const displayDims = await createDisplayDimensions(dimensions, initialData.taste)
                     setDisplayDimensions(displayDims)
@@ -330,13 +331,13 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
             const customEvent = event as CustomEvent
             const { dimensions } = customEvent.detail
             setFlavorDimensions(dimensions)
-            
+
             // 更新表单数据以匹配新的维度
             setFormData(prev => {
                 const migratedTaste = CustomFlavorDimensionsManager.migrateTasteRatings(prev.taste, dimensions)
                 return { ...prev, taste: migratedTaste }
             })
-            
+
             // 重新创建显示维度列表
             const currentTaste = formData.taste
             const displayDims = await createDisplayDimensions(dimensions, currentTaste)
@@ -404,16 +405,16 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         // 🎯 处理笔记步骤中的参数修改（直接修改，不触发外部事件）
         const handleUpdateNoteParams = (e: CustomEvent) => {
             const { type, value } = e.detail;
-            
+
             // 根据参数类型计算相关值
             const currentCoffeeNum = parseFloat(extractNumericValue(methodParams.coffee));
             const currentRatioNum = parseFloat(extractNumericValue(methodParams.ratio.split(':')[1]));
-            
+
             switch (type) {
                 case 'coffee': {
                     const coffeeValue = parseFloat(value);
                     if (isNaN(coffeeValue) || coffeeValue <= 0) return;
-                    
+
                     const calculatedWater = Math.round(coffeeValue * currentRatioNum);
                     setMethodParams(prev => ({
                         ...prev,
@@ -430,7 +431,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                 case 'ratio': {
                     const ratioValue = parseFloat(value);
                     if (isNaN(ratioValue) || ratioValue <= 0) return;
-                    
+
                     const calculatedWater = Math.round(currentCoffeeNum * ratioValue);
                     setMethodParams(prev => ({
                         ...prev,
@@ -507,7 +508,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
 
         // 检查咖啡豆信息变化
         const beanChanged = prev.coffeeBean?.id !== current.coffeeBean?.id ||
-                           prev.coffeeBeanInfo?.name !== current.coffeeBeanInfo?.name;
+            prev.coffeeBeanInfo?.name !== current.coffeeBeanInfo?.name;
 
         if (beanChanged) {
             const beanInfo = current.coffeeBean || current.coffeeBeanInfo;
@@ -529,17 +530,17 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
 
         // 检查其他数据变化
         const dataChanged = prev.rating !== current.rating ||
-                           prev.notes !== current.notes ||
-                           prev.image !== current.image ||
-                           JSON.stringify(prev.taste) !== JSON.stringify(current.taste);
+            prev.notes !== current.notes ||
+            prev.image !== current.image ||
+            JSON.stringify(prev.taste) !== JSON.stringify(current.taste);
 
         if (dataChanged) {
             setFormData(prev => ({
                 ...prev,
                 image: typeof current.image === 'string' ? current.image : prev.image,
                 rating: current.rating || prev.rating,
-                taste: current.taste ? 
-                    CustomFlavorDimensionsManager.migrateTasteRatings(current.taste, flavorDimensions) : 
+                taste: current.taste ?
+                    CustomFlavorDimensionsManager.migrateTasteRatings(current.taste, flavorDimensions) :
                     prev.taste,
                 notes: current.notes || prev.notes
             }));
@@ -671,18 +672,18 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     // Inside the component, add a new state for showing/hiding flavor ratings
     const [showFlavorRatings, setShowFlavorRatings] = useState(() => {
         // 初始化时检查是否有任何风味评分大于0
-        const hasTasteValues = initialData?.taste && 
+        const hasTasteValues = initialData?.taste &&
             Object.values(initialData.taste).some(value => value > 0);
-        
+
         // 如果有风味评分，默认展开
         return hasTasteValues || false;
     });
-    
+
     // 监听风味评分变化
     useEffect(() => {
         // 检查任何风味评分是否大于0
         const hasTasteValues = Object.values(formData.taste).some(value => value > 0);
-        
+
         // 如果有任何风味评分大于0，自动展开风味评分区域
         if (hasTasteValues && !showFlavorRatings) {
             setShowFlavorRatings(true);
@@ -693,14 +694,14 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         try {
             // 获取图片（已经是base64格式）
             const result = await captureImage({ source });
-            
+
             // 直接压缩base64图片
             const compressedBase64 = await compressBase64Image(result.dataUrl, {
                 maxSizeMB: 0.1,
                 maxWidthOrHeight: 1200,
                 initialQuality: 0.8
             });
-            
+
             // 更新表单数据
             setFormData(prev => ({ ...prev, image: compressedBase64 }));
         } catch (error) {
@@ -841,8 +842,8 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     const containerClassName = "relative flex flex-col h-full overflow-y-auto overscroll-contain";
 
     return (
-        <form 
-            id={id} 
+        <form
+            id={id}
             ref={formRef}
             onSubmit={handleSubmit}
             className={containerClassName}
@@ -882,6 +883,15 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                                     </span>
                                 ) : (
                                     <span className="ml-1">{selectedCoffeeBean?.name || formData.coffeeBeanInfo.name || '未知咖啡豆'}</span>
+                                )}
+                                {/* 风味入口 - 直接跟在咖啡豆名称后面，仅当有风味信息时显示 */}
+                                {selectedCoffeeBean?.flavor && selectedCoffeeBean.flavor.length > 0 && (
+                                    <span
+                                        onClick={() => setShowFlavorInfo(!showFlavorInfo)}
+                                        className="ml-1 text-xs text-neutral-400 dark:text-neutral-500 hover:text-neutral-600 dark:hover:text-neutral-400 transition-colors cursor-pointer"
+                                    >
+                                        / {showFlavorInfo ? selectedCoffeeBean.flavor.join(' · ') : '显示风味'}
+                                    </span>
                                 )}
                             </>
                         </div>
@@ -931,7 +941,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                             {/* 删除按钮 */}
                             <button
                                 type="button"
-                                onClick={() => setFormData(prev => ({...prev, image: ''}))}
+                                onClick={() => setFormData(prev => ({ ...prev, image: '' }))}
                                 className="absolute top-1 right-1 w-5 h-5 bg-neutral-800/80 dark:bg-neutral-200/80 text-white dark:text-neutral-800 rounded-full flex items-center justify-center hover:bg-red-500 dark:hover:bg-red-500 dark:hover:text-white transition-colors"
                             >
                                 <X className="h-2.5 w-2.5" />
@@ -949,7 +959,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                             >
                                 <Camera className="w-5 h-5 text-neutral-300 dark:text-neutral-600" />
                             </button>
-                            
+
                             {/* 相册框 */}
                             <button
                                 type="button"
@@ -1020,136 +1030,134 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
 
                 {/* 添加方案参数编辑 - 只在编辑记录时显示 */}
                 {initialData?.id && (
-                <div className="space-y-4">
-                    <div className="flex items-center justify-between" data-equipment-method-selector>
-                        <div className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400 flex-1 min-w-0 mr-3">
-                            <span className="truncate block">
-                                方案参数 · {currentEquipmentName}_{currentMethodName}
-                            </span>
-                        </div>
-                        <button
-                            type="button"
-                            onClick={() => setShowEquipmentMethodSelector(!showEquipmentMethodSelector)}
-                            className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400 underline hover:text-neutral-700 dark:hover:text-neutral-300 flex-shrink-0"
-                        >
-                            [ 选择 ]
-                        </button>
-                    </div>
-
-                    {/* 器具和方案选择下拉框 */}
-                    {showEquipmentMethodSelector && (
-                        <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg p-4 space-y-4 bg-neutral-50 dark:bg-neutral-900" data-equipment-method-selector>
-                            {/* 器具选择 */}
-                            <div className="space-y-2">
-                                <div className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
-                                    选择器具
-                                </div>
-                                <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
-                                    {availableEquipments.map((equipment) => (
-                                        <button
-                                            key={equipment.id}
-                                            type="button"
-                                            onClick={() => handleEquipmentSelect(equipment.id)}
-                                            className={`text-xs p-2 rounded border text-left ${
-                                                selectedEquipment === equipment.id
-                                                    ? 'border-neutral-800 dark:border-white bg-neutral-100 dark:bg-neutral-800'
-                                                    : 'border-neutral-200 dark:border-neutral-700 hover:border-neutral-400 dark:hover:border-neutral-500'
-                                            }`}
-                                        >
-                                            {equipment.name}
-                                            {'isCustom' in equipment && equipment.isCustom && (
-                                                <span className="ml-1 text-neutral-400 dark:text-neutral-500">(自定义)</span>
-                                            )}
-                                        </button>
-                                    ))}
-                                </div>
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between" data-equipment-method-selector>
+                            <div className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400 flex-1 min-w-0 mr-3">
+                                <span className="truncate block">
+                                    方案参数 · {currentEquipmentName}_{currentMethodName}
+                                </span>
                             </div>
+                            <button
+                                type="button"
+                                onClick={() => setShowEquipmentMethodSelector(!showEquipmentMethodSelector)}
+                                className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400 underline hover:text-neutral-700 dark:hover:text-neutral-300 flex-shrink-0"
+                            >
+                                [ 选择 ]
+                            </button>
+                        </div>
 
-                            {/* 方案选择 */}
-                            {availableMethods.length > 0 && (
+                        {/* 器具和方案选择下拉框 */}
+                        {showEquipmentMethodSelector && (
+                            <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg p-4 space-y-4 bg-neutral-50 dark:bg-neutral-900" data-equipment-method-selector>
+                                {/* 器具选择 */}
                                 <div className="space-y-2">
                                     <div className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
-                                        选择方案
+                                        选择器具
                                     </div>
-                                    <div className="space-y-1 max-h-32 overflow-y-auto">
-                                        {availableMethods.map((method) => {
-                                            // 优先使用名称作为标识符
-                                            const methodIdentifier = method.name || method.id || '';
-                                            return (
-                                                <button
-                                                    key={method.id || method.name}
-                                                    type="button"
-                                                    onClick={() => handleMethodSelect(methodIdentifier)}
-                                                    className={`w-full text-xs p-2 rounded border text-left ${
-                                                        selectedMethod === methodIdentifier
-                                                            ? 'border-neutral-800 dark:border-white bg-neutral-100 dark:bg-neutral-800'
-                                                            : 'border-neutral-200 dark:border-neutral-700 hover:border-neutral-400 dark:hover:border-neutral-500'
+                                    <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
+                                        {availableEquipments.map((equipment) => (
+                                            <button
+                                                key={equipment.id}
+                                                type="button"
+                                                onClick={() => handleEquipmentSelect(equipment.id)}
+                                                className={`text-xs p-2 rounded border text-left ${selectedEquipment === equipment.id
+                                                        ? 'border-neutral-800 dark:border-white bg-neutral-100 dark:bg-neutral-800'
+                                                        : 'border-neutral-200 dark:border-neutral-700 hover:border-neutral-400 dark:hover:border-neutral-500'
                                                     }`}
-                                                >
-                                                    {method.name}
-                                                </button>
-                                            );
-                                        })}
+                                            >
+                                                {equipment.name}
+                                                {'isCustom' in equipment && equipment.isCustom && (
+                                                    <span className="ml-1 text-neutral-400 dark:text-neutral-500">(自定义)</span>
+                                                )}
+                                            </button>
+                                        ))}
                                     </div>
                                 </div>
-                            )}
-                        </div>
-                    )}
-                    <div className="grid grid-cols-4 gap-6">
-                        <div className="relative">
-                            <input
-                                id="coffee-amount"
-                                name="coffeeAmount"
-                                type="text"
-                                inputMode="decimal"
-                                value={numericValues.coffee}
-                                onChange={(e) => handleCoffeeChange(e.target.value)}
-                                className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-hidden transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none pr-4"
-                                placeholder="15"
-                            />
-                            <span className="absolute right-0 bottom-2 text-xs text-neutral-400 dark:text-neutral-500">g</span>
-                        </div>
-                        <div className="relative overflow-hidden">
-                            <div className="flex items-center">
-                                <span className="text-xs text-neutral-400 dark:text-neutral-500 mr-1 flex-shrink-0">1:</span>
+
+                                {/* 方案选择 */}
+                                {availableMethods.length > 0 && (
+                                    <div className="space-y-2">
+                                        <div className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
+                                            选择方案
+                                        </div>
+                                        <div className="space-y-1 max-h-32 overflow-y-auto">
+                                            {availableMethods.map((method) => {
+                                                // 优先使用名称作为标识符
+                                                const methodIdentifier = method.name || method.id || '';
+                                                return (
+                                                    <button
+                                                        key={method.id || method.name}
+                                                        type="button"
+                                                        onClick={() => handleMethodSelect(methodIdentifier)}
+                                                        className={`w-full text-xs p-2 rounded border text-left ${selectedMethod === methodIdentifier
+                                                                ? 'border-neutral-800 dark:border-white bg-neutral-100 dark:bg-neutral-800'
+                                                                : 'border-neutral-200 dark:border-neutral-700 hover:border-neutral-400 dark:hover:border-neutral-500'
+                                                            }`}
+                                                    >
+                                                        {method.name}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                        <div className="grid grid-cols-4 gap-6">
+                            <div className="relative">
                                 <input
-                                    id="coffee-ratio"
-                                    name="coffeeRatio"
+                                    id="coffee-amount"
+                                    name="coffeeAmount"
                                     type="text"
                                     inputMode="decimal"
-                                    value={numericValues.ratio}
-                                    onChange={(e) => handleRatioChange(e.target.value)}
-                                    className="flex-1 min-w-0 border-b border-neutral-200 bg-transparent py-2 text-xs outline-hidden transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
+                                    value={numericValues.coffee}
+                                    onChange={(e) => handleCoffeeChange(e.target.value)}
+                                    className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-hidden transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none pr-4"
                                     placeholder="15"
                                 />
+                                <span className="absolute right-0 bottom-2 text-xs text-neutral-400 dark:text-neutral-500">g</span>
+                            </div>
+                            <div className="relative overflow-hidden">
+                                <div className="flex items-center">
+                                    <span className="text-xs text-neutral-400 dark:text-neutral-500 mr-1 flex-shrink-0">1:</span>
+                                    <input
+                                        id="coffee-ratio"
+                                        name="coffeeRatio"
+                                        type="text"
+                                        inputMode="decimal"
+                                        value={numericValues.ratio}
+                                        onChange={(e) => handleRatioChange(e.target.value)}
+                                        className="flex-1 min-w-0 border-b border-neutral-200 bg-transparent py-2 text-xs outline-hidden transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
+                                        placeholder="15"
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <input
+                                    id="grind-size"
+                                    name="grindSize"
+                                    type="text"
+                                    value={settings ? formatGrindSize(methodParams.grindSize, settings.grindType, settings.customGrinders as Record<string, unknown>[] | undefined) : methodParams.grindSize}
+                                    onChange={(e) => setMethodParams({ ...methodParams, grindSize: e.target.value })}
+                                    className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-hidden transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
+                                    placeholder={settings && hasSpecificGrindScale(settings.grindType) ? `8${getGrindScaleUnit(settings.grindType)}` : '中细'}
+                                />
+                            </div>
+                            <div className="relative">
+                                <input
+                                    id="water-temperature"
+                                    name="waterTemperature"
+                                    type="text"
+                                    inputMode="decimal"
+                                    value={numericValues.temp}
+                                    onChange={(e) => handleTempChange(e.target.value)}
+                                    className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-hidden transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none pr-8"
+                                    placeholder="92"
+                                />
+                                <span className="absolute right-0 bottom-2 text-xs text-neutral-400 dark:text-neutral-500">°C</span>
                             </div>
                         </div>
-                        <div>
-                            <input
-                                id="grind-size"
-                                name="grindSize"
-                                type="text"
-                                value={settings ? formatGrindSize(methodParams.grindSize, settings.grindType, settings.customGrinders as Record<string, unknown>[] | undefined) : methodParams.grindSize}
-                                onChange={(e) => setMethodParams({...methodParams, grindSize: e.target.value})}
-                                className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-hidden transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none"
-                                placeholder={settings && hasSpecificGrindScale(settings.grindType) ? `8${getGrindScaleUnit(settings.grindType)}` : '中细'}
-                            />
-                        </div>
-                        <div className="relative">
-                            <input
-                                id="water-temperature"
-                                name="waterTemperature"
-                                type="text"
-                                inputMode="decimal"
-                                value={numericValues.temp}
-                                onChange={(e) => handleTempChange(e.target.value)}
-                                className="w-full border-b border-neutral-200 bg-transparent py-2 text-xs outline-hidden transition-colors focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 text-neutral-800 dark:text-neutral-300 rounded-none pr-8"
-                                placeholder="92"
-                            />
-                            <span className="absolute right-0 bottom-2 text-xs text-neutral-400 dark:text-neutral-500">°C</span>
-                        </div>
                     </div>
-                </div>
                 )}
 
                 {/* 风味评分 */}
@@ -1166,7 +1174,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                             [ {showFlavorRatings ? '收起' : '展开'} ]
                         </button>
                     </div>
-                    
+
                     {showFlavorRatings && (
                         <div className="grid grid-cols-2 gap-8">
                             {displayDimensions.map((dimension) => {
