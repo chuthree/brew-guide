@@ -1,9 +1,10 @@
 'use client'
 
 import { useMemo, useCallback } from 'react'
-import { BrewingNote } from '@/lib/core/config'
+import { BrewingNote, CustomEquipment } from '@/lib/core/config'
 import { SortOption } from '../../types'
 import { sortNotes, calculateTotalCoffeeConsumption } from '../../utils'
+import { isSameEquipment, getEquipmentIdByName } from '@/lib/utils/equipmentUtils'
 
 // 简单的debounce实现
 const debounce = <T extends (...args: unknown[]) => unknown>(func: T, wait: number): T => {
@@ -23,6 +24,7 @@ interface UseEnhancedNotesFilteringProps {
     searchQuery?: string
     isSearching?: boolean
     preFilteredNotes?: BrewingNote[]
+    customEquipments?: CustomEquipment[] // 🔥 添加自定义器具列表用于兼容性比较
 }
 
 interface UseEnhancedNotesFilteringReturn {
@@ -47,7 +49,8 @@ export const useEnhancedNotesFiltering = ({
     selectedBean,
     searchQuery = '',
     isSearching = false,
-    preFilteredNotes
+    preFilteredNotes,
+    customEquipments = []
 }: UseEnhancedNotesFilteringProps): UseEnhancedNotesFilteringReturn => {
 
     // 基础筛选：先排序，再应用筛选条件
@@ -66,7 +69,10 @@ export const useEnhancedNotesFiltering = ({
         let filtered = sortedNotes
 
         if (filterMode === 'equipment' && selectedEquipment) {
-            filtered = sortedNotes.filter((note: BrewingNote) => note.equipment === selectedEquipment)
+            // 🔥 使用兼容性比较，支持ID和名称混用
+            filtered = sortedNotes.filter((note: BrewingNote) => {
+                return isSameEquipment(note.equipment, selectedEquipment, customEquipments);
+            })
         } else if (filterMode === 'bean' && selectedBean) {
             // 使用简单的咖啡豆名称匹配
             // 复杂的异步匹配逻辑在外部处理
@@ -74,7 +80,7 @@ export const useEnhancedNotesFiltering = ({
         }
 
         return filtered
-    }, [notes, sortOption, filterMode, selectedEquipment, selectedBean, preFilteredNotes, isSearching, searchQuery])
+    }, [notes, sortOption, filterMode, selectedEquipment, selectedBean, preFilteredNotes, isSearching, searchQuery, customEquipments])
 
     // 显示的笔记（用于UI渲染）
     const displayNotes = useMemo(() => {
@@ -91,19 +97,22 @@ export const useEnhancedNotesFiltering = ({
         return calculateTotalCoffeeConsumption(filteredNotes)
     }, [filteredNotes])
 
-    // 获取可用设备列表（基于原始数据）
+    // 🔥 获取可用设备列表（基于原始数据，规范化为ID避免重复）
     const availableEquipments = useMemo(() => {
         if (!notes || notes.length === 0) return []
         
         const equipmentSet = new Set<string>()
         notes.forEach((note: BrewingNote) => {
             if (note.equipment) {
-                equipmentSet.add(note.equipment)
+                // 规范化为ID（名称会被转为ID，ID保持不变）
+                // 使用getEquipmentIdByName来统一标识
+                const normalizedId = getEquipmentIdByName(note.equipment, customEquipments);
+                equipmentSet.add(normalizedId)
             }
         })
         
         return Array.from(equipmentSet).sort()
-    }, [notes])
+    }, [notes, customEquipments])
 
     // 获取可用咖啡豆列表（基于原始数据）
     const availableBeans = useMemo(() => {

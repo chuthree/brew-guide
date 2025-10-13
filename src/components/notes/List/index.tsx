@@ -158,6 +158,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     // 本地状态管理笔记数据 - 需要在Hook之前声明
     const [notes, setNotes] = useState<BrewingNote[]>([]);
     const [equipmentNames, setEquipmentNames] = useState<Record<string, string>>({});
+    const [customEquipments, setCustomEquipments] = useState<import('@/lib/core/config').CustomEquipment[]>([]);
 
     // 预览容器引用
     const notesContainerRef = useRef<HTMLDivElement>(null)
@@ -169,7 +170,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         type: 'info' as 'success' | 'error' | 'info'
     })
     
-    // 使用增强的笔记筛选Hook
+    // 🔥 使用增强的笔记筛选Hook（传入customEquipments用于兼容性比较）
     const {
         filteredNotes,
         totalCount,
@@ -185,7 +186,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         selectedBean,
         searchQuery,
         isSearching,
-        preFilteredNotes: undefined // 暂时不使用，我们需要重新组织逻辑
+        preFilteredNotes: undefined, // 暂时不使用，我们需要重新组织逻辑
+        customEquipments // 🔥 传入自定义器具列表用于兼容性比较
     })
 
     // 搜索过滤逻辑 - 在Hook之后定义以避免循环依赖
@@ -295,16 +297,19 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
             // 直接更新本地状态
             setNotes(parsedNotes);
 
-            // 获取设备名称映射
+            // 获取设备名称映射和自定义器具列表
             const { equipmentList } = await import('@/lib/core/config');
             const { loadCustomEquipments } = await import('@/lib/managers/customEquipments');
-            const customEquipments = await loadCustomEquipments();
+            const customEquips = await loadCustomEquipments();
+
+            // 🔥 保存到状态以便传递给Hook
+            setCustomEquipments(customEquips);
 
             const namesMap: Record<string, string> = {};
             equipmentList.forEach(equipment => {
                 namesMap[equipment.id] = equipment.name;
             });
-            customEquipments.forEach(equipment => {
+            customEquips.forEach(equipment => {
                 namesMap[equipment.id] = equipment.name;
             });
 

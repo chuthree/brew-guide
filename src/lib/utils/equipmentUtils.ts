@@ -173,4 +173,46 @@ export const getDefaultPourType = (customEquipment: CustomEquipment): string => 
     default:
       return 'circle';
   }
+};
+
+/**
+ * 🔥 兼容性比较：判断两个器具标识是否指向同一个器具
+ * 这个函数可以比较器具ID和器具名称，实现向后兼容
+ * 
+ * @param equipment1 器具标识1（可以是ID或名称）
+ * @param equipment2 器具标识2（可以是ID或名称）
+ * @param customEquipments 自定义器具列表
+ * @returns 是否是同一个器具
+ * 
+ * @example
+ * // 可以比较ID和名称
+ * isSameEquipment('custom-v60-1758387226603-3si62s2', '山文62', customEquipments) // true
+ * // 也可以比较两个ID
+ * isSameEquipment('custom-v60-1758387226603-3si62s2', 'custom-v60-1758387226603-3si62s2', customEquipments) // true
+ * // 或两个名称
+ * isSameEquipment('山文62', '山文62', customEquipments) // true
+ */
+export const isSameEquipment = (
+  equipment1: string | null | undefined,
+  equipment2: string | null | undefined,
+  customEquipments: CustomEquipment[] = []
+): boolean => {
+  if (!equipment1 || !equipment2) return equipment1 === equipment2;
+  
+  // 如果直接相等，返回true
+  if (equipment1 === equipment2) return true;
+  
+  // 获取两个器具的规范化ID（名称会被转为ID，ID保持不变）
+  const id1 = getEquipmentIdByName(equipment1, customEquipments);
+  const id2 = getEquipmentIdByName(equipment2, customEquipments);
+  
+  // 比较规范化后的ID
+  if (id1 === id2) return true;
+  
+  // 获取两个器具的名称（ID会被转为名称，名称保持不变）
+  const name1 = getEquipmentNameById(equipment1, customEquipments);
+  const name2 = getEquipmentNameById(equipment2, customEquipments);
+  
+  // 比较规范化后的名称
+  return name1 === name2;
 }; 

@@ -12,7 +12,7 @@ import { equipmentList, commonMethods, type Method, type CustomEquipment } from 
 import { loadCustomEquipments } from '@/lib/managers/customEquipments'
 import { loadCustomMethods } from '@/lib/managers/customMethods'
 import { formatGrindSize, hasSpecificGrindScale, getGrindScaleUnit } from '@/lib/utils/grindUtils'
-import { getEquipmentNameById } from '@/lib/utils/equipmentUtils'
+import { getEquipmentNameById, getEquipmentIdByName } from '@/lib/utils/equipmentUtils'
 import { SettingsOptions } from '@/components/settings/Settings'
 import { CustomFlavorDimensionsManager, FlavorDimension } from '@/lib/managers/customFlavorDimensions'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/coffee-bean/ui/select'
@@ -368,10 +368,15 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                 const customMethods = await loadCustomMethods();
                 setCustomMethods(customMethods);
 
-                // 如果有选中的器具，加载对应的方案
+                // 🔥 如果有选中的器具，加载对应的方案（兼容ID和名称）
                 if (initialData.equipment) {
-                    const equipmentMethods = customMethods[initialData.equipment] || [];
-                    const commonEquipmentMethods = getCommonMethodsForEquipment(initialData.equipment, allEquipments);
+                    // 规范化器具标识为ID（名称会被转为ID，ID保持不变）
+                    // 使用同步版本的规范化函数
+                    const equipmentId = getEquipmentIdByName(initialData.equipment, customEquips);
+                    
+                    // 使用规范化后的ID查找方案
+                    const equipmentMethods = customMethods[equipmentId] || [];
+                    const commonEquipmentMethods = getCommonMethodsForEquipment(equipmentId, allEquipments);
                     setAvailableMethods([...equipmentMethods, ...commonEquipmentMethods]);
                 }
             } catch (error) {
