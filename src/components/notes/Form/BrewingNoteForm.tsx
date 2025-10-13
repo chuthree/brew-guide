@@ -6,8 +6,8 @@ import Image from 'next/image'
 import type { BrewingNoteData, CoffeeBean } from '@/types/app'
 import AutoResizeTextarea from '@/components/common/forms/AutoResizeTextarea'
 import NoteFormHeader from '@/components/notes/ui/NoteFormHeader'
-import ImagePickerDrawer from '@/components/common/ImagePickerDrawer'
 import { captureImage, compressBase64Image } from '@/lib/utils/imageCapture'
+import { Camera, Image as ImageIcon, X } from 'lucide-react'
 import { equipmentList, commonMethods, type Method, type CustomEquipment } from '@/lib/core/config'
 import { loadCustomEquipments } from '@/lib/managers/customEquipments'
 import { loadCustomMethods } from '@/lib/managers/customMethods'
@@ -190,9 +190,6 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     const [timestamp, setTimestamp] = useState<Date>(
         initialData.timestamp ? new Date(initialData.timestamp) : new Date()
     );
-
-    // 添加图片选择抽屉状态
-    const [showImagePicker, setShowImagePicker] = useState(false)
 
     // 监听initialData.timestamp的变化，同步更新内部状态
     useEffect(() => {
@@ -692,50 +689,26 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         }
     }, [formData.taste, showFlavorRatings]);
 
-    // 处理图片上传和选择
-    const handleImageUpload = useCallback(async (file: File) => {
-        if (!file.type.startsWith('image/')) return;
-
-        const reader = new FileReader();
-        reader.onload = async () => {
-            try {
-                const base64 = reader.result as string;
-                if (!base64) return;
-                const compressedBase64 = await compressBase64Image(base64, {
-                    maxSizeMB: 0.1,
-                    maxWidthOrHeight: 1200,
-                    initialQuality: 0.8
-                });
-                setFormData(prev => ({ ...prev, image: compressedBase64 }));
-            } catch (error) {
-                if (process.env.NODE_ENV === 'development') {
-                    console.error('图片处理失败:', error);
-                }
-            }
-        };
-        reader.onerror = () => {
-            if (process.env.NODE_ENV === 'development') {
-                console.error('文件读取失败');
-            }
-        };
-        reader.readAsDataURL(file);
-    }, []);
-
     const handleImageSelect = useCallback(async (source: 'camera' | 'gallery') => {
         try {
+            // 获取图片（已经是base64格式）
             const result = await captureImage({ source });
-            const response = await fetch(result.dataUrl);
-            const blob = await response.blob();
-            const file = new File([blob], `image.${result.format}`, { type: `image/${result.format}` });
-            handleImageUpload(file);
-            setShowImagePicker(false); // 成功后关闭抽屉
+            
+            // 直接压缩base64图片
+            const compressedBase64 = await compressBase64Image(result.dataUrl, {
+                maxSizeMB: 0.1,
+                maxWidthOrHeight: 1200,
+                initialQuality: 0.8
+            });
+            
+            // 更新表单数据
+            setFormData(prev => ({ ...prev, image: compressedBase64 }));
         } catch (error) {
             if (process.env.NODE_ENV === 'development') {
                 console.error('打开相机/相册失败:', error);
             }
-            setShowImagePicker(false); // 出错也要关闭抽屉
         }
-    }, [handleImageUpload]);
+    }, []);
 
     // 处理咖啡豆选择变化
     const handleCoffeeBeanSelect = useCallback((bean: CoffeeBean | null) => {
@@ -944,48 +917,50 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                 )}
 
                 {/* 笔记图片 */}
-                <div className="space-y-2 w-full">
-                    {/* 合并的图片按钮和显示容器 */}
-                    <div className="w-16 h-16 rounded bg-neutral-200/40 dark:bg-neutral-800/60 overflow-hidden relative">
-                        {formData.image ? (
-                            <>
-                                {/* 显示图片 */}
-                                <div 
-                                    className="w-full h-full cursor-pointer"
-                                    onClick={() => setShowImagePicker(true)}
-                                >
-                                    <Image
-                                        src={formData.image}
-                                        alt="笔记图片"
-                                        className="object-cover"
-                                        fill
-                                        sizes="64px"
-                                    />
-                                </div>
-                                {/* 右上角固定删除按钮 */}
-                                <button
-                                    type="button"
-                                    onClick={() => setFormData(prev => ({...prev, image: ''}))}
-                                    className="absolute top-1 right-1 w-6 h-6 bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-800 rounded-full flex items-center justify-center shadow-md hover:bg-red-500 dark:hover:bg-red-500 dark:hover:text-white transition-colors z-10"
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                                    </svg>
-                                </button>
-                            </>
-                        ) : (
-                            /* 添加图片状态 */
+                <div className="flex items-center gap-2 w-full">
+                    {formData.image ? (
+                        /* 有图片时：只显示图片 */
+                        <div className="w-16 h-16 rounded bg-neutral-200/40 dark:bg-neutral-800/60 overflow-hidden relative flex-shrink-0">
+                            <Image
+                                src={formData.image}
+                                alt="笔记图片"
+                                className="object-cover"
+                                fill
+                                sizes="64px"
+                            />
+                            {/* 删除按钮 */}
                             <button
                                 type="button"
-                                onClick={() => setShowImagePicker(true)}
-                                className="w-full h-full flex items-center justify-center"
+                                onClick={() => setFormData(prev => ({...prev, image: ''}))}
+                                className="absolute top-1 right-1 w-5 h-5 bg-neutral-800/80 dark:bg-neutral-200/80 text-white dark:text-neutral-800 rounded-full flex items-center justify-center hover:bg-red-500 dark:hover:bg-red-500 dark:hover:text-white transition-colors"
                             >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-neutral-300 dark:text-neutral-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                </svg>
+                                <X className="h-2.5 w-2.5" />
                             </button>
-                        )}
-                    </div>
+                        </div>
+                    ) : (
+                        /* 无图片时：显示两个占位框 */
+                        <>
+                            {/* 拍照框 */}
+                            <button
+                                type="button"
+                                onClick={() => handleImageSelect('camera')}
+                                className="w-16 h-16 rounded bg-neutral-200/40 dark:bg-neutral-800/60 flex items-center justify-center hover:bg-neutral-200/60 dark:hover:bg-neutral-800/80 transition-colors flex-shrink-0"
+                                title="拍照"
+                            >
+                                <Camera className="w-5 h-5 text-neutral-300 dark:text-neutral-600" />
+                            </button>
+                            
+                            {/* 相册框 */}
+                            <button
+                                type="button"
+                                onClick={() => handleImageSelect('gallery')}
+                                className="w-16 h-16 rounded bg-neutral-200/40 dark:bg-neutral-800/60 flex items-center justify-center hover:bg-neutral-200/60 dark:hover:bg-neutral-800/80 transition-colors flex-shrink-0"
+                                title="相册"
+                            >
+                                <ImageIcon className="w-5 h-5 text-neutral-300 dark:text-neutral-600" />
+                            </button>
+                        </>
+                    )}
                 </div>                {/* 咖啡豆信息 */}
                 <div className="space-y-4">
                     {/* 只有在新建笔记且没有选择咖啡豆时才显示输入框 */}
@@ -1309,14 +1284,6 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                     </button>
                 </div>
             )}
-
-            {/* 图片选择抽屉 */}
-            <ImagePickerDrawer
-                isOpen={showImagePicker}
-                onClose={() => setShowImagePicker(false)}
-                onSelectCamera={() => handleImageSelect('camera')}
-                onSelectGallery={() => handleImageSelect('gallery')}
-            />
         </form>
     )
 }
