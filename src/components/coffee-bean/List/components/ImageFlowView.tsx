@@ -10,6 +10,7 @@ interface ImageFlowViewProps {
     onEdit?: (bean: ExtendedCoffeeBean) => void
     onDelete?: (bean: ExtendedCoffeeBean) => void
     onShare?: (bean: ExtendedCoffeeBean) => void
+    onRate?: (bean: ExtendedCoffeeBean) => void
 }
 
 
@@ -18,7 +19,8 @@ const ImageFlowView: React.FC<ImageFlowViewProps> = ({
     filteredBeans,
     onEdit,
     onDelete,
-    onShare
+    onShare,
+    onRate
 }) => {
     // 详情弹窗状态 - 简化为单一状态
     const [detailBean, setDetailBean] = useState<ExtendedCoffeeBean | null>(null);
@@ -114,6 +116,7 @@ const ImageFlowView: React.FC<ImageFlowViewProps> = ({
                 onEdit={onEdit}
                 onDelete={onDelete}
                 onShare={onShare}
+                onRate={onRate}
             />
         </div>
     )

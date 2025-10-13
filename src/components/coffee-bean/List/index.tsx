@@ -54,6 +54,7 @@ import { showToast } from '@/components/common/feedback/LightToast'
 import { exportStatsView } from './components/StatsView/StatsExporter'
 import { TempFileManager } from '@/lib/utils/tempFileManager'
 import { exportListPreview } from './components/ListExporter'
+import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore'
 
 // 重命名导入组件以避免混淆
 const CoffeeBeanRanking = _CoffeeBeanRanking;
@@ -245,6 +246,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
             globalCache.initialized = true;
             updateFilteredBeansAndCategories(loadedBeans);
             setIsFirstLoad(false);
+            
+            // 同时更新 Zustand store
+            useCoffeeBeanStore.setState({ beans: loadedBeans });
         } catch (error) {
             console.error("加载咖啡豆数据失败:", error);
             setIsFirstLoad(false);
@@ -630,14 +634,18 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         }
     };
 
+    // 从 Zustand store 获取更新评分的方法
+    const updateBeanRating = useCoffeeBeanStore(state => state.updateBeanRating);
+    
     // 处理评分保存
     const handleRatingSave = async (id: string, ratings: Partial<ExtendedCoffeeBean>) => {
         try {
+            // 使用 Zustand store 更新评分，会自动更新所有订阅的组件
+            await updateBeanRating(id, ratings);
+            
+            // 同时更新本地状态以保持兼容性
             const result = await handleSaveRating(id, ratings);
             if (result.success) {
-                // 自动切换到榜单视图
-                setViewMode(VIEW_OPTIONS.RANKING);
-
                 return result.bean;
             }
             return null;
@@ -1313,6 +1321,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
                             onEdit={handleEdit}
                             onDelete={handleDelete}
                             onShare={(bean) => handleShare(bean, copyText)}
+                            onRate={(bean) => handleShowRatingForm(bean)}
                             onQuickDecrement={handleQuickDecrement}
                             isSearching={isSearching}
                             searchQuery={searchQuery}

@@ -19,6 +19,7 @@ interface InventoryViewProps {
     onEdit: (bean: ExtendedCoffeeBean) => void
     onDelete: (bean: ExtendedCoffeeBean) => void
     onShare: (bean: ExtendedCoffeeBean) => void
+    onRate?: (bean: ExtendedCoffeeBean) => void
     onQuickDecrement: (beanId: string, currentValue: string, decrementAmount: number) => Promise<{ success: boolean, value?: string, reducedToZero?: boolean, error?: Error }>
     isSearching?: boolean
     searchQuery?: string
@@ -48,6 +49,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
     onEdit,
     onDelete,
     onShare,
+    onRate,
     onQuickDecrement,
     isSearching = false,
     searchQuery = '',
@@ -124,6 +126,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                 onEdit={onEdit}
                 onDelete={onDelete}
                 onShare={onShare}
+                onRate={onRate}
             />
         )
     }
@@ -201,6 +204,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                 onEdit={onEdit}
                 onDelete={onDelete}
                 onShare={onShare}
+                onRate={onRate}
             />
         </div>
     );

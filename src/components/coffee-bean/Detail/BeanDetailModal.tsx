@@ -15,6 +15,7 @@ import ActionMenu from '@/components/coffee-bean/ui/action-menu'
 import { ArrowRight } from 'lucide-react'
 import { BREWING_EVENTS } from '@/lib/brewing/constants'
 import { useFlavorDimensions } from '@/lib/hooks/useFlavorDimensions'
+import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore'
 
 // 动态导入 ImageViewer 组件
 const ImageViewer = dynamic(() => import('@/components/common/ui/ImageViewer'), {
@@ -70,17 +71,27 @@ interface BeanDetailModalProps {
     onEdit?: (bean: CoffeeBean) => void
     onDelete?: (bean: CoffeeBean) => void
     onShare?: (bean: CoffeeBean) => void
+    onRate?: (bean: CoffeeBean) => void
 }
 
 const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     isOpen,
-    bean,
+    bean: propBean,
     onClose,
     searchQuery = '',
     onEdit,
     onDelete,
-    onShare
+    onShare,
+    onRate
 }) => {
+    // 从 store 获取最新的咖啡豆数据
+    const storeBean = useCoffeeBeanStore(state => 
+        propBean ? state.beans.find(b => b.id === propBean.id) : null
+    )
+    
+    // 优先使用 store 中的最新数据，如果没有则使用 props 传入的数据
+    const bean = storeBean || propBean
+    
     const [imageError, setImageError] = useState(false)
     const [relatedNotes, setRelatedNotes] = useState<BrewingNote[]>([])
     const [isLoadingNotes, setIsLoadingNotes] = useState(false)
@@ -657,7 +668,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                             </div>
 
                             {bean ? (
-                                <div className="px-6 space-y-4">
+                                <div className="px-6 space-y-3">
                                     {/* 咖啡豆信息 */}
                                     <div className="space-y-3">
                                         {/* 基础信息 */}
@@ -717,6 +728,60 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                                         <HighlightText text={bean.notes} highlight={searchQuery} className="text-neutral-700 dark:text-neutral-300" />
                                                     ) : bean.notes}
                                                 </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* 个人榜单评价区域 */}
+                                    <div className="border-t border-neutral-200/40 dark:border-neutral-800/40 pt-3">
+                                        {bean.overallRating && bean.overallRating > 0 ? (
+                                            // 已有评价，显示评价内容
+                                            <div 
+                                                className="space-y-3 cursor-pointer"
+                                                onClick={() => {
+                                                    if (onRate && bean) {
+                                                        onRate(bean)
+                                                    }
+                                                }}
+                                            >
+                                                {/* 评分 */}
+                                                <div className="flex items-start">
+                                                    <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400 w-16 flex-shrink-0">
+                                                        评分
+                                                    </div>
+                                                    <div className="text-xs font-medium ml-4 text-neutral-800 dark:text-neutral-100">
+                                                        {bean.overallRating} / 5
+                                                    </div>
+                                                </div>
+                                                
+                                                {/* 评价备注 */}
+                                                {bean.ratingNotes && bean.ratingNotes.trim() && (
+                                                    <div className="flex items-start">
+                                                        <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400 w-16 flex-shrink-0">
+                                                            评价
+                                                        </div>
+                                                        <div className="text-xs font-medium ml-4 text-neutral-800 dark:text-neutral-100 whitespace-pre-line">
+                                                            {bean.ratingNotes}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            // 无评价，显示添加提示
+                                            <div className="flex items-start">
+                                                <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400 w-16 flex-shrink-0">
+                                                    评分
+                                                </div>
+                                                <button
+                                                    onClick={() => {
+                                                        if (onRate && bean) {
+                                                            onRate(bean)
+                                                        }
+                                                    }}
+                                                    className="ml-4 text-xs font-medium text-neutral-400 dark:text-neutral-500 hover:text-neutral-600 dark:hover:text-neutral-400 transition-colors"
+                                                >
+                                                    + 添加评价
+                                                </button>
                                             </div>
                                         )}
                                     </div>
