@@ -85,13 +85,13 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(({
 
                 if (beanData.roastLevel.includes('浅')) {
                     startDay = 7;
-                    endDay = 30;
+                    endDay = 60;
                 } else if (beanData.roastLevel.includes('深')) {
                     startDay = 14;
-                    endDay = 60;
+                    endDay = 90;
                 } else {
                     startDay = 10;
-                    endDay = 30;
+                    endDay = 60;
                 }
 
                 beanData.startDay = startDay;
@@ -319,7 +319,8 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(({
                 [field]: safeValue
             }));
 
-            setTimeout(() => autoSetFlavorPeriod(), 100);
+            // 传入新的烘焙度值，避免使用过时的state
+            setTimeout(() => autoSetFlavorPeriod(safeValue), 100);
         } else {
             setBean(prev => ({
                 ...prev,
@@ -489,9 +490,12 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(({
     };
 
     // 根据烘焙度自动设置赏味期参数
-    const autoSetFlavorPeriod = async () => {
+    const autoSetFlavorPeriod = async (roastLevelOverride?: string) => {
         let startDay = 0;
         let endDay = 0;
+
+        // 使用传入的烘焙度参数，如果没有则使用当前的bean.roastLevel
+        const currentRoastLevel = roastLevelOverride || bean.roastLevel || '';
 
         try {
             // 从设置中获取自定义赏味期配置
@@ -505,13 +509,13 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(({
             }
 
             // 使用工具函数获取烘焙度对应的赏味期设置
-            const flavorPeriod = getDefaultFlavorPeriodByRoastLevelSync(bean.roastLevel || '', customFlavorPeriod);
+            const flavorPeriod = getDefaultFlavorPeriodByRoastLevelSync(currentRoastLevel, customFlavorPeriod);
             startDay = flavorPeriod.startDay;
             endDay = flavorPeriod.endDay;
         } catch (error) {
             console.error('获取自定义赏味期设置失败，使用默认值:', error);
             // 使用工具函数获取默认值
-            const flavorPeriod = getDefaultFlavorPeriodByRoastLevelSync(bean.roastLevel || '');
+            const flavorPeriod = getDefaultFlavorPeriodByRoastLevelSync(currentRoastLevel);
             startDay = flavorPeriod.startDay;
             endDay = flavorPeriod.endDay;
         }

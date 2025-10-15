@@ -139,9 +139,9 @@ export const defaultSettings: SettingsOptions = {
     },
     // 默认自定义赏味期设置 - 初始为空，使用预设值
     customFlavorPeriod: {
-        light: { startDay: 0, endDay: 0 }, // 0表示使用预设值：养豆7天，赏味期30天
-        medium: { startDay: 0, endDay: 0 }, // 0表示使用预设值：养豆10天，赏味期30天
-        dark: { startDay: 0, endDay: 0 } // 0表示使用预设值：养豆14天，赏味期60天
+        light: { startDay: 0, endDay: 0 }, // 0表示使用预设值：养豆7天，赏味期60天
+        medium: { startDay: 0, endDay: 0 }, // 0表示使用预设值：养豆10天，赏味期60天
+        dark: { startDay: 0, endDay: 0 } // 0表示使用预设值：养豆14天，赏味期90天
     },
     // 备份提醒设置默认为undefined，将在运行时从BackupReminderUtils加载
     backupReminder: undefined,

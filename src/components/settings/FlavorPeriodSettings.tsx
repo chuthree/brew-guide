@@ -114,7 +114,7 @@ const FlavorPeriodSettings: React.FC<FlavorPeriodSettingsProps> = ({
                                         type="number"
                                         min="0"
                                         max="30"
-                                        value={settings.customFlavorPeriod?.light?.startDay === 0 ? '' : settings.customFlavorPeriod?.light?.startDay || ''}
+                                        value={settings.customFlavorPeriod?.light?.startDay || ''}
                                         placeholder="7"
                                         onChange={(e) => {
                                             const value = e.target.value === '' ? 0 : parseInt(e.target.value) || 0;
@@ -130,8 +130,8 @@ const FlavorPeriodSettings: React.FC<FlavorPeriodSettingsProps> = ({
                                         type="number"
                                         min="1"
                                         max="90"
-                                        value={settings.customFlavorPeriod?.light?.endDay === 0 ? '' : settings.customFlavorPeriod?.light?.endDay || ''}
-                                        placeholder="30"
+                                        value={settings.customFlavorPeriod?.light?.endDay || ''}
+                                        placeholder="60"
                                         onChange={(e) => {
                                             const value = e.target.value === '' ? 0 : parseInt(e.target.value) || 0;
                                             updateCustomFlavorPeriod('light', 'endDay', value);
@@ -155,7 +155,7 @@ const FlavorPeriodSettings: React.FC<FlavorPeriodSettingsProps> = ({
                                         type="number"
                                         min="0"
                                         max="30"
-                                        value={settings.customFlavorPeriod?.medium?.startDay === 0 ? '' : settings.customFlavorPeriod?.medium?.startDay || ''}
+                                        value={settings.customFlavorPeriod?.medium?.startDay || ''}
                                         placeholder="10"
                                         onChange={(e) => {
                                             const value = e.target.value === '' ? 0 : parseInt(e.target.value) || 0;
@@ -171,8 +171,8 @@ const FlavorPeriodSettings: React.FC<FlavorPeriodSettingsProps> = ({
                                         type="number"
                                         min="1"
                                         max="90"
-                                        value={settings.customFlavorPeriod?.medium?.endDay === 0 ? '' : settings.customFlavorPeriod?.medium?.endDay || ''}
-                                        placeholder="30"
+                                        value={settings.customFlavorPeriod?.medium?.endDay || ''}
+                                        placeholder="60"
                                         onChange={(e) => {
                                             const value = e.target.value === '' ? 0 : parseInt(e.target.value) || 0;
                                             updateCustomFlavorPeriod('medium', 'endDay', value);
@@ -196,7 +196,7 @@ const FlavorPeriodSettings: React.FC<FlavorPeriodSettingsProps> = ({
                                         type="number"
                                         min="0"
                                         max="30"
-                                        value={settings.customFlavorPeriod?.dark?.startDay === 0 ? '' : settings.customFlavorPeriod?.dark?.startDay || ''}
+                                        value={settings.customFlavorPeriod?.dark?.startDay || ''}
                                         placeholder="14"
                                         onChange={(e) => {
                                             const value = e.target.value === '' ? 0 : parseInt(e.target.value) || 0;
@@ -212,8 +212,8 @@ const FlavorPeriodSettings: React.FC<FlavorPeriodSettingsProps> = ({
                                         type="number"
                                         min="1"
                                         max="90"
-                                        value={settings.customFlavorPeriod?.dark?.endDay === 0 ? '' : settings.customFlavorPeriod?.dark?.endDay || ''}
-                                        placeholder="60"
+                                        value={settings.customFlavorPeriod?.dark?.endDay || ''}
+                                        placeholder="90"
                                         onChange={(e) => {
                                             const value = e.target.value === '' ? 0 : parseInt(e.target.value) || 0;
                                             updateCustomFlavorPeriod('dark', 'endDay', value);
@@ -226,7 +226,7 @@ const FlavorPeriodSettings: React.FC<FlavorPeriodSettingsProps> = ({
                         </div>
                     </div>
                      <h3 className="text-sm text-neutral-500 dark:text-neutral-400 mt-3">
-                        添加咖啡豆时，会根据烘焙度自动设定赏味期。
+                        添加咖啡豆时，会根据烘焙度自动设定赏味期。空值表示使用默认预设（灰色数字）。
                     </h3>
                 </div>
             </div>

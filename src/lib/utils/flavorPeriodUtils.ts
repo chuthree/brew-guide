@@ -30,22 +30,26 @@ export const getCustomFlavorPeriodSettings = async () => {
 export const getDefaultFlavorPeriodByRoastLevel = async (roastLevel: string) => {
     const customFlavorPeriod = await getCustomFlavorPeriodSettings();
     
+    // 定义硬编码的预设值（当用户未自定义时使用）
+    const PRESET_VALUES = {
+        light: { startDay: 7, endDay: 60 },
+        medium: { startDay: 10, endDay: 60 },
+        dark: { startDay: 14, endDay: 90 }
+    };
+    
     if (roastLevel?.includes('浅')) {
-        return {
-            startDay: customFlavorPeriod!.light.startDay,
-            endDay: customFlavorPeriod!.light.endDay
-        };
+        const startDay = customFlavorPeriod!.light.startDay || PRESET_VALUES.light.startDay;
+        const endDay = customFlavorPeriod!.light.endDay || PRESET_VALUES.light.endDay;
+        return { startDay, endDay };
     } else if (roastLevel?.includes('深')) {
-        return {
-            startDay: customFlavorPeriod!.dark.startDay,
-            endDay: customFlavorPeriod!.dark.endDay
-        };
+        const startDay = customFlavorPeriod!.dark.startDay || PRESET_VALUES.dark.startDay;
+        const endDay = customFlavorPeriod!.dark.endDay || PRESET_VALUES.dark.endDay;
+        return { startDay, endDay };
     } else {
         // 默认为中烘焙
-        return {
-            startDay: customFlavorPeriod!.medium.startDay,
-            endDay: customFlavorPeriod!.medium.endDay
-        };
+        const startDay = customFlavorPeriod!.medium.startDay || PRESET_VALUES.medium.startDay;
+        const endDay = customFlavorPeriod!.medium.endDay || PRESET_VALUES.medium.endDay;
+        return { startDay, endDay };
     }
 };
 
@@ -53,22 +57,26 @@ export const getDefaultFlavorPeriodByRoastLevel = async (roastLevel: string) => 
 export const getDefaultFlavorPeriodByRoastLevelSync = (roastLevel: string, customFlavorPeriod?: SettingsOptions['customFlavorPeriod']) => {
     const flavorPeriod = customFlavorPeriod || defaultSettings.customFlavorPeriod;
     
+    // 定义硬编码的预设值（当用户未自定义时使用）
+    const PRESET_VALUES = {
+        light: { startDay: 7, endDay: 60 },
+        medium: { startDay: 10, endDay: 60 },
+        dark: { startDay: 14, endDay: 90 }
+    };
+    
     if (roastLevel?.includes('浅')) {
-        return {
-            startDay: flavorPeriod!.light.startDay,
-            endDay: flavorPeriod!.light.endDay
-        };
+        const startDay = flavorPeriod!.light.startDay || PRESET_VALUES.light.startDay;
+        const endDay = flavorPeriod!.light.endDay || PRESET_VALUES.light.endDay;
+        return { startDay, endDay };
     } else if (roastLevel?.includes('深')) {
-        return {
-            startDay: flavorPeriod!.dark.startDay,
-            endDay: flavorPeriod!.dark.endDay
-        };
+        const startDay = flavorPeriod!.dark.startDay || PRESET_VALUES.dark.startDay;
+        const endDay = flavorPeriod!.dark.endDay || PRESET_VALUES.dark.endDay;
+        return { startDay, endDay };
     } else {
         // 默认为中烘焙
-        return {
-            startDay: flavorPeriod!.medium.startDay,
-            endDay: flavorPeriod!.medium.endDay
-        };
+        const startDay = flavorPeriod!.medium.startDay || PRESET_VALUES.medium.startDay;
+        const endDay = flavorPeriod!.medium.endDay || PRESET_VALUES.medium.endDay;
+        return { startDay, endDay };
     }
 };
 
