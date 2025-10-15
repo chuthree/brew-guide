@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager'
 import CoffeeBeanFormModal from '@/components/coffee-bean/Form/Modal'
 import CoffeeBeanRatingModal from '../Rating/Modal'
@@ -41,11 +41,18 @@ import {
     saveSelectedOriginPreference,
     saveSelectedFlavorPeriodPreference,
     saveSelectedRoasterPreference,
-    saveImageFlowModePreference
+    saveImageFlowModePreference,
+    isBeanEmpty
 } from './globalCache'
 import { useBeanOperations } from './hooks/useBeanOperations'
 import { useEnhancedBeanFiltering } from './hooks/useEnhancedBeanFiltering'
-import { FlavorPeriodStatus } from '@/lib/utils/beanVarietyUtils'
+import { 
+    FlavorPeriodStatus,
+    beanHasVariety,
+    beanHasOrigin,
+    beanHasFlavorPeriodStatus,
+    beanHasRoaster
+} from '@/lib/utils/beanVarietyUtils'
 import ViewSwitcher from './components/ViewSwitcher'
 import InventoryView from './components/InventoryView'
 import StatsView from './components/StatsView'
@@ -216,6 +223,47 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         showEmptyBeans,
         sortOption
     })
+
+    // 计算每种类型的咖啡豆数量（用于类型筛选显示）
+    const { espressoCount, filterCount } = useMemo(() => {
+        // 根据当前的筛选条件计算不同类型的豆子数量
+        let beansToCount = beans
+
+        // 如果不显示空豆子，先过滤掉空豆子
+        if (!showEmptyBeans) {
+            beansToCount = beansToCount.filter(bean => !isBeanEmpty(bean))
+        }
+
+        // 根据当前的分类模式和选择进行筛选
+        switch (filterMode) {
+            case 'variety':
+                if (selectedVariety) {
+                    beansToCount = beansToCount.filter(bean => beanHasVariety(bean, selectedVariety))
+                }
+                break
+            case 'origin':
+                if (selectedOrigin) {
+                    beansToCount = beansToCount.filter(bean => beanHasOrigin(bean, selectedOrigin))
+                }
+                break
+            case 'flavorPeriod':
+                if (selectedFlavorPeriod) {
+                    beansToCount = beansToCount.filter(bean => beanHasFlavorPeriodStatus(bean, selectedFlavorPeriod))
+                }
+                break
+            case 'roaster':
+                if (selectedRoaster) {
+                    beansToCount = beansToCount.filter(bean => beanHasRoaster(bean, selectedRoaster))
+                }
+                break
+        }
+
+        // 统计不同类型的豆子数量
+        const espresso = beansToCount.filter(bean => bean.beanType === 'espresso').length
+        const filter = beansToCount.filter(bean => bean.beanType === 'filter').length
+
+        return { espressoCount: espresso, filterCount: filter }
+    }, [beans, showEmptyBeans, filterMode, selectedVariety, selectedOrigin, selectedFlavorPeriod, selectedRoaster])
 
 
 
@@ -1301,6 +1349,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
                 originalTotalWeight={calculateOriginalTotalWeight()}
                 // 新增导出相关属性
                 onExportPreview={handleExportPreview}
+                // 新增类型统计属性
+                espressoCount={espressoCount}
+                filterCount={filterCount}
             />
 
             {/* 内容区域 - 可滚动 */}

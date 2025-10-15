@@ -149,12 +149,16 @@ interface BeanTypeFilterProps {
     selectedBeanType?: BeanType
     onBeanTypeChange?: (type: BeanType) => void
     showAll?: boolean
+    espressoCount?: number
+    filterCount?: number
 }
 
 const BeanTypeFilter: React.FC<BeanTypeFilterProps> = ({
     selectedBeanType,
     onBeanTypeChange,
-    showAll = true
+    showAll = true,
+    espressoCount = 0,
+    filterCount = 0
 }) => (
     <div>
         <div className="text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-2">类型</div>
@@ -169,13 +173,15 @@ const BeanTypeFilter: React.FC<BeanTypeFilterProps> = ({
             )}
             <FilterButton
                 isActive={selectedBeanType === 'espresso'}
-                onClick={() => onBeanTypeChange?.('espresso')}
+                onClick={() => espressoCount > 0 && onBeanTypeChange?.('espresso')}
+                className={espressoCount === 0 ? 'opacity-30 cursor-not-allowed' : ''}
             >
                 {showAll ? '意式' : '意式豆'}
             </FilterButton>
             <FilterButton
                 isActive={selectedBeanType === 'filter'}
-                onClick={() => onBeanTypeChange?.('filter')}
+                onClick={() => filterCount > 0 && onBeanTypeChange?.('filter')}
+                className={filterCount === 0 ? 'opacity-30 cursor-not-allowed' : ''}
             >
                 {showAll ? '手冲' : '手冲豆'}
             </FilterButton>
@@ -273,6 +279,9 @@ interface ViewSwitcherProps {
     availableRoasters?: string[]
     // 新增导出相关props
     onExportPreview?: () => void
+    // 新增类型统计props
+    espressoCount?: number
+    filterCount?: number
 }
 
 const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
@@ -324,6 +333,9 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
     availableRoasters = [],
     // 新增导出相关参数
     onExportPreview,
+    // 新增类型统计参数
+    espressoCount = 0,
+    filterCount = 0,
 }) => {
     // 添加极简模式状态
     const [_isMinimalistMode, setIsMinimalistMode] = useState(false);
@@ -1010,6 +1022,8 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                                                     selectedBeanType={selectedBeanType}
                                                     onBeanTypeChange={onBeanTypeChange}
                                                     showAll={true}
+                                                    espressoCount={espressoCount}
+                                                    filterCount={filterCount}
                                                 />
 
                                                 {/* 显示选项区域 */}
