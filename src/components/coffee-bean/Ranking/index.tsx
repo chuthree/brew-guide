@@ -4,7 +4,6 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { Virtuoso } from 'react-virtuoso'
 import { CoffeeBean } from '@/types/app'
 import { getBloggerBeans, BloggerBean, BloggerType, getVideoUrlFromEpisode } from '@/lib/utils/csvUtils'
-import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore'
 
 // 用于检测当前运行环境
 const isMobileApp = typeof window !== 'undefined' && 
@@ -132,12 +131,6 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
     const [refreshTrigger, setRefreshTrigger] = useState(0)
     const [year, setYear] = useState<2023 | 2024 | 2025>(externalYear || 2025)
     const [blogger, setBlogger] = useState<BloggerType>(externalBlogger)
-    
-    // 订阅 Zustand store 的咖啡豆数据，当数据变化时触发重新加载
-    // 我们只订阅数组长度的变化，以避免不必要的重新渲染
-    const storeBeans = useCoffeeBeanStore(state => state.beans)
-
-
 
     // 监听外部传入的筛选类型变化
     useEffect(() => {
@@ -322,10 +315,10 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
         }
     }, [isOpen, beanType, sortOption, viewMode, year, blogger, sortBeans]);
 
-    // 在组件挂载、isOpen变化、beanType变化、sortOption变化、refreshTrigger变化或store数据变化时重新加载数据
+    // 在组件挂载、isOpen变化、beanType变化、sortOption变化或refreshTrigger变化时重新加载数据
     useEffect(() => {
         loadBeans();
-    }, [loadBeans, refreshTrigger, storeBeans]);
+    }, [loadBeans, refreshTrigger]);
 
 
 

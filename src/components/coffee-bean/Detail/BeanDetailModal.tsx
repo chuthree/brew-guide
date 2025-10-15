@@ -89,12 +89,15 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     onShare,
     onRate
 }) => {
-    // 从 store 获取最新的咖啡豆数据
-    const storeBean = useCoffeeBeanStore(state => 
-        propBean ? state.beans.find(b => b.id === propBean.id) : null
-    )
+    // 使用 Zustand Store 获取实时更新的咖啡豆数据
+    // 性能优化：只在当前咖啡豆的 ID 匹配时订阅，避免不必要的重新渲染
+    const storeBean = useCoffeeBeanStore(state => {
+        if (!propBean) return null
+        return state.beans.find(b => b.id === propBean.id) || null
+    })
     
-    // 优先使用 store 中的最新数据，如果没有则使用 props 传入的数据
+    // 优先使用 Store 中的实时数据，如果 Store 中没有（初始加载时），则使用 props 传入的数据
+    // 这样既能保证初始显示，又能实时响应数据变化
     const bean = storeBean || propBean
     
     const [imageError, setImageError] = useState(false)

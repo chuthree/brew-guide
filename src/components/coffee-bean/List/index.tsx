@@ -247,7 +247,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
             updateFilteredBeansAndCategories(loadedBeans);
             setIsFirstLoad(false);
             
-            // 同时更新 Zustand store
+            // 同步更新 Zustand Store，确保详情页能实时响应数据变化
             useCoffeeBeanStore.setState({ beans: loadedBeans });
         } catch (error) {
             console.error("加载咖啡豆数据失败:", error);
@@ -359,6 +359,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
                 setBeans(loadedBeans);
                 globalCache.beans = loadedBeans;
                 updateFilteredBeansAndCategories(loadedBeans);
+                
+                // 同步更新 Zustand Store
+                useCoffeeBeanStore.setState({ beans: loadedBeans });
             } catch (error) {
                 console.error("重新加载咖啡豆数据失败:", error);
             }
@@ -394,6 +397,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
                 globalCache.beans = loadedBeans;
                 globalCache.initialized = true;
                 updateFilteredBeansAndCategories(loadedBeans);
+                
+                // 同步更新 Zustand Store
+                useCoffeeBeanStore.setState({ beans: loadedBeans });
             } catch (error) {
                 console.error('挂载时加载数据失败:', error);
             }
@@ -634,16 +640,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         }
     };
 
-    // 从 Zustand store 获取更新评分的方法
-    const updateBeanRating = useCoffeeBeanStore(state => state.updateBeanRating);
-    
     // 处理评分保存
     const handleRatingSave = async (id: string, ratings: Partial<ExtendedCoffeeBean>) => {
         try {
-            // 使用 Zustand store 更新评分，会自动更新所有订阅的组件
-            await updateBeanRating(id, ratings);
-            
-            // 同时更新本地状态以保持兼容性
             const result = await handleSaveRating(id, ratings);
             if (result.success) {
                 return result.bean;
