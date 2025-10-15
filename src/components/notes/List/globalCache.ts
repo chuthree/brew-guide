@@ -1,10 +1,29 @@
 import { BrewingNote } from '@/lib/core/config';
-import { SortOption, SORT_OPTIONS } from '../types';
+import { SortOption, SORT_OPTIONS, DateGroupingMode } from '../types';
 import { getStringState, saveStringState } from '@/lib/core/statePersistence';
 import { calculateTotalCoffeeConsumption as calculateConsumption, formatConsumption as formatConsumptionUtil } from '../utils';
 
 // 模块名称
 const MODULE_NAME = 'brewing-notes';
+
+// 根据日期粒度格式化日期字符串
+const formatDateByGrouping = (timestamp: number, groupingMode: DateGroupingMode): string => {
+    const date = new Date(timestamp)
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    
+    switch (groupingMode) {
+        case 'year':
+            return `${year}`
+        case 'month':
+            return `${year}-${month}`
+        case 'day':
+            return `${year}-${month}-${day}`
+        default:
+            return `${year}-${month}`
+    }
+}
 
 // 创建全局缓存对象，确保跨组件实例保持数据
 export const globalCache: {
@@ -14,10 +33,13 @@ export const globalCache: {
     beanPrices: Record<string, number>;
     selectedEquipment: string | null;
     selectedBean: string | null;
-    filterMode: 'equipment' | 'bean';
+    selectedDate: string | null;
+    filterMode: 'equipment' | 'bean' | 'date';
+    dateGroupingMode: DateGroupingMode;
     sortOption: SortOption;
     availableEquipments: string[];
     availableBeans: string[];
+    availableDates: string[];
     initialized: boolean;
     totalConsumption: number;
     isLoading: boolean;
@@ -28,10 +50,13 @@ export const globalCache: {
     beanPrices: {},
     selectedEquipment: null,
     selectedBean: null,
+    selectedDate: null,
     filterMode: 'equipment',
+    dateGroupingMode: 'month', // 默认按月分组
     sortOption: SORT_OPTIONS.TIME_DESC,
     availableEquipments: [],
     availableBeans: [],
+    availableDates: [],
     initialized: false,
     totalConsumption: 0,
     isLoading: false
@@ -59,14 +84,25 @@ export const saveSelectedBeanPreference = (value: string | null): void => {
     saveStringState(MODULE_NAME, 'selectedBean', value || '');
 };
 
+// 从localStorage读取选中的日期
+export const getSelectedDatePreference = (): string | null => {
+    const value = getStringState(MODULE_NAME, 'selectedDate', '');
+    return value === '' ? null : value;
+};
+
+// 保存选中的日期到localStorage
+export const saveSelectedDatePreference = (value: string | null): void => {
+    saveStringState(MODULE_NAME, 'selectedDate', value || '');
+};
+
 // 从localStorage读取过滤模式
-export const getFilterModePreference = (): 'equipment' | 'bean' => {
+export const getFilterModePreference = (): 'equipment' | 'bean' | 'date' => {
     const value = getStringState(MODULE_NAME, 'filterMode', 'equipment');
-    return value as 'equipment' | 'bean';
+    return value as 'equipment' | 'bean' | 'date';
 };
 
 // 保存过滤模式到localStorage
-export const saveFilterModePreference = (value: 'equipment' | 'bean'): void => {
+export const saveFilterModePreference = (value: 'equipment' | 'bean' | 'date'): void => {
     saveStringState(MODULE_NAME, 'filterMode', value);
 };
 
@@ -81,6 +117,17 @@ export const saveSortOptionPreference = (value: SortOption): void => {
     saveStringState(MODULE_NAME, 'sortOption', value);
 };
 
+// 从localStorage读取日期分组模式
+export const getDateGroupingModePreference = (): DateGroupingMode => {
+    const value = getStringState(MODULE_NAME, 'dateGroupingMode', 'month');
+    return value as DateGroupingMode;
+};
+
+// 保存日期分组模式到localStorage
+export const saveDateGroupingModePreference = (value: DateGroupingMode): void => {
+    saveStringState(MODULE_NAME, 'dateGroupingMode', value);
+};
+
 // 初始化全局缓存数据
 export const initializeGlobalCache = async (): Promise<void> => {
     if (globalCache.isLoading) return;
@@ -91,8 +138,10 @@ export const initializeGlobalCache = async (): Promise<void> => {
         // 初始化首选项
         globalCache.selectedEquipment = getSelectedEquipmentPreference();
         globalCache.selectedBean = getSelectedBeanPreference();
+        globalCache.selectedDate = getSelectedDatePreference();
         globalCache.filterMode = getFilterModePreference();
         globalCache.sortOption = getSortOptionPreference();
+        globalCache.dateGroupingMode = getDateGroupingModePreference();
         
         // 从存储加载数据
         const { Storage } = await import('@/lib/core/storage');
@@ -105,7 +154,7 @@ export const initializeGlobalCache = async (): Promise<void> => {
         globalCache.totalConsumption = totalConsumption;
         
         // 并行加载设备数据和收集ID
-        const [namesMap, equipmentIds, beanNames] = await Promise.all([
+        const [namesMap, equipmentIds, beanNames, datesList] = await Promise.all([
             // 获取设备名称映射
             (async () => {
                 const map: Record<string, string> = {};
@@ -141,6 +190,20 @@ export const initializeGlobalCache = async (): Promise<void> => {
                         .map(note => note.coffeeBeanInfo?.name)
                         .filter(Boolean) as string[]
                 ));
+            })(),
+            
+            // 收集日期列表（按年-月）
+            (async () => {
+                const dateSet = new Set<string>();
+                parsedNotes.forEach(note => {
+                    if (note.timestamp) {
+                        const date = new Date(note.timestamp);
+                        const yearMonth = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                        dateSet.add(yearMonth);
+                    }
+                });
+                // 按日期降序排序（最新的在前）
+                return Array.from(dateSet).sort((a, b) => b.localeCompare(a));
             })()
         ]);
         
@@ -148,6 +211,7 @@ export const initializeGlobalCache = async (): Promise<void> => {
         globalCache.equipmentNames = namesMap;
         globalCache.availableEquipments = equipmentIds;
         globalCache.availableBeans = beanNames;
+        globalCache.availableDates = datesList;
         
         // 应用过滤器设置过滤后的笔记
         let filteredNotes = parsedNotes;
@@ -157,6 +221,12 @@ export const initializeGlobalCache = async (): Promise<void> => {
             filteredNotes = parsedNotes.filter(note => 
                 note.coffeeBeanInfo?.name === globalCache.selectedBean
             );
+        } else if (globalCache.filterMode === 'date' && globalCache.selectedDate) {
+            filteredNotes = parsedNotes.filter(note => {
+                if (!note.timestamp) return false;
+                const noteDate = formatDateByGrouping(note.timestamp, globalCache.dateGroupingMode);
+                return noteDate === globalCache.selectedDate;
+            });
         }
         globalCache.filteredNotes = filteredNotes;
         

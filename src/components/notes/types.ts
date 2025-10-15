@@ -14,6 +14,16 @@ export const SORT_OPTIONS = {
 
 export type SortOption = typeof SORT_OPTIONS[keyof typeof SORT_OPTIONS];
 
+// 日期分组粒度类型
+export type DateGroupingMode = 'year' | 'month' | 'day';
+
+// 日期分组粒度的显示名称
+export const DATE_GROUPING_LABELS: Record<DateGroupingMode, string> = {
+    year: '按年',
+    month: '按月',
+    day: '按日',
+};
+
 // 排序选项的显示名称
 export const SORT_LABELS: Record<SortOption, string> = {
     [SORT_OPTIONS.TIME_DESC]: '时间',
@@ -59,15 +69,20 @@ export interface NoteItemProps {
 
 // 筛选标签页属性
 export interface FilterTabsProps {
-    filterMode: 'equipment' | 'bean'
+    filterMode: 'equipment' | 'bean' | 'date'
     selectedEquipment: string | null
     selectedBean: string | null
+    selectedDate: string | null
+    dateGroupingMode: DateGroupingMode
     availableEquipments: string[]
     availableBeans: string[]
+    availableDates: string[]
     equipmentNames: Record<string, string>
-    onFilterModeChange: (mode: 'equipment' | 'bean') => void
+    onFilterModeChange: (mode: 'equipment' | 'bean' | 'date') => void
     onEquipmentClick: (equipment: string | null) => void
     onBeanClick: (bean: string | null) => void
+    onDateClick: (date: string | null) => void
+    onDateGroupingModeChange: (mode: DateGroupingMode) => void
     isSearching?: boolean
     searchQuery?: string
     onSearchClick?: () => void

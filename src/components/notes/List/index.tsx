@@ -27,9 +27,9 @@ import Toast from '../ui/Toast'
 import BrewingNoteEditModal from '../Form/BrewingNoteEditModal'
 import ChangeRecordEditModal from '../Form/ChangeRecordEditModal'
 import { BrewingNoteData } from '@/types/app'
-import { globalCache, saveSelectedEquipmentPreference, saveSelectedBeanPreference, saveFilterModePreference, saveSortOptionPreference, calculateTotalCoffeeConsumption, formatConsumption, getSelectedEquipmentPreference, getSelectedBeanPreference, getFilterModePreference, getSortOptionPreference } from './globalCache'
+import { globalCache, saveSelectedEquipmentPreference, saveSelectedBeanPreference, saveSelectedDatePreference, saveFilterModePreference, saveSortOptionPreference, saveDateGroupingModePreference, calculateTotalCoffeeConsumption, formatConsumption, getSelectedEquipmentPreference, getSelectedBeanPreference, getSelectedDatePreference, getFilterModePreference, getSortOptionPreference, getDateGroupingModePreference } from './globalCache'
 import ListView from './ListView'
-import { SortOption } from '../types'
+import { SortOption, DateGroupingMode } from '../types'
 import { exportSelectedNotes } from '../Share/NotesExporter'
 import { useEnhancedNotesFiltering } from './hooks/useEnhancedNotesFiltering'
 import { extractExtractionTime, sortNotes } from '../utils'
@@ -49,9 +49,11 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
 }) => {
     // 用于跟踪用户选择 - 从本地存储初始化
     const [sortOption, setSortOption] = useState<SortOption>(getSortOptionPreference())
-    const [filterMode, setFilterMode] = useState<'equipment' | 'bean'>(getFilterModePreference())
+    const [filterMode, setFilterMode] = useState<'equipment' | 'bean' | 'date'>(getFilterModePreference())
     const [selectedEquipment, setSelectedEquipment] = useState<string | null>(getSelectedEquipmentPreference())
     const [selectedBean, setSelectedBean] = useState<string | null>(getSelectedBeanPreference())
+    const [selectedDate, setSelectedDate] = useState<string | null>(getSelectedDatePreference())
+    const [dateGroupingMode, setDateGroupingMode] = useState<DateGroupingMode>(getDateGroupingModePreference())
     
     // 搜索排序状态 - 独立于普通排序，可选的
     const [searchSortOption, setSearchSortOption] = useState<SortOption | null>(null)
@@ -177,6 +179,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         totalConsumption,
         availableEquipments,
         availableBeans,
+        availableDates,
         debouncedUpdateFilters
     } = useEnhancedNotesFiltering({
         notes: notes,
@@ -184,6 +187,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         filterMode,
         selectedEquipment,
         selectedBean,
+        selectedDate,
+        dateGroupingMode,
         searchQuery,
         isSearching,
         preFilteredNotes: undefined, // 暂时不使用，我们需要重新组织逻辑
@@ -761,19 +766,22 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     }, [viewMode, isImageFlowMode, isDateImageFlowMode, lastImageFlowType, setImageFlowMode, updateViewMode]);
 
     // 处理过滤模式变化
-    const handleFilterModeChange = (mode: 'equipment' | 'bean') => {
+    const handleFilterModeChange = (mode: 'equipment' | 'bean' | 'date') => {
         setFilterMode(mode);
         saveFilterModePreference(mode);
         // 已保存到本地存储
         // 切换模式时清空选择
         setSelectedEquipment(null);
         setSelectedBean(null);
+        setSelectedDate(null);
         saveSelectedEquipmentPreference(null);
         saveSelectedBeanPreference(null);
+        saveSelectedDatePreference(null);
         globalCache.selectedEquipment = null;
         globalCache.selectedBean = null;
+        globalCache.selectedDate = null;
         // 数据筛选由 useEnhancedNotesFiltering Hook 自动处理
-        debouncedUpdateFilters({ filterMode: mode, selectedEquipment: null, selectedBean: null });
+        debouncedUpdateFilters({ filterMode: mode, selectedEquipment: null, selectedBean: null, selectedDate: null });
     };
 
     // 处理设备选择变化
@@ -792,6 +800,29 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         // 已保存到本地存储
         // 数据筛选由 useEnhancedNotesFiltering Hook 自动处理
         debouncedUpdateFilters({ selectedBean: bean });
+    }, [debouncedUpdateFilters]);
+
+    // 处理日期选择变化
+    const handleDateClick = useCallback((date: string | null) => {
+        setSelectedDate(date);
+        saveSelectedDatePreference(date);
+        // 已保存到本地存储
+        // 数据筛选由 useEnhancedNotesFiltering Hook 自动处理
+        debouncedUpdateFilters({ selectedDate: date });
+    }, [debouncedUpdateFilters]);
+
+    // 处理日期分组模式变化
+    const handleDateGroupingModeChange = useCallback((mode: DateGroupingMode) => {
+        setDateGroupingMode(mode);
+        saveDateGroupingModePreference(mode);
+        // 已保存到本地存储
+        // 切换粒度时清空选择的日期，因为格式会改变
+        setSelectedDate(null);
+        saveSelectedDatePreference(null);
+        globalCache.dateGroupingMode = mode;
+        globalCache.selectedDate = null;
+        // 数据筛选由 useEnhancedNotesFiltering Hook 自动处理
+        debouncedUpdateFilters({ dateGroupingMode: mode, selectedDate: null });
     }, [debouncedUpdateFilters]);
     
     // 处理笔记选择/取消选择
@@ -976,12 +1007,19 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                                             : `${imageFlowStats.count} 条图片记录，已消耗 ${formatConsumption(imageFlowStats.consumption)}`;
                                     }
 
+                                    // 如果没有任何笔记数据，不显示统计信息
+                                    if (notes.length === 0) {
+                                        return "";
+                                    }
+
                                     // 普通模式下显示总记录统计
-                                    return totalCount === 0
-                                        ? "" // 当没有笔记记录时不显示统计信息
-                                        : (isSearching && searchQuery.trim())
-                                            ? `${searchFilteredNotes.length} 条记录，已消耗 ${formatConsumption(currentConsumption)}`
-                                            : `${totalCount} 条记录，已消耗 ${formatConsumption(currentConsumption)}`;
+                                    // 搜索模式：显示搜索结果的统计
+                                    if (isSearching && searchQuery.trim()) {
+                                        return `${searchFilteredNotes.length} 条记录，已消耗 ${formatConsumption(currentConsumption)}`;
+                                    }
+                                    
+                                    // 普通模式：显示当前筛选结果的统计
+                                    return `${totalCount} 条记录，已消耗 ${formatConsumption(currentConsumption)}`;
                                 })()}
                             </div>
                         </div>
@@ -991,12 +1029,17 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                             filterMode={filterMode}
                             selectedEquipment={selectedEquipment}
                             selectedBean={selectedBean}
+                            selectedDate={selectedDate}
+                            dateGroupingMode={dateGroupingMode}
                             availableEquipments={imageFlowAvailableOptions.equipments}
                             availableBeans={imageFlowAvailableOptions.beans}
+                            availableDates={availableDates}
                             equipmentNames={equipmentNames}
                             onFilterModeChange={handleFilterModeChange}
                             onEquipmentClick={handleEquipmentClick}
                             onBeanClick={handleBeanClick}
+                            onDateClick={handleDateClick}
+                            onDateGroupingModeChange={handleDateGroupingModeChange}
                             isSearching={isSearching}
                             searchQuery={searchQuery}
                             onSearchClick={handleSearchClick}

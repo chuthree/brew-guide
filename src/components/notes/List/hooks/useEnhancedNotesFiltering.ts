@@ -2,7 +2,7 @@
 
 import { useMemo, useCallback } from 'react'
 import { BrewingNote, CustomEquipment } from '@/lib/core/config'
-import { SortOption } from '../../types'
+import { SortOption, DateGroupingMode } from '../../types'
 import { sortNotes, calculateTotalCoffeeConsumption } from '../../utils'
 import { isSameEquipment, getEquipmentIdByName } from '@/lib/utils/equipmentUtils'
 
@@ -15,12 +15,33 @@ const debounce = <T extends (...args: unknown[]) => unknown>(func: T, wait: numb
     }) as T
 }
 
+// 根据日期粒度格式化日期字符串
+const formatDateByGrouping = (timestamp: number, groupingMode: DateGroupingMode): string => {
+    const date = new Date(timestamp)
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    
+    switch (groupingMode) {
+        case 'year':
+            return `${year}`
+        case 'month':
+            return `${year}-${month}`
+        case 'day':
+            return `${year}-${month}-${day}`
+        default:
+            return `${year}-${month}`
+    }
+}
+
 interface UseEnhancedNotesFilteringProps {
     notes: BrewingNote[]
     sortOption: SortOption
-    filterMode: 'equipment' | 'bean'
+    filterMode: 'equipment' | 'bean' | 'date'
     selectedEquipment: string | null
     selectedBean: string | null
+    selectedDate: string | null
+    dateGroupingMode: DateGroupingMode
     searchQuery?: string
     isSearching?: boolean
     preFilteredNotes?: BrewingNote[]
@@ -34,6 +55,7 @@ interface UseEnhancedNotesFilteringReturn {
     totalConsumption: number
     availableEquipments: string[]
     availableBeans: string[]
+    availableDates: string[]
     debouncedUpdateFilters: (filters: Partial<UseEnhancedNotesFilteringProps>) => void
 }
 
@@ -47,6 +69,8 @@ export const useEnhancedNotesFiltering = ({
     filterMode,
     selectedEquipment,
     selectedBean,
+    selectedDate,
+    dateGroupingMode,
     searchQuery = '',
     isSearching = false,
     preFilteredNotes,
@@ -77,10 +101,17 @@ export const useEnhancedNotesFiltering = ({
             // 使用简单的咖啡豆名称匹配
             // 复杂的异步匹配逻辑在外部处理
             filtered = sortedNotes.filter((note: BrewingNote) => note.coffeeBeanInfo?.name === selectedBean)
+        } else if (filterMode === 'date' && selectedDate) {
+            // 按日期筛选 - 根据dateGroupingMode使用不同的匹配格式
+            filtered = sortedNotes.filter((note: BrewingNote) => {
+                if (!note.timestamp) return false
+                const noteDate = formatDateByGrouping(note.timestamp, dateGroupingMode)
+                return noteDate === selectedDate
+            })
         }
 
         return filtered
-    }, [notes, sortOption, filterMode, selectedEquipment, selectedBean, preFilteredNotes, isSearching, searchQuery, customEquipments])
+    }, [notes, sortOption, filterMode, selectedEquipment, selectedBean, selectedDate, dateGroupingMode, preFilteredNotes, isSearching, searchQuery, customEquipments])
 
     // 显示的笔记（用于UI渲染）
     const displayNotes = useMemo(() => {
@@ -128,6 +159,22 @@ export const useEnhancedNotesFiltering = ({
         return Array.from(beanSet).sort()
     }, [notes])
 
+    // 获取可用日期列表（基于原始数据，根据dateGroupingMode按不同粒度分组）
+    const availableDates = useMemo(() => {
+        if (!notes || notes.length === 0) return []
+        
+        const dateSet = new Set<string>()
+        notes.forEach((note: BrewingNote) => {
+            if (note.timestamp) {
+                const dateStr = formatDateByGrouping(note.timestamp, dateGroupingMode)
+                dateSet.add(dateStr)
+            }
+        })
+        
+        // 按日期降序排序（最新的在前）
+        return Array.from(dateSet).sort((a, b) => b.localeCompare(a))
+    }, [notes, dateGroupingMode])
+
     // 防抖的筛选更新函数
     const debouncedUpdateFilters = useCallback((_filters: Partial<UseEnhancedNotesFilteringProps>) => {
         const debouncedHandler = debounce(() => {
@@ -146,6 +193,7 @@ export const useEnhancedNotesFiltering = ({
         totalConsumption,
         availableEquipments,
         availableBeans,
+        availableDates,
         debouncedUpdateFilters
     }
 }

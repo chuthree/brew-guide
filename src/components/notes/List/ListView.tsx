@@ -12,7 +12,7 @@ import DateImageFlowView from './DateImageFlowView'
 interface NotesListViewProps {
     selectedEquipment: string | null;
     selectedBean: string | null;
-    filterMode: 'equipment' | 'bean';
+    filterMode: 'equipment' | 'bean' | 'date';
     onNoteClick: (note: BrewingNote) => void;
     onDeleteNote: (noteId: string) => Promise<void>;
     isShareMode?: boolean;

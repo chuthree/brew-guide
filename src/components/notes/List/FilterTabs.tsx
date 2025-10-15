@@ -1,7 +1,7 @@
 'use client'
 
 import React, { memo, useRef, useState, useEffect, useCallback } from 'react'
-import { FilterTabsProps, SORT_OPTIONS, SortOption } from '../types'
+import { FilterTabsProps, SORT_OPTIONS, SortOption, DateGroupingMode, DATE_GROUPING_LABELS } from '../types'
 import { X, AlignLeft } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 
@@ -32,6 +32,87 @@ const FILTER_ANIMATION = {
         }
     }
 }
+
+// 日期格式化函数 - 将日期字符串转换为更友好的显示（支持不同粒度）
+const formatDateLabel = (dateStr: string, groupingMode: DateGroupingMode): string => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+    const currentDay = now.getDate();
+    
+    if (groupingMode === 'year') {
+        // 按年分组
+        const year = parseInt(dateStr, 10);
+        if (year === currentYear) {
+            return '今年';
+        }
+        return `${year}年`;
+    } else if (groupingMode === 'month') {
+        // 按月分组
+        const [year, month] = dateStr.split('-');
+        const monthNum = parseInt(month, 10);
+        const yearNum = parseInt(year, 10);
+        
+        if (yearNum === currentYear) {
+            if (monthNum === currentMonth) {
+                return '本月';
+            }
+            return `${monthNum}月`;
+        }
+        return `${year}年${monthNum}月`;
+    } else {
+        // 按日分组 - 优化显示逻辑
+        const [year, month, day] = dateStr.split('-');
+        const yearNum = parseInt(year, 10);
+        const monthNum = parseInt(month, 10);
+        const dayNum = parseInt(day, 10);
+        
+        // 计算日期差
+        const targetDate = new Date(yearNum, monthNum - 1, dayNum);
+        const todayDate = new Date(currentYear, currentMonth - 1, currentDay);
+        const diffTime = todayDate.getTime() - targetDate.getTime();
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        
+        // 今天
+        if (diffDays === 0) {
+            return '今天';
+        }
+        // 昨天
+        else if (diffDays === 1) {
+            return '昨天';
+        }
+        // 前天
+        else if (diffDays === 2) {
+            return '前天';
+        }
+        // 其他日期：当年显示月/日，其他年份显示年/月/日
+        else if (yearNum === currentYear) {
+            return `${monthNum}/${dayNum}`;
+        }
+        else {
+            return `${year}/${monthNum}/${dayNum}`;
+        }
+    }
+}
+
+// 生成今天的日期字符串（根据粒度）
+const getTodayDateString = (groupingMode: DateGroupingMode): string => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    
+    switch (groupingMode) {
+        case 'year':
+            return `${year}`;
+        case 'month':
+            return `${year}-${month}`;
+        case 'day':
+            return `${year}-${month}-${day}`;
+        default:
+            return `${year}-${month}`;
+    }
+};
 
 // 可复用的标签按钮组件
 interface TabButtonProps {
@@ -116,8 +197,8 @@ const getSortOrderLabel = (type: string, order: string) => {
 
 // 筛选模式选择组件
 interface FilterModeSectionProps {
-    filterMode: 'equipment' | 'bean'
-    onFilterModeChange: (mode: 'equipment' | 'bean') => void
+    filterMode: 'equipment' | 'bean' | 'date'
+    onFilterModeChange: (mode: 'equipment' | 'bean' | 'date') => void
 }
 
 const FilterModeSection: React.FC<FilterModeSectionProps> = ({ filterMode, onFilterModeChange }) => {
@@ -136,6 +217,46 @@ const FilterModeSection: React.FC<FilterModeSectionProps> = ({ filterMode, onFil
                     onClick={() => onFilterModeChange('bean')}
                 >
                     按豆子
+                </FilterButton>
+                <FilterButton
+                    isActive={filterMode === 'date'}
+                    onClick={() => onFilterModeChange('date')}
+                >
+                    按日期
+                </FilterButton>
+            </div>
+        </div>
+    );
+};
+
+// 日期粒度选择组件
+interface DateGroupingSectionProps {
+    dateGroupingMode: DateGroupingMode
+    onDateGroupingModeChange: (mode: DateGroupingMode) => void
+}
+
+const DateGroupingSection: React.FC<DateGroupingSectionProps> = ({ dateGroupingMode, onDateGroupingModeChange }) => {
+    return (
+        <div>
+            <div className="text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-2">时间分组</div>
+            <div className="flex items-center flex-wrap gap-2">
+                <FilterButton
+                    isActive={dateGroupingMode === 'year'}
+                    onClick={() => onDateGroupingModeChange('year')}
+                >
+                    {DATE_GROUPING_LABELS.year}
+                </FilterButton>
+                <FilterButton
+                    isActive={dateGroupingMode === 'month'}
+                    onClick={() => onDateGroupingModeChange('month')}
+                >
+                    {DATE_GROUPING_LABELS.month}
+                </FilterButton>
+                <FilterButton
+                    isActive={dateGroupingMode === 'day'}
+                    onClick={() => onDateGroupingModeChange('day')}
+                >
+                    {DATE_GROUPING_LABELS.day}
                 </FilterButton>
             </div>
         </div>
@@ -473,12 +594,17 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
     filterMode,
     selectedEquipment,
     selectedBean,
+    selectedDate,
+    dateGroupingMode,
     availableEquipments,
     availableBeans,
+    availableDates,
     equipmentNames,
     onFilterModeChange,
     onEquipmentClick,
     onBeanClick,
+    onDateClick,
+    onDateGroupingModeChange,
     isSearching = false,
     searchQuery = '',
     onSearchClick,
@@ -522,7 +648,9 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
     const scrollToSelected = useCallback(() => {
         if (!scrollContainerRef.current) return
 
-        const selectedId = filterMode === 'equipment' ? selectedEquipment : selectedBean
+        const selectedId = filterMode === 'equipment' ? selectedEquipment 
+            : filterMode === 'bean' ? selectedBean 
+            : selectedDate
         if (!selectedId) return
 
         const selectedElement = scrollContainerRef.current.querySelector(`[data-tab="${selectedId}"]`)
@@ -545,14 +673,14 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
             left: Math.max(0, targetScrollLeft),
             behavior: 'smooth'
         })
-    }, [filterMode, selectedEquipment, selectedBean])
+    }, [filterMode, selectedEquipment, selectedBean, selectedDate])
 
     // 当选中项变化时滚动到选中项
     useEffect(() => {
         // 延迟执行以确保DOM已更新
         const timer = setTimeout(scrollToSelected, 100)
         return () => clearTimeout(timer)
-    }, [selectedEquipment, selectedBean, filterMode, scrollToSelected])
+    }, [selectedEquipment, selectedBean, selectedDate, filterMode, scrollToSelected])
 
     // 添加滚动事件监听
     useEffect(() => {
@@ -601,8 +729,8 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
         };
     }, [isFilterExpanded]);
 
-    // 如果没有可筛选的设备或咖啡豆，不渲染任何内容
-    if (availableEquipments.length === 0 && availableBeans.length === 0) return null;
+    // 如果没有可筛选的设备或咖啡豆或日期，不渲染任何内容
+    if (availableEquipments.length === 0 && availableBeans.length === 0 && availableDates.length === 0) return null;
 
     return (
         <div className="relative" ref={filterExpandRef}>
@@ -614,12 +742,18 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                             {/* 固定在左侧的"全部"和筛选按钮 */}
                             <div className="flex items-center bg-neutral-50 dark:bg-neutral-900 z-10 pr-1 relative flex-shrink-0">
                                 <TabButton
-                                    isActive={(filterMode === 'equipment' && selectedEquipment === null) || (filterMode === 'bean' && selectedBean === null)}
+                                    isActive={
+                                        (filterMode === 'equipment' && selectedEquipment === null) || 
+                                        (filterMode === 'bean' && selectedBean === null) ||
+                                        (filterMode === 'date' && selectedDate === null)
+                                    }
                                     onClick={() => {
                                         if (filterMode === 'equipment') {
                                             onEquipmentClick(null);
-                                        } else {
+                                        } else if (filterMode === 'bean') {
                                             onBeanClick(null);
+                                        } else {
+                                            onDateClick(null);
                                         }
                                     }}
                                     className="mr-1"
@@ -680,7 +814,7 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                                             {equipmentNames[equipment] || equipment}
                                         </TabButton>
                                     ))
-                                ) : (
+                                ) : filterMode === 'bean' ? (
                                     availableBeans.map(bean => (
                                         <TabButton
                                             key={bean}
@@ -692,6 +826,91 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                                             {bean}
                                         </TabButton>
                                     ))
+                                ) : (
+                                    <>
+                                        {/* 按日模式下，始终显示"今天"、"昨天"、"前天"快捷选项 */}
+                                        {dateGroupingMode === 'day' && (() => {
+                                            const todayStr = getTodayDateString('day');
+                                            const now = new Date();
+                                            
+                                            // 计算昨天
+                                            const yesterday = new Date(now);
+                                            yesterday.setDate(yesterday.getDate() - 1);
+                                            const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+                                            
+                                            // 计算前天
+                                            const dayBeforeYesterday = new Date(now);
+                                            dayBeforeYesterday.setDate(dayBeforeYesterday.getDate() - 2);
+                                            const dayBeforeYesterdayStr = `${dayBeforeYesterday.getFullYear()}-${String(dayBeforeYesterday.getMonth() + 1).padStart(2, '0')}-${String(dayBeforeYesterday.getDate()).padStart(2, '0')}`;
+                                            
+                                            return (
+                                                <>
+                                                    {/* 今天 - 始终显示 */}
+                                                    <TabButton
+                                                        key="today-shortcut"
+                                                        isActive={selectedDate === todayStr}
+                                                        onClick={() => selectedDate !== todayStr && onDateClick(todayStr)}
+                                                        className="mr-3"
+                                                        dataTab={todayStr}
+                                                    >
+                                                        今天
+                                                    </TabButton>
+                                                    
+                                                    {/* 昨天 - 始终显示 */}
+                                                    <TabButton
+                                                        key="yesterday-shortcut"
+                                                        isActive={selectedDate === yesterdayStr}
+                                                        onClick={() => selectedDate !== yesterdayStr && onDateClick(yesterdayStr)}
+                                                        className="mr-3"
+                                                        dataTab={yesterdayStr}
+                                                    >
+                                                        昨天
+                                                    </TabButton>
+                                                    
+                                                    {/* 前天 - 始终显示 */}
+                                                    <TabButton
+                                                        key="day-before-yesterday-shortcut"
+                                                        isActive={selectedDate === dayBeforeYesterdayStr}
+                                                        onClick={() => selectedDate !== dayBeforeYesterdayStr && onDateClick(dayBeforeYesterdayStr)}
+                                                        className="mr-3"
+                                                        dataTab={dayBeforeYesterdayStr}
+                                                    >
+                                                        前天
+                                                    </TabButton>
+                                                </>
+                                            );
+                                        })()}
+                                        
+                                        {/* 其他日期 - 过滤掉今天、昨天、前天（避免重复） */}
+                                        {availableDates
+                                            .filter(date => {
+                                                if (dateGroupingMode !== 'day') return true;
+                                                const todayStr = getTodayDateString('day');
+                                                const now = new Date();
+                                                
+                                                const yesterday = new Date(now);
+                                                yesterday.setDate(yesterday.getDate() - 1);
+                                                const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+                                                
+                                                const dayBeforeYesterday = new Date(now);
+                                                dayBeforeYesterday.setDate(dayBeforeYesterday.getDate() - 2);
+                                                const dayBeforeYesterdayStr = `${dayBeforeYesterday.getFullYear()}-${String(dayBeforeYesterday.getMonth() + 1).padStart(2, '0')}-${String(dayBeforeYesterday.getDate()).padStart(2, '0')}`;
+                                                
+                                                return date !== todayStr && date !== yesterdayStr && date !== dayBeforeYesterdayStr;
+                                            })
+                                            .map(date => (
+                                                <TabButton
+                                                    key={date}
+                                                    isActive={selectedDate === date}
+                                                    onClick={() => selectedDate !== date && onDateClick(date)}
+                                                    className="mr-3"
+                                                    dataTab={date}
+                                                >
+                                                    {formatDateLabel(date, dateGroupingMode)}
+                                                </TabButton>
+                                            ))
+                                        }
+                                    </>
                                 )}
                             </div>
                         </div>
@@ -754,6 +973,14 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                                             filterMode={filterMode}
                                             onFilterModeChange={onFilterModeChange}
                                         />
+
+                                        {/* 日期粒度选择 - 只在选择"按日期"时显示 */}
+                                        {filterMode === 'date' && (
+                                            <DateGroupingSection
+                                                dateGroupingMode={dateGroupingMode}
+                                                onDateGroupingModeChange={onDateGroupingModeChange}
+                                            />
+                                        )}
 
                                         {onViewModeChange && (
                                             <ViewModeSection
