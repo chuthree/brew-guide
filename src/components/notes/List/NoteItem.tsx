@@ -22,6 +22,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
     equipmentNames,
     onEdit,
     onDelete,
+    onCopy,
     unitPriceCache,
     isShareMode = false,
     isSelected = false,
@@ -247,6 +248,11 @@ const NoteItem: React.FC<NoteItemProps> = ({
                                                 id: 'edit',
                                                 label: '编辑',
                                                 onClick: () => onEdit(note)
+                                            },
+                                            {
+                                                id: 'copy',
+                                                label: '复制',
+                                                onClick: () => onCopy?.(note.id)
                                             },
                                             {
                                                 id: 'delete',

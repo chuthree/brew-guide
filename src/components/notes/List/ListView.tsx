@@ -15,6 +15,7 @@ interface NotesListViewProps {
     filterMode: 'equipment' | 'bean' | 'date';
     onNoteClick: (note: BrewingNote) => void;
     onDeleteNote: (noteId: string) => Promise<void>;
+    onCopyNote?: (noteId: string) => Promise<void>;
     isShareMode?: boolean;
     selectedNotes?: string[];
     onToggleSelect?: (noteId: string, enterShareMode?: boolean) => void;
@@ -36,6 +37,7 @@ const NotesListView: React.FC<NotesListViewProps> = ({
     filterMode,
     onNoteClick,
     onDeleteNote,
+    onCopyNote,
     isShareMode = false,
     selectedNotes = [],
     onToggleSelect,
@@ -159,6 +161,7 @@ const NotesListView: React.FC<NotesListViewProps> = ({
                                                     note={note}
                                                     onEdit={onNoteClick}
                                                     onDelete={onDeleteNote}
+                                                    onCopy={onCopyNote}
                                                     isShareMode={isShareMode}
                                                     isSelected={selectedNotes.includes(note.id)}
                                                     onToggleSelect={handleToggleSelect}
@@ -178,6 +181,7 @@ const NotesListView: React.FC<NotesListViewProps> = ({
                         equipmentNames={equipmentNames}
                         onEdit={onNoteClick}
                         onDelete={onDeleteNote}
+                        onCopy={onCopyNote}
                         unitPriceCache={unitPriceCache}
                         isShareMode={isShareMode}
                         isSelected={selectedNotes.includes(note.id)}

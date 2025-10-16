@@ -9,6 +9,7 @@ interface ChangeRecordNoteItemProps {
     note: BrewingNote
     onEdit?: (note: BrewingNote) => void
     onDelete?: (noteId: string) => Promise<void>
+    onCopy?: (noteId: string) => Promise<void>
     isShareMode?: boolean
     isSelected?: boolean
     onToggleSelect?: (noteId: string, enterShareMode?: boolean) => void
@@ -18,6 +19,7 @@ const ChangeRecordNoteItem: React.FC<ChangeRecordNoteItemProps> = ({
     note,
     onEdit,
     onDelete,
+    onCopy,
     isShareMode = false,
     isSelected = false,
     onToggleSelect
@@ -111,6 +113,11 @@ const ChangeRecordNoteItem: React.FC<ChangeRecordNoteItemProps> = ({
                                     id: 'edit',
                                     label: '编辑',
                                     onClick: () => onEdit && onEdit(note)
+                                },
+                                {
+                                    id: 'copy',
+                                    label: '复制',
+                                    onClick: () => onCopy && onCopy(note.id)
                                 },
                                 {
                                     id: 'delete',

@@ -57,6 +57,7 @@ export interface NoteItemProps {
     equipmentNames: Record<string, string>
     onEdit: (note: BrewingNote) => void
     onDelete: (noteId: string) => void
+    onCopy?: (noteId: string) => void
     unitPriceCache: Record<string, number>
     isShareMode?: boolean
     isSelected?: boolean
