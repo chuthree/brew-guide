@@ -123,6 +123,11 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     // 标题可见性状态
     const [isTitleVisible, setIsTitleVisible] = useState(true)
     
+    // 评分显示设置
+    const [showBeanRating, setShowBeanRating] = useState(false)
+    // 详情页显示设置
+    const [showBeanInfoDivider, setShowBeanInfoDivider] = useState(true)
+    
     // 处理显示/隐藏动画
     useEffect(() => {
         if (isOpen) {
@@ -144,7 +149,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
         }
     }, [isOpen])
     
-    // 加载打印设置
+    // 加载打印和显示设置
     useEffect(() => {
         const loadPrintSettings = async () => {
             try {
@@ -152,14 +157,22 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                 const settingsStr = await Storage.get('brewGuideSettings')
                 if (settingsStr) {
                     const settings = JSON.parse(settingsStr)
-                    const enabled = settings.enableBeanPrint === true
-                    setPrintEnabled(enabled)
+                    const printEnabledValue = settings.enableBeanPrint === true
+                    const showRatingValue = settings.showBeanRating === true
+                    const showInfoDividerValue = settings.showBeanInfoDivider !== false // 默认true
+                    setPrintEnabled(printEnabledValue)
+                    setShowBeanRating(showRatingValue)
+                    setShowBeanInfoDivider(showInfoDividerValue)
                 } else {
                     setPrintEnabled(false)
+                    setShowBeanRating(false)
+                    setShowBeanInfoDivider(true) // 默认显示
                 }
             } catch (error) {
                 console.error('加载打印设置失败:', error)
                 setPrintEnabled(false)
+                setShowBeanRating(false)
+                setShowBeanInfoDivider(true) // 默认显示
             }
         }
         
@@ -692,8 +705,10 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                         {/* 基础信息 */}
                                         <InfoGrid items={getBasicInfoItems()} />
                                         
-                                        {/* 虚线分割线 */}
-                                        <div className="border-t border-dashed border-neutral-200/50 dark:border-neutral-800/50"></div>
+                                        {/* 虚线分割线 - 根据设置决定是否显示 */}
+                                        {showBeanInfoDivider && (
+                                            <div className="border-t border-dashed border-neutral-200/70 dark:border-neutral-800/70"></div>
+                                        )}
                                         
                                         {/* 产地信息（单品豆时显示）*/}
                                         {(() => {
