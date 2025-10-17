@@ -692,6 +692,9 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                         {/* 基础信息 */}
                                         <InfoGrid items={getBasicInfoItems()} />
                                         
+                                        {/* 虚线分割线 */}
+                                        <div className="border-t border-dashed border-neutral-200/50 dark:border-neutral-800/50"></div>
+                                        
                                         {/* 产地信息（单品豆时显示）*/}
                                         {(() => {
                                             const originItems = getOriginInfoItems()
