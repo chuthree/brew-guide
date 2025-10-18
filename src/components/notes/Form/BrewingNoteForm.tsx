@@ -873,7 +873,6 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                         <div className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400 mb-3">
                             {/* 显示选择的咖啡豆信息，只在咖啡豆名称部分添加下划线 */}
                             <>
-                                <span>咖啡豆信息 ·</span>
                                 {initialData.id && coffeeBeans.length > 0 ? (
                                     <span
                                         onClick={() => {
@@ -882,7 +881,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                                                 setCoffeeBeanSearchQuery(''); // 打开时清空搜索
                                             }
                                         }}
-                                        className="ml-1 text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400 border-b border-dashed border-neutral-400 dark:border-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 hover:border-neutral-600 dark:hover:border-neutral-400 transition-colors cursor-pointer"
+                                        className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400 border-b border-dashed border-neutral-400 dark:border-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 hover:border-neutral-600 dark:hover:border-neutral-400 transition-colors cursor-pointer"
                                     >
                                         {selectedCoffeeBean?.name || formData.coffeeBeanInfo.name || '未知咖啡豆'}
                                     </span>
