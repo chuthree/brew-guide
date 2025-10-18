@@ -178,7 +178,7 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
                 <button
                     type="button"
                     onClick={handleClose}
-                    className="text-neutral-800 dark:text-neutral-200"
+                    className="text-neutral-800 dark:text-neutral-200 -m-3 p-3"
                 >
                     <ArrowLeft size={16} />
                 </button>

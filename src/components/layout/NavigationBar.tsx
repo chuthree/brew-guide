@@ -498,10 +498,10 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                             style={{ pointerEvents: shouldHideHeader ? 'none' : 'auto' }}
                         >
                             <div className="flex items-start justify-between">
-                                {/* 设置入口按钮图标 */}
+                                {/* 设置入口按钮图标 - 扩大触碰区域 */}
                                 <div
                                     onClick={handleTitleClick}
-                                    className="cursor-pointer text-[12px] tracking-widest text-neutral-500 dark:text-neutral-400 flex items-center"
+                                    className="cursor-pointer text-[12px] tracking-widest text-neutral-500 dark:text-neutral-400 flex items-center -ml-3 -mt-3 pl-3 pt-3 pr-4 pb-3"
                                 >
                                     {canGoBack() && onBackClick ? (
                                         <ArrowLeft className="w-4 h-4 mr-1" />

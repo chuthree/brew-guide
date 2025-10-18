@@ -734,7 +734,7 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(({
     return (
         <div className="flex flex-col">
             <div className="flex items-center justify-between my-6">
-                <button type="button" onClick={handleBack} className="rounded-full">
+                <button type="button" onClick={handleBack} className="rounded-full -m-3 p-3">
                     <ArrowLeft className="w-5 h-5 text-neutral-800 dark:text-neutral-200" />
                 </button>
 

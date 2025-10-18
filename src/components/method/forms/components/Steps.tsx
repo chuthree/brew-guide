@@ -36,7 +36,7 @@ const Steps: React.FC<StepsProps> = ({ steps, currentStep, onBack }) => {
       <button
         type="button"
         onClick={onBack}
-        className="rounded-full"
+        className="rounded-full -m-3 p-3"
       >
         <ArrowLeft className="w-5 h-5 text-neutral-800 dark:text-neutral-200" />
       </button>

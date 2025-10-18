@@ -128,7 +128,7 @@ const CustomEquipmentFormModal: React.FC<CustomEquipmentFormModalProps> = ({
                                     <button
                                         type="button"
                                         onClick={handleClose}
-                                        className="rounded-full p-2 pl-0"
+                                        className="rounded-full -m-3 p-3"
                                     >
                                         <svg
                                             width="16"
@@ -147,7 +147,7 @@ const CustomEquipmentFormModal: React.FC<CustomEquipmentFormModalProps> = ({
                                             />
                                         </svg>
                                     </button>
-                                    <h3 className="text-base font-medium">
+                                    <h3 className="text-base font-medium ml-6">
                                         {editingEquipment ? '编辑器具' : '添加器具'}
                                     </h3>
                                     {/* 导入按钮 */}

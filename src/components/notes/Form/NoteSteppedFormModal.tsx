@@ -375,7 +375,7 @@ const NoteSteppedFormModal = forwardRef<NoteSteppedFormHandle, NoteSteppedFormMo
                 <button
                     type="button"
                     onClick={handleBack}
-                    className="rounded-full"
+                    className="rounded-full -m-3 p-3"
                 >
                     <ArrowLeft className="w-5 h-5 text-neutral-800 dark:text-neutral-200" />
                 </button>
