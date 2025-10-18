@@ -308,13 +308,8 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
         }
 
         if (canGoBack() && onBackClick) {
-            // 检查是否有历史栈记录，如果有就触发浏览器返回
-            if (window.history.state?.brewingStep) {
-                window.history.back()
-            } else {
-                // 没有历史栈记录，直接调用返回函数
-                onBackClick()
-            }
+            // 直接调用返回函数，让父组件统一处理返回逻辑（包括历史栈管理）
+            onBackClick()
         } else {
             onTitleDoubleClick()
         }
