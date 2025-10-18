@@ -1184,7 +1184,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                             {displayDimensions.map((dimension) => {
                                 const value = formData.taste[dimension.id] || 0;
                                 return (
-                                    <div key={dimension.id} className="space-y-2">
+                                    <div key={dimension.id} className="space-y-2 relative">
                                         <div className="flex items-center justify-between">
                                             <div className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
                                                 {dimension.label}
@@ -1196,30 +1196,28 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                                                 [ {value || 0} ]
                                             </div>
                                         </div>
-                                        <div className="relative py-4 -my-4">
-                                            <input
-                                                id={`taste-${dimension.id}`}
-                                                name={`taste_${dimension.id}`}
-                                                type="range"
-                                                min="0"
-                                                max="5"
-                                                step="1"
-                                                value={value || 0}
-                                                onChange={(e) =>
-                                                    setFormData({
-                                                        ...formData,
-                                                        taste: {
-                                                            ...formData.taste,
-                                                            [dimension.id]: parseInt(e.target.value),
-                                                        },
-                                                    })
-                                                }
-                                                onTouchStart={tasteHandlers(dimension.id).onTouchStart(value)}
-                                                onTouchMove={tasteHandlers(dimension.id).onTouchMove}
-                                                onTouchEnd={tasteHandlers(dimension.id).onTouchEnd}
-                                                className={SLIDER_STYLES}
-                                            />
-                                        </div>
+                                        <input
+                                            id={`taste-${dimension.id}`}
+                                            name={`taste_${dimension.id}`}
+                                            type="range"
+                                            min="0"
+                                            max="5"
+                                            step="1"
+                                            value={value || 0}
+                                            onChange={(e) =>
+                                                setFormData({
+                                                    ...formData,
+                                                    taste: {
+                                                        ...formData.taste,
+                                                        [dimension.id]: parseInt(e.target.value),
+                                                    },
+                                                })
+                                            }
+                                            onTouchStart={tasteHandlers(dimension.id).onTouchStart(value)}
+                                            onTouchMove={tasteHandlers(dimension.id).onTouchMove}
+                                            onTouchEnd={tasteHandlers(dimension.id).onTouchEnd}
+                                            className={SLIDER_STYLES}
+                                        />
                                     </div>
                                 );
                             })}
@@ -1238,27 +1236,25 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                         </div>
                     </div>
                     <div className="relative py-3">
-                        <div className="relative py-4 -my-4">
-                            <input
-                                id="overall-rating"
-                                name="overallRating"
-                                type="range"
-                                min="1"
-                                max="5"
-                                step="0.5"
-                                value={formData.rating}
-                                onChange={(e) =>
-                                    setFormData({
-                                        ...formData,
-                                        rating: parseFloat(e.target.value),
-                                    })
-                                }
-                                onTouchStart={ratingHandlers.onTouchStart(formData.rating)}
-                                onTouchMove={ratingHandlers.onTouchMove}
-                                onTouchEnd={ratingHandlers.onTouchEnd}
-                                className={SLIDER_STYLES}
-                            />
-                        </div>
+                        <input
+                            id="overall-rating"
+                            name="overallRating"
+                            type="range"
+                            min="1"
+                            max="5"
+                            step="0.5"
+                            value={formData.rating}
+                            onChange={(e) =>
+                                setFormData({
+                                    ...formData,
+                                    rating: parseFloat(e.target.value),
+                                })
+                            }
+                            onTouchStart={ratingHandlers.onTouchStart(formData.rating)}
+                            onTouchMove={ratingHandlers.onTouchMove}
+                            onTouchEnd={ratingHandlers.onTouchEnd}
+                            className={SLIDER_STYLES}
+                        />
                     </div>
                 </div>
 
