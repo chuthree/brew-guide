@@ -221,7 +221,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
 
     return (
         <div
-            className={`group ${isEmpty ? 'bg-neutral-100/60 dark:bg-neutral-800/30' : ''} ${onDetailClick ? 'cursor-pointer transition-colors' : ''}`}
+            className={`group ${isEmpty ? 'opacity-50' : ''} ${onDetailClick ? 'cursor-pointer transition-colors' : ''}`}
             onClick={handleCardClick}
             data-bean-item={bean.id}
         >
@@ -275,10 +275,12 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                             {searchQuery ? (
                                 <HighlightText text={displayTitle} highlight={searchQuery} />
                             ) : displayTitle}
-                            {isEmpty && <span className="text-neutral-500 dark:text-neutral-400 font-normal">（已用完）</span>}
+                            {isEmpty && <span className="text-neutral-500 dark:text-neutral-400"> - 已用完</span>}
                         </div>
 
-                        <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400 leading-relaxed">
+                        <div className={`text-xs font-medium tracking-wide leading-relaxed ${
+                            isEmpty ? 'text-neutral-400 dark:text-neutral-600' : 'text-neutral-600 dark:text-neutral-400'
+                        }`}>
                             {(bean.roastDate || bean.isInTransit) && (
                                 <span className="inline">
                                     {bean.isInTransit 
