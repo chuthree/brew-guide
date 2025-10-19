@@ -128,6 +128,9 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     // 详情页显示设置
     const [showBeanInfoDivider, setShowBeanInfoDivider] = useState(true)
     
+    // 变动记录显示状态
+    const [showChangeRecords, setShowChangeRecords] = useState(false)
+    
     // 处理显示/隐藏动画
     useEffect(() => {
         if (isOpen) {
@@ -824,23 +827,54 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                         </div>
                                     )}
 
-                                    {/* 相关冲煮记录 - 简化布局 */}
-                                    <div className="border-t border-neutral-200/40 dark:border-neutral-800/40 pt-3">
-                                        <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                                            冲煮记录 {relatedNotes.length > 0 && `(${relatedNotes.length})`}
-                                        </div>
+                                    {/* 相关冲煮记录 - 简化布局 - 只在有记录时显示 */}
+                                    {relatedNotes.length > 0 && (
+                                        <div className="border-t border-neutral-200/40 dark:border-neutral-800/40 pt-3">
+                                            <div className="flex items-center gap-2">
+                                                {(() => {
+                                                    const normalNotes = relatedNotes.filter(note => !isSimpleChangeRecord(note));
+                                                    const changeRecords = relatedNotes.filter(note => isSimpleChangeRecord(note));
+                                                    
+                                                    return (
+                                                        <>
+                                                            {normalNotes.length > 0 && (
+                                                                <button
+                                                                    onClick={() => setShowChangeRecords(false)}
+                                                                    className={`text-xs font-medium text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300 transition-colors ${
+                                                                        !showChangeRecords ? 'opacity-100' : 'opacity-50'
+                                                                    }`}
+                                                                >
+                                                                    冲煮记录 ({normalNotes.length})
+                                                                </button>
+                                                            )}
+                                                            {changeRecords.length > 0 && (
+                                                                <button
+                                                                    onClick={() => setShowChangeRecords(true)}
+                                                                    className={`text-xs font-medium text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300 transition-colors ${
+                                                                        showChangeRecords ? 'opacity-100' : 'opacity-50'
+                                                                    }`}
+                                                                >
+                                                                    变动记录 ({changeRecords.length})
+                                                                </button>
+                                                            )}
+                                                        </>
+                                                    );
+                                                })()}
+                                            </div>
 
-                                        {isLoadingNotes ? (
-                                            <div className="text-xs text-neutral-500 dark:text-neutral-400">
-                                                加载中...
-                                            </div>
-                                        ) : relatedNotes.length === 0 ? (
-                                            <div className="text-xs text-neutral-500 dark:text-neutral-400">
-                                                暂无冲煮记录
-                                            </div>
-                                        ) : (
-                                <div className="space-y-2 mt-2">
-                                    {relatedNotes.map((note) => {
+                                            {(() => {
+                                                const filteredNotes = relatedNotes.filter((note) => {
+                                                    const isChangeRecord = isSimpleChangeRecord(note);
+                                                    return showChangeRecords ? isChangeRecord : !isChangeRecord;
+                                                });
+                                                
+                                                return filteredNotes.length === 0 ? (
+                                                    <div className="text-xs text-neutral-500 dark:text-neutral-400 mt-1.5">
+                                                        {showChangeRecords ? '暂无变动记录' : '暂无冲煮记录'}
+                                                    </div>
+                                                ) : (
+                                                    <div className="space-y-2 mt-3">
+                                                        {filteredNotes.map((note) => {
                                         const isChangeRecord = isSimpleChangeRecord(note)
 
                                         return (
@@ -1042,9 +1076,11 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                                 </div>
                                         )
                                     })}
-                                            </div>
-                                        )}
-                                    </div>
+                                                    </div>
+                                                );
+                                            })()}
+                                        </div>
+                                    )}
                                 </div>
                             ) : null}
                         </div>
