@@ -102,7 +102,6 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     
     const [imageError, setImageError] = useState(false)
     const [relatedNotes, setRelatedNotes] = useState<BrewingNote[]>([])
-    const [isLoadingNotes, setIsLoadingNotes] = useState(false)
     const [equipmentNames, setEquipmentNames] = useState<Record<string, string>>({})
     // 图片查看器状态
     const [imageViewerOpen, setImageViewerOpen] = useState(false)
@@ -445,17 +444,14 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
         const loadRelatedNotes = async () => {
             if (!bean?.id || !isOpen) {
                 setRelatedNotes([])
-                setIsLoadingNotes(false)
                 return
             }
 
-            setIsLoadingNotes(true)
             try {
                 const { Storage } = await import('@/lib/core/storage');
                 const notesStr = await Storage.get('brewingNotes')
                 if (!notesStr) {
                     setRelatedNotes([])
-                    setIsLoadingNotes(false)
                     return
                 }
 
@@ -496,8 +492,6 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
             } catch (error) {
                 console.error('加载冲煮记录失败:', error)
                 setRelatedNotes([])
-            } finally {
-                setIsLoadingNotes(false)
             }
         }
 
