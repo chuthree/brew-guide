@@ -664,7 +664,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                         }}
                                         className="overflow-hidden"
                                     >
-                                        <div className="px-6 py-2 mt-2 bg-neutral-100 dark:bg-neutral-800 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                                        <div className="px-6 py-2 bg-neutral-100 dark:bg-neutral-800 text-xs font-medium text-neutral-500 dark:text-neutral-400">
                                             <div className="flex items-center justify-between gap-3">
                                                 {/* 左侧：方案名称区域 - 使用省略号 */}
                                                 <div className="flex items-center min-w-0 flex-1 overflow-hidden">
