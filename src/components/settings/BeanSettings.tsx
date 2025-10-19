@@ -238,54 +238,63 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
                             </div>
                         )}
 
-                        {/* 启用标签保存功能 */}
-                        <div className="flex items-center justify-between">
-                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                                标签打印功能
+                        {/* 咖啡豆详情功能区分割线 */}
+                        <div className="pt-4 mt-4 border-t border-neutral-200 dark:border-neutral-700">
+                            <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-4">
+                                咖啡豆详情功能
                             </div>
-                            <label className="relative inline-flex cursor-pointer items-center">
-                                <input
-                                    type="checkbox"
-                                    checked={settings.enableBeanPrint || false}
-                                    onChange={(e) => handleChange('enableBeanPrint', e.target.checked)}
-                                    className="peer sr-only"
-                                />
-                                <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-                            </label>
-                        </div>
 
-                        {/* 显示信息分割线 */}
-                        <div className="flex items-center justify-between">
-                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                                显示信息分割线
-                            </div>
-                            <label className="relative inline-flex cursor-pointer items-center">
-                                <input
-                                    type="checkbox"
-                                    checked={settings.showBeanInfoDivider !== false}
-                                    onChange={(e) => handleChange('showBeanInfoDivider', e.target.checked)}
-                                    className="peer sr-only"
-                                />
-                                <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-                            </label>
-                        </div>
+                            <div className="space-y-5">
+                                {/* 启用标签保存功能 */}
+                                <div className="flex items-center justify-between">
+                                    <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                                        标签打印功能
+                                    </div>
+                                    <label className="relative inline-flex cursor-pointer items-center">
+                                        <input
+                                            type="checkbox"
+                                            checked={settings.enableBeanPrint || false}
+                                            onChange={(e) => handleChange('enableBeanPrint', e.target.checked)}
+                                            className="peer sr-only"
+                                        />
+                                        <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
+                                    </label>
+                                </div>
 
-                        {/* 显示评分功能 */}
-                        <div className="flex items-center justify-between">
-                            <div className="flex flex-col">
-                                <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                                    显示空评分区域
+                                {/* 显示信息分割线 */}
+                                <div className="flex items-center justify-between">
+                                    <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                                        显示信息分割线
+                                    </div>
+                                    <label className="relative inline-flex cursor-pointer items-center">
+                                        <input
+                                            type="checkbox"
+                                            checked={settings.showBeanInfoDivider !== false}
+                                            onChange={(e) => handleChange('showBeanInfoDivider', e.target.checked)}
+                                            className="peer sr-only"
+                                        />
+                                        <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
+                                    </label>
+                                </div>
+
+                                {/* 显示评分功能 */}
+                                <div className="flex items-center justify-between">
+                                    <div className="flex flex-col">
+                                        <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                                            显示空评分区域
+                                        </div>
+                                    </div>
+                                    <label className="relative inline-flex cursor-pointer items-center flex-shrink-0">
+                                        <input
+                                            type="checkbox"
+                                            checked={settings.showBeanRating || false}
+                                            onChange={(e) => handleChange('showBeanRating', e.target.checked)}
+                                            className="peer sr-only"
+                                        />
+                                        <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
+                                    </label>
                                 </div>
                             </div>
-                            <label className="relative inline-flex cursor-pointer items-center flex-shrink-0">
-                                <input
-                                    type="checkbox"
-                                    checked={settings.showBeanRating || false}
-                                    onChange={(e) => handleChange('showBeanRating', e.target.checked)}
-                                    className="peer sr-only"
-                                />
-                                <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-                            </label>
                         </div>
                     </div>
                 </div>
