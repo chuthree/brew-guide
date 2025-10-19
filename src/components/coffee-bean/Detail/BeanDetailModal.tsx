@@ -427,16 +427,9 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
 
     // 判断是否为简单的变动记录（快捷扣除或容量调整）
     const isSimpleChangeRecord = (note: BrewingNote): boolean => {
-        const isBasicChangeRecord = !(note.taste && Object.values(note.taste).some(value => value > 0)) &&
-            note.rating === 0 &&
-            (!note.method || note.method.trim() === '') &&
-            (!note.equipment || note.equipment.trim() === '' || note.equipment === '未指定') &&
-            !note.image
-
-        return !!(
-            (note.source === 'quick-decrement' && note.notes === '快捷扣除' && isBasicChangeRecord) ||
-            (note.source === 'capacity-adjustment' && note.notes === '容量调整(不计入统计)' && isBasicChangeRecord)
-        )
+        // 只依据 source 字段判断是否为变动记录
+        // 不再限制备注内容，允许用户自由修改备注
+        return note.source === 'quick-decrement' || note.source === 'capacity-adjustment';
     }
 
     // 获取相关的冲煮记录
