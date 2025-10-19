@@ -464,7 +464,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         }
     };
 
-    // 处理复制笔记 - 复制笔记内容，时间更新为当前，容量不足时扣除剩余量
+    // 处理复制笔记 - 打开编辑界面让用户修改后保存，不包含图片
     const handleCopyNote = async (noteId: string) => {
         try {
             const { Storage } = await import('@/lib/core/storage');
@@ -483,122 +483,43 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
             const newTimestamp = Date.now();
             const newId = newTimestamp.toString();
 
-            // 导入容量管理器
-            const { CoffeeBeanManager, CapacitySyncManager } = await import('@/lib/managers/coffeeBeanManager');
+            // 检查是否为变动记录
+            const isChangeRecord = noteToCopy.source === 'quick-decrement' || noteToCopy.source === 'capacity-adjustment';
 
-            // 处理咖啡豆容量扣除和用量调整
-            let actualCoffeeAmount: number | null = null; // null 表示不需要调整
-            let requestedAmount = 0;
+            if (isChangeRecord) {
+                // 变动记录：打开变动记录编辑界面（不包含图片）
+                const changeRecordToEdit: BrewingNote = {
+                    ...noteToCopy,
+                    id: newId,
+                    timestamp: newTimestamp,
+                    image: undefined, // 不包含图片
+                };
+                setEditingChangeRecord(changeRecordToEdit);
+                setShowChangeRecordEditModal(true);
+            } else {
+                // 普通笔记：打开编辑界面（不包含图片）
+                const noteToEdit: BrewingNoteData = {
+                    id: newId,
+                    timestamp: newTimestamp,
+                    equipment: noteToCopy.equipment,
+                    method: noteToCopy.method,
+                    params: noteToCopy.params,
+                    coffeeBeanInfo: noteToCopy.coffeeBeanInfo || {
+                        name: '',
+                        roastLevel: ''
+                    },
+                    image: undefined, // 不包含图片
+                    rating: noteToCopy.rating,
+                    taste: noteToCopy.taste,
+                    notes: noteToCopy.notes,
+                    totalTime: noteToCopy.totalTime,
+                    beanId: noteToCopy.beanId
+                };
+                setEditingNote(noteToEdit);
+            }
             
-            if (noteToCopy.beanId) {
-                try {
-                    // 对于变动记录，优先从 quickDecrementAmount 或 changeRecord 中提取用量
-                    if (noteToCopy.source === 'quick-decrement' && noteToCopy.quickDecrementAmount) {
-                        requestedAmount = noteToCopy.quickDecrementAmount;
-                    } else if (noteToCopy.source === 'capacity-adjustment' && noteToCopy.changeRecord?.capacityAdjustment?.changeAmount) {
-                        // 容量调整记录可能是负数（减少）或正数（增加）
-                        requestedAmount = Math.abs(noteToCopy.changeRecord.capacityAdjustment.changeAmount);
-                    } else if (noteToCopy.params?.coffee) {
-                        // 普通笔记从 params.coffee 提取
-                        requestedAmount = CapacitySyncManager.extractCoffeeAmount(noteToCopy.params.coffee);
-                    }
-                    
-                    if (requestedAmount > 0) {
-                        // 获取当前咖啡豆信息
-                        const currentBean = await CoffeeBeanManager.getBeanById(noteToCopy.beanId);
-                        
-                        if (currentBean) {
-                            const currentRemaining = parseFloat(currentBean.remaining || '0');
-                            
-                            // 计算实际可用量：如果剩余量不足，使用剩余量（可能为0）
-                            actualCoffeeAmount = Math.max(0, Math.min(requestedAmount, currentRemaining));
-                            
-                            // 扣除咖啡豆容量
-                            if (actualCoffeeAmount > 0) {
-                                await CoffeeBeanManager.updateBeanRemaining(noteToCopy.beanId, actualCoffeeAmount);
-                            }
-                            
-                            // 如果实际可用量与请求量不同，提示用户
-                            // 如果实际可用量与请求量不同，提示用户
-                        if (actualCoffeeAmount < requestedAmount) {
-                            const message = actualCoffeeAmount === 0 
-                                ? '咖啡豆已用完'
-                                : `用量已调整为${actualCoffeeAmount}g`;
-                            showToastMessage(message, 'info');
-                        }
-                        }
-                    }
-                } catch (error) {
-                    console.error('处理咖啡豆容量失败:', error);
-                    showToastMessage('处理咖啡豆容量失败', 'error');
-                    return;
-                }
-            }
-
-            // 创建复制的笔记 - 根据笔记类型调整不同字段
-            const copiedNote: BrewingNote = {
-                ...noteToCopy,
-                id: newId,
-                timestamp: newTimestamp,
-            };
-
-            // 根据笔记类型和实际可用量调整相关字段
-            if (actualCoffeeAmount !== null && requestedAmount > 0) {
-                if (noteToCopy.source === 'quick-decrement') {
-                    // 快捷扣除记录：更新 quickDecrementAmount 和 params.coffee
-                    copiedNote.quickDecrementAmount = actualCoffeeAmount;
-                    if (copiedNote.params) {
-                        copiedNote.params.coffee = `${actualCoffeeAmount}g`;
-                    }
-                } else if (noteToCopy.source === 'capacity-adjustment' && noteToCopy.changeRecord?.capacityAdjustment && copiedNote.changeRecord?.capacityAdjustment) {
-                    // 容量调整记录：更新 changeRecord 中的 changeAmount
-                    const originalChangeAmount = noteToCopy.changeRecord.capacityAdjustment.changeAmount;
-                    const isNegative = originalChangeAmount < 0;
-                    copiedNote.changeRecord.capacityAdjustment.changeAmount = isNegative ? -actualCoffeeAmount : actualCoffeeAmount;
-                    
-                    // 同时更新 params.coffee
-                    if (copiedNote.params) {
-                        copiedNote.params.coffee = `${actualCoffeeAmount}g`;
-                    }
-                } else {
-                    // 普通笔记：更新 params
-                    copiedNote.params = {
-                        ...noteToCopy.params,
-                        coffee: `${actualCoffeeAmount}g`,
-                        // 如果咖啡量变了，同时更新水量保持粉水比
-                        water: (() => {
-                            const originalCoffee = CapacitySyncManager.extractCoffeeAmount(noteToCopy.params?.coffee || '0g');
-                            const originalWater = CapacitySyncManager.extractCoffeeAmount(noteToCopy.params?.water || '0g');
-                            if (originalCoffee > 0 && originalWater > 0) {
-                                const ratio = originalWater / originalCoffee;
-                                const newWater = Math.round(actualCoffeeAmount * ratio);
-                                return `${newWater}g`;
-                            }
-                            return noteToCopy.params?.water || '';
-                        })()
-                    };
-                }
-            }
-
-            // 将复制的笔记添加到列表开头
-            const updatedNotes = [copiedNote, ...notes];
-
-            // 更新本地状态
-            setNotes(updatedNotes);
-
-            // 更新总消耗量
-            totalCoffeeConsumption.current = calculateTotalCoffeeConsumption(updatedNotes);
-
-            // 保存到存储
-            await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
-
-            // 主动刷新数据，确保UI立即更新
-            await loadNotesData();
-
-            // 只有在容量充足时才显示普通的"笔记已复制"提示
-            if (actualCoffeeAmount === null || actualCoffeeAmount === requestedAmount) {
-                showToastMessage('笔记已复制', 'success');
-            }
+            // 提示用户
+            showToastMessage('请修改后保存', 'info');
         } catch (error) {
             console.error('复制笔记失败:', error);
             showToastMessage('复制笔记失败', 'error');
@@ -648,13 +569,22 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
             const savedNotes = await Storage.get('brewingNotes')
             let parsedNotes: BrewingNote[] = savedNotes ? JSON.parse(savedNotes) : []
 
-            // 查找并更新指定笔记
-            parsedNotes = parsedNotes.map(note => {
-                if (note.id === updatedData.id) {
-                    return updatedData as BrewingNote
-                }
-                return note
-            })
+            // 检查笔记是否已存在
+            const existingNoteIndex = parsedNotes.findIndex(note => note.id === updatedData.id);
+            const isNewNote = existingNoteIndex === -1;
+
+            if (isNewNote) {
+                // 添加新笔记
+                parsedNotes = [updatedData as BrewingNote, ...parsedNotes];
+            } else {
+                // 更新现有笔记
+                parsedNotes = parsedNotes.map(note => {
+                    if (note.id === updatedData.id) {
+                        return updatedData as BrewingNote
+                    }
+                    return note
+                })
+            }
 
             // 直接更新本地状态
             setNotes(parsedNotes);
@@ -674,7 +604,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
             setEditingNote(null)
 
             // 显示成功提示
-            showToastMessage('笔记已更新', 'success')
+            showToastMessage(isNewNote ? '笔记已添加' : '笔记已更新', 'success')
         } catch (error) {
             console.error('更新笔记失败:', error)
             showToastMessage('更新笔记失败', 'error')
@@ -731,9 +661,10 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
 
             // 找到原始记录以计算容量变化差异
             const originalRecord = parsedNotes.find(note => note.id === updatedRecord.id);
+            const isNewRecord = !originalRecord;
 
             // 同步咖啡豆容量变化
-            if (originalRecord && updatedRecord.beanId) {
+            if (updatedRecord.beanId) {
                 try {
                     const { CoffeeBeanManager } = await import('@/lib/managers/coffeeBeanManager');
 
@@ -741,10 +672,12 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                     let originalChangeAmount = 0;
                     let newChangeAmount = 0;
 
-                    if (originalRecord.source === 'quick-decrement') {
-                        originalChangeAmount = -(originalRecord.quickDecrementAmount || 0);
-                    } else if (originalRecord.source === 'capacity-adjustment') {
-                        originalChangeAmount = originalRecord.changeRecord?.capacityAdjustment?.changeAmount || 0;
+                    if (originalRecord) {
+                        if (originalRecord.source === 'quick-decrement') {
+                            originalChangeAmount = -(originalRecord.quickDecrementAmount || 0);
+                        } else if (originalRecord.source === 'capacity-adjustment') {
+                            originalChangeAmount = originalRecord.changeRecord?.capacityAdjustment?.changeAmount || 0;
+                        }
                     }
 
                     if (updatedRecord.source === 'quick-decrement') {
@@ -787,13 +720,19 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                 }
             }
 
-            // 查找并更新指定变动记录
-            parsedNotes = parsedNotes.map(note => {
-                if (note.id === updatedRecord.id) {
-                    return updatedRecord
-                }
-                return note
-            })
+            // 检查记录是否已存在
+            if (isNewRecord) {
+                // 添加新记录
+                parsedNotes = [updatedRecord, ...parsedNotes];
+            } else {
+                // 更新现有记录
+                parsedNotes = parsedNotes.map(note => {
+                    if (note.id === updatedRecord.id) {
+                        return updatedRecord
+                    }
+                    return note
+                })
+            }
 
             // 直接更新本地状态
             setNotes(parsedNotes);
@@ -812,7 +751,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
             setShowChangeRecordEditModal(false)
 
             // 显示成功提示
-            showToastMessage('变动记录已更新', 'success')
+            showToastMessage(isNewRecord ? '变动记录已添加' : '变动记录已更新', 'success')
         } catch (error) {
             console.error('更新变动记录失败:', error)
             showToastMessage('更新变动记录失败', 'error')
