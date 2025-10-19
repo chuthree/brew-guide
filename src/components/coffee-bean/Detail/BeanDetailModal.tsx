@@ -768,18 +768,19 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                         )}
                                     </div>
 
-                                    {/* 个人榜单评价区域 */}
-                                    <div className="border-t border-neutral-200/40 dark:border-neutral-800/40 pt-3">
-                                        {bean.overallRating && bean.overallRating > 0 ? (
-                                            // 已有评价，显示评价内容
-                                            <div 
-                                                className="space-y-3 cursor-pointer"
-                                                onClick={() => {
-                                                    if (onRate && bean) {
-                                                        onRate(bean)
-                                                    }
-                                                }}
-                                            >
+                                    {/* 个人榜单评价区域 - 根据设置和内容决定是否显示 */}
+                                    {(showBeanRating || (bean.overallRating && bean.overallRating > 0)) && (
+                                        <div className="border-t border-neutral-200/40 dark:border-neutral-800/40 pt-3">
+                                            {bean.overallRating && bean.overallRating > 0 ? (
+                                                // 已有评价，显示评价内容
+                                                <div 
+                                                    className="space-y-3 cursor-pointer"
+                                                    onClick={() => {
+                                                        if (onRate && bean) {
+                                                            onRate(bean)
+                                                        }
+                                                    }}
+                                                >
                                                 {/* 评分 */}
                                                 <div className="flex items-start">
                                                     <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400 w-16 flex-shrink-0">
@@ -820,7 +821,8 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                                 </button>
                                             </div>
                                         )}
-                                    </div>
+                                        </div>
+                                    )}
 
                                     {/* 相关冲煮记录 - 简化布局 */}
                                     <div className="border-t border-neutral-200/40 dark:border-neutral-800/40 pt-3">

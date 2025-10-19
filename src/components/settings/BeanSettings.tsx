@@ -272,10 +272,12 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
 
                         {/* 显示评分功能 */}
                         <div className="flex items-center justify-between">
-                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                                显示评分区域
+                            <div className="flex flex-col">
+                                <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                                    显示空评分区域
+                                </div>
                             </div>
-                            <label className="relative inline-flex cursor-pointer items-center">
+                            <label className="relative inline-flex cursor-pointer items-center flex-shrink-0">
                                 <input
                                     type="checkbox"
                                     checked={settings.showBeanRating || false}
