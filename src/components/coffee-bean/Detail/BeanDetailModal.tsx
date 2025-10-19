@@ -151,6 +151,24 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
         }
     }, [isOpen])
     
+    // 当咖啡豆改变时，智能重置记录显示状态
+    useEffect(() => {
+        if (!bean?.id || !isOpen) return
+        
+        // 计算普通冲煮记录和变动记录的数量
+        const normalNotes = relatedNotes.filter(note => !isSimpleChangeRecord(note))
+        const changeRecords = relatedNotes.filter(note => isSimpleChangeRecord(note))
+        
+        // 如果有普通冲煮记录，默认显示冲煮记录
+        // 如果只有变动记录，显示变动记录
+        // 如果都没有，状态无所谓（因为整个区域不显示）
+        if (normalNotes.length > 0) {
+            setShowChangeRecords(false)
+        } else if (changeRecords.length > 0) {
+            setShowChangeRecords(true)
+        }
+    }, [bean?.id, relatedNotes, isOpen])
+    
     // 加载打印和显示设置
     useEffect(() => {
         const loadPrintSettings = async () => {
@@ -815,53 +833,45 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                     )}
 
                                     {/* 相关冲煮记录 - 简化布局 - 只在有记录时显示 */}
-                                    {relatedNotes.length > 0 && (
-                                        <div className="border-t border-neutral-200/40 dark:border-neutral-800/40 pt-3">
-                                            <div className="flex items-center gap-2">
-                                                {(() => {
-                                                    const normalNotes = relatedNotes.filter(note => !isSimpleChangeRecord(note));
-                                                    const changeRecords = relatedNotes.filter(note => isSimpleChangeRecord(note));
-                                                    
-                                                    return (
-                                                        <>
-                                                            {normalNotes.length > 0 && (
-                                                                <button
-                                                                    onClick={() => setShowChangeRecords(false)}
-                                                                    className={`text-xs font-medium text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300 transition-colors ${
-                                                                        !showChangeRecords ? 'opacity-100' : 'opacity-50'
-                                                                    }`}
-                                                                >
-                                                                    冲煮记录 ({normalNotes.length})
-                                                                </button>
-                                                            )}
-                                                            {changeRecords.length > 0 && (
-                                                                <button
-                                                                    onClick={() => setShowChangeRecords(true)}
-                                                                    className={`text-xs font-medium text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300 transition-colors ${
-                                                                        showChangeRecords ? 'opacity-100' : 'opacity-50'
-                                                                    }`}
-                                                                >
-                                                                    变动记录 ({changeRecords.length})
-                                                                </button>
-                                                            )}
-                                                        </>
-                                                    );
-                                                })()}
-                                            </div>
+                                    {(() => {
+                                        // 分类记录
+                                        const normalNotes = relatedNotes.filter(note => !isSimpleChangeRecord(note));
+                                        const changeRecords = relatedNotes.filter(note => isSimpleChangeRecord(note));
+                                        
+                                        // 如果都没有记录，直接返回null，不显示这个区域
+                                        if (normalNotes.length === 0 && changeRecords.length === 0) {
+                                            return null;
+                                        }
+                                        
+                                        return (
+                                            <div className="border-t border-neutral-200/40 dark:border-neutral-800/40 pt-3">
+                                                {/* Tab切换按钮 - 只显示存在的类型 */}
+                                                <div className="flex items-center gap-2">
+                                                    {normalNotes.length > 0 && (
+                                                        <button
+                                                            onClick={() => setShowChangeRecords(false)}
+                                                            className={`text-xs font-medium text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300 transition-colors ${
+                                                                !showChangeRecords ? 'opacity-100' : 'opacity-50'
+                                                            }`}
+                                                        >
+                                                            冲煮记录 ({normalNotes.length})
+                                                        </button>
+                                                    )}
+                                                    {changeRecords.length > 0 && (
+                                                        <button
+                                                            onClick={() => setShowChangeRecords(true)}
+                                                            className={`text-xs font-medium text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300 transition-colors ${
+                                                                showChangeRecords ? 'opacity-100' : 'opacity-50'
+                                                            }`}
+                                                        >
+                                                            变动记录 ({changeRecords.length})
+                                                        </button>
+                                                    )}
+                                                </div>
 
-                                            {(() => {
-                                                const filteredNotes = relatedNotes.filter((note) => {
-                                                    const isChangeRecord = isSimpleChangeRecord(note);
-                                                    return showChangeRecords ? isChangeRecord : !isChangeRecord;
-                                                });
-                                                
-                                                return filteredNotes.length === 0 ? (
-                                                    <div className="text-xs text-neutral-500 dark:text-neutral-400 mt-1.5">
-                                                        {showChangeRecords ? '暂无变动记录' : '暂无冲煮记录'}
-                                                    </div>
-                                                ) : (
-                                                    <div className="space-y-2 mt-3">
-                                                        {filteredNotes.map((note) => {
+                                                {/* 记录列表 */}
+                                                <div className="space-y-2 mt-3">
+                                                    {(showChangeRecords ? changeRecords : normalNotes).map((note) => {
                                         const isChangeRecord = isSimpleChangeRecord(note)
 
                                         return (
@@ -1060,14 +1070,13 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                         )}
                                     </div>
                                 )}
-                                                </div>
-                                        )
+                                            </div>
+                                        );
                                     })}
-                                                    </div>
-                                                );
-                                            })()}
-                                        </div>
-                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
                                 </div>
                             ) : null}
                         </div>
