@@ -287,28 +287,99 @@ const DataSettings: React.FC<DataSettingsProps> = ({
             reader.onload = async (event) => {
                 try {
                     const jsonString = event.target?.result as string
-                    const result = await DataManagerUtil.importAllData(jsonString)
-
-                    if (result.success) {
-                        setStatus({ type: 'success', message: result.message })
-                        if (onDataChange) {
-                            onDataChange()
-                        }
+                    
+                    // 动态导入 Beanconqueror 导入器
+                    const { isBeanconquerorData, importBeanconquerorData } = await import('@/lib/utils/beanconquerorImporter')
+                    
+                    // 检测数据类型
+                    if (isBeanconquerorData(jsonString)) {
+                        // 处理 Beanconqueror 数据
+                        setStatus({ type: 'info', message: '检测到 Beanconqueror 数据，正在转换...' })
                         
-                        // 触发笔记全局缓存的重新初始化
-                        try {
-                            // 触发全局缓存重置事件
-                            window.dispatchEvent(new CustomEvent('globalCacheReset'));
+                        const importResult = await importBeanconquerorData(jsonString)
+                        
+                        if (importResult.success && importResult.data) {
+                            const { Storage } = await import('@/lib/core/storage')
+                            const { db } = await import('@/lib/core/db')
                             
-                            // 异步重新初始化全局缓存，不阻塞UI
-                            import('@/components/notes/List/globalCache')
-                                .then(({ initializeGlobalCache }) => initializeGlobalCache())
-                                .catch(err => console.error('重新初始化笔记缓存失败:', err));
-                        } catch (cacheError) {
-                            console.error('重置笔记缓存事件失败:', cacheError);
+                            // 清空现有的咖啡豆数据
+                            await Storage.set('coffeeBeans', JSON.stringify([]))
+                            await db.coffeeBeans.clear()
+                            
+                            // 清空现有的冲煮记录数据
+                            await Storage.set('brewingNotes', JSON.stringify([]))
+                            await db.brewingNotes.clear()
+                            
+                            // 导入咖啡豆数据
+                            const { CoffeeBeanManager } = await import('@/lib/managers/coffeeBeanManager')
+                            CoffeeBeanManager.clearCache() // 清除缓存
+                            
+                            // 批量添加咖啡豆
+                            CoffeeBeanManager.startBatchOperation()
+                            try {
+                                for (const bean of importResult.data.coffeeBeans) {
+                                    // 移除 id 和 timestamp，让 addBean 自动生成
+                                    const { id: _id, timestamp: _timestamp, ...beanData } = bean
+                                    await CoffeeBeanManager.addBean(beanData)
+                                }
+                                CoffeeBeanManager.endBatchOperation()
+                            } catch (error) {
+                                CoffeeBeanManager.endBatchOperation()
+                                throw error
+                            }
+                            
+                            // 导入冲煮记录数据
+                            if (importResult.data.brewingNotes.length > 0) {
+                                // 直接替换为导入的笔记
+                                await Storage.set('brewingNotes', JSON.stringify(importResult.data.brewingNotes))
+                                
+                                // 更新全局缓存
+                                try {
+                                    const { globalCache, calculateTotalCoffeeConsumption } = await import('@/components/notes/List/globalCache')
+                                    // BrewingNoteData 与 BrewingNote 结构兼容，可以安全转换
+                                    type BrewingNote = import('@/lib/core/config').BrewingNote
+                                    globalCache.notes = importResult.data.brewingNotes as unknown as BrewingNote[]
+                                    globalCache.totalConsumption = calculateTotalCoffeeConsumption(importResult.data.brewingNotes as unknown as BrewingNote[])
+                                } catch (cacheError) {
+                                    console.error('更新笔记缓存失败:', cacheError)
+                                }
+                            }
+                            setStatus({ 
+                                type: 'success', 
+                                message: `成功从 Beanconqueror 导入 ${importResult.stats?.beansCount || 0} 个咖啡豆${importResult.stats?.brewsCount ? `和 ${importResult.stats.brewsCount} 条冲煮记录` : ''}`
+                            })
+                            
+                            if (onDataChange) {
+                                onDataChange()
+                            }
+                        } else {
+                            setStatus({ type: 'error', message: importResult.message })
                         }
                     } else {
-                        setStatus({ type: 'error', message: result.message })
+                        // 处理 brew-guide 数据
+                        const result = await DataManagerUtil.importAllData(jsonString)
+
+                        if (result.success) {
+                            setStatus({ type: 'success', message: result.message })
+                            if (onDataChange) {
+                                onDataChange()
+                            }
+                            
+                            // 触发笔记全局缓存的重新初始化
+                            try {
+                                // 触发全局缓存重置事件
+                                window.dispatchEvent(new CustomEvent('globalCacheReset'));
+                                
+                                // 异步重新初始化全局缓存，不阻塞UI
+                                import('@/components/notes/List/globalCache')
+                                    .then(({ initializeGlobalCache }) => initializeGlobalCache())
+                                    .catch(err => console.error('重新初始化笔记缓存失败:', err));
+                            } catch (cacheError) {
+                                console.error('重置笔记缓存事件失败:', cacheError);
+                            }
+                        } else {
+                            setStatus({ type: 'error', message: result.message })
+                        }
                     }
                 } catch (_error) {
                     setStatus({ type: 'error', message: `导入失败: ${(_error as Error).message}` })

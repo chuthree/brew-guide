@@ -668,6 +668,10 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     }, [selectedEquipment, availableEquipments]);
 
     const currentMethodName = useMemo(() => {
+        // 如果 selectedMethod 是空字符串，返回"无方案"而不是"未知方案"
+        if (!selectedMethod || selectedMethod.trim() === '') {
+            return '无方案';
+        }
         const method = availableMethods.find(m =>
             m.name === selectedMethod || m.id === selectedMethod
         );

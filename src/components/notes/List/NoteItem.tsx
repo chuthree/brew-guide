@@ -174,10 +174,11 @@ const NoteItem: React.FC<NoteItemProps> = ({
                                     )}
                                 </div>
 
-                                {/* 方案信息 - 只在有方案时显示 */}
-                                {note.params && note.method && note.method.trim() !== '' && (
+                                {/* 参数信息 - 只要有参数就显示，不依赖于是否有方案 */}
+                                {note.params && (
                                     <div className="text-xs font-medium mt-1.5 tracking-wide text-neutral-600 dark:text-neutral-400 space-x-1 leading-relaxed">
-                                        {beanName && (
+                                        {/* 如果有方案且有咖啡豆名称，显示器具名称 */}
+                                        {beanName && note.method && note.method.trim() !== '' && (
                                             <>
                                                 <span>{equipmentName}</span>
                                                 <span>·</span>

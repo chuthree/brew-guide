@@ -999,8 +999,8 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                                         )}
                                                     </div>
 
-                                                    {/* 方案信息 - 只在有方案时显示 */}
-                                                    {note.params && note.method && note.method.trim() !== '' && (
+                                                    {/* 参数信息 - 无论是否有方案都显示 */}
+                                                    {note.params && (
                                                         <div className="text-xs font-medium mt-1.5 tracking-wide text-neutral-600 dark:text-neutral-400 space-x-1 leading-relaxed">
                                                             {bean?.name && (
                                                                 <>
