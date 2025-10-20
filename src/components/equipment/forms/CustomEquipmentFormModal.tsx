@@ -174,7 +174,9 @@ const CustomEquipmentFormModal: React.FC<CustomEquipmentFormModalProps> = ({
                                             ref={formRef}
                                             onSave={(equipment) => {
                                                 onSave(equipment);
-                                                handleClose();
+                                                // 保存成功后直接关闭，不通过历史栈返回
+                                                // 避免触发 popstate 事件导致表单返回上一步
+                                                onClose();
                                             }}
                                             onCancel={handleClose}
                                             initialEquipment={editingEquipment}

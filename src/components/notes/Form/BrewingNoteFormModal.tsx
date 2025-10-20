@@ -374,9 +374,15 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
       }
     }
 
-    // 保存并关闭
+    // 保存笔记
     onSave(completeNote)
-    handleClose()
+    
+    // 保存成功后直接关闭，不通过历史栈返回
+    // 避免触发 popstate 事件导致表单返回上一步
+    // 重置状态
+    setSelectedCoffeeBean(null)
+    setSelectedMethod('')
+    onClose()
 
     // 如果提供了保存成功回调，则调用它
     if (onSaveSuccess) {
