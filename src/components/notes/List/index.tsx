@@ -576,6 +576,23 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
             if (isNewNote) {
                 // 添加新笔记
                 parsedNotes = [updatedData as BrewingNote, ...parsedNotes];
+                
+                // 扣除咖啡豆剩余量
+                if (updatedData.beanId && updatedData.params?.coffee) {
+                    try {
+                        const { CoffeeBeanManager } = await import('@/lib/managers/coffeeBeanManager');
+                        const coffeeMatch = updatedData.params.coffee.match(/(\d+(?:\.\d+)?)/);
+                        if (coffeeMatch) {
+                            const coffeeAmount = parseFloat(coffeeMatch[0]);
+                            if (!isNaN(coffeeAmount) && coffeeAmount > 0) {
+                                await CoffeeBeanManager.updateBeanRemaining(updatedData.beanId, coffeeAmount);
+                            }
+                        }
+                    } catch (error) {
+                        console.error('扣除咖啡豆剩余量失败:', error);
+                        // 不阻止笔记保存，但记录错误
+                    }
+                }
             } else {
                 // 更新现有笔记
                 parsedNotes = parsedNotes.map(note => {
@@ -668,49 +685,79 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                 try {
                     const { CoffeeBeanManager } = await import('@/lib/managers/coffeeBeanManager');
 
-                    // 计算原始变化量和新变化量
-                    let originalChangeAmount = 0;
-                    let newChangeAmount = 0;
+                    if (isNewRecord) {
+                        // 新记录：直接扣除咖啡豆剩余量
+                        if (updatedRecord.source === 'quick-decrement') {
+                            const decrementAmount = updatedRecord.quickDecrementAmount || 0;
+                            if (decrementAmount > 0) {
+                                await CoffeeBeanManager.updateBeanRemaining(updatedRecord.beanId, decrementAmount);
+                            }
+                        } else if (updatedRecord.source === 'capacity-adjustment') {
+                            const changeAmount = updatedRecord.changeRecord?.capacityAdjustment?.changeAmount || 0;
+                            if (Math.abs(changeAmount) > 0.01) {
+                                // 获取当前咖啡豆信息
+                                const currentBean = await CoffeeBeanManager.getBeanById(updatedRecord.beanId);
+                                if (currentBean) {
+                                    const currentRemaining = parseFloat(currentBean.remaining || '0');
+                                    const newRemaining = Math.max(0, currentRemaining + changeAmount);
 
-                    if (originalRecord) {
+                                    // 确保不超过总容量
+                                    let finalRemaining = newRemaining;
+                                    if (currentBean.capacity) {
+                                        const totalCapacity = parseFloat(currentBean.capacity);
+                                        if (!isNaN(totalCapacity) && totalCapacity > 0) {
+                                            finalRemaining = Math.min(finalRemaining, totalCapacity);
+                                        }
+                                    }
+
+                                    const formattedRemaining = CoffeeBeanManager.formatNumber(finalRemaining);
+                                    await CoffeeBeanManager.updateBean(updatedRecord.beanId, {
+                                        remaining: formattedRemaining
+                                    });
+                                }
+                            }
+                        }
+                    } else {
+                        // 更新现有记录：计算差异并调整
+                        let originalChangeAmount = 0;
+                        let newChangeAmount = 0;
+
                         if (originalRecord.source === 'quick-decrement') {
                             originalChangeAmount = -(originalRecord.quickDecrementAmount || 0);
                         } else if (originalRecord.source === 'capacity-adjustment') {
                             originalChangeAmount = originalRecord.changeRecord?.capacityAdjustment?.changeAmount || 0;
                         }
-                    }
 
-                    if (updatedRecord.source === 'quick-decrement') {
-                        newChangeAmount = -(updatedRecord.quickDecrementAmount || 0);
-                    } else if (updatedRecord.source === 'capacity-adjustment') {
-                        newChangeAmount = updatedRecord.changeRecord?.capacityAdjustment?.changeAmount || 0;
-                    }
+                        if (updatedRecord.source === 'quick-decrement') {
+                            newChangeAmount = -(updatedRecord.quickDecrementAmount || 0);
+                        } else if (updatedRecord.source === 'capacity-adjustment') {
+                            newChangeAmount = updatedRecord.changeRecord?.capacityAdjustment?.changeAmount || 0;
+                        }
 
-                    // 计算需要调整的容量差异
-                    const capacityDiff = newChangeAmount - originalChangeAmount;
+                        // 计算需要调整的容量差异
+                        const capacityDiff = newChangeAmount - originalChangeAmount;
 
-                    if (Math.abs(capacityDiff) > 0.01) {
-                        // 获取当前咖啡豆信息
-                        const currentBean = await CoffeeBeanManager.getBeanById(updatedRecord.beanId);
-                        if (currentBean) {
-                            const currentRemaining = parseFloat(currentBean.remaining || '0');
-                            const newRemaining = Math.max(0, currentRemaining + capacityDiff);
+                        if (Math.abs(capacityDiff) > 0.01) {
+                            // 获取当前咖啡豆信息
+                            const currentBean = await CoffeeBeanManager.getBeanById(updatedRecord.beanId);
+                            if (currentBean) {
+                                const currentRemaining = parseFloat(currentBean.remaining || '0');
+                                const newRemaining = Math.max(0, currentRemaining + capacityDiff);
 
-                            // 确保不超过总容量
-                            let finalRemaining = newRemaining;
-                            if (currentBean.capacity) {
-                                const totalCapacity = parseFloat(currentBean.capacity);
-                                if (!isNaN(totalCapacity) && totalCapacity > 0) {
-                                    finalRemaining = Math.min(finalRemaining, totalCapacity);
+                                // 确保不超过总容量
+                                let finalRemaining = newRemaining;
+                                if (currentBean.capacity) {
+                                    const totalCapacity = parseFloat(currentBean.capacity);
+                                    if (!isNaN(totalCapacity) && totalCapacity > 0) {
+                                        finalRemaining = Math.min(finalRemaining, totalCapacity);
+                                    }
                                 }
+
+                                const formattedRemaining = CoffeeBeanManager.formatNumber(finalRemaining);
+                                await CoffeeBeanManager.updateBean(updatedRecord.beanId, {
+                                    remaining: formattedRemaining
+                                });
                             }
-
-                            const formattedRemaining = CoffeeBeanManager.formatNumber(finalRemaining);
-                            await CoffeeBeanManager.updateBean(updatedRecord.beanId, {
-                                remaining: formattedRemaining
-                            });
-
-
                         }
                     }
                 } catch (error) {
