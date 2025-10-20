@@ -1,4 +1,4 @@
-export const APP_VERSION = "1.3.10";
+export const APP_VERSION = "1.3.11";
 
 // Types
 export interface Stage {
@@ -536,7 +536,7 @@ export const equipmentList: Equipment[] = [
 export const brewingMethods: BrewingMethods = {
 	V60: [
 		{
-			name: "一刀流(萃取稳定)",
+			name: "一刀流",
 			params: {
 				coffee: "15g",
 				water: "225g",
@@ -566,7 +566,7 @@ export const brewingMethods: BrewingMethods = {
 			},
 		},
 		{
-			name: "三段式(兼容性强)",
+			name: "三段式",
 			params: {
 				coffee: "15g",
 				water: "225g",
@@ -604,7 +604,7 @@ export const brewingMethods: BrewingMethods = {
 			},
 		},
 		{
-			name: "粕谷哲4:6法(甜而平衡)",
+			name: "粕谷哲4:6法",
 			params: {
 				coffee: "20g",
 				water: "300g",
@@ -658,7 +658,7 @@ export const brewingMethods: BrewingMethods = {
 			},
 		},
 		{
-			name: "温水细粉慢冲LtFS(甜感爆炸)",
+			name: "温水细粉慢冲LtFS",
 			params: {
 				coffee: "12g",
 				water: "200g",
@@ -696,53 +696,7 @@ export const brewingMethods: BrewingMethods = {
 			},
 		},
 		{
-			name: "张师傅1:2:3冲煮法(群友力推)",
-			params: {
-				coffee: "16g",
-				water: "240g",
-				ratio: "1:15",
-				grindSize: "中细",
-				temp: "92°C",
-				videoUrl: "",
-				roastLevel: "中浅烘焙",
-				stages: [
-					{
-						time: 25,
-						pourTime: 15,
-						label: "焖蒸（绕圈注水）",
-						water: "40g",
-						detail: "中心向外绕圈，确保均匀萃取",
-						pourType: "circle",
-					},
-					{
-						time: 55,
-						pourTime: 20,
-						label: "绕圈注水",
-						water: "120g",
-						detail: "中心向外缓慢画圈注水，均匀萃取咖啡风味",
-						pourType: "circle",
-					},
-					{
-						time: 70,
-						pourTime: 10,
-						label: "绕圈注水",
-						water: "190g",
-						detail: "中心向外缓慢画圈注水，均匀萃取咖啡风味",
-						pourType: "circle",
-					},
-					{
-						time: 95,
-						pourTime: 5,
-						label: "中心注水",
-						water: "240g",
-						detail: "中心定点大水流注水",
-						pourType: "center",
-					},
-				],
-			},
-		},
-		{
-			name: "冰手冲(清爽明亮)",
+			name: "冰手冲",
 			params: {
 				coffee: "20g",
 				water: "200g",
@@ -780,7 +734,7 @@ export const brewingMethods: BrewingMethods = {
 			},
 		},
 		{
-			name: "夏季八冲(全宇宙最多人使用的咖啡冲煮手法)",
+			name: "夏季八冲",
 			params: {
 				coffee: "0g",
 				water: "0g",
@@ -836,7 +790,7 @@ export const brewingMethods: BrewingMethods = {
 			},
 		},
 		{
-			name: "夏季八冲(全宇宙最多人使用的咖啡冲煮手法)",
+			name: "夏季八冲",
 			params: {
 				coffee: "0g",
 				water: "0g",
@@ -861,7 +815,7 @@ export const brewingMethods: BrewingMethods = {
 	],
 	Kalita: [
 		{
-			name: "三段式(兼容性强)",
+			name: "三段式",
 			params: {
 				coffee: "15g",
 				water: "225g",
@@ -899,7 +853,7 @@ export const brewingMethods: BrewingMethods = {
 			},
 		},
 		{
-			name: "温水细粉慢冲LtFS(甜感爆炸)",
+			name: "温水细粉慢冲LtFS",
 			params: {
 				coffee: "12g",
 				water: "200g",
@@ -937,7 +891,7 @@ export const brewingMethods: BrewingMethods = {
 			},
 		},
 		{
-			name: "夏季八冲(全宇宙最多人使用的咖啡冲煮手法)",
+			name: "夏季八冲",
 			params: {
 				coffee: "0g",
 				water: "0g",
@@ -961,7 +915,7 @@ export const brewingMethods: BrewingMethods = {
 	],
 	Origami: [
 		{
-			name: "三段式(兼容性强)",
+			name: "三段式",
 			params: {
 				coffee: "15g",
 				water: "225g",
@@ -999,7 +953,7 @@ export const brewingMethods: BrewingMethods = {
 			},
 		},
 		{
-			name: "温水细粉慢冲LtFS(甜感爆炸)",
+			name: "温水细粉慢冲LtFS",
 			params: {
 				coffee: "12g",
 				water: "200g",
@@ -1037,7 +991,7 @@ export const brewingMethods: BrewingMethods = {
 			},
 		},
 		{
-			name: "夏季八冲(全宇宙最多人使用的咖啡冲煮手法)",
+			name: "夏季八冲",
 			params: {
 				coffee: "0g",
 				water: "0g",
