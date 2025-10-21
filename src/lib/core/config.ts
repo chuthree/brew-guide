@@ -695,6 +695,52 @@ export const brewingMethods: BrewingMethods = {
 				],
 			},
 		},
+        {
+			name: "张师傅1:2:3冲煮法",
+			params: {
+				coffee: "16g",
+				water: "240g",
+				ratio: "1:15",
+				grindSize: "中细",
+				temp: "92°C",
+				videoUrl: "",
+				roastLevel: "中浅烘焙",
+				stages: [
+					{
+						time: 25,
+						pourTime: 15,
+						label: "焖蒸（绕圈注水）",
+						water: "40g",
+						detail: "中心向外绕圈，确保均匀萃取",
+						pourType: "circle",
+					},
+					{
+						time: 55,
+						pourTime: 20,
+						label: "绕圈注水",
+						water: "120g",
+						detail: "中心向外缓慢画圈注水，均匀萃取咖啡风味",
+						pourType: "circle",
+					},
+					{
+						time: 70,
+						pourTime: 10,
+						label: "绕圈注水",
+						water: "190g",
+						detail: "中心向外缓慢画圈注水，均匀萃取咖啡风味",
+						pourType: "circle",
+					},
+					{
+						time: 95,
+						pourTime: 5,
+						label: "中心注水",
+						water: "240g",
+						detail: "中心定点大水流注水",
+						pourType: "center",
+					},
+				],
+			},
+		},
 		{
 			name: "冰手冲",
 			params: {
