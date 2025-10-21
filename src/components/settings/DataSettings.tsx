@@ -10,7 +10,9 @@ import { Share } from '@capacitor/share'
 import { SettingsOptions } from './Settings'
 import { ButtonGroup } from '../ui/ButtonGroup'
 
-import S3SyncManager, { SyncResult, SyncMetadata } from '@/lib/s3/syncManager'
+// 使用新版本的 S3 同步管理器
+import S3SyncManager from '@/lib/s3/syncManagerV2'
+import type { SyncResult, SyncMetadataV2 as SyncMetadata } from '@/lib/s3/types'
 import {
   BackupReminderSettings,
   BackupReminderUtils,
@@ -445,6 +447,11 @@ const DataSettings: React.FC<DataSettingsProps> = ({
     const [showConflictModal, setShowConflictModal] = useState(false)
     const [conflictRemoteMetadata, setConflictRemoteMetadata] = useState<SyncMetadata | null>(null)
     const [isSyncNeeded, setIsSyncNeeded] = useState(false)
+    const [syncProgress, setSyncProgress] = useState<{
+        phase: string
+        message: string
+        percentage: number
+    } | null>(null)
 
     // 加载备份提醒设置
     useEffect(() => {
@@ -565,12 +572,27 @@ const DataSettings: React.FC<DataSettingsProps> = ({
 
         setIsSyncing(true)
         setS3Error('')
+        setSyncProgress(null)
 
         try {
-            const result: SyncResult = await syncManager.sync(direction)
+            // 使用新的 SyncOptions 格式
+            const result: SyncResult = await syncManager.sync({
+                preferredDirection: direction,
+                onProgress: (progress) => {
+                    setSyncProgress({
+                        phase: progress.phase,
+                        message: progress.message,
+                        percentage: progress.percentage
+                    })
+                }
+            })
 
             if (result.conflict) {
-                setConflictRemoteMetadata(result.remoteMetadata || null)
+                const metadata = result.remoteMetadata
+                // 确保元数据是 V2 格式
+                if (metadata && 'version' in metadata && metadata.version === '2.0.0') {
+                    setConflictRemoteMetadata(metadata as SyncMetadata)
+                }
                 setShowConflictModal(true)
                 setS3Error('数据冲突：本地和云端数据都已更改。')
                 return
@@ -594,6 +616,7 @@ const DataSettings: React.FC<DataSettingsProps> = ({
             setS3Error(`同步失败: ${error instanceof Error ? error.message : '未知错误'}`)
         } finally {
             setIsSyncing(false)
+            setSyncProgress(null)
         }
     }, [syncManager, isSyncing, settings.hapticFeedback, onDataChange])
 
@@ -846,13 +869,115 @@ const DataSettings: React.FC<DataSettingsProps> = ({
                                         </div>
 
                                         {/* 测试连接按钮 */}
-                                        <button
-                                            onClick={testS3Connection}
-                                            disabled={s3Status === 'connecting'}
-                                            className="w-full py-2 px-3 text-sm font-medium text-white bg-neutral-700 hover:bg-neutral-800 disabled:bg-neutral-400 rounded-md transition-colors"
-                                        >
-                                            {s3Status === 'connecting' ? '连接中...' : '测试连接'}
-                                        </button>
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={testS3Connection}
+                                                disabled={s3Status === 'connecting'}
+                                                className="flex-1 py-2 px-3 text-sm font-medium text-white bg-neutral-700 hover:bg-neutral-800 disabled:bg-neutral-400 rounded-md transition-colors"
+                                            >
+                                                {s3Status === 'connecting' ? '连接中...' : '测试连接'}
+                                            </button>
+                                        </div>
+
+                                        {/* 导入导出配置 */}
+                                        <div className="pt-3 border-t border-neutral-200 dark:border-neutral-700">
+                                            <div className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-2">
+                                                配置管理
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={async () => {
+                                                        try {
+                                                            const config = {
+                                                                region: s3Settings.region,
+                                                                accessKeyId: s3Settings.accessKeyId,
+                                                                secretAccessKey: s3Settings.secretAccessKey,
+                                                                bucketName: s3Settings.bucketName,
+                                                                prefix: s3Settings.prefix,
+                                                                endpoint: s3Settings.endpoint
+                                                            }
+                                                            const configText = JSON.stringify(config, null, 2)
+                                                            
+                                                            if (navigator.clipboard) {
+                                                                await navigator.clipboard.writeText(configText)
+                                                                setStatus({ type: 'success', message: '配置已复制到剪贴板' })
+                                                                if (settings.hapticFeedback) {
+                                                                    hapticsUtils.light()
+                                                                }
+                                                            } else {
+                                                                // 备用方案：显示配置文本让用户手动复制
+                                                                alert(`请复制以下配置:\n\n${configText}`)
+                                                            }
+                                                        } catch (error) {
+                                                            console.error('复制配置失败:', error)
+                                                            setStatus({ type: 'error', message: '复制失败' })
+                                                        }
+                                                    }}
+                                                    className="flex-1 py-2 px-3 text-xs font-medium text-neutral-700 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 rounded-md transition-colors"
+                                                >
+                                                    📋 导出配置
+                                                </button>
+                                                <button
+                                                    onClick={async () => {
+                                                        try {
+                                                            let configText = ''
+                                                            
+                                                            if (navigator.clipboard) {
+                                                                configText = await navigator.clipboard.readText()
+                                                            } else {
+                                                                // 备用方案：让用户粘贴配置
+                                                                configText = prompt('请粘贴配置文本:') || ''
+                                                            }
+                                                            
+                                                            if (!configText.trim()) {
+                                                                setStatus({ type: 'error', message: '剪贴板为空' })
+                                                                return
+                                                            }
+                                                            
+                                                            const config = JSON.parse(configText)
+                                                            
+                                                            // 验证必需字段
+                                                            if (!config.region || !config.accessKeyId || !config.secretAccessKey || !config.bucketName) {
+                                                                setStatus({ type: 'error', message: '配置格式不完整' })
+                                                                return
+                                                            }
+                                                            
+                                                            // 导入配置
+                                                            const newS3Settings = normalizeS3Settings({
+                                                                ...s3Settings,
+                                                                region: config.region,
+                                                                accessKeyId: config.accessKeyId,
+                                                                secretAccessKey: config.secretAccessKey,
+                                                                bucketName: config.bucketName,
+                                                                prefix: config.prefix || 'brew-guide-data/',
+                                                                endpoint: config.endpoint || '',
+                                                                lastConnectionSuccess: false
+                                                            })
+                                                            
+                                                            setS3Settings(newS3Settings)
+                                                            handleChange('s3Sync', newS3Settings)
+                                                            
+                                                            setStatus({ type: 'success', message: '配置已导入，请测试连接' })
+                                                            if (settings.hapticFeedback) {
+                                                                hapticsUtils.light()
+                                                            }
+                                                        } catch (error) {
+                                                            console.error('导入配置失败:', error)
+                                                            setStatus({ 
+                                                                type: 'error', 
+                                                                message: error instanceof SyntaxError ? '配置格式错误' : '导入失败' 
+                                                            })
+                                                        }
+                                                    }}
+                                                    className="flex-1 py-2 px-3 text-xs font-medium text-neutral-700 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 rounded-md transition-colors"
+                                                >
+                                                    📥 导入配置
+                                                </button>
+                                            </div>
+                                            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-2">
+                                                💡 可通过复制粘贴在设备间共享配置
+                                            </p>
+                                        </div>
 
                                         {/* 错误信息 */}
                                         {s3Error && (
@@ -900,7 +1025,19 @@ const DataSettings: React.FC<DataSettingsProps> = ({
                                             disabled={isSyncing}
                                             className="w-full py-2 px-3 text-sm font-medium text-white bg-neutral-700 hover:bg-neutral-800 disabled:bg-neutral-400 rounded-md transition-colors"
                                         >
-                                            {isSyncing ? '同步中...' : isSyncNeeded ? '需要同步' : '立即同步'}
+                                            {isSyncing ? (
+                                                syncProgress ? (
+                                                    <div className="flex flex-col items-center gap-1">
+                                                        <span>{syncProgress.message}</span>
+                                                        <div className="w-full bg-neutral-200 dark:bg-neutral-700 rounded-full h-1.5">
+                                                            <div 
+                                                                className="bg-neutral-600 dark:bg-neutral-400 h-1.5 rounded-full transition-all duration-300"
+                                                                style={{ width: `${syncProgress.percentage}%` }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                ) : '同步中...'
+                                            ) : isSyncNeeded ? '需要同步' : '立即同步'}
                                         </button>
                                         <div className="text-xs text-neutral-400 dark:text-neutral-500">
                                             {isSyncNeeded && <div className="text-orange-500 dark:text-orange-400">检测到数据变更，建议同步</div>}
@@ -1149,43 +1286,63 @@ const DataSettings: React.FC<DataSettingsProps> = ({
                         onClick={(e: React.MouseEvent) => e.stopPropagation()}
                         >
                             <div className="text-center mb-4">
-                                <h3 className="text-lg font-bold text-neutral-900 dark:text-neutral-100">数据同步冲突</h3>
+                                <h3 className="text-lg font-bold text-neutral-900 dark:text-neutral-100">
+                                    检测到数据冲突
+                                </h3>
                                 <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">
-                                    检测到云端数据已更新，请选择操作
+                                    本地和云端都有数据，请选择保留哪一方
                                 </p>
+                                {conflictRemoteMetadata && !conflictRemoteMetadata.lastSyncTime && (
+                                    <p className="mt-2 text-xs text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 px-3 py-2 rounded">
+                                        💡 首次同步：通常建议下载云端数据
+                                    </p>
+                                )}
                             </div>
 
-                            <div className="p-4 mb-4 bg-neutral-200/60 dark:bg-neutral-900/60 rounded text-center">
-                                <p className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                                    云端数据
-                                </p>
-                                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
-                                    {conflictRemoteMetadata && conflictRemoteMetadata.lastSyncTime
-                                        ? `最后更新于 ${new Date(
-                                            conflictRemoteMetadata.lastSyncTime
-                                        ).toLocaleString('zh-CN', {
-                                            month: 'numeric',
-                                            day: 'numeric',
-                                            hour: '2-digit',
-                                            minute: '2-digit'
-                                        })}`
-                                        : '无法获取云端数据时间'}
-                                </p>
+                            <div className="space-y-3 mb-4">
+                                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded">
+                                    <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                                        📥 云端数据
+                                    </p>
+                                    <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                                        {conflictRemoteMetadata && conflictRemoteMetadata.lastSyncTime
+                                            ? `最后更新：${new Date(
+                                                conflictRemoteMetadata.lastSyncTime
+                                            ).toLocaleString('zh-CN', {
+                                                month: 'numeric',
+                                                day: 'numeric',
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                            })}`
+                                            : '云端有数据'}
+                                    </p>
+                                </div>
+                                <div className="p-4 bg-neutral-200/60 dark:bg-neutral-900/60 rounded">
+                                    <p className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                                        📱 本地数据
+                                    </p>
+                                    <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">
+                                        当前设备上的数据
+                                    </p>
+                                </div>
                             </div>
 
                             <div className="space-y-3">
                                 <button
                                     onClick={() => handleConflictResolution('download')}
-                                    className="w-full py-3 px-4 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded transition-colors"
+                                    className="w-full py-3 px-4 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-sm"
                                 >
-                                    下载云端数据 (推荐)
+                                    ⬇️ 下载云端数据（推荐）
                                 </button>
                                 <button
                                     onClick={() => handleConflictResolution('upload')}
-                                    className="w-full py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-500"
+                                    className="w-full py-3 px-4 text-sm font-medium text-neutral-700 dark:text-neutral-300 bg-white dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-50 dark:hover:bg-neutral-600 rounded-lg transition-colors"
                                 >
-                                    上传本地数据 (将覆盖云端)
+                                    ⬆️ 上传本地数据
                                 </button>
+                                <p className="text-xs text-center text-neutral-500 dark:text-neutral-400 pt-2">
+                                    ⚠️ 选择后将覆盖另一方的数据，请谨慎操作
+                                </p>
                             </div>
                     </div>
                 </div>

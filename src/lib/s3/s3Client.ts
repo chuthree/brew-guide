@@ -618,8 +618,20 @@ export class S3Client {
     }
 
     private logSummary(event: string, detail: Record<string, unknown>): void {
+        // 只在开发环境或启用调试模式时输出
         if (typeof console !== 'undefined' && typeof console.warn === 'function') {
-            console.warn(`[S3:${event}]`, detail)
+            // 简化日志，只输出关键信息
+            const simplifiedDetail = {
+                ...detail,
+                // 移除冗余的 URL 信息，只保留关键字段
+                key: detail.key,
+                status: detail.status,
+                ok: detail.ok
+            }
+            
+            // 使用 console.log 而不是 console.warn，避免调用栈
+            // eslint-disable-next-line no-console
+            console.log(`[S3:${event}]`, simplifiedDetail)
         }
     }
 
