@@ -2476,176 +2476,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         className="flex h-full flex-col overflow-y-scroll"
         style={getParentPageStyle(hasModalOpen)}
       >
-        {/* 页面级别的视图选择覆盖层 */}
-        <AnimatePresence>
-          {showViewDropdown && activeMainTab === '咖啡豆' && (
-            <>
-              {/* 模糊背景 - 移动设备优化的动画 */}
-              <motion.div
-                initial={{
-                  opacity: 0,
-                  backdropFilter: 'blur(0px)',
-                }}
-                animate={{
-                  opacity: 1,
-                  backdropFilter: 'blur(20px)',
-                  transition: {
-                    opacity: {
-                      duration: 0.2,
-                      ease: [0.25, 0.46, 0.45, 0.94],
-                    },
-                    backdropFilter: {
-                      duration: 0.3,
-                      ease: [0.25, 0.46, 0.45, 0.94],
-                    },
-                  },
-                }}
-                exit={{
-                  opacity: 0,
-                  backdropFilter: 'blur(0px)',
-                  transition: {
-                    opacity: {
-                      duration: 0.15,
-                      ease: [0.4, 0.0, 1, 1],
-                    },
-                    backdropFilter: {
-                      duration: 0.2,
-                      ease: [0.4, 0.0, 1, 1],
-                    },
-                  },
-                }}
-                className="fixed inset-0 z-[60]"
-                style={{
-                  backgroundColor:
-                    'color-mix(in srgb, var(--background) 40%, transparent)',
-                  WebkitBackdropFilter: 'blur(4px)',
-                }}
-                onClick={() => setShowViewDropdown(false)}
-              />
-
-              {beanButtonPosition && (
-                <motion.div
-                  initial={{ opacity: 1, scale: 1 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{
-                    opacity: 0,
-                    scale: 0.98,
-                    transition: {
-                      duration: 0.12,
-                      ease: [0.4, 0.0, 1, 1],
-                    },
-                  }}
-                  className="fixed z-[80]"
-                  style={{
-                    top: `${beanButtonPosition.top}px`,
-                    left: `${beanButtonPosition.left}px`,
-                    minWidth: `${beanButtonPosition.width}px`,
-                  }}
-                  data-view-selector
-                >
-                  <motion.button
-                    initial={{ opacity: 1 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 1 }}
-                    onClick={() => setShowViewDropdown(false)}
-                    className="flex cursor-pointer items-center pb-3 text-left text-xs font-medium tracking-widest whitespace-nowrap text-neutral-800 transition-colors dark:text-neutral-100"
-                    style={{ paddingBottom: '12px' }}
-                  >
-                    <span className="relative inline-block">
-                      {VIEW_LABELS[currentBeanView]}
-                    </span>
-                    <ChevronsUpDown
-                      size={12}
-                      className="ml-1 text-neutral-400 dark:text-neutral-600"
-                      color="currentColor"
-                    />
-                  </motion.button>
-                </motion.div>
-              )}
-
-              {beanButtonPosition && (
-                <motion.div
-                  initial={{
-                    opacity: 0,
-                    y: -8,
-                    scale: 0.96,
-                  }}
-                  animate={{
-                    opacity: 1,
-                    y: 0,
-                    scale: 1,
-                    transition: {
-                      duration: 0.25,
-                      ease: [0.25, 0.46, 0.45, 0.94],
-                    },
-                  }}
-                  exit={{
-                    opacity: 0,
-                    y: -6,
-                    scale: 0.98,
-                    transition: {
-                      duration: 0.15,
-                      ease: [0.4, 0.0, 1, 1],
-                    },
-                  }}
-                  className="fixed z-[80]"
-                  style={{
-                    top: `${beanButtonPosition.top + 30}px`,
-                    left: `${beanButtonPosition.left}px`,
-                    minWidth: `${beanButtonPosition.width}px`,
-                  }}
-                  data-view-selector
-                >
-                  <div className="flex flex-col">
-                    {Object.entries(VIEW_LABELS)
-                      .filter(([key]) => key !== currentBeanView)
-                      .map(([key, label], index) => (
-                        <motion.button
-                          key={key}
-                          initial={{
-                            opacity: 0,
-                            y: -6,
-                            scale: 0.98,
-                          }}
-                          animate={{
-                            opacity: 1,
-                            y: 0,
-                            scale: 1,
-                            transition: {
-                              delay: index * 0.04,
-                              duration: 0.2,
-                              ease: [0.25, 0.46, 0.45, 0.94],
-                            },
-                          }}
-                          exit={{
-                            opacity: 0,
-                            y: -4,
-                            scale: 0.98,
-                            transition: {
-                              delay:
-                                (Object.keys(VIEW_LABELS).length - index - 1) *
-                                0.02,
-                              duration: 0.12,
-                              ease: [0.4, 0.0, 1, 1],
-                            },
-                          }}
-                          onClick={() =>
-                            handleBeanViewChange(key as ViewOption)
-                          }
-                          className="flex items-center pb-3 text-left text-xs font-medium tracking-widest whitespace-nowrap text-neutral-500 transition-colors hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300"
-                          style={{ paddingBottom: '12px' }}
-                        >
-                          <span className="relative inline-block">{label}</span>
-                          <span className="ml-1 h-3 w-3" />
-                        </motion.button>
-                      ))}
-                  </div>
-                </motion.div>
-              )}
-            </>
-          )}
-        </AnimatePresence>
-
         <NavigationBar
           activeMainTab={activeMainTab}
           setActiveMainTab={handleMainTabClick}
@@ -2942,6 +2772,176 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           reminderType={reminderType}
         />
       </div>
+
+      {/* 页面级别的视图选择覆盖层 - 独立渲染，不受父容器转场影响 */}
+      <AnimatePresence>
+        {showViewDropdown && activeMainTab === '咖啡豆' && (
+          <>
+            {/* 模糊背景 - 移动设备优化的动画 */}
+            <motion.div
+              initial={{
+                opacity: 0,
+                backdropFilter: 'blur(0px)',
+              }}
+              animate={{
+                opacity: 1,
+                backdropFilter: 'blur(20px)',
+                transition: {
+                  opacity: {
+                    duration: 0.2,
+                    ease: [0.25, 0.46, 0.45, 0.94],
+                  },
+                  backdropFilter: {
+                    duration: 0.3,
+                    ease: [0.25, 0.46, 0.45, 0.94],
+                  },
+                },
+              }}
+              exit={{
+                opacity: 0,
+                backdropFilter: 'blur(0px)',
+                transition: {
+                  opacity: {
+                    duration: 0.15,
+                    ease: [0.4, 0.0, 1, 1],
+                  },
+                  backdropFilter: {
+                    duration: 0.2,
+                    ease: [0.4, 0.0, 1, 1],
+                  },
+                },
+              }}
+              className="fixed inset-0 z-[60]"
+              style={{
+                backgroundColor:
+                  'color-mix(in srgb, var(--background) 40%, transparent)',
+                WebkitBackdropFilter: 'blur(4px)',
+              }}
+              onClick={() => setShowViewDropdown(false)}
+            />
+
+            {beanButtonPosition && (
+              <motion.div
+                initial={{ opacity: 1, scale: 1 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{
+                  opacity: 0,
+                  scale: 0.98,
+                  transition: {
+                    duration: 0.12,
+                    ease: [0.4, 0.0, 1, 1],
+                  },
+                }}
+                className="fixed z-[80]"
+                style={{
+                  top: `${beanButtonPosition.top}px`,
+                  left: `${beanButtonPosition.left}px`,
+                  minWidth: `${beanButtonPosition.width}px`,
+                }}
+                data-view-selector
+              >
+                <motion.button
+                  initial={{ opacity: 1 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 1 }}
+                  onClick={() => setShowViewDropdown(false)}
+                  className="flex cursor-pointer items-center pb-3 text-left text-xs font-medium tracking-widest whitespace-nowrap text-neutral-800 transition-colors dark:text-neutral-100"
+                  style={{ paddingBottom: '12px' }}
+                >
+                  <span className="relative inline-block">
+                    {VIEW_LABELS[currentBeanView]}
+                  </span>
+                  <ChevronsUpDown
+                    size={12}
+                    className="ml-1 text-neutral-400 dark:text-neutral-600"
+                    color="currentColor"
+                  />
+                </motion.button>
+              </motion.div>
+            )}
+
+            {beanButtonPosition && (
+              <motion.div
+                initial={{
+                  opacity: 0,
+                  y: -8,
+                  scale: 0.96,
+                }}
+                animate={{
+                  opacity: 1,
+                  y: 0,
+                  scale: 1,
+                  transition: {
+                    duration: 0.25,
+                    ease: [0.25, 0.46, 0.45, 0.94],
+                  },
+                }}
+                exit={{
+                  opacity: 0,
+                  y: -6,
+                  scale: 0.98,
+                  transition: {
+                    duration: 0.15,
+                    ease: [0.4, 0.0, 1, 1],
+                  },
+                }}
+                className="fixed z-[80]"
+                style={{
+                  top: `${beanButtonPosition.top + 30}px`,
+                  left: `${beanButtonPosition.left}px`,
+                  minWidth: `${beanButtonPosition.width}px`,
+                }}
+                data-view-selector
+              >
+                <div className="flex flex-col">
+                  {Object.entries(VIEW_LABELS)
+                    .filter(([key]) => key !== currentBeanView)
+                    .map(([key, label], index) => (
+                      <motion.button
+                        key={key}
+                        initial={{
+                          opacity: 0,
+                          y: -6,
+                          scale: 0.98,
+                        }}
+                        animate={{
+                          opacity: 1,
+                          y: 0,
+                          scale: 1,
+                          transition: {
+                            delay: index * 0.04,
+                            duration: 0.2,
+                            ease: [0.25, 0.46, 0.45, 0.94],
+                          },
+                        }}
+                        exit={{
+                          opacity: 0,
+                          y: -4,
+                          scale: 0.98,
+                          transition: {
+                            delay:
+                              (Object.keys(VIEW_LABELS).length - index - 1) *
+                              0.02,
+                            duration: 0.12,
+                            ease: [0.4, 0.0, 1, 1],
+                          },
+                        }}
+                        onClick={() =>
+                          handleBeanViewChange(key as ViewOption)
+                        }
+                        className="flex items-center pb-3 text-left text-xs font-medium tracking-widest whitespace-nowrap text-neutral-500 transition-colors hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300"
+                        style={{ paddingBottom: '12px' }}
+                      >
+                        <span className="relative inline-block">{label}</span>
+                        <span className="ml-1 h-3 w-3" />
+                      </motion.button>
+                    ))}
+                </div>
+              </motion.div>
+            )}
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Settings 组件独立渲染，不受父容器转场影响 */}
       <Settings
