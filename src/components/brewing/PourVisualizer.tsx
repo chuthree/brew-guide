@@ -479,7 +479,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                             src={getValveImageSrc() || ''}
                             alt={`Valve ${valveStatus}`}
                             fill
-                            className="object-contain invert-0 dark:invert opacity-50 transition-opacity duration-300"
+                            className={`object-contain invert-0 dark:invert ${equipmentOpacity} transition-opacity duration-300`}
                             sizes="(max-width: 768px) 100vw, 300px"
                             quality={85}
                             onError={() => { }}
@@ -631,7 +631,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                         src={getValveImageSrc() || ''}
                         alt={`Valve ${valveStatus}`}
                         fill
-                        className="object-contain invert-0 dark:invert opacity-50 transition-opacity duration-300"
+                        className={`object-contain invert-0 dark:invert ${equipmentOpacity} transition-opacity duration-300`}
                         sizes="(max-width: 768px) 100vw, 300px"
                         quality={85}
                         onError={() => { }}
