@@ -8,6 +8,7 @@ import React, {
   useMemo,
 } from 'react';
 import Image from 'next/image';
+import { motion } from 'framer-motion';
 
 import type { BrewingNoteData, CoffeeBean } from '@/types/app';
 import AutoResizeTextarea from '@/components/common/forms/AutoResizeTextarea';
@@ -45,6 +46,7 @@ import {
 } from '@/components/coffee-bean/ui/select';
 import CoffeeBeanSelector from './CoffeeBeanSelector';
 import { useCoffeeBeanData } from './hooks/useCoffeeBeanData';
+import ImagePreview from '@/components/common/ImagePreview';
 
 // 常量定义
 const ROAST_LEVELS = [
@@ -222,6 +224,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   const [coffeeBeanSearchQuery, setCoffeeBeanSearchQuery] = useState('');
   const [originalBeanId] = useState<string | undefined>(initialData.beanId); // 记录原始的beanId用于容量同步
   const [showFlavorInfo, setShowFlavorInfo] = useState(false); // 控制风味信息的显示
+  const [showImagePreview, setShowImagePreview] = useState(false); // 控制图片预览
 
   const [formData, setFormData] = useState<FormData>({
     coffeeBeanInfo: getInitialCoffeeBeanInfo(initialData),
@@ -1149,7 +1152,18 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         <div className="flex w-full items-center gap-2">
           {formData.image ? (
             /* 有图片时：只显示图片 */
-            <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded bg-neutral-200/40 dark:bg-neutral-800/60">
+            <motion.div
+              layoutId="note-image-preview"
+              className="relative h-16 w-16 flex-shrink-0 cursor-pointer overflow-hidden rounded bg-neutral-200/40 dark:bg-neutral-800/60"
+              onClick={() => setShowImagePreview(true)}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              transition={{
+                type: 'spring',
+                stiffness: 300,
+                damping: 30,
+              }}
+            >
               <Image
                 src={formData.image}
                 alt="笔记图片"
@@ -1160,12 +1174,15 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
               {/* 删除按钮 */}
               <button
                 type="button"
-                onClick={() => setFormData(prev => ({ ...prev, image: '' }))}
+                onClick={e => {
+                  e.stopPropagation();
+                  setFormData(prev => ({ ...prev, image: '' }));
+                }}
                 className="absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-neutral-800/80 text-white transition-colors hover:bg-red-500 dark:bg-neutral-200/80 dark:text-neutral-800 dark:hover:bg-red-500 dark:hover:text-white"
               >
                 <X className="h-2.5 w-2.5" />
               </button>
-            </div>
+            </motion.div>
           ) : (
             /* 无图片时：显示两个占位框 */
             <>
@@ -1542,6 +1559,17 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
             <span className="font-medium">保存笔记</span>
           </button>
         </div>
+      )}
+
+      {/* 图片预览 */}
+      {formData.image && (
+        <ImagePreview
+          src={formData.image}
+          alt="笔记图片"
+          isOpen={showImagePreview}
+          onClose={() => setShowImagePreview(false)}
+          layoutId="note-image-preview"
+        />
       )}
     </form>
   );
