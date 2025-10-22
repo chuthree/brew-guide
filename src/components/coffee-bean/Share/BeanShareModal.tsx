@@ -166,7 +166,7 @@ const BeanShareModal: React.FC<BeanShareModalProps> = ({
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.265 }}
                         onClick={handleClose}
-                        className="fixed inset-0 z-[70] bg-black/30 backdrop-blur-xs"
+                        className="fixed inset-0 z-[70] bg-black/30"
                     />
 
                     {/* 模态框内容 */}

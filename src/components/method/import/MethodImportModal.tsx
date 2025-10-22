@@ -310,7 +310,7 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
             className={`
                 fixed inset-0 z-50 transition-all duration-300
                 ${showForm 
-                    ? 'opacity-100 pointer-events-auto bg-black/30 backdrop-blur-xs' 
+                    ? 'opacity-100 pointer-events-auto bg-black/30' 
                     : 'opacity-0 pointer-events-none'
                 }
             `}

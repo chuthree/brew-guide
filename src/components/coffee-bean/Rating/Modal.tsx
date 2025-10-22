@@ -96,7 +96,7 @@ const CoffeeBeanRatingModal: React.FC<CoffeeBeanRatingModalProps> = ({
             className={`
                 fixed inset-0 z-[100] transition-all duration-300
                 ${showModal 
-                    ? 'opacity-100 pointer-events-auto bg-black/30 backdrop-blur-xs' 
+                    ? 'opacity-100 pointer-events-auto bg-black/30' 
                     : 'opacity-0 pointer-events-none'
                 }
             `}
