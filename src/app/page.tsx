@@ -2926,9 +2926,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                             ease: [0.4, 0.0, 1, 1],
                           },
                         }}
-                        onClick={() =>
-                          handleBeanViewChange(key as ViewOption)
-                        }
+                        onClick={() => handleBeanViewChange(key as ViewOption)}
                         className="flex items-center pb-3 text-left text-xs font-medium tracking-widest whitespace-nowrap text-neutral-500 transition-colors hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300"
                         style={{ paddingBottom: '12px' }}
                       >
