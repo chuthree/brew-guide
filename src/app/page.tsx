@@ -1594,7 +1594,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 bitterness: 0,
                 body: 0
             },
-            rating: 3,
+            rating: 0,
             notes: ''
         });
         setShowNoteFormModal(true);
@@ -1862,7 +1862,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                                     bitterness: 0,
                                     body: 0
                                 },
-                                rating: 3,
+                                rating: 0,
                                 notes: ''
                             });
                             setShowNoteFormModal(true);
@@ -1884,7 +1884,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                             bitterness: 0,
                             body: 0
                         },
-                        rating: 3,
+                        rating: 0,
                         notes: ''
                     });
                     setShowNoteFormModal(true);

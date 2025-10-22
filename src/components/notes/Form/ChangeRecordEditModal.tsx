@@ -249,7 +249,7 @@ const ChangeRecordEditModal: React.FC<ChangeRecordEditModalProps> = ({
                                                         grindSize: '',
                                                         temp: ''
                                                     },
-                                                    rating: initialData.rating || 3,
+                                                    rating: initialData.rating ?? 0,
                                                     taste: initialData.taste || {
                                                         acidity: 0,
                                                         sweetness: 0,

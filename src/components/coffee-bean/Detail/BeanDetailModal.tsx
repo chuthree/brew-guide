@@ -1073,9 +1073,12 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                             <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
                                                 {formatDate(note.timestamp)}
                                             </div>
-                                            <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
-                                                {formatRating(note.rating)}
-                                            </div>
+                                            {/* 只有当评分大于 0 时才显示评分 */}
+                                            {note.rating > 0 && (
+                                                <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
+                                                    {formatRating(note.rating)}
+                                                </div>
+                                            )}
                                         </div>
 
                                         {/* 备注信息 */}

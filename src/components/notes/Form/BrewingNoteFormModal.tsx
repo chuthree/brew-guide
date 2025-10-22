@@ -301,7 +301,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
         roastDate: initialNote?.coffeeBeanInfo?.roastDate || ''
       },
       params: initialNote?.params || params,
-      rating: initialNote?.rating || 3,
+      rating: initialNote?.rating ?? 0,
       taste: initialNote?.taste || {
         acidity: 0,
         sweetness: 0,

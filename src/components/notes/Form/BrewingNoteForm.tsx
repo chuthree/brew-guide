@@ -184,7 +184,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     const [formData, setFormData] = useState<FormData>({
         coffeeBeanInfo: getInitialCoffeeBeanInfo(initialData),
         image: typeof initialData.image === 'string' ? initialData.image : '',
-        rating: initialData?.rating || 3,
+        rating: initialData?.rating ?? 0,
         taste: initialData?.taste || {},
         notes: initialData?.notes || ''
     });
@@ -545,7 +545,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
             setFormData(prev => ({
                 ...prev,
                 image: typeof current.image === 'string' ? current.image : prev.image,
-                rating: current.rating || prev.rating,
+                rating: current.rating ?? prev.rating,
                 taste: current.taste ?
                     CustomFlavorDimensionsManager.migrateTasteRatings(current.taste, flavorDimensions) :
                     prev.taste,
@@ -580,7 +580,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     };
 
     // 创建滑块处理器
-    const ratingHandlers = createSliderHandlers(updateRating, 1, 5, 0.5);
+    const ratingHandlers = createSliderHandlers(updateRating, 0, 5, 0.5);
     const tasteHandlers = (key: string) =>
         createSliderHandlers(updateTasteRating(key), 0, 5, 1);
 
@@ -893,7 +893,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                                         {selectedCoffeeBean?.name || formData.coffeeBeanInfo.name || '未知咖啡豆'}
                                     </span>
                                 ) : (
-                                    <span className="ml-1">{selectedCoffeeBean?.name || formData.coffeeBeanInfo.name || '未知咖啡豆'}</span>
+                                    <>{selectedCoffeeBean?.name || formData.coffeeBeanInfo.name || '未知咖啡豆'}</>
                                 )}
                                 {/* 风味入口 - 直接跟在咖啡豆名称后面，仅当有风味信息时显示 */}
                                 {selectedCoffeeBean?.flavor && selectedCoffeeBean.flavor.length > 0 && (
@@ -1247,7 +1247,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                             id="overall-rating"
                             name="overallRating"
                             type="range"
-                            min="1"
+                            min="0"
                             max="5"
                             step="0.5"
                             value={formData.rating}
