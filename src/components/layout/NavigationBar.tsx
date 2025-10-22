@@ -561,6 +561,9 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                       pointerEvents: !(canGoBack() && onBackClick)
                         ? 'auto'
                         : 'none',
+                      visibility: !(canGoBack() && onBackClick)
+                        ? 'visible'
+                        : 'hidden',
                     }}
                   >
                     <TabButton
@@ -576,6 +579,9 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                       pointerEvents: !(canGoBack() && onBackClick)
                         ? 'auto'
                         : 'none',
+                      visibility: !(canGoBack() && onBackClick)
+                        ? 'visible'
+                        : 'hidden',
                     }}
                     className="relative"
                   >
@@ -602,10 +608,9 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                           showViewDropdown && activeMainTab === '咖啡豆'
                             ? 'none'
                             : 'auto',
-                        visibility:
-                          showViewDropdown && activeMainTab === '咖啡豆'
-                            ? 'hidden'
-                            : 'visible',
+                        ...(showViewDropdown && activeMainTab === '咖啡豆'
+                          ? { visibility: 'hidden' as const }
+                          : {}),
                       }}
                       data-view-selector
                     >
@@ -680,6 +685,9 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                       pointerEvents: !(canGoBack() && onBackClick)
                         ? 'auto'
                         : 'none',
+                      visibility: !(canGoBack() && onBackClick)
+                        ? 'visible'
+                        : 'hidden',
                     }}
                   >
                     <TabButton
