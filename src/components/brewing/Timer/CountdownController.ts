@@ -1,5 +1,5 @@
-import type { AudioState } from "./Audio";
-import { playSound } from "./Audio";
+import type { AudioState } from './Audio';
+import { playSound } from './Audio';
 
 /**
  * 倒计时回调接口
@@ -7,7 +7,10 @@ import { playSound } from "./Audio";
 export interface CountdownCallbacks {
   onTick: (updater: (prev: number | null) => number | null) => void;
   onComplete: () => void;
-  onStatusChange?: (status: { isRunning: boolean; time: number | null }) => void;
+  onStatusChange?: (status: {
+    isRunning: boolean;
+    time: number | null;
+  }) => void;
 }
 
 /**
@@ -27,7 +30,7 @@ export const createInitialCountdownState = (): CountdownState => ({
   timerId: null,
   currentTime: null,
   isRunning: false,
-  prevTime: null
+  prevTime: null,
 });
 
 /**
@@ -43,54 +46,54 @@ export const startCountdown = (
   audioState: AudioState,
   notificationSoundEnabled: boolean,
   callbacks: CountdownCallbacks
-): { 
-  timerId: NodeJS.Timeout; 
+): {
+  timerId: NodeJS.Timeout;
   cleanup: () => void;
 } => {
   // 播放开始音效
-  playSound("start", audioState, notificationSoundEnabled);
-  
+  playSound('start', audioState, notificationSoundEnabled);
+
   // 创建倒计时计时器
   const timerId = setInterval(() => {
-    callbacks.onTick((prev) => {
+    callbacks.onTick(prev => {
       if (prev === null) return null;
       if (prev <= 1) {
         // 倒计时结束
         clearInterval(timerId);
-        
+
         // 通知倒计时完成
         setTimeout(() => {
           if (notificationSoundEnabled) {
-            playSound("ding", audioState, true);
+            playSound('ding', audioState, true);
           }
           callbacks.onComplete();
         }, 0);
-        
+
         // 通知状态变化
         if (callbacks.onStatusChange) {
           callbacks.onStatusChange({ isRunning: false, time: 0 });
         }
-        
+
         return 0;
       }
-      
+
       const newTime = prev - 1;
-      
+
       // 通知状态变化
       if (callbacks.onStatusChange) {
         callbacks.onStatusChange({ isRunning: true, time: newTime });
       }
-      
+
       return newTime;
     });
   }, 1000);
-  
+
   // 返回计时器ID和清理函数
   return {
     timerId,
     cleanup: () => {
       clearInterval(timerId);
-    }
+    },
   };
 };
 
@@ -114,13 +117,13 @@ export const resetCountdownState = (state: CountdownState): CountdownState => {
   if (state.timerId) {
     clearInterval(state.timerId);
   }
-  
+
   // 返回重置后的状态
   return {
     timerId: null,
     currentTime: null,
     isRunning: false,
-    prevTime: null
+    prevTime: null,
   };
 };
 
@@ -135,4 +138,4 @@ export const updateCountdownState = (
   updates: Partial<CountdownState>
 ): CountdownState => {
   return { ...state, ...updates };
-}; 
+};

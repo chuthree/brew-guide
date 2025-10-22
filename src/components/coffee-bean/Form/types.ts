@@ -9,9 +9,9 @@ export type ExtendedCoffeeBean = CoffeeBean;
 
 // 表单属性接口
 export interface CoffeeBeanFormProps {
-    onSave: (bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>) => void;
-    onCancel: () => void;
-    initialBean?: ExtendedCoffeeBean;
+  onSave: (bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>) => void;
+  onCancel: () => void;
+  initialBean?: ExtendedCoffeeBean;
 }
 
 // 定义步骤类型
@@ -19,6 +19,6 @@ export type Step = 'basic' | 'detail' | 'flavor' | 'complete';
 
 // 步骤配置接口
 export interface StepConfig {
-    id: Step;
-    label: string;
-} 
+  id: Step;
+  label: string;
+}

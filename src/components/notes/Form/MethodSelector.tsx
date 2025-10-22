@@ -1,18 +1,22 @@
-'use client'
+'use client';
 
-import React, { useState, useEffect } from 'react'
-import { Method } from '@/lib/core/config'
-import { formatGrindSize, hasSpecificGrindScale, getGrindScaleUnit } from '@/lib/utils/grindUtils'
-import { SettingsOptions } from '@/components/settings/Settings'
+import React, { useState, useEffect } from 'react';
+import { Method } from '@/lib/core/config';
+import {
+  formatGrindSize,
+  hasSpecificGrindScale,
+  getGrindScaleUnit,
+} from '@/lib/utils/grindUtils';
+import { SettingsOptions } from '@/components/settings/Settings';
 
 interface MethodSelectorProps {
-  selectedEquipment: string
-  selectedMethod: string
-  customMethods: Method[]
-  commonMethods: Method[]
-  onMethodSelect: (methodId: string) => void
-  onParamsChange: (method: Method) => void
-  settings?: SettingsOptions // 添加可选的设置参数
+  selectedEquipment: string;
+  selectedMethod: string;
+  customMethods: Method[];
+  commonMethods: Method[];
+  onMethodSelect: (methodId: string) => void;
+  onParamsChange: (method: Method) => void;
+  settings?: SettingsOptions; // 添加可选的设置参数
 }
 
 const MethodSelector: React.FC<MethodSelectorProps> = ({
@@ -25,80 +29,80 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
   settings,
 }) => {
   // 本地状态管理参数
-  const [coffeeAmount, setCoffeeAmount] = useState<string>('15')
-  const [ratioAmount, setRatioAmount] = useState<string>('15')
-  const [waterAmount, setWaterAmount] = useState<string>('225g')
-  const [grindSize, setGrindSize] = useState<string>('中细')
-  const [_tempValue, setTempValue] = useState<string>('92')
+  const [coffeeAmount, setCoffeeAmount] = useState<string>('15');
+  const [ratioAmount, setRatioAmount] = useState<string>('15');
+  const [waterAmount, setWaterAmount] = useState<string>('225g');
+  const [grindSize, setGrindSize] = useState<string>('中细');
+  const [_tempValue, setTempValue] = useState<string>('92');
 
   // 处理咖啡粉量变化
   const handleCoffeeAmountChange = (value: string, method: Method) => {
     // 允许输入数字和小数点的正则表达式
     const regex = /^$|^[0-9]*\.?[0-9]*$/;
     if (regex.test(value)) {
-      setCoffeeAmount(value)
+      setCoffeeAmount(value);
 
       // 更新方法参数
-      method.params.coffee = `${value}g`
+      method.params.coffee = `${value}g`;
 
       // 计算并更新水量
       if (value && ratioAmount && value !== '.') {
-        const coffeeValue = parseFloat(value)
-        const ratioValue = parseFloat(ratioAmount)
+        const coffeeValue = parseFloat(value);
+        const ratioValue = parseFloat(ratioAmount);
 
         if (!isNaN(coffeeValue) && !isNaN(ratioValue) && coffeeValue > 0) {
-          const waterValue = coffeeValue * ratioValue
+          const waterValue = coffeeValue * ratioValue;
           // 四舍五入到整数
-          const roundedWaterValue = Math.round(waterValue)
-          method.params.water = `${roundedWaterValue}g`
-          setWaterAmount(`${roundedWaterValue}g`)
+          const roundedWaterValue = Math.round(waterValue);
+          method.params.water = `${roundedWaterValue}g`;
+          setWaterAmount(`${roundedWaterValue}g`);
         }
       }
 
       // 通知父组件参数已更改
-      onParamsChange(method)
+      onParamsChange(method);
     }
-  }
+  };
 
   // 处理水粉比变化
   const handleRatioAmountChange = (value: string, method: Method) => {
     // 允许输入数字和小数点的正则表达式
     const regex = /^$|^[0-9]*\.?[0-9]*$/;
     if (regex.test(value)) {
-      setRatioAmount(value)
+      setRatioAmount(value);
 
       // 更新方法参数
-      method.params.ratio = `1:${value}`
+      method.params.ratio = `1:${value}`;
 
       // 计算并更新水量
       if (coffeeAmount && value && value !== '.') {
-        const coffeeValue = parseFloat(coffeeAmount)
-        const ratioValue = parseFloat(value)
+        const coffeeValue = parseFloat(coffeeAmount);
+        const ratioValue = parseFloat(value);
 
         if (!isNaN(coffeeValue) && !isNaN(ratioValue) && coffeeValue > 0) {
-          const waterValue = coffeeValue * ratioValue
+          const waterValue = coffeeValue * ratioValue;
           // 四舍五入到整数
-          const roundedWaterValue = Math.round(waterValue)
-          method.params.water = `${roundedWaterValue}g`
-          setWaterAmount(`${roundedWaterValue}g`)
+          const roundedWaterValue = Math.round(waterValue);
+          method.params.water = `${roundedWaterValue}g`;
+          setWaterAmount(`${roundedWaterValue}g`);
         }
       }
 
       // 通知父组件参数已更改
-      onParamsChange(method)
+      onParamsChange(method);
     }
-  }
+  };
 
   // 处理研磨度变化
   const handleGrindSizeChange = (value: string, method: Method) => {
-    setGrindSize(value)
+    setGrindSize(value);
 
     // 更新方法参数
-    method.params.grindSize = value
+    method.params.grindSize = value;
 
     // 通知父组件参数已更改
-    onParamsChange(method)
-  }
+    onParamsChange(method);
+  };
 
   // 处理水温变化
   // 未使用的水温变更处理函数，可以在将来实现
@@ -108,24 +112,32 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
     if (selectedMethod) {
       // 在所有方案中查找选中的方案
       const allMethods = [...customMethods, ...commonMethods];
-      const method = allMethods.find(m => m.id === selectedMethod || m.name === selectedMethod);
+      const method = allMethods.find(
+        m => m.id === selectedMethod || m.name === selectedMethod
+      );
 
       if (method) {
         // 提取参数到本地状态
-        const coffee = extractNumber(method.params.coffee)
-        const ratio = extractRatioNumber(method.params.ratio)
-        const temp = method.params.temp.replace('°C', '')
+        const coffee = extractNumber(method.params.coffee);
+        const ratio = extractRatioNumber(method.params.ratio);
+        const temp = method.params.temp.replace('°C', '');
 
-        setCoffeeAmount(coffee)
-        setRatioAmount(ratio)
-        setWaterAmount(method.params.water)
+        setCoffeeAmount(coffee);
+        setRatioAmount(ratio);
+        setWaterAmount(method.params.water);
         // 设置研磨度时应用转换
-        const displayGrindSize = settings ? formatGrindSize(method.params.grindSize, settings.grindType, settings.customGrinders as Record<string, unknown>[] | undefined) : method.params.grindSize
-        setGrindSize(displayGrindSize)
-        setTempValue(temp)
+        const displayGrindSize = settings
+          ? formatGrindSize(
+              method.params.grindSize,
+              settings.grindType,
+              settings.customGrinders as Record<string, unknown>[] | undefined
+            )
+          : method.params.grindSize;
+        setGrindSize(displayGrindSize);
+        setTempValue(temp);
       }
     }
-  }, [selectedMethod, customMethods, commonMethods, settings])
+  }, [selectedMethod, customMethods, commonMethods, settings]);
 
   // 辅助函数：提取数字部分
   function extractNumber(str: string): string {
@@ -142,16 +154,19 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
   // 判断方法是否选中
   const isMethodSelected = (method: Method) => {
     return selectedMethod === method.id || selectedMethod === method.name;
-  }
+  };
 
   // 创建分隔符
-  const divider = (customMethods.length > 0 && commonMethods.length > 0) ? (
-    <div className="py-3 flex items-center">
-      <div className="grow h-px bg-neutral-200 dark:bg-neutral-800"></div>
-      <span className="px-2 text-xs text-neutral-500 dark:text-neutral-400">通用方案</span>
-      <div className="grow h-px bg-neutral-200 dark:bg-neutral-800"></div>
-    </div>
-  ) : null;
+  const divider =
+    customMethods.length > 0 && commonMethods.length > 0 ? (
+      <div className="flex items-center py-3">
+        <div className="h-px grow bg-neutral-200 dark:bg-neutral-800"></div>
+        <span className="px-2 text-xs text-neutral-500 dark:text-neutral-400">
+          通用方案
+        </span>
+        <div className="h-px grow bg-neutral-200 dark:bg-neutral-800"></div>
+      </div>
+    ) : null;
 
   // 渲染单个方案
   const renderMethod = (method: Method, isCustom: boolean) => {
@@ -159,11 +174,11 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
 
     return (
       <div
-        key={isCustom ? (method.id || method.name) : method.name}
+        key={isCustom ? method.id || method.name : method.name}
         className="group relative"
       >
         <div
-          className={`group relative border-l ${isSelected ? 'border-neutral-800 dark:border-white' : 'border-neutral-200 dark:border-neutral-800'} pl-6 cursor-pointer`}
+          className={`group relative border-l ${isSelected ? 'border-neutral-800 dark:border-white' : 'border-neutral-200 dark:border-neutral-800'} cursor-pointer pl-6`}
           onClick={() => {
             // 统一优先使用ID作为标识符，确保一致性
             const methodIdentifier = method.id || method.name;
@@ -171,11 +186,11 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
           }}
         >
           {isSelected && (
-            <div className="absolute -left-px top-0 h-full w-px bg-neutral-800 dark:bg-white"></div>
+            <div className="absolute top-0 -left-px h-full w-px bg-neutral-800 dark:bg-white"></div>
           )}
           <div className="flex items-baseline justify-between">
-            <div className="flex items-baseline gap-3 min-w-0 overflow-hidden text-neutral-800 dark:text-neutral-100 ">
-              <h3 className={`text-xs font-medium tracking-wider truncate`}>
+            <div className="flex min-w-0 items-baseline gap-3 overflow-hidden text-neutral-800 dark:text-neutral-100">
+              <h3 className={`truncate text-xs font-medium tracking-wider`}>
                 {method.name}
               </h3>
             </div>
@@ -184,62 +199,95 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
           {!isSelected && (
             <div className="mt-1.5 space-y-0.5 text-neutral-500 dark:text-neutral-400">
               <div className="flex items-center">
-                <span className="text-xs font-medium w-14">咖啡粉:</span>
-                <span className="text-xs font-medium">{method.params.coffee}</span>
-              </div>
-              <div className="flex items-center">
-                <span className="text-xs font-medium w-14">水量:</span>
-                <span className="text-xs font-medium">{method.params.water}</span>
-              </div>
-              <div className="flex items-center">
-                <span className="text-xs font-medium w-14">粉水比:</span>
-                <span className="text-xs font-medium">{method.params.ratio}</span>
-              </div>
-              <div className="flex items-center">
-                <span className="text-xs font-medium w-14">研磨度:</span>
+                <span className="w-14 text-xs font-medium">咖啡粉:</span>
                 <span className="text-xs font-medium">
-                  {settings ? formatGrindSize(method.params.grindSize, settings.grindType, settings.customGrinders as Record<string, unknown>[] | undefined) : method.params.grindSize}
+                  {method.params.coffee}
+                </span>
+              </div>
+              <div className="flex items-center">
+                <span className="w-14 text-xs font-medium">水量:</span>
+                <span className="text-xs font-medium">
+                  {method.params.water}
+                </span>
+              </div>
+              <div className="flex items-center">
+                <span className="w-14 text-xs font-medium">粉水比:</span>
+                <span className="text-xs font-medium">
+                  {method.params.ratio}
+                </span>
+              </div>
+              <div className="flex items-center">
+                <span className="w-14 text-xs font-medium">研磨度:</span>
+                <span className="text-xs font-medium">
+                  {settings
+                    ? formatGrindSize(
+                        method.params.grindSize,
+                        settings.grindType,
+                        settings.customGrinders as
+                          | Record<string, unknown>[]
+                          | undefined
+                      )
+                    : method.params.grindSize}
                 </span>
               </div>
             </div>
           )}
 
           {isSelected && (
-            <div className="mt-2 pt-2 border-t border-dashed border-neutral-200 dark:border-neutral-700" onClick={(e) => e.stopPropagation()}>
+            <div
+              className="mt-2 border-t border-dashed border-neutral-200 pt-2 dark:border-neutral-700"
+              onClick={e => e.stopPropagation()}
+            >
               <div className="space-y-2">
                 {/* 咖啡粉量 */}
                 <div className="flex items-center">
-                  <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 w-14">咖啡粉:</label>
-                  <div className="w-20 flex justify-end">
+                  <label className="w-14 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                    咖啡粉:
+                  </label>
+                  <div className="flex w-20 justify-end">
                     <input
                       type="text"
                       value={coffeeAmount}
-                      onChange={(e) => handleCoffeeAmountChange(e.target.value, method)}
-                      className="w-12 py-0.5 px-1 border border-neutral-300 dark:border-neutral-700 rounded-sm bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100 text-right text-xs font-medium focus:outline-hidden focus:ring-1 focus:ring-neutral-500"
+                      onChange={e =>
+                        handleCoffeeAmountChange(e.target.value, method)
+                      }
+                      className="w-12 rounded-sm border border-neutral-300 bg-white px-1 py-0.5 text-right text-xs font-medium text-neutral-800 focus:ring-1 focus:ring-neutral-500 focus:outline-hidden dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
                       placeholder="15"
                     />
-                    <span className="ml-0.5 text-xs font-medium text-neutral-500 dark:text-neutral-400">g</span>
+                    <span className="ml-0.5 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                      g
+                    </span>
                   </div>
                 </div>
 
                 {/* 水量 - 不可编辑，仅显示计算结果 */}
                 <div className="flex items-center">
-                  <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 w-14">水量:</label>
-                  <div className="w-20 flex justify-end">
-                    <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400">{waterAmount}</span>
+                  <label className="w-14 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                    水量:
+                  </label>
+                  <div className="flex w-20 justify-end">
+                    <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                      {waterAmount}
+                    </span>
                   </div>
                 </div>
 
                 {/* 粉水比 */}
                 <div className="flex items-center">
-                  <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 w-14">粉水比:</label>
-                  <div className="w-20 flex justify-end items-center">
-                    <span className="mr-0.5 text-xs font-medium text-neutral-500 dark:text-neutral-400">1:</span>
+                  <label className="w-14 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                    粉水比:
+                  </label>
+                  <div className="flex w-20 items-center justify-end">
+                    <span className="mr-0.5 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                      1:
+                    </span>
                     <input
                       type="text"
                       value={ratioAmount}
-                      onChange={(e) => handleRatioAmountChange(e.target.value, method)}
-                      className="w-10 py-0.5 px-1 border border-neutral-300 dark:border-neutral-700 rounded-sm bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100 text-right text-xs font-medium  focus:outline-hidden focus:ring-1 focus:ring-neutral-500"
+                      onChange={e =>
+                        handleRatioAmountChange(e.target.value, method)
+                      }
+                      className="w-10 rounded-sm border border-neutral-300 bg-white px-1 py-0.5 text-right text-xs font-medium text-neutral-800 focus:ring-1 focus:ring-neutral-500 focus:outline-hidden dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
                       placeholder="15"
                     />
                   </div>
@@ -247,14 +295,22 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
 
                 {/* 研磨度 */}
                 <div className="flex items-center">
-                  <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 w-14">研磨度:</label>
-                  <div className="w-20 flex justify-end">
+                  <label className="w-14 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                    研磨度:
+                  </label>
+                  <div className="flex w-20 justify-end">
                     <input
                       type="text"
                       value={grindSize}
-                      onChange={(e) => handleGrindSizeChange(e.target.value, method)}
-                      className="w-16 py-0.5 px-1 border border-neutral-300 dark:border-neutral-700 rounded-sm bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100 text-right text-xs font-medium  focus:outline-hidden focus:ring-1 focus:ring-neutral-500"
-                      placeholder={settings && hasSpecificGrindScale(settings.grindType) ? `8${getGrindScaleUnit(settings.grindType)}` : '中细'}
+                      onChange={e =>
+                        handleGrindSizeChange(e.target.value, method)
+                      }
+                      className="w-16 rounded-sm border border-neutral-300 bg-white px-1 py-0.5 text-right text-xs font-medium text-neutral-800 focus:ring-1 focus:ring-neutral-500 focus:outline-hidden dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+                      placeholder={
+                        settings && hasSpecificGrindScale(settings.grindType)
+                          ? `8${getGrindScaleUnit(settings.grindType)}`
+                          : '中细'
+                      }
                     />
                   </div>
                 </div>
@@ -272,33 +328,31 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
         {selectedEquipment ? (
           <div className="space-y-5">
             {/* 自定义方案 */}
-            {customMethods.length > 0 && (
-              customMethods.map((method) => renderMethod(method, true))
-            )}
+            {customMethods.length > 0 &&
+              customMethods.map(method => renderMethod(method, true))}
 
             {/* 分隔符 */}
             {divider}
 
             {/* 通用方案 */}
-            {commonMethods.length > 0 && (
-              commonMethods.map((method) => renderMethod(method, false))
-            )}
+            {commonMethods.length > 0 &&
+              commonMethods.map(method => renderMethod(method, false))}
 
             {/* 没有方案时的提示 */}
             {customMethods.length === 0 && commonMethods.length === 0 && (
-                <div className="text-xs text-neutral-500 dark:text-neutral-400 border-l border-neutral-200 dark:border-neutral-800 pl-6">
-                  没有可用的冲煮方案，请前往“冲煮”页面添加
-                </div>
+              <div className="border-l border-neutral-200 pl-6 text-xs text-neutral-500 dark:border-neutral-800 dark:text-neutral-400">
+                没有可用的冲煮方案，请前往“冲煮”页面添加
+              </div>
             )}
           </div>
         ) : (
-          <div className="text-xs text-neutral-500 dark:text-neutral-400 border-l border-neutral-200 dark:border-neutral-800 pl-6">
+          <div className="border-l border-neutral-200 pl-6 text-xs text-neutral-500 dark:border-neutral-800 dark:text-neutral-400">
             请先选择器具
           </div>
         )}
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default MethodSelector
+export default MethodSelector;

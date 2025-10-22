@@ -7,23 +7,23 @@ import { CustomEquipment, equipmentList } from '@/lib/core/config';
  * @returns 器具名称，如果找不到则返回ID本身
  */
 export const getEquipmentNameById = (
-  equipmentId: string | null | undefined, 
+  equipmentId: string | null | undefined,
   customEquipments: CustomEquipment[] = []
 ): string => {
   if (!equipmentId) return '';
-  
+
   // 首先在系统器具中查找
   const systemEquipment = equipmentList.find(eq => eq.id === equipmentId);
   if (systemEquipment) {
     return systemEquipment.name;
   }
-  
+
   // 然后在自定义器具中查找
   const customEquipment = customEquipments.find(eq => eq.id === equipmentId);
   if (customEquipment) {
     return customEquipment.name;
   }
-  
+
   // 如果都找不到，返回ID本身（向后兼容旧数据）
   return equipmentId;
 };
@@ -39,19 +39,21 @@ export const getEquipmentIdByName = (
   customEquipments: CustomEquipment[] = []
 ): string => {
   if (!equipmentName) return '';
-  
+
   // 首先在系统器具中查找
   const systemEquipment = equipmentList.find(eq => eq.name === equipmentName);
   if (systemEquipment) {
     return systemEquipment.id;
   }
-  
+
   // 然后在自定义器具中查找
-  const customEquipment = customEquipments.find(eq => eq.name === equipmentName);
+  const customEquipment = customEquipments.find(
+    eq => eq.name === equipmentName
+  );
   if (customEquipment) {
     return customEquipment.id;
   }
-  
+
   // 如果都找不到，返回名称本身（向后兼容）
   return equipmentName;
 };
@@ -65,21 +67,21 @@ export const getEquipmentIdByName = (
 export const getEquipmentById = (
   equipmentId: string | null | undefined,
   customEquipments: CustomEquipment[] = []
-): (typeof equipmentList[0] | CustomEquipment) | null => {
+): ((typeof equipmentList)[0] | CustomEquipment) | null => {
   if (!equipmentId) return null;
-  
+
   // 首先在系统器具中查找
   const systemEquipment = equipmentList.find(eq => eq.id === equipmentId);
   if (systemEquipment) {
     return systemEquipment;
   }
-  
+
   // 然后在自定义器具中查找
   const customEquipment = customEquipments.find(eq => eq.id === equipmentId);
   if (customEquipment) {
     return customEquipment;
   }
-  
+
   return null;
 };
 
@@ -88,7 +90,9 @@ export const getEquipmentById = (
  * @param customEquipment 自定义设备对象
  * @returns 是否为意式机
  */
-export const isEspressoMachine = (customEquipment: CustomEquipment): boolean => {
+export const isEspressoMachine = (
+  customEquipment: CustomEquipment
+): boolean => {
   return customEquipment.animationType === 'espresso';
 };
 
@@ -99,7 +103,7 @@ export const isEspressoMachine = (customEquipment: CustomEquipment): boolean => 
  */
 export const getPourTypeName = (pourType?: string): string => {
   if (!pourType) return '请选择注水方式';
-  
+
   switch (pourType) {
     case 'extraction':
       return '萃取浓缩';
@@ -134,7 +138,9 @@ export const hasValve = (customEquipment: CustomEquipment): boolean => {
  * @param customEquipment 自定义设备对象
  * @returns 默认的注水方式
  */
-export const getDefaultPourType = (customEquipment: CustomEquipment): string => {
+export const getDefaultPourType = (
+  customEquipment: CustomEquipment
+): string => {
   // 根据器具类型返回默认注水方式
   switch (customEquipment.animationType) {
     case 'espresso':
@@ -147,27 +153,28 @@ export const getDefaultPourType = (customEquipment: CustomEquipment): string => 
     case 'clever':
       return 'circle'; // 聪明杯默认使用绕圈注水
     case 'custom':
-  // 如果是自定义预设并且有自定义注水动画
-      if (customEquipment.customPourAnimations && 
-      customEquipment.customPourAnimations.length > 0) {
-    
-    // 先找系统默认的动画
-    const defaultAnimation = customEquipment.customPourAnimations.find(
-      anim => anim.isSystemDefault && anim.pourType
-    );
-    
-    if (defaultAnimation && defaultAnimation.pourType) {
-      return defaultAnimation.pourType;
-    }
-    
-    // 没有系统默认动画就用第一个动画
-    const firstAnimation = customEquipment.customPourAnimations[0];
-    if (firstAnimation.pourType) {
-      return firstAnimation.pourType;
-    }
-    
-    return firstAnimation.id;
-  }
+      // 如果是自定义预设并且有自定义注水动画
+      if (
+        customEquipment.customPourAnimations &&
+        customEquipment.customPourAnimations.length > 0
+      ) {
+        // 先找系统默认的动画
+        const defaultAnimation = customEquipment.customPourAnimations.find(
+          anim => anim.isSystemDefault && anim.pourType
+        );
+
+        if (defaultAnimation && defaultAnimation.pourType) {
+          return defaultAnimation.pourType;
+        }
+
+        // 没有系统默认动画就用第一个动画
+        const firstAnimation = customEquipment.customPourAnimations[0];
+        if (firstAnimation.pourType) {
+          return firstAnimation.pourType;
+        }
+
+        return firstAnimation.id;
+      }
       // 如果没有自定义注水动画，默认使用绕圈注水
       return 'circle';
     default:
@@ -178,12 +185,12 @@ export const getDefaultPourType = (customEquipment: CustomEquipment): string => 
 /**
  * 🔥 兼容性比较：判断两个器具标识是否指向同一个器具
  * 这个函数可以比较器具ID和器具名称，实现向后兼容
- * 
+ *
  * @param equipment1 器具标识1（可以是ID或名称）
  * @param equipment2 器具标识2（可以是ID或名称）
  * @param customEquipments 自定义器具列表
  * @returns 是否是同一个器具
- * 
+ *
  * @example
  * // 可以比较ID和名称
  * isSameEquipment('custom-v60-1758387226603-3si62s2', '山文62', customEquipments) // true
@@ -198,21 +205,21 @@ export const isSameEquipment = (
   customEquipments: CustomEquipment[] = []
 ): boolean => {
   if (!equipment1 || !equipment2) return equipment1 === equipment2;
-  
+
   // 如果直接相等，返回true
   if (equipment1 === equipment2) return true;
-  
+
   // 获取两个器具的规范化ID（名称会被转为ID，ID保持不变）
   const id1 = getEquipmentIdByName(equipment1, customEquipments);
   const id2 = getEquipmentIdByName(equipment2, customEquipments);
-  
+
   // 比较规范化后的ID
   if (id1 === id2) return true;
-  
+
   // 获取两个器具的名称（ID会被转为名称，名称保持不变）
   const name1 = getEquipmentNameById(equipment1, customEquipments);
   const name2 = getEquipmentNameById(equipment2, customEquipments);
-  
+
   // 比较规范化后的名称
   return name1 === name2;
-}; 
+};

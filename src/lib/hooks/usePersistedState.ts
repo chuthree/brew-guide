@@ -7,7 +7,7 @@ import {
   getNumberState,
   saveNumberState,
   getObjectState,
-  saveObjectState
+  saveObjectState,
 } from '../core/statePersistence';
 
 /**
@@ -37,40 +37,56 @@ export function usePersistedState<T>(
   const loadState = useCallback((): T => {
     const type = typeof initialValue;
     if (type === 'string') {
-      return getStringState(moduleName, key, initialValue as string) as unknown as T;
+      return getStringState(
+        moduleName,
+        key,
+        initialValue as string
+      ) as unknown as T;
     } else if (type === 'boolean') {
-      return getBooleanState(moduleName, key, initialValue as boolean) as unknown as T;
+      return getBooleanState(
+        moduleName,
+        key,
+        initialValue as boolean
+      ) as unknown as T;
     } else if (type === 'number') {
-      return getNumberState(moduleName, key, initialValue as number) as unknown as T;
+      return getNumberState(
+        moduleName,
+        key,
+        initialValue as number
+      ) as unknown as T;
     } else {
       return getObjectState(moduleName, key, initialValue);
     }
   }, [moduleName, key, initialValue]);
 
   // 保存状态的函数
-  const saveState = useCallback((newValue: T) => {
-    const type = typeof newValue;
-    if (type === 'string') {
-      saveStringState(moduleName, key, newValue as string);
-    } else if (type === 'boolean') {
-      saveBooleanState(moduleName, key, newValue as boolean);
-    } else if (type === 'number') {
-      saveNumberState(moduleName, key, newValue as number);
-    } else {
-      saveObjectState(moduleName, key, newValue);
-    }
-  }, [moduleName, key]);
+  const saveState = useCallback(
+    (newValue: T) => {
+      const type = typeof newValue;
+      if (type === 'string') {
+        saveStringState(moduleName, key, newValue as string);
+      } else if (type === 'boolean') {
+        saveBooleanState(moduleName, key, newValue as boolean);
+      } else if (type === 'number') {
+        saveNumberState(moduleName, key, newValue as number);
+      } else {
+        saveObjectState(moduleName, key, newValue);
+      }
+    },
+    [moduleName, key]
+  );
 
   // 更新函数，处理值和函数更新器两种情况
   const setAndPersistValue = (newValueOrUpdater: T | ((prevValue: T) => T)) => {
-    setValue((prevValue) => {
-      const newValue = typeof newValueOrUpdater === 'function' 
-        ? (newValueOrUpdater as (prevValue: T) => T)(prevValue) 
-        : newValueOrUpdater;
-      
+    setValue(prevValue => {
+      const newValue =
+        typeof newValueOrUpdater === 'function'
+          ? (newValueOrUpdater as (prevValue: T) => T)(prevValue)
+          : newValueOrUpdater;
+
       // 保存到localStorage
       saveState(newValue);
-      
+
       return newValue;
     });
   };
@@ -88,8 +104,7 @@ export function usePersistedState<T>(
         saveState(value);
       }
     }
-     
   }, [loadState, saveState, value]);
 
   return [value, setAndPersistValue];
-} 
+}

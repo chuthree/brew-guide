@@ -1,52 +1,57 @@
-'use client'
+'use client';
 
-import React, { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { BackupReminderUtils, BackupReminderType } from '@/lib/utils/backupReminderUtils'
-import { DataManager as DataManagerUtil } from '@/lib/core/dataManager'
-import { Capacitor } from '@capacitor/core'
-import { Filesystem, Directory, Encoding } from '@capacitor/filesystem'
-import { Share } from '@capacitor/share'
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  BackupReminderUtils,
+  BackupReminderType,
+} from '@/lib/utils/backupReminderUtils';
+import { DataManager as DataManagerUtil } from '@/lib/core/dataManager';
+import { Capacitor } from '@capacitor/core';
+import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
 
 interface BackupReminderModalProps {
-  isOpen: boolean
-  onClose: () => void
-  reminderType?: BackupReminderType | null
+  isOpen: boolean;
+  onClose: () => void;
+  reminderType?: BackupReminderType | null;
 }
 
 const BackupReminderModal: React.FC<BackupReminderModalProps> = ({
   isOpen,
   onClose,
-  reminderType = null
+  reminderType = null,
 }) => {
-  const [nextReminderText, setNextReminderText] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const [exportStatus, setExportStatus] = useState<'idle' | 'exporting' | 'success' | 'error'>('idle')
-  const [exportMessage, setExportMessage] = useState('')
+  const [nextReminderText, setNextReminderText] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [exportStatus, setExportStatus] = useState<
+    'idle' | 'exporting' | 'success' | 'error'
+  >('idle');
+  const [exportMessage, setExportMessage] = useState('');
 
   // 加载下次提醒时间文本
   useEffect(() => {
     if (isOpen) {
-      BackupReminderUtils.getNextReminderText().then(setNextReminderText)
+      BackupReminderUtils.getNextReminderText().then(setNextReminderText);
     }
-  }, [isOpen])
+  }, [isOpen]);
 
   const handleBackupNow = async () => {
-    setIsLoading(true)
-    setExportStatus('exporting')
-    setExportMessage('正在导出数据...')
+    setIsLoading(true);
+    setExportStatus('exporting');
+    setExportMessage('正在导出数据...');
 
     try {
       const getLocalDateString = (date: Date) => {
-          const year = date.getFullYear();
-          const month = (date.getMonth() + 1).toString().padStart(2, '0');
-          const day = date.getDate().toString().padStart(2, '0');
-          return `${year}-${month}-${day}`;
+        const year = date.getFullYear();
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const day = date.getDate().toString().padStart(2, '0');
+        return `${year}-${month}-${day}`;
       };
 
-      const jsonData = await DataManagerUtil.exportAllData()
-      const fileName = `brew-guide-data-${getLocalDateString(new Date())}.json`
-      const isNative = Capacitor.isNativePlatform()
+      const jsonData = await DataManagerUtil.exportAllData();
+      const fileName = `brew-guide-data-${getLocalDateString(new Date())}.json`;
+      const isNative = Capacitor.isNativePlatform();
 
       if (isNative) {
         // 移动端处理
@@ -54,78 +59,73 @@ const BackupReminderModal: React.FC<BackupReminderModalProps> = ({
           path: fileName,
           data: jsonData,
           directory: Directory.Cache,
-          encoding: Encoding.UTF8
-        })
+          encoding: Encoding.UTF8,
+        });
 
         const uriResult = await Filesystem.getUri({
           path: fileName,
-          directory: Directory.Cache
-        })
+          directory: Directory.Cache,
+        });
 
         await Share.share({
           title: '导出数据',
           text: '请选择保存位置',
           url: uriResult.uri,
-          dialogTitle: '导出数据'
-        })
+          dialogTitle: '导出数据',
+        });
 
         // 清理临时文件
         await Filesystem.deleteFile({
           path: fileName,
-          directory: Directory.Cache
-        })
+          directory: Directory.Cache,
+        });
       } else {
         // Web端处理
-        const blob = new Blob([jsonData], { type: 'application/json' })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = fileName
-        document.body.appendChild(a)
-        a.click()
+        const blob = new Blob([jsonData], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
 
         // 清理
         setTimeout(() => {
-          document.body.removeChild(a)
-          URL.revokeObjectURL(url)
-        }, 100)
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }, 100);
       }
 
       // 标记备份完成
-      await BackupReminderUtils.markBackupCompleted()
+      await BackupReminderUtils.markBackupCompleted();
 
-      setExportStatus('success')
-      setExportMessage('数据导出成功！')
+      setExportStatus('success');
+      setExportMessage('数据导出成功！');
 
       // 延迟关闭弹窗
       setTimeout(() => {
-        onClose()
-      }, 1500)
-
+        onClose();
+      }, 1500);
     } catch (error) {
-      console.error('导出失败:', error)
-      setExportStatus('error')
-      setExportMessage(`导出失败: ${(error as Error).message}`)
+      console.error('导出失败:', error);
+      setExportStatus('error');
+      setExportMessage(`导出失败: ${(error as Error).message}`);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const handleRemindLater = async () => {
-    setIsLoading(true)
+    setIsLoading(true);
     try {
-      await BackupReminderUtils.markReminderShown()
-      onClose()
+      await BackupReminderUtils.markReminderShown();
+      onClose();
     } catch (error) {
-      console.error('设置提醒失败:', error)
+      console.error('设置提醒失败:', error);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
-
-
-
-
+  };
 
   // 根据提醒类型获取标题和描述
   const getReminderContent = () => {
@@ -133,27 +133,27 @@ const BackupReminderModal: React.FC<BackupReminderModalProps> = ({
       case 'hasDataNeverBackedUp':
         return {
           title: '备份数据',
-          description: '检测到您有一些数据，建议备份以防丢失'
-        }
+          description: '检测到您有一些数据，建议备份以防丢失',
+        };
       case 'firstTimeAfterDays':
         return {
           title: '备份数据',
-          description: '建议定期备份您的冲煮记录和咖啡豆数据'
-        }
+          description: '建议定期备份您的冲煮记录和咖啡豆数据',
+        };
       case 'periodicReminder':
         return {
           title: '备份提醒',
-          description: '定期备份可以防止数据丢失'
-        }
+          description: '定期备份可以防止数据丢失',
+        };
       default:
         return {
           title: '备份提醒',
-          description: '建议备份您的数据'
-        }
+          description: '建议备份您的数据',
+        };
     }
-  }
+  };
 
-  const { title, description } = getReminderContent()
+  const { title, description } = getReminderContent();
 
   return (
     <AnimatePresence>
@@ -161,9 +161,9 @@ const BackupReminderModal: React.FC<BackupReminderModalProps> = ({
         <>
           {/* 背景模糊 */}
           <motion.div
-            initial={{ backdropFilter: "blur(0px)" }}
-            animate={{ backdropFilter: "blur(8px)" }}
-            exit={{ backdropFilter: "blur(0px)" }}
+            initial={{ backdropFilter: 'blur(0px)' }}
+            animate={{ backdropFilter: 'blur(8px)' }}
+            exit={{ backdropFilter: 'blur(0px)' }}
             transition={{ duration: 0.2 }}
             className="fixed inset-0 z-50"
             onClick={onClose}
@@ -171,33 +171,37 @@ const BackupReminderModal: React.FC<BackupReminderModalProps> = ({
 
           {/* 拟态框 */}
           <motion.div
-            initial={{ y: "100%" }}
+            initial={{ y: '100%' }}
             animate={{ y: 0 }}
-            exit={{ y: "100%" }}
+            exit={{ y: '100%' }}
             transition={{ damping: 30, stiffness: 300 }}
             drag="y"
             dragConstraints={{ top: 0, bottom: 0 }}
             dragElastic={{ top: 0, bottom: 0.2 }}
             onDragEnd={(_, info) => {
               if (info.offset.y > 100) {
-                onClose()
+                onClose();
               }
             }}
-            className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-neutral-800 backdrop-blur-xl rounded-t-3xl"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed right-0 bottom-0 left-0 z-50 rounded-t-3xl bg-white/95 backdrop-blur-xl dark:bg-neutral-800"
+            onClick={e => e.stopPropagation()}
           >
             {/* 拖拽指示器 */}
             <div className="flex justify-center pt-3 pb-2">
-              <div className="w-10 h-1 bg-neutral-300 dark:bg-neutral-600 rounded-full" />
+              <div className="h-1 w-10 rounded-full bg-neutral-300 dark:bg-neutral-600" />
             </div>
 
             <div className="px-6 pb-6">
               {/* 标题 */}
               <div className="mb-5">
-                <h3 className="text-lg font-medium text-neutral-900 dark:text-neutral-100 mb-1">
-                  {exportStatus === 'exporting' ? '正在备份' :
-                   exportStatus === 'success' ? '备份完成' :
-                   exportStatus === 'error' ? '备份失败' : title}
+                <h3 className="mb-1 text-lg font-medium text-neutral-900 dark:text-neutral-100">
+                  {exportStatus === 'exporting'
+                    ? '正在备份'
+                    : exportStatus === 'success'
+                      ? '备份完成'
+                      : exportStatus === 'error'
+                        ? '备份失败'
+                        : title}
                 </h3>
                 <p className="text-sm text-neutral-500 dark:text-neutral-400">
                   {exportMessage || description}
@@ -208,11 +212,15 @@ const BackupReminderModal: React.FC<BackupReminderModalProps> = ({
               <button
                 onClick={handleBackupNow}
                 disabled={isLoading || exportStatus === 'success'}
-                className="w-full bg-neutral-900 hover:bg-neutral-800 active:bg-neutral-700 disabled:bg-neutral-400 dark:bg-neutral-100 dark:hover:bg-neutral-200 dark:active:bg-neutral-300 dark:disabled:bg-neutral-600 text-white dark:text-neutral-900 font-medium py-3.5 rounded-full transition-all duration-150 active:scale-[0.98]"
+                className="w-full rounded-full bg-neutral-900 py-3.5 font-medium text-white transition-all duration-150 hover:bg-neutral-800 active:scale-[0.98] active:bg-neutral-700 disabled:bg-neutral-400 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200 dark:active:bg-neutral-300 dark:disabled:bg-neutral-600"
               >
-                {exportStatus === 'exporting' ? '正在备份...' :
-                 exportStatus === 'success' ? '备份完成' :
-                 exportStatus === 'error' ? '重试备份' : '立即备份'}
+                {exportStatus === 'exporting'
+                  ? '正在备份...'
+                  : exportStatus === 'success'
+                    ? '备份完成'
+                    : exportStatus === 'error'
+                      ? '重试备份'
+                      : '立即备份'}
               </button>
 
               {/* 次要操作和信息 - 仅在非导出状态下显示 */}
@@ -221,12 +229,12 @@ const BackupReminderModal: React.FC<BackupReminderModalProps> = ({
                   <button
                     onClick={handleRemindLater}
                     disabled={isLoading}
-                    className="text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300 py-2 transition-colors duration-150"
+                    className="py-2 text-neutral-500 transition-colors duration-150 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300"
                   >
                     稍后提醒
                   </button>
 
-                                    {nextReminderText && (
+                  {nextReminderText && (
                     <span className="text-neutral-400 dark:text-neutral-500">
                       下次：{nextReminderText}
                     </span>
@@ -238,7 +246,7 @@ const BackupReminderModal: React.FC<BackupReminderModalProps> = ({
         </>
       )}
     </AnimatePresence>
-  )
-}
+  );
+};
 
-export default BackupReminderModal
+export default BackupReminderModal;

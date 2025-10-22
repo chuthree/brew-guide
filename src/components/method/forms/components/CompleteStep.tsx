@@ -12,13 +12,13 @@ const pageVariants = {
   },
   out: {
     opacity: 0,
-  }
+  },
 };
 
 const pageTransition = {
-  type: "tween",
-  ease: "anticipate",
-  duration: 0.26
+  type: 'tween',
+  ease: 'anticipate',
+  duration: 0.26,
 };
 
 interface CompleteStepProps {
@@ -42,7 +42,7 @@ const CompleteStep: React.FC<CompleteStepProps> = ({
   isEdit,
   formatTime,
   isEspressoMachine = false,
-  formattedEspressoWater
+  formattedEspressoWater,
 }) => {
   return (
     <motion.div
@@ -52,10 +52,10 @@ const CompleteStep: React.FC<CompleteStepProps> = ({
       exit="out"
       variants={pageVariants}
       transition={pageTransition}
-      className="flex flex-col items-center justify-center pt-10 space-y-8 text-center relative"
+      className="relative flex flex-col items-center justify-center space-y-8 pt-10 text-center"
     >
-      <div className="w-16 h-16 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
-        <Check className="w-8 h-8 text-neutral-800 dark:text-neutral-200" />
+      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-neutral-100 dark:bg-neutral-800">
+        <Check className="h-8 w-8 text-neutral-800 dark:text-neutral-200" />
       </div>
       <div className="space-y-2">
         <h3 className="text-xl font-medium text-neutral-800 dark:text-neutral-200">
@@ -66,37 +66,49 @@ const CompleteStep: React.FC<CompleteStepProps> = ({
         </p>
       </div>
       <div className="w-full max-w-sm space-y-4 px-4">
-        <div className="flex justify-between items-center py-2 border-b border-neutral-200 dark:border-neutral-700">
-          <span className="text-sm text-neutral-500 dark:text-neutral-400">方案名称</span>
+        <div className="flex items-center justify-between border-b border-neutral-200 py-2 dark:border-neutral-700">
+          <span className="text-sm text-neutral-500 dark:text-neutral-400">
+            方案名称
+          </span>
           <span className="text-sm font-medium">{methodName}</span>
         </div>
-        <div className="flex justify-between items-center py-2 border-b border-neutral-200 dark:border-neutral-700">
-          <span className="text-sm text-neutral-500 dark:text-neutral-400">咖啡粉量</span>
+        <div className="flex items-center justify-between border-b border-neutral-200 py-2 dark:border-neutral-700">
+          <span className="text-sm text-neutral-500 dark:text-neutral-400">
+            咖啡粉量
+          </span>
           <span className="text-sm font-medium">{coffee}</span>
         </div>
-        <div className="flex justify-between items-center py-2 border-b border-neutral-200 dark:border-neutral-700">
-          <span className="text-sm text-neutral-500 dark:text-neutral-400">水量</span>
+        <div className="flex items-center justify-between border-b border-neutral-200 py-2 dark:border-neutral-700">
+          <span className="text-sm text-neutral-500 dark:text-neutral-400">
+            水量
+          </span>
           {isEspressoMachine && formattedEspressoWater ? (
             <div className="text-right">
-              <span className="text-sm font-medium">{formattedEspressoWater}</span>
+              <span className="text-sm font-medium">
+                {formattedEspressoWater}
+              </span>
             </div>
           ) : (
             <span className="text-sm font-medium">{water}</span>
           )}
         </div>
-        <div className="flex justify-between items-center py-2 border-b border-neutral-200 dark:border-neutral-700">
-          <span className="text-sm text-neutral-500 dark:text-neutral-400">粉水比</span>
+        <div className="flex items-center justify-between border-b border-neutral-200 py-2 dark:border-neutral-700">
+          <span className="text-sm text-neutral-500 dark:text-neutral-400">
+            粉水比
+          </span>
           <span className="text-sm font-medium">{ratio}</span>
         </div>
-        <div className="flex justify-between items-center py-2 border-b border-neutral-200 dark:border-neutral-700">
-          <span className="text-sm text-neutral-500 dark:text-neutral-400">总时间</span>
+        <div className="flex items-center justify-between border-b border-neutral-200 py-2 dark:border-neutral-700">
+          <span className="text-sm text-neutral-500 dark:text-neutral-400">
+            总时间
+          </span>
           <span className="text-sm font-medium">{formatTime(totalTime)}</span>
         </div>
       </div>
       {/* 底部渐变阴影 - 提示有更多内容 */}
-      <div className="sticky w-full bottom-0 left-0 right-0 h-12 bg-linear-to-t from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none"></div>
+      <div className="pointer-events-none sticky right-0 bottom-0 left-0 h-12 w-full bg-linear-to-t from-neutral-50 to-transparent dark:from-neutral-900"></div>
     </motion.div>
   );
 };
 
-export default CompleteStep; 
+export default CompleteStep;

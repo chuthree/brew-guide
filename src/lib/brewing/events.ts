@@ -4,10 +4,10 @@
  * @param data 事件数据
  */
 export const emitEvent = <T>(eventName: string, data: T): void => {
-	if (typeof window === "undefined") return;
+  if (typeof window === 'undefined') return;
 
-	const event = new CustomEvent(eventName, { detail: data });
-	window.dispatchEvent(event);
+  const event = new CustomEvent(eventName, { detail: data });
+  window.dispatchEvent(event);
 };
 
 /**
@@ -17,15 +17,15 @@ export const emitEvent = <T>(eventName: string, data: T): void => {
  * @returns 清理函数
  */
 export const listenToEvent = <T>(
-	eventName: string,
-	handler: (data: T) => void
+  eventName: string,
+  handler: (data: T) => void
 ): (() => void) => {
-	if (typeof window === "undefined") return () => {};
+  if (typeof window === 'undefined') return () => {};
 
-	const wrappedHandler = (e: CustomEvent<T>) => handler(e.detail);
-	window.addEventListener(eventName, wrappedHandler as EventListener);
+  const wrappedHandler = (e: CustomEvent<T>) => handler(e.detail);
+  window.addEventListener(eventName, wrappedHandler as EventListener);
 
-	return () => {
-		window.removeEventListener(eventName, wrappedHandler as EventListener);
-	};
+  return () => {
+    window.removeEventListener(eventName, wrappedHandler as EventListener);
+  };
 };

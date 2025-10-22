@@ -9,7 +9,8 @@ export function BaiduAnalytics() {
     if (typeof window !== 'undefined') {
       // 创建百度统计脚本
       const script = document.createElement('script');
-      script.src = 'https://hm.baidu.com/hm.js?1d5ab7c4016b8737328359797bfaac08';
+      script.src =
+        'https://hm.baidu.com/hm.js?1d5ab7c4016b8737328359797bfaac08';
       script.async = true;
       document.head.appendChild(script);
 

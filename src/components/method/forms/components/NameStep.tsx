@@ -17,13 +17,13 @@ const pageVariants = {
   },
   out: {
     opacity: 0,
-  }
+  },
 };
 
 const pageTransition = {
-  type: "tween",
-  ease: "anticipate",
-  duration: 0.26
+  type: 'tween',
+  ease: 'anticipate',
+  duration: 0.26,
 };
 
 const NameStep: React.FC<NameStepProps> = ({ name, onChange, isEdit }) => {
@@ -46,7 +46,7 @@ const NameStep: React.FC<NameStepProps> = ({ name, onChange, isEdit }) => {
       transition={pageTransition}
       className="flex flex-col items-center pt-10 pb-20"
     >
-      <div className="text-center space-y-8 max-w-sm">
+      <div className="max-w-sm space-y-8 text-center">
         <h2 className="text-xl font-medium text-neutral-800 dark:text-neutral-200">
           {isEdit ? '编辑你的冲煮方案名称' : '给你的冲煮方案起个名字'}
         </h2>
@@ -56,13 +56,10 @@ const NameStep: React.FC<NameStepProps> = ({ name, onChange, isEdit }) => {
               ref={inputRef}
               type="text"
               value={name}
-              onChange={(e) => onChange(e.target.value)}
+              onChange={e => onChange(e.target.value)}
               placeholder="叫做..."
               autoFocus={true}
-              className={`
-                text-center text-lg py-2 bg-transparent outline-hidden
-                focus:border-neutral-800 dark:focus:border-neutral-400
-              `}
+              className={`bg-transparent py-2 text-center text-lg outline-hidden focus:border-neutral-800 dark:focus:border-neutral-400`}
             />
           </div>
         </div>
@@ -71,4 +68,4 @@ const NameStep: React.FC<NameStepProps> = ({ name, onChange, isEdit }) => {
   );
 };
 
-export default NameStep; 
+export default NameStep;

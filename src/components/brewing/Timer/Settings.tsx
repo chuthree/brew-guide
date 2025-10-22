@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useState, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // 布局设置接口
 export interface LayoutSettings {
@@ -28,7 +28,8 @@ const BrewingTimerSettings: React.FC<BrewingTimerSettingsProps> = ({
   onLayoutChange,
   onFlowRateSettingChange,
 }) => {
-  const [localLayoutSettings, setLocalLayoutSettings] = useState<LayoutSettings>(layoutSettings);
+  const [localLayoutSettings, setLocalLayoutSettings] =
+    useState<LayoutSettings>(layoutSettings);
   const [localShowFlowRate, setLocalShowFlowRate] = useState(showFlowRate);
 
   // 监听布局设置变化
@@ -42,44 +43,50 @@ const BrewingTimerSettings: React.FC<BrewingTimerSettingsProps> = ({
   }, [showFlowRate]);
 
   // 处理布局设置变化
-  const handleLayoutChange = useCallback((newSettings: LayoutSettings) => {
-    // 首先更新本地状态
-    setLocalLayoutSettings(newSettings);
-    
-    // 调用父组件提供的回调
-    onLayoutChange(newSettings);
-  }, [onLayoutChange]);
+  const handleLayoutChange = useCallback(
+    (newSettings: LayoutSettings) => {
+      // 首先更新本地状态
+      setLocalLayoutSettings(newSettings);
+
+      // 调用父组件提供的回调
+      onLayoutChange(newSettings);
+    },
+    [onLayoutChange]
+  );
 
   // 处理流速显示设置变化
-  const handleFlowRateSettingChange = useCallback((showFlowRate: boolean) => {
-    // 更新本地状态
-    setLocalShowFlowRate(showFlowRate);
-    
-    // 调用父组件提供的回调
-    onFlowRateSettingChange(showFlowRate);
+  const handleFlowRateSettingChange = useCallback(
+    (showFlowRate: boolean) => {
+      // 更新本地状态
+      setLocalShowFlowRate(showFlowRate);
 
-    // 将更新保存到 Storage 以确保持久化
-    const updateSettings = async () => {
-      try {
-        // 动态导入 Storage
-        const { Storage } = await import('@/lib/core/storage');
-        // 先获取当前设置
-        const currentSettingsStr = await Storage.get('brewGuideSettings');
-        if (currentSettingsStr) {
-          const currentSettings = JSON.parse(currentSettingsStr);
-          // 更新 showFlowRate 设置
-          const newSettings = { ...currentSettings, showFlowRate };
-          // 保存回存储
-          await Storage.set('brewGuideSettings', JSON.stringify(newSettings));
-          // 流速设置已保存
+      // 调用父组件提供的回调
+      onFlowRateSettingChange(showFlowRate);
+
+      // 将更新保存到 Storage 以确保持久化
+      const updateSettings = async () => {
+        try {
+          // 动态导入 Storage
+          const { Storage } = await import('@/lib/core/storage');
+          // 先获取当前设置
+          const currentSettingsStr = await Storage.get('brewGuideSettings');
+          if (currentSettingsStr) {
+            const currentSettings = JSON.parse(currentSettingsStr);
+            // 更新 showFlowRate 设置
+            const newSettings = { ...currentSettings, showFlowRate };
+            // 保存回存储
+            await Storage.set('brewGuideSettings', JSON.stringify(newSettings));
+            // 流速设置已保存
+          }
+        } catch (error) {
+          console.error('保存流速设置失败', error);
         }
-      } catch (error) {
-        console.error('保存流速设置失败', error);
-      }
-    };
-    
-    updateSettings();
-  }, [onFlowRateSettingChange]);
+      };
+
+      updateSettings();
+    },
+    [onFlowRateSettingChange]
+  );
 
   return (
     <AnimatePresence>
@@ -88,15 +95,15 @@ const BrewingTimerSettings: React.FC<BrewingTimerSettingsProps> = ({
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 10 }}
-          className="absolute bottom-full left-0 right-0 px-6 py-4 bg-neutral-50 dark:bg-neutral-900 transform-gpu"
+          className="absolute right-0 bottom-full left-0 transform-gpu bg-neutral-50 px-6 py-4 dark:bg-neutral-900"
           style={{
-            willChange: "transform, opacity",
-            transform: "translateZ(0)",
+            willChange: 'transform, opacity',
+            transform: 'translateZ(0)',
             zIndex: 40,
           }}
         >
           {/* 添加渐变阴影 */}
-          <div className="absolute -top-12 left-0 right-0 h-12 bg-linear-to-t from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none"></div>
+          <div className="pointer-events-none absolute -top-12 right-0 left-0 h-12 bg-linear-to-t from-neutral-50 to-transparent dark:from-neutral-900"></div>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
@@ -104,7 +111,7 @@ const BrewingTimerSettings: React.FC<BrewingTimerSettingsProps> = ({
               </h3>
               <button
                 onClick={onClose}
-                className="p-1 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                className="rounded-full p-1 transition-colors hover:bg-neutral-100 dark:hover:bg-neutral-800"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -112,7 +119,7 @@ const BrewingTimerSettings: React.FC<BrewingTimerSettingsProps> = ({
                   viewBox="0 0 24 24"
                   strokeWidth={1.5}
                   stroke="currentColor"
-                  className="w-4 h-4"
+                  className="h-4 w-4"
                 >
                   <path
                     strokeLinecap="round"
@@ -132,7 +139,7 @@ const BrewingTimerSettings: React.FC<BrewingTimerSettingsProps> = ({
                   <input
                     type="checkbox"
                     checked={localLayoutSettings?.stageInfoReversed || false}
-                    onChange={(e) => {
+                    onChange={e => {
                       const newSettings = {
                         ...localLayoutSettings,
                         stageInfoReversed: e.target.checked,
@@ -141,7 +148,7 @@ const BrewingTimerSettings: React.FC<BrewingTimerSettingsProps> = ({
                     }}
                     className="peer sr-only"
                   />
-                  <div className="peer h-5 w-9 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500" />
+                  <div className="peer h-5 w-9 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-[2px] after:left-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500" />
                 </label>
               </div>
 
@@ -153,7 +160,7 @@ const BrewingTimerSettings: React.FC<BrewingTimerSettingsProps> = ({
                   <input
                     type="checkbox"
                     checked={localLayoutSettings?.controlsReversed || false}
-                    onChange={(e) => {
+                    onChange={e => {
                       const newSettings = {
                         ...localLayoutSettings,
                         controlsReversed: e.target.checked,
@@ -162,7 +169,7 @@ const BrewingTimerSettings: React.FC<BrewingTimerSettingsProps> = ({
                     }}
                     className="peer sr-only"
                   />
-                  <div className="peer h-5 w-9 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500" />
+                  <div className="peer h-5 w-9 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-[2px] after:left-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500" />
                 </label>
               </div>
 
@@ -174,7 +181,7 @@ const BrewingTimerSettings: React.FC<BrewingTimerSettingsProps> = ({
                   <input
                     type="checkbox"
                     checked={localLayoutSettings?.alwaysShowTimerInfo || false}
-                    onChange={(e) => {
+                    onChange={e => {
                       const newSettings = {
                         ...localLayoutSettings,
                         alwaysShowTimerInfo: e.target.checked,
@@ -183,7 +190,7 @@ const BrewingTimerSettings: React.FC<BrewingTimerSettingsProps> = ({
                     }}
                     className="peer sr-only"
                   />
-                  <div className="peer h-5 w-9 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500" />
+                  <div className="peer h-5 w-9 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-[2px] after:left-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500" />
                 </label>
               </div>
 
@@ -195,7 +202,7 @@ const BrewingTimerSettings: React.FC<BrewingTimerSettingsProps> = ({
                   <input
                     type="checkbox"
                     checked={localLayoutSettings?.showStageDivider || false}
-                    onChange={(e) => {
+                    onChange={e => {
                       const newSettings = {
                         ...localLayoutSettings,
                         showStageDivider: e.target.checked,
@@ -204,7 +211,7 @@ const BrewingTimerSettings: React.FC<BrewingTimerSettingsProps> = ({
                     }}
                     className="peer sr-only"
                   />
-                  <div className="peer h-5 w-9 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500" />
+                  <div className="peer h-5 w-9 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-[2px] after:left-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500" />
                 </label>
               </div>
 
@@ -216,12 +223,12 @@ const BrewingTimerSettings: React.FC<BrewingTimerSettingsProps> = ({
                   <input
                     type="checkbox"
                     checked={localShowFlowRate || false}
-                    onChange={(e) => {
+                    onChange={e => {
                       handleFlowRateSettingChange(e.target.checked);
                     }}
                     className="peer sr-only"
                   />
-                  <div className="peer h-5 w-9 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500" />
+                  <div className="peer h-5 w-9 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-[2px] after:left-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500" />
                 </label>
               </div>
 
@@ -233,7 +240,7 @@ const BrewingTimerSettings: React.FC<BrewingTimerSettingsProps> = ({
                   <input
                     type="checkbox"
                     checked={localLayoutSettings?.compactMode || false}
-                    onChange={(e) => {
+                    onChange={e => {
                       const newSettings = {
                         ...localLayoutSettings,
                         compactMode: e.target.checked,
@@ -242,7 +249,7 @@ const BrewingTimerSettings: React.FC<BrewingTimerSettingsProps> = ({
                     }}
                     className="peer sr-only"
                   />
-                  <div className="peer h-5 w-9 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500" />
+                  <div className="peer h-5 w-9 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-[2px] after:left-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500" />
                 </label>
               </div>
 
@@ -256,14 +263,14 @@ const BrewingTimerSettings: React.FC<BrewingTimerSettingsProps> = ({
                   max="12"
                   step="1"
                   value={localLayoutSettings?.progressBarHeight || 4}
-                  onChange={(e) => {
+                  onChange={e => {
                     const newSettings = {
                       ...localLayoutSettings,
                       progressBarHeight: parseInt(e.target.value),
                     };
                     handleLayoutChange(newSettings);
                   }}
-                  className="w-full h-1 bg-neutral-200 rounded-full appearance-none cursor-pointer dark:bg-neutral-700"
+                  className="h-1 w-full cursor-pointer appearance-none rounded-full bg-neutral-200 dark:bg-neutral-700"
                 />
               </div>
             </div>
@@ -274,4 +281,4 @@ const BrewingTimerSettings: React.FC<BrewingTimerSettingsProps> = ({
   );
 };
 
-export default BrewingTimerSettings; 
+export default BrewingTimerSettings;

@@ -1,11 +1,11 @@
-import type { Method } from "@/lib/core/config";
-import type { SettingsOptions } from "@/components/settings/Settings";
-import type { BrewingNoteData, CoffeeBean } from "@/types/app";
-import { LayoutSettings } from "./Settings";
+import type { Method } from '@/lib/core/config';
+import type { SettingsOptions } from '@/components/settings/Settings';
+import type { BrewingNoteData, CoffeeBean } from '@/types/app';
+import { LayoutSettings } from './Settings';
 
 // 扩展阶段类型
 export type ExpandedStage = {
-  type: "pour" | "wait";
+  type: 'pour' | 'wait';
   label: string;
   startTime: number;
   endTime: number;
@@ -14,7 +14,7 @@ export type ExpandedStage = {
   water: string;
   detail: string;
   pourType?: string;
-  valveStatus?: "open" | "closed";
+  valveStatus?: 'open' | 'closed';
   originalIndex: number;
 };
 
@@ -40,4 +40,4 @@ export interface BrewingTimerProps {
 // 笔记表单初始数据类型
 export type NoteFormInitialData = Partial<BrewingNoteData> & {
   coffeeBean?: CoffeeBean | null;
-}; 
+};

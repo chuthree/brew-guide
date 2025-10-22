@@ -3,118 +3,144 @@
  * 统一管理器具列表的加载、排序和事件订阅逻辑，避免重复代码
  */
 
-import { useState, useEffect, useCallback } from 'react'
-import { equipmentList, type CustomEquipment, type Equipment } from '@/lib/core/config'
+import { useState, useEffect, useCallback } from 'react';
+import {
+  equipmentList,
+  type CustomEquipment,
+  type Equipment,
+} from '@/lib/core/config';
 
 export interface UseEquipmentListOptions {
-  customEquipments: CustomEquipment[]
-  transformItems?: <T extends { id: string; name: string; isCustom?: boolean }>(items: T[]) => T[]
+  customEquipments: CustomEquipment[];
+  transformItems?: <T extends { id: string; name: string; isCustom?: boolean }>(
+    items: T[]
+  ) => T[];
 }
 
-export interface UseEquipmentListReturn<T extends { id: string; name: string; isCustom?: boolean } = Equipment | CustomEquipment> {
-  allEquipments: T[]
-  isLoading: boolean
-  error: string | null
+export interface UseEquipmentListReturn<
+  T extends { id: string; name: string; isCustom?: boolean } =
+    | Equipment
+    | CustomEquipment,
+> {
+  allEquipments: T[];
+  isLoading: boolean;
+  error: string | null;
 }
 
 /**
  * 器具列表管理Hook
  * 处理器具列表的加载、排序和实时更新
  */
-export function useEquipmentList<T extends { id: string; name: string; isCustom?: boolean } = Equipment | CustomEquipment>({
+export function useEquipmentList<
+  T extends { id: string; name: string; isCustom?: boolean } =
+    | Equipment
+    | CustomEquipment,
+>({
   customEquipments,
-  transformItems
+  transformItems,
 }: UseEquipmentListOptions): UseEquipmentListReturn<T> {
-  const [allEquipments, setAllEquipments] = useState<T[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [allEquipments, setAllEquipments] = useState<T[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // 加载和排序器具列表
   const loadSortedEquipments = useCallback(async () => {
-    setIsLoading(true)
-    setError(null)
-    
+    setIsLoading(true);
+    setError(null);
+
     try {
-      const { loadEquipmentOrder } = await import('@/lib/managers/customEquipments')
-      const { equipmentUtils } = await import('@/lib/equipment/equipmentUtils')
-      
-      const equipmentOrder = await loadEquipmentOrder()
-      const sortedEquipments = equipmentUtils.getAllEquipments(customEquipments, equipmentOrder)
-      
+      const { loadEquipmentOrder } = await import(
+        '@/lib/managers/customEquipments'
+      );
+      const { equipmentUtils } = await import('@/lib/equipment/equipmentUtils');
+
+      const equipmentOrder = await loadEquipmentOrder();
+      const sortedEquipments = equipmentUtils.getAllEquipments(
+        customEquipments,
+        equipmentOrder
+      );
+
       // 应用转换函数（如果提供）
-      const finalEquipments = transformItems 
+      const finalEquipments = transformItems
         ? transformItems(sortedEquipments)
-        : sortedEquipments
-      
-      setAllEquipments(finalEquipments as T[])
+        : sortedEquipments;
+
+      setAllEquipments(finalEquipments as T[]);
     } catch (err) {
-      console.error('加载器具排序失败:', err)
-      setError(err instanceof Error ? err.message : '加载失败')
-      
+      console.error('加载器具排序失败:', err);
+      setError(err instanceof Error ? err.message : '加载失败');
+
       // 使用默认排序作为回退
       const defaultEquipments = [
-        ...equipmentList.map((eq) => ({ ...eq, isCustom: false })),
-        ...customEquipments
-      ]
-      
-      const finalEquipments = transformItems 
+        ...equipmentList.map(eq => ({ ...eq, isCustom: false })),
+        ...customEquipments,
+      ];
+
+      const finalEquipments = transformItems
         ? transformItems(defaultEquipments)
-        : defaultEquipments
-      
-      setAllEquipments(finalEquipments as T[])
+        : defaultEquipments;
+
+      setAllEquipments(finalEquipments as T[]);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }, [customEquipments, transformItems])
+  }, [customEquipments, transformItems]);
 
   // 处理器具排序更新事件
   const handleEquipmentOrderUpdate = useCallback(async () => {
     try {
-      const { loadEquipmentOrder } = await import('@/lib/managers/customEquipments')
-      const { equipmentUtils } = await import('@/lib/equipment/equipmentUtils')
-      
-      const equipmentOrder = await loadEquipmentOrder()
-      const sortedEquipments = equipmentUtils.getAllEquipments(customEquipments, equipmentOrder)
-      
-      const finalEquipments = transformItems 
+      const { loadEquipmentOrder } = await import(
+        '@/lib/managers/customEquipments'
+      );
+      const { equipmentUtils } = await import('@/lib/equipment/equipmentUtils');
+
+      const equipmentOrder = await loadEquipmentOrder();
+      const sortedEquipments = equipmentUtils.getAllEquipments(
+        customEquipments,
+        equipmentOrder
+      );
+
+      const finalEquipments = transformItems
         ? transformItems(sortedEquipments)
-        : sortedEquipments
-      
-      setAllEquipments(finalEquipments as T[])
+        : sortedEquipments;
+
+      setAllEquipments(finalEquipments as T[]);
     } catch (err) {
-      console.error('更新器具排序失败:', err)
-      setError(err instanceof Error ? err.message : '更新失败')
+      console.error('更新器具排序失败:', err);
+      setError(err instanceof Error ? err.message : '更新失败');
     }
-  }, [customEquipments, transformItems])
+  }, [customEquipments, transformItems]);
 
   // 初始化加载
   useEffect(() => {
-    loadSortedEquipments()
-  }, [loadSortedEquipments])
+    loadSortedEquipments();
+  }, [loadSortedEquipments]);
 
   // 订阅器具排序更新事件
   useEffect(() => {
-    let unsubscribe: (() => void) | undefined
-    
+    let unsubscribe: (() => void) | undefined;
+
     const setupEventListener = async () => {
       try {
-        const { equipmentEventBus } = await import('@/lib/equipment/equipmentEventBus')
-        unsubscribe = equipmentEventBus.subscribe(handleEquipmentOrderUpdate)
+        const { equipmentEventBus } = await import(
+          '@/lib/equipment/equipmentEventBus'
+        );
+        unsubscribe = equipmentEventBus.subscribe(handleEquipmentOrderUpdate);
       } catch (err) {
-        console.error('设置器具排序事件监听失败:', err)
+        console.error('设置器具排序事件监听失败:', err);
       }
-    }
-    
-    setupEventListener()
-    
+    };
+
+    setupEventListener();
+
     return () => {
-      unsubscribe?.()
-    }
-  }, [handleEquipmentOrderUpdate])
+      unsubscribe?.();
+    };
+  }, [handleEquipmentOrderUpdate]);
 
   return {
     allEquipments,
     isLoading,
-    error
-  }
+    error,
+  };
 }

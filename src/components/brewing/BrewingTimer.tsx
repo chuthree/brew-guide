@@ -1,12 +1,18 @@
-"use client";
+'use client';
 
-import React, { useState, useEffect, useCallback, useRef, useLayoutEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { BrewingNoteForm } from "@/components/notes";
-import type { BrewingNoteData, CoffeeBean } from "@/types/app";
-import type { Method, Stage } from "@/lib/core/config";
-import type { SettingsOptions } from "@/components/settings/Settings";
-import hapticsUtils from "@/lib/ui/haptics";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useLayoutEffect,
+} from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { BrewingNoteForm } from '@/components/notes';
+import type { BrewingNoteData, CoffeeBean } from '@/types/app';
+import type { Method, Stage } from '@/lib/core/config';
+import type { SettingsOptions } from '@/components/settings/Settings';
+import hapticsUtils from '@/lib/ui/haptics';
 import {
   BrewingTimerSettings,
   formatTime,
@@ -23,17 +29,17 @@ import {
   calculateCurrentWater,
   // 计时器控制器
   startMainTimer as startTimerController,
-} from "@/components/brewing/Timer";
+} from '@/components/brewing/Timer';
 import type {
   ExpandedStage,
   LayoutSettings,
   AudioState,
   TimerCallbacks,
-} from "@/components/brewing/Timer";
-import { globalAudioManager } from "@/lib/audio/globalAudioManager";
+} from '@/components/brewing/Timer';
+import { globalAudioManager } from '@/lib/audio/globalAudioManager';
 
 // 保留布局设置接口的导出，但使用从Timer模块导入的定义
-export type { LayoutSettings } from "@/components/brewing/Timer";
+export type { LayoutSettings } from '@/components/brewing/Timer';
 // 导出这些在导入中被定义但未使用的函数，避免linter错误
 export { getStageProgress, calculateCurrentWater };
 
@@ -50,7 +56,7 @@ interface BrewingTimerProps {
   onCountdownChange?: (time: number | null) => void;
   onExpandedStagesChange?: (
     stages: {
-      type: "pour" | "wait";
+      type: 'pour' | 'wait';
       label: string;
       startTime: number;
       endTime: number;
@@ -59,7 +65,7 @@ interface BrewingTimerProps {
       water: string;
       detail: string;
       pourType?: string;
-      valveStatus?: "open" | "closed";
+      valveStatus?: 'open' | 'closed';
       originalIndex: number;
     }[]
   ) => void;
@@ -118,8 +124,11 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
 
   const [showSkipButton, setShowSkipButton] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [localLayoutSettings, setLocalLayoutSettings] = useState<LayoutSettings>(layoutSettings);
-  const [localShowFlowRate, setLocalShowFlowRate] = useState(settings.showFlowRate);
+  const [localLayoutSettings, setLocalLayoutSettings] =
+    useState<LayoutSettings>(layoutSettings);
+  const [localShowFlowRate, setLocalShowFlowRate] = useState(
+    settings.showFlowRate
+  );
 
   // 监听布局设置变化
   useEffect(() => {
@@ -135,13 +144,13 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
   const handleLayoutChange = useCallback((newSettings: LayoutSettings) => {
     // 首先更新本地状态
     setLocalLayoutSettings(newSettings);
-    
+
     // 记录日志
     // 发送布局设置变更
-    
+
     // 然后派发事件，通知其他组件
     window.dispatchEvent(
-      new CustomEvent("brewing:layoutChange", {
+      new CustomEvent('brewing:layoutChange', {
         detail: { layoutSettings: newSettings },
       })
     );
@@ -151,10 +160,10 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
   const handleFlowRateSettingChange = useCallback((showFlowRate: boolean) => {
     // 更新本地状态
     setLocalShowFlowRate(showFlowRate);
-    
+
     // 发送事件通知父组件更新设置
     window.dispatchEvent(
-      new CustomEvent("brewing:settingsChange", {
+      new CustomEvent('brewing:settingsChange', {
         detail: {
           showFlowRate: showFlowRate,
         },
@@ -180,7 +189,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         console.error('保存流速设置失败', error);
       }
     };
-    
+
     updateSettings();
   }, []);
 
@@ -200,7 +209,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
       if (
         isHapticsSupported &&
         settings.hapticFeedback &&
-        typeof hapticsUtils[type] === "function"
+        typeof hapticsUtils[type] === 'function'
       ) {
         await hapticsUtils[type]();
       }
@@ -223,19 +232,19 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
 
     // 添加用户交互事件监听器（用于恢复音频上下文）
     const handleUserInteraction = () => {
-      if (audioState.current.audioContext?.state === "suspended") {
+      if (audioState.current.audioContext?.state === 'suspended') {
         audioState.current.audioContext.resume();
       }
-      document.removeEventListener("click", handleUserInteraction);
-      document.removeEventListener("touchstart", handleUserInteraction);
+      document.removeEventListener('click', handleUserInteraction);
+      document.removeEventListener('touchstart', handleUserInteraction);
     };
 
-    document.addEventListener("click", handleUserInteraction);
-    document.addEventListener("touchstart", handleUserInteraction);
+    document.addEventListener('click', handleUserInteraction);
+    document.addEventListener('touchstart', handleUserInteraction);
 
     return () => {
-      document.removeEventListener("click", handleUserInteraction);
-      document.removeEventListener("touchstart", handleUserInteraction);
+      document.removeEventListener('click', handleUserInteraction);
+      document.removeEventListener('touchstart', handleUserInteraction);
       // 不再立即清理音频系统，让全局管理器处理
       // 只在有活跃音频时等待完成
       if (globalAudioManager.isAudioPlaying()) {
@@ -247,7 +256,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
   }, []);
 
   const playSoundEffect = useCallback(
-    (type: "start" | "ding" | "correct") => {
+    (type: 'start' | 'ding' | 'correct') => {
       // 使用全局音频管理器播放音效
       globalAudioManager.playSound(type, settings.notificationSound);
     },
@@ -273,7 +282,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
 
       // 重置当前阶段索引
       setCurrentExpandedStageIndex(-1);
-      
+
       // 标记进度条准备就绪
       setIsProgressBarReady(true);
     } else {
@@ -302,7 +311,11 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
   // 使用StageProcessor的getStageProgress函数
   const calculateStageProgress = useCallback(
     (stageIndex: number) => {
-      return getStageProgress(stageIndex, currentTime, expandedStagesRef.current);
+      return getStageProgress(
+        stageIndex,
+        currentTime,
+        expandedStagesRef.current
+      );
     },
     [currentTime]
   );
@@ -311,7 +324,11 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
   const calculateCurrentWaterAmount = useCallback(() => {
     if (!currentBrewingMethod || currentTime === 0) return 0;
     const currentStageIndex = getCurrentStageAndUpdateIndex();
-    return calculateCurrentWater(currentTime, currentStageIndex, expandedStagesRef.current);
+    return calculateCurrentWater(
+      currentTime,
+      currentStageIndex,
+      expandedStagesRef.current
+    );
   }, [currentTime, currentBrewingMethod, getCurrentStageAndUpdateIndex]);
 
   useEffect(() => {
@@ -324,7 +341,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
       clearInterval(timerId);
       setTimerId(null);
     }
-    
+
     // 同时清除倒计时计时器
     if (countdownTimerRef.current) {
       clearInterval(countdownTimerRef.current);
@@ -346,10 +363,10 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     const totalBrewingTime = currentTime;
 
     // 触发触感反馈
-    triggerHaptic("success");
+    triggerHaptic('success');
 
     // 播放完成音效
-    playSoundEffect("correct");
+    playSoundEffect('correct');
 
     // 停止计时器
     clearTimerAndStates();
@@ -359,30 +376,30 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     setShowComplete(true);
 
     // 发送冲煮完成事件
-    window.dispatchEvent(new Event("brewing:complete"));
+    window.dispatchEvent(new Event('brewing:complete'));
 
     // 构造咖啡豆信息
     const coffeeBeanInfo = {
-      name: "",
-      roastLevel: "中度烘焙",
-      roastDate: "",
+      name: '',
+      roastLevel: '中度烘焙',
+      roastDate: '',
     };
 
     if (currentBrewingMethod) {
       // 在冲煮完成时请求最新的参数
-      window.dispatchEvent(new CustomEvent("brewing:getParams"));
+      window.dispatchEvent(new CustomEvent('brewing:getParams'));
 
       // 初始化笔记表单数据
       const initialData: Partial<BrewingNoteData> = {
-        equipment: selectedEquipment || "",
+        equipment: selectedEquipment || '',
         method: currentBrewingMethod.name,
         totalTime: totalBrewingTime,
         params: {
-          coffee: currentBrewingMethod.params.coffee || "",
-          water: currentBrewingMethod.params.water || "",
-          ratio: currentBrewingMethod.params.ratio || "",
-          grindSize: currentBrewingMethod.params.grindSize || "",
-          temp: currentBrewingMethod.params.temp || "",
+          coffee: currentBrewingMethod.params.coffee || '',
+          water: currentBrewingMethod.params.water || '',
+          ratio: currentBrewingMethod.params.ratio || '',
+          grindSize: currentBrewingMethod.params.grindSize || '',
+          temp: currentBrewingMethod.params.temp || '',
         },
         coffeeBeanInfo: coffeeBeanInfo,
         rating: 0, // 默认评分
@@ -412,18 +429,20 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
       // 首先确认有扩展阶段数据
       if (expandedStagesRef.current.length === 0) {
         // 强制重新处理阶段数据
-        const newExpandedStages = createExpandedStages(currentBrewingMethod.params.stages || []);
+        const newExpandedStages = createExpandedStages(
+          currentBrewingMethod.params.stages || []
+        );
         expandedStagesRef.current = newExpandedStages;
-        
+
         // 检查再次扩展后的结果
         if (expandedStagesRef.current.length === 0) {
           return;
         }
       }
-      
+
       // 现在可以安全地启动计时器
       const timerCallbacks: TimerCallbacks = {
-        onTick: (updater) => {
+        onTick: updater => {
           setCurrentTime(updater);
         },
         onComplete: () => {
@@ -431,11 +450,11 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
             handleComplete();
           }, 0);
         },
-        onHaptic: (type) => {
+        onHaptic: type => {
           if (isHapticsSupported && settings.hapticFeedback) {
             triggerHaptic(type as keyof typeof hapticsUtils);
           }
-        }
+        },
       };
 
       const timerId = startTimerController(
@@ -445,11 +464,11 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         settings.hapticFeedback && isHapticsSupported,
         timerCallbacks
       );
-      
+
       // 设置状态和开始计时
       setIsRunning(true);
       setTimerId(timerId);
-      
+
       // 通知状态变化
       if (onStatusChange) {
         onStatusChange({ isRunning: true });
@@ -462,92 +481,107 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     isHapticsSupported,
     settings.notificationSound,
     settings.hapticFeedback,
-    onStatusChange
+    onStatusChange,
   ]);
 
   // 添加startCountdown函数
-  const startCountdown = useCallback((seconds: number) => {
-    // 播放开始音效
-    playSoundEffect("start");
-    // 触发触感反馈
-    triggerHaptic("medium");
-    
-    // 首先清除可能存在的倒计时计时器
-    if (countdownTimerRef.current) {
-      clearInterval(countdownTimerRef.current);
-      countdownTimerRef.current = null;
-    }
-    
-    // 设置倒计时时间
-    setCountdownTime(seconds);
-    
-    // 创建倒计时计时器
-    const countdownId = setInterval(() => {
-      setCountdownTime((prev) => {
-        if (prev === null) return null;
-        
-        // 从3倒数到1的每一秒都触发声音和震动
-        if (prev > 1 && prev <= 3) {
-          playSoundEffect("start");
-          triggerHaptic("medium");
-        }
-        
-        if (prev <= 1) {
-          // 倒计时结束时清除
-          clearInterval(countdownId);
-          countdownTimerRef.current = null;
-          
-          // 倒计时结束
-          setTimeout(() => {
-            // 设置倒计时为null以触发UI更新
-            setCountdownTime(null);
-            playSoundEffect("ding");
-            triggerHaptic("vibrateMultiple");
-            
-            // 确保清理所有旧的计时器，然后再开始新的
-            clearTimerAndStates();
-            
-            // 重新处理和检查阶段扩展数据
-            if (currentBrewingMethod?.params?.stages) {
-              // 强制重新处理扩展阶段
-              const newExpandedStages = createExpandedStages(currentBrewingMethod.params.stages);
-              expandedStagesRef.current = newExpandedStages;
-              
-              // 通知扩展阶段变化
-              if (onExpandedStagesChange) {
-                onExpandedStagesChange(newExpandedStages);
-              }
-            }
-            
-            // 确保方法和阶段都存在
-            if (currentBrewingMethod && expandedStagesRef.current.length > 0) {
-              startMainTimer();
+  const startCountdown = useCallback(
+    (seconds: number) => {
+      // 播放开始音效
+      playSoundEffect('start');
+      // 触发触感反馈
+      triggerHaptic('medium');
 
-              // 派发事件以确保其他组件收到通知
-              window.dispatchEvent(
-                new CustomEvent("brewing:mainTimerStarted", {
-                  detail: { started: true },
-                })
-              );
-            }
-          }, 0);
-          
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    
-    // 将ID保存在ref中以便后续可能的清除
-    countdownTimerRef.current = countdownId;
-    
-    return () => {
+      // 首先清除可能存在的倒计时计时器
       if (countdownTimerRef.current) {
         clearInterval(countdownTimerRef.current);
         countdownTimerRef.current = null;
       }
-    };
-  }, [playSoundEffect, triggerHaptic, startMainTimer, clearTimerAndStates, currentBrewingMethod, onExpandedStagesChange]);
+
+      // 设置倒计时时间
+      setCountdownTime(seconds);
+
+      // 创建倒计时计时器
+      const countdownId = setInterval(() => {
+        setCountdownTime(prev => {
+          if (prev === null) return null;
+
+          // 从3倒数到1的每一秒都触发声音和震动
+          if (prev > 1 && prev <= 3) {
+            playSoundEffect('start');
+            triggerHaptic('medium');
+          }
+
+          if (prev <= 1) {
+            // 倒计时结束时清除
+            clearInterval(countdownId);
+            countdownTimerRef.current = null;
+
+            // 倒计时结束
+            setTimeout(() => {
+              // 设置倒计时为null以触发UI更新
+              setCountdownTime(null);
+              playSoundEffect('ding');
+              triggerHaptic('vibrateMultiple');
+
+              // 确保清理所有旧的计时器，然后再开始新的
+              clearTimerAndStates();
+
+              // 重新处理和检查阶段扩展数据
+              if (currentBrewingMethod?.params?.stages) {
+                // 强制重新处理扩展阶段
+                const newExpandedStages = createExpandedStages(
+                  currentBrewingMethod.params.stages
+                );
+                expandedStagesRef.current = newExpandedStages;
+
+                // 通知扩展阶段变化
+                if (onExpandedStagesChange) {
+                  onExpandedStagesChange(newExpandedStages);
+                }
+              }
+
+              // 确保方法和阶段都存在
+              if (
+                currentBrewingMethod &&
+                expandedStagesRef.current.length > 0
+              ) {
+                startMainTimer();
+
+                // 派发事件以确保其他组件收到通知
+                window.dispatchEvent(
+                  new CustomEvent('brewing:mainTimerStarted', {
+                    detail: { started: true },
+                  })
+                );
+              }
+            }, 0);
+
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      // 将ID保存在ref中以便后续可能的清除
+      countdownTimerRef.current = countdownId;
+
+      return () => {
+        if (countdownTimerRef.current) {
+          clearInterval(countdownTimerRef.current);
+          countdownTimerRef.current = null;
+        }
+      };
+    },
+    [
+      playSoundEffect,
+      triggerHaptic,
+      startMainTimer,
+      clearTimerAndStates,
+      currentBrewingMethod,
+      onExpandedStagesChange,
+    ]
+  );
 
   // 添加倒计时ref
   const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -565,7 +599,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
       if (prevCountdownTimeRef.current !== countdownTime) {
         // 通过事件向外广播倒计时状态变化
         window.dispatchEvent(
-          new CustomEvent("brewing:countdownChange", {
+          new CustomEvent('brewing:countdownChange', {
             detail: { remainingTime: countdownTime },
           })
         );
@@ -590,17 +624,20 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
   const handleSaveNote = useCallback(async (note: BrewingNoteData) => {
     try {
       // 动态导入全局缓存，避免循环依赖
-      const { globalCache } = await import('@/components/notes/List/globalCache');
+      const { globalCache } = await import(
+        '@/components/notes/List/globalCache'
+      );
 
       // 从Storage获取现有笔记
       const { Storage } = await import('@/lib/core/storage');
-      const existingNotesStr = await Storage.get("brewingNotes");
+      const existingNotesStr = await Storage.get('brewingNotes');
       const existingNotes = existingNotesStr
         ? JSON.parse(existingNotesStr)
         : [];
 
       // 检查是否是现有笔记
-      const isExistingNote = note.id && existingNotes.some((n: BrewingNoteData) => n.id === note.id);
+      const isExistingNote =
+        note.id && existingNotes.some((n: BrewingNoteData) => n.id === note.id);
 
       // 创建笔记数据 - 确保不保存完整的coffeeBean对象
       const noteData = {
@@ -608,7 +645,8 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         id: note.id || Date.now().toString(),
         // 编辑现有笔记时保留原始时间戳，新建笔记时使用当前时间
         timestamp: isExistingNote
-          ? existingNotes.find((n: BrewingNoteData) => n.id === note.id)?.timestamp || Date.now()
+          ? existingNotes.find((n: BrewingNoteData) => n.id === note.id)
+              ?.timestamp || Date.now()
           : Date.now(),
       };
 
@@ -632,21 +670,24 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
       globalCache.notes = updatedNotes;
 
       // 重新计算总消耗量
-      const { calculateTotalCoffeeConsumption } = await import('@/components/notes/List/globalCache');
-      globalCache.totalConsumption = calculateTotalCoffeeConsumption(updatedNotes);
+      const { calculateTotalCoffeeConsumption } = await import(
+        '@/components/notes/List/globalCache'
+      );
+      globalCache.totalConsumption =
+        calculateTotalCoffeeConsumption(updatedNotes);
 
       // 存储更新后的笔记列表 - Storage.set() 会自动触发事件
-      await Storage.set("brewingNotes", JSON.stringify(updatedNotes));
+      await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
 
       // 设置笔记已保存标记
-      localStorage.setItem("brewingNoteInProgress", "false");
+      localStorage.setItem('brewingNoteInProgress', 'false');
       // 清空表单初始数据，表示已完全保存
       setNoteFormInitialData(null);
 
       // 关闭笔记表单
       setShowNoteForm(false);
     } catch {
-      alert("保存失败，请重试");
+      alert('保存失败，请重试');
     }
   }, []);
 
@@ -668,7 +709,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
   }, [currentTime, handleComplete, isCompleted]);
 
   const resetTimer = useCallback(() => {
-    triggerHaptic("warning");
+    triggerHaptic('warning');
     clearTimerAndStates();
     setIsRunning(false);
     setCurrentTime(0);
@@ -682,7 +723,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
 
     // 手动触发一次事件，确保其他组件知道倒计时已结束
     window.dispatchEvent(
-      new CustomEvent("brewing:countdownChange", {
+      new CustomEvent('brewing:countdownChange', {
         detail: { remainingTime: null },
       })
     );
@@ -691,22 +732,22 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     setIsCompleted(false);
 
     // 清除笔记进度标记和保存的表单数据
-    localStorage.setItem("brewingNoteInProgress", "false");
+    localStorage.setItem('brewingNoteInProgress', 'false');
     setNoteFormInitialData(null);
 
     // 关闭笔记表单(如果打开的话)
     setShowNoteForm(false);
 
     // 触发一个事件通知其他组件重置
-    const event = new CustomEvent("brewing:reset");
+    const event = new CustomEvent('brewing:reset');
     window.dispatchEvent(event);
 
     // 同时重置自动跳转标志
-    window.dispatchEvent(new CustomEvent("brewing:resetAutoNavigation"));
+    window.dispatchEvent(new CustomEvent('brewing:resetAutoNavigation'));
   }, [clearTimerAndStates, triggerHaptic]);
 
   const pauseTimer = useCallback(() => {
-    triggerHaptic("light");
+    triggerHaptic('light');
     clearTimerAndStates();
     setIsRunning(false);
   }, [clearTimerAndStates, triggerHaptic]);
@@ -720,7 +761,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         resetTimer();
 
         // 确保通知所有组件冲煮已经重置
-        window.dispatchEvent(new CustomEvent("brewing:reset"));
+        window.dispatchEvent(new CustomEvent('brewing:reset'));
 
         // 延迟启动计时器，确保状态已完全重置
         setTimeout(() => {
@@ -782,10 +823,15 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
       onStageChange?.({
         currentStage: currentStage,
         progress: progress,
-        isWaiting: currentExpandedStage.type === "wait",
+        isWaiting: currentExpandedStage.type === 'wait',
       });
     }
-  }, [currentTime, getCurrentStageAndUpdateIndex, calculateStageProgress, onStageChange]);
+  }, [
+    currentTime,
+    getCurrentStageAndUpdateIndex,
+    calculateStageProgress,
+    onStageChange,
+  ]);
 
   // 监听brewing:paramsUpdated事件，更新笔记表单数据
   useEffect(() => {
@@ -808,29 +854,29 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
       if (e.detail && noteFormInitialData) {
         // 标准化烘焙度值，确保与下拉列表选项匹配
         const normalizeRoastLevel = (roastLevel?: string): string => {
-          if (!roastLevel) return "中度烘焙";
+          if (!roastLevel) return '中度烘焙';
 
           // 如果已经是完整格式，直接返回
-          if (roastLevel.endsWith("烘焙")) return roastLevel;
+          if (roastLevel.endsWith('烘焙')) return roastLevel;
 
           // 否则添加"烘焙"后缀
-          if (roastLevel === "极浅") return "极浅烘焙";
-          if (roastLevel === "浅度") return "浅度烘焙";
-          if (roastLevel === "中浅") return "中浅烘焙";
-          if (roastLevel === "中度") return "中度烘焙";
-          if (roastLevel === "中深") return "中深烘焙";
-          if (roastLevel === "深度") return "深度烘焙";
+          if (roastLevel === '极浅') return '极浅烘焙';
+          if (roastLevel === '浅度') return '浅度烘焙';
+          if (roastLevel === '中浅') return '中浅烘焙';
+          if (roastLevel === '中度') return '中度烘焙';
+          if (roastLevel === '中深') return '中深烘焙';
+          if (roastLevel === '深度') return '深度烘焙';
 
           // 尝试匹配部分字符串
-          if (roastLevel.includes("极浅")) return "极浅烘焙";
-          if (roastLevel.includes("浅")) return "浅度烘焙";
-          if (roastLevel.includes("中浅")) return "中浅烘焙";
-          if (roastLevel.includes("中深")) return "中深烘焙";
-          if (roastLevel.includes("深")) return "深度烘焙";
-          if (roastLevel.includes("中")) return "中度烘焙";
+          if (roastLevel.includes('极浅')) return '极浅烘焙';
+          if (roastLevel.includes('浅')) return '浅度烘焙';
+          if (roastLevel.includes('中浅')) return '中浅烘焙';
+          if (roastLevel.includes('中深')) return '中深烘焙';
+          if (roastLevel.includes('深')) return '深度烘焙';
+          if (roastLevel.includes('中')) return '中度烘焙';
 
           // 默认返回中度烘焙
-          return "中度烘焙";
+          return '中度烘焙';
         };
 
         // 更新笔记表单数据
@@ -844,17 +890,17 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
             coffee:
               e.detail.params.coffee ||
               noteFormInitialData.params?.coffee ||
-              "",
+              '',
             water:
-              e.detail.params.water || noteFormInitialData.params?.water || "",
+              e.detail.params.water || noteFormInitialData.params?.water || '',
             ratio:
-              e.detail.params.ratio || noteFormInitialData.params?.ratio || "",
+              e.detail.params.ratio || noteFormInitialData.params?.ratio || '',
             grindSize:
               e.detail.params.grindSize ||
               noteFormInitialData.params?.grindSize ||
-              "",
+              '',
             temp:
-              e.detail.params.temp || noteFormInitialData.params?.temp || "",
+              e.detail.params.temp || noteFormInitialData.params?.temp || '',
           };
         }
 
@@ -862,9 +908,9 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         if (e.detail.coffeeBean) {
           // 移除完整咖啡豆对象的保存，只保留必要的信息
           updatedData.coffeeBeanInfo = {
-            name: e.detail.coffeeBean.name || "",
+            name: e.detail.coffeeBean.name || '',
             roastLevel: normalizeRoastLevel(e.detail.coffeeBean.roastLevel),
-            roastDate: e.detail.coffeeBean.roastDate || "",
+            roastDate: e.detail.coffeeBean.roastDate || '',
           };
         }
 
@@ -873,13 +919,13 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     };
 
     window.addEventListener(
-      "brewing:paramsUpdated",
+      'brewing:paramsUpdated',
       handleParamsUpdated as EventListener
     );
 
     return () => {
       window.removeEventListener(
-        "brewing:paramsUpdated",
+        'brewing:paramsUpdated',
         handleParamsUpdated as EventListener
       );
     };
@@ -893,7 +939,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
       isRunning &&
       lastStageRef.current !== -1
     ) {
-      triggerHaptic("medium");
+      triggerHaptic('medium');
     }
     lastStageRef.current = currentStage;
   }, [currentTime, getCurrentStageAndUpdateIndex, isRunning, triggerHaptic]);
@@ -916,17 +962,17 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     };
 
     // 添加事件监听
-    window.addEventListener("showBrewingNoteForm", handleShowNoteForm);
+    window.addEventListener('showBrewingNoteForm', handleShowNoteForm);
     window.addEventListener(
-      "closeBrewingNoteForm",
+      'closeBrewingNoteForm',
       handleCloseNoteForm as EventListener
     );
 
     return () => {
       // 移除事件监听
-      window.removeEventListener("showBrewingNoteForm", handleShowNoteForm);
+      window.removeEventListener('showBrewingNoteForm', handleShowNoteForm);
       window.removeEventListener(
-        "closeBrewingNoteForm",
+        'closeBrewingNoteForm',
         handleCloseNoteForm as EventListener
       );
     };
@@ -965,13 +1011,13 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
 
     // 添加自定义事件监听器
     window.addEventListener(
-      "methodSelected",
+      'methodSelected',
       handleMethodSelected as EventListener
     );
 
     return () => {
       window.removeEventListener(
-        "methodSelected",
+        'methodSelected',
         handleMethodSelected as EventListener
       );
     };
@@ -1002,16 +1048,16 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
       clearTimerAndStates();
 
       // 清除笔记进度标记
-      localStorage.setItem("brewingNoteInProgress", "false");
+      localStorage.setItem('brewingNoteInProgress', 'false');
       setNoteFormInitialData(null);
       setShowNoteForm(false);
     };
 
     // 监听brewing:reset事件
-    window.addEventListener("brewing:reset", handleBrewingReset);
+    window.addEventListener('brewing:reset', handleBrewingReset);
 
     return () => {
-      window.removeEventListener("brewing:reset", handleBrewingReset);
+      window.removeEventListener('brewing:reset', handleBrewingReset);
     };
   }, [clearTimerAndStates]);
 
@@ -1025,10 +1071,10 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
       const stageProgress =
         (currentTime - currentStage.startTime) /
         (currentStage.endTime - currentStage.startTime);
-      const isWaiting = currentStage.type === "wait";
+      const isWaiting = currentStage.type === 'wait';
 
       // 发送阶段变化事件
-      const stageEvent = new CustomEvent("brewing:stageChange", {
+      const stageEvent = new CustomEvent('brewing:stageChange', {
         detail: {
           currentStage: currentExpandedStageIndex,
           stage: currentExpandedStageIndex, // 同时包含stage和currentStage，确保兼容性
@@ -1064,13 +1110,11 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     setCurrentTime(lastStage.endTime);
 
     // 重置自动跳转标志，确保跳过操作能触发自动跳转
-    window.dispatchEvent(new CustomEvent("brewing:resetAutoNavigation"));
+    window.dispatchEvent(new CustomEvent('brewing:resetAutoNavigation'));
 
     // 触发完成处理
     handleComplete();
   }, [currentBrewingMethod, handleComplete, clearTimerAndStates]);
-
-
 
   // 监听阶段变化以显示跳过按钮
   useEffect(() => {
@@ -1083,10 +1127,15 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     // 只在最后一个阶段且是等待阶段时显示跳过按钮
     const isLastStage = currentStage === lastStageIndex;
     const isWaitingStage =
-      isLastStage && expandedStages[lastStageIndex]?.type === "wait";
+      isLastStage && expandedStages[lastStageIndex]?.type === 'wait';
 
     setShowSkipButton(isLastStage && isWaitingStage && isRunning);
-  }, [currentTime, getCurrentStageAndUpdateIndex, currentBrewingMethod, isRunning]);
+  }, [
+    currentTime,
+    getCurrentStageAndUpdateIndex,
+    currentBrewingMethod,
+    isRunning,
+  ]);
 
   useEffect(() => {
     // 使用提取出的工具函数处理屏幕常亮
@@ -1105,8 +1154,8 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     currentExpandedStageIndex >= 0
       ? currentExpandedStageIndex
       : expandedStagesRef.current.length > 0
-      ? 0
-      : -1;
+        ? 0
+        : -1;
 
   const currentStage =
     currentStageIndex >= 0 && expandedStagesRef.current.length > 0
@@ -1124,28 +1173,27 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     nextStageIndex >= 0 ? expandedStagesRef.current[nextStageIndex] : null;
 
   // 计算当前阶段的流速（无论是否正在运行）
-  const currentFlowRateValue = currentStage?.type === "pour" 
-    ? calculateTargetFlowRate(currentStage, expandedStagesRef.current) 
-    : 0;
-    
+  const currentFlowRateValue =
+    currentStage?.type === 'pour'
+      ? calculateTargetFlowRate(currentStage, expandedStagesRef.current)
+      : 0;
+
   // 直接使用计算好的流速值
   const displayFlowRate = currentFlowRateValue;
 
   return (
     <>
-      <div
-        className="px-6 sticky bottom-0 bg-neutral-50 pt-6 dark:bg-neutral-900 pb-safe-bottom"
-      >
+      <div className="pb-safe-bottom sticky bottom-0 bg-neutral-50 px-6 pt-6 dark:bg-neutral-900">
         {/* 添加设置点和边框 */}
-        <div className="absolute top-0 left-0 right-0 flex items-center justify-center">
+        <div className="absolute top-0 right-0 left-0 flex items-center justify-center">
           <div className="relative w-full border-t border-neutral-200 dark:border-neutral-800">
-            <div className="absolute top-1/2 right-6 -translate-y-1/2 flex items-center">
+            <div className="absolute top-1/2 right-6 flex -translate-y-1/2 items-center">
               <button
                 onClick={() => setShowSettings(!showSettings)}
-                className="h-4 px-2 -mr-2 bg-neutral-50 dark:bg-neutral-900 flex items-center gap-1"
+                className="-mr-2 flex h-4 items-center gap-1 bg-neutral-50 px-2 dark:bg-neutral-900"
               >
-                <div className="w-[3px] h-[3px] rounded-full bg-neutral-300 dark:bg-neutral-700 hover:bg-neutral-400 dark:hover:bg-neutral-600 transition-colors" />
-                <div className="w-[3px] h-[3px] rounded-full bg-neutral-300 dark:bg-neutral-700 hover:bg-neutral-400 dark:hover:bg-neutral-600 transition-colors" />
+                <div className="h-[3px] w-[3px] rounded-full bg-neutral-300 transition-colors hover:bg-neutral-400 dark:bg-neutral-700 dark:hover:bg-neutral-600" />
+                <div className="h-[3px] w-[3px] rounded-full bg-neutral-300 transition-colors hover:bg-neutral-400 dark:bg-neutral-700 dark:hover:bg-neutral-600" />
               </button>
             </div>
           </div>
@@ -1172,12 +1220,12 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 10 }}
               onClick={handleSkip}
-              className="absolute right-6 -top-12 flex items-center gap-1 rounded-full bg-neutral-100 px-3 py-1 text-xs text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400 transform-gpu"
+              className="absolute -top-12 right-6 flex transform-gpu items-center gap-1 rounded-full bg-neutral-100 px-3 py-1 text-xs text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400"
               style={{
-                willChange: "transform, opacity",
-                transform: "translateZ(0)",
-                contain: "layout",
-                backfaceVisibility: "hidden",
+                willChange: 'transform, opacity',
+                transform: 'translateZ(0)',
+                contain: 'layout',
+                backfaceVisibility: 'hidden',
               }}
               whileTap={{ scale: 0.95 }}
             >
@@ -1188,7 +1236,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                 viewBox="0 0 24 24"
                 strokeWidth={1.5}
                 stroke="currentColor"
-                className="w-4 h-4"
+                className="h-4 w-4"
               >
                 <path
                   strokeLinecap="round"
@@ -1200,431 +1248,462 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
           )}
         </AnimatePresence>
         <AnimatePresence mode="wait">
-          {(isRunning || localLayoutSettings.alwaysShowTimerInfo) && isProgressBarReady && (
-            <motion.div
-              key="brewing-info"
-              className="overflow-hidden will-change-auto"
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{
-                duration: 0.26,
-                ease: [0.4, 0, 0.2, 1],
-                opacity: { duration: 0.1 },
-              }}
-              style={{
-                contain: "content",
-                backfaceVisibility: "hidden",
-                WebkitFontSmoothing: "subpixel-antialiased",
-              }}
-            >
-              <div className="space-y-3 transform-gpu">
-                <motion.div
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className="space-y-3"
-                  style={{
-                    willChange: "transform, opacity",
-                    backfaceVisibility: "hidden",
-                  }}
-                >
-                  <div
-                    className={`flex items-baseline border-l-2 border-neutral-800 pl-3 dark:border-neutral-100 ${
-                      localLayoutSettings.stageInfoReversed
-                        ? "flex-row-reverse"
-                        : "flex-row"
-                    } justify-between`}
+          {(isRunning || localLayoutSettings.alwaysShowTimerInfo) &&
+            isProgressBarReady && (
+              <motion.div
+                key="brewing-info"
+                className="overflow-hidden will-change-auto"
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{
+                  duration: 0.26,
+                  ease: [0.4, 0, 0.2, 1],
+                  opacity: { duration: 0.1 },
+                }}
+                style={{
+                  contain: 'content',
+                  backfaceVisibility: 'hidden',
+                  WebkitFontSmoothing: 'subpixel-antialiased',
+                }}
+              >
+                <div className="transform-gpu space-y-3">
+                  <motion.div
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="space-y-3"
+                    style={{
+                      willChange: 'transform, opacity',
+                      backfaceVisibility: 'hidden',
+                    }}
                   >
                     <div
-                      className={`${
+                      className={`flex items-baseline border-l-2 border-neutral-800 pl-3 dark:border-neutral-100 ${
                         localLayoutSettings.stageInfoReversed
-                          ? "text-right"
-                          : "text-left"
-                      }`}
-                    >
-                      <div className="text-xs text-neutral-500 dark:text-neutral-400">
-                        当前阶段
-                      </div>
-                      <motion.div
-                        key={currentStageIndex}
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.26 }}
-                        className="mt-1 text-sm font-medium tracking-wide"
-                        style={{
-                          willChange: "transform, opacity",
-                          backfaceVisibility: "hidden",
-                        }}
-                      >
-                        {currentStage
-                          ? currentStage.type === "pour"
-                            ? currentStage.label
-                            : `等待`
-                          : "完成冲煮"}
-                      </motion.div>
-                    </div>
-                    <div
-                      className={`flex items-baseline flex-row ${
-                        localLayoutSettings.stageInfoReversed
-                          ? "text-left"
-                          : "text-right"
-                      }`}
+                          ? 'flex-row-reverse'
+                          : 'flex-row'
+                      } justify-between`}
                     >
                       <div
-                        className={
-                          localLayoutSettings.stageInfoReversed ? "mr-4" : "mr-0"
-                        }
+                        className={`${
+                          localLayoutSettings.stageInfoReversed
+                            ? 'text-right'
+                            : 'text-left'
+                        }`}
                       >
                         <div className="text-xs text-neutral-500 dark:text-neutral-400">
-                          目标时间
+                          当前阶段
                         </div>
                         <motion.div
-                          key={`time-${currentStageIndex}`}
-                          initial={{ opacity: 0.8 }}
-                          animate={{ opacity: 1 }}
+                          key={currentStageIndex}
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
                           transition={{ duration: 0.26 }}
                           className="mt-1 text-sm font-medium tracking-wide"
+                          style={{
+                            willChange: 'transform, opacity',
+                            backfaceVisibility: 'hidden',
+                          }}
                         >
                           {currentStage
-                            ? formatTime(currentStage.endTime, true)
-                            : "-"}
+                            ? currentStage.type === 'pour'
+                              ? currentStage.label
+                              : `等待`
+                            : '完成冲煮'}
                         </motion.div>
                       </div>
-                      <div className={`${localShowFlowRate ? 'min-w-20' : 'min-w-24'}`}>
-                        <div className="text-xs text-neutral-500 dark:text-neutral-400">
-                          目标水量
-                        </div>
-                        <motion.div
-                          key={`water-${currentStageIndex}`}
-                          initial={{ opacity: 0.8 }}
-                          animate={{ opacity: 1 }}
-                          transition={{ duration: 0.26 }}
-                          className="mt-1 flex flex-col text-sm font-medium tracking-wide"
+                      <div
+                        className={`flex flex-row items-baseline ${
+                          localLayoutSettings.stageInfoReversed
+                            ? 'text-left'
+                            : 'text-right'
+                        }`}
+                      >
+                        <div
+                          className={
+                            localLayoutSettings.stageInfoReversed
+                              ? 'mr-4'
+                              : 'mr-0'
+                          }
                         >
-                          {currentStage?.water ? (
-                            <div
-                              className={`flex items-baseline ${
-                                localLayoutSettings.stageInfoReversed
-                                  ? "justify-start"
-                                  : "justify-end"
-                              }`}
-                            >
-                              <span>{currentWaterAmount}</span>
-                              <span className="mx-0.5 text-neutral-300 dark:text-neutral-600">
-                                /
-                              </span>
-                              <span>{currentStage.water}</span>
-                            </div>
-                          ) : (
-                            "-"
-                          )}
-                        </motion.div>
-                      </div>
-                      {localShowFlowRate && (
-                        <div className="min-w-14">
                           <div className="text-xs text-neutral-500 dark:text-neutral-400">
-                            流速
+                            目标时间
                           </div>
                           <motion.div
-                            key={`flow-rate-${currentStageIndex}`}
+                            key={`time-${currentStageIndex}`}
                             initial={{ opacity: 0.8 }}
                             animate={{ opacity: 1 }}
                             transition={{ duration: 0.26 }}
                             className="mt-1 text-sm font-medium tracking-wide"
                           >
-                            {currentStage?.type === "pour" ? (
-                              <span>{displayFlowRate.toFixed(1)}</span>
+                            {currentStage
+                              ? formatTime(currentStage.endTime, true)
+                              : '-'}
+                          </motion.div>
+                        </div>
+                        <div
+                          className={`${localShowFlowRate ? 'min-w-20' : 'min-w-24'}`}
+                        >
+                          <div className="text-xs text-neutral-500 dark:text-neutral-400">
+                            目标水量
+                          </div>
+                          <motion.div
+                            key={`water-${currentStageIndex}`}
+                            initial={{ opacity: 0.8 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ duration: 0.26 }}
+                            className="mt-1 flex flex-col text-sm font-medium tracking-wide"
+                          >
+                            {currentStage?.water ? (
+                              <div
+                                className={`flex items-baseline ${
+                                  localLayoutSettings.stageInfoReversed
+                                    ? 'justify-start'
+                                    : 'justify-end'
+                                }`}
+                              >
+                                <span>{currentWaterAmount}</span>
+                                <span className="mx-0.5 text-neutral-300 dark:text-neutral-600">
+                                  /
+                                </span>
+                                <span>{currentStage.water}</span>
+                              </div>
                             ) : (
-                              "-"
+                              '-'
                             )}
                           </motion.div>
                         </div>
-                      )}
+                        {localShowFlowRate && (
+                          <div className="min-w-14">
+                            <div className="text-xs text-neutral-500 dark:text-neutral-400">
+                              流速
+                            </div>
+                            <motion.div
+                              key={`flow-rate-${currentStageIndex}`}
+                              initial={{ opacity: 0.8 }}
+                              animate={{ opacity: 1 }}
+                              transition={{ duration: 0.26 }}
+                              className="mt-1 text-sm font-medium tracking-wide"
+                            >
+                              {currentStage?.type === 'pour' ? (
+                                <span>{displayFlowRate.toFixed(1)}</span>
+                              ) : (
+                                '-'
+                              )}
+                            </motion.div>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
 
-                  <AnimatePresence mode="wait">
-                    {nextStage && (
-                      <motion.div
-                        key={`next-${nextStageIndex}`}
-                        initial={{ opacity: 0, height: 0, y: -20 }}
-                        animate={{ opacity: 1, height: "auto", y: 0 }}
-                        exit={{ opacity: 0, height: 0, y: -20 }}
-                        transition={{ duration: 0.26 }}
-                        className={`flex items-baseline border-l m border-neutral-300 pl-3 dark:border-neutral-700 ${
-                          localLayoutSettings.stageInfoReversed
-                            ? "flex-row-reverse"
-                            : "flex-row"
-                        } justify-between transform-gpu`}
-                        style={{
-                          willChange: "transform, opacity, height",
-                          backfaceVisibility: "hidden",
-                        }}
-                      >
-                        <div
-                          className={`${
+                    <AnimatePresence mode="wait">
+                      {nextStage && (
+                        <motion.div
+                          key={`next-${nextStageIndex}`}
+                          initial={{ opacity: 0, height: 0, y: -20 }}
+                          animate={{ opacity: 1, height: 'auto', y: 0 }}
+                          exit={{ opacity: 0, height: 0, y: -20 }}
+                          transition={{ duration: 0.26 }}
+                          className={`m flex items-baseline border-l border-neutral-300 pl-3 dark:border-neutral-700 ${
                             localLayoutSettings.stageInfoReversed
-                              ? "text-right"
-                              : "text-left"
-                          }`}
+                              ? 'flex-row-reverse'
+                              : 'flex-row'
+                          } transform-gpu justify-between`}
+                          style={{
+                            willChange: 'transform, opacity, height',
+                            backfaceVisibility: 'hidden',
+                          }}
                         >
                           <div
-                            className={`flex items-center ${
+                            className={`${
                               localLayoutSettings.stageInfoReversed
-                                ? "justify-end"
-                                : "justify-start"
-                            } gap-2 text-xs text-neutral-500 dark:text-neutral-400`}
+                                ? 'text-right'
+                                : 'text-left'
+                            }`}
                           >
-                            <span>下一步</span>
+                            <div
+                              className={`flex items-center ${
+                                localLayoutSettings.stageInfoReversed
+                                  ? 'justify-end'
+                                  : 'justify-start'
+                              } gap-2 text-xs text-neutral-500 dark:text-neutral-400`}
+                            >
+                              <span>下一步</span>
+                            </div>
+                            <motion.div
+                              initial={{
+                                opacity: 0,
+                                x: localLayoutSettings.stageInfoReversed
+                                  ? 10
+                                  : -10,
+                              }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ duration: 0.26, delay: 0.1 }}
+                              className="mt-1"
+                            >
+                              <span className="text-sm font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
+                                {nextStage.type === 'pour'
+                                  ? nextStage.label
+                                  : `等待`}
+                              </span>
+                            </motion.div>
                           </div>
                           <motion.div
                             initial={{
                               opacity: 0,
-                              x: localLayoutSettings.stageInfoReversed ? 10 : -10,
+                              x: localLayoutSettings.stageInfoReversed
+                                ? -10
+                                : 10,
                             }}
                             animate={{ opacity: 1, x: 0 }}
-                            transition={{ duration: 0.26, delay: 0.1 }}
-                            className="mt-1"
+                            transition={{ duration: 0.26, delay: 0.2 }}
+                            className={`flex flex-row items-baseline ${
+                              localLayoutSettings.stageInfoReversed
+                                ? 'text-left'
+                                : 'text-right'
+                            }`}
                           >
-                            <span className="text-sm font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
-                              {nextStage.type === "pour"
-                                ? nextStage.label
-                                : `等待`}
-                            </span>
-                          </motion.div>
-                        </div>
-                        <motion.div
-                          initial={{
-                            opacity: 0,
-                            x: localLayoutSettings.stageInfoReversed ? -10 : 10,
-                          }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ duration: 0.26, delay: 0.2 }}
-                          className={`flex items-baseline flex-row ${
-                            localLayoutSettings.stageInfoReversed
-                              ? "text-left"
-                              : "text-right "
-                          }`}
-                        >
-                          <div
-                            className={
-                              localLayoutSettings.stageInfoReversed ? "mr-4" : "mr-0"
-                            }
-                          >
-                            <div className="text-xs text-neutral-500 dark:text-neutral-400">
-                              目标时间
-                            </div>
-                            <div className="mt-1 text-sm font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
-                              {formatTime(nextStage.endTime, true)}
-                            </div>
-                          </div>
-                          <div className={`${localShowFlowRate ? 'min-w-20' : 'min-w-24'}`}>
-                            <div className="text-xs text-neutral-500 dark:text-neutral-400">
-                              目标水量
+                            <div
+                              className={
+                                localLayoutSettings.stageInfoReversed
+                                  ? 'mr-4'
+                                  : 'mr-0'
+                              }
+                            >
+                              <div className="text-xs text-neutral-500 dark:text-neutral-400">
+                                目标时间
+                              </div>
+                              <div className="mt-1 text-sm font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
+                                {formatTime(nextStage.endTime, true)}
+                              </div>
                             </div>
                             <div
-                              className={`mt-1 text-sm font-medium tracking-wide text-neutral-600 dark:text-neutral-400 ${
-                                localLayoutSettings.stageInfoReversed
-                                  ? "text-left"
-                                  : "text-right"
-                              }`}
+                              className={`${localShowFlowRate ? 'min-w-20' : 'min-w-24'}`}
                             >
-                              {nextStage.water}
-                            </div>
-                          </div>
-                          {localShowFlowRate && (
-                            <div className="min-w-14">
                               <div className="text-xs text-neutral-500 dark:text-neutral-400">
-                                流速
+                                目标水量
                               </div>
                               <div
                                 className={`mt-1 text-sm font-medium tracking-wide text-neutral-600 dark:text-neutral-400 ${
                                   localLayoutSettings.stageInfoReversed
-                                    ? "text-left"
-                                    : "text-right"
+                                    ? 'text-left'
+                                    : 'text-right'
                                 }`}
                               >
-                                {nextStage.type === "pour" ? (
-                                  <>
-                                    <span>{calculateTargetFlowRate(nextStage, expandedStagesRef.current).toFixed(1)}</span>
-                                  </>
-                                ) : (
-                                  "-"
-                                )}
+                                {nextStage.water}
                               </div>
                             </div>
-                          )}
+                            {localShowFlowRate && (
+                              <div className="min-w-14">
+                                <div className="text-xs text-neutral-500 dark:text-neutral-400">
+                                  流速
+                                </div>
+                                <div
+                                  className={`mt-1 text-sm font-medium tracking-wide text-neutral-600 dark:text-neutral-400 ${
+                                    localLayoutSettings.stageInfoReversed
+                                      ? 'text-left'
+                                      : 'text-right'
+                                  }`}
+                                >
+                                  {nextStage.type === 'pour' ? (
+                                    <>
+                                      <span>
+                                        {calculateTargetFlowRate(
+                                          nextStage,
+                                          expandedStagesRef.current
+                                        ).toFixed(1)}
+                                      </span>
+                                    </>
+                                  ) : (
+                                    '-'
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </motion.div>
                         </motion.div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                      )}
+                    </AnimatePresence>
 
-                  {/* 进度条 */}
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.26, ease: [0.4, 0, 0.2, 1] }}
-                    className="relative mb-3"
-                  >
-                    {expandedStagesRef.current.map((stage, index) => {
-                      const totalTime =
-                        expandedStagesRef.current[
-                          expandedStagesRef.current.length - 1
-                        ].endTime;
-                      const percentage = (stage.endTime / totalTime) * 100;
-                      return localLayoutSettings?.showStageDivider ? (
-                        <div
-                          key={`divider-end-${stage.endTime}-${index}`}
-                          className="absolute top-0 w-[2px] bg-neutral-50 dark:bg-neutral-900"
-                          style={{
-                            left: `${percentage}%`,
-                            height: `${localLayoutSettings.progressBarHeight || 4}px`,
-                            opacity: 0.8,
-                            transform: "translateZ(0)",
-                          }}
-                        />
-                      ) : null;
-                    })}
-
-                    <div
-                      className="w-full overflow-hidden bg-neutral-200/50 dark:bg-neutral-800"
-                      style={{
-                        height: `${localLayoutSettings.progressBarHeight || 4}px`,
-                        contain: "paint layout",
-                        position: "relative",
-                      }}
+                    {/* 进度条 */}
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.26, ease: [0.4, 0, 0.2, 1] }}
+                      className="relative mb-3"
                     >
-                      {/* 阶段分隔线 */}
                       {expandedStagesRef.current.map((stage, index) => {
-                        // 跳过第一个阶段的开始线（最左侧）
-                        if (index === 0) return null;
-                        
                         const totalTime =
                           expandedStagesRef.current[
                             expandedStagesRef.current.length - 1
                           ].endTime;
-                        const percentage = (stage.startTime / totalTime) * 100;
-                        
-                        return (
+                        const percentage = (stage.endTime / totalTime) * 100;
+                        return localLayoutSettings?.showStageDivider ? (
                           <div
-                            key={`divider-${stage.startTime}-${index}`}
-                            className="absolute top-0 bottom-0 z-10 w-[1.5px] bg-neutral-100 dark:bg-neutral-900"
+                            key={`divider-end-${stage.endTime}-${index}`}
+                            className="absolute top-0 w-[2px] bg-neutral-50 dark:bg-neutral-900"
                             style={{
                               left: `${percentage}%`,
                               height: `${localLayoutSettings.progressBarHeight || 4}px`,
+                              opacity: 0.8,
+                              transform: 'translateZ(0)',
                             }}
                           />
-                        );
+                        ) : null;
                       })}
-                      
-                      {/* 等待阶段的斜纹背景 */}
-                      {expandedStagesRef.current.map((stage, index) => {
-                        const totalTime =
-                          expandedStagesRef.current[
-                            expandedStagesRef.current.length - 1
-                          ].endTime;
-                        const startPercentage =
-                          (stage.startTime / totalTime) * 100;
-                        const width =
-                          ((stage.endTime - stage.startTime) / totalTime) * 100;
 
-                        return stage.type === "wait" ? (
-                          <div
-                            key={`waiting-${stage.endTime}-${index}`}
-                            className="absolute"
-                            style={{
-                              left: `${startPercentage}%`,
-                              width: `${width}%`,
-                              height: `${
-                                localLayoutSettings.progressBarHeight || 4
-                              }px`,
-                              background: `repeating-linear-gradient(
+                      <div
+                        className="w-full overflow-hidden bg-neutral-200/50 dark:bg-neutral-800"
+                        style={{
+                          height: `${localLayoutSettings.progressBarHeight || 4}px`,
+                          contain: 'paint layout',
+                          position: 'relative',
+                        }}
+                      >
+                        {/* 阶段分隔线 */}
+                        {expandedStagesRef.current.map((stage, index) => {
+                          // 跳过第一个阶段的开始线（最左侧）
+                          if (index === 0) return null;
+
+                          const totalTime =
+                            expandedStagesRef.current[
+                              expandedStagesRef.current.length - 1
+                            ].endTime;
+                          const percentage =
+                            (stage.startTime / totalTime) * 100;
+
+                          return (
+                            <div
+                              key={`divider-${stage.startTime}-${index}`}
+                              className="absolute top-0 bottom-0 z-10 w-[1.5px] bg-neutral-100 dark:bg-neutral-900"
+                              style={{
+                                left: `${percentage}%`,
+                                height: `${localLayoutSettings.progressBarHeight || 4}px`,
+                              }}
+                            />
+                          );
+                        })}
+
+                        {/* 等待阶段的斜纹背景 */}
+                        {expandedStagesRef.current.map((stage, index) => {
+                          const totalTime =
+                            expandedStagesRef.current[
+                              expandedStagesRef.current.length - 1
+                            ].endTime;
+                          const startPercentage =
+                            (stage.startTime / totalTime) * 100;
+                          const width =
+                            ((stage.endTime - stage.startTime) / totalTime) *
+                            100;
+
+                          return stage.type === 'wait' ? (
+                            <div
+                              key={`waiting-${stage.endTime}-${index}`}
+                              className="absolute"
+                              style={{
+                                left: `${startPercentage}%`,
+                                width: `${width}%`,
+                                height: `${
+                                  localLayoutSettings.progressBarHeight || 4
+                                }px`,
+                                background: `repeating-linear-gradient(
                                 45deg,
                                 transparent,
                                 transparent 4px,
                                 rgba(0, 0, 0, 0.1) 4px,
                                 rgba(0, 0, 0, 0.1) 8px
                               )`,
-                              transform: "translateZ(0)",
-                            }}
-                          />
-                        ) : null;
-                      })}
-                      
-                      {/* 进度指示器 */}
-                      <motion.div
-                        className="h-full bg-neutral-800 dark:bg-neutral-100 transform-gpu"
-                        initial={{ width: 0 }}
-                        animate={{
-                          width: currentTime > 0 && expandedStagesRef.current.length > 0
-                            ? `${(currentTime / (expandedStagesRef.current[expandedStagesRef.current.length - 1]?.endTime || 1)) * 100}%`
-                            : "0%"
-                        }}
-                        transition={{
-                          duration: 0.26,
-                          ease: [0.4, 0, 0.2, 1],
-                        }}
-                        style={{
-                          willChange: "width",
-                          transformOrigin: "left center",
-                          contain: "layout",
-                          backfaceVisibility: "hidden",
-                          position: "relative",
-                          zIndex: 5,
-                        }}
-                      />
-                    </div>
+                                transform: 'translateZ(0)',
+                              }}
+                            />
+                          ) : null;
+                        })}
 
-                    <div className="relative mt-1 h-4 w-full">
-                      {/* 当前阶段时间标记 */}
-                      {currentStage && (
-                        <div
-                          key={`current-${currentStage.endTime}-${currentExpandedStageIndex}`}
-                          className="absolute top-0 font-medium text-[9px] text-neutral-600 dark:text-neutral-300"
-                          style={{
-                            left: `${(currentStage.endTime / expandedStagesRef.current[expandedStagesRef.current.length - 1].endTime) * 100}%`,
-                            transform: "translateX(-100%)",
+                        {/* 进度指示器 */}
+                        <motion.div
+                          className="h-full transform-gpu bg-neutral-800 dark:bg-neutral-100"
+                          initial={{ width: 0 }}
+                          animate={{
+                            width:
+                              currentTime > 0 &&
+                              expandedStagesRef.current.length > 0
+                                ? `${(currentTime / (expandedStagesRef.current[expandedStagesRef.current.length - 1]?.endTime || 1)) * 100}%`
+                                : '0%',
                           }}
-                        >
-                          {formatTime(currentStage.endTime, true)}
-                        </div>
-                      )}
-                      
-                      {/* 最后阶段时间标记 */}
-                      {expandedStagesRef.current.length > 0 && (
-                        <div
-                          key="final-time"
-                          className="absolute top-0 right-0 font-medium text-[9px] text-neutral-600 dark:text-neutral-300"
-                        >
-                          {formatTime(expandedStagesRef.current[expandedStagesRef.current.length - 1].endTime, true)}
-                        </div>
-                      )}
-                    </div>
+                          transition={{
+                            duration: 0.26,
+                            ease: [0.4, 0, 0.2, 1],
+                          }}
+                          style={{
+                            willChange: 'width',
+                            transformOrigin: 'left center',
+                            contain: 'layout',
+                            backfaceVisibility: 'hidden',
+                            position: 'relative',
+                            zIndex: 5,
+                          }}
+                        />
+                      </div>
+
+                      <div className="relative mt-1 h-4 w-full">
+                        {/* 当前阶段时间标记 */}
+                        {currentStage && (
+                          <div
+                            key={`current-${currentStage.endTime}-${currentExpandedStageIndex}`}
+                            className="absolute top-0 text-[9px] font-medium text-neutral-600 dark:text-neutral-300"
+                            style={{
+                              left: `${(currentStage.endTime / expandedStagesRef.current[expandedStagesRef.current.length - 1].endTime) * 100}%`,
+                              transform: 'translateX(-100%)',
+                            }}
+                          >
+                            {formatTime(currentStage.endTime, true)}
+                          </div>
+                        )}
+
+                        {/* 最后阶段时间标记 */}
+                        {expandedStagesRef.current.length > 0 && (
+                          <div
+                            key="final-time"
+                            className="absolute top-0 right-0 text-[9px] font-medium text-neutral-600 dark:text-neutral-300"
+                          >
+                            {formatTime(
+                              expandedStagesRef.current[
+                                expandedStagesRef.current.length - 1
+                              ].endTime,
+                              true
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
                   </motion.div>
-                </motion.div>
-              </div>
-            </motion.div>
-          )}
+                </div>
+              </motion.div>
+            )}
         </AnimatePresence>
 
         <div
           className={`flex items-center ${
-            localLayoutSettings.controlsReversed ? "flex-row-reverse" : "flex-row"
-          } justify-between gap-2 min-w-0`}
+            localLayoutSettings.controlsReversed
+              ? 'flex-row-reverse'
+              : 'flex-row'
+          } min-w-0 justify-between gap-2`}
         >
           <div
             className={`grid ${
               localLayoutSettings.controlsReversed
                 ? `grid-cols-[auto_auto_auto] ${localShowFlowRate ? 'gap-2 sm:gap-4' : 'gap-4 sm:gap-8'}`
                 : `grid-cols-[auto_auto_auto] ${localShowFlowRate ? 'gap-2 sm:gap-4' : 'gap-4 sm:gap-8'}`
-            } flex-1 min-w-0 overflow-hidden`}
+            } min-w-0 flex-1 overflow-hidden`}
           >
             <div
               className={`flex flex-col ${
-                localLayoutSettings.controlsReversed ? "items-end" : "items-start"
+                localLayoutSettings.controlsReversed
+                  ? 'items-end'
+                  : 'items-start'
               }`}
             >
-              <span className="text-xs text-neutral-500 dark:text-neutral-400 mb-1">
+              <span className="mb-1 text-xs text-neutral-500 dark:text-neutral-400">
                 时间
               </span>
               <div className="relative text-2xl font-light tracking-widest text-neutral-800 sm:text-3xl dark:text-neutral-100">
@@ -1638,17 +1717,17 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                       transition={{ duration: 0.26 }}
                       className={`timer-font min-w-[3ch] ${
                         localLayoutSettings.controlsReversed
-                          ? "text-right"
-                          : "text-left"
+                          ? 'text-right'
+                          : 'text-left'
                       } transform-gpu`}
                       style={{
-                        willChange: "transform, opacity",
-                        transform: "translateZ(0)",
-                        contain: "content",
-                        backfaceVisibility: "hidden",
+                        willChange: 'transform, opacity',
+                        transform: 'translateZ(0)',
+                        contain: 'content',
+                        backfaceVisibility: 'hidden',
                       }}
                     >
-                      {`0:${countdownTime.toString().padStart(2, "0")}`}
+                      {`0:${countdownTime.toString().padStart(2, '0')}`}
                     </motion.div>
                   ) : (
                     <motion.div
@@ -1659,14 +1738,14 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                       transition={{ duration: 0.26 }}
                       className={`timer-font min-w-[3ch] ${
                         localLayoutSettings.controlsReversed
-                          ? "text-right"
-                          : "text-left"
+                          ? 'text-right'
+                          : 'text-left'
                       } transform-gpu`}
                       style={{
-                        willChange: "transform, opacity",
-                        transform: "translateZ(0)",
-                        contain: "content",
-                        backfaceVisibility: "hidden",
+                        willChange: 'transform, opacity',
+                        transform: 'translateZ(0)',
+                        contain: 'content',
+                        backfaceVisibility: 'hidden',
                       }}
                     >
                       {formatTime(currentTime)}
@@ -1678,16 +1757,20 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
 
             <div
               className={`flex flex-col ${
-                localLayoutSettings.controlsReversed ? "items-end" : "items-start"
+                localLayoutSettings.controlsReversed
+                  ? 'items-end'
+                  : 'items-start'
               }`}
             >
-              <span className="text-xs text-neutral-500 dark:text-neutral-400 mb-1">
+              <span className="mb-1 text-xs text-neutral-500 dark:text-neutral-400">
                 水量
               </span>
               <div className="text-2xl font-light tracking-widest text-neutral-800 sm:text-3xl dark:text-neutral-100">
                 <motion.div
                   className={`timer-font min-w-[3ch] ${
-                    localLayoutSettings.controlsReversed ? "text-right" : "text-left"
+                    localLayoutSettings.controlsReversed
+                      ? 'text-right'
+                      : 'text-left'
                   } transform-gpu`}
                   animate={{
                     opacity: [null, 1],
@@ -1698,14 +1781,14 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                     ease: [0.4, 0, 0.2, 1],
                   }}
                   style={{
-                    willChange: "transform, opacity",
-                    transform: "translateZ(0)",
-                    contain: "content",
-                    backfaceVisibility: "hidden",
+                    willChange: 'transform, opacity',
+                    transform: 'translateZ(0)',
+                    contain: 'content',
+                    backfaceVisibility: 'hidden',
                   }}
                 >
                   <span>{currentWaterAmount}</span>
-                  <span className="text-sm text-neutral-500 dark:text-neutral-400 ml-1">
+                  <span className="ml-1 text-sm text-neutral-500 dark:text-neutral-400">
                     g
                   </span>
                 </motion.div>
@@ -1715,16 +1798,20 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
             {localShowFlowRate && (
               <div
                 className={`flex flex-col ${
-                  localLayoutSettings.controlsReversed ? "items-end" : "items-start"
+                  localLayoutSettings.controlsReversed
+                    ? 'items-end'
+                    : 'items-start'
                 }`}
               >
-                <span className="text-xs text-neutral-500 dark:text-neutral-400 mb-1">
+                <span className="mb-1 text-xs text-neutral-500 dark:text-neutral-400">
                   流速
                 </span>
                 <div className="text-2xl font-light tracking-widest text-neutral-800 sm:text-3xl dark:text-neutral-100">
                   <motion.div
                     className={`timer-font min-w-[2.5ch] ${
-                      localLayoutSettings.controlsReversed ? "text-right" : "text-left"
+                      localLayoutSettings.controlsReversed
+                        ? 'text-right'
+                        : 'text-left'
                     } transform-gpu`}
                     animate={{
                       opacity: [null, 1],
@@ -1735,10 +1822,10 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                       ease: [0.4, 0, 0.2, 1],
                     }}
                     style={{
-                      willChange: "transform, opacity",
-                      transform: "translateZ(0)",
-                      contain: "content",
-                      backfaceVisibility: "hidden",
+                      willChange: 'transform, opacity',
+                      transform: 'translateZ(0)',
+                      contain: 'content',
+                      backfaceVisibility: 'hidden',
                     }}
                   >
                     <span>{displayFlowRate.toFixed(1)}</span>
@@ -1749,22 +1836,22 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
           </div>
 
           <div
-            className={`flex items-center flex-shrink-0 ${
+            className={`flex flex-shrink-0 items-center ${
               localLayoutSettings.controlsReversed
-                ? "flex-row-reverse space-x-3 space-x-reverse"
-                : "flex-row space-x-3"
+                ? 'flex-row-reverse space-x-3 space-x-reverse'
+                : 'flex-row space-x-3'
             }`}
           >
             <motion.button
               onClick={isRunning ? pauseTimer : startTimer}
-              className={`${localShowFlowRate ? 'w-11 h-11 sm:w-12 sm:h-12' : 'w-12 h-12 sm:w-14 sm:h-14'} flex-shrink-0 flex items-center justify-center rounded-full bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400 transform-gpu`}
+              className={`${localShowFlowRate ? 'h-11 w-11 sm:h-12 sm:w-12' : 'h-12 w-12 sm:h-14 sm:w-14'} flex flex-shrink-0 transform-gpu items-center justify-center rounded-full bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400`}
               whileTap={{ scale: 0.95 }}
               transition={{ duration: 0.1, ease: [0.4, 0, 0.2, 1] }}
               style={{
-                willChange: "transform",
-                transform: "translateZ(0)",
-                contain: "layout",
-                backfaceVisibility: "hidden",
+                willChange: 'transform',
+                transform: 'translateZ(0)',
+                contain: 'layout',
+                backfaceVisibility: 'hidden',
               }}
             >
               {isRunning ? (
@@ -1774,7 +1861,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                   viewBox="0 0 24 24"
                   strokeWidth={1.5}
                   stroke="currentColor"
-                  className={`${localShowFlowRate ? 'w-4 h-4 sm:w-5 sm:h-5' : 'w-5 h-5 sm:w-6 sm:h-6'}`}
+                  className={`${localShowFlowRate ? 'h-4 w-4 sm:h-5 sm:w-5' : 'h-5 w-5 sm:h-6 sm:w-6'}`}
                 >
                   <path
                     strokeLinecap="round"
@@ -1789,7 +1876,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                   viewBox="0 0 24 24"
                   strokeWidth={1.5}
                   stroke="currentColor"
-                  className={`${localShowFlowRate ? 'w-4 h-4 sm:w-5 sm:h-5' : 'w-5 h-5 sm:w-6 sm:h-6'}`}
+                  className={`${localShowFlowRate ? 'h-4 w-4 sm:h-5 sm:w-5' : 'h-5 w-5 sm:h-6 sm:w-6'}`}
                 >
                   <path
                     strokeLinecap="round"
@@ -1801,22 +1888,30 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
             </motion.button>
             <motion.button
               onClick={
-                currentTime === 0 && !hasStartedOnce && !isRunning && !showComplete && !isCompleted
+                currentTime === 0 &&
+                !hasStartedOnce &&
+                !isRunning &&
+                !showComplete &&
+                !isCompleted
                   ? handleSkip // 初始状态：跳过到记录页面
                   : resetTimer // 非初始状态：重置计时器
               }
-              className={`${localShowFlowRate ? 'w-11 h-11 sm:w-12 sm:h-12' : 'w-12 h-12 sm:w-14 sm:h-14'} flex-shrink-0 flex items-center justify-center rounded-full bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400 transform-gpu`}
+              className={`${localShowFlowRate ? 'h-11 w-11 sm:h-12 sm:w-12' : 'h-12 w-12 sm:h-14 sm:w-14'} flex flex-shrink-0 transform-gpu items-center justify-center rounded-full bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400`}
               whileTap={{ scale: 0.95 }}
               transition={{ duration: 0.1, ease: [0.4, 0, 0.2, 1] }}
               style={{
-                willChange: "transform",
-                transform: "translateZ(0)",
-                contain: "layout",
-                backfaceVisibility: "hidden",
+                willChange: 'transform',
+                transform: 'translateZ(0)',
+                contain: 'layout',
+                backfaceVisibility: 'hidden',
               }}
             >
               {/* 根据计时器状态显示不同图标 */}
-              {currentTime === 0 && !hasStartedOnce && !isRunning && !showComplete && !isCompleted ? (
+              {currentTime === 0 &&
+              !hasStartedOnce &&
+              !isRunning &&
+              !showComplete &&
+              !isCompleted ? (
                 // 初始状态：显示跳过图标
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -1824,7 +1919,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                   viewBox="0 0 24 24"
                   strokeWidth={1.5}
                   stroke="currentColor"
-                  className={`${localShowFlowRate ? 'w-4 h-4 sm:w-5 sm:h-5' : 'w-5 h-5 sm:w-6 sm:h-6'}`}
+                  className={`${localShowFlowRate ? 'h-4 w-4 sm:h-5 sm:w-5' : 'h-5 w-5 sm:h-6 sm:w-6'}`}
                 >
                   <path
                     strokeLinecap="round"
@@ -1840,7 +1935,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                   viewBox="0 0 24 24"
                   strokeWidth={1.5}
                   stroke="currentColor"
-                  className={`${localShowFlowRate ? 'w-4 h-4 sm:w-5 sm:h-5' : 'w-5 h-5 sm:w-6 sm:h-6'}`}
+                  className={`${localShowFlowRate ? 'h-4 w-4 sm:h-5 sm:w-5' : 'h-5 w-5 sm:h-6 sm:w-6'}`}
                 >
                   <path
                     strokeLinecap="round"
@@ -1871,14 +1966,14 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
             onSave={handleSaveNote}
             initialData={
               noteFormInitialData || {
-                equipment: selectedEquipment || "",
-                method: currentBrewingMethod?.name || "",
+                equipment: selectedEquipment || '',
+                method: currentBrewingMethod?.name || '',
                 params: {
-                  coffee: currentBrewingMethod?.params?.coffee || "",
-                  water: currentBrewingMethod?.params?.water || "",
-                  ratio: currentBrewingMethod?.params?.ratio || "",
-                  grindSize: currentBrewingMethod?.params?.grindSize || "",
-                  temp: currentBrewingMethod?.params?.temp || "",
+                  coffee: currentBrewingMethod?.params?.coffee || '',
+                  water: currentBrewingMethod?.params?.water || '',
+                  ratio: currentBrewingMethod?.params?.ratio || '',
+                  grindSize: currentBrewingMethod?.params?.grindSize || '',
+                  temp: currentBrewingMethod?.params?.temp || '',
                 },
                 totalTime: currentTime,
               }

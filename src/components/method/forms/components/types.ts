@@ -7,7 +7,13 @@ export type BasePourType = string;
 export type EspressoPourTypeValues = 'extraction' | 'beverage' | 'other';
 
 // 定义普通器具的注水方式枚举
-export type RegularPourType = 'center' | 'circle' | 'ice' | 'bypass' | 'other' | string;
+export type RegularPourType =
+  | 'center'
+  | 'circle'
+  | 'ice'
+  | 'bypass'
+  | 'other'
+  | string;
 
 // 扩展基础的 Stage 类型，从config.ts中引用
 import { Stage as BaseStage } from '@/lib/core/config';
@@ -40,4 +46,4 @@ export interface Step {
   name: string;
   component: React.ReactNode;
   id?: string;
-} 
+}

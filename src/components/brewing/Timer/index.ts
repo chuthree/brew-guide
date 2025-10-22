@@ -23,4 +23,4 @@ export * from './TimerManager';
 // 导出类型定义
 export * from './types';
 
-// 移除已删除的TimerComponent组件导出 
+// 移除已删除的TimerComponent组件导出

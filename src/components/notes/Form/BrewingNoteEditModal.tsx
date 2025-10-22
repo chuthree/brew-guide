@@ -1,254 +1,272 @@
-'use client'
+'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react'
-import { ArrowLeft } from 'lucide-react'
-import BrewingNoteForm from './BrewingNoteForm'
-import { BrewingNoteData } from '@/types/app'
-import { SettingsOptions } from '@/components/settings/Settings'
-import { Calendar } from '@/components/common/ui/Calendar'
-import { getChildPageStyle } from '@/lib/navigation/pageTransition'
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { ArrowLeft } from 'lucide-react';
+import BrewingNoteForm from './BrewingNoteForm';
+import { BrewingNoteData } from '@/types/app';
+import { SettingsOptions } from '@/components/settings/Settings';
+import { Calendar } from '@/components/common/ui/Calendar';
+import { getChildPageStyle } from '@/lib/navigation/pageTransition';
 
 interface BrewingNoteEditModalProps {
-    showModal: boolean
-    initialData: BrewingNoteData | null
-    onSave: (data: BrewingNoteData) => void
-    onClose: () => void
-    settings?: SettingsOptions
-    isCopy?: boolean // 标记是否是复制操作
+  showModal: boolean;
+  initialData: BrewingNoteData | null;
+  onSave: (data: BrewingNoteData) => void;
+  onClose: () => void;
+  settings?: SettingsOptions;
+  isCopy?: boolean; // 标记是否是复制操作
 }
 
 const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
-    showModal,
-    initialData,
-    onSave,
-    onClose,
-    settings,
-    isCopy = false // 默认不是复制操作
+  showModal,
+  initialData,
+  onSave,
+  onClose,
+  settings,
+  isCopy = false, // 默认不是复制操作
 }) => {
-    // 显示控制状态
-    const [shouldRender, setShouldRender] = useState(false)
-    const [isVisible, setIsVisible] = useState(false)
+  // 显示控制状态
+  const [shouldRender, setShouldRender] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
 
-    // 时间戳状态管理
-    const [timestamp, setTimestamp] = useState<Date>(new Date(initialData?.timestamp || Date.now()))
+  // 时间戳状态管理
+  const [timestamp, setTimestamp] = useState<Date>(
+    new Date(initialData?.timestamp || Date.now())
+  );
 
-    // 日期选择器状态
-    const [showDatePicker, setShowDatePicker] = useState(false)
-    const datePickerRef = useRef<HTMLDivElement>(null)
+  // 日期选择器状态
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const datePickerRef = useRef<HTMLDivElement>(null);
 
-    // 重置时间戳当初始数据变化时
-    useEffect(() => {
-        if (initialData) {
-            setTimestamp(new Date(initialData.timestamp))
-        }
-    }, [initialData])
+  // 重置时间戳当初始数据变化时
+  useEffect(() => {
+    if (initialData) {
+      setTimestamp(new Date(initialData.timestamp));
+    }
+  }, [initialData]);
 
-    // 处理显示/隐藏动画
-    useEffect(() => {
-        if (showModal) {
-            setShouldRender(true)
-            // 使用 requestAnimationFrame 触发动画
-            requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                    setIsVisible(true)
-                })
-            })
-        } else {
-            setIsVisible(false)
-            const timer = setTimeout(() => {
-                setShouldRender(false)
-            }, 350) // 与动画时长匹配
-            return () => clearTimeout(timer)
-        }
-    }, [showModal])
+  // 处理显示/隐藏动画
+  useEffect(() => {
+    if (showModal) {
+      setShouldRender(true);
+      // 使用 requestAnimationFrame 触发动画
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setIsVisible(true);
+        });
+      });
+    } else {
+      setIsVisible(false);
+      const timer = setTimeout(() => {
+        setShouldRender(false);
+      }, 350); // 与动画时长匹配
+      return () => clearTimeout(timer);
+    }
+  }, [showModal]);
 
-    // 处理时间戳变化
-    const handleTimestampChange = useCallback((newTimestamp: Date) => {
-        setTimestamp(newTimestamp)
-    }, [])
+  // 处理时间戳变化
+  const handleTimestampChange = useCallback((newTimestamp: Date) => {
+    setTimestamp(newTimestamp);
+  }, []);
 
-    // 处理日期变化
-    const handleDateChange = useCallback((newDate: Date) => {
-        // 保持原有的时分秒，只修改年月日
-        const updatedTimestamp = new Date(timestamp)
-        updatedTimestamp.setFullYear(newDate.getFullYear())
-        updatedTimestamp.setMonth(newDate.getMonth())
-        updatedTimestamp.setDate(newDate.getDate())
+  // 处理日期变化
+  const handleDateChange = useCallback(
+    (newDate: Date) => {
+      // 保持原有的时分秒，只修改年月日
+      const updatedTimestamp = new Date(timestamp);
+      updatedTimestamp.setFullYear(newDate.getFullYear());
+      updatedTimestamp.setMonth(newDate.getMonth());
+      updatedTimestamp.setDate(newDate.getDate());
 
-        setTimestamp(updatedTimestamp)
-        setShowDatePicker(false)
-    }, [timestamp])
+      setTimestamp(updatedTimestamp);
+      setShowDatePicker(false);
+    },
+    [timestamp]
+  );
 
-    // 点击外部关闭日期选择器
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (datePickerRef.current && !datePickerRef.current.contains(event.target as Node)) {
-                setShowDatePicker(false)
-            }
-        }
+  // 点击外部关闭日期选择器
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        datePickerRef.current &&
+        !datePickerRef.current.contains(event.target as Node)
+      ) {
+        setShowDatePicker(false);
+      }
+    };
 
-        if (showDatePicker) {
-            document.addEventListener('mousedown', handleClickOutside)
-        }
+    if (showDatePicker) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
 
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside)
-        }
-    }, [showDatePicker])
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showDatePicker]);
 
-    // 处理保存
-    const handleSave = useCallback((updatedData: BrewingNoteData) => {
-        // 确保使用最新的时间戳
-        const finalData = {
-            ...updatedData,
-            timestamp: timestamp.getTime()
-        }
-        onSave(finalData)
-    }, [onSave, timestamp])
+  // 处理保存
+  const handleSave = useCallback(
+    (updatedData: BrewingNoteData) => {
+      // 确保使用最新的时间戳
+      const finalData = {
+        ...updatedData,
+        timestamp: timestamp.getTime(),
+      };
+      onSave(finalData);
+    },
+    [onSave, timestamp]
+  );
 
-    // 处理关闭 - 先触发退出动画，然后调用父组件关闭
-    const handleClose = useCallback(() => {
-        setIsVisible(false) // 触发退出动画
-        window.dispatchEvent(new CustomEvent('brewingNoteEditClosing')) // 通知父组件
-        
-        setTimeout(() => {
-            onClose() // 350ms 后真正关闭
-        }, 350)
-    }, [onClose])
+  // 处理关闭 - 先触发退出动画，然后调用父组件关闭
+  const handleClose = useCallback(() => {
+    setIsVisible(false); // 触发退出动画
+    window.dispatchEvent(new CustomEvent('brewingNoteEditClosing')); // 通知父组件
 
-    // 历史栈管理 - 支持硬件返回键和浏览器返回按钮
-    useEffect(() => {
-        if (!showModal) return
+    setTimeout(() => {
+      onClose(); // 350ms 后真正关闭
+    }, 350);
+  }, [onClose]);
 
-        // 添加模态框历史记录
-        window.history.pushState({ modal: 'brewing-note-edit' }, '')
+  // 历史栈管理 - 支持硬件返回键和浏览器返回按钮
+  useEffect(() => {
+    if (!showModal) return;
 
-        // 监听返回事件
-        const handlePopState = () => {
-            handleClose()
-        }
+    // 添加模态框历史记录
+    window.history.pushState({ modal: 'brewing-note-edit' }, '');
 
-        window.addEventListener('popstate', handlePopState)
+    // 监听返回事件
+    const handlePopState = () => {
+      handleClose();
+    };
 
-        return () => {
-            window.removeEventListener('popstate', handlePopState)
-        }
-    }, [showModal, handleClose])
+    window.addEventListener('popstate', handlePopState);
 
-    // 移动端优化：防止背景滚动
-    useEffect(() => {
-        if (showModal && isVisible) {
-            // 防止背景页面滚动
-            document.body.style.overflow = 'hidden'
-            document.body.style.position = 'fixed'
-            document.body.style.width = '100%'
-        } else {
-            // 恢复背景页面滚动
-            document.body.style.overflow = ''
-            document.body.style.position = ''
-            document.body.style.width = ''
-        }
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [showModal, handleClose]);
 
-        return () => {
-            // 清理函数
-            document.body.style.overflow = ''
-            document.body.style.position = ''
-            document.body.style.width = ''
-        }
-    }, [showModal, isVisible])
+  // 移动端优化：防止背景滚动
+  useEffect(() => {
+    if (showModal && isVisible) {
+      // 防止背景页面滚动
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+    } else {
+      // 恢复背景页面滚动
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+    }
 
-    // 处理保存按钮点击
-    const handleSaveClick = useCallback(() => {
-        if (!initialData) return
-        // 触发表单提交
-        const form = document.querySelector(`form[id="${initialData.id}"]`) as HTMLFormElement
-        if (form) {
-            form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }))
-        }
-    }, [initialData])
+    return () => {
+      // 清理函数
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+    };
+  }, [showModal, isVisible]);
 
-    if (!shouldRender) return null
+  // 处理保存按钮点击
+  const handleSaveClick = useCallback(() => {
+    if (!initialData) return;
+    // 触发表单提交
+    const form = document.querySelector(
+      `form[id="${initialData.id}"]`
+    ) as HTMLFormElement;
+    if (form) {
+      form.dispatchEvent(
+        new Event('submit', { cancelable: true, bubbles: true })
+      );
+    }
+  }, [initialData]);
 
-    return (
-        <div
-            className="fixed inset-0 z-[60] max-w-[500px] mx-auto px-6 pt-safe-top pb-safe-bottom overflow-auto bg-neutral-50 dark:bg-neutral-900"
-            style={getChildPageStyle(isVisible)}
+  if (!shouldRender) return null;
+
+  return (
+    <div
+      className="pt-safe-top pb-safe-bottom fixed inset-0 z-[60] mx-auto max-w-[500px] overflow-auto bg-neutral-50 px-6 dark:bg-neutral-900"
+      style={getChildPageStyle(isVisible)}
+    >
+      {/* 顶部标题栏 */}
+      <div className="flex items-center justify-between">
+        <button
+          type="button"
+          onClick={handleClose}
+          className="-m-3 p-3 text-neutral-800 dark:text-neutral-200"
         >
-            {/* 顶部标题栏 */}
-            <div className="flex items-center justify-between">
-                <button
-                    type="button"
-                    onClick={handleClose}
-                    className="text-neutral-800 dark:text-neutral-200 -m-3 p-3"
-                >
-                    <ArrowLeft size={16} />
-                </button>
+          <ArrowLeft size={16} />
+        </button>
 
-                {/* 中间的时间戳编辑区域 */}
-                <div className="flex items-baseline">
-                    <span className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
-                        编辑记录 ·
-                    </span>
+        {/* 中间的时间戳编辑区域 */}
+        <div className="flex items-baseline">
+          <span className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
+            编辑记录 ·
+          </span>
 
-                    {/* 可点击的日期部分 */}
-                    <div className="relative ml-1" ref={datePickerRef}>
-                        <button
-                            type="button"
-                            onClick={() => setShowDatePicker(!showDatePicker)}
-                            className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400 border-b border-dashed border-neutral-400 dark:border-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 hover:border-neutral-600 dark:hover:border-neutral-400 transition-colors cursor-pointer"
-                        >
-                            {`${timestamp.getFullYear()}-${String(timestamp.getMonth() + 1).padStart(2, '0')}-${String(timestamp.getDate()).padStart(2, '0')}`}
-                        </button>
+          {/* 可点击的日期部分 */}
+          <div className="relative ml-1" ref={datePickerRef}>
+            <button
+              type="button"
+              onClick={() => setShowDatePicker(!showDatePicker)}
+              className="cursor-pointer border-b border-dashed border-neutral-400 text-xs font-medium tracking-widest text-neutral-500 transition-colors hover:border-neutral-600 hover:text-neutral-700 dark:border-neutral-500 dark:text-neutral-400 dark:hover:border-neutral-400 dark:hover:text-neutral-300"
+            >
+              {`${timestamp.getFullYear()}-${String(timestamp.getMonth() + 1).padStart(2, '0')}-${String(timestamp.getDate()).padStart(2, '0')}`}
+            </button>
 
-                        {/* 日期选择器 */}
-                        {showDatePicker && (
-                            <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 z-50 bg-white dark:bg-neutral-900 rounded-lg shadow-lg border border-neutral-200 dark:border-neutral-800" style={{ width: '280px' }}>
-                                <Calendar
-                                    selected={timestamp}
-                                    onSelect={handleDateChange}
-                                    locale="zh-CN"
-                                    initialFocus
-                                />
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                {/* 占位元素，保持布局平衡 */}
-                <div className="w-12"></div>
-            </div>
-
-            {/* 表单内容容器 */}
-            <div className="flex-1 mt-6">
-                {initialData && (
-                    <BrewingNoteForm
-                        id={initialData.id}
-                        isOpen={true}
-                        onClose={handleClose}
-                        onSave={handleSave}
-                        initialData={initialData}
-                        inBrewPage={true}
-                        showSaveButton={false}
-                        hideHeader={true}
-                        onTimestampChange={handleTimestampChange}
-                        settings={settings}
-                        isCopy={isCopy}
-                    />
-                )}
-            </div>
-
-            {/* 底部保存按钮 - 使用sticky定位相对于容器固定 */}
-            <div className="modal-bottom-button flex items-center justify-center">
-                <button
-                    type="button"
-                    onClick={handleSaveClick}
-                    className="rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100 px-6 py-3 flex items-center justify-center"
-                >
-                    <span className="font-medium">保存笔记</span>
-                </button>
-            </div>
+            {/* 日期选择器 */}
+            {showDatePicker && (
+              <div
+                className="absolute top-full left-1/2 z-50 mt-2 -translate-x-1/2 transform rounded-lg border border-neutral-200 bg-white shadow-lg dark:border-neutral-800 dark:bg-neutral-900"
+                style={{ width: '280px' }}
+              >
+                <Calendar
+                  selected={timestamp}
+                  onSelect={handleDateChange}
+                  locale="zh-CN"
+                  initialFocus
+                />
+              </div>
+            )}
+          </div>
         </div>
-    )
-}
 
-export default BrewingNoteEditModal
+        {/* 占位元素，保持布局平衡 */}
+        <div className="w-12"></div>
+      </div>
+
+      {/* 表单内容容器 */}
+      <div className="mt-6 flex-1">
+        {initialData && (
+          <BrewingNoteForm
+            id={initialData.id}
+            isOpen={true}
+            onClose={handleClose}
+            onSave={handleSave}
+            initialData={initialData}
+            inBrewPage={true}
+            showSaveButton={false}
+            hideHeader={true}
+            onTimestampChange={handleTimestampChange}
+            settings={settings}
+            isCopy={isCopy}
+          />
+        )}
+      </div>
+
+      {/* 底部保存按钮 - 使用sticky定位相对于容器固定 */}
+      <div className="modal-bottom-button flex items-center justify-center">
+        <button
+          type="button"
+          onClick={handleSaveClick}
+          className="flex items-center justify-center rounded-full bg-neutral-100 px-6 py-3 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-100"
+        >
+          <span className="font-medium">保存笔记</span>
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default BrewingNoteEditModal;

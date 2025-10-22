@@ -13,7 +13,7 @@ const isLocalStorageAvailable = (): boolean => {
   if (typeof window === 'undefined') {
     return false;
   }
-  
+
   try {
     const testKey = `${APP_PREFIX}:test`;
     localStorage.setItem(testKey, 'test');
@@ -40,11 +40,15 @@ const getStorageKey = (module: string, key: string): string => {
  * @param key 状态键名
  * @param value 要保存的字符串值
  */
-export const saveStringState = (module: string, key: string, value: string): void => {
+export const saveStringState = (
+  module: string,
+  key: string,
+  value: string
+): void => {
   if (!isLocalStorageAvailable()) {
     return;
   }
-  
+
   try {
     localStorage.setItem(getStorageKey(module, key), value);
   } catch (error) {
@@ -59,11 +63,15 @@ export const saveStringState = (module: string, key: string, value: string): voi
  * @param defaultValue 默认值（如果未找到）
  * @returns 存储的字符串值或默认值
  */
-export const getStringState = (module: string, key: string, defaultValue: string = ''): string => {
+export const getStringState = (
+  module: string,
+  key: string,
+  defaultValue: string = ''
+): string => {
   if (!isLocalStorageAvailable()) {
     return defaultValue;
   }
-  
+
   try {
     const value = localStorage.getItem(getStorageKey(module, key));
     return value !== null ? value : defaultValue;
@@ -79,7 +87,11 @@ export const getStringState = (module: string, key: string, defaultValue: string
  * @param key 状态键名
  * @param value 要保存的数字值
  */
-export const saveNumberState = (module: string, key: string, value: number): void => {
+export const saveNumberState = (
+  module: string,
+  key: string,
+  value: number
+): void => {
   saveStringState(module, key, value.toString());
 };
 
@@ -90,7 +102,11 @@ export const saveNumberState = (module: string, key: string, value: number): voi
  * @param defaultValue 默认值（如果未找到或发生错误）
  * @returns 存储的数字值或默认值
  */
-export const getNumberState = (module: string, key: string, defaultValue: number = 0): number => {
+export const getNumberState = (
+  module: string,
+  key: string,
+  defaultValue: number = 0
+): number => {
   try {
     const value = getStringState(module, key, defaultValue.toString());
     return Number(value);
@@ -105,7 +121,11 @@ export const getNumberState = (module: string, key: string, defaultValue: number
  * @param key 状态键名
  * @param value 要保存的布尔值
  */
-export const saveBooleanState = (module: string, key: string, value: boolean): void => {
+export const saveBooleanState = (
+  module: string,
+  key: string,
+  value: boolean
+): void => {
   saveStringState(module, key, value.toString());
 };
 
@@ -116,7 +136,11 @@ export const saveBooleanState = (module: string, key: string, value: boolean): v
  * @param defaultValue 默认值（如果未找到）
  * @returns 存储的布尔值或默认值
  */
-export const getBooleanState = (module: string, key: string, defaultValue: boolean = false): boolean => {
+export const getBooleanState = (
+  module: string,
+  key: string,
+  defaultValue: boolean = false
+): boolean => {
   const value = getStringState(module, key, '');
   return value === '' ? defaultValue : value === 'true';
 };
@@ -127,7 +151,11 @@ export const getBooleanState = (module: string, key: string, defaultValue: boole
  * @param key 状态键名
  * @param value 要保存的对象
  */
-export const saveObjectState = <T>(module: string, key: string, value: T): void => {
+export const saveObjectState = <T>(
+  module: string,
+  key: string,
+  value: T
+): void => {
   try {
     const jsonValue = JSON.stringify(value);
     saveStringState(module, key, jsonValue);
@@ -143,7 +171,11 @@ export const saveObjectState = <T>(module: string, key: string, value: T): void 
  * @param defaultValue 默认值（如果未找到或解析失败）
  * @returns 解析后的对象或默认值
  */
-export const getObjectState = <T>(module: string, key: string, defaultValue: T): T => {
+export const getObjectState = <T>(
+  module: string,
+  key: string,
+  defaultValue: T
+): T => {
   try {
     const jsonValue = getStringState(module, key, '');
     if (!jsonValue) return defaultValue;
@@ -162,7 +194,7 @@ export const clearModuleState = (module: string): void => {
   if (!isLocalStorageAvailable()) {
     return;
   }
-  
+
   try {
     const modulePrefix = `${APP_PREFIX}:${module}:`;
     Object.keys(localStorage).forEach(key => {
@@ -184,10 +216,10 @@ export const clearState = (module: string, key: string): void => {
   if (!isLocalStorageAvailable()) {
     return;
   }
-  
+
   try {
     localStorage.removeItem(getStorageKey(module, key));
   } catch (error) {
     console.error(`无法清除状态 [${module}:${key}]`, error);
   }
-}; 
+};

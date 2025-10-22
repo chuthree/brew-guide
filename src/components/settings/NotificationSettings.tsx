@@ -1,133 +1,135 @@
-'use client'
+'use client';
 
-import React from 'react'
-import { ChevronLeft } from 'lucide-react'
-import { SettingsOptions } from './Settings'
-import { getChildPageStyle } from '@/lib/navigation/pageTransition'
-
+import React from 'react';
+import { ChevronLeft } from 'lucide-react';
+import { SettingsOptions } from './Settings';
+import { getChildPageStyle } from '@/lib/navigation/pageTransition';
 
 interface NotificationSettingsProps {
-    settings: SettingsOptions
-    onClose: () => void
-    handleChange: <K extends keyof SettingsOptions>(key: K, value: SettingsOptions[K]) => void | Promise<void>
+  settings: SettingsOptions;
+  onClose: () => void;
+  handleChange: <K extends keyof SettingsOptions>(
+    key: K,
+    value: SettingsOptions[K]
+  ) => void | Promise<void>;
 }
 
 const NotificationSettings: React.FC<NotificationSettingsProps> = ({
-    settings,
-    onClose,
-    handleChange
+  settings,
+  onClose,
+  handleChange,
 }) => {
-    // 历史栈管理
-    const onCloseRef = React.useRef(onClose)
-    onCloseRef.current = onClose
-    
-    React.useEffect(() => {
-        window.history.pushState({ modal: 'notification-settings' }, '')
-        
-        const handlePopState = () => onCloseRef.current()
-        window.addEventListener('popstate', handlePopState)
-        
-        return () => window.removeEventListener('popstate', handlePopState)
-    }, []) // 空依赖数组，确保只在挂载时执行一次
+  // 历史栈管理
+  const onCloseRef = React.useRef(onClose);
+  onCloseRef.current = onClose;
 
-    // 关闭处理
-    const handleClose = () => {
-        // 立即触发退出动画
-        setIsVisible(false)
-        
-        // 立即通知父组件子设置正在关闭
-        window.dispatchEvent(new CustomEvent('subSettingsClosing'))
-        
-        // 等待动画完成后再真正关闭
-        setTimeout(() => {
-            if (window.history.state?.modal === 'notification-settings') {
-                window.history.back()
-            } else {
-                onClose()
-            }
-        }, 350) // 与 IOS_TRANSITION_CONFIG.duration 一致
-    }
+  React.useEffect(() => {
+    window.history.pushState({ modal: 'notification-settings' }, '');
 
-    // 控制动画状态
-    const [shouldRender, setShouldRender] = React.useState(false)
-    const [isVisible, setIsVisible] = React.useState(false)
+    const handlePopState = () => onCloseRef.current();
+    window.addEventListener('popstate', handlePopState);
 
-    // 处理显示/隐藏动画
-    React.useEffect(() => {
-        setShouldRender(true)
-        const timer = setTimeout(() => setIsVisible(true), 10)
-        return () => clearTimeout(timer)
-    }, [])
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []); // 空依赖数组，确保只在挂载时执行一次
 
-    if (!shouldRender) return null
+  // 关闭处理
+  const handleClose = () => {
+    // 立即触发退出动画
+    setIsVisible(false);
 
-    return (
-        <div
-            className="fixed inset-0 z-[60] flex flex-col bg-neutral-50 dark:bg-neutral-900 max-w-[500px] mx-auto"
-            style={getChildPageStyle(isVisible)}
+    // 立即通知父组件子设置正在关闭
+    window.dispatchEvent(new CustomEvent('subSettingsClosing'));
+
+    // 等待动画完成后再真正关闭
+    setTimeout(() => {
+      if (window.history.state?.modal === 'notification-settings') {
+        window.history.back();
+      } else {
+        onClose();
+      }
+    }, 350); // 与 IOS_TRANSITION_CONFIG.duration 一致
+  };
+
+  // 控制动画状态
+  const [shouldRender, setShouldRender] = React.useState(false);
+  const [isVisible, setIsVisible] = React.useState(false);
+
+  // 处理显示/隐藏动画
+  React.useEffect(() => {
+    setShouldRender(true);
+    const timer = setTimeout(() => setIsVisible(true), 10);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (!shouldRender) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-[60] mx-auto flex max-w-[500px] flex-col bg-neutral-50 dark:bg-neutral-900"
+      style={getChildPageStyle(isVisible)}
+    >
+      {/* 头部导航栏 */}
+      <div className="pt-safe-top relative flex items-center justify-center py-4">
+        <button
+          onClick={handleClose}
+          className="absolute left-4 flex h-10 w-10 items-center justify-center rounded-full text-neutral-700 dark:text-neutral-300"
         >
-            {/* 头部导航栏 */}
-            <div className="relative flex items-center justify-center py-4 pt-safe-top">
-                <button
-                    onClick={handleClose}
-                    className="absolute left-4 flex items-center justify-center w-10 h-10 rounded-full text-neutral-700 dark:text-neutral-300"
-                >
-                    <ChevronLeft className="h-5 w-5" />
-                </button>
-                <h2 className="text-md font-medium text-neutral-800 dark:text-neutral-200">
-                    通知设置
-                </h2>
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+        <h2 className="text-md font-medium text-neutral-800 dark:text-neutral-200">
+          通知设置
+        </h2>
+      </div>
+
+      {/* 滚动内容区域 */}
+      <div className="pb-safe-bottom relative flex-1 divide-y divide-neutral-200 overflow-y-auto dark:divide-neutral-800">
+        {/* 顶部渐变阴影 */}
+        <div className="pointer-events-none sticky top-0 z-10 h-12 w-full bg-linear-to-b from-neutral-50 to-transparent first:border-b-0 dark:from-neutral-900"></div>
+
+        {/* 设置内容 */}
+        <div className="-mt-4 px-6 py-4">
+          {/* 统一样式的设置项 */}
+          <div className="space-y-5">
+            {/* 提示音 */}
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                提示音
+              </div>
+              <label className="relative inline-flex cursor-pointer items-center">
+                <input
+                  type="checkbox"
+                  checked={settings.notificationSound}
+                  onChange={e =>
+                    handleChange('notificationSound', e.target.checked)
+                  }
+                  className="peer sr-only"
+                />
+                <div className="peer h-6 w-11 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
+              </label>
             </div>
 
-            {/* 滚动内容区域 */}
-            <div className="relative flex-1 overflow-y-auto pb-safe-bottom divide-y divide-neutral-200 dark:divide-neutral-800">
-                {/* 顶部渐变阴影 */}
-                <div className="sticky top-0 z-10 h-12 w-full bg-linear-to-b from-neutral-50 dark:from-neutral-900 to-transparent pointer-events-none first:border-b-0"></div>
-
-                {/* 设置内容 */}
-                <div className="px-6 py-4 -mt-4">
-                    {/* 统一样式的设置项 */}
-                    <div className="space-y-5">
-                        {/* 提示音 */}
-                        <div className="flex items-center justify-between">
-                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                                提示音
-                            </div>
-                            <label className="relative inline-flex cursor-pointer items-center">
-                                <input
-                                    type="checkbox"
-                                    checked={settings.notificationSound}
-                                    onChange={(e) =>
-                                        handleChange('notificationSound', e.target.checked)
-                                    }
-                                    className="peer sr-only"
-                                />
-                                <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-                            </label>
-                        </div>
-
-                        {/* 震动反馈 */}
-                        <div className="flex items-center justify-between">
-                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                                震动反馈
-                            </div>
-                            <label className="relative inline-flex cursor-pointer items-center">
-                                <input
-                                    type="checkbox"
-                                    checked={settings.hapticFeedback}
-                                    onChange={(e) => {
-                                        handleChange('hapticFeedback', e.target.checked);
-                                    }}
-                                    className="peer sr-only"
-                                />
-                                <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-600 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-                            </label>
-                        </div>
-                    </div>
-                </div>
+            {/* 震动反馈 */}
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                震动反馈
+              </div>
+              <label className="relative inline-flex cursor-pointer items-center">
+                <input
+                  type="checkbox"
+                  checked={settings.hapticFeedback}
+                  onChange={e => {
+                    handleChange('hapticFeedback', e.target.checked);
+                  }}
+                  className="peer sr-only"
+                />
+                <div className="peer h-6 w-11 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
+              </label>
             </div>
+          </div>
         </div>
-    )
-}
+      </div>
+    </div>
+  );
+};
 
-export default NotificationSettings
+export default NotificationSettings;

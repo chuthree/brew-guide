@@ -1,6 +1,6 @@
-import type { ExpandedStage } from "./types";
-import { playSound } from "./Audio";
-import type { AudioState } from "./Audio";
+import type { ExpandedStage } from './types';
+import { playSound } from './Audio';
+import type { AudioState } from './Audio';
 
 /**
  * 计时器回调接口
@@ -27,11 +27,11 @@ export const handleTimerTick = (
 } => {
   const newTime = currentTime + 1;
   const lastStageIndex = expandedStages.length - 1;
-  
+
   if (lastStageIndex < 0) {
     return { newTime, isCompleted: false };
   }
-  
+
   let shouldPlayDing = false;
   let shouldPlayStart = false;
   let shouldNotifyPourEnd = false;
@@ -52,7 +52,7 @@ export const handleTimerTick = (
     }
 
     // 注水阶段特殊处理
-    if (expandedStages[index].type === "pour") {
+    if (expandedStages[index].type === 'pour') {
       const pourEndTime = expandedStages[index].endTime;
 
       // 注水阶段结束时
@@ -68,32 +68,32 @@ export const handleTimerTick = (
   }
 
   if (shouldPlayDing) {
-    playSound("ding", audioState, notificationSoundEnabled);
+    playSound('ding', audioState, notificationSoundEnabled);
   }
-  
+
   if (shouldPlayStart) {
-    playSound("start", audioState, notificationSoundEnabled);
+    playSound('start', audioState, notificationSoundEnabled);
   }
-  
+
   if (shouldPreNotifyPourEnd) {
-    playSound("start", audioState, notificationSoundEnabled);
+    playSound('start', audioState, notificationSoundEnabled);
   }
-  
+
   if (shouldNotifyPourEnd) {
-    playSound("ding", audioState, notificationSoundEnabled);
+    playSound('ding', audioState, notificationSoundEnabled);
     if (hapticEnabled && hapticCallback) {
-      hapticCallback("medium");
+      hapticCallback('medium');
     }
   }
 
   // 检查是否完成所有阶段
   const isCompleted = newTime > expandedStages[lastStageIndex].endTime;
-  
+
   // 如果完成了所有阶段，返回最后阶段的结束时间
   if (isCompleted) {
-    return { 
+    return {
       newTime: expandedStages[lastStageIndex].endTime,
-      isCompleted: true 
+      isCompleted: true,
     };
   }
 
@@ -120,13 +120,13 @@ export const startMainTimer = (
         hapticEnabled,
         callbacks.onHaptic
       );
-      
+
       if (isCompleted) {
         // 这里不直接处理，而是通过回调，让组件处理停止计时器等逻辑
         callbacks.onComplete();
       }
-      
+
       return newTime;
     });
   }, 1000);
-}; 
+};

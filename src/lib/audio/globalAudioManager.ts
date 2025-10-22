@@ -1,6 +1,11 @@
 // 全局音频管理器，确保音频播放不被页面切换打断
 
-import { createInitialAudioState, initAudioSystem, playSound, type AudioState } from '@/components/brewing/Timer/Audio';
+import {
+  createInitialAudioState,
+  initAudioSystem,
+  playSound,
+  type AudioState,
+} from '@/components/brewing/Timer/Audio';
 
 class GlobalAudioManager {
   private static instance: GlobalAudioManager;
@@ -25,7 +30,10 @@ class GlobalAudioManager {
     }
   }
 
-  public playSound(type: "start" | "ding" | "correct", enabled: boolean = true): void {
+  public playSound(
+    type: 'start' | 'ding' | 'correct',
+    enabled: boolean = true
+  ): void {
     if (this.initialized) {
       playSound(type, this.audioState, enabled);
     }
@@ -40,20 +48,22 @@ class GlobalAudioManager {
   }
 
   // 等待所有音频播放完毕
-  public async waitForAudioCompletion(maxWaitTime: number = 3000): Promise<void> {
-    return new Promise((resolve) => {
+  public async waitForAudioCompletion(
+    maxWaitTime: number = 3000
+  ): Promise<void> {
+    return new Promise(resolve => {
       const startTime = Date.now();
-      
+
       const checkCompletion = () => {
         const elapsed = Date.now() - startTime;
-        
+
         if (!this.isAudioPlaying() || elapsed >= maxWaitTime) {
           resolve();
         } else {
           setTimeout(checkCompletion, 100);
         }
       };
-      
+
       checkCompletion();
     });
   }
@@ -69,17 +79,17 @@ class GlobalAudioManager {
           // 静默处理错误
         }
       });
-      
+
       // 清空活跃源列表
       if (this.audioState.activeSources) {
         this.audioState.activeSources = [];
       }
-      
+
       // 关闭音频上下文
       this.audioState.audioContext.close().catch(() => {
         // 静默处理错误
       });
-      
+
       this.initialized = false;
     }
   }

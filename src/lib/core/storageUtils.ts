@@ -17,13 +17,13 @@ export enum StorageType {
  */
 const STORAGE_TYPE_MAPPING: Record<string, StorageType> = {
   // 大数据量的键使用IndexedDB
-  'brewingNotes': StorageType.INDEXED_DB,
-  'coffeeBeans': StorageType.INDEXED_DB, // 咖啡豆数据也使用IndexedDB存储
-  'customEquipments': StorageType.INDEXED_DB, // 添加自定义器具到IndexedDB存储
-  'customFlavorDimensions': StorageType.PREFERENCES, // 自定义风味维度使用小型存储
+  brewingNotes: StorageType.INDEXED_DB,
+  coffeeBeans: StorageType.INDEXED_DB, // 咖啡豆数据也使用IndexedDB存储
+  customEquipments: StorageType.INDEXED_DB, // 添加自定义器具到IndexedDB存储
+  customFlavorDimensions: StorageType.PREFERENCES, // 自定义风味维度使用小型存储
   // 对于自定义方案，由于键名是动态的(customMethods_[equipmentId])，
   // 我们将在getStorageType函数中处理这种模式
-  
+
   // 其他小型配置数据使用Preferences
   // 如果有其他大数据量的键，可以添加到这里
 };
@@ -38,12 +38,12 @@ export const getStorageType = (key: string): StorageType => {
   if (STORAGE_TYPE_MAPPING[key]) {
     return STORAGE_TYPE_MAPPING[key];
   }
-  
+
   // 处理自定义方案的键模式 (customMethods_[equipmentId])
   if (key.startsWith('customMethods_')) {
     return StorageType.INDEXED_DB;
   }
-  
+
   // 默认使用Preferences
   return StorageType.PREFERENCES;
 };
@@ -59,9 +59,9 @@ export const StorageUtils = {
     try {
       // 初始化IndexedDB数据库
       await dbUtils.initialize();
-      
+
       let migrationResult = false;
-      
+
       // 基于平台选择正确的迁移方法
       if (Capacitor.isNativePlatform()) {
         // 移动端：从Preferences迁移
@@ -84,13 +84,13 @@ export const StorageUtils = {
           await this.cleanupLocalStorage();
         }
       }
-      
+
       // 迁移自定义器具数据
       await this.migrateCustomEquipments();
-      
+
       // 迁移自定义方案数据
       await this.migrateCustomMethods();
-      
+
       if (process.env.NODE_ENV === 'development') {
         console.warn('存储系统初始化完成');
       }
@@ -102,7 +102,7 @@ export const StorageUtils = {
       throw error;
     }
   },
-  
+
   /**
    * 从localStorage迁移数据到IndexedDB
    * @returns 迁移是否成功
@@ -115,11 +115,13 @@ export const StorageUtils = {
         // 验证数据是否实际存在
         const beansCount = await db.coffeeBeans.count();
         const notesCount = await db.brewingNotes.count();
-        
+
         // 如果数据库为空但localStorage有数据，重置迁移标志强制重新迁移
         // 检查是否在客户端环境
-        const hasLocalStorageData = typeof window !== 'undefined' &&
-          (localStorage.getItem('coffeeBeans') || localStorage.getItem('brewingNotes'));
+        const hasLocalStorageData =
+          typeof window !== 'undefined' &&
+          (localStorage.getItem('coffeeBeans') ||
+            localStorage.getItem('brewingNotes'));
 
         if ((beansCount === 0 || notesCount === 0) && hasLocalStorageData) {
           console.warn('虽然标记为已迁移，但数据似乎丢失，重新执行迁移...');
@@ -130,10 +132,10 @@ export const StorageUtils = {
           return true;
         }
       }
-      
+
       console.warn('开始数据迁移...');
       let migrationSuccessful = true;
-      
+
       // 从localStorage获取所有需要迁移到IndexedDB的大数据项
       // 检查是否在客户端环境
       if (typeof window === 'undefined') {
@@ -156,7 +158,9 @@ export const StorageUtils = {
                   if (migratedCount === notes.length) {
                     console.warn(`成功迁移 ${notes.length} 条${key}数据`);
                   } else {
-                    console.error(`迁移失败：应有 ${notes.length} 条数据，但只迁移了 ${migratedCount} 条`);
+                    console.error(
+                      `迁移失败：应有 ${notes.length} 条数据，但只迁移了 ${migratedCount} 条`
+                    );
                     migrationSuccessful = false;
                   }
                 }
@@ -175,7 +179,9 @@ export const StorageUtils = {
                   if (migratedCount === beans.length) {
                     console.warn(`成功迁移 ${beans.length} 条${key}数据`);
                   } else {
-                    console.error(`迁移失败：应有 ${beans.length} 条数据，但只迁移了 ${migratedCount} 条`);
+                    console.error(
+                      `迁移失败：应有 ${beans.length} 条数据，但只迁移了 ${migratedCount} 条`
+                    );
                     migrationSuccessful = false;
                   }
                 }
@@ -191,11 +197,14 @@ export const StorageUtils = {
           }
         }
       }
-      
+
       // 只有在数据成功迁移后才标记为已完成
       if (migrationSuccessful) {
         await db.settings.put({ key: 'migrated', value: 'true' });
-        await db.settings.put({ key: 'migratedAt', value: new Date().toISOString() });
+        await db.settings.put({
+          key: 'migratedAt',
+          value: new Date().toISOString(),
+        });
         console.warn('数据迁移完成，已标记为已迁移');
         return true;
       } else {
@@ -207,7 +216,7 @@ export const StorageUtils = {
       return false;
     }
   },
-  
+
   /**
    * 清理localStorage中的大数据项
    */
@@ -215,7 +224,7 @@ export const StorageUtils = {
     if (Capacitor.isNativePlatform()) {
       return; // 原生平台不需要清理
     }
-    
+
     try {
       // 遍历所有大数据键，从localStorage中移除
       for (const key in STORAGE_TYPE_MAPPING) {
@@ -225,28 +234,35 @@ export const StorageUtils = {
             const count = await db.brewingNotes.count();
             // 只有在IndexedDB中确实有数据，且localStorage中也有此数据时才清除
             // 检查是否在客户端环境
-            const localData = typeof window !== 'undefined' ? localStorage.getItem(key) : null;
+            const localData =
+              typeof window !== 'undefined' ? localStorage.getItem(key) : null;
             if (count > 0 && localData && typeof window !== 'undefined') {
               localStorage.removeItem(key);
               console.warn(`已从localStorage中清除${key}数据`);
             } else {
-              console.warn(`IndexedDB中${key}数据为空或localStorage无此数据，不清除localStorage`);
+              console.warn(
+                `IndexedDB中${key}数据为空或localStorage无此数据，不清除localStorage`
+              );
             }
           } else if (key === 'coffeeBeans') {
             const count = await db.coffeeBeans.count();
             // 只有在IndexedDB中确实有数据，且localStorage中也有此数据时才清除
             // 检查是否在客户端环境
-            const localData = typeof window !== 'undefined' ? localStorage.getItem(key) : null;
+            const localData =
+              typeof window !== 'undefined' ? localStorage.getItem(key) : null;
             if (count > 0 && localData && typeof window !== 'undefined') {
               localStorage.removeItem(key);
               console.warn(`已从localStorage中清除${key}数据`);
             } else {
-              console.warn(`IndexedDB中${key}数据为空或localStorage无此数据，不清除localStorage`);
+              console.warn(
+                `IndexedDB中${key}数据为空或localStorage无此数据，不清除localStorage`
+              );
             }
           } else {
             const item = await db.settings.get(key);
             // 检查是否在客户端环境
-            const hasLocalData = typeof window !== 'undefined' && localStorage.getItem(key);
+            const hasLocalData =
+              typeof window !== 'undefined' && localStorage.getItem(key);
             if (item && hasLocalData) {
               localStorage.removeItem(key);
               console.warn(`已从localStorage中清除${key}数据`);
@@ -258,7 +274,7 @@ export const StorageUtils = {
       console.error('清理localStorage失败:', error);
     }
   },
-  
+
   /**
    * 从Capacitor Preferences迁移数据到IndexedDB
    * @returns 迁移是否成功
@@ -271,13 +287,18 @@ export const StorageUtils = {
         // 验证数据是否实际存在
         const beansCount = await db.coffeeBeans.count();
         const notesCount = await db.brewingNotes.count();
-        
+
         // 获取Preferences中的数据以检查是否有数据需要迁移
-        const hasPreferencesBeans = await this.hasPreferencesData('coffeeBeans');
-        const hasPreferencesNotes = await this.hasPreferencesData('brewingNotes');
-        
+        const hasPreferencesBeans =
+          await this.hasPreferencesData('coffeeBeans');
+        const hasPreferencesNotes =
+          await this.hasPreferencesData('brewingNotes');
+
         // 如果数据库为空但Preferences有数据，重置迁移标志强制重新迁移
-        if ((beansCount === 0 && hasPreferencesBeans) || (notesCount === 0 && hasPreferencesNotes)) {
+        if (
+          (beansCount === 0 && hasPreferencesBeans) ||
+          (notesCount === 0 && hasPreferencesNotes)
+        ) {
           console.warn('虽然标记为已迁移，但数据似乎丢失，重新执行迁移...');
           // 重置迁移标志
           await db.settings.delete('migrated');
@@ -286,16 +307,16 @@ export const StorageUtils = {
           return true;
         }
       }
-      
+
       console.warn('开始从Preferences迁移数据到IndexedDB...');
       let migrationSuccessful = true;
-      
+
       // 从Preferences获取所有需要迁移到IndexedDB的大数据项
       for (const key in STORAGE_TYPE_MAPPING) {
         if (STORAGE_TYPE_MAPPING[key] === StorageType.INDEXED_DB) {
           console.warn(`检查Preferences是否有${key}数据...`);
           const { value } = await Preferences.get({ key });
-          
+
           if (value) {
             console.warn(`从Preferences中找到${key}数据，准备迁移...`);
             if (key === 'brewingNotes') {
@@ -309,7 +330,9 @@ export const StorageUtils = {
                   if (migratedCount === notes.length) {
                     console.warn(`成功迁移 ${notes.length} 条${key}数据`);
                   } else {
-                    console.error(`迁移失败：应有 ${notes.length} 条数据，但只迁移了 ${migratedCount} 条`);
+                    console.error(
+                      `迁移失败：应有 ${notes.length} 条数据，但只迁移了 ${migratedCount} 条`
+                    );
                     migrationSuccessful = false;
                   }
                 } else {
@@ -330,7 +353,9 @@ export const StorageUtils = {
                   if (migratedCount === beans.length) {
                     console.warn(`成功迁移 ${beans.length} 条${key}数据`);
                   } else {
-                    console.error(`迁移失败：应有 ${beans.length} 条数据，但只迁移了 ${migratedCount} 条`);
+                    console.error(
+                      `迁移失败：应有 ${beans.length} 条数据，但只迁移了 ${migratedCount} 条`
+                    );
                     migrationSuccessful = false;
                   }
                 } else {
@@ -350,11 +375,14 @@ export const StorageUtils = {
           }
         }
       }
-      
+
       // 只有在数据成功迁移后才标记为已完成
       if (migrationSuccessful) {
         await db.settings.put({ key: 'migrated', value: 'true' });
-        await db.settings.put({ key: 'migratedAt', value: new Date().toISOString() });
+        await db.settings.put({
+          key: 'migratedAt',
+          value: new Date().toISOString(),
+        });
         console.warn('数据迁移完成，已标记为已迁移');
         return true;
       } else {
@@ -366,7 +394,7 @@ export const StorageUtils = {
       return false;
     }
   },
-  
+
   /**
    * 检查Preferences中是否存在指定键的数据
    * @param key 键名
@@ -376,7 +404,7 @@ export const StorageUtils = {
     try {
       const { value } = await Preferences.get({ key });
       if (!value) return false;
-      
+
       try {
         const data = JSON.parse(value);
         return Array.isArray(data) && data.length > 0;
@@ -387,16 +415,20 @@ export const StorageUtils = {
       return false;
     }
   },
-  
+
   /**
    * 根据存储类型保存数据
    * @param key 键名
    * @param value 值
    * @param type 存储类型，如果未指定则自动判断
    */
-  async saveData(key: string, value: string, type?: StorageType): Promise<void> {
+  async saveData(
+    key: string,
+    value: string,
+    type?: StorageType
+  ): Promise<void> {
     const storageType = type || getStorageType(key);
-    
+
     if (storageType === StorageType.INDEXED_DB) {
       // 对于大型数据，使用IndexedDB
       if (key === 'brewingNotes') {
@@ -405,16 +437,16 @@ export const StorageUtils = {
           // 清除现有数据并保存新数据
           await db.brewingNotes.clear();
           await db.brewingNotes.bulkPut(notes);
-          
+
           // 触发自定义事件通知数据变更
           const storageEvent = new CustomEvent('storage:changed', {
-            detail: { key, source: 'internal' }
+            detail: { key, source: 'internal' },
           });
           window.dispatchEvent(storageEvent);
-          
+
           // 同时触发 customStorageChange 事件，以确保所有组件都能收到通知
           const customEvent = new CustomEvent('customStorageChange', {
-            detail: { key }
+            detail: { key },
           });
           window.dispatchEvent(customEvent);
         } catch (error) {
@@ -427,16 +459,16 @@ export const StorageUtils = {
           // 清除现有数据并保存新数据
           await db.coffeeBeans.clear();
           await db.coffeeBeans.bulkPut(beans);
-          
+
           // 触发自定义事件通知数据变更
           const storageEvent = new CustomEvent('storage:changed', {
-            detail: { key, source: 'internal' }
+            detail: { key, source: 'internal' },
           });
           window.dispatchEvent(storageEvent);
-          
+
           // 同时触发 customStorageChange 事件，以确保所有组件都能收到通知
           const customEvent = new CustomEvent('customStorageChange', {
-            detail: { key }
+            detail: { key },
           });
           window.dispatchEvent(customEvent);
         } catch (error) {
@@ -465,20 +497,20 @@ export const StorageUtils = {
 
           // 触发自定义事件
           const storageEvent = new CustomEvent('storage:changed', {
-            detail: { key, source: 'internal' }
+            detail: { key, source: 'internal' },
           });
           window.dispatchEvent(storageEvent);
 
           // 同时触发 customStorageChange 事件，以确保所有组件都能收到通知
           const customEvent = new CustomEvent('customStorageChange', {
-            detail: { key }
+            detail: { key },
           });
           window.dispatchEvent(customEvent);
         }
       }
     }
   },
-  
+
   /**
    * 根据存储类型获取数据
    * @param key 键名
@@ -487,7 +519,7 @@ export const StorageUtils = {
    */
   async getData(key: string, type?: StorageType): Promise<string | null> {
     const storageType = type || getStorageType(key);
-    
+
     if (storageType === StorageType.INDEXED_DB) {
       // 对于大型数据，从IndexedDB获取
       if (key === 'brewingNotes') {
@@ -526,7 +558,7 @@ export const StorageUtils = {
       }
     }
   },
-  
+
   /**
    * 根据存储类型删除数据
    * @param key 键名
@@ -534,7 +566,7 @@ export const StorageUtils = {
    */
   async removeData(key: string, type?: StorageType): Promise<void> {
     const storageType = type || getStorageType(key);
-    
+
     if (storageType === StorageType.INDEXED_DB) {
       // 对于大型数据，从IndexedDB删除
       if (key === 'brewingNotes') {
@@ -557,14 +589,14 @@ export const StorageUtils = {
       }
     }
   },
-  
+
   /**
    * 清除所有存储数据
    */
   async clearAllData(): Promise<void> {
     // 清除IndexedDB数据
     await dbUtils.clearAllData();
-    
+
     // 清除Preferences/localStorage数据
     if (Capacitor.isNativePlatform()) {
       await Preferences.clear();
@@ -575,7 +607,7 @@ export const StorageUtils = {
       }
     }
   },
-  
+
   /**
    * 迁移自定义器具数据到IndexedDB
    */
@@ -584,36 +616,51 @@ export const StorageUtils = {
       // 检查IndexedDB中是否已有数据
       const equipmentCount = await db.customEquipments.count();
       if (equipmentCount > 0) {
-        console.warn(`[migrateCustomEquipments] IndexedDB中已有${equipmentCount}个自定义器具，无需迁移`);
+        console.warn(
+          `[migrateCustomEquipments] IndexedDB中已有${equipmentCount}个自定义器具，无需迁移`
+        );
         return true;
       }
-      
+
       // 从localStorage/Preferences读取数据
-      const equipmentsJson = await this.getData('customEquipments', StorageType.PREFERENCES);
+      const equipmentsJson = await this.getData(
+        'customEquipments',
+        StorageType.PREFERENCES
+      );
       if (!equipmentsJson) {
-        console.warn(`[migrateCustomEquipments] 未找到自定义器具数据，不需要迁移`);
+        console.warn(
+          `[migrateCustomEquipments] 未找到自定义器具数据，不需要迁移`
+        );
         return false;
       }
-      
+
       // 解析数据
       const equipments = JSON.parse(equipmentsJson);
       if (!Array.isArray(equipments) || equipments.length === 0) {
-        console.warn(`[migrateCustomEquipments] 自定义器具数据为空或格式错误，不需要迁移`);
+        console.warn(
+          `[migrateCustomEquipments] 自定义器具数据为空或格式错误，不需要迁移`
+        );
         return false;
       }
-      
-      console.warn(`[migrateCustomEquipments] 找到${equipments.length}个自定义器具，准备迁移到IndexedDB`);
-      
+
+      console.warn(
+        `[migrateCustomEquipments] 找到${equipments.length}个自定义器具，准备迁移到IndexedDB`
+      );
+
       // 保存到IndexedDB
       await db.customEquipments.bulkPut(equipments);
-      
+
       // 验证迁移
       const migratedCount = await db.customEquipments.count();
       if (migratedCount === equipments.length) {
-        console.warn(`[migrateCustomEquipments] 成功迁移${migratedCount}个自定义器具到IndexedDB`);
+        console.warn(
+          `[migrateCustomEquipments] 成功迁移${migratedCount}个自定义器具到IndexedDB`
+        );
         return true;
       } else {
-        console.warn(`[migrateCustomEquipments] 迁移不完全：应有${equipments.length}个，实际只有${migratedCount}个`);
+        console.warn(
+          `[migrateCustomEquipments] 迁移不完全：应有${equipments.length}个，实际只有${migratedCount}个`
+        );
         return false;
       }
     } catch (error) {
@@ -621,7 +668,7 @@ export const StorageUtils = {
       return false;
     }
   },
-  
+
   /**
    * 迁移自定义方案数据到IndexedDB
    */
@@ -630,52 +677,62 @@ export const StorageUtils = {
       // 检查IndexedDB中是否已有数据
       const methodCount = await db.customMethods.count();
       if (methodCount > 0) {
-        console.warn(`[migrateCustomMethods] IndexedDB中已有${methodCount}组自定义方案，无需迁移`);
+        console.warn(
+          `[migrateCustomMethods] IndexedDB中已有${methodCount}组自定义方案，无需迁移`
+        );
         return true;
       }
-      
+
       // 获取所有键
       const keys = await this.getStorageKeys();
-      
+
       // 筛选方案相关的键
       const methodKeys = keys.filter(key => key.startsWith('customMethods_'));
       if (methodKeys.length === 0) {
-        console.warn(`[migrateCustomMethods] 未找到任何自定义方案数据，不需要迁移`);
+        console.warn(
+          `[migrateCustomMethods] 未找到任何自定义方案数据，不需要迁移`
+        );
         return false;
       }
-      
-      console.warn(`[migrateCustomMethods] 找到${methodKeys.length}个自定义方案键，准备迁移到IndexedDB`);
-      
+
+      console.warn(
+        `[migrateCustomMethods] 找到${methodKeys.length}个自定义方案键，准备迁移到IndexedDB`
+      );
+
       // 逐个迁移方案数据
       let successCount = 0;
       for (const key of methodKeys) {
         try {
           // 从键名中提取设备ID
           const equipmentId = key.replace('customMethods_', '');
-          
+
           // 读取数据
           const methodsJson = await this.getData(key, StorageType.PREFERENCES);
           if (!methodsJson) continue;
-          
+
           // 解析数据
           const methods = JSON.parse(methodsJson);
           if (!Array.isArray(methods) || methods.length === 0) continue;
-          
+
           // 保存到IndexedDB
           await db.customMethods.put({
             equipmentId,
-            methods
+            methods,
           });
-          
-          console.warn(`[migrateCustomMethods] 成功迁移设备${equipmentId}的${methods.length}个方案到IndexedDB`);
+
+          console.warn(
+            `[migrateCustomMethods] 成功迁移设备${equipmentId}的${methods.length}个方案到IndexedDB`
+          );
           successCount++;
         } catch (e) {
           console.error(`[migrateCustomMethods] 迁移方案${key}失败:`, e);
         }
       }
-      
+
       if (successCount > 0) {
-        console.warn(`[migrateCustomMethods] 总共成功迁移了${successCount}组方案数据`);
+        console.warn(
+          `[migrateCustomMethods] 总共成功迁移了${successCount}组方案数据`
+        );
         return true;
       } else {
         console.warn(`[migrateCustomMethods] 未能成功迁移任何方案数据`);
@@ -686,7 +743,7 @@ export const StorageUtils = {
       return false;
     }
   },
-  
+
   /**
    * 获取存储中的所有键
    */
@@ -710,4 +767,4 @@ export const StorageUtils = {
       return [];
     }
   },
-}; 
+};

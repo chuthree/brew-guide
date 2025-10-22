@@ -45,7 +45,7 @@ export const initAudioSystem = async (
   audioState: AudioState
 ): Promise<AudioState> => {
   try {
-    if (typeof window === "undefined" || !("AudioContext" in window)) {
+    if (typeof window === 'undefined' || !('AudioContext' in window)) {
       return audioState;
     }
 
@@ -56,13 +56,13 @@ export const initAudioSystem = async (
 
     const newState = { ...audioState };
     newState.audioContext = new AudioContext();
-    
+
     // 加载音频文件
     try {
       const [startBuffer, dingBuffer, correctBuffer] = await Promise.all([
-        fetchAudio("/sounds/start.mp3", newState.audioContext),
-        fetchAudio("/sounds/ding.mp3", newState.audioContext),
-        fetchAudio("/sounds/correct.mp3", newState.audioContext),
+        fetchAudio('/sounds/start.mp3', newState.audioContext),
+        fetchAudio('/sounds/ding.mp3', newState.audioContext),
+        fetchAudio('/sounds/correct.mp3', newState.audioContext),
       ]);
 
       newState.buffers = {
@@ -72,12 +72,12 @@ export const initAudioSystem = async (
       };
       newState.loaded = true;
     } catch {
-      console.warn("加载音频文件失败");
+      console.warn('加载音频文件失败');
     }
 
     return newState;
   } catch {
-    console.warn("初始化音频系统失败");
+    console.warn('初始化音频系统失败');
     return audioState;
   }
 };
@@ -89,7 +89,7 @@ const fetchAudio = async (
   url: string,
   audioContext: AudioContext
 ): Promise<AudioBuffer> => {
-  const response = await fetch(url, { cache: "force-cache" });
+  const response = await fetch(url, { cache: 'force-cache' });
   const arrayBuffer = await response.arrayBuffer();
   return await audioContext.decodeAudioData(arrayBuffer);
 };
@@ -98,7 +98,7 @@ const fetchAudio = async (
  * 恢复AudioContext播放
  */
 export const resumeAudioContext = (audioState: AudioState): void => {
-  if (audioState.audioContext?.state === "suspended") {
+  if (audioState.audioContext?.state === 'suspended') {
     audioState.audioContext.resume().catch(() => {
       // 静默处理错误
     });
@@ -108,7 +108,10 @@ export const resumeAudioContext = (audioState: AudioState): void => {
 /**
  * 清理音频系统
  */
-export const cleanupAudioSystem = (audioState: AudioState, immediate: boolean = false): void => {
+export const cleanupAudioSystem = (
+  audioState: AudioState,
+  immediate: boolean = false
+): void => {
   if (audioState.audioContext) {
     if (immediate) {
       // 立即停止所有活跃的音频源并清理
@@ -158,7 +161,7 @@ export const cleanupAudioSystem = (audioState: AudioState, immediate: boolean = 
  * 播放音效
  */
 export const playSound = (
-  type: "start" | "ding" | "correct",
+  type: 'start' | 'ding' | 'correct',
   audioState: AudioState,
   enabled: boolean = true
 ): void => {

@@ -4,4 +4,4 @@ export * from './Form';
 export * from './Share/NotesExporter';
 export * from './ui/Toast';
 export * from './types';
-export * from './utils'; 
+export * from './utils';

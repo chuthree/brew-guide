@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 /*
   ---break---
 */
@@ -27,7 +27,10 @@
 /* 变量定义 */
 :root {
   text-autospace: normal;
-  --font-sans: var(--font-noto-sans-sc), var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  --font-sans:
+    var(--font-noto-sans-sc), var(--font-inter), -apple-system,
+    BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell,
+    'Open Sans', 'Helvetica Neue', sans-serif;
   --font-timer: var(--font-timer);
   --keyboard-height: 0px;
   --custom-shape-color: #000000;
@@ -36,7 +39,7 @@
   --font-scale: 1;
   --base-font-size: 16px;
   --radius: 0.625rem;
-  --background: #FAFAFA;
+  --background: #fafafa;
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
@@ -112,13 +115,13 @@
 }
 
 /* 在旧浏览器模式时应用特殊样式 */
-html[style*="--legacy-mode: 1"] {
+html[style*='--legacy-mode: 1'] {
   /* 使用简单的颜色方案，避免使用oklch */
   --background: #fafafa;
   --foreground: #000000;
 }
 
-html[style*="--legacy-mode: 1"].dark {
+html[style*='--legacy-mode: 1'].dark {
   --background: #171717;
   --foreground: #ffffff;
 }
@@ -161,7 +164,7 @@ button:focus,
 input:focus,
 textarea:focus,
 select:focus,
-[role="button"]:focus {
+[role='button']:focus {
   outline: none !important;
   box-shadow: none !important;
 }
@@ -257,76 +260,130 @@ body[data-scroll-locked] {
 /* 计时器字体 */
 .timer-font {
   font-family: var(--font-timer);
-  font-feature-settings: "tnum" on, "lnum" on;
+  font-feature-settings:
+    'tnum' on,
+    'lnum' on;
 }
 
 /* 动画效果 */
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes fadeOut {
-  from { opacity: 1; }
-  to { opacity: 0; }
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
 }
 
 @keyframes zoomIn {
-  from { transform: scale(0.99); }
-  to { transform: scale(1); }
+  from {
+    transform: scale(0.99);
+  }
+  to {
+    transform: scale(1);
+  }
 }
 
 @keyframes zoomOut {
-  from { transform: scale(1); }
-  to { transform: scale(0.99); }
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(0.99);
+  }
 }
 
 @keyframes slideInFromTop {
-  from { transform: translateY(-0.5rem); }
-  to { transform: translateY(0); }
+  from {
+    transform: translateY(-0.5rem);
+  }
+  to {
+    transform: translateY(0);
+  }
 }
 
 @keyframes slideOutToTop {
-  from { transform: translateY(0); }
-  to { transform: translateY(-0.5rem); }
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-0.5rem);
+  }
 }
 
 @keyframes slideInFromBottom {
-  from { transform: translateY(0.5rem); }
-  to { transform: translateY(0); }
+  from {
+    transform: translateY(0.5rem);
+  }
+  to {
+    transform: translateY(0);
+  }
 }
 
 @keyframes slideOutToBottom {
-  from { transform: translateY(0); }
-  to { transform: translateY(0.5rem); }
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(0.5rem);
+  }
 }
 
 @keyframes slideInFromLeft {
-  from { transform: translateX(-0.5rem); }
-  to { transform: translateX(0); }
+  from {
+    transform: translateX(-0.5rem);
+  }
+  to {
+    transform: translateX(0);
+  }
 }
 
 @keyframes slideOutToLeft {
-  from { transform: translateX(0); }
-  to { transform: translateX(-0.5rem); }
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-0.5rem);
+  }
 }
 
 @keyframes slideInFromRight {
-  from { transform: translateX(0.5rem); }
-  to { transform: translateX(0); }
+  from {
+    transform: translateX(0.5rem);
+  }
+  to {
+    transform: translateX(0);
+  }
 }
 
 @keyframes slideOutToRight {
-  from { transform: translateX(0); }
-  to { transform: translateX(0.5rem); }
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(0.5rem);
+  }
 }
 
 .animate-in {
-  animation: fadeIn 150ms ease, zoomIn 150ms ease;
+  animation:
+    fadeIn 150ms ease,
+    zoomIn 150ms ease;
 }
 
 .animate-out {
-  animation: fadeOut 150ms ease, zoomOut 150ms ease;
+  animation:
+    fadeOut 150ms ease,
+    zoomOut 150ms ease;
 }
 
 .fade-in-0 {

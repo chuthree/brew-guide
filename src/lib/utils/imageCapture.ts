@@ -17,8 +17,15 @@ export interface ImageCaptureResult {
  * 统一的图片选择/拍照工具函数
  * 在原生平台使用 Capacitor Camera API，在网页端使用 HTML input
  */
-export async function captureImage(options: ImageCaptureOptions): Promise<ImageCaptureResult> {
-  const { source, quality = 90, allowEditing = false, resultType = CameraResultType.DataUrl } = options;
+export async function captureImage(
+  options: ImageCaptureOptions
+): Promise<ImageCaptureResult> {
+  const {
+    source,
+    quality = 90,
+    allowEditing = false,
+    resultType = CameraResultType.DataUrl,
+  } = options;
 
   // 在原生平台使用 Capacitor Camera API
   if (Capacitor.isNativePlatform()) {
@@ -36,7 +43,7 @@ export async function captureImage(options: ImageCaptureOptions): Promise<ImageC
 
       return {
         dataUrl: image.dataUrl,
-        format: image.format || 'jpeg'
+        format: image.format || 'jpeg',
       };
     } catch (error) {
       console.error('Capacitor Camera error:', error);
@@ -53,7 +60,9 @@ export async function captureImage(options: ImageCaptureOptions): Promise<ImageC
  * 使用 HTML input 元素选择图片的降级方案
  * 优化手机端兼容性和用户体验
  */
-function captureImageWithHtmlInput(source: 'camera' | 'gallery'): Promise<ImageCaptureResult> {
+function captureImageWithHtmlInput(
+  source: 'camera' | 'gallery'
+): Promise<ImageCaptureResult> {
   return new Promise((resolve, reject) => {
     try {
       const fileInput = document.createElement('input');
@@ -88,7 +97,7 @@ function captureImageWithHtmlInput(source: 'camera' | 'gallery'): Promise<ImageC
       };
 
       // 处理文件选择
-      fileInput.onchange = async (e) => {
+      fileInput.onchange = async e => {
         if (isResolved) return;
 
         const input = e.target as HTMLInputElement;
@@ -137,7 +146,7 @@ function captureImageWithHtmlInput(source: 'camera' | 'gallery'): Promise<ImageC
 
             resolve({
               dataUrl: result,
-              format: file.type.split('/')[1] || 'jpeg'
+              format: file.type.split('/')[1] || 'jpeg',
             });
           };
 
@@ -151,13 +160,17 @@ function captureImageWithHtmlInput(source: 'camera' | 'gallery'): Promise<ImageC
 
           // 开始读取文件
           reader.readAsDataURL(file);
-
         } catch (error) {
           if (isResolved) return;
 
           isResolved = true;
           cleanup();
-          reject(new Error('图片处理失败：' + (error instanceof Error ? error.message : '未知错误')));
+          reject(
+            new Error(
+              '图片处理失败：' +
+                (error instanceof Error ? error.message : '未知错误')
+            )
+          );
         }
       };
 
@@ -175,7 +188,10 @@ function captureImageWithHtmlInput(source: 'camera' | 'gallery'): Promise<ImageC
       const handleFocus = () => {
         // 延迟检查，给文件选择器一些时间
         focusTimeout = setTimeout(() => {
-          if (!isResolved && (!fileInput.files || fileInput.files.length === 0)) {
+          if (
+            !isResolved &&
+            (!fileInput.files || fileInput.files.length === 0)
+          ) {
             // 用户可能取消了选择
             isResolved = true;
             cleanup();
@@ -211,9 +227,13 @@ function captureImageWithHtmlInput(source: 'camera' | 'gallery'): Promise<ImageC
           fileInput.click();
         }
       }, 100);
-
     } catch (error) {
-      reject(new Error('无法打开图片选择器：' + (error instanceof Error ? error.message : '未知错误')));
+      reject(
+        new Error(
+          '无法打开图片选择器：' +
+            (error instanceof Error ? error.message : '未知错误')
+        )
+      );
     }
   });
 }
@@ -225,7 +245,7 @@ export function isCameraSupported(): boolean {
   if (Capacitor.isNativePlatform()) {
     return true;
   }
-  
+
   // 在网页端检查是否支持 getUserMedia
   return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
 }
@@ -291,13 +311,13 @@ async function canvasCompression(
     maxSizeMB = 0.1,
     maxWidthOrHeight = 1200,
     initialQuality = 0.8,
-    fileType = 'image/jpeg'
+    fileType = 'image/jpeg',
   } = options;
 
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
 
-    reader.onload = (event) => {
+    reader.onload = event => {
       const img = new Image();
 
       img.onload = () => {
@@ -333,7 +353,7 @@ async function canvasCompression(
 
           const tryCompress = () => {
             canvas.toBlob(
-              (blob) => {
+              blob => {
                 if (!blob) {
                   reject(new Error('Canvas压缩失败'));
                   return;
@@ -346,7 +366,7 @@ async function canvasCompression(
                     file.name.replace(/\.[^/.]+$/, '.jpg'),
                     {
                       type: fileType,
-                      lastModified: Date.now()
+                      lastModified: Date.now(),
                     }
                   );
                   resolve(compressedFile);

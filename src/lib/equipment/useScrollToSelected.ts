@@ -3,16 +3,16 @@
  * 统一管理滚动到选中项的逻辑，避免重复代码
  */
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react';
 
 export interface UseScrollToSelectedOptions {
-  selectedItem: string | null
-  containerRef: React.RefObject<HTMLDivElement | null>
-  delay?: number
+  selectedItem: string | null;
+  containerRef: React.RefObject<HTMLDivElement | null>;
+  delay?: number;
 }
 
 export interface UseScrollToSelectedReturn {
-  scrollToSelected: () => void
+  scrollToSelected: () => void;
 }
 
 /**
@@ -22,51 +22,53 @@ export interface UseScrollToSelectedReturn {
 export function useScrollToSelected({
   selectedItem,
   containerRef,
-  delay = 100
+  delay = 100,
 }: UseScrollToSelectedOptions): UseScrollToSelectedReturn {
-  
   const scrollToSelected = useCallback(() => {
-    if (!containerRef.current || !selectedItem) return
+    if (!containerRef.current || !selectedItem) return;
 
-    const selectedElement = containerRef.current.querySelector(`[data-tab="${selectedItem}"]`)
-    if (!selectedElement) return
+    const selectedElement = containerRef.current.querySelector(
+      `[data-tab="${selectedItem}"]`
+    );
+    if (!selectedElement) return;
 
-    const container = containerRef.current
-    const containerRect = container.getBoundingClientRect()
-    const elementRect = selectedElement.getBoundingClientRect()
+    const container = containerRef.current;
+    const containerRect = container.getBoundingClientRect();
+    const elementRect = selectedElement.getBoundingClientRect();
 
     // 计算元素相对于容器的位置
-    const elementLeft = elementRect.left - containerRect.left + container.scrollLeft
-    const elementWidth = elementRect.width
-    const containerWidth = containerRect.width
+    const elementLeft =
+      elementRect.left - containerRect.left + container.scrollLeft;
+    const elementWidth = elementRect.width;
+    const containerWidth = containerRect.width;
 
     // 计算目标滚动位置（将选中项居中）
-    const targetScrollLeft = elementLeft - (containerWidth - elementWidth) / 2
+    const targetScrollLeft = elementLeft - (containerWidth - elementWidth) / 2;
 
     // 平滑滚动到目标位置
     container.scrollTo({
       left: Math.max(0, targetScrollLeft),
-      behavior: 'smooth'
-    })
-  }, [containerRef, selectedItem])
+      behavior: 'smooth',
+    });
+  }, [containerRef, selectedItem]);
 
   // 当选中项变化时自动滚动
   useEffect(() => {
-    const timer = setTimeout(scrollToSelected, delay)
-    return () => clearTimeout(timer)
-  }, [scrollToSelected, delay])
+    const timer = setTimeout(scrollToSelected, delay);
+    return () => clearTimeout(timer);
+  }, [scrollToSelected, delay]);
 
-  return { scrollToSelected }
+  return { scrollToSelected };
 }
 
 export interface UseScrollBorderOptions {
-  containerRef: React.RefObject<HTMLDivElement | null>
-  itemCount: number
+  containerRef: React.RefObject<HTMLDivElement | null>;
+  itemCount: number;
 }
 
 export interface UseScrollBorderReturn {
-  showLeftBorder: boolean
-  showRightBorder: boolean
+  showLeftBorder: boolean;
+  showRightBorder: boolean;
 }
 
 /**
@@ -75,41 +77,42 @@ export interface UseScrollBorderReturn {
  */
 export function useScrollBorder({
   containerRef,
-  itemCount
+  itemCount,
 }: UseScrollBorderOptions): UseScrollBorderReturn {
-  const [showLeftBorder, setShowLeftBorder] = useState(false)
-  const [showRightBorder, setShowRightBorder] = useState(false)
+  const [showLeftBorder, setShowLeftBorder] = useState(false);
+  const [showRightBorder, setShowRightBorder] = useState(false);
 
   useEffect(() => {
-    const container = containerRef.current
-    if (!container) return
+    const container = containerRef.current;
+    if (!container) return;
 
     const handleScroll = () => {
-      const scrollLeft = container.scrollLeft
-      const scrollWidth = container.scrollWidth
-      const clientWidth = container.clientWidth
+      const scrollLeft = container.scrollLeft;
+      const scrollWidth = container.scrollWidth;
+      const clientWidth = container.clientWidth;
 
       // 左边框：当向右滚动时显示
-      setShowLeftBorder(scrollLeft > 0)
+      setShowLeftBorder(scrollLeft > 0);
 
       // 右边框：当还能继续向右滚动时显示
-      const maxScrollLeft = scrollWidth - clientWidth
-      const canScrollRight = maxScrollLeft > 0 && scrollLeft < maxScrollLeft - 1
-      setShowRightBorder(canScrollRight)
-    }
+      const maxScrollLeft = scrollWidth - clientWidth;
+      const canScrollRight =
+        maxScrollLeft > 0 && scrollLeft < maxScrollLeft - 1;
+      setShowRightBorder(canScrollRight);
+    };
 
     // 延迟初始检查，确保DOM已完全渲染
-    const timer = setTimeout(handleScroll, 100)
-    
-    container.addEventListener('scroll', handleScroll)
-    window.addEventListener('resize', handleScroll)
+    const timer = setTimeout(handleScroll, 100);
+
+    container.addEventListener('scroll', handleScroll);
+    window.addEventListener('resize', handleScroll);
 
     return () => {
-      clearTimeout(timer)
-      container.removeEventListener('scroll', handleScroll)
-      window.removeEventListener('resize', handleScroll)
-    }
-  }, [itemCount, containerRef])
+      clearTimeout(timer);
+      container.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleScroll);
+    };
+  }, [itemCount, containerRef]);
 
-  return { showLeftBorder, showRightBorder }
+  return { showLeftBorder, showRightBorder };
 }

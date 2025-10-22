@@ -1,12 +1,12 @@
-import type { ExpandedStage } from "./types";
-import type { AudioState } from "./Audio";
-import { startMainTimer } from "./TimerController";
-import { 
-  startCountdown, 
+import type { ExpandedStage } from './types';
+import type { AudioState } from './Audio';
+import { startMainTimer } from './TimerController';
+import {
+  startCountdown,
   stopCountdown,
-  CountdownState, 
-  createInitialCountdownState
-} from "./CountdownController";
+  CountdownState,
+  createInitialCountdownState,
+} from './CountdownController';
 
 /**
  * 计时器管理器状态
@@ -18,10 +18,10 @@ export interface TimerManagerState {
   isRunning: boolean;
   hasStartedOnce: boolean;
   isCompleted: boolean;
-  
+
   // 倒计时相关
   countdown: CountdownState;
-  
+
   // 其他状态
   showComplete: boolean;
   waterAmount: number;
@@ -34,9 +34,9 @@ export interface TimerManagerState {
 export interface TimerEventCallbacks {
   onTimerStatus?: (status: { isRunning: boolean }) => void;
   onTimeUpdate?: (time: number) => void;
-  onStageChange?: (status: { 
+  onStageChange?: (status: {
     currentStage: number;
-    progress: number; 
+    progress: number;
     isWaiting: boolean;
   }) => void;
   onCountdownChange?: (time: number | null) => void;
@@ -58,7 +58,7 @@ export const createInitialTimerManagerState = (): TimerManagerState => ({
   countdown: createInitialCountdownState(),
   showComplete: false,
   waterAmount: 0,
-  skipButtonVisible: false
+  skipButtonVisible: false,
 });
 
 /**
@@ -97,35 +97,35 @@ export const startTimer = (
   // 如果冲煮已完成，先重置所有状态
   if (state.showComplete || state.isCompleted) {
     const resetState = resetTimer(state, expandedStages, callbacks);
-    
+
     // 延迟启动计时器，确保状态已完全重置
     setTimeout(() => {
       if (callbacks.onHaptic) {
-        callbacks.onHaptic("medium");
+        callbacks.onHaptic('medium');
       }
-      
+
       // 派发倒计时变化事件
       window.dispatchEvent(
-        new CustomEvent("brewing:countdownChange", {
+        new CustomEvent('brewing:countdownChange', {
           detail: { remainingTime: 3 },
         })
       );
-      
+
       // 通知状态变化
       window.dispatchEvent(
-        new CustomEvent("brewing:timerStatus", {
-          detail: { isRunning: true, status: "running" },
+        new CustomEvent('brewing:timerStatus', {
+          detail: { isRunning: true, status: 'running' },
         })
       );
     }, 100);
-    
+
     // 启动倒计时
     const { timerId } = startCountdown(
-      3, 
+      3,
       audioState,
       settings.notificationSound,
       {
-        onTick: (updater) => {
+        onTick: updater => {
           const newValue = updater(3);
           if (callbacks.onCountdownChange) {
             callbacks.onCountdownChange(newValue);
@@ -139,7 +139,7 @@ export const startTimer = (
             settings.notificationSound,
             settings.hapticFeedback,
             {
-              onTick: (updater) => {
+              onTick: updater => {
                 const newTime = updater(0);
                 if (callbacks.onTimeUpdate) {
                   callbacks.onTimeUpdate(newTime);
@@ -150,26 +150,26 @@ export const startTimer = (
                   callbacks.onComplete(resetState.currentTime);
                 }
               },
-              onHaptic: callbacks.onHaptic
+              onHaptic: callbacks.onHaptic,
             }
           );
-          
+
           // 更新状态
           window.dispatchEvent(
-            new CustomEvent("brewing:mainTimerStarted", {
+            new CustomEvent('brewing:mainTimerStarted', {
               detail: { timerId: newTimerId },
             })
           );
         },
-        onStatusChange: (status) => {
+        onStatusChange: status => {
           // 通知倒计时状态变化
           if (callbacks.onCountdownChange) {
             callbacks.onCountdownChange(status.time);
           }
-        }
+        },
       }
     );
-    
+
     // 返回更新后的状态
     return {
       ...resetState,
@@ -179,24 +179,24 @@ export const startTimer = (
         ...resetState.countdown,
         timerId,
         currentTime: 3,
-        isRunning: true
-      }
+        isRunning: true,
+      },
     };
   }
 
   // 常规启动逻辑
   if (callbacks.onHaptic) {
-    callbacks.onHaptic("medium");
+    callbacks.onHaptic('medium');
   }
-  
+
   // 通知运行状态变化
   if (callbacks.onTimerStatus) {
     callbacks.onTimerStatus({ isRunning: true });
   }
-  
+
   window.dispatchEvent(
-    new CustomEvent("brewing:timerStatus", {
-      detail: { isRunning: true, status: "running" },
+    new CustomEvent('brewing:timerStatus', {
+      detail: { isRunning: true, status: 'running' },
     })
   );
 
@@ -204,11 +204,11 @@ export const startTimer = (
   if (!state.hasStartedOnce || state.currentTime === 0) {
     // 启动倒计时
     const { timerId } = startCountdown(
-      3, 
+      3,
       audioState,
       settings.notificationSound,
       {
-        onTick: (updater) => {
+        onTick: updater => {
           const newValue = updater(3);
           if (callbacks.onCountdownChange) {
             callbacks.onCountdownChange(newValue);
@@ -222,7 +222,7 @@ export const startTimer = (
             settings.notificationSound,
             settings.hapticFeedback,
             {
-              onTick: (updater) => {
+              onTick: updater => {
                 const newTime = updater(0);
                 if (callbacks.onTimeUpdate) {
                   callbacks.onTimeUpdate(newTime);
@@ -233,26 +233,26 @@ export const startTimer = (
                   callbacks.onComplete(state.currentTime);
                 }
               },
-              onHaptic: callbacks.onHaptic
+              onHaptic: callbacks.onHaptic,
             }
           );
-          
+
           // 更新状态
           window.dispatchEvent(
-            new CustomEvent("brewing:mainTimerStarted", {
+            new CustomEvent('brewing:mainTimerStarted', {
               detail: { timerId: newTimerId },
             })
           );
         },
-        onStatusChange: (status) => {
+        onStatusChange: status => {
           // 通知倒计时状态变化
           if (callbacks.onCountdownChange) {
             callbacks.onCountdownChange(status.time);
           }
-        }
+        },
       }
     );
-    
+
     // 返回更新后的状态
     return {
       ...state,
@@ -262,8 +262,8 @@ export const startTimer = (
         ...state.countdown,
         timerId,
         currentTime: 3,
-        isRunning: true
-      }
+        isRunning: true,
+      },
     };
   } else {
     // 直接启动主计时器
@@ -273,7 +273,7 @@ export const startTimer = (
       settings.notificationSound,
       settings.hapticFeedback,
       {
-        onTick: (updater) => {
+        onTick: updater => {
           const newTime = updater(state.currentTime);
           if (callbacks.onTimeUpdate) {
             callbacks.onTimeUpdate(newTime);
@@ -284,15 +284,15 @@ export const startTimer = (
             callbacks.onComplete(state.currentTime);
           }
         },
-        onHaptic: callbacks.onHaptic
+        onHaptic: callbacks.onHaptic,
       }
     );
-    
+
     // 返回更新后的状态
     return {
       ...state,
       mainTimerId: newTimerId,
-      isRunning: true
+      isRunning: true,
     };
   }
 };
@@ -311,29 +311,29 @@ export const pauseTimer = (
   if (state.countdown.isRunning && state.countdown.timerId) {
     stopCountdown(state.countdown.timerId);
   }
-  
+
   // 如果主计时器在运行
   if (state.mainTimerId) {
     stopMainTimer(state.mainTimerId);
   }
-  
+
   // 触发触感回调
   if (callbacks.onHaptic) {
-    callbacks.onHaptic("light");
+    callbacks.onHaptic('light');
   }
-  
+
   // 通知运行状态变化
   if (callbacks.onTimerStatus) {
     callbacks.onTimerStatus({ isRunning: false });
   }
-  
+
   // 派发事件
   window.dispatchEvent(
-    new CustomEvent("brewing:timerStatus", {
-      detail: { isRunning: false, status: "paused" },
+    new CustomEvent('brewing:timerStatus', {
+      detail: { isRunning: false, status: 'paused' },
     })
   );
-  
+
   // 返回更新后的状态
   return {
     ...state,
@@ -342,8 +342,8 @@ export const pauseTimer = (
     countdown: {
       ...state.countdown,
       timerId: null,
-      isRunning: false
-    }
+      isRunning: false,
+    },
   };
 };
 
@@ -363,44 +363,44 @@ export const resetTimer = (
   if (state.countdown.isRunning && state.countdown.timerId) {
     stopCountdown(state.countdown.timerId);
   }
-  
+
   // 如果主计时器在运行
   if (state.mainTimerId) {
     stopMainTimer(state.mainTimerId);
   }
-  
+
   // 触发触感回调
   if (callbacks.onHaptic) {
-    callbacks.onHaptic("warning");
+    callbacks.onHaptic('warning');
   }
-  
+
   // 通知状态变化
   if (callbacks.onTimerStatus) {
     callbacks.onTimerStatus({ isRunning: false });
   }
-  
+
   if (callbacks.onTimeUpdate) {
     callbacks.onTimeUpdate(0);
   }
-  
+
   if (callbacks.onCountdownChange) {
     callbacks.onCountdownChange(null);
   }
-  
+
   if (callbacks.onWaterAmountChange) {
     callbacks.onWaterAmountChange(0);
   }
-  
+
   // 派发重置事件
-  window.dispatchEvent(new CustomEvent("brewing:reset"));
-  
+  window.dispatchEvent(new CustomEvent('brewing:reset'));
+
   // 手动触发一次事件，确保其他组件知道倒计时已结束
   window.dispatchEvent(
-    new CustomEvent("brewing:countdownChange", {
+    new CustomEvent('brewing:countdownChange', {
       detail: { remainingTime: null },
     })
   );
-  
+
   // 返回重置后的状态
   return {
     ...state,
@@ -412,7 +412,7 @@ export const resetTimer = (
     countdown: createInitialCountdownState(),
     showComplete: false,
     waterAmount: 0,
-    skipButtonVisible: false
+    skipButtonVisible: false,
   };
 };
 
@@ -431,32 +431,32 @@ export const skipCurrentStage = (
   if (!expandedStages.length) {
     return state;
   }
-  
+
   // 获取最后一个阶段的结束时间
   const lastStage = expandedStages[expandedStages.length - 1];
   if (!lastStage) {
     return state;
   }
-  
+
   // 如果主计时器在运行
   if (state.mainTimerId) {
     stopMainTimer(state.mainTimerId);
   }
-  
+
   // 如果正在倒计时
   if (state.countdown.isRunning && state.countdown.timerId) {
     stopCountdown(state.countdown.timerId);
   }
-  
+
   // 通知状态变化
   if (callbacks.onTimerStatus) {
     callbacks.onTimerStatus({ isRunning: false });
   }
-  
+
   if (callbacks.onTimeUpdate) {
     callbacks.onTimeUpdate(lastStage.endTime);
   }
-  
+
   // 触发完成回调
   if (callbacks.onComplete) {
     callbacks.onComplete(lastStage.endTime);
@@ -464,11 +464,11 @@ export const skipCurrentStage = (
 
   // 派发完成事件
   window.dispatchEvent(
-    new CustomEvent("brewing:complete", {
+    new CustomEvent('brewing:complete', {
       detail: { skipped: true, totalTime: lastStage.endTime },
     })
   );
-  
+
   // 返回更新后的状态
   return {
     ...state,
@@ -478,7 +478,7 @@ export const skipCurrentStage = (
     isCompleted: true,
     showComplete: true,
     countdown: createInitialCountdownState(),
-    skipButtonVisible: false
+    skipButtonVisible: false,
   };
 };
 
@@ -493,4 +493,4 @@ export const updateTimerState = (
   updates: Partial<TimerManagerState>
 ): TimerManagerState => {
   return { ...state, ...updates };
-}; 
+};

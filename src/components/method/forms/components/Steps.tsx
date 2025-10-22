@@ -22,9 +22,9 @@ const Steps: React.FC<StepsProps> = ({ steps, currentStep, onBack }) => {
     const progress = ((currentIndex + 1) / steps.length) * 100;
 
     return (
-      <div className="w-full h-1 bg-neutral-200 dark:bg-neutral-700 rounded-full overflow-hidden">
+      <div className="h-1 w-full overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-700">
         <div
-          className="h-full bg-neutral-800 dark:bg-neutral-200 transition-all duration-300 ease-in-out"
+          className="h-full bg-neutral-800 transition-all duration-300 ease-in-out dark:bg-neutral-200"
           style={{ width: `${progress}%` }}
         />
       </div>
@@ -32,17 +32,11 @@ const Steps: React.FC<StepsProps> = ({ steps, currentStep, onBack }) => {
   };
 
   return (
-    <div className="flex items-center justify-between mt-3 mb-6">
-      <button
-        type="button"
-        onClick={onBack}
-        className="rounded-full -m-3 p-3"
-      >
-        <ArrowLeft className="w-5 h-5 text-neutral-800 dark:text-neutral-200" />
+    <div className="mt-3 mb-6 flex items-center justify-between">
+      <button type="button" onClick={onBack} className="-m-3 rounded-full p-3">
+        <ArrowLeft className="h-5 w-5 text-neutral-800 dark:text-neutral-200" />
       </button>
-      <div className="w-full px-4">
-        {renderProgressBar()}
-      </div>
+      <div className="w-full px-4">{renderProgressBar()}</div>
       <div className="text-sm font-medium text-neutral-600 dark:text-neutral-400">
         {getCurrentStepIndex() + 1}/{steps.length}
       </div>
@@ -50,4 +44,4 @@ const Steps: React.FC<StepsProps> = ({ steps, currentStep, onBack }) => {
   );
 };
 
-export default Steps; 
+export default Steps;
