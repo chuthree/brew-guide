@@ -716,10 +716,23 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                         {/* 基础信息 */}
                                         <InfoGrid items={getBasicInfoItems()} />
                                         
-                                        {/* 虚线分割线 - 根据设置决定是否显示 */}
-                                        {showBeanInfoDivider && (
-                                            <div className="border-t border-dashed border-neutral-200/70 dark:border-neutral-800/70"></div>
-                                        )}
+                                        {/* 虚线分割线 - 只在有基础信息且有后续内容时显示 */}
+                                        {(() => {
+                                            const basicItems = getBasicInfoItems()
+                                            const originItems = getOriginInfoItems()
+                                            const isMultipleBlend = bean?.blendComponents && bean.blendComponents.length > 1
+                                            const hasOriginInfo = originItems.length > 0 && !isMultipleBlend
+                                            const hasBlendInfo = isMultipleBlend
+                                            const hasFlavor = bean.flavor && bean.flavor.length > 0
+                                            const hasNotes = bean.notes && bean.notes.trim()
+                                            
+                                            const hasBasicInfo = basicItems.length > 0
+                                            const hasFollowingContent = hasOriginInfo || hasBlendInfo || hasFlavor || hasNotes
+                                            
+                                            return showBeanInfoDivider && hasBasicInfo && hasFollowingContent && (
+                                                <div className="border-t border-dashed border-neutral-200/70 dark:border-neutral-800/70"></div>
+                                            )
+                                        })()}
                                         
                                         {/* 产地信息（单品豆时显示）*/}
                                         {(() => {
