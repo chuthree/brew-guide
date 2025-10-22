@@ -1129,12 +1129,20 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     const isWaitingStage =
       isLastStage && expandedStages[lastStageIndex]?.type === 'wait';
 
-    setShowSkipButton(isLastStage && isWaitingStage && isRunning);
+    // 在以下情况显示跳过按钮:
+    // 1. 最后一个阶段且是等待阶段且正在运行
+    // 2. 或者计时器已开始过但当前暂停状态
+    const shouldShowSkip =
+      (isLastStage && isWaitingStage && isRunning) ||
+      (hasStartedOnce && !isRunning && currentTime > 0);
+
+    setShowSkipButton(shouldShowSkip);
   }, [
     currentTime,
     getCurrentStageAndUpdateIndex,
     currentBrewingMethod,
     isRunning,
+    hasStartedOnce,
   ]);
 
   useEffect(() => {
@@ -1229,7 +1237,11 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
               }}
               whileTap={{ scale: 0.95 }}
             >
-              <span>跳过当前阶段</span>
+              <span>
+                {hasStartedOnce && !isRunning && currentTime > 0
+                  ? '去记录'
+                  : '跳过当前阶段'}
+              </span>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
