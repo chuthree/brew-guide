@@ -167,8 +167,8 @@ const generateCompactDescription = (step: Step & { time?: number; pourTime?: num
     };
 }
 
-// StageItem组件
-const StageItem: React.FC<StageItemProps> = ({
+// StageItem组件 - 使用 React.memo 优化性能
+const StageItem: React.FC<StageItemProps> = React.memo(({
     step,
     index,
     onClick,
@@ -490,6 +490,22 @@ const StageItem: React.FC<StageItemProps> = ({
             {renderStageContent()}
         </div>
     );
-}
+}, (prevProps, nextProps) => {
+    // 自定义比较函数，只在关键 props 变化时才重新渲染
+    return (
+        prevProps.step === nextProps.step &&
+        prevProps.index === nextProps.index &&
+        prevProps.activeTab === nextProps.activeTab &&
+        prevProps.currentStage === nextProps.currentStage &&
+        prevProps.selectedMethod === nextProps.selectedMethod &&
+        prevProps.showFlowRate === nextProps.showFlowRate &&
+        prevProps.compactMode === nextProps.compactMode &&
+        prevProps.onEdit === nextProps.onEdit &&
+        prevProps.onDelete === nextProps.onDelete &&
+        prevProps.onShare === nextProps.onShare
+    );
+});
 
-export default StageItem
+StageItem.displayName = 'StageItem';
+
+export default StageItem;

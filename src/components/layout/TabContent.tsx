@@ -432,8 +432,8 @@ const TabContent: React.FC<TabContentProps> = ({
         setSearchQuery('');
     };
 
-    // 获取编辑器具方法
-    const getEditEquipmentHandler = (step: Step) => {
+    // 获取编辑器具方法 - 使用 useCallback 优化
+    const getEditEquipmentHandler = useCallback((step: Step) => {
         if (!step.isCustom) return undefined;
 
         return () => {
@@ -443,10 +443,10 @@ const TabContent: React.FC<TabContentProps> = ({
                 setShowEquipmentForm(true);
             }
         };
-    };
+    }, [customEquipments, setEditingEquipment, setShowEquipmentForm]);
 
-    // 获取删除器具方法
-    const getDeleteEquipmentHandler = (step: Step) => {
+    // 获取删除器具方法 - 使用 useCallback 优化
+    const getDeleteEquipmentHandler = useCallback((step: Step) => {
         if (!step.isCustom) return undefined;
 
         return () => {
@@ -455,7 +455,7 @@ const TabContent: React.FC<TabContentProps> = ({
                 handleDeleteEquipment(equipment);
             }
         };
-    };
+    }, [customEquipments, handleDeleteEquipment]);
 
     // 通用方案折叠状态
     const [isCommonMethodsCollapsed, setIsCommonMethodsCollapsed] = useState(false);
@@ -497,8 +497,8 @@ const TabContent: React.FC<TabContentProps> = ({
         return 'V60'; // 默认
     };
 
-    // 编辑通用方案 - 创建临时副本进入编辑模式，不立即保存
-    const editCommonMethod = (step: Step, selectedEquipment: string) => {
+    // 编辑通用方案 - 创建临时副本进入编辑模式，不立即保存 - 使用 useCallback 优化
+    const editCommonMethod = useCallback((step: Step, selectedEquipment: string) => {
         let commonMethodsList = commonMethods[selectedEquipment];
 
         if (!commonMethodsList && selectedEquipment.startsWith('custom-')) {
@@ -523,10 +523,10 @@ const TabContent: React.FC<TabContentProps> = ({
             // 直接进入编辑模式，不显示成功提示
             onEditMethod(methodWithFlag);
         }
-    };
+    }, [onEditMethod]);
 
-    // 简化的分享处理函数 - 直接复制到剪贴板
-    const handleShareMethod = async (method: Method) => {
+    // 简化的分享处理函数 - 直接复制到剪贴板 - 使用 useCallback 优化
+    const handleShareMethod = useCallback(async (method: Method) => {
         try {
             const { copyMethodToClipboard } = await import('@/lib/managers/customMethods');
             await copyMethodToClipboard(method, getSelectedCustomEquipment());
@@ -542,9 +542,9 @@ const TabContent: React.FC<TabContentProps> = ({
                 duration: 2000
             });
         }
-    };
+    }, [getSelectedCustomEquipment]);
 
-    const handleShareEquipment = async (equipment: CustomEquipment) => {
+    const handleShareEquipment = useCallback(async (equipment: CustomEquipment) => {
         try {
             const methods = customMethods[equipment.id || equipment.name] || [];
             const { copyEquipmentToClipboard } = await import('@/lib/managers/customMethods');
@@ -561,10 +561,10 @@ const TabContent: React.FC<TabContentProps> = ({
                 duration: 2000
             });
         }
-    };
+    }, [customMethods]);
 
-    // 获取分享方案的处理函数
-    const getShareMethodHandler = (step: Step) => {
+    // 获取分享方案的处理函数 - 使用 useCallback 优化
+    const getShareMethodHandler = useCallback((step: Step) => {
         if (activeTab !== '方案') return undefined;
 
         return () => {
@@ -589,10 +589,10 @@ const TabContent: React.FC<TabContentProps> = ({
                 }
             }
         };
-    };
+    }, [activeTab, selectedEquipment, customMethods, handleShareMethod]);
 
-    // 获取分享器具的处理函数
-    const getShareEquipmentHandler = (step: Step) => {
+    // 获取分享器具的处理函数 - 使用 useCallback 优化
+    const getShareEquipmentHandler = useCallback((step: Step) => {
         if (!step.isCustom) return undefined;
 
         return () => {
@@ -601,7 +601,7 @@ const TabContent: React.FC<TabContentProps> = ({
                 handleShareEquipment(equipment);
             }
         };
-    };
+    }, [customEquipments, handleShareEquipment]);
 
     // 供“咖啡豆”Tab 的虚拟列表绑定外层滚动容器
     const [beanScrollEl, setBeanScrollEl] = useState<HTMLElement | null>(null);

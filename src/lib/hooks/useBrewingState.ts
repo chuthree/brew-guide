@@ -434,36 +434,65 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 		记录: { steps: [] },
 	});
 
-	// 简化的content更新
+	// 优化的content更新 - 使用 useMemo 缓存计算结果
+	const methodSteps = useRef<Step[]>([]);
+	const stageSteps = useRef<Step[]>([]);
+	const prevEquipment = useRef<string | null>(null);
+	const prevMethodType = useRef<"common" | "custom">(methodType);
+	const prevBrewingMethod = useRef<Method | null>(null);
+
+	// 简化的content更新 - 批量更新，减少重渲染
 	useEffect(() => {
-		const getMethods = () => {
-			if (!selectedEquipment) return [];
-			const methods = methodType === "common"
-				? commonMethods[selectedEquipment] || []
-				: customMethods[selectedEquipment] || [];
-			return methods.map(method => ({ title: method.name, methodId: method.id }));
-		};
+		let needsUpdate = false;
+		let newMethodSteps = methodSteps.current;
+		let newStageSteps = stageSteps.current;
 
-		const getStages = () => {
-			if (!currentBrewingMethod) return [];
-			return currentBrewingMethod.params.stages.map((stage, index) => ({
-				title: stage.label,
-				time: stage.time,
-				pourTime: stage.pourTime,
-				water: stage.water,
-				detail: stage.detail,
-				pourType: stage.pourType,
-				valveStatus: stage.valveStatus,
-				originalIndex: index,
-			}));
-		};
+		// 只在方案相关数据变化时更新方案列表
+		if (
+			prevEquipment.current !== selectedEquipment ||
+			prevMethodType.current !== methodType ||
+			customMethods !== undefined // 自定义方案变化
+		) {
+			if (selectedEquipment) {
+				const methods = methodType === "common"
+					? commonMethods[selectedEquipment] || []
+					: customMethods[selectedEquipment] || [];
+				newMethodSteps = methods.map(method => ({ title: method.name, methodId: method.id }));
+				methodSteps.current = newMethodSteps;
+				needsUpdate = true;
+			}
+			prevEquipment.current = selectedEquipment;
+			prevMethodType.current = methodType;
+		}
 
-		setContent({
-			咖啡豆: { steps: [] },
-			方案: { steps: getMethods(), type: methodType },
-			注水: { steps: getStages() },
-			记录: { steps: [] },
-		});
+		// 只在冲煮方法变化时更新注水列表
+		if (prevBrewingMethod.current !== currentBrewingMethod) {
+			if (currentBrewingMethod) {
+				newStageSteps = currentBrewingMethod.params.stages.map((stage, index) => ({
+					title: stage.label,
+					time: stage.time,
+					pourTime: stage.pourTime,
+					water: stage.water,
+					detail: stage.detail,
+					pourType: stage.pourType,
+					valveStatus: stage.valveStatus,
+					originalIndex: index,
+				}));
+				stageSteps.current = newStageSteps;
+				needsUpdate = true;
+			}
+			prevBrewingMethod.current = currentBrewingMethod;
+		}
+
+		// 批量更新，减少重渲染
+		if (needsUpdate) {
+			setContent({
+				咖啡豆: { steps: [] },
+				方案: { steps: newMethodSteps, type: methodType },
+				注水: { steps: newStageSteps },
+				记录: { steps: [] },
+			});
+		}
 	}, [selectedEquipment, methodType, customMethods, currentBrewingMethod]);
 
 	return {
