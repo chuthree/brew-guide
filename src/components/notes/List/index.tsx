@@ -1273,7 +1273,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   return (
     <>
       {/* 主要内容区域 - 始终显示笔记列表 */}
-      <div className="sticky top-0 z-20 flex-none space-y-6 bg-neutral-50 pt-6 dark:bg-neutral-900">
+      <div className="sticky top-0 flex-none space-y-6 bg-neutral-50 pt-6 dark:bg-neutral-900">
         {/* 数量显示 */}
         <div className="mb-6 flex items-center justify-between px-6">
           <div className="text-xs font-medium tracking-wide break-words text-neutral-800 dark:text-neutral-100">

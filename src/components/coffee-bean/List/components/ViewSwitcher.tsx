@@ -665,7 +665,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
   }
 
   return (
-    <div className="sticky top-0 z-20 flex-none space-y-6 bg-neutral-50 pt-6 dark:bg-neutral-900">
+    <div className="sticky top-0 flex-none space-y-6 bg-neutral-50 pt-6 dark:bg-neutral-900">
       {/* 视图切换与筛选栏 - 统一布局 */}
       <div className="mb-6 flex items-center justify-between px-6">
         <div className="flex items-center space-x-3">

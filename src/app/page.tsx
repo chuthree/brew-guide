@@ -271,6 +271,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   const [isBrewingNoteCopy, setIsBrewingNoteCopy] = useState(false); // 标记是否是复制操作
 
   // 计算是否有任何模态框打开（Settings、子设置、咖啡豆详情、添加咖啡豆 或 笔记编辑）
+  // 注意：咖啡豆表单是抽屉式组件，不需要触发主页面转场动画
   const hasAnyModalOpen =
     isSettingsOpen ||
     hasSubSettingsOpen ||
@@ -2710,16 +2711,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           }}
         />
 
-        <CoffeeBeanFormModal
-          showForm={showBeanForm}
-          initialBean={editingBean}
-          onSave={handleSaveBean}
-          onClose={() => {
-            setShowBeanForm(false);
-            setEditingBean(null);
-          }}
-        />
-
         <BrewingNoteFormModal
           key="note-form-modal"
           showForm={showNoteFormModal}
@@ -3077,6 +3068,17 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           }}
         />
       )}
+
+      {/* 咖啡豆表单模态框独立渲染，与 Settings 同级 */}
+      <CoffeeBeanFormModal
+        showForm={showBeanForm}
+        initialBean={editingBean}
+        onSave={handleSaveBean}
+        onClose={() => {
+          setShowBeanForm(false);
+          setEditingBean(null);
+        }}
+      />
 
       {/* 咖啡豆详情独立渲染，与 Settings 同级 */}
       <BeanDetailModal
