@@ -1,6 +1,6 @@
 # 咖啡冲煮指南 (Brew Guide)
 
-![版本](https://img.shields.io/badge/版本-1.3.12--beta.1-blue)
+![版本](https://img.shields.io/badge/版本-1.3.12--beta.2-blue)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/chu3/brew-guide)
 
 一站式咖啡小工具，支持辅助冲煮，豆仓管理与品鉴记录功能。
@@ -18,12 +18,14 @@
 ## 主要功能
 
 **冲煮管理**
+
 - 支持多种器具（V60、聪明杯、Kalita、Origami 等）
 - 丰富的冲煮方案库，预设和自定义方法
 - 精确的计时器，按阶段引导冲煮
 - 可视化注水过程
 
 **咖啡豆管理**
+
 - 详细库存记录（产地、处理法、品种、烘焙度等）
 - 烘焙日期追踪和新鲜度监控
 - 消耗跟踪和剩余量管理
@@ -31,11 +33,13 @@
 - 在线数据库支持，快速导入咖啡豆信息
 
 **冲煮笔记**
+
 - 详细记录评分、口感和笔记
 - 关联器具、方法和豆子数据
 - 趋势分析和偏好统计
 
 **其他特性**
+
 - PWA 支持，可离线使用
 - 深色/浅色模式
 - 数据导入导出
@@ -49,12 +53,14 @@
 **数据来源**：[https://gitee.com/chu3/brew-guide-bean-data](https://gitee.com/chu3/brew-guide-bean-data)
 
 **使用方法**：
+
 1. 应用内进入"快速添加"功能
 2. 点击"搜索咖啡豆"
 3. 输入关键词搜索（支持名称、品牌、产区、风味、处理法、品种）
 4. 选择并一键导入到库存
 
 **数据维护**：
+
 - 问题反馈：chuthree@163.com
 - Issue 提交：[数据库仓库](https://gitee.com/chu3/brew-guide-bean-data/issues)
 
