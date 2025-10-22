@@ -3,7 +3,6 @@
 import React, { useMemo, useState, useEffect } from 'react'
 import Image from 'next/image'
 import { ExtendedCoffeeBean } from '../types'
-import BeanDetailModal from '../../Detail/BeanDetailModal'
 
 interface ImageFlowViewProps {
     filteredBeans: ExtendedCoffeeBean[]
@@ -16,14 +15,8 @@ interface ImageFlowViewProps {
 
 
 const ImageFlowView: React.FC<ImageFlowViewProps> = ({
-    filteredBeans,
-    onEdit,
-    onDelete,
-    onShare,
-    onRate
+    filteredBeans
 }) => {
-    // 详情弹窗状态 - 简化为单一状态
-    const [detailBean, setDetailBean] = useState<ExtendedCoffeeBean | null>(null);
     // 添加方形尺寸状态
     const [squareSize, setSquareSize] = useState<number>(0);
 
@@ -45,14 +38,11 @@ const ImageFlowView: React.FC<ImageFlowViewProps> = ({
         return () => window.removeEventListener('resize', calculateSquareSize);
     }, []);
 
-    // 处理详情点击
+    // 处理详情点击 - 通过事件打开
     const handleDetailClick = (bean: ExtendedCoffeeBean) => {
-        setDetailBean(bean);
-    };
-
-    // 处理详情弹窗关闭
-    const handleDetailClose = () => {
-        setDetailBean(null);
+        window.dispatchEvent(new CustomEvent('beanDetailOpened', {
+            detail: { bean }
+        }))
     };
 
     // 过滤出有图片的咖啡豆 - 使用 useMemo 避免每次渲染都创建新数组
@@ -107,17 +97,6 @@ const ImageFlowView: React.FC<ImageFlowViewProps> = ({
                     ))}
                 </div>
             </div>
-
-            {/* 详情弹窗 */}
-            <BeanDetailModal
-                isOpen={!!detailBean}
-                bean={detailBean}
-                onClose={handleDetailClose}
-                onEdit={onEdit}
-                onDelete={onDelete}
-                onShare={onShare}
-                onRate={onRate}
-            />
         </div>
     )
 }

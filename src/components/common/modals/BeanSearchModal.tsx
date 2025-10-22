@@ -606,7 +606,7 @@ const BeanSearchModal: React.FC<BeanSearchModalProps> = ({
         <AnimatePresence>
             {isOpen && (
                 <motion.div
-                    className="fixed inset-0 bg-neutral-50 dark:bg-neutral-900 z-50 flex flex-col max-w-[500px] mx-auto"
+                    className="fixed inset-0 bg-neutral-50 dark:bg-neutral-900 z-[70] flex flex-col max-w-[500px] mx-auto"
                     initial={{ x: "100%" }}
                     animate={{ x: 0 }}
                     transition={{

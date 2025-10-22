@@ -113,6 +113,7 @@ interface BrewingNoteFormProps {
     hideHeader?: boolean;
     onTimestampChange?: (timestamp: Date) => void;
     settings?: SettingsOptions;
+    isCopy?: boolean; // 标记是否是复制操作
 }
 
 
@@ -163,6 +164,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     hideHeader = false,
     onTimestampChange,
     settings,
+    isCopy = false, // 默认不是复制操作
 }) => {
 
     // 风味维度数据
@@ -754,7 +756,8 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         e.preventDefault()
 
         // 处理咖啡豆变化和容量同步（容量调整记录除外）
-        if (initialData.id && initialData.source !== 'capacity-adjustment') {
+        // 注意：对于复制的笔记，不执行容量同步，让 page.tsx 直接扣除
+        if (initialData.id && initialData.source !== 'capacity-adjustment' && !isCopy) {
             try {
                 const { CapacitySyncManager, CoffeeBeanManager } = await import('@/lib/managers/coffeeBeanManager');
                 const currentCoffeeAmount = CapacitySyncManager.extractCoffeeAmount(methodParams.coffee);

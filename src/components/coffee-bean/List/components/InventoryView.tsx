@@ -6,7 +6,6 @@ import { ExtendedCoffeeBean, BeanType } from '../types'
 import BeanListItem from './BeanListItem'
 import ImageFlowView from './ImageFlowView'
 import RemainingEditor from './RemainingEditor'
-import BeanDetailModal from '@/components/coffee-bean/Detail/BeanDetailModal'
 
 // 已移除手动分页，改用 react-virtuoso 虚拟列表
 
@@ -67,15 +66,14 @@ const InventoryView: React.FC<InventoryViewProps> = ({
         bean: ExtendedCoffeeBean
     } | null>(null);
 
-    // 详情弹窗状态 - 简化为单一状态
-    const [detailBean, setDetailBean] = useState<ExtendedCoffeeBean | null>(null);
-
     const handleDetailClick = (bean: ExtendedCoffeeBean) => {
-        setDetailBean(bean);
-    };
-
-    const handleDetailClose = () => {
-        setDetailBean(null);
+        // 通过事件打开详情页
+        window.dispatchEvent(new CustomEvent('beanDetailOpened', {
+            detail: {
+                bean,
+                searchQuery: isSearching ? searchQuery : ''
+            }
+        }))
     };
 
     const handleRemainingClick = (bean: ExtendedCoffeeBean, event: React.MouseEvent) => {
@@ -193,18 +191,6 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                 onCancel={() => setEditingRemaining(null)}
                 onQuickDecrement={handleQuickDecrement}
                 coffeeBean={editingRemaining?.bean}
-            />
-
-            {/* 详情弹窗 */}
-            <BeanDetailModal
-                isOpen={!!detailBean}
-                bean={detailBean}
-                onClose={handleDetailClose}
-                searchQuery={isSearching ? searchQuery : ''}
-                onEdit={onEdit}
-                onDelete={onDelete}
-                onShare={onShare}
-                onRate={onRate}
             />
         </div>
     );

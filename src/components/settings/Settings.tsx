@@ -9,20 +9,7 @@ import { LayoutSettings } from '../brewing/Timer/Settings'
 import { ChevronLeft, ChevronRight, RefreshCw, Loader, Monitor, SlidersHorizontal, Archive, List, CalendarDays, Timer, Database, Bell, ClipboardPen, Shuffle, ArrowUpDown, Palette } from 'lucide-react'
 
 import Image from 'next/image'
-import GrinderSettings from './GrinderSettings'
-import StockSettings from './StockSettings' // 导入新的组件
-import BeanSettings from './BeanSettings' // 导入新的组件
-import FlavorPeriodSettings from './FlavorPeriodSettings'
-import TimerSettings from './TimerSettings'
-
-
-// 导入ButtonGroup组件
-import DisplaySettings from './DisplaySettings'
-import DataSettings from './DataSettings'
-import NotificationSettings from './NotificationSettings'
-import RandomCoffeeBeanSettings from './RandomCoffeeBeanSettings'
-import SearchSortSettings from './SearchSortSettings'
-import FlavorDimensionSettings from './FlavorDimensionSettings'
+import { getChildPageStyle } from '@/lib/navigation/pageTransition'
 // 自定义磨豆机接口
 export interface CustomGrinder {
     id: string
@@ -188,12 +175,29 @@ export const defaultSettings: SettingsOptions = {
     showBeanInfoDivider: true // 默认显示基础信息和产地信息之间的分割线
 }
 
+// 子设置页面的打开/关闭函数接口
+export interface SubSettingsHandlers {
+    onOpenDisplaySettings: () => void
+    onOpenGrinderSettings: () => void
+    onOpenStockSettings: () => void
+    onOpenBeanSettings: () => void
+    onOpenFlavorPeriodSettings: () => void
+    onOpenTimerSettings: () => void
+    onOpenDataSettings: () => void
+    onOpenNotificationSettings: () => void
+    onOpenRandomCoffeeBeanSettings: () => void
+    onOpenSearchSortSettings: () => void
+    onOpenFlavorDimensionSettings: () => void
+}
+
 interface SettingsProps {
     isOpen: boolean
     onClose: () => void
     settings: SettingsOptions
     setSettings: (settings: SettingsOptions) => void
     onDataChange?: () => void
+    subSettingsHandlers: SubSettingsHandlers
+    hasSubSettingsOpen: boolean // 是否有子设置页面打开
 }
 
 
@@ -203,7 +207,9 @@ const Settings: React.FC<SettingsProps> = ({
     onClose,
     settings,
     setSettings,
-    onDataChange,
+    onDataChange: _onDataChange,
+    subSettingsHandlers,
+    hasSubSettingsOpen,
 }) => {
     // 获取主题相关方法
     const { theme } = useTheme()
@@ -216,9 +222,12 @@ const Settings: React.FC<SettingsProps> = ({
     useEffect(() => {
         if (isOpen) {
             setShouldRender(true)
-            // 短暂延迟确保DOM渲染，然后触发滑入动画
-            const timer = setTimeout(() => setIsVisible(true), 10)
-            return () => clearTimeout(timer)
+            // 使用 requestAnimationFrame 确保 DOM 已渲染，比 setTimeout 更快更流畅
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    setIsVisible(true)
+                })
+            })
         } else {
             setIsVisible(false)
             // 等待动画完成后移除DOM
@@ -231,22 +240,23 @@ const Settings: React.FC<SettingsProps> = ({
 
     // 关闭处理
     const handleClose = () => {
-        if (window.history.state?.modal === 'settings') {
-            window.history.back()
-        } else {
-            onClose()
-        }
+        // 立即触发退出动画
+        setIsVisible(false)
+        
+        // 立即通知父组件 Settings 正在关闭
+        window.dispatchEvent(new CustomEvent('settingsClosing'))
+        
+        // 等待动画完成后再真正关闭
+        setTimeout(() => {
+            if (window.history.state?.modal === 'settings') {
+                window.history.back()
+            } else {
+                onClose()
+            }
+        }, 350) // 与 IOS_TRANSITION_CONFIG.duration 一致
     }
 
-    // 添加显示设置状态
-    const [showDisplaySettings, setShowDisplaySettings] = useState(false)
-    
-    // 监控显示设置状态变化
-    React.useEffect(() => {
-        // Display settings state change
-    }, [showDisplaySettings])
-    
-    // 添加全局历史栈变化监控（仅在开发模式 - 简化版）
+    // 全局历史栈变化监控（仅在开发模式 - 简化版）
     React.useEffect(() => {
         const originalPushState = window.history.pushState
         
@@ -259,35 +269,19 @@ const Settings: React.FC<SettingsProps> = ({
         }
     }, [])
 
-    // 添加研磨度设置状态
-    const [showGrinderSettings, setShowGrinderSettings] = useState(false)
-
-    // 添加库存扣除预设值设置状态
-    const [showStockSettings, setShowStockSettings] = useState(false)
-
-    // 添加豆仓列表显示设置状态
-    const [showBeanSettings, setShowBeanSettings] = useState(false)
-
-    // 添加赏味期设置状态
-    const [showFlavorPeriodSettings, setShowFlavorPeriodSettings] = useState(false)
-
-    // 添加计时器布局设置状态
-    const [showTimerSettings, setShowTimerSettings] = useState(false)
-
-    // 添加数据管理设置状态
-    const [showDataSettings, setShowDataSettings] = useState(false)
-
-    // 添加通知设置状态
-    const [showNotificationSettings, setShowNotificationSettings] = useState(false)
-
-    // 添加随机咖啡豆设置状态
-    const [showRandomCoffeeBeanSettings, setShowRandomCoffeeBeanSettings] = useState(false)
-
-    // 添加搜索排序设置状态
-    const [showSearchSortSettings, setShowSearchSortSettings] = useState(false)
-
-    // 添加风味维度设置状态
-    const [showFlavorDimensionSettings, setShowFlavorDimensionSettings] = useState(false)
+    // 监听子设置页面的关闭事件
+    const [isSubSettingsClosing, setIsSubSettingsClosing] = React.useState(false)
+    
+    React.useEffect(() => {
+        const handleSubSettingsClosing = () => {
+            setIsSubSettingsClosing(true)
+            // 350ms 后重置状态
+            setTimeout(() => setIsSubSettingsClosing(false), 350)
+        }
+        
+        window.addEventListener('subSettingsClosing', handleSubSettingsClosing)
+        return () => window.removeEventListener('subSettingsClosing', handleSubSettingsClosing)
+    }, [])
 
     // 添加二维码显示状态
     const [showQRCodes, setShowQRCodes] = useState(false)
@@ -396,26 +390,11 @@ const Settings: React.FC<SettingsProps> = ({
         }
         
         const handlePopState = (_event: PopStateEvent) => {
-            // 检查是否有子设置页面打开
-            const hasSubSettingsOpen = showDisplaySettings || showGrinderSettings || showStockSettings || 
-                                      showBeanSettings || showFlavorPeriodSettings || showTimerSettings || 
-                                      showDataSettings || showNotificationSettings || showRandomCoffeeBeanSettings || 
-                                      showSearchSortSettings || showFlavorDimensionSettings
-            
+            // 子设置页面的状态现在由父组件管理
+            // 这里只需要处理主设置页面的关闭
             if (hasSubSettingsOpen) {
-                // 如果有子设置页面打开，关闭它们
-                setShowDisplaySettings(false)
-                setShowGrinderSettings(false)
-                setShowStockSettings(false)
-                setShowBeanSettings(false)
-                setShowFlavorPeriodSettings(false)
-                setShowTimerSettings(false)
-                setShowDataSettings(false)
-                setShowNotificationSettings(false)
-                setShowRandomCoffeeBeanSettings(false)
-                setShowSearchSortSettings(false)
-                setShowFlavorDimensionSettings(false)
-                // 重新添加主设置的历史记录
+                // 如果有子设置页面打开，不关闭主设置，只是重新添加历史记录
+                // 实际的子页面关闭由父组件通过监听 popstate 事件处理
                 window.history.pushState({ modal: 'settings' }, '')
             } else {
                 // 没有子页面打开，关闭主设置
@@ -428,9 +407,7 @@ const Settings: React.FC<SettingsProps> = ({
         return () => {
             window.removeEventListener('popstate', handlePopState)
         }
-    }, [isOpen, onClose, showDisplaySettings, showGrinderSettings, showStockSettings, showBeanSettings, 
-        showFlavorPeriodSettings, showTimerSettings, showDataSettings, showNotificationSettings, 
-        showRandomCoffeeBeanSettings, showSearchSortSettings, showFlavorDimensionSettings])
+    }, [isOpen, onClose, hasSubSettingsOpen])
 
     // showConfetti 函数已移到 GrinderSettings 组件中
 
@@ -473,13 +450,27 @@ const handleChange = async <K extends keyof SettingsOptions>(
     // 如果shouldRender为false，不渲染任何内容
     if (!shouldRender) return null
 
+    // 计算 Settings 页面的样式
+    // 只在打开时应用滑入动画，子页面打开时应用左移（但不改变透明度）
+    const baseStyle = getChildPageStyle(isVisible)
+    
+    // Settings 的最终样式
+    // 当子设置页面打开时，Settings 需要像主页一样向左滑动 24px
+    // 当子设置正在关闭时（isSubSettingsClosing），立即开始恢复动画
+    const settingsStyle: React.CSSProperties = {
+        ...baseStyle,
+        // 如果有子设置页面打开且不是正在关闭，Settings 向左移动
+        transform: (isVisible && hasSubSettingsOpen && !isSubSettingsClosing)
+            ? 'translate3d(-24px, 0, 0)'
+            : baseStyle.transform,
+        // 保持完全不透明，不要降低透明度
+        opacity: isVisible ? 1 : 0,
+    }
+
     return (
         <div 
-            className={`
-                fixed inset-0 z-50 flex flex-col bg-neutral-50 dark:bg-neutral-900 max-w-[500px] mx-auto
-                transition-transform duration-[350ms] ease-[cubic-bezier(0.36,0.66,0.04,1)]
-                ${isVisible ? 'translate-x-0' : 'translate-x-full'}
-            `}
+            className="fixed inset-0 z-50 flex flex-col bg-neutral-50 dark:bg-neutral-900 max-w-[500px] mx-auto"
+            style={settingsStyle}
         >
             {/* 头部导航栏 */}
             <div
@@ -654,9 +645,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                 {/* 按钮组 */}
                 <div className="px-6 py-4 space-y-4">
                     <button
-                        onClick={() => {
-                            setShowDisplaySettings(true)
-                        }}
+                        onClick={subSettingsHandlers.onOpenDisplaySettings}
                         className="w-full py-3 px-4 text-sm font-medium text-neutral-800 bg-neutral-100 rounded transition-colors hover:bg-neutral-200 dark:text-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 flex items-center justify-between"
                     >
                         <div className="flex items-center space-x-3">
@@ -666,7 +655,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                         <ChevronRight className="h-4 w-4 text-neutral-400" />
                     </button>
                     <button
-                        onClick={() => setShowNotificationSettings(true)}
+                        onClick={subSettingsHandlers.onOpenNotificationSettings}
                         className="w-full py-3 px-4 text-sm font-medium text-neutral-800 bg-neutral-100 rounded transition-colors hover:bg-neutral-200 dark:text-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 flex items-center justify-between"
                     >
                         <div className="flex items-center space-x-3">
@@ -678,7 +667,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                 </div>
                 <div className="px-6 py-4 space-y-4">
                     <button
-                        onClick={() => setShowTimerSettings(true)}
+                        onClick={subSettingsHandlers.onOpenTimerSettings}
                         className="w-full py-3 px-4 text-sm font-medium text-neutral-800 bg-neutral-100 rounded transition-colors hover:bg-neutral-200 dark:text-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 flex items-center justify-between"
                     >
                         <div className="flex items-center space-x-3">
@@ -688,7 +677,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                         <ChevronRight className="h-4 w-4 text-neutral-400" />
                     </button>
                     <button
-                        onClick={() => setShowGrinderSettings(true)}
+                        onClick={subSettingsHandlers.onOpenGrinderSettings}
                         className="w-full py-3 px-4 text-sm font-medium text-neutral-800 bg-neutral-100 rounded transition-colors hover:bg-neutral-200 dark:text-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 flex items-center justify-between"
                     >
                         <div className="flex items-center space-x-3">
@@ -698,7 +687,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                         <ChevronRight className="h-4 w-4 text-neutral-400" />
                     </button>
                     <button
-                        onClick={() => setShowRandomCoffeeBeanSettings(true)}
+                        onClick={subSettingsHandlers.onOpenRandomCoffeeBeanSettings}
                         className="w-full py-3 px-4 text-sm font-medium text-neutral-800 bg-neutral-100 rounded transition-colors hover:bg-neutral-200 dark:text-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 flex items-center justify-between"
                     >
                         <div className="flex items-center space-x-3">
@@ -711,7 +700,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
 
                 <div className="px-6 py-4 space-y-4">
                     <button
-                        onClick={() => setShowBeanSettings(true)}
+                        onClick={subSettingsHandlers.onOpenBeanSettings}
                         className="w-full py-3 px-4 text-sm font-medium text-neutral-800 bg-neutral-100 rounded transition-colors hover:bg-neutral-200 dark:text-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 flex items-center justify-between"
                     >
                         <div className="flex items-center space-x-3">
@@ -722,7 +711,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                     </button>
                     
                     <button
-                        onClick={() => setShowStockSettings(true)}
+                        onClick={subSettingsHandlers.onOpenStockSettings}
                         className="w-full py-3 px-4 text-sm font-medium text-neutral-800 bg-neutral-100 rounded transition-colors hover:bg-neutral-200 dark:text-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 flex items-center justify-between"
                     >
                         <div className="flex items-center space-x-3">
@@ -733,7 +722,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                     </button>
 
                     <button
-                        onClick={() => setShowFlavorPeriodSettings(true)}
+                        onClick={subSettingsHandlers.onOpenFlavorPeriodSettings}
                         className="w-full py-3 px-4 text-sm font-medium text-neutral-800 bg-neutral-100 rounded transition-colors hover:bg-neutral-200 dark:text-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 flex items-center justify-between"
                     >
                         <div className="flex items-center space-x-3">
@@ -747,7 +736,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                 {/* 笔记相关设置 */}
                 <div className="px-6 py-4 space-y-4">
                     <button
-                        onClick={() => setShowSearchSortSettings(true)}
+                        onClick={subSettingsHandlers.onOpenSearchSortSettings}
                         className="w-full py-3 px-4 text-sm font-medium text-neutral-800 bg-neutral-100 rounded transition-colors hover:bg-neutral-200 dark:text-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 flex items-center justify-between"
                     >
                         <div className="flex items-center space-x-3">
@@ -758,7 +747,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                     </button>
                     
                     <button
-                        onClick={() => setShowFlavorDimensionSettings(true)}
+                        onClick={subSettingsHandlers.onOpenFlavorDimensionSettings}
                         className="w-full py-3 px-4 text-sm font-medium text-neutral-800 bg-neutral-100 rounded transition-colors hover:bg-neutral-200 dark:text-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 flex items-center justify-between"
                     >
                         <div className="flex items-center space-x-3">
@@ -772,7 +761,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
                 {/* 数据管理入口按钮 */}
                 <div className="px-6 py-4">
                     <button
-                        onClick={() => setShowDataSettings(true)}
+                        onClick={subSettingsHandlers.onOpenDataSettings}
                         className="w-full py-3 px-4 text-sm font-medium text-neutral-800 bg-neutral-100 rounded transition-colors hover:bg-neutral-200 dark:text-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 flex items-center justify-between"
                     >
                         <div className="flex items-center space-x-3">
@@ -836,106 +825,6 @@ const handleChange = async <K extends keyof SettingsOptions>(
                     </p>
                 </div>
             </div>
-
-            {/* 显示设置组件 */}
-            {showDisplaySettings && (
-                <DisplaySettings
-                    settings={settings}
-                    onClose={() => setShowDisplaySettings(false)}
-                    handleChange={handleChange}
-                />
-            )}
-
-            {/* 研磨度设置组件 */}
-            {showGrinderSettings && (
-                <GrinderSettings
-                    settings={settings}
-                    onClose={() => setShowGrinderSettings(false)}
-                    handleChange={handleChange}
-                />
-            )}
-
-            {/* 库存扣除预设值设置组件 */}
-            {showStockSettings && (
-                <StockSettings
-                    settings={settings}
-                    onClose={() => setShowStockSettings(false)}
-                    handleChange={handleChange}
-                />
-            )}
-
-            {/* 豆仓列表显示设置组件 */}
-            {showBeanSettings && (
-                <BeanSettings
-                    settings={settings}
-                    onClose={() => setShowBeanSettings(false)}
-                    handleChange={handleChange}
-                />
-            )}
-
-            {/* 赏味期设置组件 */}
-            {showFlavorPeriodSettings && (
-                <FlavorPeriodSettings
-                    settings={settings}
-                    onClose={() => setShowFlavorPeriodSettings(false)}
-                    handleChange={handleChange}
-                />
-            )}
-
-            {/* 计时器布局设置组件 */}
-            {showTimerSettings && (
-                <TimerSettings
-                    settings={settings}
-                    onClose={() => setShowTimerSettings(false)}
-                    handleChange={handleChange}
-                />
-            )}
-
-            {/* 数据管理设置组件 */}
-            {showDataSettings && (
-                <DataSettings
-                    settings={settings}
-                    onClose={() => setShowDataSettings(false)}
-                    handleChange={handleChange}
-                    onDataChange={onDataChange}
-                />
-            )}
-
-            {/* 通知设置组件 */}
-            {showNotificationSettings && (
-                <NotificationSettings
-                    settings={settings}
-                    onClose={() => setShowNotificationSettings(false)}
-                    handleChange={handleChange}
-                />
-            )}
-
-            {/* 随机咖啡豆设置组件 */}
-            {showRandomCoffeeBeanSettings && (
-                <RandomCoffeeBeanSettings
-                    settings={settings}
-                    onClose={() => setShowRandomCoffeeBeanSettings(false)}
-                    handleChange={handleChange}
-                />
-            )}
-
-            {/* 搜索排序设置组件 */}
-            {showSearchSortSettings && (
-                <SearchSortSettings
-                    settings={settings}
-                    onClose={() => setShowSearchSortSettings(false)}
-                    handleChange={handleChange}
-                />
-            )}
-
-            {/* 风味维度设置组件 */}
-            {showFlavorDimensionSettings && (
-                <FlavorDimensionSettings
-                    settings={settings}
-                    onClose={() => setShowFlavorDimensionSettings(false)}
-                    handleChange={handleChange}
-                />
-            )}
         </div>
     )
 }

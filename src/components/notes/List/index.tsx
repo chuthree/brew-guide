@@ -24,7 +24,6 @@ import FilterTabs from './FilterTabs'
 import AddNoteButton from './AddNoteButton'
 import { showToast } from '@/components/common/feedback/LightToast'
 
-import BrewingNoteEditModal from '../Form/BrewingNoteEditModal'
 import ChangeRecordEditModal from '../Form/ChangeRecordEditModal'
 import { BrewingNoteData } from '@/types/app'
 import { globalCache, saveSelectedEquipmentPreference, saveSelectedBeanPreference, saveSelectedDatePreference, saveFilterModePreference, saveSortOptionPreference, saveDateGroupingModePreference, calculateTotalCoffeeConsumption, formatConsumption, getSelectedEquipmentPreference, getSelectedBeanPreference, getSelectedDatePreference, getFilterModePreference, getSortOptionPreference, getDateGroupingModePreference } from './globalCache'
@@ -57,7 +56,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     
     // 搜索排序状态 - 独立于普通排序，可选的
     const [searchSortOption, setSearchSortOption] = useState<SortOption | null>(null)
-    const [editingNote, setEditingNote] = useState<BrewingNoteData | null>(null)
     const [editingChangeRecord, setEditingChangeRecord] = useState<BrewingNote | null>(null)
 
     // 模态显示状态
@@ -498,8 +496,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                 setShowChangeRecordEditModal(true);
             } else {
                 // 普通笔记：打开编辑界面（不包含图片）
-                const noteToEdit: BrewingNoteData = {
-                    id: newId,
+                // 注意：不传递 id，让表单认为这是全新的笔记，这样容量同步逻辑才能正确工作
+                const noteToEdit: Partial<BrewingNoteData> = {
                     timestamp: newTimestamp,
                     equipment: noteToCopy.equipment,
                     method: noteToCopy.method,
@@ -513,9 +511,18 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                     taste: noteToCopy.taste,
                     notes: noteToCopy.notes,
                     totalTime: noteToCopy.totalTime,
-                    beanId: noteToCopy.beanId
+                    beanId: noteToCopy.beanId,
+                    // 添加一个临时 ID 用于表单提交识别，但让表单知道这是新笔记
+                    id: newId
                 };
-                setEditingNote(noteToEdit);
+                
+                // 通过事件触发模态框打开
+                window.dispatchEvent(new CustomEvent('brewingNoteEditOpened', {
+                    detail: { 
+                        data: noteToEdit,
+                        isCopy: true // 标记这是复制操作
+                    }
+                }))
             }
             
             // 提示用户
@@ -556,78 +563,13 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                 beanId: note.beanId
             };
 
-            // 设置编辑普通笔记数据并显示模态
-            setEditingNote(noteToEdit);
+            // 通过事件触发模态框打开
+            window.dispatchEvent(new CustomEvent('brewingNoteEditOpened', {
+                detail: { data: noteToEdit }
+            }))
         }
     };
     
-    // 处理保存编辑 - 添加导航栏替代头部支持
-    const handleSaveEdit = async (updatedData: BrewingNoteData) => {
-        try {
-            // 获取现有笔记
-            const { Storage } = await import('@/lib/core/storage');
-            const savedNotes = await Storage.get('brewingNotes')
-            let parsedNotes: BrewingNote[] = savedNotes ? JSON.parse(savedNotes) : []
-
-            // 检查笔记是否已存在
-            const existingNoteIndex = parsedNotes.findIndex(note => note.id === updatedData.id);
-            const isNewNote = existingNoteIndex === -1;
-
-            if (isNewNote) {
-                // 添加新笔记
-                parsedNotes = [updatedData as BrewingNote, ...parsedNotes];
-                
-                // 扣除咖啡豆剩余量
-                if (updatedData.beanId && updatedData.params?.coffee) {
-                    try {
-                        const { CoffeeBeanManager } = await import('@/lib/managers/coffeeBeanManager');
-                        const coffeeMatch = updatedData.params.coffee.match(/(\d+(?:\.\d+)?)/);
-                        if (coffeeMatch) {
-                            const coffeeAmount = parseFloat(coffeeMatch[0]);
-                            if (!isNaN(coffeeAmount) && coffeeAmount > 0) {
-                                await CoffeeBeanManager.updateBeanRemaining(updatedData.beanId, coffeeAmount);
-                            }
-                        }
-                    } catch (error) {
-                        console.error('扣除咖啡豆剩余量失败:', error);
-                        // 不阻止笔记保存，但记录错误
-                    }
-                }
-            } else {
-                // 更新现有笔记
-                parsedNotes = parsedNotes.map(note => {
-                    if (note.id === updatedData.id) {
-                        return updatedData as BrewingNote
-                    }
-                    return note
-                })
-            }
-
-            // 直接更新本地状态
-            setNotes(parsedNotes);
-
-            // 更新总消耗量
-            totalCoffeeConsumption.current = calculateTotalCoffeeConsumption(parsedNotes);
-
-            // 数据处理现在由 useEnhancedNotesFiltering Hook 自动处理
-
-            // 保存更新后的笔记 - Storage.set() 会自动触发事件
-            await Storage.set('brewingNotes', JSON.stringify(parsedNotes))
-
-            // 主动刷新数据，确保UI立即更新
-            await loadNotesData();
-
-            // 关闭模态和编辑状态
-            setEditingNote(null)
-
-            // 显示成功提示
-            showToastMessage(isNewNote ? '笔记已添加' : '笔记已更新', 'success')
-        } catch (error) {
-            console.error('更新笔记失败:', error)
-            showToastMessage('更新笔记失败', 'error')
-        }
-    }
-
     // 处理变动记录转换为普通笔记
     const handleConvertToNormalNote = (convertedNote: BrewingNote) => {
         // 关闭变动记录编辑模态
@@ -664,8 +606,10 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
             beanId: convertedNote.beanId
         };
 
-        // 打开普通笔记编辑模态
-        setEditingNote(noteToEdit);
+        // 通过事件打开普通笔记编辑模态
+        window.dispatchEvent(new CustomEvent('brewingNoteEditOpened', {
+            detail: { data: noteToEdit }
+        }))
     };
 
     // 处理变动记录保存
@@ -1233,17 +1177,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                         <AddNoteButton onAddNote={handleAddNote} />
                     )}
 
-            {/* 模态组件 */}
-            <BrewingNoteEditModal
-                showModal={!!editingNote}
-                initialData={editingNote}
-                onSave={handleSaveEdit}
-                onClose={() => {
-                    setEditingNote(null)
-                }}
-                settings={settings}
-            />
-
+            {/* 变动记录编辑模态 */}
             {editingChangeRecord && (
                 <ChangeRecordEditModal
                     showModal={showChangeRecordEditModal}

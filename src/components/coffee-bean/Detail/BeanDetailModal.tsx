@@ -16,6 +16,7 @@ import { ArrowRight } from 'lucide-react'
 import { BREWING_EVENTS } from '@/lib/brewing/constants'
 import { useFlavorDimensions } from '@/lib/hooks/useFlavorDimensions'
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore'
+import { getChildPageStyle } from '@/lib/navigation/pageTransition'
 
 // 动态导入 ImageViewer 组件
 const ImageViewer = dynamic(() => import('@/components/common/ui/ImageViewer'), {
@@ -134,11 +135,12 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     useEffect(() => {
         if (isOpen) {
             setShouldRender(true)
-            // 短暂延迟以确保DOM已渲染，然后触发滑入动画
-            const timer = setTimeout(() => {
-                setIsVisible(true)
-            }, 10)
-            return () => clearTimeout(timer)
+            // 使用 requestAnimationFrame 确保 DOM 已渲染，比 setTimeout 更快更流畅
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    setIsVisible(true)
+                })
+            })
         } else {
             setIsVisible(false)
             // 重置打印模态框状态，防止下次打开时直接显示打印界面
@@ -511,13 +513,18 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
 
     // 处理关闭
     const handleClose = () => {
-        // 如果历史栈中有我们添加的条目，触发返回
-        if (window.history.state?.modal === 'bean-detail') {
-            window.history.back()
-        } else {
-            // 否则直接关闭
-            onClose()
-        }
+        setIsVisible(false) // 触发退出动画
+        window.dispatchEvent(new CustomEvent('beanDetailClosing')) // 通知父组件
+        
+        setTimeout(() => {
+            // 如果历史栈中有我们添加的条目，触发返回
+            if (window.history.state?.modal === 'bean-detail') {
+                window.history.back()
+            } else {
+                // 否则直接关闭
+                onClose()
+            }
+        }, 350) // 等待动画完成
     }
 
     // 处理去冲煮功能
@@ -586,12 +593,8 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     return (
         <>
         <div
-            className={`
-                fixed inset-0 z-50 max-w-[500px] mx-auto overflow-hidden 
-                bg-neutral-50 dark:bg-neutral-900 flex flex-col
-                transition-transform duration-[350ms] ease-[cubic-bezier(0.36,0.66,0.04,1)]
-                ${isVisible ? 'translate-x-0' : 'translate-x-full'}
-            `}
+            className="fixed inset-0 z-[60] max-w-[500px] mx-auto overflow-hidden bg-neutral-50 dark:bg-neutral-900 flex flex-col"
+            style={getChildPageStyle(isVisible)}
         >
                         {/* 顶部按钮栏 */}
                         <div className="sticky top-0 z-10 flex items-center pt-safe-top p-4 bg-neutral-50 dark:bg-neutral-900 gap-3">

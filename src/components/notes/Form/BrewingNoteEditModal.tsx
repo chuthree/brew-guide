@@ -1,12 +1,12 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft } from 'lucide-react'
 import BrewingNoteForm from './BrewingNoteForm'
 import { BrewingNoteData } from '@/types/app'
 import { SettingsOptions } from '@/components/settings/Settings'
 import { Calendar } from '@/components/common/ui/Calendar'
+import { getChildPageStyle } from '@/lib/navigation/pageTransition'
 
 interface BrewingNoteEditModalProps {
     showModal: boolean
@@ -14,6 +14,7 @@ interface BrewingNoteEditModalProps {
     onSave: (data: BrewingNoteData) => void
     onClose: () => void
     settings?: SettingsOptions
+    isCopy?: boolean // 标记是否是复制操作
 }
 
 const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
@@ -21,8 +22,13 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
     initialData,
     onSave,
     onClose,
-    settings
+    settings,
+    isCopy = false // 默认不是复制操作
 }) => {
+    // 显示控制状态
+    const [shouldRender, setShouldRender] = useState(false)
+    const [isVisible, setIsVisible] = useState(false)
+
     // 时间戳状态管理
     const [timestamp, setTimestamp] = useState<Date>(new Date(initialData?.timestamp || Date.now()))
 
@@ -30,18 +36,31 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
     const [showDatePicker, setShowDatePicker] = useState(false)
     const datePickerRef = useRef<HTMLDivElement>(null)
 
-    // 内部动画状态
-    const [isClosing, setIsClosing] = useState(false)
-    const [isAnimating, setIsAnimating] = useState(false)
-
     // 重置时间戳当初始数据变化时
     useEffect(() => {
         if (initialData) {
             setTimestamp(new Date(initialData.timestamp))
-            setIsClosing(false) // 重置关闭状态
-            setIsAnimating(false) // 重置动画状态
         }
     }, [initialData])
+
+    // 处理显示/隐藏动画
+    useEffect(() => {
+        if (showModal) {
+            setShouldRender(true)
+            // 使用 requestAnimationFrame 触发动画
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    setIsVisible(true)
+                })
+            })
+        } else {
+            setIsVisible(false)
+            const timer = setTimeout(() => {
+                setShouldRender(false)
+            }, 350) // 与动画时长匹配
+            return () => clearTimeout(timer)
+        }
+    }, [showModal])
 
     // 处理时间戳变化
     const handleTimestampChange = useCallback((newTimestamp: Date) => {
@@ -89,23 +108,13 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
 
     // 处理关闭 - 先触发退出动画，然后调用父组件关闭
     const handleClose = useCallback(() => {
-        if (!isClosing && !isAnimating) {
-            setIsAnimating(true)
-            setIsClosing(true)
-            
-            // 如果历史栈中有我们添加的条目，触发返回
-            if (window.history.state?.modal === 'brewing-note-edit') {
-                window.history.back()
-            } else {
-                // 否则直接关闭
-                // 等待退出动画完成后再调用父组件的关闭回调
-                setTimeout(() => {
-                    onClose()
-                    setIsAnimating(false)
-                }, 200) // 匹配新的动画持续时间
-            }
-        }
-    }, [isClosing, isAnimating, onClose])
+        setIsVisible(false) // 触发退出动画
+        window.dispatchEvent(new CustomEvent('brewingNoteEditClosing')) // 通知父组件
+        
+        setTimeout(() => {
+            onClose() // 350ms 后真正关闭
+        }, 350)
+    }, [onClose])
 
     // 历史栈管理 - 支持硬件返回键和浏览器返回按钮
     useEffect(() => {
@@ -116,7 +125,7 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
 
         // 监听返回事件
         const handlePopState = () => {
-            onClose()
+            handleClose()
         }
 
         window.addEventListener('popstate', handlePopState)
@@ -124,11 +133,11 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
         return () => {
             window.removeEventListener('popstate', handlePopState)
         }
-    }, [showModal, onClose])
+    }, [showModal, handleClose])
 
     // 移动端优化：防止背景滚动
     useEffect(() => {
-        if (showModal && !isClosing) {
+        if (showModal && isVisible) {
             // 防止背景页面滚动
             document.body.style.overflow = 'hidden'
             document.body.style.position = 'fixed'
@@ -146,7 +155,7 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
             document.body.style.position = ''
             document.body.style.width = ''
         }
-    }, [showModal, isClosing])
+    }, [showModal, isVisible])
 
     // 处理保存按钮点击
     const handleSaveClick = useCallback(() => {
@@ -158,21 +167,13 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
         }
     }, [initialData])
 
+    if (!shouldRender) return null
+
     return (
-        <AnimatePresence mode="wait">
-            {showModal && !isClosing && initialData && (
-                <motion.div
-                    initial={{ opacity: 0}}
-                    animate={{ opacity: 1}}
-                    transition={{ 
-                        duration: 0.2, 
-                        ease: [0.25, 0.46, 0.45, 0.94] // 移动端友好的缓动函数
-                    }}
-                    style={{
-                        willChange: "opacity, transform", // 启用硬件加速
-                    }}
-                    className="fixed px-6 pt-safe-top pb-safe-bottom overflow-auto max-w-[500px] mx-auto inset-0 z-50 bg-neutral-50 dark:bg-neutral-900"
-                >
+        <div
+            className="fixed inset-0 z-[60] max-w-[500px] mx-auto px-6 pt-safe-top pb-safe-bottom overflow-auto bg-neutral-50 dark:bg-neutral-900"
+            style={getChildPageStyle(isVisible)}
+        >
             {/* 顶部标题栏 */}
             <div className="flex items-center justify-between">
                 <button
@@ -219,18 +220,21 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
 
             {/* 表单内容容器 */}
             <div className="flex-1 mt-6">
-                <BrewingNoteForm
-                    id={initialData.id}
-                    isOpen={true}
-                    onClose={handleClose}
-                    onSave={handleSave}
-                    initialData={initialData}
-                    inBrewPage={true}
-                    showSaveButton={false}
-                    hideHeader={true}
-                    onTimestampChange={handleTimestampChange}
-                    settings={settings}
-                />
+                {initialData && (
+                    <BrewingNoteForm
+                        id={initialData.id}
+                        isOpen={true}
+                        onClose={handleClose}
+                        onSave={handleSave}
+                        initialData={initialData}
+                        inBrewPage={true}
+                        showSaveButton={false}
+                        hideHeader={true}
+                        onTimestampChange={handleTimestampChange}
+                        settings={settings}
+                        isCopy={isCopy}
+                    />
+                )}
             </div>
 
             {/* 底部保存按钮 - 使用sticky定位相对于容器固定 */}
@@ -243,9 +247,7 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
                     <span className="font-medium">保存笔记</span>
                 </button>
             </div>
-                </motion.div>
-            )}
-        </AnimatePresence>
+        </div>
     )
 }
 

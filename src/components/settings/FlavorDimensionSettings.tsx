@@ -10,6 +10,7 @@ import {
     FlavorDimension
 } from '@/lib/managers/customFlavorDimensions'
 import hapticsUtils from '@/lib/ui/haptics'
+import { getChildPageStyle } from '@/lib/navigation/pageTransition'
 
 interface FlavorDimensionSettingsProps {
     settings: SettingsOptions
@@ -35,13 +36,34 @@ const FlavorDimensionSettings: React.FC<FlavorDimensionSettingsProps> = ({
         return () => window.removeEventListener('popstate', handlePopState)
     }, []) // 空依赖数组，确保只在挂载时执行一次
 
+    // 控制动画状态
+    const [shouldRender, setShouldRender] = useState(false)
+    const [isVisible, setIsVisible] = useState(false)
+
+    // 处理显示/隐藏动画
+    useEffect(() => {
+        setShouldRender(true)
+        // 短暂延迟确保 DOM 渲染，然后触发滑入动画
+        const timer = setTimeout(() => setIsVisible(true), 10)
+        return () => clearTimeout(timer)
+    }, [])
+
     // 关闭处理
     const handleClose = () => {
-        if (window.history.state?.modal === 'flavor-dimension-settings') {
-            window.history.back()
-        } else {
-            onClose()
-        }
+        // 立即触发退出动画
+        setIsVisible(false)
+        
+        // 立即通知父组件子设置正在关闭
+        window.dispatchEvent(new CustomEvent('subSettingsClosing'))
+        
+        // 等待动画完成后再真正关闭
+        setTimeout(() => {
+            if (window.history.state?.modal === 'flavor-dimension-settings') {
+                window.history.back()
+            } else {
+                onClose()
+            }
+        }, 350) // 与 IOS_TRANSITION_CONFIG.duration 一致
     }
 
     const [dimensions, setDimensions] = useState<FlavorDimension[]>([])
@@ -176,16 +198,12 @@ const FlavorDimensionSettings: React.FC<FlavorDimensionSettingsProps> = ({
         }
     }
 
+    if (!shouldRender) return null
+
     return (
-        <motion.div
-            initial={{ x: '100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '100%' }}
-            transition={{
-                duration: 0.35,
-                ease: [0.36, 0.66, 0.04, 1]
-            }}
-            className="fixed inset-0 z-50 bg-neutral-50 dark:bg-neutral-900 pt-safe-top pb-safe-bottom max-w-[640px] sm:max-w-full mx-auto flex flex-col"
+        <div
+            className="fixed inset-0 z-[60] bg-neutral-50 dark:bg-neutral-900 pt-safe-top pb-safe-bottom max-w-[640px] sm:max-w-full mx-auto flex flex-col"
+            style={getChildPageStyle(isVisible)}
         >
             {/* 头部导航栏 */}
             <div className="relative flex items-center justify-center pb-4 sm:max-w-sm w-full mx-auto">
@@ -406,7 +424,7 @@ const FlavorDimensionSettings: React.FC<FlavorDimensionSettingsProps> = ({
                     <div className="h-20" />
                 </div>
             </div>
-        </motion.div>
+        </div>
     )
 }
 

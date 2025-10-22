@@ -4,6 +4,7 @@ import React from 'react'
 
 import { ChevronLeft } from 'lucide-react'
 import { SettingsOptions } from './Settings'
+import { getChildPageStyle } from '@/lib/navigation/pageTransition'
 
 interface SearchSortSettingsProps {
     settings: SettingsOptions
@@ -31,11 +32,20 @@ const SearchSortSettings: React.FC<SearchSortSettingsProps> = ({
 
     // 关闭处理
     const handleClose = () => {
-        if (window.history.state?.modal === 'search-sort-settings') {
-            window.history.back()
-        } else {
-            onClose()
-        }
+        // 立即触发退出动画
+        setIsVisible(false)
+        
+        // 立即通知父组件子设置正在关闭
+        window.dispatchEvent(new CustomEvent('subSettingsClosing'))
+        
+        // 等待动画完成后再真正关闭
+        setTimeout(() => {
+            if (window.history.state?.modal === 'search-sort-settings') {
+                window.history.back()
+            } else {
+                onClose()
+            }
+        }, 350) // 与 IOS_TRANSITION_CONFIG.duration 一致
     }
 
     // 控制动画状态
@@ -53,11 +63,8 @@ const SearchSortSettings: React.FC<SearchSortSettingsProps> = ({
 
     return (
         <div
-            className={`
-                fixed inset-0 z-50 flex flex-col bg-neutral-50 dark:bg-neutral-900 max-w-[500px] mx-auto
-                transition-transform duration-[350ms] ease-[cubic-bezier(0.36,0.66,0.04,1)]
-                ${isVisible ? 'translate-x-0' : 'translate-x-full'}
-            `}
+            className="fixed inset-0 z-[60] flex flex-col bg-neutral-50 dark:bg-neutral-900 max-w-[500px] mx-auto"
+            style={getChildPageStyle(isVisible)}
         >
             {/* 头部导航栏 */}
             <div className="relative flex items-center justify-center py-4 pt-safe-top">
