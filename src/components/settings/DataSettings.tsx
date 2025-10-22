@@ -457,6 +457,7 @@ const DataSettings: React.FC<DataSettingsProps> = ({
     const [showConflictModal, setShowConflictModal] = useState(false)
     const [conflictRemoteMetadata, setConflictRemoteMetadata] = useState<SyncMetadata | null>(null)
     const [isSyncNeeded, setIsSyncNeeded] = useState(false)
+    const [syncDirection, setSyncDirection] = useState<'upload' | 'download' | 'both' | null>(null)
     const [syncProgress, setSyncProgress] = useState<{
         phase: string
         message: string
@@ -583,6 +584,7 @@ const DataSettings: React.FC<DataSettingsProps> = ({
         setIsSyncing(true)
         setS3Error('')
         setSyncProgress(null)
+        setSyncDirection(null)
 
         try {
             // 使用新的 SyncOptions 格式
@@ -605,6 +607,7 @@ const DataSettings: React.FC<DataSettingsProps> = ({
                 }
                 setShowConflictModal(true)
                 setS3Error('数据冲突：本地和云端数据都已更改。')
+                setSyncDirection(null)
                 return
             }
 
@@ -613,6 +616,52 @@ const DataSettings: React.FC<DataSettingsProps> = ({
                 setLastSyncTime(lastSync)
                 setIsSyncNeeded(false)
 
+                // 同步完成后，已经是最新状态，清除方向图标
+                setSyncDirection(null)
+
+                // 显示同步结果提示
+                const { showToast } = await import('@/components/common/feedback/LightToast');
+                
+                if (result.uploadedFiles > 0 && result.downloadedFiles > 0) {
+                    // 双向同步
+                    showToast({
+                        type: 'success',
+                        title: `同步完成：上传 ${result.uploadedFiles} 项，下载 ${result.downloadedFiles} 项，即将重启...`,
+                        duration: 3000
+                    });
+                    
+                    // 双向同步包含下载，刷新页面以加载新数据
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 3000);
+                } else if (result.uploadedFiles > 0) {
+                    // 仅上传
+                    showToast({
+                        type: 'success',
+                        title: `已上传 ${result.uploadedFiles} 项到云端`,
+                        duration: 2500
+                    });
+                } else if (result.downloadedFiles > 0) {
+                    // 仅下载
+                    showToast({
+                        type: 'success',
+                        title: `已从云端下载 ${result.downloadedFiles} 项，即将重启...`,
+                        duration: 2500
+                    });
+                    
+                    // 下载完成后刷新页面以加载新数据
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2500);
+                } else {
+                    // 无变化
+                    showToast({
+                        type: 'info',
+                        title: '数据已是最新，无需同步',
+                        duration: 2000
+                    });
+                }
+
                 if (settings.hapticFeedback) {
                     hapticsUtils.medium()
                 }
@@ -620,10 +669,28 @@ const DataSettings: React.FC<DataSettingsProps> = ({
                 onDataChange?.()
             } else {
                 setS3Error(result.message || '同步失败')
+                setSyncDirection(null)
+                
+                // 显示同步失败提示
+                const { showToast } = await import('@/components/common/feedback/LightToast');
+                showToast({
+                    type: 'error',
+                    title: result.message || '同步失败',
+                    duration: 3000
+                });
             }
         } catch (error) {
             console.error('同步失败:', error)
             setS3Error(`同步失败: ${error instanceof Error ? error.message : '未知错误'}`)
+            setSyncDirection(null)
+            
+            // 显示错误提示
+            const { showToast } = await import('@/components/common/feedback/LightToast');
+            showToast({
+                type: 'error',
+                title: `同步失败: ${error instanceof Error ? error.message : '未知错误'}`,
+                duration: 3000
+            });
         } finally {
             setIsSyncing(false)
             setSyncProgress(null)
@@ -694,6 +761,30 @@ const DataSettings: React.FC<DataSettingsProps> = ({
         const timer = setTimeout(() => setIsVisible2(true), 10)
         return () => clearTimeout(timer)
     }, [])
+
+    // 广播 S3 同步状态到其他组件（如 Settings 页面）
+    useEffect(() => {
+        window.dispatchEvent(new CustomEvent('s3StatusChange', {
+            detail: {
+                status: s3Status,
+                syncing: isSyncing,
+                needsSync: isSyncNeeded,
+                syncDirection: syncDirection
+            }
+        }))
+    }, [s3Status, isSyncing, isSyncNeeded, syncDirection])
+
+    // 监听来自其他组件的同步请求
+    useEffect(() => {
+        const handleSyncRequest = () => {
+            if (s3Status === 'connected' && syncManager) {
+                performSync()
+            }
+        }
+
+        window.addEventListener('s3SyncRequested', handleSyncRequest)
+        return () => window.removeEventListener('s3SyncRequested', handleSyncRequest)
+    }, [s3Status, syncManager, performSync])
 
     if (!shouldRender2) return null
 

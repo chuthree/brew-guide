@@ -6,7 +6,7 @@ import hapticsUtils from '@/lib/ui/haptics'
 
 import { useTheme } from 'next-themes'
 import { LayoutSettings } from '../brewing/Timer/Settings'
-import { ChevronLeft, ChevronRight, RefreshCw, Loader, Monitor, SlidersHorizontal, Archive, List, CalendarDays, Timer, Database, Bell, ClipboardPen, Shuffle, ArrowUpDown, Palette } from 'lucide-react'
+import { ChevronLeft, ChevronRight, RefreshCw, Loader, Monitor, SlidersHorizontal, Archive, List, CalendarDays, Timer, Database, Bell, ClipboardPen, Shuffle, ArrowUpDown, Palette, Upload, Download, ArrowUpDown as ArrowUpDownIcon } from 'lucide-react'
 
 import Image from 'next/image'
 import { getChildPageStyle } from '@/lib/navigation/pageTransition'
@@ -292,14 +292,16 @@ const Settings: React.FC<SettingsProps> = ({
     const [s3Status, setS3Status] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected')
     const [isSyncing, setIsSyncing] = useState(false)
     const [isSyncNeeded, setIsSyncNeeded] = useState(false)
+    const [syncDirection, setSyncDirection] = useState<'upload' | 'download' | 'both' | null>(null)
 
-        // 通过 DataSettings 组件获取 S3 同步状态
+    // 通过 DataSettings 组件获取 S3 同步状态
     useEffect(() => {
         const handleS3StatusChange = (event: CustomEvent) => {
-            const { status, syncing, needsSync } = event.detail;
+            const { status, syncing, needsSync, syncDirection: direction } = event.detail;
             setS3Status(status);
             setIsSyncing(syncing);
             setIsSyncNeeded(needsSync);
+            setSyncDirection(direction || null);
         };
 
         // 监听来自 DataSettings 组件的状态更新事件
@@ -308,7 +310,95 @@ const Settings: React.FC<SettingsProps> = ({
         return () => {
             window.removeEventListener('s3StatusChange', handleS3StatusChange as EventListener);
         };
-    }, []);
+    }, []);    // 在 Settings 打开时主动检测 S3 同步状态
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const checkS3Status = async () => {
+            try {
+                // 动态导入 S3SyncManager
+                const S3SyncManager = (await import('@/lib/s3/syncManagerV2')).default;
+                
+                // 检查是否已配置并启用 S3 同步
+                const s3Config = settings.s3Sync;
+                if (
+                    !s3Config?.enabled ||
+                    !s3Config.lastConnectionSuccess ||
+                    !s3Config.accessKeyId ||
+                    !s3Config.secretAccessKey ||
+                    !s3Config.bucketName
+                ) {
+                    setS3Status('disconnected');
+                    return;
+                }
+
+                // 尝试初始化连接
+                setS3Status('connecting');
+                const manager = new S3SyncManager();
+                const connected = await manager.initialize({
+                    region: s3Config.region,
+                    accessKeyId: s3Config.accessKeyId,
+                    secretAccessKey: s3Config.secretAccessKey,
+                    bucketName: s3Config.bucketName,
+                    prefix: s3Config.prefix,
+                    endpoint: s3Config.endpoint || undefined
+                });
+
+                if (connected) {
+                    setS3Status('connected');
+                    // 检查是否需要同步
+                    const needsSync = await manager.needsSync();
+                    setIsSyncNeeded(needsSync);
+                    
+                    // 如果需要同步，尝试获取同步方向
+                    if (needsSync) {
+                        try {
+                            // 获取同步计划来确定方向
+                            const { SyncPlanner } = await import('@/lib/s3/syncPlanner');
+                            const { MetadataManager } = await import('@/lib/s3/metadataManager');
+                            
+                            const planner = new SyncPlanner();
+                            const metadataManager = new MetadataManager(manager['client'], manager['deviceId']);
+                            
+                            // 获取本地、远程和基准元数据
+                            const localData = await manager['getLocalFilesMetadata']();
+                            const remoteMetadata = await metadataManager.getRemoteMetadata();
+                            const baseMetadata = await metadataManager.getLocalMetadata();
+                            
+                            // 计算同步计划
+                            const plan = planner.calculateSyncPlan(localData, remoteMetadata, baseMetadata);
+                            
+                            // 根据计划确定同步方向
+                            const hasUploads = plan.upload.length > 0;
+                            const hasDownloads = plan.download.length > 0;
+                            
+                            if (hasUploads && hasDownloads) {
+                                setSyncDirection('both');
+                            } else if (hasUploads) {
+                                setSyncDirection('upload');
+                            } else if (hasDownloads) {
+                                setSyncDirection('download');
+                            } else {
+                                setSyncDirection(null);
+                            }
+                        } catch (error) {
+                            console.error('无法获取同步方向:', error);
+                            setSyncDirection(null);
+                        }
+                    } else {
+                        setSyncDirection(null);
+                    }
+                } else {
+                    setS3Status('error');
+                }
+            } catch (error) {
+                console.error('检测 S3 状态失败:', error);
+                setS3Status('error');
+            }
+        };
+
+        checkS3Status();
+    }, [isOpen, settings.s3Sync]);
 
     // 添加主题颜色更新的 Effect
     useEffect(() => {
@@ -428,16 +518,130 @@ const handleChange = async <K extends keyof SettingsOptions>(
     }))
 }
 
-    // 执行同步，现在通过事件触发
-    const performSync = useCallback(() => {
-        // 触发同步事件，让 DataSettings 组件处理
-        window.dispatchEvent(new CustomEvent('s3SyncRequested'));
-        
-        // 触发震动反馈
-        if (settings.hapticFeedback) {
-            hapticsUtils.light();
+    // 执行同步 - 直接调用 S3SyncManager 的同步功能
+    const performSync = useCallback(async () => {
+        // 如果 DataSettings 组件已打开，通过事件触发（优先使用 DataSettings 的逻辑）
+        if (hasSubSettingsOpen) {
+            window.dispatchEvent(new CustomEvent('s3SyncRequested'));
+            if (settings.hapticFeedback) {
+                hapticsUtils.light();
+            }
+            return;
         }
-    }, [settings.hapticFeedback])
+
+        // 如果 DataSettings 未打开，直接在这里执行同步
+        if (isSyncing || s3Status !== 'connected') {
+            return;
+        }
+
+        try {
+            setIsSyncing(true);
+
+            // 动态导入 S3SyncManager
+            const S3SyncManager = (await import('@/lib/s3/syncManagerV2')).default;
+            
+            const s3Config = settings.s3Sync;
+            if (!s3Config) return;
+
+            // 初始化管理器
+            const manager = new S3SyncManager();
+            const connected = await manager.initialize({
+                region: s3Config.region,
+                accessKeyId: s3Config.accessKeyId,
+                secretAccessKey: s3Config.secretAccessKey,
+                bucketName: s3Config.bucketName,
+                prefix: s3Config.prefix,
+                endpoint: s3Config.endpoint || undefined
+            });
+
+            if (!connected) {
+                console.error('S3 连接失败');
+                return;
+            }
+
+            // 执行同步
+            const result = await manager.sync({
+                preferredDirection: 'auto'
+            });
+
+            if (result.success) {
+                // 同步完成后，已经是最新状态，不需要显示方向图标
+                setIsSyncNeeded(false);
+                setSyncDirection(null);
+
+                // 显示同步结果提示
+                const { showToast } = await import('@/components/common/feedback/LightToast');
+                
+                if (result.uploadedFiles > 0 && result.downloadedFiles > 0) {
+                    // 双向同步
+                    showToast({
+                        type: 'success',
+                        title: `同步完成：上传 ${result.uploadedFiles} 项，下载 ${result.downloadedFiles} 项，即将重启...`,
+                        duration: 3000
+                    });
+                    
+                    // 双向同步包含下载，刷新页面以加载新数据
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 3000);
+                } else if (result.uploadedFiles > 0) {
+                    // 仅上传
+                    showToast({
+                        type: 'success',
+                        title: `已上传 ${result.uploadedFiles} 项到云端`,
+                        duration: 2500
+                    });
+                } else if (result.downloadedFiles > 0) {
+                    // 仅下载
+                    showToast({
+                        type: 'success',
+                        title: `已从云端下载 ${result.downloadedFiles} 项，即将重启...`,
+                        duration: 2500
+                    });
+                    
+                    // 下载完成后刷新页面以加载新数据
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2500);
+                } else {
+                    // 无变化
+                    showToast({
+                        type: 'info',
+                        title: '数据已是最新，无需同步',
+                        duration: 2000
+                    });
+                }
+
+                if (settings.hapticFeedback) {
+                    hapticsUtils.medium();
+                }
+
+                // 触发数据变化事件
+                window.dispatchEvent(new CustomEvent('storageChange', {
+                    detail: { key: 'all' }
+                }));
+            } else {
+                // 同步失败
+                const { showToast } = await import('@/components/common/feedback/LightToast');
+                showToast({
+                    type: 'error',
+                    title: result.message || '同步失败',
+                    duration: 3000
+                });
+            }
+        } catch (error) {
+            console.error('同步失败:', error);
+            // 显示错误提示
+            const { showToast } = await import('@/components/common/feedback/LightToast');
+            showToast({
+                type: 'error',
+                title: `同步失败: ${error instanceof Error ? error.message : '未知错误'}`,
+                duration: 3000
+            });
+        } finally {
+            setIsSyncing(false);
+        }
+    }, [settings.hapticFeedback, settings.s3Sync, isSyncing, s3Status, hasSubSettingsOpen])
 
 
 
@@ -474,7 +678,7 @@ const handleChange = async <K extends keyof SettingsOptions>(
         >
             {/* 头部导航栏 */}
             <div
-                className="relative flex items-center justify-center py-4 pt-safe-top"
+                className="relative flex items-center justify-center py-4 pt-safe-top z-20"
             >
                 <button
                     onClick={handleClose}
@@ -488,10 +692,16 @@ const handleChange = async <K extends keyof SettingsOptions>(
                     <button
                         onClick={performSync}
                         disabled={isSyncing}
-                        className="absolute right-4 flex items-center justify-center w-10 h-10 rounded-full text-neutral-700 bg-neutral-100 dark:text-neutral-300 dark:bg-neutral-800 transition-colors"
+                        className="absolute right-4 flex items-center justify-center w-10 h-10 rounded-full text-neutral-700 bg-neutral-100 dark:text-neutral-300 dark:bg-neutral-800 transition-colors disabled:opacity-50 hover:bg-neutral-200 dark:hover:bg-neutral-700 active:scale-95"
                     >
                         {isSyncing ? (
                             <Loader className="animate-spin h-5 w-5" />
+                        ) : syncDirection === 'upload' ? (
+                            <Upload className="h-5 w-5" />
+                        ) : syncDirection === 'download' ? (
+                            <Download className="h-5 w-5" />
+                        ) : syncDirection === 'both' ? (
+                            <ArrowUpDownIcon className="h-5 w-5" />
                         ) : (
                             <RefreshCw className="h-5 w-5" />
                         )}
