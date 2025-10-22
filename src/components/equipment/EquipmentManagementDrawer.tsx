@@ -239,7 +239,7 @@ const EquipmentManagementDrawer: React.FC<EquipmentManagementDrawerProps> = ({
       {/* 背景遮罩 */}
       <div
         data-modal={isOpen ? 'equipment-management' : undefined}
-        className={`fixed inset-0 z-50 bg-black/30 transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'} `}
+        className={`fixed inset-0 z-40 bg-black/50 transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'} `}
         onClick={handleClose}
       />
 

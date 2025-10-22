@@ -342,7 +342,7 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
       data-modal={showForm ? 'method-import' : undefined}
       className={`fixed inset-0 z-50 transition-all duration-300 ${
         showForm
-          ? 'pointer-events-auto bg-black/30 opacity-100'
+          ? 'pointer-events-auto bg-black/50 opacity-100'
           : 'pointer-events-none opacity-0'
       } `}
     >

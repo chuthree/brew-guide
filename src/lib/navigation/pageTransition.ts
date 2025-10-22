@@ -79,10 +79,8 @@ export function getParentPageStyle(
     transform: hasModal
       ? `translateX(${config.parentTranslateX}) scale(${config.parentScale})`
       : 'translateX(0) scale(1)',
-    opacity: hasModal ? config.parentOpacity : 1,
-    transition: `transform ${config.duration}ms ${config.easing}, opacity ${config.duration}ms ${config.easing}`,
-    willChange: 'transform, opacity',
-    transformOrigin: 'center center',
+    transition: `transform ${config.duration}ms ${config.easing}`,
+    willChange: 'transform',
   };
 }
 

@@ -478,10 +478,10 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
   return (
     <>
       <div
-        className={`fixed inset-0 z-50 mx-auto flex max-w-[500px] flex-col overflow-hidden bg-neutral-50 transition-transform duration-[350ms] ease-[cubic-bezier(0.36,0.66,0.04,1)] dark:bg-neutral-900 ${isVisible ? 'translate-x-0' : 'translate-x-full'} `}
+        className={`fixed inset-0 mx-auto flex max-w-[500px] flex-col overflow-hidden bg-neutral-50 transition-transform duration-[350ms] ease-[cubic-bezier(0.36,0.66,0.04,1)] dark:bg-neutral-900 ${isVisible ? 'translate-x-0' : 'translate-x-full'} `}
       >
         {/* 顶部按钮栏 */}
-        <div className="pt-safe-top sticky top-0 z-10 flex items-center justify-between bg-neutral-50 px-4 py-3 dark:bg-neutral-900">
+        <div className="pt-safe-top sticky top-0 flex items-center justify-between bg-neutral-50 px-4 py-3 dark:bg-neutral-900">
           <button
             onClick={handleClose}
             className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-100 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700"
@@ -1610,7 +1610,7 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
 
         {/* 重置确认对话框 */}
         {showResetConfirm && (
-          <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/20 p-4 backdrop-blur-sm">
+          <div className="absolute inset-0 flex items-center justify-center bg-black/20 p-4 backdrop-blur-sm">
             <div className="mx-4 w-full max-w-sm rounded-lg bg-white p-4 shadow-lg dark:bg-neutral-800">
               <div className="mb-2 text-sm font-medium text-neutral-800 dark:text-neutral-200">
                 重置配置

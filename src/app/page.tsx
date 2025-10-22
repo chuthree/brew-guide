@@ -74,6 +74,7 @@ import {
 } from '@/lib/managers/customEquipments';
 import CustomEquipmentFormModal from '@/components/equipment/forms/CustomEquipmentFormModal';
 import EquipmentImportModal from '@/components/equipment/import/EquipmentImportModal';
+import EquipmentManagementDrawer from '@/components/equipment/EquipmentManagementDrawer';
 import DataMigrationModal from '@/components/common/modals/DataMigrationModal';
 import { showToast } from '@/components/common/feedback/LightToast';
 import BackupReminderModal from '@/components/common/modals/BackupReminderModal';
@@ -356,6 +357,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     CustomEquipment | undefined
   >(undefined);
   const [showEquipmentImportForm, setShowEquipmentImportForm] = useState(false);
+  const [showEquipmentManagement, setShowEquipmentManagement] = useState(false);
   const [showDataMigration, setShowDataMigration] = useState(false);
   const [migrationData, setMigrationData] = useState<{
     legacyCount: number;
@@ -2151,6 +2153,71 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     }
   };
 
+  // 器具管理抽屉相关处理函数
+  const handleAddEquipment = () => {
+    setEditingEquipment(undefined);
+    setShowEquipmentForm(true);
+    setShowEquipmentManagement(false);
+  };
+
+  const handleEditEquipment = (equipment: CustomEquipment) => {
+    setEditingEquipment(equipment);
+    setShowEquipmentForm(true);
+    setShowEquipmentManagement(false);
+  };
+
+  const handleShareEquipment = async (equipment: CustomEquipment) => {
+    try {
+      const shareData = { equipment };
+      const shareText = JSON.stringify(shareData, null, 2);
+
+      if (navigator.share) {
+        await navigator.share({
+          title: `分享器具：${equipment.name}`,
+          text: shareText,
+        });
+      } else {
+        await navigator.clipboard.writeText(shareText);
+        showToast({
+          title: '器具数据已复制到剪贴板',
+          type: 'success',
+        });
+      }
+    } catch (error) {
+      console.error('分享器具失败:', error);
+    }
+  };
+
+  const handleReorderEquipments = async (newOrder: CustomEquipment[]) => {
+    try {
+      const { saveEquipmentOrder, loadEquipmentOrder } = await import(
+        '@/lib/managers/customEquipments'
+      );
+      const { equipmentUtils } = await import('@/lib/equipment/equipmentUtils');
+
+      const currentOrder = await loadEquipmentOrder();
+      const allCurrentEquipments = equipmentUtils.getAllEquipments(
+        customEquipments,
+        currentOrder
+      );
+
+      const updatedEquipments = allCurrentEquipments.map(eq => {
+        if (!eq.isCustom) return eq;
+        const reorderedCustomEq = newOrder.find(newEq => newEq.id === eq.id);
+        return reorderedCustomEq
+          ? { ...reorderedCustomEq, isCustom: true }
+          : eq;
+      });
+
+      const newEquipmentOrder =
+        equipmentUtils.generateEquipmentOrder(updatedEquipments);
+
+      await saveEquipmentOrder(newEquipmentOrder);
+    } catch (error) {
+      console.error('保存器具排序失败:', error);
+    }
+  };
+
   useEffect(() => {
     if (selectedEquipment) {
       const isCustomPresetEquipment = customEquipments.some(
@@ -2549,6 +2616,9 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             }
           }}
           onBackClick={handleBackClick}
+          onToggleEquipmentManagement={() =>
+            setShowEquipmentManagement(!showEquipmentManagement)
+          }
         />
 
         {activeMainTab === '冲煮' && (
@@ -3132,6 +3202,19 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         }}
         settings={settings}
         isCopy={isBrewingNoteCopy}
+      />
+
+      {/* 器具管理抽屉独立渲染，与 Settings 同级 */}
+      <EquipmentManagementDrawer
+        isOpen={showEquipmentManagement}
+        onClose={() => setShowEquipmentManagement(false)}
+        customEquipments={customEquipments}
+        onAddEquipment={handleAddEquipment}
+        onEditEquipment={handleEditEquipment}
+        onDeleteEquipment={handleDeleteEquipment}
+        onShareEquipment={handleShareEquipment}
+        onReorderEquipments={handleReorderEquipments}
+        settings={settings}
       />
     </>
   );

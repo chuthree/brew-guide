@@ -78,17 +78,6 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
               priority
             />
           </motion.div>
-
-          {/* 提示文字 */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 10 }}
-            transition={{ delay: 0.2 }}
-            className="absolute bottom-6 left-1/2 -translate-x-1/2 transform text-xs text-neutral-400 dark:text-neutral-500"
-          >
-            点击任意位置关闭
-          </motion.div>
         </motion.div>
       )}
     </AnimatePresence>

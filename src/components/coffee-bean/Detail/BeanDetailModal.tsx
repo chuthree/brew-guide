@@ -645,11 +645,11 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   return (
     <>
       <div
-        className="fixed inset-0 z-[60] mx-auto flex max-w-[500px] flex-col overflow-hidden bg-neutral-50 dark:bg-neutral-900"
+        className="fixed inset-0 mx-auto flex max-w-[500px] flex-col overflow-hidden bg-neutral-50 dark:bg-neutral-900"
         style={getChildPageStyle(isVisible)}
       >
         {/* 顶部按钮栏 */}
-        <div className="pt-safe-top sticky top-0 z-10 flex items-center gap-3 bg-neutral-50 p-4 dark:bg-neutral-900">
+        <div className="pt-safe-top sticky top-0 flex items-center gap-3 bg-neutral-50 p-4 dark:bg-neutral-900">
           {/* 左侧关闭按钮 */}
           <button
             onClick={handleClose}

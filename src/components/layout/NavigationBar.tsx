@@ -13,7 +13,6 @@ import {
   getEquipmentName,
 } from '@/lib/brewing/parameters';
 import EquipmentBar from '@/components/equipment/EquipmentBar';
-import EquipmentManagementDrawer from '@/components/equipment/EquipmentManagementDrawer';
 
 import { Equal, ArrowLeft, ChevronsUpDown } from 'lucide-react';
 import { saveMainTabPreference } from '@/lib/navigation/navigationCache';
@@ -200,6 +199,7 @@ interface NavigationBarProps {
   onEditEquipment?: (equipment: CustomEquipment) => void;
   onDeleteEquipment?: (equipment: CustomEquipment) => void;
   onShareEquipment?: (equipment: CustomEquipment) => void;
+  onToggleEquipmentManagement?: () => void;
   onBackClick?: () => void;
 }
 
@@ -277,10 +277,11 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
   handleExtractionTimeChange,
   customEquipments = [],
   onEquipmentSelect,
-  onAddEquipment,
-  onEditEquipment,
-  onDeleteEquipment,
-  onShareEquipment,
+  onAddEquipment: _onAddEquipment,
+  onEditEquipment: _onEditEquipment,
+  onDeleteEquipment: _onDeleteEquipment,
+  onShareEquipment: _onShareEquipment,
+  onToggleEquipmentManagement,
   onBackClick,
 }) => {
   const { canGoBack } = useNavigation(
@@ -289,52 +290,13 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
     hasCoffeeBeans
   );
 
-  // 抽屉管理状态
-  const [isManagementDrawerOpen, setIsManagementDrawerOpen] = useState(false);
-
   // 🎯 笔记步骤中参数显示的叠加层状态（仅用于UI显示，不影响实际数据）
   const [displayOverlay, setDisplayOverlay] =
     useState<Partial<EditableParams> | null>(null);
 
   // 处理抽屉开关
   const handleToggleManagementDrawer = () => {
-    setIsManagementDrawerOpen(!isManagementDrawerOpen);
-  };
-
-  // 处理器具排序
-  const handleReorderEquipments = async (newOrder: CustomEquipment[]) => {
-    try {
-      // 动态导入排序管理函数
-      const { saveEquipmentOrder, loadEquipmentOrder } = await import(
-        '@/lib/managers/customEquipments'
-      );
-      const { equipmentUtils } = await import('@/lib/equipment/equipmentUtils');
-
-      // 获取当前完整的器具列表（保持现有顺序，只更新自定义器具部分）
-      const currentOrder = await loadEquipmentOrder();
-      const allCurrentEquipments = equipmentUtils.getAllEquipments(
-        customEquipments,
-        currentOrder
-      );
-
-      // 更新自定义器具的位置，保持系统器具的位置不变
-      const updatedEquipments = allCurrentEquipments.map(eq => {
-        if (!eq.isCustom) return eq; // 系统器具位置不变
-        const reorderedCustomEq = newOrder.find(newEq => newEq.id === eq.id);
-        return reorderedCustomEq
-          ? { ...reorderedCustomEq, isCustom: true }
-          : eq;
-      });
-
-      // 生成新的排序数据
-      const newEquipmentOrder =
-        equipmentUtils.generateEquipmentOrder(updatedEquipments);
-
-      // 保存排序
-      await saveEquipmentOrder(newEquipmentOrder);
-    } catch (error) {
-      console.error('保存器具排序失败:', error);
-    }
+    onToggleEquipmentManagement?.();
   };
 
   // 获取当前视图的显示名称
@@ -543,7 +505,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
 
   return (
     <motion.div
-      className={`pt-safe-top sticky top-0 z-20 border-b transition-colors duration-300 ease-in-out ${
+      className={`pt-safe-top sticky top-0 border-b transition-colors duration-300 ease-in-out ${
         activeBrewingStep === 'brewing' || activeBrewingStep === 'notes'
           ? 'border-transparent'
           : 'border-neutral-200 dark:border-neutral-800'
@@ -914,19 +876,6 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
           )}
         </AnimatePresence>
       )}
-
-      {/* 器具管理抽屉 */}
-      <EquipmentManagementDrawer
-        isOpen={isManagementDrawerOpen}
-        onClose={() => setIsManagementDrawerOpen(false)}
-        customEquipments={customEquipments}
-        onAddEquipment={onAddEquipment || (() => {})}
-        onEditEquipment={onEditEquipment || (() => {})}
-        onDeleteEquipment={onDeleteEquipment || (() => {})}
-        onShareEquipment={onShareEquipment || (() => {})}
-        onReorderEquipments={handleReorderEquipments}
-        settings={settings}
-      />
     </motion.div>
   );
 };

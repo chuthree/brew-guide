@@ -49,7 +49,7 @@ const MethodShareModal: React.FC<MethodShareModalProps> = ({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.265 }}
-          className="fixed inset-0 z-50 bg-black/30"
+          className="fixed inset-0 z-50 bg-black/50"
         >
           <motion.div
             initial={{ y: '100%' }}

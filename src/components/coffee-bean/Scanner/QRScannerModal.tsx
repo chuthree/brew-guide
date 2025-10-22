@@ -134,7 +134,7 @@ const QRScannerModal: React.FC<QRScannerModalProps> = ({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.265 }}
             onClick={handleClose}
-            className="fixed inset-0 z-[70] bg-black/30"
+            className="fixed inset-0 z-[70] bg-black/50"
           />
 
           {/* 模态框内容 */}
