@@ -48,6 +48,8 @@ import {
   getFilterModePreference,
   getSortOptionPreference,
   getDateGroupingModePreference,
+  getSearchHistoryPreference,
+  addSearchHistory,
 } from './globalCache';
 import ListView from './ListView';
 import { SortOption, DateGroupingMode } from '../types';
@@ -102,6 +104,12 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   // 搜索相关状态
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchHistory, setSearchHistory] = useState<string[]>([]);
+
+  // 加载搜索历史
+  useEffect(() => {
+    setSearchHistory(getSearchHistoryPreference());
+  }, []);
 
   // 显示模式状态（持久化记忆 - 使用 localStorage 存储 UI 偏好设置）
   const [viewMode, setViewMode] = useState<'list' | 'gallery'>(() => {
@@ -1112,6 +1120,23 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     }
   };
 
+  // 处理搜索历史点击
+  const handleSearchHistoryClick = (query: string) => {
+    setSearchQuery(query);
+  };
+
+  // 自动添加搜索历史 - 延迟1秒后添加
+  useEffect(() => {
+    if (!isSearching || !searchQuery.trim()) return;
+
+    const timer = setTimeout(() => {
+      addSearchHistory(searchQuery.trim());
+      setSearchHistory(getSearchHistoryPreference());
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, isSearching]);
+
   // 计算当前显示的消耗量 - 使用Hook提供的数据
   const currentConsumption = useMemo(() => {
     // 搜索状态下，计算搜索结果的消耗量
@@ -1311,6 +1336,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
           hasExtractionTimeData={hasExtractionTimeData}
           searchSortOption={searchSortOption || undefined}
           onSearchSortChange={handleSearchSortChange}
+          searchHistory={searchHistory}
+          onSearchHistoryClick={handleSearchHistoryClick}
         />
       </div>
 

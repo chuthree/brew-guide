@@ -317,6 +317,9 @@ interface ViewSwitcherProps {
   // 新增类型统计props
   espressoCount?: number;
   filterCount?: number;
+  // 新增搜索历史相关props
+  searchHistory?: string[];
+  onSearchHistoryClick?: (query: string) => void;
 }
 
 const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
@@ -371,6 +374,9 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
   // 新增类型统计参数
   espressoCount = 0,
   filterCount = 0,
+  // 新增搜索历史参数
+  searchHistory = [],
+  onSearchHistoryClick,
 }) => {
   // 添加极简模式状态
   const [_isMinimalistMode, setIsMinimalistMode] = useState(false);
@@ -615,6 +621,13 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
     }
   };
 
+  // 处理历史记录项点击
+  const handleHistoryClick = (query: string) => {
+    if (onSearchHistoryClick) {
+      onSearchHistoryClick(query);
+    }
+  };
+
   // 处理筛选展开栏
   const handleFilterToggle = () => {
     setIsFilterExpanded(!isFilterExpanded);
@@ -854,7 +867,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                 </div>
               ) : (
                 /* 搜索框 - 替换整个分类栏 */
-                <div className="flex min-h-[22px] items-center pb-1.5">
+                <div className="relative flex min-h-[22px] items-center pb-1.5">
                   <div className="relative flex flex-1 items-center">
                     <input
                       ref={searchInputRef}
@@ -876,6 +889,34 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                 </div>
               )}
             </div>
+
+            {/* 搜索历史下拉框 - 在搜索框没有内容时显示 */}
+            {isSearching &&
+              !searchQuery.trim() &&
+              searchHistory &&
+              searchHistory.length > 0 && (
+                <div className="border-t border-neutral-200/50 dark:border-neutral-700/50">
+                  <div className="px-6 py-3">
+                    <div
+                      className="flex flex-wrap items-center gap-2 overflow-hidden"
+                      style={{ maxHeight: '3.5rem' }}
+                    >
+                      <div className="flex-shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                        历史搜索:
+                      </div>
+                      {searchHistory.map((item, index) => (
+                        <button
+                          key={index}
+                          onClick={() => handleHistoryClick(item)}
+                          className="flex-shrink-0 bg-neutral-200/30 px-2 py-1 text-xs font-medium whitespace-nowrap text-neutral-400 transition-colors dark:bg-neutral-800/50 dark:text-neutral-400"
+                        >
+                          {item}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
 
             {/* 展开式筛选栏 - 在同一个容器内 */}
             <AnimatePresence>
@@ -1058,7 +1099,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                   </div>
                 </div>
               ) : (
-                <div className="flex min-h-[22px] items-center pb-1.5">
+                <div className="relative flex min-h-[22px] items-center pb-1.5">
                   <div className="relative flex flex-1 items-center">
                     <input
                       ref={searchInputRef}
@@ -1094,6 +1135,34 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                 </div>
               )}
             </div>
+
+            {/* 搜索历史下拉框 - 在搜索框没有内容时显示 */}
+            {isSearching &&
+              !searchQuery.trim() &&
+              searchHistory &&
+              searchHistory.length > 0 && (
+                <div className="border-t border-neutral-200/50 dark:border-neutral-700/50">
+                  <div className="px-6 py-3">
+                    <div
+                      className="flex flex-wrap items-center gap-2 overflow-hidden"
+                      style={{ maxHeight: '3.5rem' }}
+                    >
+                      <div className="flex-shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                        历史搜索:
+                      </div>
+                      {searchHistory.map((item, index) => (
+                        <button
+                          key={index}
+                          onClick={() => handleHistoryClick(item)}
+                          className="flex-shrink-0 bg-neutral-200/30 px-2 py-1 text-xs font-medium whitespace-nowrap text-neutral-400 transition-colors dark:bg-neutral-800/50 dark:text-neutral-400"
+                        >
+                          {item}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
 
             {/* 展开式筛选栏 - 在同一个容器内 */}
             <AnimatePresence>

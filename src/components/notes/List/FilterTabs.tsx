@@ -529,7 +529,7 @@ const SearchSortBar: React.FC<SearchSortBarProps> = ({
   return (
     <div className="border-b border-neutral-200 bg-neutral-50/30 px-6 py-3 dark:border-neutral-800 dark:bg-neutral-900/30">
       <div className="flex items-center">
-        <span className="mr-3 flex-shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+        <span className="mr-2 flex-shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
           搜索排序:
         </span>
 
@@ -731,6 +731,8 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
   hasExtractionTimeData = false,
   searchSortOption,
   onSearchSortChange,
+  searchHistory,
+  onSearchHistoryClick,
 }) {
   // 搜索输入框引用 - 移到条件语句前面
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -1062,7 +1064,8 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
               </div>
             </div>
           ) : (
-            <div className="flex min-h-[22px] items-center pb-1.5">
+            /* 搜索框 - 替换整个分类栏 */
+            <div className="relative flex min-h-[22px] items-center pb-1.5">
               <div className="relative flex flex-1 items-center">
                 <input
                   ref={searchInputRef}
@@ -1098,6 +1101,34 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
             </div>
           )}
         </div>
+
+        {/* 搜索历史下拉框 - 在搜索框没有内容时显示 */}
+        {isSearching &&
+          !searchQuery.trim() &&
+          searchHistory &&
+          searchHistory.length > 0 && (
+            <div className="border-t border-neutral-200/50 dark:border-neutral-700/50">
+              <div className="px-6 py-3">
+                <div
+                  className="flex flex-wrap items-center gap-2 overflow-hidden"
+                  style={{ maxHeight: '3.5rem' }}
+                >
+                  <div className="flex-shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                    历史搜索:
+                  </div>
+                  {searchHistory.map((item, index) => (
+                    <button
+                      key={index}
+                      onClick={() => onSearchHistoryClick?.(item)}
+                      className="flex-shrink-0 bg-neutral-200/30 px-2 py-1 text-xs font-medium whitespace-nowrap text-neutral-400 transition-colors dark:bg-neutral-800/50 dark:text-neutral-400"
+                    >
+                      {item}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
         {/* 展开式筛选栏 - 在同一个容器内 */}
         <AnimatePresence>

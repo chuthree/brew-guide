@@ -1,6 +1,11 @@
 import { BrewingNote } from '@/lib/core/config';
 import { SortOption, SORT_OPTIONS, DateGroupingMode } from '../types';
-import { getStringState, saveStringState } from '@/lib/core/statePersistence';
+import {
+  getStringState,
+  saveStringState,
+  getObjectState,
+  saveObjectState,
+} from '@/lib/core/statePersistence';
 import {
   calculateTotalCoffeeConsumption as calculateConsumption,
   formatConsumption as formatConsumptionUtil,
@@ -288,3 +293,44 @@ globalCache.sortOption = getSortOptionPreference();
 // 导出主utils文件的函数，保持兼容性
 export const calculateTotalCoffeeConsumption = calculateConsumption;
 export const formatConsumption = formatConsumptionUtil;
+
+// ============== 搜索历史管理 ==============
+
+// 最大搜索历史记录数
+const MAX_SEARCH_HISTORY = 15;
+
+// 从localStorage读取搜索历史
+export const getSearchHistoryPreference = (): string[] => {
+  return getObjectState(MODULE_NAME, 'searchHistory', []);
+};
+
+// 保存搜索历史到localStorage
+export const saveSearchHistoryPreference = (history: string[]): void => {
+  saveObjectState(MODULE_NAME, 'searchHistory', history);
+};
+
+// 添加搜索记录到历史
+export const addSearchHistory = (query: string): void => {
+  const trimmedQuery = query.trim();
+  if (!trimmedQuery) return;
+
+  const history = getSearchHistoryPreference();
+
+  // 移除重复项（如果存在）
+  const filteredHistory = history.filter(item => item !== trimmedQuery);
+
+  // 添加到开头
+  const newHistory = [trimmedQuery, ...filteredHistory];
+
+  // 限制数量
+  const limitedHistory = newHistory.slice(0, MAX_SEARCH_HISTORY);
+
+  saveSearchHistoryPreference(limitedHistory);
+};
+
+// 从历史中移除单条记录
+export const removeSearchHistoryItem = (query: string): void => {
+  const history = getSearchHistoryPreference();
+  const newHistory = history.filter(item => item !== query);
+  saveSearchHistoryPreference(newHistory);
+};

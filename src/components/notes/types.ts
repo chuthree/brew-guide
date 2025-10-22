@@ -108,6 +108,9 @@ export interface FilterTabsProps {
   // 搜索排序相关props - 独立于普通排序
   searchSortOption?: SortOption;
   onSearchSortChange?: (option: SortOption | null) => void;
+  // 搜索历史相关props
+  searchHistory?: string[];
+  onSearchHistoryClick?: (query: string) => void;
 }
 
 // 添加笔记按钮属性

@@ -13,12 +13,17 @@ import {
   saveStringState,
   getNumberState,
   saveNumberState,
+  getObjectState,
+  saveObjectState,
 } from '@/lib/core/statePersistence';
 import { SortOption } from './SortSelector';
 import { FlavorPeriodStatus } from '@/lib/utils/beanVarietyUtils';
 
 // 模块名称
 const MODULE_NAME = 'coffee-beans';
+
+// 搜索历史最大保存数量
+const MAX_SEARCH_HISTORY = 15;
 
 // 创建全局缓存对象，确保跨组件实例保持数据
 export const globalCache: {
@@ -329,6 +334,50 @@ export const getImageFlowModePreference = (): boolean => {
 // 保存图片流模式到localStorage
 export const saveImageFlowModePreference = (value: boolean): void => {
   saveBooleanState(MODULE_NAME, 'isImageFlowMode', value);
+};
+
+// ==================== 搜索历史管理 ====================
+
+// 从localStorage读取搜索历史
+export const getSearchHistoryPreference = (): string[] => {
+  const history = getObjectState<string[]>(MODULE_NAME, 'searchHistory', []);
+  return Array.isArray(history) ? history : [];
+};
+
+// 保存搜索历史到localStorage
+export const saveSearchHistoryPreference = (history: string[]): void => {
+  saveObjectState(MODULE_NAME, 'searchHistory', history);
+};
+
+// 添加搜索关键词到历史记录
+export const addSearchHistory = (query: string): void => {
+  if (!query.trim()) return;
+
+  const history = getSearchHistoryPreference();
+
+  // 移除重复项（如果已存在，移到最前面）
+  const filteredHistory = history.filter(item => item !== query.trim());
+
+  // 添加到最前面
+  const newHistory = [query.trim(), ...filteredHistory];
+
+  // 限制数量
+  const limitedHistory = newHistory.slice(0, MAX_SEARCH_HISTORY);
+
+  // 保存
+  saveSearchHistoryPreference(limitedHistory);
+};
+
+// 清除搜索历史
+export const clearSearchHistory = (): void => {
+  saveSearchHistoryPreference([]);
+};
+
+// 删除单条搜索历史
+export const removeSearchHistoryItem = (query: string): void => {
+  const history = getSearchHistoryPreference();
+  const newHistory = history.filter(item => item !== query);
+  saveSearchHistoryPreference(newHistory);
 };
 
 // 初始化全局缓存的状态

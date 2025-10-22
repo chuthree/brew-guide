@@ -53,6 +53,8 @@ import {
   saveSelectedRoasterPreference,
   saveImageFlowModePreference,
   isBeanEmpty,
+  getSearchHistoryPreference,
+  addSearchHistory,
 } from './globalCache';
 import { useBeanOperations } from './hooks/useBeanOperations';
 import { useEnhancedBeanFiltering } from './hooks/useEnhancedBeanFiltering';
@@ -1037,6 +1039,12 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   // 添加搜索状态
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchHistory, setSearchHistory] = useState<string[]>([]);
+
+  // 加载搜索历史
+  useEffect(() => {
+    setSearchHistory(getSearchHistoryPreference());
+  }, []);
 
   // 搜索过滤逻辑
   const searchFilteredBeans = React.useMemo(() => {
@@ -1442,6 +1450,24 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     CoffeeBeanManager.clearCache();
   };
 
+  // 处理搜索历史点击
+  const handleSearchHistoryClick = (query: string) => {
+    setSearchQuery(query);
+    // 执行搜索 - 不需要添加到历史因为已经在历史中
+  };
+
+  // 当搜索查询改变且不为空时，添加到历史记录
+  useEffect(() => {
+    if (searchQuery.trim() && isSearching) {
+      const timeoutId = setTimeout(() => {
+        addSearchHistory(searchQuery.trim());
+        setSearchHistory(getSearchHistoryPreference());
+      }, 1000); // 延迟1秒添加，避免频繁添加
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [searchQuery, isSearching]);
+
   return (
     <div className="flex h-full flex-col overflow-hidden">
       {/* 咖啡豆表单弹出框 */}
@@ -1561,6 +1587,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         // 新增类型统计属性
         espressoCount={espressoCount}
         filterCount={filterCount}
+        // 新增搜索历史属性
+        searchHistory={searchHistory}
+        onSearchHistoryClick={handleSearchHistoryClick}
       />
 
       {/* 内容区域 - 可滚动 */}
