@@ -25,9 +25,9 @@ fi
 NEW_VERSION=$1
 BUILD_NUMBER=${2:-}
 
-# 验证版本号格式 (x.y.z)
-if ! [[ $NEW_VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-    echo -e "${RED}错误: 版本号格式不正确，应该是 x.y.z 格式（例如：1.3.12）${NC}"
+# 验证版本号格式 (x.y.z 或 x.y.z-prerelease)
+if ! [[ $NEW_VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+(\.[0-9]+)?)?$ ]]; then
+    echo -e "${RED}错误: 版本号格式不正确，应该是 x.y.z 或 x.y.z-prerelease 格式（例如：1.3.12 或 1.3.12-beta.1）${NC}"
     exit 1
 fi
 
@@ -54,9 +54,9 @@ fi
 # 3. 更新 README.md
 echo -e "${YELLOW}更新 README.md...${NC}"
 if [[ "$OSTYPE" == "darwin"* ]]; then
-    sed -i '' "s/版本-[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*-blue/版本-$NEW_VERSION-blue/" README.md
+    sed -i '' "s/版本-[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\(-[a-zA-Z0-9.]*\)\?-blue/版本-$NEW_VERSION-blue/" README.md
 else
-    sed -i "s/版本-[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*-blue/版本-$NEW_VERSION-blue/" README.md
+    sed -i "s/版本-[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\(-[a-zA-Z0-9.]*\)\?-blue/版本-$NEW_VERSION-blue/" README.md
 fi
 
 # 4. 更新 Android versionName
@@ -80,18 +80,18 @@ fi
 # 6. 更新 iOS MARKETING_VERSION
 echo -e "${YELLOW}更新 ios/App/App.xcodeproj/project.pbxproj...${NC}"
 if [[ "$OSTYPE" == "darwin"* ]]; then
-    sed -i '' "s/MARKETING_VERSION = [0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*;/MARKETING_VERSION = $NEW_VERSION;/g" ios/App/App.xcodeproj/project.pbxproj
+    sed -i '' "s/\(MARKETING_VERSION = \)[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\(-[a-zA-Z0-9.]*\)\?;/\1$NEW_VERSION;/g" ios/App/App.xcodeproj/project.pbxproj
 else
-    sed -i "s/MARKETING_VERSION = [0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*;/MARKETING_VERSION = $NEW_VERSION;/g" ios/App/App.xcodeproj/project.pbxproj
+    sed -i "s/\(MARKETING_VERSION = \)[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\(-[a-zA-Z0-9.]*\)\?;/\1$NEW_VERSION;/g" ios/App/App.xcodeproj/project.pbxproj
 fi
 
 # 7. 更新 iOS CURRENT_PROJECT_VERSION (如果提供了构建号)
 if [ -n "$BUILD_NUMBER" ]; then
     echo -e "${YELLOW}更新 iOS CURRENT_PROJECT_VERSION 到 ${BUILD_NUMBER}...${NC}"
     if [[ "$OSTYPE" == "darwin"* ]]; then
-        sed -i '' "s/CURRENT_PROJECT_VERSION = [0-9][0-9]*;/CURRENT_PROJECT_VERSION = $BUILD_NUMBER;/g" ios/App/App.xcodeproj/project.pbxproj
+        sed -i '' "s/\(CURRENT_PROJECT_VERSION = \)[0-9][0-9]*;/\1$BUILD_NUMBER;/g" ios/App/App.xcodeproj/project.pbxproj
     else
-        sed -i "s/CURRENT_PROJECT_VERSION = [0-9][0-9]*;/CURRENT_PROJECT_VERSION = $BUILD_NUMBER;/g" ios/App/App.xcodeproj/project.pbxproj
+        sed -i "s/\(CURRENT_PROJECT_VERSION = \)[0-9][0-9]*;/\1$BUILD_NUMBER;/g" ios/App/App.xcodeproj/project.pbxproj
     fi
 fi
 
