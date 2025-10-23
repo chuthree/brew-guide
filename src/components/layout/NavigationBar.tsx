@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { equipmentList, type CustomEquipment } from '@/lib/core/config';
 import hapticsUtils from '@/lib/ui/haptics';
 import { SettingsOptions } from '@/components/settings/Settings';
-import { formatGrindSize } from '@/lib/utils/grindUtils';
 import { BREWING_EVENTS, ParameterInfo } from '@/lib/brewing/constants';
 import { listenToEvent } from '@/lib/brewing/events';
 import {
@@ -778,14 +777,10 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                   <>
                                     <span className="shrink-0">·</span>
                                     <EditableParameter
-                                      value={formatGrindSize(
+                                      value={
                                         displayOverlay?.grindSize ||
-                                          editableParams.grindSize,
-                                        settings.grindType,
-                                        settings.customGrinders as
-                                          | Record<string, unknown>[]
-                                          | undefined
-                                      )}
+                                        editableParams.grindSize
+                                      }
                                       onChange={v =>
                                         handleParamChange('grindSize', v)
                                       }
@@ -834,13 +829,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                 </span>
                                 <span className="shrink-0">·</span>
                                 <span className="whitespace-nowrap">
-                                  {formatGrindSize(
-                                    parameterInfo.params.grindSize || '',
-                                    settings.grindType,
-                                    settings.customGrinders as
-                                      | Record<string, unknown>[]
-                                      | undefined
-                                  )}
+                                  {parameterInfo.params.grindSize || ''}
                                 </span>
                                 <span className="shrink-0">·</span>
                                 <span className="whitespace-nowrap">

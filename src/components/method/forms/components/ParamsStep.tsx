@@ -1,12 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import {
-  formatGrindSize,
-  hasSpecificGrindScale,
-  getGrindScaleUnit,
-} from '@/lib/utils/grindUtils';
-import { Grinder, availableGrinders, CustomEquipment } from '@/lib/core/config';
-import { SettingsOptions } from '@/components/settings/Settings';
+import { CustomEquipment } from '@/lib/core/config';
 import { isEspressoMachine } from '@/lib/utils/equipmentUtils';
 
 // 动画变体
@@ -40,7 +34,6 @@ interface ParamsStepProps {
   // 意式机特有参数的处理函数
   onExtractionTimeChange?: (value: number) => void;
   onLiquidWeightChange?: (value: string) => void;
-  settings: SettingsOptions;
   customEquipment?: CustomEquipment;
 }
 
@@ -52,82 +45,12 @@ const ParamsStep: React.FC<ParamsStepProps> = ({
   onTempChange,
   onExtractionTimeChange,
   onLiquidWeightChange,
-  settings,
   customEquipment,
 }) => {
   // 检查是否是意式机
   const isEspresso = customEquipment
     ? isEspressoMachine(customEquipment)
     : false;
-
-  // 查找选定的研磨机
-  const selectedGrinder = availableGrinders.find(
-    (g: Grinder) => g.id === settings.grindType
-  );
-  const grinderName = selectedGrinder ? selectedGrinder.name : '通用';
-
-  // 研磨度参考提示渲染函数
-  const renderGrindSizeHints = () => {
-    if (params.grindSize) return null;
-
-    return (
-      <div className="mt-1 space-y-1 text-xs">
-        <p className="text-neutral-500 dark:text-neutral-400">
-          研磨度参考 (可自由输入):
-        </p>
-        {selectedGrinder && selectedGrinder.grindSizes ? (
-          // 显示特定研磨机的提示
-          <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-            {Object.entries(selectedGrinder.grindSizes)
-              .filter(([key]) => {
-                // 只显示粗细度类型，而不是冲煮器具名称
-                const basicKeywords = [
-                  '极细',
-                  '特细',
-                  '细',
-                  '中细',
-                  '中细偏粗',
-                  '中粗',
-                  '粗',
-                  '特粗',
-                ];
-                return basicKeywords.includes(key);
-              })
-              .map(([key, value]) => (
-                <p key={key} className="text-neutral-500 dark:text-neutral-400">
-                  · {key}: {value}
-                </p>
-              ))}
-          </div>
-        ) : (
-          // 显示通用提示
-          <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-            {isEspresso ? (
-              <>
-                <p className="text-neutral-500 dark:text-neutral-400">
-                  · 极细 特细
-                </p>
-                <p className="text-neutral-500 dark:text-neutral-400">
-                  · 浓缩咖啡级
-                </p>
-              </>
-            ) : (
-              <>
-                <p className="text-neutral-500 dark:text-neutral-400">
-                  · 极细 特细
-                </p>
-                <p className="text-neutral-500 dark:text-neutral-400">· 细</p>
-                <p className="text-neutral-500 dark:text-neutral-400">· 中细</p>
-                <p className="text-neutral-500 dark:text-neutral-400">
-                  · 中粗 粗
-                </p>
-              </>
-            )}
-          </div>
-        )}
-      </div>
-    );
-  };
 
   return (
     <motion.div
@@ -243,35 +166,18 @@ const ParamsStep: React.FC<ParamsStepProps> = ({
         {/* 研磨度 */}
         <div className="space-y-2">
           <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
-            研磨度{' '}
-            {grinderName !== '通用' && (
-              <span className="text-xs text-neutral-400">({grinderName})</span>
-            )}
+            研磨度
           </label>
           <input
             type="text"
-            value={formatGrindSize(
-              params.grindSize || '',
-              settings.grindType,
-              settings.customGrinders as Record<string, unknown>[] | undefined
-            )}
+            value={params.grindSize || ''}
             onChange={e => onGrindSizeChange(e.target.value)}
             onFocus={e => e.target.select()}
             placeholder={
-              isEspresso
-                ? hasSpecificGrindScale(settings.grindType)
-                  ? `例如：2-4${getGrindScaleUnit(settings.grindType)}`
-                  : '例如：特细、浓缩咖啡级'
-                : hasSpecificGrindScale(settings.grindType)
-                  ? `例如：8${getGrindScaleUnit(settings.grindType)} (可直接输入${getGrindScaleUnit(settings.grindType)}数)`
-                  : '例如：中细、特细、中粗等'
+              isEspresso ? '例如：特细、浓缩咖啡级' : '例如：中细、特细、中粗等'
             }
             className="w-full border-b border-neutral-300 bg-transparent py-2 outline-hidden focus:border-neutral-800 dark:border-neutral-700 dark:focus:border-neutral-400"
           />
-          {/* 移除重复的参考刻度显示，因为输入框已经显示转换后的值 */}
-
-          {/* 研磨度参考提示 */}
-          {renderGrindSizeHints()}
         </div>
 
         {/* 只在非意式机模式下显示水温字段 */}

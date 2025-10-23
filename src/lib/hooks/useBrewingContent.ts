@@ -5,7 +5,6 @@ import {
   CustomEquipment,
 } from '@/lib/core/config';
 import { Content } from './useBrewingState';
-import { formatGrindSize } from '@/lib/utils/grindUtils';
 import { SettingsOptions } from '@/components/settings/Settings';
 import { loadCustomMethodsForEquipment } from '@/lib/managers/customMethods';
 import { Stage } from '@/components/method/forms/components/types';
@@ -46,7 +45,7 @@ export function useBrewingContent({
   methodType,
   customMethods, // 不再忽略customMethods参数
   selectedMethod,
-  settings,
+  settings: _settings,
   customEquipments = [], // 设置默认值为空数组
 }: UseBrewingContentProps) {
   const initialContent: Content = {
@@ -238,7 +237,7 @@ export function useBrewingContent({
             items = [
               `水粉比 ${method.params.ratio}`,
               `总时长 ${formatTime(totalTime, true)}`,
-              `研磨度 ${formatGrindSize(method.params.grindSize, settings.grindType, settings.customGrinders as Record<string, unknown>[] | undefined)}`,
+              `研磨度 ${method.params.grindSize}`,
             ];
           }
 
@@ -292,7 +291,7 @@ export function useBrewingContent({
               items = [
                 `水粉比 ${method.params.ratio}`,
                 `总时长 ${formatTime(totalTime, true)}`,
-                `研磨度 ${formatGrindSize(method.params.grindSize, settings.grindType, settings.customGrinders as Record<string, unknown>[] | undefined)}`,
+                `研磨度 ${method.params.grindSize}`,
               ];
             }
 
@@ -343,8 +342,6 @@ export function useBrewingContent({
   }, [
     selectedEquipment,
     methodType,
-    settings.grindType,
-    settings.customGrinders,
     customEquipments,
     currentEquipmentCustomMethods, // 添加依赖，确保currentEquipmentCustomMethods变化时更新content
   ]);

@@ -6,15 +6,6 @@ import {
   defaultSettings,
 } from '@/components/settings/Settings';
 import fontZoomUtils from '@/lib/utils/fontZoomUtils';
-// 移除未使用的confetti导入
-import { availableGrinders } from '@/lib/core/config';
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from '@/components/coffee-bean/ui/select';
 
 // 设置页面界面属性
 interface OnboardingProps {
@@ -54,11 +45,6 @@ const Onboarding: React.FC<OnboardingProps> = ({
     if (key === 'textZoomLevel') {
       fontZoomUtils.set(value as number);
     }
-
-    // 当选择特定磨豆机时可以提供反馈（移除硬编码特定品牌的特殊处理）
-    // if (key === 'grindType' && value !== 'generic') {
-    //     // 可以在这里添加通用的反馈逻辑
-    // }
   };
 
   // 处理完成按钮点击
@@ -156,50 +142,6 @@ const Onboarding: React.FC<OnboardingProps> = ({
                     </div>
                   </div>
                 )}
-
-                {/* 磨豆机选择 */}
-                {/* 磨豆机选择 */}
-                <div
-                  id="onboarding-grinder-select-wrapper"
-                  className="rounded-xl bg-neutral-100 p-4 dark:bg-neutral-800"
-                >
-                  <label className="mb-1 block text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                    磨豆机型号
-                  </label>
-                  <div className="relative">
-                    <Select
-                      value={settings.grindType}
-                      onValueChange={value =>
-                        handleSettingChange('grindType', value)
-                      }
-                    >
-                      <SelectTrigger
-                        variant="minimal"
-                        className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm font-medium text-neutral-800 focus:ring-2 focus:ring-neutral-500 focus:outline-hidden dark:border-neutral-600 dark:bg-neutral-700 dark:text-neutral-200"
-                      >
-                        <SelectValue placeholder="选择磨豆机" />
-                        <svg
-                          className="ml-1 h-4 w-4 text-neutral-500"
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                        >
-                          <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-                        </svg>
-                      </SelectTrigger>
-                      <SelectContent className="max-h-[40vh] overflow-y-auto">
-                        {availableGrinders.map(grinder => (
-                          <SelectItem key={grinder.id} value={grinder.id}>
-                            {grinder.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
-                    选择你的磨豆机以获得研磨度参考，后续可在设置中自定义
-                  </p>
-                </div>
 
                 {/* 用户名输入 */}
                 <div className="rounded-lg bg-neutral-100 p-4 dark:bg-neutral-800">

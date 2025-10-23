@@ -36,7 +36,6 @@ import Settings, {
   defaultSettings,
 } from '@/components/settings/Settings';
 import DisplaySettings from '@/components/settings/DisplaySettings';
-import GrinderSettings from '@/components/settings/GrinderSettings';
 import StockSettings from '@/components/settings/StockSettings';
 import BeanSettings from '@/components/settings/BeanSettings';
 import FlavorPeriodSettings from '@/components/settings/FlavorPeriodSettings';
@@ -217,7 +216,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
   // 子设置页面的状态
   const [showDisplaySettings, setShowDisplaySettings] = useState(false);
-  const [showGrinderSettings, setShowGrinderSettings] = useState(false);
   const [showStockSettings, setShowStockSettings] = useState(false);
   const [showBeanSettings, setShowBeanSettings] = useState(false);
   const [showFlavorPeriodSettings, setShowFlavorPeriodSettings] =
@@ -235,7 +233,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   // 计算是否有任何子设置页面打开
   const hasSubSettingsOpen =
     showDisplaySettings ||
-    showGrinderSettings ||
     showStockSettings ||
     showBeanSettings ||
     showFlavorPeriodSettings ||
@@ -3012,7 +3009,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         hasSubSettingsOpen={hasSubSettingsOpen}
         subSettingsHandlers={{
           onOpenDisplaySettings: () => setShowDisplaySettings(true),
-          onOpenGrinderSettings: () => setShowGrinderSettings(true),
           onOpenStockSettings: () => setShowStockSettings(true),
           onOpenBeanSettings: () => setShowBeanSettings(true),
           onOpenFlavorPeriodSettings: () => setShowFlavorPeriodSettings(true),
@@ -3032,24 +3028,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         <DisplaySettings
           settings={settings}
           onClose={() => setShowDisplaySettings(false)}
-          handleChange={async (key, value) => {
-            const newSettings = { ...settings, [key]: value };
-            setSettings(newSettings);
-            const { Storage } = await import('@/lib/core/storage');
-            await Storage.set('brewGuideSettings', JSON.stringify(newSettings));
-            window.dispatchEvent(
-              new CustomEvent('storageChange', {
-                detail: { key: 'brewGuideSettings' },
-              })
-            );
-          }}
-        />
-      )}
-
-      {showGrinderSettings && (
-        <GrinderSettings
-          settings={settings}
-          onClose={() => setShowGrinderSettings(false)}
           handleChange={async (key, value) => {
             const newSettings = { ...settings, [key]: value };
             setSettings(newSettings);

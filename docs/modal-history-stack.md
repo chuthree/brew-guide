@@ -267,7 +267,6 @@ useEffect(() => {
     // 检查是否有子设置页面打开
     const hasSubSettingsOpen =
       showDisplaySettings ||
-      showGrinderSettings ||
       showBeanSettings ||
       showTimerSettings ||
       showDataSettings;
@@ -275,7 +274,6 @@ useEffect(() => {
     if (hasSubSettingsOpen) {
       // 如果有子设置页面打开，关闭它们
       setShowDisplaySettings(false);
-      setShowGrinderSettings(false);
       // ... 关闭所有子设置页面
       // 重新添加主设置的历史记录
       window.history.pushState({ modal: 'settings' }, '');
@@ -288,12 +286,7 @@ useEffect(() => {
   window.addEventListener('popstate', handlePopState);
 
   return () => window.removeEventListener('popstate', handlePopState);
-}, [
-  isOpen,
-  onClose,
-  showDisplaySettings,
-  showGrinderSettings /* ... 所有子设置状态 */,
-]);
+}, [isOpen, onClose, showDisplaySettings /* ... 所有子设置状态 */]);
 ```
 
 **子设置组件**：

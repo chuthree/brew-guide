@@ -464,7 +464,6 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
               commonMethods={availableMethods}
               onMethodSelect={setSelectedMethod}
               onParamsChange={_handleMethodParamsChange}
-              settings={settings}
             />
           )}
         </div>

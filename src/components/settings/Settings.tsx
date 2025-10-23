@@ -12,7 +12,6 @@ import {
   RefreshCw,
   Loader,
   Monitor,
-  SlidersHorizontal,
   Archive,
   List,
   CalendarDays,
@@ -30,19 +29,11 @@ import {
 
 import Image from 'next/image';
 import { getChildPageStyle } from '@/lib/navigation/pageTransition';
-// 自定义磨豆机接口
-export interface CustomGrinder {
-  id: string;
-  name: string;
-  grindSizes: Record<string, string>;
-  isCustom: true;
-}
 
 // 定义设置选项接口
 export interface SettingsOptions {
   notificationSound: boolean;
   hapticFeedback: boolean;
-  grindType: string;
   textZoomLevel: number;
   layoutSettings?: LayoutSettings; // 添加布局设置
   showFlowRate: boolean; // 添加显示流速选项
@@ -57,7 +48,6 @@ export interface SettingsOptions {
   notesMaxLines: number; // 备注最大显示行数
   showTotalPrice: boolean; // 是否显示总价格而不是单价
   showStatusDots: boolean; // 是否显示状态点
-  customGrinders?: CustomGrinder[]; // 添加自定义磨豆机列表
 
   safeAreaMargins?: {
     top: number; // 顶部边距
@@ -121,7 +111,6 @@ export interface SettingsOptions {
 export const defaultSettings: SettingsOptions = {
   notificationSound: true,
   hapticFeedback: true,
-  grindType: 'generic',
   textZoomLevel: 1.0,
   layoutSettings: {
     stageInfoReversed: false,
@@ -143,7 +132,6 @@ export const defaultSettings: SettingsOptions = {
   notesMaxLines: 1, // 默认最大显示1行
   showTotalPrice: false, // 默认显示单价
   showStatusDots: true, // 默认显示状态点
-  customGrinders: [], // 默认无自定义磨豆机
 
   safeAreaMargins: {
     top: 38, // 默认顶部边距 42px
@@ -199,7 +187,6 @@ export const defaultSettings: SettingsOptions = {
 // 子设置页面的打开/关闭函数接口
 export interface SubSettingsHandlers {
   onOpenDisplaySettings: () => void;
-  onOpenGrinderSettings: () => void;
   onOpenStockSettings: () => void;
   onOpenBeanSettings: () => void;
   onOpenFlavorPeriodSettings: () => void;
@@ -549,8 +536,6 @@ const Settings: React.FC<SettingsProps> = ({
       window.removeEventListener('popstate', handlePopState);
     };
   }, [isOpen, onClose, hasSubSettingsOpen]);
-
-  // showConfetti 函数已移到 GrinderSettings 组件中
 
   // 处理设置变更
   const handleChange = async <K extends keyof SettingsOptions>(
@@ -949,16 +934,6 @@ const Settings: React.FC<SettingsProps> = ({
             <div className="flex items-center space-x-3">
               <Timer className="h-4 w-4 text-neutral-500" />
               <span>计时器设置</span>
-            </div>
-            <ChevronRight className="h-4 w-4 text-neutral-400" />
-          </button>
-          <button
-            onClick={subSettingsHandlers.onOpenGrinderSettings}
-            className="flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
-          >
-            <div className="flex items-center space-x-3">
-              <SlidersHorizontal className="h-4 w-4 text-neutral-500" />
-              <span>研磨度设置</span>
             </div>
             <ChevronRight className="h-4 w-4 text-neutral-400" />
           </button>

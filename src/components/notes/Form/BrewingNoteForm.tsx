@@ -24,11 +24,6 @@ import {
 import { loadCustomEquipments } from '@/lib/managers/customEquipments';
 import { loadCustomMethods } from '@/lib/managers/customMethods';
 import {
-  formatGrindSize,
-  hasSpecificGrindScale,
-  getGrindScaleUnit,
-} from '@/lib/utils/grindUtils';
-import {
   getEquipmentNameById,
   getEquipmentIdByName,
 } from '@/lib/utils/equipmentUtils';
@@ -1387,17 +1382,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                   id="grind-size"
                   name="grindSize"
                   type="text"
-                  value={
-                    settings
-                      ? formatGrindSize(
-                          methodParams.grindSize,
-                          settings.grindType,
-                          settings.customGrinders as
-                            | Record<string, unknown>[]
-                            | undefined
-                        )
-                      : methodParams.grindSize
-                  }
+                  value={methodParams.grindSize}
                   onChange={e =>
                     setMethodParams({
                       ...methodParams,
@@ -1405,11 +1390,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                     })
                   }
                   className="w-full rounded-none border-b border-neutral-200 bg-transparent py-2 text-xs text-neutral-800 outline-hidden transition-colors placeholder:text-neutral-300 focus:border-neutral-400 dark:border-neutral-800 dark:text-neutral-300 dark:placeholder:text-neutral-600 dark:focus:border-neutral-600"
-                  placeholder={
-                    settings && hasSpecificGrindScale(settings.grindType)
-                      ? `8${getGrindScaleUnit(settings.grindType)}`
-                      : '中细'
-                  }
+                  placeholder="中细"
                 />
               </div>
               <div className="relative">

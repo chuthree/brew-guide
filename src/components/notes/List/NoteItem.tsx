@@ -10,8 +10,6 @@ import {
   SettingsOptions,
   defaultSettings,
 } from '@/components/settings/Settings';
-import { formatGrindSize as _formatGrindSize } from '@/lib/utils/grindUtils';
-import { availableGrinders } from '@/lib/core/config';
 import { useFlavorDimensions } from '@/lib/hooks/useFlavorDimensions';
 
 // 动态导入 ImageViewer 组件 - 移除加载占位符
@@ -37,7 +35,6 @@ const NoteItem: React.FC<NoteItemProps> = ({
 }) => {
   // 添加用户设置状态
   const [_settings, setSettings] = useState<SettingsOptions>(defaultSettings);
-  const [_grinderName, setGrinderName] = useState<string>('');
   // 图片查看器状态和错误状态
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [imageError, setImageError] = useState(false);
@@ -65,16 +62,6 @@ const NoteItem: React.FC<NoteItemProps> = ({
         if (settingsStr) {
           const parsedSettings = JSON.parse(settingsStr) as SettingsOptions;
           setSettings(parsedSettings);
-
-          // 获取磨豆机名称
-          if (parsedSettings.grindType !== 'generic') {
-            const grinder = availableGrinders.find(
-              g => g.id === parsedSettings.grindType
-            );
-            if (grinder) {
-              setGrinderName(grinder.name);
-            }
-          }
         }
       } catch (error) {
         console.error('加载用户设置失败', error);
@@ -210,68 +197,11 @@ const NoteItem: React.FC<NoteItemProps> = ({
                         <span>·</span>
                         {note.params.grindSize && note.params.temp ? (
                           <span>
-                            {isShareMode &&
-                            _settings.grindType !== 'generic' &&
-                            _grinderName ? (
-                              // 在分享模式下显示磨豆机名称 + 研磨度
-                              <>
-                                {_grinderName}{' '}
-                                {_formatGrindSize(
-                                  note.params.grindSize,
-                                  _settings.grindType,
-                                  _settings.customGrinders as
-                                    | Record<string, unknown>[]
-                                    | undefined
-                                )}{' '}
-                                · {note.params.temp}
-                              </>
-                            ) : (
-                              // 普通显示 - 也应用转换
-                              <>
-                                {_formatGrindSize(
-                                  note.params.grindSize,
-                                  _settings.grindType,
-                                  _settings.customGrinders as
-                                    | Record<string, unknown>[]
-                                    | undefined
-                                )}{' '}
-                                · {note.params.temp}
-                              </>
-                            )}
+                            {note.params.grindSize} · {note.params.temp}
                           </span>
                         ) : (
                           <span>
-                            {note.params.grindSize ? (
-                              isShareMode &&
-                              _settings.grindType !== 'generic' &&
-                              _grinderName ? (
-                                // 在分享模式下只显示研磨度
-                                <>
-                                  {_grinderName}{' '}
-                                  {_formatGrindSize(
-                                    note.params.grindSize,
-                                    _settings.grindType,
-                                    _settings.customGrinders as
-                                      | Record<string, unknown>[]
-                                      | undefined
-                                  )}
-                                </>
-                              ) : (
-                                // 普通显示 - 也应用转换
-                                <>
-                                  {_formatGrindSize(
-                                    note.params.grindSize,
-                                    _settings.grindType,
-                                    _settings.customGrinders as
-                                      | Record<string, unknown>[]
-                                      | undefined
-                                  )}
-                                </>
-                              )
-                            ) : (
-                              // 只有水温
-                              <>{note.params.temp}</>
-                            )}
+                            {note.params.grindSize || note.params.temp}
                           </span>
                         )}
                       </>

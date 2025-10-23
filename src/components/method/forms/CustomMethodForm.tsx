@@ -15,10 +15,6 @@ import {
   getPourTypeName,
 } from '@/lib/utils/equipmentUtils';
 import {
-  SettingsOptions,
-  defaultSettings,
-} from '@/components/settings/Settings';
-import {
   Steps,
   NameStep,
   ParamsStep,
@@ -233,10 +229,6 @@ const CustomMethodForm = React.forwardRef<
     return initializeNewMethod();
   });
 
-  // 获取设置
-  const [localSettings, setLocalSettings] =
-    useState<SettingsOptions>(defaultSettings);
-
   // ===== 步骤配置 =====
   const steps = React.useMemo(
     () => [
@@ -370,32 +362,6 @@ const CustomMethodForm = React.forwardRef<
   };
 
   // ===== 副作用 =====
-
-  // 加载设置
-  useEffect(() => {
-    const loadSettings = async () => {
-      const { Storage } = await import('@/lib/core/storage');
-      const savedSettings = await Storage.get('brewGuideSettings');
-      if (!savedSettings) return;
-
-      try {
-        const parsedSettings = JSON.parse(savedSettings) as SettingsOptions;
-        // 确保必要设置存在
-        if (!parsedSettings.layoutSettings) {
-          parsedSettings.layoutSettings = defaultSettings.layoutSettings;
-        }
-
-        setLocalSettings(parsedSettings);
-      } catch (e) {
-        // Log error in development only
-        if (process.env.NODE_ENV === 'development') {
-          console.error('Failed to parse settings from storage:', e);
-        }
-      }
-    };
-
-    loadSettings();
-  }, []);
 
   // 自动聚焦输入框
   useEffect(() => {
@@ -1344,7 +1310,6 @@ const CustomMethodForm = React.forwardRef<
                 ? handleLiquidWeightChange
                 : undefined
             }
-            settings={localSettings}
             customEquipment={customEquipment}
           />
         );

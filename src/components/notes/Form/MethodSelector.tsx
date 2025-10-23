@@ -2,12 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { Method } from '@/lib/core/config';
-import {
-  formatGrindSize,
-  hasSpecificGrindScale,
-  getGrindScaleUnit,
-} from '@/lib/utils/grindUtils';
-import { SettingsOptions } from '@/components/settings/Settings';
 
 interface MethodSelectorProps {
   selectedEquipment: string;
@@ -16,7 +10,6 @@ interface MethodSelectorProps {
   commonMethods: Method[];
   onMethodSelect: (methodId: string) => void;
   onParamsChange: (method: Method) => void;
-  settings?: SettingsOptions; // 添加可选的设置参数
 }
 
 const MethodSelector: React.FC<MethodSelectorProps> = ({
@@ -26,7 +19,6 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
   commonMethods,
   onMethodSelect,
   onParamsChange,
-  settings,
 }) => {
   // 本地状态管理参数
   const [coffeeAmount, setCoffeeAmount] = useState<string>('15');
@@ -125,19 +117,12 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
         setCoffeeAmount(coffee);
         setRatioAmount(ratio);
         setWaterAmount(method.params.water);
-        // 设置研磨度时应用转换
-        const displayGrindSize = settings
-          ? formatGrindSize(
-              method.params.grindSize,
-              settings.grindType,
-              settings.customGrinders as Record<string, unknown>[] | undefined
-            )
-          : method.params.grindSize;
-        setGrindSize(displayGrindSize);
+        // 直接设置研磨度，不进行转换
+        setGrindSize(method.params.grindSize);
         setTempValue(temp);
       }
     }
-  }, [selectedMethod, customMethods, commonMethods, settings]);
+  }, [selectedMethod, customMethods, commonMethods]);
 
   // 辅助函数：提取数字部分
   function extractNumber(str: string): string {
@@ -219,15 +204,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
               <div className="flex items-center">
                 <span className="w-14 text-xs font-medium">研磨度:</span>
                 <span className="text-xs font-medium">
-                  {settings
-                    ? formatGrindSize(
-                        method.params.grindSize,
-                        settings.grindType,
-                        settings.customGrinders as
-                          | Record<string, unknown>[]
-                          | undefined
-                      )
-                    : method.params.grindSize}
+                  {method.params.grindSize}
                 </span>
               </div>
             </div>
@@ -306,11 +283,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
                         handleGrindSizeChange(e.target.value, method)
                       }
                       className="w-16 rounded-sm border border-neutral-300 bg-white px-1 py-0.5 text-right text-xs font-medium text-neutral-800 focus:ring-1 focus:ring-neutral-500 focus:outline-hidden dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
-                      placeholder={
-                        settings && hasSpecificGrindScale(settings.grindType)
-                          ? `8${getGrindScaleUnit(settings.grindType)}`
-                          : '中细'
-                      }
+                      placeholder="中细"
                     />
                   </div>
                 </div>
