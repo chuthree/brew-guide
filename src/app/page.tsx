@@ -3032,8 +3032,16 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         <DisplaySettings
           settings={settings}
           onClose={() => setShowDisplaySettings(false)}
-          handleChange={(key, value) => {
-            setSettings(prev => ({ ...prev, [key]: value }));
+          handleChange={async (key, value) => {
+            const newSettings = { ...settings, [key]: value };
+            setSettings(newSettings);
+            const { Storage } = await import('@/lib/core/storage');
+            await Storage.set('brewGuideSettings', JSON.stringify(newSettings));
+            window.dispatchEvent(
+              new CustomEvent('storageChange', {
+                detail: { key: 'brewGuideSettings' },
+              })
+            );
           }}
         />
       )}
@@ -3042,8 +3050,16 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         <GrinderSettings
           settings={settings}
           onClose={() => setShowGrinderSettings(false)}
-          handleChange={(key, value) => {
-            setSettings(prev => ({ ...prev, [key]: value }));
+          handleChange={async (key, value) => {
+            const newSettings = { ...settings, [key]: value };
+            setSettings(newSettings);
+            const { Storage } = await import('@/lib/core/storage');
+            await Storage.set('brewGuideSettings', JSON.stringify(newSettings));
+            window.dispatchEvent(
+              new CustomEvent('storageChange', {
+                detail: { key: 'brewGuideSettings' },
+              })
+            );
           }}
         />
       )}
@@ -3052,8 +3068,17 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         <StockSettings
           settings={settings}
           onClose={() => setShowStockSettings(false)}
-          handleChange={(key, value) => {
-            setSettings(prev => ({ ...prev, [key]: value }));
+          handleChange={async (key, value) => {
+            const newSettings = { ...settings, [key]: value };
+            setSettings(newSettings);
+            const { Storage } = await import('@/lib/core/storage');
+            await Storage.set('brewGuideSettings', JSON.stringify(newSettings));
+            // 触发自定义事件通知其他组件设置已更改
+            window.dispatchEvent(
+              new CustomEvent('storageChange', {
+                detail: { key: 'brewGuideSettings' },
+              })
+            );
           }}
         />
       )}
@@ -3062,8 +3087,16 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         <BeanSettings
           settings={settings}
           onClose={() => setShowBeanSettings(false)}
-          handleChange={(key, value) => {
-            setSettings(prev => ({ ...prev, [key]: value }));
+          handleChange={async (key, value) => {
+            const newSettings = { ...settings, [key]: value };
+            setSettings(newSettings);
+            const { Storage } = await import('@/lib/core/storage');
+            await Storage.set('brewGuideSettings', JSON.stringify(newSettings));
+            window.dispatchEvent(
+              new CustomEvent('storageChange', {
+                detail: { key: 'brewGuideSettings' },
+              })
+            );
           }}
         />
       )}
@@ -3072,8 +3105,16 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         <FlavorPeriodSettings
           settings={settings}
           onClose={() => setShowFlavorPeriodSettings(false)}
-          handleChange={(key, value) => {
-            setSettings(prev => ({ ...prev, [key]: value }));
+          handleChange={async (key, value) => {
+            const newSettings = { ...settings, [key]: value };
+            setSettings(newSettings);
+            const { Storage } = await import('@/lib/core/storage');
+            await Storage.set('brewGuideSettings', JSON.stringify(newSettings));
+            window.dispatchEvent(
+              new CustomEvent('storageChange', {
+                detail: { key: 'brewGuideSettings' },
+              })
+            );
           }}
         />
       )}
@@ -3082,8 +3123,16 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         <TimerSettings
           settings={settings}
           onClose={() => setShowTimerSettings(false)}
-          handleChange={(key, value) => {
-            setSettings(prev => ({ ...prev, [key]: value }));
+          handleChange={async (key, value) => {
+            const newSettings = { ...settings, [key]: value };
+            setSettings(newSettings);
+            const { Storage } = await import('@/lib/core/storage');
+            await Storage.set('brewGuideSettings', JSON.stringify(newSettings));
+            window.dispatchEvent(
+              new CustomEvent('storageChange', {
+                detail: { key: 'brewGuideSettings' },
+              })
+            );
           }}
         />
       )}
@@ -3092,8 +3141,16 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         <DataSettings
           settings={settings}
           onClose={() => setShowDataSettings(false)}
-          handleChange={(key, value) => {
-            setSettings(prev => ({ ...prev, [key]: value }));
+          handleChange={async (key, value) => {
+            const newSettings = { ...settings, [key]: value };
+            setSettings(newSettings);
+            const { Storage } = await import('@/lib/core/storage');
+            await Storage.set('brewGuideSettings', JSON.stringify(newSettings));
+            window.dispatchEvent(
+              new CustomEvent('storageChange', {
+                detail: { key: 'brewGuideSettings' },
+              })
+            );
           }}
           onDataChange={handleDataChange}
         />
@@ -3103,8 +3160,16 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         <NotificationSettings
           settings={settings}
           onClose={() => setShowNotificationSettings(false)}
-          handleChange={(key, value) => {
-            setSettings(prev => ({ ...prev, [key]: value }));
+          handleChange={async (key, value) => {
+            const newSettings = { ...settings, [key]: value };
+            setSettings(newSettings);
+            const { Storage } = await import('@/lib/core/storage');
+            await Storage.set('brewGuideSettings', JSON.stringify(newSettings));
+            window.dispatchEvent(
+              new CustomEvent('storageChange', {
+                detail: { key: 'brewGuideSettings' },
+              })
+            );
           }}
         />
       )}
@@ -3113,8 +3178,16 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         <RandomCoffeeBeanSettings
           settings={settings}
           onClose={() => setShowRandomCoffeeBeanSettings(false)}
-          handleChange={(key, value) => {
-            setSettings(prev => ({ ...prev, [key]: value }));
+          handleChange={async (key, value) => {
+            const newSettings = { ...settings, [key]: value };
+            setSettings(newSettings);
+            const { Storage } = await import('@/lib/core/storage');
+            await Storage.set('brewGuideSettings', JSON.stringify(newSettings));
+            window.dispatchEvent(
+              new CustomEvent('storageChange', {
+                detail: { key: 'brewGuideSettings' },
+              })
+            );
           }}
         />
       )}
@@ -3123,8 +3196,16 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         <SearchSortSettings
           settings={settings}
           onClose={() => setShowSearchSortSettings(false)}
-          handleChange={(key, value) => {
-            setSettings(prev => ({ ...prev, [key]: value }));
+          handleChange={async (key, value) => {
+            const newSettings = { ...settings, [key]: value };
+            setSettings(newSettings);
+            const { Storage } = await import('@/lib/core/storage');
+            await Storage.set('brewGuideSettings', JSON.stringify(newSettings));
+            window.dispatchEvent(
+              new CustomEvent('storageChange', {
+                detail: { key: 'brewGuideSettings' },
+              })
+            );
           }}
         />
       )}
@@ -3133,8 +3214,16 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         <FlavorDimensionSettings
           settings={settings}
           onClose={() => setShowFlavorDimensionSettings(false)}
-          handleChange={(key, value) => {
-            setSettings(prev => ({ ...prev, [key]: value }));
+          handleChange={async (key, value) => {
+            const newSettings = { ...settings, [key]: value };
+            setSettings(newSettings);
+            const { Storage } = await import('@/lib/core/storage');
+            await Storage.set('brewGuideSettings', JSON.stringify(newSettings));
+            window.dispatchEvent(
+              new CustomEvent('storageChange', {
+                detail: { key: 'brewGuideSettings' },
+              })
+            );
           }}
         />
       )}
