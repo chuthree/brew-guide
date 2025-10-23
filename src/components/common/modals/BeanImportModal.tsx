@@ -279,7 +279,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
     <>
       {shouldRender && (
         <div
-          className="fixed inset-0 z-[60] mx-auto flex max-w-[500px] flex-col bg-neutral-50 dark:bg-neutral-900"
+          className="fixed inset-0 mx-auto flex max-w-[500px] flex-col bg-neutral-50 dark:bg-neutral-900"
           style={getChildPageStyle(isVisible)}
         >
           {/* 头部 - 只有左上角返回按钮 */}
