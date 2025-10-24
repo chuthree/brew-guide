@@ -59,7 +59,7 @@
     "csv-parse": "^6.0.0",
     "date-fns": "^4.1.0",
     "dexie": "^4.0.11",
-    "eslint-config-next": "^15.5.4",
+    "eslint-config-next": "16.0.0",
     "fast-mutex": "^1.0.2",
     "framer-motion": "^12.12.1",
     "geist": "^1.4.2",
@@ -71,11 +71,11 @@
     "lottie-react": "^2.4.1",
     "lucide-react": "^0.525.0",
     "nanoid": "^5.1.5",
-    "next": "15.4.7",
+    "next": "16.0.0",
     "next-themes": "^0.4.6",
     "qrcode.react": "^4.2.0",
-    "react": "19.1.0",
-    "react-dom": "19.1.0",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
     "react-image-crop": "^11.0.10",
     "react-virtuoso": "^4.14.0",
     "regenerator-runtime": "^0.14.1",
@@ -89,9 +89,8 @@
   "devDependencies": {
     "@csstools/postcss-oklab-function": "^4.0.10",
     "@types/lodash": "^4.17.20",
-    "@types/qrcode.react": "^3.0.0",
-    "@types/react": "19.1.8",
-    "@types/react-dom": "19.1.6",
+    "@types/react": "19.2.2",
+    "@types/react-dom": "19.2.2",
     "@types/uuid": "^10.0.0",
     "eslint": "^9.37.0",
     "postcss": "^8.5.6",
@@ -103,8 +102,8 @@
     "typescript": "^5.8.3"
   },
   "overrides": {
-    "@types/react": "19.1.8",
-    "@types/react-dom": "19.1.6",
+    "@types/react": "19.2.2",
+    "@types/react-dom": "19.2.2",
     "brace-expansion": ">=2.0.2"
   }
 }
