@@ -9,6 +9,7 @@ import {
   Code,
   ExternalLink,
   ScanLine,
+  Image as ImageIcon,
 } from 'lucide-react';
 import BeanSearchModal from './BeanSearchModal';
 import QRScannerModal from '@/components/coffee-bean/Scanner/QRScannerModal';
@@ -41,12 +42,14 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
     'buttons'
   );
   const [inputType, setInputType] = useState<
-    'clipboard' | 'json' | 'search' | 'qr'
+    'clipboard' | 'json' | 'search' | 'qr' | 'image'
   >('clipboard');
   // 搜索模态框状态
   const [showSearchModal, setShowSearchModal] = useState(false);
   // 二维码扫描模态框状态
   const [showQRScannerModal, setShowQRScannerModal] = useState(false);
+  // 图片识别加载状态
+  const [isRecognizing, setIsRecognizing] = useState(false);
 
   // 转场动画状态
   const [shouldRender, setShouldRender] = useState(false);
@@ -246,15 +249,69 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
     }
   }, [clearMessages]);
 
-  // 处理搜索咖啡豆
-  // const handleSearchBeans = useCallback(() => {
-  //     setShowSearchModal(true);
-  // }, []);
-
   // 处理扫描二维码
   const handleScanQRCode = useCallback(() => {
     setShowQRScannerModal(true);
   }, []);
+
+  // 处理图片上传识别
+  const handleImageUpload = useCallback(
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      // 验证文件类型
+      if (!file.type.startsWith('image/')) {
+        setError('请上传图片文件');
+        return;
+      }
+
+      // 验证文件大小（最大 10MB）
+      if (file.size > 10 * 1024 * 1024) {
+        setError('图片大小不能超过 10MB');
+        return;
+      }
+
+      clearMessages();
+      setIsRecognizing(true);
+      setInputType('image');
+      setCurrentMode('input');
+      setImportData('');
+
+      try {
+        // 压缩图片
+        console.log('📸 开始压缩图片...');
+        const { smartCompress } = await import('@/lib/utils/imageCompression');
+        const compressedFile = await smartCompress(file);
+
+        // 识别图片
+        const { recognizeBeanImage } = await import(
+          '@/lib/api/beanRecognition'
+        );
+        const beanData = await recognizeBeanImage(compressedFile);
+
+        setImportData(JSON.stringify(beanData, null, 2));
+        setSuccess('✨ 图片识别成功，请检查信息是否正确');
+        setIsRecognizing(false);
+      } catch (error) {
+        console.error('图片识别失败:', error);
+        setError(
+          error instanceof Error ? error.message : '图片识别失败，请重试'
+        );
+        setIsRecognizing(false);
+      }
+    },
+    [clearMessages]
+  );
+
+  // 触发图片选择
+  const handleUploadImageClick = useCallback(() => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = e => handleImageUpload(e as any);
+    input.click();
+  }, [handleImageUpload]);
 
   // 处理输入JSON
   const handleInputJSON = useCallback(() => {
@@ -339,6 +396,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                       {inputType === 'search' &&
                         '从搜索结果自动填入，请检查信息是否正确'}
                       {inputType === 'qr' && '已扫描二维码，请检查信息是否正确'}
+                      {inputType === 'image' && '请检查识别结果是否正确'}
                     </>
                   )}
                 </motion.p>
@@ -398,17 +456,24 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                     <ChevronRight className="h-5 w-5 text-neutral-500" />
                   </button>
 
-                  {/* 搜索咖啡豆：暂时禁用*/}
-                  {/* <button
-                                        onClick={handleSearchBeans}
-                                        className="w-full flex items-center justify-between p-4 bg-neutral-200/50 dark:bg-neutral-800 transition-colors rounded"
-                                    >
-                                        <div className="flex items-center space-x-3">
-                                            <Search className="w-5 h-5 text-neutral-600 dark:text-neutral-400" />
-                                            <span className="text-neutral-800 dark:text-white font-medium">搜索咖啡豆</span>
-                                        </div>
-                                        <ChevronRight className="w-5 h-5 text-neutral-500" />
-                                    </button> */}
+                  {/* 分隔线 */}
+                  <div className="py-2">
+                    <div className="h-px bg-neutral-100 dark:bg-neutral-800/50"></div>
+                  </div>
+
+                  {/* 拍照识别咖啡豆 */}
+                  <button
+                    onClick={handleUploadImageClick}
+                    className="flex w-full items-center justify-between rounded bg-neutral-200/50 p-4 transition-colors dark:bg-neutral-800"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <ImageIcon className="h-5 w-5 text-neutral-600 dark:text-neutral-400" />
+                      <span className="font-medium text-neutral-800 dark:text-white">
+                        拍照识别咖啡豆
+                      </span>
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-neutral-500" />
+                  </button>
                 </motion.div>
               ) : (
                 <motion.div
@@ -437,17 +502,22 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                     <textarea
                       className="w-full resize-none rounded border border-transparent bg-neutral-200/50 p-4 text-sm text-neutral-800 transition-all placeholder:text-neutral-400 focus:ring-2 focus:ring-neutral-300 focus:outline-none dark:bg-neutral-800 dark:text-white dark:placeholder:text-neutral-500 dark:focus:ring-neutral-700"
                       placeholder={
-                        success
-                          ? `✅ ${success}`
-                          : inputType === 'clipboard'
-                            ? '识别剪切板内容中...'
-                            : inputType === 'json'
-                              ? '粘贴咖啡豆数据...'
-                              : '咖啡豆信息'
+                        isRecognizing
+                          ? '识别中...'
+                          : success
+                            ? `✅ ${success}`
+                            : inputType === 'clipboard'
+                              ? '识别剪切板内容中...'
+                              : inputType === 'json'
+                                ? '粘贴咖啡豆数据...'
+                                : inputType === 'image'
+                                  ? '图片识别结果将显示在这里'
+                                  : '咖啡豆信息'
                       }
                       value={importData}
                       onChange={e => setImportData(e.target.value)}
                       rows={12}
+                      disabled={isRecognizing}
                     />
                     {/* 错误提示 - 左下角 */}
                     {error && (
@@ -475,26 +545,17 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                       </button>
                     )}
 
-                    {/* 添加按钮 */}
-                    <button
-                      onClick={handleImport}
-                      disabled={!importData.trim()}
-                      className={`flex w-full items-center justify-center rounded p-4 transition-colors ${
-                        importData.trim()
-                          ? 'bg-neutral-200/50 hover:bg-neutral-200/70 dark:bg-neutral-800 dark:hover:bg-neutral-800/70'
-                          : 'cursor-not-allowed bg-neutral-100 dark:bg-neutral-900/50'
-                      }`}
-                    >
-                      <span
-                        className={`font-medium ${
-                          importData.trim()
-                            ? 'text-neutral-800 dark:text-white'
-                            : 'text-neutral-400 dark:text-neutral-600'
-                        }`}
+                    {/* 添加按钮 - 只在有数据时显示 */}
+                    {importData.trim() && !isRecognizing && (
+                      <button
+                        onClick={handleImport}
+                        className="flex w-full items-center justify-center rounded bg-neutral-200/50 p-4 transition-colors hover:bg-neutral-200/70 dark:bg-neutral-800 dark:hover:bg-neutral-800/70"
                       >
-                        {importData.trim() ? '添加咖啡豆' : '请输入数据'}
-                      </span>
-                    </button>
+                        <span className="font-medium text-neutral-800 dark:text-white">
+                          添加咖啡豆
+                        </span>
+                      </button>
+                    )}
                   </div>
                 </motion.div>
               )}
