@@ -469,7 +469,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                     <div className="flex items-center space-x-3">
                       <ImageIcon className="h-5 w-5 text-neutral-600 dark:text-neutral-400" />
                       <span className="font-medium text-neutral-800 dark:text-white">
-                        拍照识别咖啡豆
+                        图片识别咖啡豆 (BETA)
                       </span>
                     </div>
                     <ChevronRight className="h-5 w-5 text-neutral-500" />

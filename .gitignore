@@ -74,3 +74,6 @@ android/app/release/
 *.swo
 
 logs/
+
+# API Server (deployed separately)
+server.js
